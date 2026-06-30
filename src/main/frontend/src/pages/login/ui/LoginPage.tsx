@@ -30,7 +30,7 @@ export function LoginPage({ totpApi = defaultTotpApi }: { totpApi?: TotpApi } = 
 
       <main className="relative flex flex-col justify-center bg-bg-0 px-8 py-12 sm:px-11">
         <div className="mx-auto w-full max-w-95">
-          <div className="mb-8 flex items-center gap-2.5 md:hidden">
+          <div className="mb-8 flex items-center gap-2.5 md:hidden" data-testid="mobile-header">
             <div
               className="grid size-8 shrink-0 place-items-center rounded-lg font-mono text-sm font-bold text-bg-0"
               style={{ background: 'linear-gradient(135deg, var(--brand-icon-from), var(--brand-icon-to))' }}

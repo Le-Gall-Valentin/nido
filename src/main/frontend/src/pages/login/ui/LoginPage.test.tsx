@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { LoginPage } from './LoginPage'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -85,12 +85,8 @@ describe('LoginPage', () => {
     })
 
     it('renders the "B" monogram in the mobile header', () => {
-      const monograms = screen.getAllByText('B')
-      const mobileMonogram = monograms.find(el =>
-        el.className.includes('size-8') && el.closest('.md\\:hidden') !== null
-      )
-      expect(mobileMonogram).toBeDefined()
-      expect(mobileMonogram?.textContent).toBe('B')
+      const mobileHeader = screen.getByTestId('mobile-header')
+      expect(within(mobileHeader).getByText('B')).not.toBeNull()
     })
 
     it('links the form to the title via aria-labelledby', () => {
