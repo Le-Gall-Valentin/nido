@@ -3,18 +3,18 @@
 /* ── Light theme (default) ─────────────────────────────────────── */
 @theme {
   --color-bg-0: #ffffff;
-  --color-bg-1: #f7f8fa;
-  --color-bg-2: #f0f2f5;
-  --color-bg-3: #e8ebf0;
-  --color-bg-4: #dde1e8;
-  --color-border: #e2e5eb;
-  --color-border-2: #cbd0da;
-  --color-fg-0: #111318;
-  --color-fg-1: #3a4050;
-  --color-fg-2: #6b7280;
-  --color-fg-3: #9ca3af;
-  --color-accent: #0d9488;
-  --color-accent-dim: #f0fdfa;
+  --color-bg-1: #fafafa;
+  --color-bg-2: #f4f4f5;
+  --color-bg-3: #e4e4e7;
+  --color-bg-4: #d4d4d8;
+  --color-border: #e4e4e7;
+  --color-border-2: #d4d4d8;
+  --color-fg-0: #18181b;
+  --color-fg-1: #3f3f46;
+  --color-fg-2: #71717a;
+  --color-fg-3: #a1a1aa;
+  --color-accent: #18181b;
+  --color-accent-dim: #f4f4f5;
   --color-status-green: #15803d;
   --color-status-green-dim: #f0fdf4;
   --color-status-red: #dc2626;
@@ -28,42 +28,36 @@
 }
 
 :root {
-  --color-accent-ring: rgba(13, 148, 136, 0.15);
-  --brand-panel-from: #e8f5f3;
-  --brand-panel-to: #f7f8fa;
-  --brand-accent-glow-1: rgba(13, 148, 136, 0.10);
-  --brand-accent-glow-2: rgba(99, 102, 241, 0.06);
-  --brand-grid-line: rgba(13, 148, 136, 0.05);
-  --brand-quote-bg: rgba(0, 0, 0, 0.04);
-  --brand-hero-text-from: #111318;
-  --brand-hero-text-to: #3a4050;
-  --brand-icon-from: #0f766e;
-  --brand-icon-to: #0369a1;
-  --brand-icon-glow: rgba(15, 118, 110, 0.28);
-  --brand-node-fill: #0d9488;
-  --brand-node-stroke: rgba(13, 148, 136, 0.22);
-  --brand-node-glow-sm: rgba(13, 148, 136, 0.10);
-  --brand-node-glow-lg: rgba(13, 148, 136, 0.18);
-  --brand-hub-text: #ffffff;
+  --color-accent-ring: rgba(24, 24, 27, 0.15);
+  --brand-panel-from: #f4f4f5;
+  --brand-panel-to: #ffffff;
+  --brand-accent-glow-1: rgba(0, 0, 0, 0.05);
+  --brand-accent-glow-2: rgba(0, 0, 0, 0.03);
+  --brand-grid-line: rgba(0, 0, 0, 0.05);
+  --brand-hero-text-from: #18181b;
+  --brand-hero-text-to: #52525b;
+  --brand-icon-from: #18181b;
+  --brand-icon-to: #27272a;
+  --brand-icon-glow: rgba(24, 24, 27, 0.20);
 }
 
 /* ── Dark theme override ────────────────────────────────────────── */
 /* System: active when OS is dark AND user hasn't forced light */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg-0: #0a0b0d;
-    --color-bg-1: #0f1115;
-    --color-bg-2: #14171c;
-    --color-bg-3: #1b1f26;
-    --color-bg-4: #232831;
-    --color-border: #262b34;
-    --color-border-2: #2f3540;
-    --color-fg-0: #e6e8ec;
-    --color-fg-1: #b6bbc5;
-    --color-fg-2: #7a8190;
-    --color-fg-3: #4a5160;
-    --color-accent: #5eead4;
-    --color-accent-dim: #0d2a26;
+    --color-bg-0: #09090b;
+    --color-bg-1: #131316;
+    --color-bg-2: #18181b;
+    --color-bg-3: #27272a;
+    --color-bg-4: #3f3f46;
+    --color-border: #27272a;
+    --color-border-2: #3f3f46;
+    --color-fg-0: #fafafa;
+    --color-fg-1: #d4d4d8;
+    --color-fg-2: #a1a1aa;
+    --color-fg-3: #52525b;
+    --color-accent: #fafafa;
+    --color-accent-dim: #27272a;
     --color-status-green: #4ade80;
     --color-status-green-dim: #1a3324;
     --color-status-red: #f87171;
@@ -73,41 +67,35 @@
     --color-status-blue: #60a5fa;
     --color-status-blue-dim: #16263d;
 
-    --color-accent-ring: rgba(94, 234, 212, 0.12);
-    --brand-panel-from: #0c1014;
-    --brand-panel-to: #0a0b0d;
-    --brand-accent-glow-1: rgba(94, 234, 212, 0.10);
-    --brand-accent-glow-2: rgba(129, 140, 248, 0.08);
-    --brand-grid-line: rgba(94, 234, 212, 0.04);
-    --brand-quote-bg: rgba(255, 255, 255, 0.02);
-    --brand-hero-text-from: #ffffff;
-    --brand-hero-text-to: #b6bbc5;
-    --brand-icon-from: #5eead4;
-    --brand-icon-to: #38bdf8;
-    --brand-icon-glow: rgba(94, 234, 212, 0.18);
-    --brand-node-fill: #5eead4;
-    --brand-node-stroke: rgba(94, 234, 212, 0.25);
-    --brand-node-glow-sm: rgba(94, 234, 212, 0.08);
-    --brand-node-glow-lg: rgba(94, 234, 212, 0.15);
-    --brand-hub-text: #0a0b0d;
+    --color-accent-ring: rgba(250, 250, 250, 0.12);
+    --brand-panel-from: #131316;
+    --brand-panel-to: #09090b;
+    --brand-accent-glow-1: rgba(255, 255, 255, 0.05);
+    --brand-accent-glow-2: rgba(255, 255, 255, 0.03);
+    --brand-grid-line: rgba(255, 255, 255, 0.035);
+    --brand-hero-text-from: #fafafa;
+    --brand-hero-text-to: #a1a1aa;
+    --brand-icon-from: #fafafa;
+    --brand-icon-to: #e4e4e7;
+    --brand-icon-glow: rgba(250, 250, 250, 0.14);
   }
 }
 
 /* Forced dark — same values, unconditional */
 :root[data-theme="dark"] {
-  --color-bg-0: #0a0b0d;
-  --color-bg-1: #0f1115;
-  --color-bg-2: #14171c;
-  --color-bg-3: #1b1f26;
-  --color-bg-4: #232831;
-  --color-border: #262b34;
-  --color-border-2: #2f3540;
-  --color-fg-0: #e6e8ec;
-  --color-fg-1: #b6bbc5;
-  --color-fg-2: #7a8190;
-  --color-fg-3: #4a5160;
-  --color-accent: #5eead4;
-  --color-accent-dim: #0d2a26;
+  --color-bg-0: #09090b;
+  --color-bg-1: #131316;
+  --color-bg-2: #18181b;
+  --color-bg-3: #27272a;
+  --color-bg-4: #3f3f46;
+  --color-border: #27272a;
+  --color-border-2: #3f3f46;
+  --color-fg-0: #fafafa;
+  --color-fg-1: #d4d4d8;
+  --color-fg-2: #a1a1aa;
+  --color-fg-3: #52525b;
+  --color-accent: #fafafa;
+  --color-accent-dim: #27272a;
   --color-status-green: #4ade80;
   --color-status-green-dim: #1a3324;
   --color-status-red: #f87171;
@@ -117,23 +105,17 @@
   --color-status-blue: #60a5fa;
   --color-status-blue-dim: #16263d;
 
-  --color-accent-ring: rgba(94, 234, 212, 0.12);
-  --brand-panel-from: #0c1014;
-  --brand-panel-to: #0a0b0d;
-  --brand-accent-glow-1: rgba(94, 234, 212, 0.10);
-  --brand-accent-glow-2: rgba(129, 140, 248, 0.08);
-  --brand-grid-line: rgba(94, 234, 212, 0.04);
-  --brand-quote-bg: rgba(255, 255, 255, 0.02);
-  --brand-hero-text-from: #ffffff;
-  --brand-hero-text-to: #b6bbc5;
-  --brand-icon-from: #5eead4;
-  --brand-icon-to: #38bdf8;
-  --brand-icon-glow: rgba(94, 234, 212, 0.18);
-  --brand-node-fill: #5eead4;
-  --brand-node-stroke: rgba(94, 234, 212, 0.25);
-  --brand-node-glow-sm: rgba(94, 234, 212, 0.08);
-  --brand-node-glow-lg: rgba(94, 234, 212, 0.15);
-  --brand-hub-text: #0a0b0d;
+  --color-accent-ring: rgba(250, 250, 250, 0.12);
+  --brand-panel-from: #131316;
+  --brand-panel-to: #09090b;
+  --brand-accent-glow-1: rgba(255, 255, 255, 0.05);
+  --brand-accent-glow-2: rgba(255, 255, 255, 0.03);
+  --brand-grid-line: rgba(255, 255, 255, 0.035);
+  --brand-hero-text-from: #fafafa;
+  --brand-hero-text-to: #a1a1aa;
+  --brand-icon-from: #fafafa;
+  --brand-icon-to: #e4e4e7;
+  --brand-icon-glow: rgba(250, 250, 250, 0.14);
 }
 
 *,
