@@ -39,6 +39,17 @@
   --brand-icon-from: #18181b;
   --brand-icon-to: #27272a;
   --brand-icon-glow: rgba(24, 24, 27, 0.20);
+
+  /* Primary button (single source of truth — change here to restyle all CTAs) */
+  --btn-primary-bg: var(--color-accent);
+  --btn-primary-fg: var(--color-bg-0);
+  --btn-primary-shadow: 0 1px 2px rgba(0, 0, 0, 0.10);
+
+  /* Avatars (monochrome zinc; admin slightly lighter to stay distinguishable) */
+  --avatar-from: #52525b;
+  --avatar-to: #27272a;
+  --avatar-admin-from: #71717a;
+  --avatar-admin-to: #3f3f46;
 }
 
 /* ── Dark theme override ────────────────────────────────────────── */
