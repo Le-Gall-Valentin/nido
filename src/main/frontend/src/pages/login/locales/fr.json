@@ -1,0 +1,18 @@
+{
+  "brand": "Boilerplate",
+  "hero": {
+    "headline_1": "Votre projet,",
+    "headline_2": "prêt à être livré.",
+    "description": "Une base sécurisée et complète pour construire et lancer votre application plus rapidement."
+  },
+  "quote": "Partez d'une base solide et prête pour la production, et concentrez-vous sur ce qui rend votre produit unique.",
+  "form": {
+    "title": "Bon retour",
+    "subtitle": "Connectez-vous pour accéder à votre compte."
+  },
+  "help": {
+    "no_account": "Pas encore de compte ?",
+    "contact_admin": "Contactez votre administrateur pour qu'il vous en crée un."
+  },
+  "footer": "© 2026 Boilerplate"
+}

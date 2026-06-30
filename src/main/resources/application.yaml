@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: synapsys-api
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  data:
+    redis:
+      url: ${SYNAPSYS_REDIS_URL:redis://localhost:6379}
+
+  datasource:
+    url: ${SYNAPSYS_DB_URL}
+    username: ${SYNAPSYS_DB_USER}
+    password: ${SYNAPSYS_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+
+synapsys:
+  jwt:
+    secret: ${SYNAPSYS_JWT_SECRET}
+    expiry-minutes: ${SYNAPSYS_JWT_EXPIRY_MINUTES:15}
+  refresh-token:
+    expiry-days: ${SYNAPSYS_REFRESH_TOKEN_EXPIRY_DAYS:30}
+    purge-cron: ${SYNAPSYS_REFRESH_TOKEN_PURGE_CRON:0 0 3 * * *}
+  cookie:
+    secure: ${SYNAPSYS_COOKIE_SECURE:true}
+  seed:
+    username: ${SYNAPSYS_SEED_USERNAME}
+    email: ${SYNAPSYS_SEED_EMAIL}
+    password: ${SYNAPSYS_SEED_PASSWORD}
+  cors:
+    allowed-origins: ${SYNAPSYS_CORS_ALLOWED_ORIGINS:}
+  encryption:
+    secret: ${SYNAPSYS_ENCRYPTION_SECRET}

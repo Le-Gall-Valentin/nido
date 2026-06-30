@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+/* ── Light theme (default) ─────────────────────────────────────── */
+@theme {
+  --color-bg-0: #ffffff;
+  --color-bg-1: #f7f8fa;
+  --color-bg-2: #f0f2f5;
+  --color-bg-3: #e8ebf0;
+  --color-bg-4: #dde1e8;
+  --color-border: #e2e5eb;
+  --color-border-2: #cbd0da;
+  --color-fg-0: #111318;
+  --color-fg-1: #3a4050;
+  --color-fg-2: #6b7280;
+  --color-fg-3: #9ca3af;
+  --color-accent: #0d9488;
+  --color-accent-dim: #f0fdfa;
+  --color-status-green: #15803d;
+  --color-status-green-dim: #f0fdf4;
+  --color-status-red: #dc2626;
+  --color-status-red-dim: #fef2f2;
+  --color-status-orange: #c2410c;
+  --color-status-orange-dim: #fff7ed;
+  --color-status-blue: #1d4ed8;
+  --color-status-blue-dim: #eff6ff;
+  --font-family-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-family-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+}
+
+:root {
+  --color-accent-ring: rgba(13, 148, 136, 0.15);
+  --brand-panel-from: #e8f5f3;
+  --brand-panel-to: #f7f8fa;
+  --brand-accent-glow-1: rgba(13, 148, 136, 0.10);
+  --brand-accent-glow-2: rgba(99, 102, 241, 0.06);
+  --brand-grid-line: rgba(13, 148, 136, 0.05);
+  --brand-quote-bg: rgba(0, 0, 0, 0.04);
+  --brand-hero-text-from: #111318;
+  --brand-hero-text-to: #3a4050;
+  --brand-icon-from: #0f766e;
+  --brand-icon-to: #0369a1;
+  --brand-icon-glow: rgba(15, 118, 110, 0.28);
+  --brand-node-fill: #0d9488;
+  --brand-node-stroke: rgba(13, 148, 136, 0.22);
+  --brand-node-glow-sm: rgba(13, 148, 136, 0.10);
+  --brand-node-glow-lg: rgba(13, 148, 136, 0.18);
+  --brand-hub-text: #ffffff;
+}
+
+/* ── Dark theme override ────────────────────────────────────────── */
+/* System: active when OS is dark AND user hasn't forced light */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-0: #0a0b0d;
+    --color-bg-1: #0f1115;
+    --color-bg-2: #14171c;
+    --color-bg-3: #1b1f26;
+    --color-bg-4: #232831;
+    --color-border: #262b34;
+    --color-border-2: #2f3540;
+    --color-fg-0: #e6e8ec;
+    --color-fg-1: #b6bbc5;
+    --color-fg-2: #7a8190;
+    --color-fg-3: #4a5160;
+    --color-accent: #5eead4;
+    --color-accent-dim: #0d2a26;
+    --color-status-green: #4ade80;
+    --color-status-green-dim: #1a3324;
+    --color-status-red: #f87171;
+    --color-status-red-dim: #3a1d1d;
+    --color-status-orange: #fb923c;
+    --color-status-orange-dim: #3a2516;
+    --color-status-blue: #60a5fa;
+    --color-status-blue-dim: #16263d;
+
+    --color-accent-ring: rgba(94, 234, 212, 0.12);
+    --brand-panel-from: #0c1014;
+    --brand-panel-to: #0a0b0d;
+    --brand-accent-glow-1: rgba(94, 234, 212, 0.10);
+    --brand-accent-glow-2: rgba(129, 140, 248, 0.08);
+    --brand-grid-line: rgba(94, 234, 212, 0.04);
+    --brand-quote-bg: rgba(255, 255, 255, 0.02);
+    --brand-hero-text-from: #ffffff;
+    --brand-hero-text-to: #b6bbc5;
+    --brand-icon-from: #5eead4;
+    --brand-icon-to: #38bdf8;
+    --brand-icon-glow: rgba(94, 234, 212, 0.18);
+    --brand-node-fill: #5eead4;
+    --brand-node-stroke: rgba(94, 234, 212, 0.25);
+    --brand-node-glow-sm: rgba(94, 234, 212, 0.08);
+    --brand-node-glow-lg: rgba(94, 234, 212, 0.15);
+    --brand-hub-text: #0a0b0d;
+  }
+}
+
+/* Forced dark — same values, unconditional */
+:root[data-theme="dark"] {
+  --color-bg-0: #0a0b0d;
+  --color-bg-1: #0f1115;
+  --color-bg-2: #14171c;
+  --color-bg-3: #1b1f26;
+  --color-bg-4: #232831;
+  --color-border: #262b34;
+  --color-border-2: #2f3540;
+  --color-fg-0: #e6e8ec;
+  --color-fg-1: #b6bbc5;
+  --color-fg-2: #7a8190;
+  --color-fg-3: #4a5160;
+  --color-accent: #5eead4;
+  --color-accent-dim: #0d2a26;
+  --color-status-green: #4ade80;
+  --color-status-green-dim: #1a3324;
+  --color-status-red: #f87171;
+  --color-status-red-dim: #3a1d1d;
+  --color-status-orange: #fb923c;
+  --color-status-orange-dim: #3a2516;
+  --color-status-blue: #60a5fa;
+  --color-status-blue-dim: #16263d;
+
+  --color-accent-ring: rgba(94, 234, 212, 0.12);
+  --brand-panel-from: #0c1014;
+  --brand-panel-to: #0a0b0d;
+  --brand-accent-glow-1: rgba(94, 234, 212, 0.10);
+  --brand-accent-glow-2: rgba(129, 140, 248, 0.08);
+  --brand-grid-line: rgba(94, 234, 212, 0.04);
+  --brand-quote-bg: rgba(255, 255, 255, 0.02);
+  --brand-hero-text-from: #ffffff;
+  --brand-hero-text-to: #b6bbc5;
+  --brand-icon-from: #5eead4;
+  --brand-icon-to: #38bdf8;
+  --brand-icon-glow: rgba(94, 234, 212, 0.18);
+  --brand-node-fill: #5eead4;
+  --brand-node-stroke: rgba(94, 234, 212, 0.25);
+  --brand-node-glow-sm: rgba(94, 234, 212, 0.08);
+  --brand-node-glow-lg: rgba(94, 234, 212, 0.15);
+  --brand-hub-text: #0a0b0d;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family-sans);
+  background: var(--color-bg-0);
+  color: var(--color-fg-0);
+  -webkit-font-smoothing: antialiased;
+}

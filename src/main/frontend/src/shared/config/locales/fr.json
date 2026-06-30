@@ -1,0 +1,8 @@
+{
+  "loading": "Chargement...",
+  "error": {
+    "unexpected": "Une erreur inattendue est survenue.",
+    "retry": "Réessayer",
+    "reload": "Recharger la page"
+  }
+}

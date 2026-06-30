@@ -1,0 +1,19 @@
+@media (prefers-reduced-motion: reduce) {
+  .network-artwork * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.na-edges { stroke: var(--brand-node-stroke); stroke-width: 1; fill: none; }
+.na-pulse  { fill: var(--brand-node-glow-sm); }
+.na-dot    { fill: var(--brand-node-fill); }
+.na-hub-halo  { fill: var(--brand-node-glow-lg); }
+.na-hub-core  { fill: var(--brand-node-fill); }
+.na-hub-label {
+  fill: var(--brand-hub-text);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+}
+.na-particle { fill: var(--brand-node-fill); }

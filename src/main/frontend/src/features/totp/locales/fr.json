@@ -1,0 +1,64 @@
+{
+  "verify": {
+    "title": "Vérification en deux étapes",
+    "subtitle": "Bonjour {{username}}. Saisissez le code à 6 chiffres généré par votre application d'authentification.",
+    "submit": "Vérifier",
+    "back": "← Utiliser un autre compte",
+    "help": "Vous avez perdu votre appareil ? Demandez à un administrateur de réinitialiser votre double authentification.",
+    "code_group_label": "Code de vérification",
+    "digit_label": "Chiffre {{n}}",
+    "error": {
+      "invalid_code": "Code invalide ou expiré.",
+      "challenge_expired": "Session expirée. Veuillez vous reconnecter.",
+      "max_attempts": "Trop de tentatives incorrectes. Veuillez vous reconnecter.",
+      "incomplete": "Saisissez les 6 chiffres.",
+      "rate_limit": "Trop de tentatives. Veuillez patienter avant de réessayer.",
+      "rate_limit_timed": "Trop de tentatives. Veuillez patienter {{seconds}} secondes avant de réessayer.",
+      "network": "Réseau indisponible. Vérifiez votre connexion.",
+      "server": "Une erreur serveur est survenue. Veuillez réessayer."
+    }
+  },
+  "enroll": {
+    "title": "Sécurisez votre compte",
+    "subtitle": "Bonjour {{username}}. Pour protéger votre accès, nous vous recommandons d'activer la double authentification.",
+    "why_title": "Pourquoi l'activer ?",
+    "why_text": "En plus de votre mot de passe, vous saisirez un code à 6 chiffres généré par votre téléphone à chaque connexion. Même si votre mot de passe fuite, votre compte reste protégé.",
+    "activate": "Activer la double authentification",
+    "skip": "Plus tard, continuer sans"
+  },
+  "setup": {
+    "title": "Configurer la 2FA",
+    "subtitle": "Scannez ce QR code avec Google Authenticator, 1Password, ou toute autre application TOTP.",
+    "manual_label": "Ou saisissez ce secret manuellement",
+    "show_secret": "Afficher le secret",
+    "hide_secret": "Masquer le secret",
+    "submit": "Vérifier et activer",
+    "code_group_label": "Code de vérification",
+    "digit_label": "Chiffre {{n}}",
+    "dismiss_login": "Ignorer pour cette fois",
+    "dismiss_profile": "Annuler",
+    "loading": "Chargement...",
+    "error": {
+      "invalid_code": "Saisissez le code à 6 chiffres affiché par votre application.",
+      "setup_failed": "Impossible de générer le QR code. Réessayez.",
+      "max_attempts": "Trop de tentatives. La configuration a été annulée, veuillez recommencer.",
+      "rate_limit": "Trop de tentatives. Veuillez patienter avant de réessayer.",
+      "network": "Réseau indisponible. Vérifiez votre connexion.",
+      "server": "Une erreur serveur est survenue. Veuillez réessayer."
+    }
+  },
+  "disable": {
+    "title": "Désactiver la double authentification",
+    "subtitle": "Saisissez le code affiché par votre application pour confirmer.",
+    "submit": "Désactiver",
+    "code_group_label": "Code de vérification",
+    "digit_label": "Chiffre {{n}}",
+    "error": {
+      "invalid_code": "Code invalide ou expiré.",
+      "max_attempts": "Trop de tentatives incorrectes.",
+      "rate_limit": "Trop de tentatives. Veuillez patienter.",
+      "network": "Réseau indisponible.",
+      "server": "Une erreur serveur est survenue."
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "title": "Users",
+  "subtitle": "Account management — a super administrator always remains in place to guarantee access to orchestration.",
+  "action": {
+    "create": "New user"
+  },
+  "table": {
+    "col_user": "User",
+    "col_email": "Email",
+    "col_role": "Role",
+    "col_status": "Status",
+    "col_totp": "2FA",
+    "col_created": "Created",
+    "you": "you",
+    "active": "Active",
+    "inactive": "Disabled",
+    "totp_on": "Enabled",
+    "totp_off": "Disabled",
+    "toggle_deactivate": "Deactivate",
+    "toggle_activate": "Reactivate",
+    "btn_reset_totp": "Reset 2FA for {{username}}",
+    "btn_edit": "Edit role of {{username}}",
+    "btn_delete": "Delete account",
+    "empty": "No users found."
+  },
+  "close": "Close",
+  "search": {
+    "placeholder": "Search by username or email…",
+    "clear": "Clear search"
+  },
+  "perm": {
+    "super_admin_protected": "The super administrator is protected.",
+    "self": "You cannot modify your own account.",
+    "admin_cannot_manage_admin": "An administrator cannot manage another administrator.",
+    "insufficient": "Action reserved for administrators.",
+    "totp_not_enabled": "2FA is not enabled on this account.",
+    "target_inactive": "The account must be active to change its role.",
+    "no_assignable_role": "No other role can be assigned to this user."
+  },
+  "load_error": "Unable to load the users list. Please try again.",
+  "mutation_error": "An error occurred. The changes have been reverted.",
+  "pagination": {
+    "total_one": "{{count}} user",
+    "total_other": "{{count}} users",
+    "page": "Page {{current}} of {{total}}",
+    "prev": "Previous page",
+    "next": "Next page"
+  },
+  "create": {
+    "title": "Create a user",
+    "username": "Username",
+    "username_placeholder": "firstname.lastname",
+    "email": "Email",
+    "email_placeholder": "user@acme.io",
+    "password": "Initial password",
+    "role": "Role",
+    "role_note": "The Super administrator role cannot be assigned manually — it is unique and permanent.",
+    "cancel": "Cancel",
+    "submit": "Create",
+    "error": {
+      "conflict": "This username or email address is already taken.",
+      "forbidden": "You do not have permission to create this user.",
+      "not_found": "User not found.",
+      "server": "An error occurred. Please try again.",
+      "network": "Network unavailable.",
+      "rate_limit": "Too many attempts. Please try again later.",
+      "username_length": "Username must be between 3 and 50 characters.",
+      "email_invalid": "Please enter a valid email address.",
+      "password_too_short": "Password must be at least 8 characters.",
+      "password_too_long": "Password must be at most 72 characters.",
+      "password_weak": "Password must contain an uppercase letter, a digit and a special character."
+    }
+  },
+  "edit_role": {
+    "title": "Edit role of {{username}}",
+    "role": "New role",
+    "cancel": "Cancel",
+    "submit": "Save",
+    "error": {
+      "already_assigned": "This role is already assigned to this user.",
+      "forbidden": "You do not have permission to change this user's role.",
+      "not_found": "User not found.",
+      "server": "An error occurred. Please try again.",
+      "network": "Network unavailable.",
+      "rate_limit": "Too many attempts. Please try again later."
+    }
+  },
+  "delete": {
+    "title": "Delete {{username}}?",
+    "body": "This action is irreversible. All permissions and history will be preserved but can no longer be reassigned.",
+    "cancel": "Cancel",
+    "submit": "Delete permanently",
+    "error": {
+      "forbidden": "You do not have permission to delete this user.",
+      "not_found": "User not found.",
+      "server": "An error occurred. Please try again.",
+      "network": "Network unavailable.",
+      "rate_limit": "Too many attempts. Please try again later."
+    }
+  },
+  "reset_totp": {
+    "title": "Reset 2FA for {{username}}?",
+    "body": "Two-factor authentication will be disabled for this account. At the next login, the user will be able to re-enable it with a new authenticator app.",
+    "warning": "Make sure you have verified this person's identity (phone, internal email…) before resetting their 2FA.",
+    "cancel": "Cancel",
+    "submit": "Reset",
+    "error": {
+      "forbidden": "You do not have permission to reset this user's 2FA.",
+      "not_found": "User not found.",
+      "server": "An error occurred. Please try again.",
+      "network": "Network unavailable.",
+      "rate_limit": "Too many attempts. Please try again later."
+    }
+  },
+  "rules": {
+    "title": "Account protection rules",
+    "super_admin": "The <strong>super administrator</strong> cannot be deactivated or deleted — they ensure an administrator is always present.",
+    "self": "No user can deactivate or delete <strong>their own account</strong>.",
+    "admin_admin": "An administrator can <strong>neither deactivate nor delete another administrator</strong> — only the super administrator has that right. Otherwise, super admin and admin have identical powers.",
+    "totp": "<strong>2FA reset</strong> is reserved for the super administrator for admin accounts; administrators can only reset 2FA for standard users."
+  }
+}

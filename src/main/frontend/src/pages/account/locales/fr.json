@@ -1,0 +1,64 @@
+{
+  "title": "Mon compte",
+  "subtitle": "Gérez vos informations personnelles et votre mot de passe.",
+  "action": { "logout": "Se déconnecter" },
+  "error": { "logout_failed": "La déconnexion a échoué. Veuillez réessayer." },
+  "member_since": "Membre depuis le {{date}}",
+  "profile": {
+    "title": "Informations personnelles",
+    "subtitle": "Visible des autres utilisateurs de l'organisation.",
+    "username": "Nom d'utilisateur",
+    "email": "Adresse e-mail",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "success": "Profil mis à jour.",
+    "error": {
+      "conflict": "Ce nom d'utilisateur ou cette adresse e-mail est déjà utilisé(e).",
+      "username_too_short": "Minimum 3 caractères.",
+      "username_too_long": "Maximum 50 caractères.",
+      "server": "Une erreur est survenue. Veuillez réessayer.",
+      "network": "Réseau indisponible.",
+      "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard.",
+      "email_required": "L'adresse e-mail est obligatoire."
+    }
+  },
+  "twofa": {
+    "title": "Double authentification (2FA)",
+    "subtitle": "Un code à 6 chiffres généré par votre application sera demandé à chaque connexion.",
+    "status_enabled": "Activée",
+    "status_disabled": "Désactivée",
+    "desc_enabled": "Votre compte est protégé par une application d'authentification (Google Authenticator, 1Password, etc.). Si vous perdez votre appareil, demandez à un administrateur de réinitialiser votre 2FA.",
+    "desc_disabled": "Votre compte n'est protégé que par votre mot de passe. Activez la double authentification pour ajouter une seconde couche de sécurité.",
+    "btn_enable": "Activer la 2FA",
+    "btn_disable": "Désactiver",
+    "success_enabled": "Double authentification activée.",
+    "success_disabled": "Double authentification désactivée."
+  },
+  "password": {
+    "title": "Changer de mot de passe",
+    "subtitle": "8 à 72 caractères, avec au moins une majuscule, un chiffre et un caractère spécial.",
+    "current": "Mot de passe actuel",
+    "new": "Nouveau mot de passe",
+    "confirm": "Confirmer",
+    "submit": "Mettre à jour le mot de passe",
+    "success": "Mot de passe mis à jour.",
+    "error": {
+      "mismatch": "Les deux mots de passe ne correspondent pas.",
+      "too_short": "Trop court (8 caractères minimum).",
+      "weak": "Doit contenir au moins une majuscule, un chiffre et un caractère spécial.",
+      "wrong_current": "Mot de passe actuel incorrect.",
+      "server": "Une erreur est survenue. Veuillez réessayer.",
+      "network": "Réseau indisponible.",
+      "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard."
+    }
+  },
+  "preferences": {
+    "title": "Préférences",
+    "subtitle": "Apparence et langue de l'interface.",
+    "theme_label": "Thème",
+    "theme_light": "Clair",
+    "theme_dark": "Sombre",
+    "theme_system": "Système",
+    "language_label": "Langue"
+  }
+}

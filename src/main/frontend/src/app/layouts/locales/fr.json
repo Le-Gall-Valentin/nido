@@ -1,0 +1,43 @@
+{
+  "brand": "Boilerplate",
+  "nav": {
+    "label": "Navigation principale",
+    "section": {
+      "admin": "Administration"
+    },
+    "users": "Utilisateurs",
+    "account": "Mon compte"
+  },
+  "topbar": {
+    "menu_label": "Ouvrir le menu",
+    "search_label": "Rechercher",
+    "search_placeholder": "Rechercher…",
+    "refresh_label": "Actualiser",
+    "breadcrumb_nav": "Fil d'Ariane"
+  },
+  "palette": {
+    "placeholder": "Rechercher une page…",
+    "escape_hint": "Échap",
+    "navigate_hint": "Naviguer",
+    "open_hint": "Ouvrir",
+    "no_results": "Aucun résultat pour « {{query}} »",
+    "results_one": "{{count}} résultat",
+    "results_other": "{{count}} résultats",
+    "type_page": "Page"
+  },
+  "breadcrumb": {
+    "administration": "Administration",
+    "account": "Mon compte",
+    "admin_users": "Utilisateurs"
+  },
+  "user": {
+    "role": {
+      "SUPER_ADMIN": "Super Administrateur",
+      "ADMIN": "Administrateur",
+      "USER": "Utilisateur"
+    }
+  },
+  "sidebar_label": "Menu de navigation",
+  "palette_dialog_label": "Palette de commandes",
+  "loader": "Chargement…"
+}

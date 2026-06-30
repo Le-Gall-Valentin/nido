@@ -1,0 +1,8 @@
+{
+  "loading": "Loading...",
+  "error": {
+    "unexpected": "An unexpected error occurred.",
+    "retry": "Try again",
+    "reload": "Reload page"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "title": "My account",
+  "subtitle": "Manage your personal information and password.",
+  "action": { "logout": "Sign out" },
+  "error": { "logout_failed": "Sign out failed. Please try again." },
+  "member_since": "Member since {{date}}",
+  "profile": {
+    "title": "Personal information",
+    "subtitle": "Visible to other users in the organisation.",
+    "username": "Username",
+    "email": "Email address",
+    "save": "Save",
+    "cancel": "Cancel",
+    "success": "Profile updated.",
+    "error": {
+      "conflict": "This username or email address is already in use.",
+      "username_too_short": "Minimum 3 characters.",
+      "username_too_long": "Maximum 50 characters.",
+      "server": "An error occurred. Please try again.",
+      "network": "Network unavailable.",
+      "rate_limit": "Too many requests. Please try again later.",
+      "email_required": "Email address is required."
+    }
+  },
+  "twofa": {
+    "title": "Two-factor authentication (2FA)",
+    "subtitle": "A 6-digit code from your authenticator app will be required at each login.",
+    "status_enabled": "Enabled",
+    "status_disabled": "Disabled",
+    "desc_enabled": "Your account is protected by an authenticator app (Google Authenticator, 1Password, etc.). If you lose your device, ask an administrator to reset your 2FA.",
+    "desc_disabled": "Your account is only protected by your password. Enable two-factor authentication to add a second layer of security.",
+    "btn_enable": "Enable 2FA",
+    "btn_disable": "Disable",
+    "success_enabled": "Two-factor authentication enabled.",
+    "success_disabled": "Two-factor authentication disabled."
+  },
+  "password": {
+    "title": "Change password",
+    "subtitle": "8 to 72 characters, with at least one uppercase letter, one digit, and one special character.",
+    "current": "Current password",
+    "new": "New password",
+    "confirm": "Confirm",
+    "submit": "Update password",
+    "success": "Password updated.",
+    "error": {
+      "mismatch": "The two passwords do not match.",
+      "too_short": "Too short (minimum 8 characters).",
+      "weak": "Must contain at least one uppercase letter, one digit, and one special character.",
+      "wrong_current": "Current password is incorrect.",
+      "server": "An error occurred. Please try again.",
+      "network": "Network unavailable.",
+      "rate_limit": "Too many requests. Please try again later."
+    }
+  },
+  "preferences": {
+    "title": "Preferences",
+    "subtitle": "Interface appearance and language.",
+    "theme_label": "Theme",
+    "theme_light": "Light",
+    "theme_dark": "Dark",
+    "theme_system": "System",
+    "language_label": "Language"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "brand": "Boilerplate",
+  "nav": {
+    "label": "Main navigation",
+    "section": {
+      "admin": "Administration"
+    },
+    "users": "Users",
+    "account": "My account"
+  },
+  "topbar": {
+    "menu_label": "Open menu",
+    "search_label": "Search",
+    "search_placeholder": "Search…",
+    "refresh_label": "Refresh",
+    "breadcrumb_nav": "Breadcrumb"
+  },
+  "palette": {
+    "placeholder": "Search for a page…",
+    "escape_hint": "Esc",
+    "navigate_hint": "Navigate",
+    "open_hint": "Open",
+    "no_results": "No results for « {{query}} »",
+    "results_one": "{{count}} result",
+    "results_other": "{{count}} results",
+    "type_page": "Page"
+  },
+  "breadcrumb": {
+    "administration": "Administration",
+    "account": "My account",
+    "admin_users": "Users"
+  },
+  "user": {
+    "role": {
+      "SUPER_ADMIN": "Super Administrator",
+      "ADMIN": "Administrator",
+      "USER": "User"
+    }
+  },
+  "sidebar_label": "Navigation menu",
+  "palette_dialog_label": "Command palette",
+  "loader": "Loading…"
+}

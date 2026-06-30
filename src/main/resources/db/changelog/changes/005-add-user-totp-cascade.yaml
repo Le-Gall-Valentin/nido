@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-add-user-totp-cascade
+      author: synapsys
+      changes:
+        - dropForeignKeyConstraint:
+            baseTableName: user_totp
+            constraintName: fk_user_totp_user
+        - addForeignKeyConstraint:
+            baseTableName: user_totp
+            baseColumnNames: user_id
+            constraintName: fk_user_totp_user
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: CASCADE
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: user_totp
+            constraintName: fk_user_totp_user
+        - addForeignKeyConstraint:
+            baseTableName: user_totp
+            baseColumnNames: user_id
+            constraintName: fk_user_totp_user
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: CASCADE

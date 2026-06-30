@@ -1,0 +1,20 @@
+{
+  "field": {
+    "username": "Username",
+    "username_placeholder": "firstname.lastname",
+    "password": "Password",
+    "password_placeholder": "Your password",
+    "show_password": "Show password",
+    "hide_password": "Hide password"
+  },
+  "action": {
+    "submit": "Sign in"
+  },
+  "error": {
+    "credentials": "Incorrect username or password.",
+    "network": "Service unavailable. Please try again.",
+    "rateLimit": "Too many attempts. Please wait before trying again.",
+    "rateLimitWithDelay": "Too many attempts. Try again in {{seconds}} seconds.",
+    "server": "Something went wrong. Please try again in a moment."
+  }
+}

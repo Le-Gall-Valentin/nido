@@ -1,0 +1,93 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-refresh-tokens
+      author: synapsys
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: refresh_tokens
+      changes:
+        - createTable:
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: token_hash
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: revoked
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_used_at
+                  type: TIMESTAMPTZ
+        - addUniqueConstraint:
+            tableName: refresh_tokens
+            columnNames: token_hash
+            constraintName: uq_refresh_tokens_token_hash
+        - addForeignKeyConstraint:
+            baseTableName: refresh_tokens
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_refresh_tokens_user
+            onDelete: CASCADE
+        - createIndex:
+            indexName: idx_refresh_tokens_user_id
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            indexName: idx_refresh_tokens_expires_at
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: expires_at
+        - createIndex:
+            indexName: idx_refresh_tokens_revoked_expires
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: revoked
+              - column:
+                  name: expires_at
+        - createIndex:
+            indexName: idx_refresh_tokens_revoked_last_used
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: revoked
+              - column:
+                  name: last_used_at
+      rollback:
+        - dropTable:
+            tableName: refresh_tokens
+            cascadeConstraints: true

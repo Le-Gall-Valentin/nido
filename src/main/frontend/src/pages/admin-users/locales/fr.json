@@ -1,0 +1,122 @@
+{
+  "title": "Utilisateurs",
+  "subtitle": "Gestion des comptes — un super administrateur reste toujours en place pour garantir l'accès à l'orchestration.",
+  "action": {
+    "create": "Nouvel utilisateur"
+  },
+  "table": {
+    "col_user": "Utilisateur",
+    "col_email": "Email",
+    "col_role": "Rôle",
+    "col_status": "Statut",
+    "col_totp": "2FA",
+    "col_created": "Créé",
+    "you": "vous",
+    "active": "Actif",
+    "inactive": "Désactivé",
+    "totp_on": "Activée",
+    "totp_off": "Désactivée",
+    "toggle_deactivate": "Désactiver",
+    "toggle_activate": "Réactiver",
+    "btn_reset_totp": "Réinitialiser la 2FA de {{username}}",
+    "btn_edit": "Modifier le rôle de {{username}}",
+    "btn_delete": "Supprimer le compte",
+    "empty": "Aucun utilisateur trouvé."
+  },
+  "close": "Fermer",
+  "search": {
+    "placeholder": "Rechercher par nom d'utilisateur ou email…",
+    "clear": "Effacer la recherche"
+  },
+  "perm": {
+    "super_admin_protected": "Le super administrateur est protégé.",
+    "self": "Vous ne pouvez pas modifier votre propre compte.",
+    "admin_cannot_manage_admin": "Un administrateur ne peut pas gérer un autre administrateur.",
+    "insufficient": "Action réservée aux administrateurs.",
+    "totp_not_enabled": "La 2FA n'est pas activée sur ce compte.",
+    "target_inactive": "Le compte doit être actif pour modifier son rôle.",
+    "no_assignable_role": "Aucun autre rôle ne peut être attribué à cet utilisateur."
+  },
+  "load_error": "Impossible de charger la liste des utilisateurs. Veuillez réessayer.",
+  "mutation_error": "Une erreur est survenue. Les modifications ont été annulées.",
+  "pagination": {
+    "total_one": "{{count}} utilisateur",
+    "total_other": "{{count}} utilisateurs",
+    "page": "Page {{current}} sur {{total}}",
+    "prev": "Page précédente",
+    "next": "Page suivante"
+  },
+  "create": {
+    "title": "Créer un utilisateur",
+    "username": "Identifiant",
+    "username_placeholder": "prenom.nom",
+    "email": "Email",
+    "email_placeholder": "user@acme.io",
+    "password": "Mot de passe initial",
+    "role": "Rôle",
+    "role_note": "Le rôle Super administrateur n'est pas attribuable manuellement — il est unique et permanent.",
+    "cancel": "Annuler",
+    "submit": "Créer",
+    "error": {
+      "conflict": "Ce nom d'utilisateur ou cette adresse e-mail est déjà utilisé(e).",
+      "forbidden": "Vous n'avez pas les droits nécessaires pour créer cet utilisateur.",
+      "not_found": "Utilisateur introuvable.",
+      "server": "Une erreur est survenue. Veuillez réessayer.",
+      "network": "Réseau indisponible.",
+      "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard.",
+      "username_length": "L'identifiant doit contenir entre 3 et 50 caractères.",
+      "email_invalid": "Veuillez saisir une adresse e-mail valide.",
+      "password_too_short": "Le mot de passe doit contenir au moins 8 caractères.",
+      "password_too_long": "Le mot de passe ne doit pas dépasser 72 caractères.",
+      "password_weak": "Le mot de passe doit contenir une majuscule, un chiffre et un caractère spécial."
+    }
+  },
+  "edit_role": {
+    "title": "Modifier le rôle de {{username}}",
+    "role": "Nouveau rôle",
+    "cancel": "Annuler",
+    "submit": "Enregistrer",
+    "error": {
+      "already_assigned": "Ce rôle est déjà attribué à cet utilisateur.",
+      "forbidden": "Vous n'avez pas les droits nécessaires pour modifier le rôle de cet utilisateur.",
+      "not_found": "Utilisateur introuvable.",
+      "server": "Une erreur est survenue. Veuillez réessayer.",
+      "network": "Réseau indisponible.",
+      "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard."
+    }
+  },
+  "delete": {
+    "title": "Supprimer {{username}} ?",
+    "body": "Cette action est irréversible. Toutes les permissions et l'historique de cet utilisateur seront conservés mais ne pourront plus lui être réattribués.",
+    "cancel": "Annuler",
+    "submit": "Supprimer définitivement",
+    "error": {
+      "forbidden": "Vous n'avez pas les droits nécessaires pour supprimer cet utilisateur.",
+      "not_found": "Utilisateur introuvable.",
+      "server": "Une erreur est survenue. Veuillez réessayer.",
+      "network": "Réseau indisponible.",
+      "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard."
+    }
+  },
+  "reset_totp": {
+    "title": "Réinitialiser la 2FA de {{username}} ?",
+    "body": "La double authentification sera désactivée pour ce compte. À sa prochaine connexion, l'utilisateur pourra l'activer à nouveau avec une nouvelle application d'authentification.",
+    "warning": "Assurez-vous d'avoir vérifié l'identité de cette personne (téléphone, e-mail interne…) avant de réinitialiser sa 2FA.",
+    "cancel": "Annuler",
+    "submit": "Réinitialiser",
+    "error": {
+      "forbidden": "Vous n'avez pas les droits nécessaires pour réinitialiser la 2FA de cet utilisateur.",
+      "not_found": "Utilisateur introuvable.",
+      "server": "Une erreur est survenue. Veuillez réessayer.",
+      "network": "Réseau indisponible.",
+      "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard."
+    }
+  },
+  "rules": {
+    "title": "Règles de protection des comptes",
+    "super_admin": "Le <strong>super administrateur</strong> ne peut être ni désactivé, ni supprimé — il garantit qu'un administrateur reste toujours présent.",
+    "self": "Aucun utilisateur ne peut désactiver ou supprimer <strong>son propre compte</strong>.",
+    "admin_admin": "Un administrateur ne peut <strong>ni désactiver ni supprimer un autre administrateur</strong> — seul le super administrateur en a le droit. Pour le reste, super admin et admin ont des pouvoirs identiques.",
+    "totp": "La <strong>réinitialisation de la 2FA</strong> est réservée au super administrateur pour les comptes administrateurs ; les administrateurs ne peuvent réinitialiser que la 2FA des utilisateurs standards."
+  }
+}

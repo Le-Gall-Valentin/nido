@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/001-create-users.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/002-create-refresh-tokens.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/003-create-user-credentials.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/004-create-user-totp.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/005-add-user-totp-cascade.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/006-add-user-credentials-cascade.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/007-add-user-deletion-support.yaml
+      relativeToChangelogFile: false

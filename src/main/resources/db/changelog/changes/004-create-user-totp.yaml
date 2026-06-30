@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-create-user-totp
+      author: synapsys
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: user_totp
+      changes:
+        - createTable:
+            tableName: user_totp
+            columns:
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    foreignKeyName: fk_user_totp_user
+                    references: users(id)
+              - column:
+                  name: totp_secret
+                  type: VARCHAR(256)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: totp_enabled
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              ALTER TABLE user_totp
+              ADD CONSTRAINT chk_user_totp_secret_required
+              CHECK (totp_secret IS NOT NULL OR totp_enabled = false)
+      rollback:
+        - sql:
+            sql: "ALTER TABLE user_totp DROP CONSTRAINT chk_user_totp_secret_required"
+        - dropTable:
+            tableName: user_totp
