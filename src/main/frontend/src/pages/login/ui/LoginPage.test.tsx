@@ -84,6 +84,14 @@ describe('LoginPage', () => {
       expect(screen.getByText('footer')).not.toBeNull()
     })
 
+    it('renders the "B" monogram in the mobile header', () => {
+      const monograms = screen.getAllByText('B')
+      const mobileMonogram = monograms.find(el =>
+        el.className.includes('size-8') && el.closest('.md\\:hidden') !== null
+      )
+      expect(mobileMonogram).not.toBeNull()
+    })
+
     it('links the form to the title via aria-labelledby', () => {
       const heading = screen.getByRole('heading', { level: 1 })
       const form = screen.getByRole('form')

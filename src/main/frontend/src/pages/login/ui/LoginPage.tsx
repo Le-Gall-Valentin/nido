@@ -35,7 +35,7 @@ export function LoginPage({ totpApi = defaultTotpApi }: { totpApi?: TotpApi } = 
               className="grid size-8 shrink-0 place-items-center rounded-lg font-mono text-sm font-bold text-bg-0"
               style={{ background: 'linear-gradient(135deg, var(--brand-icon-from), var(--brand-icon-to))' }}
             >
-              S
+              B
             </div>
             <span className="text-[15px] font-semibold tracking-tight text-fg-0">Boilerplate</span>
           </div>
