@@ -89,7 +89,8 @@ describe('LoginPage', () => {
       const mobileMonogram = monograms.find(el =>
         el.className.includes('size-8') && el.closest('.md\\:hidden') !== null
       )
-      expect(mobileMonogram).not.toBeNull()
+      expect(mobileMonogram).toBeDefined()
+      expect(mobileMonogram?.textContent).toBe('B')
     })
 
     it('links the form to the title via aria-labelledby', () => {
