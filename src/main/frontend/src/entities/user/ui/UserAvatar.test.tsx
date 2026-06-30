@@ -8,15 +8,14 @@ describe('UserAvatar', () => {
     expect(getByText('JD')).toBeDefined()
   })
 
-  it('uses the violet gradient for SUPER_ADMIN', () => {
+  it('uses the admin gradient for SUPER_ADMIN', () => {
     const { getByText } = render(<UserAvatar username="root" role="SUPER_ADMIN" />)
-    // jsdom normalizes hex colors to rgb(): #a78bfa → rgb(167, 139, 250)
-    expect(getByText('R').style.background).toContain('rgb(167, 139, 250)')
+    expect(getByText('R').style.background).toContain('var(--avatar-admin-from)')
   })
 
-  it('uses the accent gradient for other roles', () => {
+  it('uses the default gradient for other roles', () => {
     const { getByText } = render(<UserAvatar username="alice" role="USER" />)
-    expect(getByText('A').style.background).toContain('var(--color-accent)')
+    expect(getByText('A').style.background).toContain('var(--avatar-from)')
   })
 
   it('is hidden from assistive technology', () => {

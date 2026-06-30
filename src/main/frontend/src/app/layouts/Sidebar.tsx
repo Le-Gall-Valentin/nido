@@ -10,8 +10,9 @@ import { isAdminRole, getInitials } from '@/entities/user'
 import type { UserRole } from '@/entities/user'
 import { NAV_CONFIG } from './navConfig'
 
-const SUPER_ADMIN_GRADIENT = 'linear-gradient(135deg, #a78bfa, #818cf8)'
-const USER_GRADIENT = 'linear-gradient(135deg, var(--color-accent), #38bdf8)'
+const BRAND_LOGO_GRADIENT = 'linear-gradient(135deg, var(--brand-icon-from), var(--brand-icon-to))'
+const AVATAR_GRADIENT = 'linear-gradient(135deg, var(--avatar-from), var(--avatar-to))'
+const AVATAR_ADMIN_GRADIENT = 'linear-gradient(135deg, var(--avatar-admin-from), var(--avatar-admin-to))'
 
 interface NavItemProps {
   to: string
@@ -72,7 +73,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   const initials = user ? getInitials(user.username) : '??'
   const roleLabel = user ? t(`user.role.${user.role as UserRole}`) : ''
-  const avatarGradient = user?.role === 'SUPER_ADMIN' ? SUPER_ADMIN_GRADIENT : USER_GRADIENT
+  const avatarGradient = user?.role === 'SUPER_ADMIN' ? AVATAR_ADMIN_GRADIENT : AVATAR_GRADIENT
   const accountActive = pathname.startsWith('/account')
 
   return (
@@ -88,9 +89,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       >
         <div
           className="grid size-[26px] shrink-0 place-items-center rounded-[7px] font-mono text-sm font-bold text-bg-0"
-          style={{ background: USER_GRADIENT }}
+          style={{ background: BRAND_LOGO_GRADIENT }}
         >
-          S
+          B
         </div>
         <span className="text-sm font-semibold tracking-tight text-fg-0">{t('brand')}</span>
       </Link>
@@ -118,7 +119,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       >
         <div
           className="grid size-7 shrink-0 place-items-center rounded-full text-[11px] font-semibold"
-          style={{ background: avatarGradient, color: 'var(--color-bg-0)' }}
+          style={{ background: avatarGradient, color: '#fff' }}
           aria-hidden="true"
         >
           {initials}

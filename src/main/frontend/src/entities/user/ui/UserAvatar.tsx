@@ -1,8 +1,8 @@
 import type { UserRole } from '../model/types'
 import { getInitials } from '../lib/getInitials'
 
-const SUPER_ADMIN_GRADIENT = 'linear-gradient(135deg, #a78bfa, #818cf8)'
-const DEFAULT_GRADIENT = 'linear-gradient(135deg, var(--color-accent), #818cf8)'
+const SUPER_ADMIN_GRADIENT = 'linear-gradient(135deg, var(--avatar-admin-from), var(--avatar-admin-to))'
+const DEFAULT_GRADIENT = 'linear-gradient(135deg, var(--avatar-from), var(--avatar-to))'
 
 interface UserAvatarProps {
   username: string
