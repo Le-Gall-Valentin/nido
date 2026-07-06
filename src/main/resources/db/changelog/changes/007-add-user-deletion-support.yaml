@@ -1,7 +1,7 @@
 databaseChangeLog:
   - changeSet:
       id: 007-add-user-deletion-support
-      author: synapsys
+      author: boilerplate
       changes:
         - addColumn:
             tableName: users

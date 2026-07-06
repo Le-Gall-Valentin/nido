@@ -1,17 +1,17 @@
 spring:
   application:
-    name: synapsys-api
+    name: boilerplate
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
   data:
     redis:
-      url: ${SYNAPSYS_REDIS_URL:redis://localhost:6379}
+      url: ${BOILERPLATE_REDIS_URL:redis://localhost:6379}
 
   datasource:
-    url: ${SYNAPSYS_DB_URL}
-    username: ${SYNAPSYS_DB_USER}
-    password: ${SYNAPSYS_DB_PASSWORD}
+    url: ${BOILERPLATE_DB_URL}
+    username: ${BOILERPLATE_DB_USER}
+    password: ${BOILERPLATE_DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -25,20 +25,20 @@ springdoc:
   swagger-ui:
     enabled: ${SWAGGER_ENABLED:false}
 
-synapsys:
+boilerplate:
   jwt:
-    secret: ${SYNAPSYS_JWT_SECRET}
-    expiry-minutes: ${SYNAPSYS_JWT_EXPIRY_MINUTES:15}
+    secret: ${BOILERPLATE_JWT_SECRET}
+    expiry-minutes: ${BOILERPLATE_JWT_EXPIRY_MINUTES:15}
   refresh-token:
-    expiry-days: ${SYNAPSYS_REFRESH_TOKEN_EXPIRY_DAYS:30}
-    purge-cron: ${SYNAPSYS_REFRESH_TOKEN_PURGE_CRON:0 0 3 * * *}
+    expiry-days: ${BOILERPLATE_REFRESH_TOKEN_EXPIRY_DAYS:30}
+    purge-cron: ${BOILERPLATE_REFRESH_TOKEN_PURGE_CRON:0 0 3 * * *}
   cookie:
-    secure: ${SYNAPSYS_COOKIE_SECURE:true}
+    secure: ${BOILERPLATE_COOKIE_SECURE:true}
   seed:
-    username: ${SYNAPSYS_SEED_USERNAME}
-    email: ${SYNAPSYS_SEED_EMAIL}
-    password: ${SYNAPSYS_SEED_PASSWORD}
+    username: ${BOILERPLATE_SEED_USERNAME}
+    email: ${BOILERPLATE_SEED_EMAIL}
+    password: ${BOILERPLATE_SEED_PASSWORD}
   cors:
-    allowed-origins: ${SYNAPSYS_CORS_ALLOWED_ORIGINS:}
+    allowed-origins: ${BOILERPLATE_CORS_ALLOWED_ORIGINS:}
   encryption:
-    secret: ${SYNAPSYS_ENCRYPTION_SECRET}
+    secret: ${BOILERPLATE_ENCRYPTION_SECRET}

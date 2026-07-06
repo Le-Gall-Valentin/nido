@@ -1,7 +1,7 @@
 databaseChangeLog:
   - changeSet:
       id: 005-add-user-totp-cascade
-      author: synapsys
+      author: boilerplate
       changes:
         - dropForeignKeyConstraint:
             baseTableName: user_totp

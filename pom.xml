@@ -8,11 +8,11 @@
         <version>4.0.6</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.synapsys</groupId>
-    <artifactId>api</artifactId>
+    <groupId>com.boilerplate</groupId>
+    <artifactId>boilerplate</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>synapsys-api</name>
-    <description>synapsys-api</description>
+    <name>boilerplate</name>
+    <description>boilerplate</description>
     <url/>
     <licenses>
         <license/>
