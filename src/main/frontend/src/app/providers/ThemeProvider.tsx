@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { ThemeContext, type Theme } from '@/shared/lib/theme'
 export { useTheme, type Theme } from '@/shared/lib/theme'
 
-const STORAGE_KEY = 'boilerplate:theme'
+const STORAGE_KEY = 'nido:theme'
 
 function isTheme(value: string | null): value is Theme {
   return value === 'light' || value === 'dark' || value === 'system'

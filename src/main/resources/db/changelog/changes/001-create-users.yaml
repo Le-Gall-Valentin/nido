@@ -1,7 +1,7 @@
 databaseChangeLog:
   - changeSet:
       id: 001-create-users
-      author: boilerplate
+      author: nido
       preConditions:
         - onFail: MARK_RAN
         - not:

@@ -15,7 +15,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 const SETUP_DATA = {
-  otpauthUri: 'otpauth://totp/Boilerplate:test@test.com?secret=ABCDEF',
+  otpauthUri: 'otpauth://totp/Nido:test@test.com?secret=ABCDEF',
   secret: 'ABCDEFGHIJKLMNOP',
 }
 

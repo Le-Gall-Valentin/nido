@@ -1,7 +1,7 @@
 databaseChangeLog:
   - changeSet:
       id: 007-add-user-deletion-support
-      author: boilerplate
+      author: nido
       changes:
         - addColumn:
             tableName: users

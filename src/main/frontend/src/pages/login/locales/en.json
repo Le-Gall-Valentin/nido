@@ -1,5 +1,5 @@
 {
-  "brand": "Boilerplate",
+  "brand": "Nido",
   "hero": {
     "headline_1": "Your project,",
     "headline_2": "ready to ship.",
@@ -13,5 +13,5 @@
     "no_account": "Don't have an account?",
     "contact_admin": "Contact your administrator to create one."
   },
-  "footer": "© 2026 Boilerplate"
+  "footer": "© 2026 Nido"
 }

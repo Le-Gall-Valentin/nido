@@ -1,4 +1,4 @@
-const SESSION_HINT_KEY = 'boilerplate.hasSession'
+const SESSION_HINT_KEY = 'nido.hasSession'
 
 export function setSessionHint(): void {
   try {

@@ -1,7 +1,7 @@
 databaseChangeLog:
   - changeSet:
       id: 002-create-refresh-tokens
-      author: boilerplate
+      author: nido
       preConditions:
         - onFail: MARK_RAN
         - not:

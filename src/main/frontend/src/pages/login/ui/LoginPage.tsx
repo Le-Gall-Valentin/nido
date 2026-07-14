@@ -37,7 +37,7 @@ export function LoginPage({ totpApi = defaultTotpApi }: { totpApi?: TotpApi } = 
             >
               B
             </div>
-            <span className="text-[15px] font-semibold tracking-tight text-fg-0">Boilerplate</span>
+            <span className="text-[15px] font-semibold tracking-tight text-fg-0">Nido</span>
           </div>
 
           {step === 'credentials' && (

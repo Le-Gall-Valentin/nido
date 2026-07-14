@@ -1,4 +1,4 @@
-# boilerplate
+# Nido
 
 Spring Boot (Java 21) backend with an embedded React/TypeScript frontend, built with Maven.
 
@@ -31,8 +31,8 @@ cp .env.example .env
 Generate the required secrets:
 
 ```bash
-openssl rand -base64 32   # BOILERPLATE_JWT_SECRET
-openssl rand -base64 32   # BOILERPLATE_ENCRYPTION_SECRET
+openssl rand -base64 32   # NIDO_JWT_SECRET
+openssl rand -base64 32   # NIDO_ENCRYPTION_SECRET
 ```
 
 See `.env.example` for the full list of variables (database, Redis, JWT, CORS, seed admin account…).
@@ -55,7 +55,7 @@ npm install
 npm run dev
 ```
 
-The dev server runs on `http://localhost:5173` (configure `BOILERPLATE_CORS_ALLOWED_ORIGINS` accordingly).
+The dev server runs on `http://localhost:5173` (configure `NIDO_CORS_ALLOWED_ORIGINS` accordingly).
 
 ## Build
 

@@ -8,11 +8,11 @@
         <version>4.0.6</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.boilerplate</groupId>
-    <artifactId>boilerplate</artifactId>
+    <groupId>com.nido</groupId>
+    <artifactId>nido</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>boilerplate</name>
-    <description>boilerplate</description>
+    <name>nido</name>
+    <description>nido</description>
     <url/>
     <licenses>
         <license/>

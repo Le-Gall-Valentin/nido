@@ -1,17 +1,17 @@
 spring:
   application:
-    name: boilerplate
+    name: nido
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
   data:
     redis:
-      url: ${BOILERPLATE_REDIS_URL:redis://localhost:6379}
+      url: ${NIDO_REDIS_URL:redis://localhost:6379}
 
   datasource:
-    url: ${BOILERPLATE_DB_URL}
-    username: ${BOILERPLATE_DB_USER}
-    password: ${BOILERPLATE_DB_PASSWORD}
+    url: ${NIDO_DB_URL}
+    username: ${NIDO_DB_USER}
+    password: ${NIDO_DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -25,20 +25,20 @@ springdoc:
   swagger-ui:
     enabled: ${SWAGGER_ENABLED:false}
 
-boilerplate:
+NIDO:
   jwt:
-    secret: ${BOILERPLATE_JWT_SECRET}
-    expiry-minutes: ${BOILERPLATE_JWT_EXPIRY_MINUTES:15}
+    secret: ${NIDO_JWT_SECRET}
+    expiry-minutes: ${NIDO_JWT_EXPIRY_MINUTES:15}
   refresh-token:
-    expiry-days: ${BOILERPLATE_REFRESH_TOKEN_EXPIRY_DAYS:30}
-    purge-cron: ${BOILERPLATE_REFRESH_TOKEN_PURGE_CRON:0 0 3 * * *}
+    expiry-days: ${NIDO_REFRESH_TOKEN_EXPIRY_DAYS:30}
+    purge-cron: ${NIDO_REFRESH_TOKEN_PURGE_CRON:0 0 3 * * *}
   cookie:
-    secure: ${BOILERPLATE_COOKIE_SECURE:true}
+    secure: ${NIDO_COOKIE_SECURE:true}
   seed:
-    username: ${BOILERPLATE_SEED_USERNAME}
-    email: ${BOILERPLATE_SEED_EMAIL}
-    password: ${BOILERPLATE_SEED_PASSWORD}
+    username: ${NIDO_SEED_USERNAME}
+    email: ${NIDO_SEED_EMAIL}
+    password: ${NIDO_SEED_PASSWORD}
   cors:
-    allowed-origins: ${BOILERPLATE_CORS_ALLOWED_ORIGINS:}
+    allowed-origins: ${NIDO_CORS_ALLOWED_ORIGINS:}
   encryption:
-    secret: ${BOILERPLATE_ENCRYPTION_SECRET}
+    secret: ${NIDO_ENCRYPTION_SECRET}

@@ -1,7 +1,7 @@
 databaseChangeLog:
   - changeSet:
       id: 005-add-user-totp-cascade
-      author: boilerplate
+      author: nido
       changes:
         - dropForeignKeyConstraint:
             baseTableName: user_totp

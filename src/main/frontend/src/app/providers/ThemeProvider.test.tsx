@@ -34,7 +34,7 @@ describe('ThemeProvider', () => {
   })
 
   it('reads initial theme from localStorage', () => {
-    localStorage.setItem('boilerplate:theme', 'dark')
+    localStorage.setItem('nido:theme', 'dark')
     const { result } = renderHook(() => useTheme(), { wrapper })
     expect(result.current.theme).toBe('dark')
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
@@ -44,7 +44,7 @@ describe('ThemeProvider', () => {
     const { result } = renderHook(() => useTheme(), { wrapper })
     act(() => result.current.setTheme('dark'))
     expect(result.current.theme).toBe('dark')
-    expect(localStorage.getItem('boilerplate:theme')).toBe('dark')
+    expect(localStorage.getItem('nido:theme')).toBe('dark')
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
   })
 
@@ -52,21 +52,21 @@ describe('ThemeProvider', () => {
     const { result } = renderHook(() => useTheme(), { wrapper })
     act(() => result.current.setTheme('light'))
     expect(result.current.theme).toBe('light')
-    expect(localStorage.getItem('boilerplate:theme')).toBe('light')
+    expect(localStorage.getItem('nido:theme')).toBe('light')
     expect(document.documentElement.getAttribute('data-theme')).toBe('light')
   })
 
   it('setTheme system: removes data-theme attribute', () => {
-    localStorage.setItem('boilerplate:theme', 'dark')
+    localStorage.setItem('nido:theme', 'dark')
     const { result } = renderHook(() => useTheme(), { wrapper })
     act(() => result.current.setTheme('system'))
     expect(result.current.theme).toBe('system')
-    expect(localStorage.getItem('boilerplate:theme')).toBe('system')
+    expect(localStorage.getItem('nido:theme')).toBe('system')
     expect(document.documentElement.getAttribute('data-theme')).toBeNull()
   })
 
   it('ignores unknown localStorage value and defaults to system', () => {
-    localStorage.setItem('boilerplate:theme', 'purple')
+    localStorage.setItem('nido:theme', 'purple')
     const { result } = renderHook(() => useTheme(), { wrapper })
     expect(result.current.theme).toBe('system')
   })
