@@ -1,9 +1,9 @@
 import type { UserRole } from '../model/types'
 
 const ROLE_PILL_CLASS: Record<UserRole, string> = {
-  SUPER_ADMIN: 'border-accent/20 bg-accent-dim text-accent',
-  ADMIN: 'border-border-2 bg-bg-3 text-fg-2',
-  USER: 'border-status-blue/20 bg-status-blue-dim text-status-blue',
+  SUPER_ADMIN: 'bg-status-green-dim text-status-green',
+  ADMIN: 'bg-status-orange-dim text-status-orange',
+  USER: 'bg-bg-3 text-fg-2',
 }
 
 interface RolePillProps {
@@ -15,7 +15,7 @@ interface RolePillProps {
 export function RolePill({ role, label }: RolePillProps) {
   return (
     <span
-      className={`inline-flex items-center px-[7px] py-[2px] rounded-full border text-[10px] font-semibold font-mono uppercase tracking-[0.04em] whitespace-nowrap ${ROLE_PILL_CLASS[role]}`}
+      className={`inline-flex items-center px-[9px] py-[3px] rounded-[6px] text-[11px] font-bold tracking-[0.02em] whitespace-nowrap ${ROLE_PILL_CLASS[role]}`}
     >
       {label ?? role}
     </span>

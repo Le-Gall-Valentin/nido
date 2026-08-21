@@ -67,7 +67,7 @@ export const TotpDigitInput = forwardRef<TotpDigitInputHandle, TotpDigitInputPro
       <div
         role="group"
         aria-label={groupLabel}
-        className="flex gap-2 my-2"
+        className="flex gap-[9px] my-2"
         onPaste={handlePaste}
       >
         {digits.map((d, i) => (
@@ -82,7 +82,7 @@ export const TotpDigitInput = forwardRef<TotpDigitInputHandle, TotpDigitInputPro
             autoFocus={autoFocus && i === 0}
             autoComplete={i === 0 ? 'one-time-code' : 'off'}
             aria-label={digitLabel(i)}
-            className="flex-1 min-w-0 h-14 bg-bg-2 border border-border-2 rounded-lg text-fg-0 text-center font-mono text-[22px] font-semibold outline-none transition-colors focus:border-accent focus:bg-bg-3 disabled:opacity-50"
+            className="flex-1 min-w-0 aspect-square max-h-14 bg-bg-1 border-[1.5px] border-border rounded-[12px] text-fg-0 text-center text-[22px] font-semibold outline-none transition-colors focus:border-accent disabled:opacity-50"
             onChange={e => setDigit(i, e.target.value)}
             onKeyDown={e => handleKeyDown(i, e)}
           />

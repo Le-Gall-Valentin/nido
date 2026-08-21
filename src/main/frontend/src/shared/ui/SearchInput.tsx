@@ -21,7 +21,7 @@ export function SearchInput({ value, onChange, placeholder, label, clearLabel, c
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-border bg-bg-1 pl-9 pr-9 py-2 text-sm text-fg-0 outline-none placeholder:text-fg-3 transition-all hover:border-border-2 focus:border-accent focus:bg-bg-2 focus:shadow-[0_0_0_3px_var(--color-accent-ring)] [&::-webkit-search-cancel-button]:hidden"
+        className="w-full rounded-[10px] border-[1.5px] border-border bg-bg-1 pl-9 pr-9 py-[9px] text-sm text-fg-0 outline-none placeholder:text-fg-3 transition-all hover:border-border-2 focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-ring)] [&::-webkit-search-cancel-button]:hidden"
       />
       {clearLabel && value.length > 0 && (
         <button
