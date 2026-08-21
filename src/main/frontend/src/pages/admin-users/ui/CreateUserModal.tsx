@@ -68,7 +68,7 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
   return (
     <Dialog open onClose={handleClose} title={t('create.title')} maxWidth="max-w-lg">
       <div className="mb-5">
-        <h3 className="text-base font-semibold text-fg-0">{t('create.title')}</h3>
+        <h3 className="text-xl font-semibold text-fg-0">{t('create.title')}</h3>
       </div>
       <form onSubmit={handleSubmit}>
         <div className="flex flex-col gap-3 sm:flex-row mb-3">
@@ -117,7 +117,7 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
         </div>
 
         <div className="mb-1 flex flex-col gap-2">
-          <label htmlFor="create-role" className="text-xs font-medium text-fg-1">
+          <label htmlFor="create-role" className="text-[13px] font-semibold text-fg-1">
             {t('create.role')}
           </label>
           <select
@@ -125,7 +125,7 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
             value={role}
             onChange={e => setRole(e.target.value as 'USER' | 'ADMIN')}
             disabled={isLoading || roles.length === 1}
-            className="w-full rounded-lg border border-border bg-bg-1 px-3.5 py-3 text-sm text-fg-0 outline-none transition-all hover:border-border-2 focus:border-accent focus:bg-bg-2 focus:shadow-[0_0_0_3px_var(--color-accent-ring)] disabled:opacity-50"
+            className="w-full rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3 py-[11px] text-sm text-fg-0 outline-none transition-all hover:border-border-2 focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-ring)] disabled:opacity-50"
           >
             {roles.map(r => (
               <option key={r} value={r}>{t(`user.role.${r}`, { ns: 'shell' })}</option>

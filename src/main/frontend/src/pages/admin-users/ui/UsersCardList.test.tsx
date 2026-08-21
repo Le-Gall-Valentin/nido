@@ -53,7 +53,7 @@ describe('UsersCardList', () => {
 
   it('shows the "vous" badge on the current user card', () => {
     const { getByText } = setup()
-    expect(getByText('table.you')).toBeDefined()
+    expect(getByText(/table\.you/)).toBeDefined()
   })
 
   it('renders the translated role label per card (shell namespace)', () => {

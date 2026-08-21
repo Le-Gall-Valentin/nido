@@ -1,8 +1,7 @@
 {
-  "title": "Utilisateurs",
-  "subtitle": "Gestion des comptes — un super administrateur reste toujours en place pour garantir l'accès à l'orchestration.",
+  "title": "Administration",
   "action": {
-    "create": "Nouvel utilisateur"
+    "create": "Créer un compte"
   },
   "table": {
     "col_user": "Utilisateur",
@@ -21,7 +20,8 @@
     "btn_reset_totp": "Réinitialiser la 2FA de {{username}}",
     "btn_edit": "Modifier le rôle de {{username}}",
     "btn_delete": "Supprimer le compte",
-    "empty": "Aucun utilisateur trouvé."
+    "empty": "Aucun utilisateur trouvé.",
+    "meta": "{{email}} · membre depuis le {{date}}"
   },
   "close": "Fermer",
   "search": {
@@ -112,11 +112,7 @@
       "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard."
     }
   },
-  "rules": {
-    "title": "Règles de protection des comptes",
-    "super_admin": "Le <strong>super administrateur</strong> ne peut être ni désactivé, ni supprimé — il garantit qu'un administrateur reste toujours présent.",
-    "self": "Aucun utilisateur ne peut désactiver ou supprimer <strong>son propre compte</strong>.",
-    "admin_admin": "Un administrateur ne peut <strong>ni désactiver ni supprimer un autre administrateur</strong> — seul le super administrateur en a le droit. Pour le reste, super admin et admin ont des pouvoirs identiques.",
-    "totp": "La <strong>réinitialisation de la 2FA</strong> est réservée au super administrateur pour les comptes administrateurs ; les administrateurs ne peuvent réinitialiser que la 2FA des utilisateurs standards."
-  }
+  "subtitle_super": "Vous êtes super admin : vous gérez tous les comptes, y compris les administrateurs.",
+  "subtitle_admin": "Vous êtes administrateur : vous pouvez créer des comptes utilisateurs.",
+  "banner": "La création de compte est réservée aux administrateurs — il n'existe pas d'inscription libre dans Nido. Un seul super admin peut exister à la fois."
 }

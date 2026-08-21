@@ -1,8 +1,7 @@
 {
-  "title": "Users",
-  "subtitle": "Account management — a super administrator always remains in place to guarantee access to orchestration.",
+  "title": "Administration",
   "action": {
-    "create": "New user"
+    "create": "Create an account"
   },
   "table": {
     "col_user": "User",
@@ -21,7 +20,8 @@
     "btn_reset_totp": "Reset 2FA for {{username}}",
     "btn_edit": "Edit role of {{username}}",
     "btn_delete": "Delete account",
-    "empty": "No users found."
+    "empty": "No users found.",
+    "meta": "{{email}} · member since {{date}}"
   },
   "close": "Close",
   "search": {
@@ -112,11 +112,7 @@
       "rate_limit": "Too many attempts. Please try again later."
     }
   },
-  "rules": {
-    "title": "Account protection rules",
-    "super_admin": "The <strong>super administrator</strong> cannot be deactivated or deleted — they ensure an administrator is always present.",
-    "self": "No user can deactivate or delete <strong>their own account</strong>.",
-    "admin_admin": "An administrator can <strong>neither deactivate nor delete another administrator</strong> — only the super administrator has that right. Otherwise, super admin and admin have identical powers.",
-    "totp": "<strong>2FA reset</strong> is reserved for the super administrator for admin accounts; administrators can only reset 2FA for standard users."
-  }
+  "subtitle_super": "You are the super admin: you manage every account, including administrators.",
+  "subtitle_admin": "You are an administrator: you can create user accounts.",
+  "banner": "Account creation is reserved for administrators — there is no self-signup in Nido. Only one super admin can exist at a time."
 }

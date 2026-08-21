@@ -42,7 +42,7 @@ export function ResetTotpModal({ user, onClose, onReset, onSuccess }: ResetTotpM
   return (
     <Dialog open onClose={handleClose} title={t('reset_totp.title', { username: user.username })} maxWidth="max-w-[460px]">
       <div className="mb-4">
-        <h3 className="text-base font-semibold text-fg-0 mb-1">
+        <h3 className="text-xl font-semibold text-fg-0 mb-1.5">
           {t('reset_totp.title', { username: user.username })}
         </h3>
         <p className="text-sm text-fg-2 leading-relaxed">{t('reset_totp.body')}</p>

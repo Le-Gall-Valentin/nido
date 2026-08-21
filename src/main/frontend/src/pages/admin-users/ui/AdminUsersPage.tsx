@@ -87,22 +87,26 @@ function AdminUsersPageContent() {
   const showPagination = !isPending && totalPages > 1
 
   return (
-    <div className="py-5 px-6 mx-auto">
+    <div className="mx-auto max-w-[1180px] px-5 py-6 md:px-10 md:py-[34px]">
       {/* Header */}
-      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <div className="flex flex-col gap-3 mb-[22px] sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-fg-0">{t('title')}</h1>
-          <p className="text-sm text-fg-2 mt-1">{t('subtitle')}</p>
+          <h1 className="text-[32px] font-semibold tracking-tight text-fg-0">{t('title')}</h1>
+          <p className="text-[15px] text-fg-2 mt-1">
+            {t(currentUser.role === 'SUPER_ADMIN' ? 'subtitle_super' : 'subtitle_admin')}
+          </p>
         </div>
         <Button
           onClick={() => setCreateOpen(true)}
           className="self-start shrink-0 border-transparent font-semibold"
-          style={CTA_BUTTON_STYLE}
+          style={{ ...CTA_BUTTON_STYLE, boxShadow: 'var(--btn-primary-shadow)' }}
         >
           <Plus className="size-4" />
           {t('action.create')}
         </Button>
       </div>
+
+      <ProtectionRulesPanel />
 
       {loadError && (
         <Alert variant="error" className="mb-4">{t('load_error')}</Alert>
@@ -167,8 +171,6 @@ function AdminUsersPageContent() {
           />
         </div>
       )}
-
-      <ProtectionRulesPanel />
 
       {/* Modals */}
       {createOpen && (

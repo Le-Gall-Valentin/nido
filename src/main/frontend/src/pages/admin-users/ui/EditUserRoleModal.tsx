@@ -57,13 +57,13 @@ export function EditUserRoleModal({ target, caller, onClose, onUpdate, onSuccess
   return (
     <Dialog open onClose={handleClose} title={t('edit_role.title', { username: target.username })}>
       <div className="mb-5">
-        <h3 className="text-base font-semibold text-fg-0">
+        <h3 className="text-xl font-semibold text-fg-0">
           {t('edit_role.title', { username: target.username })}
         </h3>
       </div>
       <form onSubmit={handleSubmit}>
         <div className="mb-1 flex flex-col gap-2">
-          <label htmlFor="edit-role" className="text-xs font-medium text-fg-1">
+          <label htmlFor="edit-role" className="text-[13px] font-semibold text-fg-1">
             {t('edit_role.role')}
           </label>
           <select
@@ -71,7 +71,7 @@ export function EditUserRoleModal({ target, caller, onClose, onUpdate, onSuccess
             value={role}
             onChange={e => setRole(e.target.value as 'USER' | 'ADMIN')}
             disabled={isLoading}
-            className="w-full rounded-lg border border-border bg-bg-1 px-3.5 py-3 text-sm text-fg-0 outline-none transition-all hover:border-border-2 focus:border-accent focus:bg-bg-2 focus:shadow-[0_0_0_3px_var(--color-accent-ring)] disabled:opacity-50"
+            className="w-full rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3 py-[11px] text-sm text-fg-0 outline-none transition-all hover:border-border-2 focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-ring)] disabled:opacity-50"
           >
             {availableRoles.map(r => (
               <option key={r} value={r}>{t(`user.role.${r}`, { ns: 'shell' })}</option>
