@@ -2,18 +2,20 @@
   "brand": "Nido",
   "nav": {
     "label": "Navigation principale",
-    "section": {
-      "admin": "Administration"
-    },
-    "users": "Utilisateurs",
-    "account": "Mon compte"
+    "settings": "Paramètres",
+    "administration": "Administration"
   },
   "topbar": {
     "menu_label": "Ouvrir le menu",
     "search_label": "Rechercher",
     "search_placeholder": "Rechercher…",
-    "refresh_label": "Actualiser",
-    "breadcrumb_nav": "Fil d'Ariane"
+    "profile_label": "Menu du profil",
+    "close_menu_label": "Fermer le menu"
+  },
+  "menu": {
+    "settings": "Paramètres",
+    "logout": "Se déconnecter",
+    "logout_error": "Échec de la déconnexion. Réessayez."
   },
   "palette": {
     "placeholder": "Rechercher une page…",
@@ -24,11 +26,6 @@
     "results_one": "{{count}} résultat",
     "results_other": "{{count}} résultats",
     "type_page": "Page"
-  },
-  "breadcrumb": {
-    "administration": "Administration",
-    "account": "Mon compte",
-    "admin_users": "Utilisateurs"
   },
   "user": {
     "role": {

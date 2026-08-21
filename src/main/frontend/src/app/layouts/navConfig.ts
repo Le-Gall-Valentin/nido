@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Users } from 'lucide-react'
+import { Settings, Shield } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 
 export interface NavItemConfig {
@@ -8,9 +8,9 @@ export interface NavItemConfig {
   icon: LucideIcon
   labelKey: string
   adminOnly?: boolean
-  sectionKey: string
 }
 
 export const NAV_CONFIG: NavItemConfig[] = [
-  { id: 'shell:users', sectionKey: 'nav.section.admin', adminOnly: true, to: ROUTES.ADMIN_USERS, icon: Users, labelKey: 'nav.users' },
+  { id: 'shell:account', to: ROUTES.ACCOUNT, icon: Settings, labelKey: 'nav.settings' },
+  { id: 'shell:users', adminOnly: true, to: ROUTES.ADMIN_USERS, icon: Shield, labelKey: 'nav.administration' },
 ]
