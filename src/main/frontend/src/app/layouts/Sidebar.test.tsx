@@ -32,58 +32,44 @@ function renderSidebar(path = '/administration/users', open = false) {
 
 beforeEach(() => vi.clearAllMocks())
 
-describe('Sidebar — admin section visibility', () => {
-  it('hides administration section for USER role', () => {
+describe('Sidebar — nav items', () => {
+  it('always shows the settings entry', () => {
     withUser('USER')
     renderSidebar()
-    expect(screen.queryByText('nav.section.admin')).toBeNull()
-    expect(screen.queryByText('nav.users')).toBeNull()
+    expect(screen.getByText('nav.settings')).toBeDefined()
   })
 
-  it('hides administration section when user is null', () => {
+  it('hides the administration entry for USER role', () => {
+    withUser('USER')
+    renderSidebar()
+    expect(screen.queryByText('nav.administration')).toBeNull()
+  })
+
+  it('hides the administration entry when user is null', () => {
     withUser(null)
     renderSidebar()
-    expect(screen.queryByText('nav.section.admin')).toBeNull()
+    expect(screen.queryByText('nav.administration')).toBeNull()
   })
 
-  it('shows administration section for ADMIN role', () => {
+  it('shows the administration entry for ADMIN role', () => {
     withUser('ADMIN')
     renderSidebar()
-    expect(screen.getByText('nav.section.admin')).toBeDefined()
-    expect(screen.getByText('nav.users')).toBeDefined()
+    expect(screen.getByText('nav.administration')).toBeDefined()
   })
 
-  it('shows administration section for SUPER_ADMIN role', () => {
+  it('shows the administration entry for SUPER_ADMIN role', () => {
     withUser('SUPER_ADMIN')
     renderSidebar()
-    expect(screen.getByText('nav.section.admin')).toBeDefined()
-    expect(screen.getByText('nav.users')).toBeDefined()
+    expect(screen.getByText('nav.administration')).toBeDefined()
   })
 })
 
-describe('Sidebar — user footer', () => {
-  it('shows initials from username split on dots', () => {
-    withUser('USER') // username = 'alice.dupont'
-    renderSidebar()
-    expect(screen.getByText('AD')).toBeDefined()
-  })
-
-  it('shows the correct role label key', () => {
-    withUser('ADMIN')
-    renderSidebar()
-    expect(screen.getByText('user.role.ADMIN')).toBeDefined()
-  })
-
-  it('shows SUPER_ADMIN role label key', () => {
-    withUser('SUPER_ADMIN')
-    renderSidebar()
-    expect(screen.getByText('user.role.SUPER_ADMIN')).toBeDefined()
-  })
-
-  it('shows USER role label key', () => {
+describe('Sidebar — brand', () => {
+  it('renders the brand name linking to the account page', () => {
     withUser('USER')
     renderSidebar()
-    expect(screen.getByText('user.role.USER')).toBeDefined()
+    const link = screen.getByRole('link', { name: /brand/ })
+    expect(link.getAttribute('href')).toBe('/account')
   })
 })
 

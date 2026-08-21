@@ -1,31 +1,33 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { Topbar } from './Topbar'
+import type { AuthState, AuthActions } from '@/features/auth/model/authStore'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-vi.mock('./useBreadcrumbs', () => ({
-  useBreadcrumbs: vi.fn(),
-}))
+vi.mock('@/features/auth', () => ({ useAuth: vi.fn() }))
 
-import { useBreadcrumbs } from './useBreadcrumbs'
-const mockUseBreadcrumbs = vi.mocked(useBreadcrumbs)
+import { useAuth } from '@/features/auth'
+const mockUseAuth = vi.mocked(useAuth)
 
-function setup(
-  crumbs = [{ label: 'Espace de travail', to: '/workspace' }, { label: 'Tableau de bord' }],
+function setup({
+  user = { id: '1', username: 'alice.dupont', email: 'alice@example.fr', role: 'USER' as const },
+  logout = vi.fn().mockResolvedValue(undefined),
   onMenuOpen = vi.fn(),
-  onSearchOpen = vi.fn()
-) {
-  mockUseBreadcrumbs.mockReturnValue(crumbs)
+  onSearchOpen = vi.fn(),
+} = {}) {
+  mockUseAuth.mockImplementation(
+    (selector) => selector({ user, logout } as unknown as AuthState & AuthActions)
+  )
   render(
     <MemoryRouter>
       <Topbar onMenuOpen={onMenuOpen} onSearchOpen={onSearchOpen} />
     </MemoryRouter>
   )
-  return { onMenuOpen, onSearchOpen }
+  return { onMenuOpen, onSearchOpen, logout }
 }
 
 beforeEach(() => vi.clearAllMocks())
@@ -48,44 +50,69 @@ describe('Topbar — search', () => {
   })
 })
 
-describe('Topbar — breadcrumbs', () => {
-  it('renders all breadcrumb labels', () => {
-    setup([
-      { label: 'Espace de travail', to: '/workspace' },
-      { label: 'Applications', to: '/workspace/applications' },
-      { label: 'my-app' },
-    ])
-    expect(screen.getByText('Espace de travail')).toBeDefined()
-    expect(screen.getByText('Applications')).toBeDefined()
-    expect(screen.getByText('my-app')).toBeDefined()
-  })
-
-  it('renders intermediate labels as links', () => {
-    setup([
-      { label: 'Espace de travail', to: '/workspace' },
-      { label: 'Applications', to: '/workspace/applications' },
-      { label: 'my-app' },
-    ])
-    const link = screen.getByRole('link', { name: 'Espace de travail' })
-    expect(link.getAttribute('href')).toBe('/workspace')
-  })
-
-  it('renders the last breadcrumb as plain text (not a link)', () => {
-    setup([{ label: 'Espace de travail', to: '/workspace' }, { label: 'Dashboard' }])
-    // 'Dashboard' should not be a link
-    expect(screen.queryByRole('link', { name: 'Dashboard' })).toBeNull()
-    expect(screen.getByText('Dashboard')).toBeDefined()
-  })
-
-  it('renders separator / between breadcrumbs', () => {
-    setup([{ label: 'A', to: '/a' }, { label: 'B' }])
-    expect(screen.getByText('/')).toBeDefined()
-  })
-})
-
-describe('Topbar — refresh', () => {
-  it('renders the refresh button', () => {
+describe('Topbar — profile menu', () => {
+  it('is closed by default', () => {
     setup()
-    expect(screen.getByLabelText('topbar.refresh_label')).toBeDefined()
+    expect(screen.queryByText('menu.logout')).toBeNull()
+  })
+
+  it('opens on avatar click and shows the user identity', () => {
+    setup()
+    fireEvent.click(screen.getByLabelText('topbar.profile_label'))
+    expect(screen.getByText('alice.dupont')).toBeDefined()
+    expect(screen.getByText('alice@example.fr')).toBeDefined()
+  })
+
+  it('links to the account page', () => {
+    setup()
+    fireEvent.click(screen.getByLabelText('topbar.profile_label'))
+    const link = screen.getByRole('link', { name: /menu\.settings/ })
+    expect(link.getAttribute('href')).toBe('/account')
+  })
+
+  it('calls logout when the sign-out item is clicked', async () => {
+    const { logout } = setup()
+    fireEvent.click(screen.getByLabelText('topbar.profile_label'))
+    fireEvent.click(screen.getByText('menu.logout'))
+    await waitFor(() => expect(logout).toHaveBeenCalledOnce())
+  })
+
+  it('shows an error when logout fails', async () => {
+    setup({ logout: vi.fn().mockRejectedValue(new Error('boom')) })
+    fireEvent.click(screen.getByLabelText('topbar.profile_label'))
+    fireEvent.click(screen.getByText('menu.logout'))
+    expect(await screen.findByRole('alert')).toBeDefined()
+  })
+
+  it('closes via the backdrop', () => {
+    setup()
+    fireEvent.click(screen.getByLabelText('topbar.profile_label'))
+    fireEvent.click(screen.getByLabelText('topbar.close_menu_label'))
+    expect(screen.queryByText('menu.logout')).toBeNull()
+  })
+
+  it('closes on Escape', () => {
+    setup()
+    fireEvent.click(screen.getByLabelText('topbar.profile_label'))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByText('menu.logout')).toBeNull()
+  })
+
+  it('renders no profile menu when user is null', () => {
+    setup({ user: null as never })
+    expect(screen.queryByLabelText('topbar.profile_label')).toBeNull()
+  })
+
+  it('prevents double submit while logout is in progress', async () => {
+    let resolve!: () => void
+    const logout = vi.fn().mockImplementation(
+      () => new Promise<void>((r) => { resolve = r })
+    )
+    setup({ logout })
+    fireEvent.click(screen.getByLabelText('topbar.profile_label'))
+    fireEvent.click(screen.getByText('menu.logout'))
+    fireEvent.click(screen.getByText('menu.logout'))
+    resolve()
+    await waitFor(() => expect(logout).toHaveBeenCalledOnce())
   })
 })
