@@ -1,8 +1,7 @@
 {
+  "kicker": "Settings",
   "title": "My account",
   "subtitle": "Manage your personal information and password.",
-  "action": { "logout": "Sign out" },
-  "error": { "logout_failed": "Sign out failed. Please try again." },
   "member_since": "Member since {{date}}",
   "profile": {
     "title": "Personal information",

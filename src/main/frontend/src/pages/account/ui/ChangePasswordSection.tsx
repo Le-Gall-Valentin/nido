@@ -60,12 +60,12 @@ export function ChangePasswordSection({ onChangePassword }: ChangePasswordSectio
   }
 
   return (
-    <section id="section-password" className="rounded-md border border-border bg-bg-1 mb-4 overflow-hidden">
-      <div className="px-3.5 py-[10px] border-b border-border">
-        <div className="text-xs font-semibold text-fg-0 tracking-tight">{t('password.title')}</div>
-        <div className="text-[11px] text-fg-2 mt-px">{t('password.subtitle')}</div>
+    <section id="section-password" className="rounded-2xl border border-border bg-bg-1 mb-4 overflow-hidden">
+      <div className="px-7 pt-6">
+        <h3 className="text-lg font-semibold text-fg-0">{t('password.title')}</h3>
+        <p className="text-[13.5px] text-fg-2 mt-0.5">{t('password.subtitle')}</p>
       </div>
-      <div className="p-3.5">
+      <div className="px-7 py-5">
         <form onSubmit={handleSubmit}>
           <div className="mb-3 max-w-[360px]">
             <Input

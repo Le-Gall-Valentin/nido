@@ -1,6 +1,5 @@
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { CTA_BUTTON_STYLE } from '@/shared/ui'
 import { useTheme, type Theme, useLanguage, type Language } from '@/shared/lib'
 
 interface OptionButtonProps {
@@ -15,12 +14,11 @@ function OptionButton({ active, onClick, children }: OptionButtonProps) {
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium transition-colors ${
+      className={`flex items-center gap-1.5 px-[15px] py-[9px] rounded-[9px] border-[1.5px] text-[13.5px] font-semibold transition-colors ${
         active
-          ? 'border-transparent'
-          : 'border-border-2 bg-bg-2 text-fg-1 hover:bg-bg-3 hover:text-fg-0'
+          ? 'border-accent bg-accent-dim text-status-green'
+          : 'border-border bg-bg-1 text-fg-2 hover:text-fg-0'
       }`}
-      style={active ? CTA_BUTTON_STYLE : undefined}
     >
       {children}
     </button>
@@ -39,20 +37,20 @@ export function PreferencesSection() {
   ]
 
   const languageOptions: { value: Language; label: string }[] = [
-    { value: 'fr', label: 'FR' },
-    { value: 'en', label: 'EN' },
+    { value: 'fr', label: 'Français' },
+    { value: 'en', label: 'English' },
   ]
 
   return (
-    <section id="section-preferences" className="rounded-md border border-border bg-bg-1 mb-4 overflow-hidden">
-      <div className="px-3.5 py-[10px] border-b border-border">
-        <div className="text-xs font-semibold text-fg-0 tracking-tight">{t('preferences.title')}</div>
-        <div className="text-[11px] text-fg-2 mt-px">{t('preferences.subtitle')}</div>
+    <section id="section-preferences" className="rounded-2xl border border-border bg-bg-1 mb-4 overflow-hidden">
+      <div className="px-7 pt-6">
+        <h3 className="text-lg font-semibold text-fg-0">{t('preferences.title')}</h3>
+        <p className="text-[13.5px] text-fg-2 mt-0.5">{t('preferences.subtitle')}</p>
       </div>
-      <div className="p-3.5 flex flex-col gap-3.5">
-        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <span className="text-xs text-fg-1 font-medium">{t('preferences.theme_label')}</span>
-          <div className="flex gap-1">
+      <div className="px-7 py-5 flex flex-col gap-[22px]">
+        <div className="flex flex-col gap-2.5">
+          <span className="text-sm text-fg-0 font-semibold">{t('preferences.theme_label')}</span>
+          <div className="flex gap-[9px] flex-wrap">
             {themeOptions.map(({ value, icon, labelKey }) => (
               <OptionButton key={value} active={theme === value} onClick={() => setTheme(value)}>
                 {icon}
@@ -61,9 +59,10 @@ export function PreferencesSection() {
             ))}
           </div>
         </div>
-        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <span className="text-xs text-fg-1 font-medium">{t('preferences.language_label')}</span>
-          <div className="flex gap-1">
+        <div className="h-px bg-bg-3 -my-[5px]" aria-hidden="true" />
+        <div className="flex flex-col gap-2.5">
+          <span className="text-sm text-fg-0 font-semibold">{t('preferences.language_label')}</span>
+          <div className="flex gap-[9px] flex-wrap">
             {languageOptions.map(({ value, label }) => (
               <OptionButton key={value} active={language === value} onClick={() => setLanguage(value)}>
                 {label}
