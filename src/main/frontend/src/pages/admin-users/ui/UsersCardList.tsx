@@ -32,9 +32,9 @@ export function UsersCardList({
     return (
       <div className="flex flex-col gap-2.5">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="rounded-lg border border-border bg-bg-1 p-3.5">
+          <div key={i} className="rounded-2xl border border-border bg-bg-1 p-4">
             <div className="flex items-center gap-3">
-              <div className="size-9 shrink-0 rounded-md bg-bg-3 animate-pulse" />
+              <div className="size-10 shrink-0 rounded-full bg-bg-3 animate-pulse" />
               <div className="flex-1 space-y-2">
                 <div className="h-3.5 w-28 bg-bg-3 animate-pulse rounded" />
                 <div className="h-3 w-40 bg-bg-3 animate-pulse rounded" />
@@ -48,7 +48,7 @@ export function UsersCardList({
 
   if (users.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-bg-1 px-4 py-8 text-center text-sm text-fg-2">
+      <div className="rounded-2xl border border-border bg-bg-1 px-4 py-8 text-center text-sm text-fg-2">
         {t('table.empty')}
       </div>
     )
@@ -103,29 +103,27 @@ function UserCard({
   const isMe = user.id === currentUser.id
 
   return (
-    <div className={`rounded-lg border border-border bg-bg-1 p-3.5 ${isMe ? 'ring-1 ring-accent/20' : ''}`}>
+    <div className={`rounded-2xl border border-border bg-bg-1 p-4 ${isMe ? 'ring-1 ring-accent/20' : ''}`}>
       {/* Identity */}
       <div className="flex items-start gap-3">
-        <UserAvatar username={user.username} role={user.role} className="size-9 rounded-md text-xs" />
+        <UserAvatar username={user.username} role={user.role} className="size-10 rounded-full text-xs" />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-fg-0 truncate">{user.username}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[14.5px] font-semibold text-fg-0 truncate">{user.username}</span>
             {isMe && (
-              <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-bg-3 text-fg-2 font-mono">
-                {youLabel}
-              </span>
+              <span className="shrink-0 text-xs font-medium text-fg-3">({youLabel})</span>
             )}
           </div>
-          <div className="font-mono text-xs text-fg-2 truncate">{user.email}</div>
+          <div className="text-[12.5px] text-fg-3 truncate">{user.email}</div>
         </div>
         <RolePill role={user.role} label={roleLabel} />
       </div>
 
       {/* Status / 2FA / created */}
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-bg-3 pt-3">
         <UserStatusToggle user={user} currentUser={currentUser} onToggle={onToggleActive} isPending={isToggling} />
         <TotpBadge enabled={user.totpEnabled} />
-        <span className="font-mono text-[11px] text-fg-3">
+        <span className="text-[12.5px] text-fg-3">
           {createdLabel} · {createdDate}
         </span>
       </div>

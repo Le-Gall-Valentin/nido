@@ -9,7 +9,7 @@ export function TotpBadge({ enabled }: TotpBadgeProps) {
 
   if (enabled) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-status-green/20 bg-status-green-dim text-[11px] font-medium text-status-green">
+      <span className="inline-flex items-center gap-1.5 px-[9px] py-[3px] rounded-[6px] bg-status-green-dim text-[11px] font-semibold text-status-green">
         <span className="size-1.5 rounded-full bg-status-green" aria-hidden="true" />
         {t('table.totp_on')}
       </span>
@@ -17,7 +17,7 @@ export function TotpBadge({ enabled }: TotpBadgeProps) {
   }
 
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-border bg-bg-2 text-[11px] font-medium text-fg-2">
+    <span className="inline-flex items-center px-[9px] py-[3px] rounded-[6px] bg-bg-3 text-[11px] font-semibold text-fg-2">
       {t('table.totp_off')}
     </span>
   )
