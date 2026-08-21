@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react'
-import { AlertTriangle, Check, Eye, EyeOff } from 'lucide-react'
+import { AlertTriangle, Eye, EyeOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
@@ -114,27 +114,27 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
 
   return (
     <div>
-      <div className="mb-8">
-        <h2 id={headingId} className="mb-2 text-[24px] lg:text-[28px] font-semibold tracking-tight text-fg-0">
+      <div className="mb-[22px]">
+        <h2 id={headingId} className="mb-1.5 text-[24px] lg:text-[27px] font-semibold tracking-tight text-fg-0">
           {t('setup.title')}
         </h2>
-        <p className="text-sm text-fg-2">{t('setup.subtitle')}</p>
+        <p className="text-[14.5px] leading-relaxed text-fg-2">{t('setup.subtitle')}</p>
       </div>
 
-      <div className="flex gap-4 items-center rounded-lg border border-border bg-bg-2 p-3.5">
-        <div className="size-35 shrink-0 bg-white p-2 rounded-md flex items-center justify-center">
+      <div className="flex gap-[18px] items-center rounded-[14px] border-[1.5px] border-border bg-bg-1 p-4">
+        <div className="shrink-0 bg-white p-2 rounded-[10px] flex items-center justify-center">
           <QRCodeSVG value={setupData.otpauthUri} size={124} level="M" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] uppercase tracking-[0.08em] text-fg-3 font-semibold mb-1.5">
+          <div className="text-xs font-semibold text-fg-2 mb-[5px]">
             {t('setup.manual_label')}
           </div>
-          <div className="relative">
+          <div className="flex items-center gap-1.5">
             <div
               // select-none prevents accidental clipboard access when hidden.
               // When visible, the secret IS in the DOM as plain text (unavoidable for
               // copy-paste UX). JS/extensions can access it — accepted trade-off.
-              className={`text-[13px] text-fg-0 bg-bg-3 border border-border rounded p-2 break-words leading-relaxed font-mono${isSecretVisible ? '' : ' select-none'}`}
+              className={`flex-1 min-w-0 text-[12.5px] text-fg-1 bg-bg-3 rounded-[7px] px-2 py-[5px] break-words leading-relaxed font-mono${isSecretVisible ? '' : ' select-none'}`}
               aria-label={t('setup.manual_label')}
             >
               {isSecretVisible ? groupedSecret : '••••••••••••••••'}
@@ -142,10 +142,10 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
             <button
               type="button"
               onClick={() => setIsSecretVisible(v => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-fg-2 hover:text-fg-0"
+              className="grid size-[30px] shrink-0 place-items-center rounded-[7px] bg-accent-dim text-accent"
               aria-label={isSecretVisible ? t('setup.hide_secret') : t('setup.show_secret')}
             >
-              {isSecretVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+              {isSecretVisible ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
         </div>
@@ -165,7 +165,7 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
         {errorKey && (
           <div
             role="alert"
-            className="flex items-center gap-2 rounded-lg border border-status-red/25 bg-status-red-dim px-3 py-2.5 text-sm text-status-red mb-3"
+            className="flex items-center gap-2 rounded-[10px] bg-status-red-dim px-3.5 py-[11px] text-[13.5px] text-status-red mb-3"
           >
             <AlertTriangle className="size-3.5 shrink-0" />
             {t(errorKey)}
@@ -175,10 +175,9 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
         <Button
           type="submit"
           isLoading={isLoading}
-          className="mt-2 w-full border-transparent py-3 font-semibold active:translate-y-px disabled:cursor-wait"
+          className="mt-2 w-full rounded-[11px] border-transparent py-3.5 text-[15px] font-semibold active:translate-y-px disabled:cursor-wait"
           style={CTA_BUTTON_STYLE}
         >
-          <Check className="size-3.5" />
           {t('setup.submit')}
         </Button>
 

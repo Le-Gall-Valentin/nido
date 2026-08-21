@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { LoginForm } from '@/features/auth'
 import { TotpVerifyStep, TotpEnrollProposal, TotpSetupFlow, totpApi as defaultTotpApi } from '@/features/totp'
 import type { ITotpVerifyApi, ITotpEnrollApi } from '@/features/totp'
+import { NidoMark } from '@/shared/ui'
 import { LoginBrandPanel } from './LoginBrandPanel'
 import { useLoginFlow } from './useLoginFlow'
 
@@ -32,12 +33,17 @@ export function LoginPage({ totpApi = defaultTotpApi }: { totpApi?: TotpApi } = 
         <div className="mx-auto w-full max-w-95">
           <div className="mb-8 flex items-center gap-2.5 md:hidden" data-testid="mobile-header">
             <div
-              className="grid size-8 shrink-0 place-items-center rounded-lg font-mono text-sm font-bold text-bg-0"
+              className="grid size-8 shrink-0 place-items-center rounded-[10px] text-white"
               style={{ background: 'linear-gradient(135deg, var(--brand-icon-from), var(--brand-icon-to))' }}
             >
-              B
+              <NidoMark size={17} />
             </div>
-            <span className="text-[15px] font-semibold tracking-tight text-fg-0">Nido</span>
+            <span
+              className="text-[17px] font-bold tracking-tight text-fg-0"
+              style={{ fontFamily: 'var(--font-family-display)' }}
+            >
+              Nido
+            </span>
           </div>
 
           {step === 'credentials' && (

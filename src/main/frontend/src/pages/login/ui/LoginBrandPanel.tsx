@@ -1,18 +1,9 @@
 import { useTranslation } from 'react-i18next'
+import { Lock } from 'lucide-react'
+import { NidoMark } from '@/shared/ui'
 
 const BRAND_PANEL_BG =
-  'radial-gradient(900px 600px at 20% 20%, var(--brand-accent-glow-1), transparent 60%), radial-gradient(700px 600px at 80% 80%, var(--brand-accent-glow-2), transparent 60%), linear-gradient(145deg, var(--brand-panel-from) 0%, var(--brand-panel-to) 100%)'
-
-const GRID_BG_IMAGE =
-  'linear-gradient(var(--brand-grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--brand-grid-line) 1px, transparent 1px)'
-
-const GRID_MASK =
-  'radial-gradient(ellipse 80% 60% at 50% 50%, #000 30%, transparent 80%)'
-
-const BRAND_ICON_BG = 'linear-gradient(135deg, var(--brand-icon-from), var(--brand-icon-to))'
-
-const BRAND_ICON_SHADOW =
-  '0 1px 0 rgba(255,255,255,0.15) inset, 0 2px 6px var(--brand-icon-glow)'
+  'linear-gradient(160deg, var(--brand-panel-from) 0%, var(--brand-panel-to) 100%)'
 
 const HERO_TEXT_BG = 'linear-gradient(135deg, var(--brand-hero-text-from) 0%, var(--brand-hero-text-to) 100%)'
 
@@ -22,39 +13,42 @@ export function LoginBrandPanel() {
   return (
     <div
       aria-hidden="true"
-      className="relative hidden flex-col overflow-hidden border-r border-border md:flex"
+      className="relative hidden flex-col overflow-hidden md:flex"
       style={{ background: BRAND_PANEL_BG }}
     >
-      {/* Grille décorative */}
+      {/* Cercles décoratifs */}
       <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage: GRID_BG_IMAGE,
-          backgroundSize: '32px 32px',
-          maskImage: GRID_MASK,
-          WebkitMaskImage: GRID_MASK,
-        }}
+        className="pointer-events-none absolute -bottom-20 -right-20 size-80 rounded-full"
+        style={{ background: 'var(--brand-accent-glow-1)' }}
+      />
+      <div
+        className="pointer-events-none absolute right-10 top-20 size-36 rounded-full"
+        style={{ background: 'var(--brand-accent-glow-2)' }}
       />
 
-      <div className="relative mx-auto flex h-full w-full max-w-[560px] flex-col px-11 py-10">
+      <div className="relative mx-auto flex h-full w-full max-w-[560px] flex-col justify-between px-11 py-10">
         {/* Brand */}
         <div className="flex items-center gap-3">
           <div
-            className="grid size-9 shrink-0 place-items-center rounded-xl font-mono text-base font-bold text-bg-0"
-            style={{ background: BRAND_ICON_BG, boxShadow: BRAND_ICON_SHADOW }}
+            className="grid size-10 shrink-0 place-items-center rounded-xl"
+            style={{ background: 'var(--brand-panel-title)', color: 'var(--brand-panel-from)' }}
           >
-            B
+            <NidoMark size={22} />
           </div>
-          <span className="text-[17px] font-semibold tracking-tight text-fg-0">
+          <span
+            className="text-2xl font-bold tracking-tight"
+            style={{ fontFamily: 'var(--font-family-display)', color: 'var(--brand-panel-title)' }}
+          >
             {t('brand')}
           </span>
         </div>
 
         {/* Hero */}
-        <div className="mt-16">
+        <div className="max-w-[420px]">
           <p
             className="mb-4 text-[26px] lg:text-[34px] font-semibold leading-[1.1] tracking-tight"
             style={{
+              fontFamily: 'var(--font-family-display)',
               background: HERO_TEXT_BG,
               WebkitBackgroundClip: 'text',
               backgroundClip: 'text',
@@ -65,9 +59,18 @@ export function LoginBrandPanel() {
             <br />
             {t('hero.headline_2')}
           </p>
-          <p className="max-w-[420px] text-[15px] leading-relaxed text-fg-1">
+          <p className="text-[15px] leading-relaxed" style={{ color: 'var(--brand-panel-desc)' }}>
             {t('hero.description')}
           </p>
+        </div>
+
+        {/* Réassurance */}
+        <div className="flex items-center gap-7 text-sm" style={{ color: 'var(--brand-panel-desc)' }}>
+          <span className="flex items-center gap-1.5">
+            <Lock size={14} />
+            {t('panel.encrypted')}
+          </span>
+          <span>{t('panel.twofa')}</span>
         </div>
       </div>
     </div>

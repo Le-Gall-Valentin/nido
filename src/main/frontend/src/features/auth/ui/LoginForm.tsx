@@ -75,7 +75,7 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
         <div
           id={errorAlertId}
           role="alert"
-          className="flex items-center gap-2 rounded-lg border border-status-red/25 bg-status-red-dim px-3 py-2.5 text-sm text-status-red"
+          className="flex items-center gap-2 rounded-[10px] bg-status-red-dim px-3.5 py-[11px] text-[13.5px] text-status-red"
         >
           <AlertTriangle className="size-3.5 shrink-0" />
           {errorMessage}
@@ -92,6 +92,7 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
         required
         autoComplete="username"
         autoFocus
+        className="rounded-[11px] px-[15px] py-[13px] text-[15px]"
         aria-invalid={errorKind !== null}
         aria-describedby={errorKind !== null ? errorAlertId : undefined}
       />
@@ -108,6 +109,7 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
         spellCheck={false}
         autoCorrect="off"
         autoCapitalize="off"
+        className="rounded-[11px] px-[15px] py-[13px] text-[15px]"
         aria-invalid={errorKind !== null}
         aria-describedby={errorKind !== null ? errorAlertId : undefined}
         suffix={
@@ -125,7 +127,7 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
       <Button
         type="submit"
         isLoading={isLoading}
-        className="mt-2 w-full border-transparent py-3 font-semibold active:translate-y-px disabled:cursor-wait"
+        className="mt-2 w-full rounded-[11px] border-transparent py-3.5 text-[15px] font-semibold active:translate-y-px disabled:cursor-wait"
         style={{ ...CTA_BUTTON_STYLE, boxShadow: CTA_BUTTON_SHADOW }}
       >
         {t('action.submit')}

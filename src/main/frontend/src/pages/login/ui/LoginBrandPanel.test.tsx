@@ -7,14 +7,16 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('LoginBrandPanel', () => {
-  it('renders the "B" monogram', () => {
-    render(<LoginBrandPanel />)
-    expect(screen.getByText('B')).not.toBeNull()
+  it('renders the brand name and the NidoMark', () => {
+    const { container } = render(<LoginBrandPanel />)
+    expect(screen.getByText('brand')).not.toBeNull()
+    expect(container.querySelector('svg')).not.toBeNull()
   })
 
-  it('does not render the network artwork svg', () => {
-    const { container } = render(<LoginBrandPanel />)
-    expect(container.querySelector('svg')).toBeNull()
+  it('renders the hero copy', () => {
+    render(<LoginBrandPanel />)
+    expect(screen.getByText(/hero\.headline_1/)).not.toBeNull()
+    expect(screen.getByText('hero.description')).not.toBeNull()
   })
 
   it('does not render the quote block', () => {

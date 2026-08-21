@@ -1,9 +1,13 @@
 {
   "brand": "Nido",
   "hero": {
-    "headline_1": "Your project,",
-    "headline_2": "ready to ship.",
-    "description": "A secure, batteries-included foundation to build and launch your application faster."
+    "headline_1": "Your whole household,",
+    "headline_2": "all in one place.",
+    "description": "Finances, tasks, documents, appointments. For yourself or shared with the people who matter. Calm, tidy, within reach."
+  },
+  "panel": {
+    "encrypted": "Encrypted and secure",
+    "twofa": "2FA required"
   },
   "form": {
     "title": "Welcome back",

@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react'
-import { AlertTriangle, Check, Info } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, Info, Lock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { TotpDigitInput } from './TotpDigitInput'
@@ -74,11 +74,25 @@ export function TotpVerifyStep({ username, api, onVerified, onBack }: TotpVerify
 
   return (
     <div>
-      <div className="mb-8">
-        <h2 id={headingId} className="mb-2 text-[24px] lg:text-[28px] font-semibold tracking-tight text-fg-0">
+      <button
+        type="button"
+        onClick={onBack}
+        disabled={isLoading}
+        className="mb-5 flex items-center gap-1 bg-transparent border-0 p-0 text-[13.5px] text-fg-2 cursor-pointer hover:text-fg-0"
+      >
+        <ChevronLeft className="size-[15px]" />
+        {t('verify.back')}
+      </button>
+
+      <div className="mb-[18px] grid size-[46px] place-items-center rounded-[13px] bg-accent-dim text-accent">
+        <Lock className="size-6" />
+      </div>
+
+      <div className="mb-6">
+        <h2 id={headingId} className="mb-1.5 text-[24px] lg:text-[28px] font-semibold tracking-tight text-fg-0">
           {t('verify.title')}
         </h2>
-        <p className="text-sm text-fg-2">
+        <p className="text-[15px] text-fg-2">
           {t('verify.subtitle', { username })}
         </p>
       </div>
@@ -97,7 +111,7 @@ export function TotpVerifyStep({ username, api, onVerified, onBack }: TotpVerify
         {errorKey && (
           <div
             role="alert"
-            className="flex items-center gap-2 rounded-lg border border-status-red/25 bg-status-red-dim px-3 py-2.5 text-sm text-status-red mb-3"
+            className="flex items-center gap-2 rounded-[10px] bg-status-red-dim px-3.5 py-[11px] text-[13.5px] text-status-red mb-3"
           >
             <AlertTriangle className="size-3.5 shrink-0" />
             {t(errorKey, rateLimitSeconds !== null ? { seconds: rateLimitSeconds } : undefined)}
@@ -107,21 +121,11 @@ export function TotpVerifyStep({ username, api, onVerified, onBack }: TotpVerify
         <Button
           type="submit"
           isLoading={isLoading}
-          className="mt-2 w-full border-transparent py-3 font-semibold active:translate-y-px disabled:cursor-wait"
+          className="mt-2 w-full rounded-[11px] border-transparent py-3.5 text-[15px] font-semibold active:translate-y-px disabled:cursor-wait"
           style={CTA_BUTTON_STYLE}
         >
-          <Check className="size-3.5" />
           {t('verify.submit')}
         </Button>
-
-        <button
-          type="button"
-          onClick={onBack}
-          disabled={isLoading}
-          className="w-full mt-2 bg-transparent border-0 text-fg-2 text-xs cursor-pointer py-1.5 hover:text-fg-0 text-center"
-        >
-          {t('verify.back')}
-        </button>
       </form>
 
       <div className="mt-7 flex gap-2 items-start text-[13px] text-fg-2">

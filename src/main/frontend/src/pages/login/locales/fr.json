@@ -1,9 +1,13 @@
 {
   "brand": "Nido",
   "hero": {
-    "headline_1": "Votre projet,",
-    "headline_2": "prêt à être livré.",
-    "description": "Une base sécurisée et complète pour construire et lancer votre application plus rapidement."
+    "headline_1": "Toute la vie du foyer,",
+    "headline_2": "au même endroit.",
+    "description": "Finances, tâches, documents, rendez-vous. Pour vous seul ou partagés avec ceux qui comptent. Calme, ordonné, à portée de main."
+  },
+  "panel": {
+    "encrypted": "Chiffré et sécurisé",
+    "twofa": "2FA obligatoire"
   },
   "form": {
     "title": "Bon retour",
