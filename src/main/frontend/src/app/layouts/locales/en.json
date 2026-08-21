@@ -2,18 +2,20 @@
   "brand": "Nido",
   "nav": {
     "label": "Main navigation",
-    "section": {
-      "admin": "Administration"
-    },
-    "users": "Users",
-    "account": "My account"
+    "settings": "Settings",
+    "administration": "Administration"
   },
   "topbar": {
     "menu_label": "Open menu",
     "search_label": "Search",
     "search_placeholder": "Search…",
-    "refresh_label": "Refresh",
-    "breadcrumb_nav": "Breadcrumb"
+    "profile_label": "Profile menu",
+    "close_menu_label": "Close menu"
+  },
+  "menu": {
+    "settings": "Settings",
+    "logout": "Sign out",
+    "logout_error": "Sign-out failed. Please try again."
   },
   "palette": {
     "placeholder": "Search for a page…",
@@ -24,11 +26,6 @@
     "results_one": "{{count}} result",
     "results_other": "{{count}} results",
     "type_page": "Page"
-  },
-  "breadcrumb": {
-    "administration": "Administration",
-    "account": "My account",
-    "admin_users": "Users"
   },
   "user": {
     "role": {
