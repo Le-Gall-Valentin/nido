@@ -84,9 +84,10 @@ describe('LoginPage', () => {
       expect(screen.getByText('footer')).not.toBeNull()
     })
 
-    it('renders the "B" monogram in the mobile header', () => {
+    it('renders the Nido brand in the mobile header', () => {
       const mobileHeader = screen.getByTestId('mobile-header')
-      expect(within(mobileHeader).getByText('B')).not.toBeNull()
+      expect(within(mobileHeader).getByText('Nido')).not.toBeNull()
+      expect(mobileHeader.querySelector('svg')).not.toBeNull()
     })
 
     it('links the form to the title via aria-labelledby', () => {
