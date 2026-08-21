@@ -80,7 +80,7 @@ describe('UsersTable — rows', () => {
 
   it('shows "vous" badge for the current user', () => {
     const { getByText } = setup(SA)
-    expect(getByText('table.you')).toBeDefined()
+    expect(getByText(/table\.you/)).toBeDefined()
   })
 
   it('renders the translated role label per row (shell namespace)', () => {
