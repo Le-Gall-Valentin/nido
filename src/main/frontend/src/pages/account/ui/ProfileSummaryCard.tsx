@@ -15,21 +15,21 @@ export function ProfileSummaryCard({ user }: ProfileSummaryCardProps) {
   )
 
   return (
-    <div className="rounded-md border border-border bg-bg-1 p-3.5 mb-4">
-      <div className="flex items-center gap-4">
+    <div className="rounded-2xl border border-border bg-bg-1 px-7 py-6 mb-4">
+      <div className="flex items-center gap-[18px]">
         <UserAvatar
           username={user.username}
           role={user.role}
-          className="w-[52px] h-[52px] rounded-[10px] text-[18px]"
+          className="w-[68px] h-[68px] rounded-full text-[24px]"
         />
         <div className="flex-1 min-w-0">
-          <div className="text-[18px] font-semibold text-fg-0 tracking-[-0.005em] truncate leading-snug">
+          <div className="text-[18px] font-semibold text-fg-0 tracking-tight truncate leading-snug">
             {user.username}
           </div>
           <div className="flex flex-wrap items-center gap-x-[10px] gap-y-1 mt-1.5">
             <RolePill role={user.role} label={t(`user.role.${user.role}`, { ns: 'shell' })} />
-            <span className="font-mono text-[11px] text-fg-3 truncate">{user.email}</span>
-            <span className="font-mono text-[11px] text-fg-3">
+            <span className="text-[12.5px] text-fg-3 truncate">{user.email}</span>
+            <span className="text-[12.5px] text-fg-3">
               {t('member_since', { date: createdDate })}
             </span>
           </div>
