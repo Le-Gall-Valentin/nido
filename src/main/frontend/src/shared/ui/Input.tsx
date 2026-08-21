@@ -10,14 +10,14 @@ export function Input({ label, suffix, className = '', ...props }: InputProps) {
   const id = props.id ?? props.name ?? generatedId
 
   return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-xs font-medium text-fg-1">
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-[13px] font-semibold text-fg-1">
         {label}
       </label>
       <div className="relative">
         <input
           id={id}
-          className={`w-full rounded-lg border border-border bg-bg-1 px-3.5 py-3 text-sm text-fg-0 outline-none placeholder:text-fg-3 transition-all hover:border-border-2 focus:border-accent focus:bg-bg-2 focus:shadow-[0_0_0_3px_var(--color-accent-ring)] ${suffix ? 'pr-11' : ''} ${className}`}
+          className={`w-full rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none placeholder:text-fg-3 transition-all hover:border-border-2 focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-ring)] ${suffix ? 'pr-11' : ''} ${className}`}
           {...props}
         />
         {suffix && (

@@ -30,10 +30,10 @@ export function Dialog({ open, onClose, title, children, maxWidth = 'max-w-md' }
       <div
         aria-hidden="true"
         data-testid="backdrop"
-        className="fixed inset-0 bg-black/50"
+        className="fixed inset-0 bg-[rgba(44,42,38,0.32)]"
         onClick={onClose}
       />
-      <div ref={panelRef} className={`relative z-10 w-full ${maxWidth} rounded-xl border border-border bg-bg-1 p-6 shadow-xl`}>
+      <div ref={panelRef} className={`relative z-10 w-full ${maxWidth} rounded-[18px] bg-bg-1 p-[26px] pt-6 shadow-[0_20px_60px_rgba(44,42,38,0.24)]`}>
         <h2 id={titleId} className="sr-only">{title}</h2>
         {children}
       </div>

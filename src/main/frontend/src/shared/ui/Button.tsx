@@ -17,7 +17,7 @@ export function Button({
     <button
       disabled={disabled || isLoading}
       aria-busy={isLoading}
-      className={`flex items-center justify-center gap-1.5 rounded-lg border border-border-2 bg-bg-2 px-4 py-2.5 text-sm font-medium text-fg-1 transition-colors hover:bg-bg-3 hover:text-fg-0 disabled:opacity-50 ${className}`}
+      className={`flex items-center justify-center gap-[7px] rounded-[10px] border-[1.5px] border-border bg-bg-1 px-[18px] py-[11px] text-sm font-semibold text-fg-2 transition-colors hover:bg-bg-2 hover:text-fg-0 disabled:opacity-50 ${className}`}
       {...props}
     >
       {isLoading ? (

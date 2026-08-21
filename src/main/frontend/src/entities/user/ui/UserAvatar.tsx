@@ -11,7 +11,7 @@ interface UserAvatarProps {
   className?: string
 }
 
-export function UserAvatar({ username, role, className = 'size-6 rounded-md text-[10px]' }: UserAvatarProps) {
+export function UserAvatar({ username, role, className = 'size-10 rounded-full text-[13px]' }: UserAvatarProps) {
   const gradient = role === 'SUPER_ADMIN' ? SUPER_ADMIN_GRADIENT : DEFAULT_GRADIENT
   return (
     <div
