@@ -65,7 +65,7 @@ export function DisableTotpModal({ open, onClose, onSuccess, onDisable }: Disabl
   return (
     <Dialog open={open} onClose={handleClose} title={t('disable.title')} maxWidth="max-w-sm">
       <div className="mb-6">
-        <h3 className="text-base font-semibold text-fg-0 mb-1">{t('disable.title')}</h3>
+        <h3 className="text-xl font-semibold text-fg-0 mb-1.5">{t('disable.title')}</h3>
         <p className="text-sm text-fg-2">{t('disable.subtitle')}</p>
       </div>
       <form onSubmit={handleSubmit}>
@@ -79,7 +79,7 @@ export function DisableTotpModal({ open, onClose, onSuccess, onDisable }: Disabl
           digitLabel={(i) => t('disable.digit_label', { n: i + 1 })}
         />
         {errorKey && (
-          <div role="alert" className="flex items-center gap-2 rounded-lg border border-status-red/25 bg-status-red-dim px-3 py-2.5 text-sm text-status-red mt-3">
+          <div role="alert" className="flex items-center gap-2 rounded-[10px] bg-status-red-dim px-3.5 py-[11px] text-[13.5px] text-status-red mt-3">
             <AlertTriangle className="size-3.5 shrink-0" />
             {t(errorKey)}
           </div>
@@ -92,7 +92,8 @@ export function DisableTotpModal({ open, onClose, onSuccess, onDisable }: Disabl
             type="submit"
             disabled={code.length < 6}
             isLoading={isLoading}
-            className="border-status-red/30 bg-status-red-dim text-status-red hover:bg-status-red/20"
+            className="border-transparent font-semibold text-bg-0"
+            style={{ background: 'var(--color-status-red)' }}
           >
             {t('disable.submit')}
           </Button>

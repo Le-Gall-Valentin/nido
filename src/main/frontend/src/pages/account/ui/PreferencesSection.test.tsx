@@ -46,15 +46,15 @@ describe('PreferencesSection', () => {
     expect(mockSetTheme).toHaveBeenCalledWith('system')
   })
 
-  it('clicking EN calls setLanguage with en', () => {
+  it('clicking English calls setLanguage with en', () => {
     const { getByText } = render(<PreferencesSection />)
-    fireEvent.click(getByText('EN'))
+    fireEvent.click(getByText('English'))
     expect(mockSetLanguage).toHaveBeenCalledWith('en')
   })
 
-  it('clicking FR calls setLanguage with fr', () => {
+  it('clicking Français calls setLanguage with fr', () => {
     const { getByText } = render(<PreferencesSection />)
-    fireEvent.click(getByText('FR'))
+    fireEvent.click(getByText('Français'))
     expect(mockSetLanguage).toHaveBeenCalledWith('fr')
   })
 })

@@ -1,4 +1,4 @@
-import { render, fireEvent, waitFor } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AccountPage } from './AccountPage'
 import type { IAccountApi } from '../model/IAccountApi'
@@ -50,10 +50,9 @@ const BASE_USER: User = {
   role: 'USER', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
 }
 
-function makeState(overrides: { user?: User | null; logout?: () => Promise<void> } = {}) {
+function makeState(overrides: { user?: User | null } = {}) {
   const state = {
     user: overrides.user !== undefined ? overrides.user : BASE_USER,
-    logout: overrides.logout ?? vi.fn().mockResolvedValue(undefined),
     patchUser: vi.fn(),
   }
   mockUseAuth.mockImplementation((selector: (s: typeof state) => unknown) => selector(state))
@@ -65,7 +64,7 @@ beforeEach(() => {
 })
 
 describe('AccountPage', () => {
-  it('returns null when user is null and no error', () => {
+  it('returns null when user is null', () => {
     makeState({ user: null })
     const { container } = renderPage()
     expect(container.firstChild).toBeNull()
@@ -81,50 +80,11 @@ describe('AccountPage', () => {
     expect(getByTestId('password-section')).toBeDefined()
   })
 
-  it('renders logout button', () => {
+  it('renders the page heading with kicker, title and subtitle', () => {
     makeState()
-    const { getByRole } = renderPage()
-    expect(getByRole('button', { name: 'action.logout' })).toBeDefined()
-  })
-
-  it('calls logout when logout button is clicked', async () => {
-    const { logout } = makeState()
-    const { getByRole } = renderPage()
-    fireEvent.click(getByRole('button', { name: 'action.logout' }))
-    await waitFor(() => expect(logout).toHaveBeenCalledOnce())
-  })
-
-  it('shows logout error when logout fails and user is still present', async () => {
-    makeState({ logout: vi.fn().mockRejectedValue(new Error('network')) })
-    const { getByRole, findByRole } = renderPage()
-    fireEvent.click(getByRole('button', { name: 'action.logout' }))
-    const alert = await findByRole('alert')
-    expect(alert.textContent).toContain('error.logout_failed')
-  })
-
-  it('shows logout error fallback when user is null after failed logout', async () => {
-    const logout = vi.fn().mockImplementation(async () => {
-      // Simulate: store nulls user in finally, then throws
-      makeState({ user: null, logout })
-      throw new Error('logout failed')
-    })
-    makeState({ logout })
-    const { getByRole, findByRole } = renderPage()
-    fireEvent.click(getByRole('button', { name: 'action.logout' }))
-    const alert = await findByRole('alert')
-    expect(alert.textContent).toContain('error.logout_failed')
-  })
-
-  it('prevents double submit while logout is in progress', async () => {
-    let resolve!: () => void
-    const logout = vi.fn().mockImplementation(
-      () => new Promise<void>(r => { resolve = r })
-    )
-    makeState({ logout })
-    const { getByRole } = renderPage()
-    fireEvent.click(getByRole('button', { name: 'action.logout' }))
-    fireEvent.click(getByRole('button', { name: 'action.logout' }))
-    resolve()
-    await waitFor(() => expect(logout).toHaveBeenCalledOnce())
+    const { getByText, getByRole } = renderPage()
+    expect(getByText('kicker')).toBeDefined()
+    expect(getByRole('heading', { level: 1, name: 'title' })).toBeDefined()
+    expect(getByText('subtitle')).toBeDefined()
   })
 })

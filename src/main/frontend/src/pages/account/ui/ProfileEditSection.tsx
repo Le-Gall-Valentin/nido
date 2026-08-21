@@ -69,12 +69,12 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
   }
 
   return (
-    <section id="section-profile" className="rounded-md border border-border bg-bg-1 mb-4 overflow-hidden">
-      <div className="px-3.5 py-[10px] border-b border-border">
-        <div className="text-xs font-semibold text-fg-0 tracking-tight">{t('profile.title')}</div>
-        <div className="text-[11px] text-fg-2 mt-px">{t('profile.subtitle')}</div>
+    <section id="section-profile" className="rounded-2xl border border-border bg-bg-1 mb-4 overflow-hidden">
+      <div className="px-7 pt-6">
+        <h3 className="text-lg font-semibold text-fg-0">{t('profile.title')}</h3>
+        <p className="text-[13.5px] text-fg-2 mt-0.5">{t('profile.subtitle')}</p>
       </div>
-      <div className="p-3.5">
+      <div className="px-7 py-5">
         <form onSubmit={handleSubmit}>
           {usernameTooShort && <p className="text-xs text-status-orange mb-2">{t('profile.error.username_too_short')}</p>}
           {usernameTooLong && <p className="text-xs text-status-orange mb-2">{t('profile.error.username_too_long')}</p>}

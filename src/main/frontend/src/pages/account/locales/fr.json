@@ -1,8 +1,7 @@
 {
+  "kicker": "Paramètres",
   "title": "Mon compte",
   "subtitle": "Gérez vos informations personnelles et votre mot de passe.",
-  "action": { "logout": "Se déconnecter" },
-  "error": { "logout_failed": "La déconnexion a échoué. Veuillez réessayer." },
   "member_since": "Membre depuis le {{date}}",
   "profile": {
     "title": "Informations personnelles",
