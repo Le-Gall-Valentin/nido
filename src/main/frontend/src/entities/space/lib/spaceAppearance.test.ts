@@ -8,7 +8,7 @@ describe('safeAccent', () => {
   })
 
   it('falls back for anything outside the palette', () => {
-    // L'accent vient de l'API : il ne doit jamais atteindre un attribut de style sans contrôle.
+    // The accent comes from the API: it must never reach a style attribute unchecked.
     expect(safeAccent('#123456')).toBe(PERSONAL_ACCENT)
     expect(safeAccent('red; background: url(evil)')).toBe(PERSONAL_ACCENT)
     expect(safeAccent('')).toBe(PERSONAL_ACCENT)

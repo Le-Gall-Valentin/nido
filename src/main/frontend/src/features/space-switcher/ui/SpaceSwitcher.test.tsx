@@ -54,12 +54,12 @@ beforeEach(() => vi.clearAllMocks())
 
 describe('SpaceSwitcher — trigger', () => {
   it('shows the current context name under the kicker', async () => {
-    // La maquette ne met pas le rôle sur le bouton : il n'apparaît qu'en
-    // sous-titre dans le panneau, où il qualifie chaque contexte listé.
+    // The design does not put the role on the trigger: it only appears as a
+    // subtitle in the panel, where it qualifies each context listed.
     setup()
     expect(await screen.findByText('La Famille')).toBeDefined()
     expect(screen.getByText('switcher.kicker')).toBeDefined()
-    expect(screen.queryByText('switcher.role.admin')).toBeNull()
+    expect(screen.queryByText('role.ADMIN')).toBeNull()
   })
 
   it('is closed by default', async () => {

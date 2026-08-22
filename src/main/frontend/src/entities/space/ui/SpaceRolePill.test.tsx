@@ -15,8 +15,8 @@ describe('SpaceRolePill', () => {
   })
 
   it('applies a distinct class to each of the four roles', () => {
-    // Les quatre rôles doivent rester lisibles les uns des autres : deux rôles
-    // partageant une classe rendraient un membre indistinguable d'un lecteur.
+    // The four roles must stay tellable apart: two roles sharing a class would
+    // make a member indistinguishable from a viewer.
     const classNames = (['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'] as const).map(
       role => render(<SpaceRolePill role={role} />).getByText(role).className
     )

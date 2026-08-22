@@ -9,10 +9,15 @@ import { useAuthGuard } from './useAuthGuard'
 /**
  * The unscoped entry point: restores the last context the user was in
  * (validated against their current list, since it may have disappeared —
- * left, deleted, revoked), falling back to their personal space. The list
- * is only fetched once authenticated, and never decided on before it settles
- * — same rule as SpaceRoute, so a slow network never bounces the user to the
- * wrong place.
+ * left, deleted, revoked), falling back to their personal space. The list is
+ * only fetched once authenticated, and this waits for a first load rather
+ * than deciding without one.
+ *
+ * Unlike SpaceRoute it does decide on a cached list that is still refetching,
+ * and it falls back to the account page when the list cannot be loaded at
+ * all. Both are deliberate: the user asked for no context in particular, so
+ * landing somewhere live beats holding an empty route, and SpaceRoute guards
+ * the destination anyway if the remembered context turns out to be gone.
  */
 export function DefaultRedirect() {
   const { isInitializing, isAuthenticated, t } = useAuthGuard()

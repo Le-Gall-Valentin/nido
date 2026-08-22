@@ -1,9 +1,9 @@
 export type SpaceType = 'PERSONAL' | 'SHARED'
 
 /**
- * Rôle dans un contexte. Distinct du rôle de plateforme (`UserRole` dans
- * `entities/user`) : celui-ci dit ce qu'on peut faire dans un contexte donné,
- * l'autre ce qu'on peut faire sur les comptes. Les deux ne se croisent jamais.
+ * A role inside one context. Distinct from the platform role (`UserRole` in
+ * `entities/user`): this one says what you may do inside a given context, the
+ * other what you may do to accounts. The two never mix.
  */
 export type SpaceRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER'
 
@@ -25,9 +25,9 @@ export interface SpaceDetail extends SpaceSummary {
 
 export interface SpaceMember {
   userId: string
-  /** Null quand le compte a été anonymisé par une suppression RGPD. */
+  /** Null once the account has been anonymised by a GDPR deletion. */
   username: string | null
-  /** Null quand le compte a été anonymisé par une suppression RGPD. */
+  /** Null once the account has been anonymised by a GDPR deletion. */
   email: string | null
   role: SpaceRole
   joinedAt: string
@@ -37,7 +37,7 @@ export interface SpaceInvitation {
   id: string
   email: string
   role: SpaceRole
-  /** En clair, réservé aux gestionnaires du contexte, qui l'ont émis. */
+  /** Clear text, only ever returned to the context's managers, who issued it. */
   code: string
   status: InvitationStatus
   expiresAt: string

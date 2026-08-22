@@ -45,7 +45,7 @@ describe('activeSpaceStore', () => {
   })
 
   it('survives a storage that throws', () => {
-    // Navigation privée, stockage bloqué : la bascule doit continuer de fonctionner.
+    // Private browsing, storage blocked: switching context must keep working.
     localStorage.setItem = () => { throw new Error('denied') }
     expect(() => activeSpaceStore.getState().remember('space-2')).not.toThrow()
     expect(activeSpaceStore.getState().lastSpaceId).toBe('space-2')
