@@ -5,6 +5,7 @@ import com.nido.api.identity.domain.model.DeleteUserCommand;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.CredentialDeletionPort;
+import com.nido.api.identity.domain.port.out.SpaceDataDeletionPort;
 import com.nido.api.identity.domain.port.out.TotpDeletionPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
@@ -22,15 +23,18 @@ public class DeleteUserHandler implements DeleteUserUseCase {
     private final UserCommandPort userCommandPort;
     private final CredentialDeletionPort credentialDeletionPort;
     private final TotpDeletionPort totpDeletionPort;
+    private final SpaceDataDeletionPort spaceDataDeletionPort;
 
     public DeleteUserHandler(UserRepository userRepository,
                              UserCommandPort userCommandPort,
                              CredentialDeletionPort credentialDeletionPort,
-                             TotpDeletionPort totpDeletionPort) {
+                             TotpDeletionPort totpDeletionPort,
+                             SpaceDataDeletionPort spaceDataDeletionPort) {
         this.userRepository = userRepository;
         this.userCommandPort = userCommandPort;
         this.credentialDeletionPort = credentialDeletionPort;
         this.totpDeletionPort = totpDeletionPort;
+        this.spaceDataDeletionPort = spaceDataDeletionPort;
     }
 
     @Override
@@ -45,6 +49,7 @@ public class DeleteUserHandler implements DeleteUserUseCase {
         userCommandPort.deleteGdpr(command.targetUserId());
         credentialDeletionPort.deleteCredentials(command.targetUserId());
         totpDeletionPort.deleteTotpData(command.targetUserId());
+        spaceDataDeletionPort.deleteSpaceData(command.targetUserId());
         log.info("GDPR delete performed by caller {} with role {}",
             command.callerId(), command.callerRole());
     }
