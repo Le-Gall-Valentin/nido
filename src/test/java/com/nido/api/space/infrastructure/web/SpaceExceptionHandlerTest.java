@@ -15,12 +15,16 @@ class SpaceExceptionHandlerTest {
     private final HttpServletRequest request = new MockHttpServletRequest("GET", "/api/spaces/x");
 
     @Test
-    void not_a_member_is_a_404_so_the_space_existence_stays_hidden() {
-        ResponseEntity<ProblemDetail> response = handler.handle(new SpaceException.NotAMember(), request);
+    void not_a_member_is_indistinguishable_from_an_unknown_space() {
+        ResponseEntity<ProblemDetail> notAMember = handler.handle(new SpaceException.NotAMember(), request);
+        ResponseEntity<ProblemDetail> notFound = handler.handle(new SpaceException.SpaceNotFound(), request);
 
-        assertThat(response.getStatusCode().value()).isEqualTo(404);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getTitle()).isEqualTo("NotAMember");
+        assertThat(notAMember.getStatusCode().value()).isEqualTo(404);
+        assertThat(notAMember.getBody()).isNotNull();
+        assertThat(notFound.getBody()).isNotNull();
+        // Aucun champ de la réponse ne doit trahir qu'un contexte existe bel et bien.
+        assertThat(notAMember.getBody().getTitle()).isEqualTo(notFound.getBody().getTitle());
+        assertThat(notAMember.getBody().getDetail()).isEqualTo(notFound.getBody().getDetail());
     }
 
     @Test

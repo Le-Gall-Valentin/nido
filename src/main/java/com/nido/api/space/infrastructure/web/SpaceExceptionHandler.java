@@ -21,9 +21,11 @@ public class SpaceExceptionHandler {
     @ExceptionHandler(SpaceException.class)
     public ResponseEntity<ProblemDetail> handle(SpaceException e, HttpServletRequest request) {
         SpaceErrorResponse response = switch (e) {
-            // 404 : un non-membre ne doit pas pouvoir distinguer « interdit » de « inexistant »
+            // 404 indistinguable : même statut, même titre, même detail pour « inexistant »
+            // et « pas membre ». Le titre est forcé, car le nom de classe trahirait le cas.
             case SpaceException.SpaceNotFound ex -> response(404, ex, "Space not found.");
-            case SpaceException.NotAMember ex -> response(404, ex, "Space not found.");
+            case SpaceException.NotAMember ignored -> new SpaceErrorResponse(
+                404, SpaceException.SpaceNotFound.class.getSimpleName(), "Space not found.");
             case SpaceException.MemberNotFound ex -> response(404, ex, "Member not found in this space.");
 
             case SpaceException.InsufficientRole ex -> response(403, ex, "Your role in this space does not allow this action.");
