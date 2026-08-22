@@ -12,6 +12,8 @@ import com.nido.api.space.infrastructure.persistence.entity.SpaceMemberEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceMemberJpaRepository;
 import com.nido.api.space.domain.model.SpaceType;
+import com.nido.api.space.infrastructure.web.dto.CreateSpaceRequest;
+import com.nido.api.space.infrastructure.web.dto.UpdateSpaceRequest;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.Cookie;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.http.MediaType;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -32,7 +35,11 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -135,6 +142,76 @@ class SpaceControllerIT {
         // malformée ne peut désigner aucun contexte, et tout UUID valide rend 404.
         mockMvc.perform(get("/api/spaces/pas-un-uuid").cookie(accessTokenFor(aliceId, Role.USER)))
             .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void create_makes_the_caller_the_owner() throws Exception {
+        String payload = objectMapper.writeValueAsString(
+            new CreateSpaceRequest("Chez papa & maman", "La maison familiale", "#4a7fa0", "🏠"));
+
+        mockMvc.perform(post("/api/spaces")
+                .cookie(accessTokenFor(bobId, Role.USER))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isCreated())
+            .andExpect(header().exists("Location"))
+            .andExpect(jsonPath("$.myRole").value("OWNER"))
+            .andExpect(jsonPath("$.type").value("SHARED"));
+
+        mockMvc.perform(get("/api/spaces").cookie(accessTokenFor(bobId, Role.USER)))
+            .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void create_rejects_an_accent_outside_the_palette() throws Exception {
+        String payload = objectMapper.writeValueAsString(
+            new CreateSpaceRequest("Chez moi", null, "#123456", "🏠"));
+
+        mockMvc.perform(post("/api/spaces")
+                .cookie(accessTokenFor(bobId, Role.USER))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void update_is_forbidden_for_a_plain_member() throws Exception {
+        saveMembership(sharedSpaceId, bobId, SpaceRole.MEMBER);
+        String payload = objectMapper.writeValueAsString(
+            new UpdateSpaceRequest("Renommé", null, "#4a7fa0", "🏠"));
+
+        mockMvc.perform(patch("/api/spaces/" + sharedSpaceId)
+                .cookie(accessTokenFor(bobId, Role.USER))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void the_personal_space_cannot_be_renamed_nor_deleted() throws Exception {
+        UUID personalId = spaces.findByPersonalOwnerId(aliceId).orElseThrow().getId();
+        String payload = objectMapper.writeValueAsString(
+            new UpdateSpaceRequest("Mon perso", null, "#4a7fa0", "🏠"));
+
+        mockMvc.perform(patch("/api/spaces/" + personalId)
+                .cookie(accessTokenFor(aliceId, Role.USER))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isUnprocessableEntity());
+
+        mockMvc.perform(delete("/api/spaces/" + personalId).cookie(accessTokenFor(aliceId, Role.USER)))
+            .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void delete_is_owner_only() throws Exception {
+        saveMembership(sharedSpaceId, bobId, SpaceRole.ADMIN);
+
+        mockMvc.perform(delete("/api/spaces/" + sharedSpaceId).cookie(accessTokenFor(bobId, Role.USER)))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(delete("/api/spaces/" + sharedSpaceId).cookie(accessTokenFor(aliceId, Role.USER)))
+            .andExpect(status().isNoContent());
     }
 
     protected UUID saveUser(String username, Role role) {
