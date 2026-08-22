@@ -145,6 +145,45 @@ class AcceptInvitationHandlerTest {
         verify(spaceMembershipPort, never()).add(any(), any(), any());
     }
 
+    @Test
+    void a_pending_invitation_addressed_to_the_caller_is_accepted_by_id_and_grants_its_own_role() {
+        when(spaceInvitationPort.findById(invitationId)).thenReturn(Optional.of(invitation(InvitationStatus.PENDING)));
+        when(spaceRepository.findById(spaceId)).thenReturn(Optional.of(sharedSpace()));
+        when(spaceMembershipPort.find(spaceId, userId)).thenReturn(Optional.empty());
+        when(spaceInvitationPort.claim(eq(invitationId), any())).thenReturn(true);
+
+        UUID joined = handler.acceptById(invitationId, userId, userEmail);
+
+        assertThat(joined).isEqualTo(spaceId);
+        InOrder order = inOrder(spaceInvitationPort, spaceMembershipPort);
+        order.verify(spaceInvitationPort).claim(eq(invitationId), any());
+        // La réclamation précède la création de l'adhésion : c'est le point de sérialisation.
+        order.verify(spaceMembershipPort).add(spaceId, userId, SpaceRole.ADMIN);
+    }
+
+    @Test
+    void an_unknown_id_is_not_found() {
+        UUID unknownId = UUID.randomUUID();
+        when(spaceInvitationPort.findById(unknownId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> handler.acceptById(unknownId, userId, userEmail))
+            .isInstanceOf(SpaceException.InvitationNotFound.class);
+        verify(spaceMembershipPort, never()).add(any(), any(), any());
+    }
+
+    // Épingle SpaceInvitation.ensureAddressedTo : c'est ce contrôle, et lui seul, qui rend
+    // légitime le stockage du code en clair. Le relâcher transformerait l'identifiant en jeton
+    // porteur — n'importe qui devinant un id pourrait rejoindre — sans que rien d'autre ne le signale.
+    @Test
+    void an_invitation_cannot_be_accepted_by_id_by_someone_else_which_is_what_makes_clear_text_storage_safe() {
+        when(spaceInvitationPort.findById(invitationId)).thenReturn(Optional.of(invitation(InvitationStatus.PENDING)));
+
+        assertThatThrownBy(() -> handler.acceptById(invitationId, userId, "eve@example.com"))
+            .isInstanceOf(SpaceException.InvitationEmailMismatch.class);
+        verify(spaceMembershipPort, never()).add(any(), any(), any());
+        verify(spaceInvitationPort, never()).claim(any(), any());
+    }
+
     private SpaceInvitation invitation(InvitationStatus status) {
         return new SpaceInvitation(invitationId, spaceId, userEmail, SpaceRole.ADMIN, "NIDO-ABC123", status,
             Instant.now().plusSeconds(3600), UUID.randomUUID(), status == InvitationStatus.ACCEPTED ? Instant.now() : null,

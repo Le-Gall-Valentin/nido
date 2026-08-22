@@ -135,6 +135,46 @@ class MyInvitationControllerIT {
     }
 
     @Test
+    void accepting_by_id_from_the_received_list_creates_the_membership_with_the_invitation_role() throws Exception {
+        UUID invitationId = createInvitation(sharedSpaceId, "carol@test.com", SpaceRole.ADMIN, aliceId, "NIDO-TEST09",
+            Instant.now().plusSeconds(3600));
+
+        mockMvc.perform(post("/api/invitations/" + invitationId + "/accept")
+                .cookie(accessTokenFor(carolId, "carol@test.com")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.spaceId").value(sharedSpaceId.toString()));
+
+        mockMvc.perform(get("/api/spaces").cookie(accessTokenFor(carolId, "carol@test.com")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.id=='" + sharedSpaceId + "')].myRole").value("ADMIN"));
+    }
+
+    // Un id inconnu et un id adressé à quelqu'un d'autre rendent exactement le même 404 : c'est
+    // ce qui garantit qu'un appelant ne peut pas distinguer, en devinant des identifiants, une
+    // invitation inexistante d'une invitation qui ne lui appartient pas. Comparaison champ par
+    // champ, corps compris.
+    @Test
+    void an_unknown_id_and_an_id_addressed_to_someone_else_answer_exactly_alike() throws Exception {
+        UUID mismatchedInvitationId = createInvitation(sharedSpaceId, "dave@test.com", SpaceRole.MEMBER, aliceId,
+            "NIDO-TEST10", Instant.now().plusSeconds(3600));
+        UUID unknownInvitationId = UUID.randomUUID();
+
+        MvcResult mismatchResult = mockMvc.perform(post("/api/invitations/" + mismatchedInvitationId + "/accept")
+                .cookie(accessTokenFor(carolId, "carol@test.com")))
+            .andExpect(status().isNotFound())
+            .andReturn();
+
+        MvcResult unknownResult = mockMvc.perform(post("/api/invitations/" + unknownInvitationId + "/accept")
+                .cookie(accessTokenFor(carolId, "carol@test.com")))
+            .andExpect(status().isNotFound())
+            .andReturn();
+
+        assertThat(mismatchResult.getResponse().getStatus()).isEqualTo(unknownResult.getResponse().getStatus());
+        assertThat(mismatchResult.getResponse().getContentAsString())
+            .isEqualTo(unknownResult.getResponse().getContentAsString());
+    }
+
+    @Test
     void reusing_the_same_code_is_a_409_single_use() throws Exception {
         createInvitation(sharedSpaceId, "carol@test.com", SpaceRole.MEMBER, aliceId, "NIDO-TEST04",
             Instant.now().plusSeconds(3600));
@@ -271,7 +311,7 @@ class MyInvitationControllerIT {
             .andExpect(jsonPath("$.length()").value(0));
     }
 
-    private void createInvitation(UUID spaceId, String email, SpaceRole role, UUID createdBy, String code, Instant expiresAt) {
+    private UUID createInvitation(UUID spaceId, String email, SpaceRole role, UUID createdBy, String code, Instant expiresAt) {
         SpaceInvitationEntity invitation = new SpaceInvitationEntity();
         invitation.setSpaceId(spaceId);
         invitation.setEmail(email);
@@ -280,7 +320,7 @@ class MyInvitationControllerIT {
         invitation.setStatus(InvitationStatus.PENDING);
         invitation.setExpiresAt(expiresAt);
         invitation.setCreatedBy(createdBy);
-        invitations.saveAndFlush(invitation);
+        return invitations.saveAndFlush(invitation).getId();
     }
 
     private UUID saveUser(String username) {

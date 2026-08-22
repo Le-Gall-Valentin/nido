@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,9 +24,13 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Deux routes qui ne sont pas des routes de contexte : ni {@code {spaceId}}, ni
+ * Trois routes qui ne sont pas des routes de contexte : ni {@code {spaceId}}, ni
  * {@code @CurrentMembership}. L'appelant est identifié par {@code @CurrentUser}, dont on
  * lit l'adresse email — celle qui reçoit les invitations.
+ *
+ * <p>Deux façons d'accepter, volontairement : par code, pour le cas hors bande, et par
+ * identifiant, pour la liste reçue qui n'expose jamais le code. Les deux passent par le
+ * même garde-fou — {@link com.nido.api.space.domain.model.SpaceInvitation#ensureAddressedTo}.
  */
 @RestController
 @Validated
@@ -61,6 +66,17 @@ public class MyInvitationController {
             @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
         UUID spaceId = acceptInvitationUseCase.accept(
             new AcceptInvitationCommand(request.code()), caller.userId(), caller.email());
+        return ResponseEntity.ok(new AcceptInvitationResponse(spaceId));
+    }
+
+    @PostMapping("/api/invitations/{invitationId}/accept")
+    @RateLimiting(max = 20)
+    @RateLimiting(mode = RateLimitMode.USER, max = 10)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<AcceptInvitationResponse> acceptById(
+            @PathVariable UUID invitationId,
+            @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
+        UUID spaceId = acceptInvitationUseCase.acceptById(invitationId, caller.userId(), caller.email());
         return ResponseEntity.ok(new AcceptInvitationResponse(spaceId));
     }
 

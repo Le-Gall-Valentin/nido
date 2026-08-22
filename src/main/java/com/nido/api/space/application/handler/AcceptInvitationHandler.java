@@ -35,12 +35,27 @@ public class AcceptInvitationHandler implements AcceptInvitationUseCase {
     @Override
     @Transactional
     public UUID accept(AcceptInvitationCommand command, UUID userId, String userEmail) {
-        Instant now = Instant.now();
         SpaceInvitation invitation = spaceInvitationPort.findByCode(command.code())
             .orElseThrow(SpaceException.InvitationNotFound::new);
-        // L'ordre compte : l'adresse d'abord. Un appelant qui soumet des codes au hasard
-        // ne doit pas pouvoir distinguer « code inexistant » de « code destiné à autrui »,
-        // et les deux rendent le même 404 (cf. SpaceExceptionHandler).
+        return acceptInvitation(invitation, userId, userEmail);
+    }
+
+    @Override
+    @Transactional
+    public UUID acceptById(UUID invitationId, UUID userId, String userEmail) {
+        SpaceInvitation invitation = spaceInvitationPort.findById(invitationId)
+            .orElseThrow(SpaceException.InvitationNotFound::new);
+        return acceptInvitation(invitation, userId, userEmail);
+    }
+
+    // Chemin partagé par accept() et acceptById() : seule la façon de retrouver l'invitation
+    // diffère entre les deux entrées, tout le reste — l'enchaînement des garde-fous et des
+    // écritures — doit rester rigoureusement identique.
+    private UUID acceptInvitation(SpaceInvitation invitation, UUID userId, String userEmail) {
+        Instant now = Instant.now();
+        // L'ordre compte : l'adresse d'abord. Un appelant qui soumet des codes ou des
+        // identifiants au hasard ne doit pas pouvoir distinguer « inexistant » de « destiné
+        // à autrui », et les deux rendent le même 404 (cf. SpaceExceptionHandler).
         invitation.ensureAddressedTo(userEmail);
         invitation.ensurePending();
         invitation.ensureNotExpired(now);

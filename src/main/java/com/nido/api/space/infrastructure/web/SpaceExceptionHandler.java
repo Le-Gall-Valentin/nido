@@ -12,11 +12,18 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
+import java.util.regex.Pattern;
 
 @RestControllerAdvice
 public class SpaceExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(SpaceExceptionHandler.class);
+
+    // Sur cette route, l'identifiant fait partie du chemin : sans ce masquage, le champ
+    // "instance" trahirait à lui seul lequel des deux cas indistinguables (id inconnu / id
+    // adressé à autrui) s'est produit, même si statut, titre et detail restent identiques.
+    private static final Pattern ACCEPT_INVITATION_BY_ID_PATH =
+        Pattern.compile("^/api/invitations/[0-9a-fA-F-]{36}/accept$");
 
     @ExceptionHandler(SpaceException.class)
     public ResponseEntity<ProblemDetail> handle(SpaceException e, HttpServletRequest request) {
@@ -63,9 +70,17 @@ public class SpaceExceptionHandler {
 
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), response.title(), response.detail(),
-            URI.create(request.getRequestURI()));
+            instance(request));
 
         return ResponseEntity.status(response.status()).body(problem);
+    }
+
+    private static URI instance(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        if (ACCEPT_INVITATION_BY_ID_PATH.matcher(uri).matches()) {
+            return URI.create("/api/invitations/%7BinvitationId%7D/accept");
+        }
+        return URI.create(uri);
     }
 
     private static SpaceErrorResponse response(int status, SpaceException e, String detail) {
