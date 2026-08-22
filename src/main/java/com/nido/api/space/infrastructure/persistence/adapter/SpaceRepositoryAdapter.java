@@ -1,7 +1,9 @@
 package com.nido.api.space.infrastructure.persistence.adapter;
 
+import com.nido.api.shared.model.PageResult;
 import com.nido.api.space.domain.model.CreateSharedSpaceCommand;
 import com.nido.api.space.domain.model.Space;
+import com.nido.api.space.domain.model.SpaceAdminView;
 import com.nido.api.space.domain.model.SpaceAppearance;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -9,6 +11,7 @@ import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceSummaryView;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.domain.model.UpdateSpaceCommand;
+import com.nido.api.space.domain.port.out.SpaceAdminPort;
 import com.nido.api.space.domain.port.out.SpaceCommandPort;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
 import com.nido.api.space.domain.port.out.SpaceRepository;
@@ -19,6 +22,8 @@ import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaReposito
 import com.nido.api.space.infrastructure.persistence.repository.SpaceMemberJpaRepository;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -29,7 +34,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
-public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort, SpaceMembershipPort {
+public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort, SpaceMembershipPort, SpaceAdminPort {
 
     private static final String PERSONAL_SPACE_NAME = "Perso";
 
@@ -73,6 +78,20 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
     @Override
     public long countMembers(UUID spaceId) {
         return members.countBySpaceId(spaceId);
+    }
+
+    @Override
+    public PageResult<SpaceAdminView> findAll(int page, int size) {
+        Page<SpaceEntity> found = spaces.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
+        Map<UUID, Long> counts = found.isEmpty()
+            ? Map.of()
+            : members.countBySpaceIds(found.getContent().stream().map(SpaceEntity::getId).toList()).stream()
+                .collect(Collectors.toMap(MemberCount::spaceId, MemberCount::total));
+        List<SpaceAdminView> content = found.getContent().stream()
+            .map(e -> new SpaceAdminView(e.getId(), e.getType(), e.getName(),
+                counts.getOrDefault(e.getId(), 0L), e.getCreatedBy(), e.getCreatedAt()))
+            .toList();
+        return new PageResult<>(content, found.getTotalElements(), page, size);
     }
 
     @Override
