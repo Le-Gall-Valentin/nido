@@ -27,6 +27,11 @@ public class SpaceExceptionHandler {
             case SpaceException.NotAMember ignored -> new SpaceErrorResponse(
                 404, SpaceException.SpaceNotFound.class.getSimpleName(), "Space not found.");
             case SpaceException.MemberNotFound ex -> response(404, ex, "Member not found in this space.");
+            case SpaceException.InvitationNotFound ex -> response(404, ex, "Invitation not found.");
+            // Indistinguable d'un code inconnu : sinon un appelant pourrait, en soumettant
+            // des codes au hasard, apprendre lesquels existent réellement.
+            case SpaceException.InvitationEmailMismatch ignored -> new SpaceErrorResponse(
+                404, SpaceException.InvitationNotFound.class.getSimpleName(), "Invitation not found.");
 
             case SpaceException.InsufficientRole ex -> response(403, ex, "Your role in this space does not allow this action.");
             case SpaceException.OwnerRequired ex -> response(403, ex, "Only the owner can perform this action.");
@@ -39,12 +44,16 @@ public class SpaceExceptionHandler {
             case SpaceException.AlreadyMember ex -> response(409, ex, "This user is already a member.");
             case SpaceException.PersonalSpaceAlreadyExists ex -> response(409, ex, "This account already has a personal space.");
             case SpaceException.OwnerAlreadyExists ex -> response(409, ex, "This space already has an owner.");
+            case SpaceException.InvitationNotPending ex -> response(409, ex, "This invitation is no longer pending.");
+            case SpaceException.InvitationAlreadyPending ex -> response(409, ex, "This address already has a pending invitation to this space.");
 
             case SpaceException.PersonalSpaceImmutable ex -> response(422, ex, "The personal space cannot be renamed, shared or deleted.");
             case SpaceException.InvalidAppearance ex -> response(422, ex, "Accent or glyph outside the allowed palette.");
             case SpaceException.InvalidSpaceName ex -> response(422, ex, "Space name must be between 1 and 80 characters.");
             case SpaceException.InvalidSpaceDescription ex -> response(422, ex, "Space description must not exceed 280 characters.");
             case SpaceException.OwnerRoleNotAssignable ex -> response(422, ex, "The owner role is only reachable through an ownership transfer.");
+            case SpaceException.InvitationExpired ex -> response(422, ex, "This invitation has expired.");
+            case SpaceException.NoAccountForEmail ex -> response(422, ex, "No account exists for this address. Ask an administrator to create one.");
 
             case SpaceException.DataIntegrityError ex -> {
                 log.error("Data integrity violation on {}", request.getRequestURI(), ex);

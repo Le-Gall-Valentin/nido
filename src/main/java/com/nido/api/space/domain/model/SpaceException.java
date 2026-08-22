@@ -19,7 +19,13 @@ public abstract sealed class SpaceException extends RuntimeException
             SpaceException.AlreadyMember,
             SpaceException.PersonalSpaceAlreadyExists,
             SpaceException.OwnerAlreadyExists,
-            SpaceException.DataIntegrityError {
+            SpaceException.DataIntegrityError,
+            SpaceException.InvitationNotFound,
+            SpaceException.InvitationNotPending,
+            SpaceException.InvitationExpired,
+            SpaceException.InvitationEmailMismatch,
+            SpaceException.InvitationAlreadyPending,
+            SpaceException.NoAccountForEmail {
 
     private SpaceException(String message) { super(message); }
 
@@ -80,5 +86,23 @@ public abstract sealed class SpaceException extends RuntimeException
     }
     public static final class DataIntegrityError extends SpaceException {
         public DataIntegrityError() { super("Unexpected data integrity violation"); }
+    }
+    public static final class InvitationNotFound extends SpaceException {
+        public InvitationNotFound() { super("Invitation not found"); }
+    }
+    public static final class InvitationNotPending extends SpaceException {
+        public InvitationNotPending() { super("Invitation is no longer pending"); }
+    }
+    public static final class InvitationExpired extends SpaceException {
+        public InvitationExpired() { super("Invitation has expired"); }
+    }
+    public static final class InvitationEmailMismatch extends SpaceException {
+        public InvitationEmailMismatch() { super("Invitation was issued to another address"); }
+    }
+    public static final class InvitationAlreadyPending extends SpaceException {
+        public InvitationAlreadyPending() { super("This address already has a pending invitation to this space"); }
+    }
+    public static final class NoAccountForEmail extends SpaceException {
+        public NoAccountForEmail() { super("No account exists for this address"); }
     }
 }
