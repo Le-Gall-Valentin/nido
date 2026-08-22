@@ -1,13 +1,13 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ReactNode } from 'react'
-import { QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import type { SpaceDetail, SpaceMember, SpaceInvitation } from '@/entities/space'
 import type { ISpacesPageApi } from '../model/ISpacesPageApi'
 import { SpacesPageApiProvider } from '../model/spacesPageApiContext'
 import { SpaceDetailSection } from './SpaceDetailSection'
-import { SpaceNotAccessibleError } from '@/features/space-switcher'
+import { SpaceNotAccessibleError, SPACES_QUERY_KEY } from '@/features/space-switcher'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k), i18n: { language: 'en' } }),
@@ -60,14 +60,24 @@ function fakeApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
   }
 }
 
-function renderSection(api: ISpacesPageApi, spaceId = 's-1', onLeft = vi.fn(), onDeleted = vi.fn()) {
-  const queryClient = createTestQueryClient()
+function renderSection(
+  api: ISpacesPageApi,
+  spaceId = 's-1',
+  onLeft = vi.fn(),
+  onDeleted = vi.fn(),
+  queryClient: QueryClient = createTestQueryClient()
+) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <SpacesPageApiProvider api={api}>{children}</SpacesPageApiProvider>
     </QueryClientProvider>
   )
-  return { ...render(<SpaceDetailSection spaceId={spaceId} onLeft={onLeft} onDeleted={onDeleted} />, { wrapper }), onLeft, onDeleted }
+  return {
+    ...render(<SpaceDetailSection spaceId={spaceId} onLeft={onLeft} onDeleted={onDeleted} />, { wrapper }),
+    onLeft,
+    onDeleted,
+    queryClient,
+  }
 }
 
 beforeEach(() => { vi.clearAllMocks(); withRole('OWNER') })
@@ -85,6 +95,16 @@ describe('SpaceDetailSection — loading and error', () => {
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toContain('errors.not_accessible')
     expect(alert.textContent).not.toContain('insufficient_role')
+  })
+
+  it('invalidates ["spaces"] on a 404 so the route guard takes over instead of stranding the user', async () => {
+    const api = fakeApi({ getSpaceDetail: vi.fn().mockRejectedValue(new SpaceNotAccessibleError()) })
+    const queryClient = createTestQueryClient()
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries')
+    renderSection(api, 's-1', vi.fn(), vi.fn(), queryClient)
+
+    await screen.findByRole('alert')
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: [SPACES_QUERY_KEY] })
   })
 })
 

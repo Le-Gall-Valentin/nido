@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQueryClient } from '@tanstack/react-query'
 import { LogOut, Pencil, Trash2, UserPlus } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { Alert, Button, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { SpaceAvatar, SpaceRolePill, canManageSpace, isOwner, isPersonal, type SpaceMember } from '@/entities/space'
+import { SpaceNotAccessibleError, SPACES_QUERY_KEY } from '@/features/space-switcher'
 import { useSpaceDetail } from '../model/useSpaceDetail'
 import { useSpaceMembers } from '../model/useSpaceMembers'
 import { useSpaceInvitations } from '../model/useSpaceInvitations'
@@ -38,8 +40,19 @@ interface SpaceDetailSectionProps {
 export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSectionProps) {
   const { t } = useTranslation('spaces')
   const currentUser = useAuth((s) => s.user)
+  const queryClient = useQueryClient()
 
   const { data: space, isPending: detailPending, isError: detailError, error: detailErrorObj } = useSpaceDetail(spaceId)
+
+  // A 404 here means the context was removed, or the caller was removed from
+  // it, while this page was open. Invalidating ["spaces"] lets SpaceRoute
+  // re-decide and take the user back to their personal space instead of
+  // leaving them stranded on this dead page.
+  useEffect(() => {
+    if (detailErrorObj instanceof SpaceNotAccessibleError) {
+      queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] })
+    }
+  }, [detailErrorObj, queryClient])
   const myRole = space?.myRole
   // The personal space is immutable at the domain level regardless of role:
   // no invite, leave or delete action is ever valid on it, even though its
@@ -105,7 +118,7 @@ export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSe
             {space.description && <p className="mt-0.5 text-sm text-fg-2">{space.description}</p>}
             {myRole && (
               <div className="mt-1.5">
-                <SpaceRolePill role={myRole} label={t(`role.${myRole}`)} />
+                <SpaceRolePill role={myRole} label={t(`space:role.${myRole}`)} />
               </div>
             )}
           </div>
