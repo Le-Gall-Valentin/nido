@@ -1,5 +1,6 @@
 package com.nido.api.space.infrastructure.web;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
@@ -169,9 +170,16 @@ class MyInvitationControllerIT {
             .andExpect(status().isNotFound())
             .andReturn();
 
+        // Comparaison sur les champs dérivés du serveur, pas sur le corps entier : l'identifiant
+        // voyage ici dans le chemin, donc "instance" renvoie à l'appelant sa propre saisie et
+        // diffère forcément entre deux requêtes portant deux identifiants. Ce qui doit être
+        // indistinguable, c'est ce que le serveur ajoute — statut, titre et detail.
         assertThat(mismatchResult.getResponse().getStatus()).isEqualTo(unknownResult.getResponse().getStatus());
-        assertThat(mismatchResult.getResponse().getContentAsString())
-            .isEqualTo(unknownResult.getResponse().getContentAsString());
+        JsonNode mismatch = new ObjectMapper().readTree(mismatchResult.getResponse().getContentAsString());
+        JsonNode unknown = new ObjectMapper().readTree(unknownResult.getResponse().getContentAsString());
+        assertThat(mismatch.get("title")).isEqualTo(unknown.get("title"));
+        assertThat(mismatch.get("detail")).isEqualTo(unknown.get("detail"));
+        assertThat(mismatch.get("status")).isEqualTo(unknown.get("status"));
     }
 
     @Test
@@ -217,9 +225,16 @@ class MyInvitationControllerIT {
             .andExpect(status().isNotFound())
             .andReturn();
 
+        // Comparaison sur les champs dérivés du serveur, pas sur le corps entier : l'identifiant
+        // voyage ici dans le chemin, donc "instance" renvoie à l'appelant sa propre saisie et
+        // diffère forcément entre deux requêtes portant deux identifiants. Ce qui doit être
+        // indistinguable, c'est ce que le serveur ajoute — statut, titre et detail.
         assertThat(mismatchResult.getResponse().getStatus()).isEqualTo(unknownResult.getResponse().getStatus());
-        assertThat(mismatchResult.getResponse().getContentAsString())
-            .isEqualTo(unknownResult.getResponse().getContentAsString());
+        JsonNode mismatch = new ObjectMapper().readTree(mismatchResult.getResponse().getContentAsString());
+        JsonNode unknown = new ObjectMapper().readTree(unknownResult.getResponse().getContentAsString());
+        assertThat(mismatch.get("title")).isEqualTo(unknown.get("title"));
+        assertThat(mismatch.get("detail")).isEqualTo(unknown.get("detail"));
+        assertThat(mismatch.get("status")).isEqualTo(unknown.get("status"));
     }
 
     // Un code vide, un code blanc ou un code trop long ne doivent rien révéler de plus qu'un
