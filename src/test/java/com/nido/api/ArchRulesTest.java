@@ -22,7 +22,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 class ArchRulesTest {
 
     private static final String BASE = "com.nido.api.";
-    private static final List<String> BCS = List.of("authentication", "identity", "mfa");
+    private static final List<String> BCS = List.of("authentication", "identity", "mfa", "space");
 
     private final JavaClasses classes = new ClassFileImporter()
         .importPackages("com.nido.api");
