@@ -197,6 +197,21 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Surefire (par defaut) execute les *Test ; failsafe execute les *IT en phase
+                 verify. `mvn test` reste la boucle courte, `mvn verify` est la porte complete :
+                 sans ce plugin les classes *IT ne tournaient que nommement. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
