@@ -45,6 +45,23 @@ class SpaceTest {
         assertThat(SpaceAppearance.ACCENTS).hasSize(6).doesNotContain(SpaceAppearance.PERSONAL_ACCENT);
     }
 
+    @Test
+    void role_ranks_are_strictly_increasing_in_power() {
+        assertThat(SpaceRole.VIEWER.rank()).isLessThan(SpaceRole.MEMBER.rank());
+        assertThat(SpaceRole.MEMBER.rank()).isLessThan(SpaceRole.ADMIN.rank());
+        assertThat(SpaceRole.ADMIN.rank()).isLessThan(SpaceRole.OWNER.rank());
+    }
+
+    @Test
+    void atLeast_compares_a_role_against_a_required_floor() {
+        assertThat(SpaceRole.VIEWER.atLeast(SpaceRole.VIEWER)).isTrue();
+        assertThat(SpaceRole.VIEWER.atLeast(SpaceRole.MEMBER)).isFalse();
+        assertThat(SpaceRole.MEMBER.atLeast(SpaceRole.MEMBER)).isTrue();
+        assertThat(SpaceRole.MEMBER.atLeast(SpaceRole.ADMIN)).isFalse();
+        assertThat(SpaceRole.ADMIN.atLeast(SpaceRole.MEMBER)).isTrue();
+        assertThat(SpaceRole.OWNER.atLeast(SpaceRole.OWNER)).isTrue();
+    }
+
     private static Space personal() {
         return new Space(UUID.randomUUID(), SpaceType.PERSONAL, "Perso", null,
             SpaceAppearance.PERSONAL_ACCENT, SpaceAppearance.PERSONAL_GLYPH, UUID.randomUUID(), Instant.now());

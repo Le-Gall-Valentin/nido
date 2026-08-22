@@ -3,6 +3,7 @@ package com.nido.api.infrastructure.web;
 import com.nido.api.space.application.port.in.ResolveMembershipUseCase;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -58,7 +59,15 @@ public class SpaceMembershipArgumentResolver implements HandlerMethodArgumentRes
             // Un identifiant mal formé ne doit pas révéler autre chose qu'un 404.
             throw new SpaceException.NotAMember();
         }
-        return resolveMembershipUseCase.resolve(spaceId, currentUserId());
+        SpaceMembership membership = resolveMembershipUseCase.resolve(spaceId, currentUserId());
+        // Plancher déclaratif : la route dit le rôle qu'elle exige, le résolveur le tient.
+        // Sans cela chaque futur handler scopé devrait penser à appeler ensureCanWrite().
+        CurrentMembership annotation = parameter.getParameterAnnotation(CurrentMembership.class);
+        SpaceRole required = annotation == null ? SpaceRole.VIEWER : annotation.min();
+        if (!membership.role().atLeast(required)) {
+            throw new SpaceException.InsufficientRole();
+        }
+        return membership;
     }
 
     private UUID currentUserId() {

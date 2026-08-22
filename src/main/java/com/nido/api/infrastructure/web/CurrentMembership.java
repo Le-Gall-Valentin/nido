@@ -1,5 +1,7 @@
 package com.nido.api.infrastructure.web;
 
+import com.nido.api.space.domain.model.SpaceRole;
+
 import java.lang.annotation.*;
 
 /**
@@ -10,4 +12,11 @@ import java.lang.annotation.*;
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface CurrentMembership {}
+public @interface CurrentMembership {
+
+    /**
+     * Rôle minimal exigé dans le contexte. VIEWER par défaut, soit aucune exigence :
+     * une route qui écrit doit déclarer explicitement MEMBER ou davantage.
+     */
+    SpaceRole min() default SpaceRole.VIEWER;
+}
