@@ -12,6 +12,7 @@ import com.nido.api.space.infrastructure.persistence.entity.SpaceMemberEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceMemberJpaRepository;
 import com.nido.api.space.domain.model.SpaceType;
+import com.nido.api.space.infrastructure.web.dto.ChangeMemberRoleRequest;
 import com.nido.api.space.infrastructure.web.dto.CreateSpaceRequest;
 import com.nido.api.space.infrastructure.web.dto.UpdateSpaceRequest;
 import io.jsonwebtoken.Jwts;
@@ -212,6 +213,61 @@ class SpaceControllerIT {
 
         mockMvc.perform(delete("/api/spaces/" + sharedSpaceId).cookie(accessTokenFor(aliceId, Role.USER)))
             .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void listMembers_returns_usernames_and_roles() throws Exception {
+        saveMembership(sharedSpaceId, bobId, SpaceRole.MEMBER);
+
+        mockMvc.perform(get("/api/spaces/" + sharedSpaceId + "/members")
+                .cookie(accessTokenFor(aliceId, Role.USER)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].username").value("alice"))
+            .andExpect(jsonPath("$[0].role").value("OWNER"))
+            .andExpect(jsonPath("$[1].username").value("bob"));
+    }
+
+    @Test
+    void changeMemberRole_is_refused_to_a_viewer_and_accepted_for_an_admin() throws Exception {
+        UUID carolId = saveUser("carol", Role.USER);
+        savePersonalSpace(carolId);
+        saveMembership(sharedSpaceId, bobId, SpaceRole.VIEWER);
+        saveMembership(sharedSpaceId, carolId, SpaceRole.MEMBER);
+        String payload = objectMapper.writeValueAsString(new ChangeMemberRoleRequest(SpaceRole.VIEWER));
+
+        mockMvc.perform(patch("/api/spaces/" + sharedSpaceId + "/members/" + carolId)
+                .cookie(accessTokenFor(bobId, Role.USER))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/api/spaces/" + sharedSpaceId + "/members/" + carolId)
+                .cookie(accessTokenFor(aliceId, Role.USER))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void the_owner_membership_cannot_be_touched() throws Exception {
+        saveMembership(sharedSpaceId, bobId, SpaceRole.ADMIN);
+
+        mockMvc.perform(delete("/api/spaces/" + sharedSpaceId + "/members/" + aliceId)
+                .cookie(accessTokenFor(bobId, Role.USER)))
+            .andExpect(status().isConflict());
+    }
+
+    @Test
+    void removeMember_lets_an_admin_remove_a_member() throws Exception {
+        saveMembership(sharedSpaceId, bobId, SpaceRole.MEMBER);
+
+        mockMvc.perform(delete("/api/spaces/" + sharedSpaceId + "/members/" + bobId)
+                .cookie(accessTokenFor(aliceId, Role.USER)))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/spaces/" + sharedSpaceId).cookie(accessTokenFor(bobId, Role.USER)))
+            .andExpect(status().isNotFound());
     }
 
     protected UUID saveUser(String username, Role role) {

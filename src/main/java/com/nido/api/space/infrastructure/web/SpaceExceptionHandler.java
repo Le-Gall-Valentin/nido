@@ -32,6 +32,7 @@ public class SpaceExceptionHandler {
             case SpaceException.OwnerRequired ex -> response(403, ex, "Only the owner can perform this action.");
 
             case SpaceException.SelfManagementForbidden ex -> response(409, ex, "You cannot manage your own membership.");
+            case SpaceException.OwnerMembershipProtected ex -> response(409, ex, "The owner's membership is protected.");
             case SpaceException.RoleAlreadyAssigned ex -> response(409, ex, "Member already has this role.");
             case SpaceException.LastOwnerCannotLeave ex -> response(409, ex, "Transfer ownership before leaving this space.");
             case SpaceException.SpaceNotEmpty ex -> response(409, ex, "This space still has members.");

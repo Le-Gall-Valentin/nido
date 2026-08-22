@@ -12,6 +12,7 @@ public abstract sealed class SpaceException extends RuntimeException
             SpaceException.InvalidSpaceDescription,
             SpaceException.OwnerRoleNotAssignable,
             SpaceException.SelfManagementForbidden,
+            SpaceException.OwnerMembershipProtected,
             SpaceException.RoleAlreadyAssigned,
             SpaceException.LastOwnerCannotLeave,
             SpaceException.SpaceNotEmpty,
@@ -54,6 +55,9 @@ public abstract sealed class SpaceException extends RuntimeException
     }
     public static final class SelfManagementForbidden extends SpaceException {
         public SelfManagementForbidden() { super("You cannot manage your own membership"); }
+    }
+    public static final class OwnerMembershipProtected extends SpaceException {
+        public OwnerMembershipProtected() { super("The owner's membership cannot be changed or removed"); }
     }
     public static final class RoleAlreadyAssigned extends SpaceException {
         public RoleAlreadyAssigned() { super("Member already has this role"); }
