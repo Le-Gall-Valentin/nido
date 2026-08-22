@@ -122,10 +122,12 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
     public void update(UpdateSpaceCommand command) {
         SpaceEntity e = spaces.findById(command.spaceId())
             .orElseThrow(SpaceException.SpaceNotFound::new);
-        e.setName(command.name());
-        e.setDescription(command.description());
-        e.setAccent(command.accent());
-        e.setGlyph(command.glyph());
+        // Modification partielle : seuls les champs fournis sont appliqués. Une description
+        // vide est un effacement explicite, à distinguer d'une absence.
+        if (command.name() != null) e.setName(command.name());
+        if (command.description() != null) e.setDescription(command.description().isEmpty() ? null : command.description());
+        if (command.accent() != null) e.setAccent(command.accent());
+        if (command.glyph() != null) e.setGlyph(command.glyph());
         save(e);
     }
 

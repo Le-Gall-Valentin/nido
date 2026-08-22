@@ -17,7 +17,20 @@ public final class SpaceAppearance {
 
     /** L'apparence d'un groupe est limitée à la palette du design : le client ne choisit pas librement. */
     public static void ensureValid(String accent, String glyph) {
-        if (!ACCENTS.contains(accent) || !GLYPHS.contains(glyph)) {
+        ensureValidAccent(accent);
+        ensureValidGlyph(glyph);
+    }
+
+    /** Validation d'un seul champ, pour une modification partielle. */
+    public static void ensureValidAccent(String accent) {
+        if (!ACCENTS.contains(accent)) {
+            throw new SpaceException.InvalidAppearance();
+        }
+    }
+
+    /** Validation d'un seul champ, pour une modification partielle. */
+    public static void ensureValidGlyph(String glyph) {
+        if (!GLYPHS.contains(glyph)) {
             throw new SpaceException.InvalidAppearance();
         }
     }

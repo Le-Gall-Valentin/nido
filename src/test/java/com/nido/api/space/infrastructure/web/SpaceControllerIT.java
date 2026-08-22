@@ -189,6 +189,44 @@ class SpaceControllerIT {
     }
 
     @Test
+    void update_is_partial_and_an_empty_description_clears_it() throws Exception {
+        String created = mockMvc.perform(post("/api/spaces")
+                .cookie(accessTokenFor(bobId, Role.USER))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(
+                    new CreateSpaceRequest("Chez papa & maman", "La maison familiale", "#4a7fa0", "🏠"))))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+        UUID spaceId = UUID.fromString(objectMapper.readTree(created).get("id").asText());
+
+        // Seul le nom est fourni : la description, l'accent et le glyphe survivent.
+        mockMvc.perform(patch("/api/spaces/" + spaceId)
+                .cookie(accessTokenFor(bobId, Role.USER))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Chez les parents\"}"))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId).cookie(accessTokenFor(bobId, Role.USER)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Chez les parents"))
+            .andExpect(jsonPath("$.description").value("La maison familiale"))
+            .andExpect(jsonPath("$.accent").value("#4a7fa0"))
+            .andExpect(jsonPath("$.glyph").value("🏠"));
+
+        // Une description vide est un effacement explicite.
+        mockMvc.perform(patch("/api/spaces/" + spaceId)
+                .cookie(accessTokenFor(bobId, Role.USER))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"description\":\"\"}"))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId).cookie(accessTokenFor(bobId, Role.USER)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Chez les parents"))
+            .andExpect(jsonPath("$.description").doesNotExist());
+    }
+
+    @Test
     void the_personal_space_cannot_be_renamed_nor_deleted() throws Exception {
         UUID personalId = spaces.findByPersonalOwnerId(aliceId).orElseThrow().getId();
         String payload = objectMapper.writeValueAsString(
