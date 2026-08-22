@@ -19,7 +19,9 @@ export function SpaceRoute({ children }: { children: ReactNode }) {
   const { data: spaces, isLoading } = useMySpaces()
   const { t } = useTranslation('common')
 
-  if (isLoading) return <Spinner label={t('loading')} />
+  // Ce garde s'affiche dans le <main> du shell, deja contraint en hauteur :
+  // la variante plein ecran du spinner y ferait deborder la zone scrollable.
+  if (isLoading) return <Spinner label={t('loading')} fullscreen={false} />
 
   const exists = spaces?.some((space) => space.id === spaceId) ?? false
   if (exists) return <>{children}</>
