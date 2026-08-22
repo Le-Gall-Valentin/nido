@@ -107,6 +107,27 @@ class SpaceControllerIT {
             .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void getSpace_returns_the_detail_for_a_member() throws Exception {
+        mockMvc.perform(get("/api/spaces/" + sharedSpaceId).cookie(accessTokenFor(aliceId, Role.USER)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Chez Valentin"))
+            .andExpect(jsonPath("$.myRole").value("OWNER"))
+            .andExpect(jsonPath("$.memberCount").value(1));
+    }
+
+    @Test
+    void getSpace_is_a_404_for_a_non_member() throws Exception {
+        mockMvc.perform(get("/api/spaces/" + sharedSpaceId).cookie(accessTokenFor(bobId, Role.USER)))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getSpace_is_a_404_for_an_unknown_space() throws Exception {
+        mockMvc.perform(get("/api/spaces/" + UUID.randomUUID()).cookie(accessTokenFor(aliceId, Role.USER)))
+            .andExpect(status().isNotFound());
+    }
+
     protected UUID saveUser(String username, Role role) {
         UserIdentityEntity user = new UserIdentityEntity();
         user.setUsername(username);
