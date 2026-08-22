@@ -4,12 +4,6 @@
   "subtitle": "Créez un groupe, invitez des personnes et gérez les rôles.",
   "loading": "Chargement…",
   "close": "Fermer",
-  "role": {
-    "OWNER": "Propriétaire",
-    "ADMIN": "Admin",
-    "MEMBER": "Membre",
-    "VIEWER": "Lecteur"
-  },
   "actions": {
     "edit": "Modifier",
     "invite": "Inviter",
@@ -25,12 +19,16 @@
     "already_assigned": "Ce membre a déjà ce rôle.",
     "last_owner": "Transférez la propriété avant de quitter ce contexte.",
     "personal_immutable": "L'espace personnel ne peut être ni renommé, ni partagé, ni supprimé.",
-    "no_account": "Aucun compte n'existe pour cette adresse.",
+    "no_account": "Aucun compte n'existe pour cette adresse. Demandez à un administrateur d'en créer un.",
     "already_member": "Cette personne fait déjà partie de ce contexte.",
     "invitation_pending": "Cette adresse a déjà une invitation en attente.",
     "invitation_not_found": "Cette invitation est introuvable.",
     "invitation_not_pending": "Cette invitation n'est plus en attente.",
     "invitation_expired": "Cette invitation a expiré.",
+    "invalid_appearance": "Cet accent ou cette icône ne fait pas partie de la palette autorisée.",
+    "invalid_space_name": "Le nom doit compter entre 1 et 80 caractères.",
+    "invalid_space_description": "La description ne doit pas dépasser 280 caractères.",
+    "owner_role_not_assignable": "Le rôle de propriétaire ne peut être attribué que par un transfert de propriété.",
     "rate_limit": "Trop de tentatives. Réessayez dans un instant.",
     "network": "Impossible de contacter le serveur. Vérifiez votre connexion.",
     "server": "Une erreur est survenue. Réessayez plus tard."
@@ -113,7 +111,8 @@
     "cancel": "Annuler",
     "submit": "Envoyer l'invitation",
     "success_title": "Invitation envoyée",
-    "success_body": "Transmettez ce code à {{email}} pour qu'iel puisse rejoindre le groupe.",
+    "success_body": "{{email}} a désormais une invitation qui l'attend sur sa page de groupes.",
+    "code_hint": "Code de référence (inutile pour rejoindre)",
     "done": "Terminé"
   },
   "leave": {

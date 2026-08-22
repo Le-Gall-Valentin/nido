@@ -51,7 +51,7 @@ export function SpaceListSection({ spaces, onSelect, onCreateClick }: SpaceListS
               <div className="min-w-0 flex-1">
                 <div className="text-[14.5px] font-semibold text-fg-0 truncate">{space.name}</div>
                 <div className="text-[12.5px] text-fg-3 truncate">
-                  {t('list.member_count', { count: space.memberCount })} · {t(`role.${space.myRole}`)}
+                  {t('list.member_count', { count: space.memberCount })} · {t(`space:role.${space.myRole}`)}
                 </div>
               </div>
               <ChevronRight className="size-4 shrink-0 text-fg-3" aria-hidden="true" />

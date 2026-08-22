@@ -71,6 +71,7 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
           <p className="text-sm text-fg-2 leading-relaxed">{t('invite.success_body', { email: issued.email })}</p>
         </div>
 
+        <p className="mb-1.5 text-xs text-fg-3">{t('invite.code_hint')}</p>
         <button
           type="button"
           onClick={() => { void handleCopy() }}
@@ -125,7 +126,7 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
             className="w-full rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3 py-[11px] text-sm text-fg-0 outline-none transition-all hover:border-border-2 focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-ring)] disabled:opacity-50"
           >
             {ASSIGNABLE_ROLES.map((r) => (
-              <option key={r} value={r}>{t(`role.${r}`)}</option>
+              <option key={r} value={r}>{t(`space:role.${r}`)}</option>
             ))}
           </select>
         </div>

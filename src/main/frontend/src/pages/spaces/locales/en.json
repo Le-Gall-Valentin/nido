@@ -4,12 +4,6 @@
   "subtitle": "Create a group, invite people, and manage roles.",
   "loading": "Loading…",
   "close": "Close",
-  "role": {
-    "OWNER": "Owner",
-    "ADMIN": "Admin",
-    "MEMBER": "Member",
-    "VIEWER": "Viewer"
-  },
   "actions": {
     "edit": "Edit",
     "invite": "Invite",
@@ -25,12 +19,16 @@
     "already_assigned": "This member already has this role.",
     "last_owner": "Transfer ownership before leaving this context.",
     "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
-    "no_account": "No account exists for this address.",
+    "no_account": "No account exists for this address. Ask an administrator to create one.",
     "already_member": "This person is already a member of this context.",
     "invitation_pending": "This address already has a pending invitation.",
     "invitation_not_found": "This invitation could not be found.",
     "invitation_not_pending": "This invitation is no longer pending.",
     "invitation_expired": "This invitation has expired.",
+    "invalid_appearance": "This accent or icon is not part of the allowed palette.",
+    "invalid_space_name": "Name must be between 1 and 80 characters.",
+    "invalid_space_description": "Description must not exceed 280 characters.",
+    "owner_role_not_assignable": "The owner role can only be assigned by transferring ownership.",
     "rate_limit": "Too many attempts. Please try again shortly.",
     "network": "Could not reach the server. Check your connection.",
     "server": "Something went wrong. Please try again later."
@@ -113,7 +111,8 @@
     "cancel": "Cancel",
     "submit": "Send invitation",
     "success_title": "Invitation sent",
-    "success_body": "Share this code with {{email}} so they can join.",
+    "success_body": "{{email}} now has an invitation waiting on their groups page.",
+    "code_hint": "Reference code (not needed to join)",
     "done": "Done"
   },
   "leave": {

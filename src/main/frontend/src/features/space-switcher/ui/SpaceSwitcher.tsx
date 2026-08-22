@@ -8,15 +8,8 @@ import { useMySpaces } from '../model/useMySpaces'
 import { useActiveSpace } from '../model/useActiveSpace'
 import { activeSpaceStore } from '../model/activeSpaceStore'
 
-const ROLE_LABEL_KEY: Record<SpaceRole, string> = {
-  OWNER: 'switcher.role.owner',
-  ADMIN: 'switcher.role.admin',
-  MEMBER: 'switcher.role.member',
-  VIEWER: 'switcher.role.viewer',
-}
-
-// L'espace perso doit toujours apparaître en tête de liste, quel que soit
-// l'ordre renvoyé par l'API.
+// The personal space must always appear first in the list, regardless of
+// the order the API returns.
 function sortSpaces(spaces: SpaceSummary[]): SpaceSummary[] {
   return [...spaces].sort((a, b) => Number(isPersonal(b)) - Number(isPersonal(a)))
 }
@@ -40,14 +33,14 @@ export function SpaceSwitcher() {
   }, [open, closeMenu])
 
   const ordered = useMemo(() => sortSpaces(spaces ?? []), [spaces])
-  // L'URL ne porte pas toujours un spaceId (ex. /account) : dans ce cas, le
-  // bouton retombe sur l'espace perso pour rester informatif, mais la coche
-  // dans le panneau, elle, ne s'allume que sur une correspondance stricte
-  // avec l'URL — jamais sur ce repli.
+  // The URL does not always carry a spaceId (e.g. /account): in that case
+  // the trigger button falls back to the personal space to stay
+  // informative, but the checkmark in the panel only lights up on a strict
+  // match with the URL — never on this fallback.
   const current = ordered.find((s) => s.id === spaceId) ?? ordered.find((s) => isPersonal(s))
 
   function roleLabel(role: SpaceRole): string {
-    return t(ROLE_LABEL_KEY[role])
+    return t(`role.${role}`)
   }
 
   function subtitleFor(space: SpaceSummary): string {
