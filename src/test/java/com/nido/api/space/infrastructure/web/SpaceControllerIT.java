@@ -227,6 +227,17 @@ class SpaceControllerIT {
     }
 
     @Test
+    void update_rejects_a_blank_name() throws Exception {
+        // Un nom présent mais vide n'est pas un no-op silencieux ni une 400 de Bean Validation :
+        // c'est un refus du domaine (InvalidSpaceName), donc un 422.
+        mockMvc.perform(patch("/api/spaces/" + sharedSpaceId)
+                .cookie(accessTokenFor(aliceId, Role.USER))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"   \"}"))
+            .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
     void the_personal_space_cannot_be_renamed_nor_deleted() throws Exception {
         UUID personalId = spaces.findByPersonalOwnerId(aliceId).orElseThrow().getId();
         String payload = objectMapper.writeValueAsString(

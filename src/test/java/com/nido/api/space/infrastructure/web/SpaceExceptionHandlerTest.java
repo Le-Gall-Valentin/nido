@@ -45,6 +45,8 @@ class SpaceExceptionHandlerTest {
             .getStatusCode().value()).isEqualTo(422);
         assertThat(handler.handle(new SpaceException.InvalidAppearance(), request)
             .getStatusCode().value()).isEqualTo(422);
+        assertThat(handler.handle(new SpaceException.OwnerAlreadyExists(), request)
+            .getStatusCode().value()).isEqualTo(409);
     }
 
     @Test
