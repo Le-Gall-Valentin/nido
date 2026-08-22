@@ -1,0 +1,16 @@
+{
+  "switcher": {
+    "kicker": "Contexte",
+    "title": "Basculer de contexte",
+    "trigger_label": "Contexte actuel : {{name}}. Basculer de contexte",
+    "close_label": "Fermer le sélecteur de contexte",
+    "personal_subtitle": "Vos données personnelles",
+    "create_action": "Créer ou rejoindre un groupe",
+    "role": {
+      "owner": "Propriétaire",
+      "admin": "Administrateur",
+      "member": "Membre",
+      "viewer": "Lecteur"
+    }
+  }
+}

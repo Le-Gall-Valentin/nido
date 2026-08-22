@@ -9,6 +9,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/features/auth', () => ({ useAuth: vi.fn() }))
+vi.mock('@/features/space-switcher', () => ({ SpaceSwitcher: () => <div data-testid="space-switcher" /> }))
 
 import { useAuth } from '@/features/auth'
 const mockUseAuth = vi.mocked(useAuth)

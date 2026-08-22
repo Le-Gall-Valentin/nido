@@ -2,9 +2,11 @@ import { lazy } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { LoginPage } from '@/pages/login'
 import { ROUTES } from '@/shared/config'
-import { AppLayout } from '@/app/layouts'
+import { AppLayout, SpaceLayout } from '@/app/layouts'
+import { SpacesApiProvider, spacesApi } from '@/features/space-switcher'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AdminRoute } from './AdminRoute'
+import { SpaceRoute } from './SpaceRoute'
 import { PublicOnlyRoute } from './PublicOnlyRoute'
 import { DefaultRedirect } from './DefaultRedirect'
 
@@ -29,7 +31,9 @@ export function AppRouter() {
         <Route
           element={
             <ProtectedRoute>
-              <AppLayout />
+              <SpacesApiProvider api={spacesApi}>
+                <AppLayout />
+              </SpacesApiProvider>
             </ProtectedRoute>
           }
         >
@@ -42,6 +46,17 @@ export function AppRouter() {
           </Route>
 
           <Route path={ROUTES.ACCOUNT} element={<AccountPage />} />
+
+          {/* Scoped context — Task 3 registers the members child route and the
+              /spaces groups page; until then the outlet below is empty. */}
+          <Route
+            path="/s/:spaceId"
+            element={
+              <SpaceRoute>
+                <SpaceLayout />
+              </SpaceRoute>
+            }
+          />
         </Route>
 
         {/* Catch-all */}
