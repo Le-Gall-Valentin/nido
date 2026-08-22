@@ -22,12 +22,17 @@ export function ReceivedInvitationsSection({ onAccepted }: ReceivedInvitationsSe
 
   if (!invitations || invitations.length === 0) return null
 
-  function handleAccept(invitationId: string) {
+  // Navigation is awaited on the mutation itself — including the
+  // invalidations useAcceptInvitation's onSuccess returns — rather than
+  // fired from a callback race that could run before the refetch settles.
+  async function handleAccept(invitationId: string) {
     setErrorKey(null)
-    acceptInvitation.mutate(invitationId, {
-      onSuccess: (result) => onAccepted(result.spaceId),
-      onError: (error) => setErrorKey(mapSpaceErrorToKey(error, 'accept')),
-    })
+    try {
+      const result = await acceptInvitation.mutateAsync(invitationId)
+      onAccepted(result.spaceId)
+    } catch (error) {
+      setErrorKey(mapSpaceErrorToKey(error, 'accept'))
+    }
   }
 
   return (
@@ -53,7 +58,7 @@ export function ReceivedInvitationsSection({ onAccepted }: ReceivedInvitationsSe
                   {t('received.expires', { time: formatRelativeTime(invitation.expiresAt, i18n.language) })}
                 </div>
               </div>
-              <SpaceRolePill role={invitation.role} label={t(`role.${invitation.role}`)} />
+              <SpaceRolePill role={invitation.role} label={t(`space:role.${invitation.role}`)} />
               <Button
                 onClick={() => handleAccept(invitation.invitationId)}
                 isLoading={accepting}

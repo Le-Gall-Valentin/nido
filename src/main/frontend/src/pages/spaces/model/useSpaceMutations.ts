@@ -28,10 +28,10 @@ export function useUpdateSpace(spaceId: string) {
   return useMutation({
     // Name/accent/glyph are shown both in the detail and in "my spaces".
     mutationFn: (patch: UpdateSpaceInput) => api.updateSpace(spaceId, patch),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: spaceDetailKey(spaceId) })
-      queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] })
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: spaceDetailKey(spaceId) }),
+      queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] }),
+    ]),
   })
 }
 
@@ -65,10 +65,10 @@ export function useRemoveMember(spaceId: string) {
     // the detail key also covers the members list: React Query matches query
     // keys by prefix, and spaceMembersKey(spaceId) extends spaceDetailKey(spaceId).
     mutationFn: (userId: string) => api.removeMember(spaceId, userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: spaceDetailKey(spaceId) })
-      queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] })
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: spaceDetailKey(spaceId) }),
+      queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] }),
+    ]),
   })
 }
 
@@ -80,10 +80,10 @@ export function useTransferOwnership(spaceId: string) {
     // appears. Invalidating the detail key also covers the members list (see
     // useRemoveMember).
     mutationFn: (userId: string) => api.transferOwnership(spaceId, userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: spaceDetailKey(spaceId) })
-      queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] })
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: spaceDetailKey(spaceId) }),
+      queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] }),
+    ]),
   })
 }
 
@@ -124,9 +124,9 @@ export function useAcceptInvitation() {
   return useMutation({
     // A context appears in "my spaces" and the accepted invitation leaves the received list.
     mutationFn: (invitationId: string) => api.acceptInvitation(invitationId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] })
-      queryClient.invalidateQueries({ queryKey: RECEIVED_INVITATIONS_QUERY_KEY })
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] }),
+      queryClient.invalidateQueries({ queryKey: RECEIVED_INVITATIONS_QUERY_KEY }),
+    ]),
   })
 }

@@ -83,6 +83,23 @@ describe('useUpdateSpace', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: spaceDetailKey('s-1') })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: [SPACES_QUERY_KEY] })
   })
+
+  it('does not resolve until both invalidations have settled', async () => {
+    const api = fakeApi()
+    const { queryClient, wrapper } = setup(api)
+    let resolveInvalidate!: () => void
+    const deferred = new Promise<void>((resolve) => { resolveInvalidate = resolve })
+    vi.spyOn(queryClient, 'invalidateQueries').mockReturnValue(deferred)
+    const { result } = renderHook(() => useUpdateSpace('s-1'), { wrapper })
+
+    result.current.mutate({ name: 'New name' })
+    await waitFor(() => expect(api.updateSpace).toHaveBeenCalled())
+    await new Promise((r) => setTimeout(r, 0))
+    expect(result.current.isSuccess).toBe(false)
+
+    resolveInvalidate()
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+  })
 })
 
 describe('useDeleteSpace', () => {
@@ -130,6 +147,23 @@ describe('useRemoveMember', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: spaceDetailKey('s-1') })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: [SPACES_QUERY_KEY] })
   })
+
+  it('does not resolve until both invalidations have settled', async () => {
+    const api = fakeApi()
+    const { queryClient, wrapper } = setup(api)
+    let resolveInvalidate!: () => void
+    const deferred = new Promise<void>((resolve) => { resolveInvalidate = resolve })
+    vi.spyOn(queryClient, 'invalidateQueries').mockReturnValue(deferred)
+    const { result } = renderHook(() => useRemoveMember('s-1'), { wrapper })
+
+    result.current.mutate('u-2')
+    await waitFor(() => expect(api.removeMember).toHaveBeenCalled())
+    await new Promise((r) => setTimeout(r, 0))
+    expect(result.current.isSuccess).toBe(false)
+
+    resolveInvalidate()
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+  })
 })
 
 describe('useTransferOwnership', () => {
@@ -146,6 +180,23 @@ describe('useTransferOwnership', () => {
     expect(invalidate).toHaveBeenCalledTimes(2)
     expect(invalidate).toHaveBeenCalledWith({ queryKey: spaceDetailKey('s-1') })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: [SPACES_QUERY_KEY] })
+  })
+
+  it('does not resolve until both invalidations have settled', async () => {
+    const api = fakeApi()
+    const { queryClient, wrapper } = setup(api)
+    let resolveInvalidate!: () => void
+    const deferred = new Promise<void>((resolve) => { resolveInvalidate = resolve })
+    vi.spyOn(queryClient, 'invalidateQueries').mockReturnValue(deferred)
+    const { result } = renderHook(() => useTransferOwnership('s-1'), { wrapper })
+
+    result.current.mutate('u-2')
+    await waitFor(() => expect(api.transferOwnership).toHaveBeenCalled())
+    await new Promise((r) => setTimeout(r, 0))
+    expect(result.current.isSuccess).toBe(false)
+
+    resolveInvalidate()
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
   })
 })
 
@@ -208,5 +259,24 @@ describe('useAcceptInvitation', () => {
     expect(result.current.data).toEqual({ spaceId: 's-2' })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: [SPACES_QUERY_KEY] })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: RECEIVED_INVITATIONS_QUERY_KEY })
+  })
+
+  it('does not resolve until the invalidations it triggers have settled', async () => {
+    // A caller awaiting this mutation (e.g. to navigate afterwards) must see
+    // the refetch complete first, or it acts on stale cached data.
+    const api = fakeApi()
+    const { queryClient, wrapper } = setup(api)
+    let resolveInvalidate!: () => void
+    const deferred = new Promise<void>((resolve) => { resolveInvalidate = resolve })
+    vi.spyOn(queryClient, 'invalidateQueries').mockReturnValue(deferred)
+    const { result } = renderHook(() => useAcceptInvitation(), { wrapper })
+
+    result.current.mutate('i-1')
+    await waitFor(() => expect(api.acceptInvitation).toHaveBeenCalled())
+    await new Promise((r) => setTimeout(r, 0))
+    expect(result.current.isSuccess).toBe(false)
+
+    resolveInvalidate()
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
   })
 })

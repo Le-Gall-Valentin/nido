@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
-import { QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SpacesApiProvider } from '@/features/space-switcher'
 import type { ISpacesApi } from '@/features/space-switcher'
 import type { SpaceSummary } from '@/entities/space'
@@ -31,8 +31,7 @@ function LocationDisplay() {
   return <div data-testid="location">{location.pathname}</div>
 }
 
-function renderAt(path: string, api: ISpacesApi) {
-  const queryClient = createTestQueryClient()
+function renderAt(path: string, api: ISpacesApi, queryClient: QueryClient = createTestQueryClient()) {
   return render(
     <QueryClientProvider client={queryClient}>
       <SpacesApiProvider api={api}>
@@ -69,5 +68,41 @@ describe('SpaceRoute', () => {
     renderAt('/s/ghost-space', fakeApi())
     await screen.findByText('scoped-content')
     expect(screen.getByTestId('location').textContent).toBe('/s/personal-1')
+  })
+
+  it('holds with the loader instead of redirecting while a background refetch might still reveal the context', async () => {
+    // Regression: accepting an invitation invalidates ["spaces"], but the
+    // cached (stale) list is still missing the new context while the
+    // refetch is in flight — isLoading is already false by then. Ejecting
+    // at that point is the bug; the guard must wait for the refetch.
+    const queryClient = createTestQueryClient()
+    queryClient.setQueryData(['spaces'], [PERSONAL])
+    let resolveFetch!: (spaces: SpaceSummary[]) => void
+    const api: ISpacesApi = {
+      listMySpaces: vi.fn().mockImplementation(() => new Promise((resolve) => { resolveFetch = resolve })),
+      getSpace: vi.fn(),
+    }
+
+    renderAt('/s/space-2', api, queryClient)
+
+    expect(screen.queryByText('scoped-content')).toBeNull()
+    expect(screen.queryByTestId('location')?.textContent).not.toBe('/s/personal-1')
+    expect(screen.getByRole('status')).toBeDefined()
+
+    resolveFetch([PERSONAL, FAMILY])
+    expect(await screen.findByText('scoped-content')).toBeDefined()
+  })
+
+  it('holds position and shows a translated error instead of redirecting when the list fails to load', async () => {
+    const api: ISpacesApi = {
+      listMySpaces: vi.fn().mockRejectedValue(new Error('network down')),
+      getSpace: vi.fn(),
+    }
+    renderAt('/s/space-2', api)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toBe('error.spaces_unavailable')
+    expect(screen.queryByText('scoped-content')).toBeNull()
+    expect(screen.getByTestId('location').textContent).toBe('/s/space-2')
   })
 })

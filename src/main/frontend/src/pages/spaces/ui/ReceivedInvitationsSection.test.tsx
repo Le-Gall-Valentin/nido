@@ -29,14 +29,13 @@ function fakeApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
   }
 }
 
-function renderWith(api: ISpacesPageApi, onAccepted = vi.fn()) {
-  const queryClient = createTestQueryClient()
+function renderWith(api: ISpacesPageApi, onAccepted = vi.fn(), queryClient = createTestQueryClient()) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <SpacesPageApiProvider api={api}>{children}</SpacesPageApiProvider>
     </QueryClientProvider>
   )
-  return { ...render(<ReceivedInvitationsSection onAccepted={onAccepted} />, { wrapper }), onAccepted }
+  return { ...render(<ReceivedInvitationsSection onAccepted={onAccepted} />, { wrapper }), onAccepted, queryClient }
 }
 
 beforeEach(() => vi.clearAllMocks())
@@ -55,6 +54,25 @@ describe('ReceivedInvitationsSection', () => {
   it('accepts an invitation and navigates to the joined space via onAccepted', async () => {
     const { onAccepted } = renderWith(fakeApi())
     fireEvent.click(await screen.findByText('received.action_accept'))
+    await waitFor(() => expect(onAccepted).toHaveBeenCalledWith('s-2'))
+  })
+
+  it('navigates only after the acceptance and its invalidations have settled, not before', async () => {
+    // Regression: navigation used to run from the mutate() call-site's
+    // onSuccess, racing the ['spaces'] invalidation it depends on.
+    const queryClient = createTestQueryClient()
+    let resolveInvalidate!: () => void
+    const deferred = new Promise<void>((resolve) => { resolveInvalidate = resolve })
+    vi.spyOn(queryClient, 'invalidateQueries').mockReturnValue(deferred)
+    const api = fakeApi()
+    const { onAccepted } = renderWith(api, vi.fn(), queryClient)
+
+    fireEvent.click(await screen.findByText('received.action_accept'))
+    await waitFor(() => expect(api.acceptInvitation).toHaveBeenCalled())
+    await new Promise((r) => setTimeout(r, 0))
+    expect(onAccepted).not.toHaveBeenCalled()
+
+    resolveInvalidate()
     await waitFor(() => expect(onAccepted).toHaveBeenCalledWith('s-2'))
   })
 

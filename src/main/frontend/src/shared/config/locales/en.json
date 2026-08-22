@@ -3,6 +3,7 @@
   "error": {
     "unexpected": "An unexpected error occurred.",
     "retry": "Try again",
-    "reload": "Reload page"
+    "reload": "Reload page",
+    "spaces_unavailable": "Could not load your contexts. Check your connection and try again."
   }
 }
