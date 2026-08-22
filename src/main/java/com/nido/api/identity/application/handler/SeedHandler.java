@@ -3,6 +3,7 @@ package com.nido.api.identity.application.handler;
 import com.nido.api.identity.application.port.in.SeedUseCase;
 import com.nido.api.identity.domain.model.CreateUserProfileCommand;
 import com.nido.api.identity.domain.port.out.CredentialSetupPort;
+import com.nido.api.identity.domain.port.out.PersonalSpaceInitPort;
 import com.nido.api.identity.domain.port.out.TotpRecordInitPort;
 import com.nido.api.identity.domain.port.out.UserAdminPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
@@ -21,15 +22,18 @@ public class SeedHandler implements SeedUseCase {
     private final UserCommandPort userCommandPort;
     private final CredentialSetupPort credentialSetupPort;
     private final TotpRecordInitPort totpRecordInitPort;
+    private final PersonalSpaceInitPort personalSpaceInitPort;
 
     public SeedHandler(UserAdminPort userAdminPort,
                        UserCommandPort userCommandPort,
                        CredentialSetupPort credentialSetupPort,
-                       TotpRecordInitPort totpRecordInitPort) {
+                       TotpRecordInitPort totpRecordInitPort,
+                       PersonalSpaceInitPort personalSpaceInitPort) {
         this.userAdminPort = userAdminPort;
         this.userCommandPort = userCommandPort;
         this.credentialSetupPort = credentialSetupPort;
         this.totpRecordInitPort = totpRecordInitPort;
+        this.personalSpaceInitPort = personalSpaceInitPort;
     }
 
     @Override
@@ -43,6 +47,7 @@ public class SeedHandler implements SeedUseCase {
             new CreateUserProfileCommand(username, email, Role.SUPER_ADMIN));
         credentialSetupPort.setup(user.id(), password);
         totpRecordInitPort.initForUser(user.id());
+        personalSpaceInitPort.initForUser(user.id());
         log.info("Default SUPER_ADMIN '{}' created", username);
     }
 }

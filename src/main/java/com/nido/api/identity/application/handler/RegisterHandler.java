@@ -6,6 +6,7 @@ import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.RegisterCommand;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.CredentialSetupPort;
+import com.nido.api.identity.domain.port.out.PersonalSpaceInitPort;
 import com.nido.api.identity.domain.port.out.TotpRecordInitPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.shared.annotation.ApplicationService;
@@ -23,13 +24,16 @@ public class RegisterHandler implements RegisterUseCase {
     private final UserCommandPort userCommandPort;
     private final CredentialSetupPort credentialSetupPort;
     private final TotpRecordInitPort totpRecordInitPort;
+    private final PersonalSpaceInitPort personalSpaceInitPort;
 
     public RegisterHandler(UserCommandPort userCommandPort,
                            CredentialSetupPort credentialSetupPort,
-                           TotpRecordInitPort totpRecordInitPort) {
+                           TotpRecordInitPort totpRecordInitPort,
+                           PersonalSpaceInitPort personalSpaceInitPort) {
         this.userCommandPort = userCommandPort;
         this.credentialSetupPort = credentialSetupPort;
         this.totpRecordInitPort = totpRecordInitPort;
+        this.personalSpaceInitPort = personalSpaceInitPort;
     }
 
     @Override
@@ -42,6 +46,7 @@ public class RegisterHandler implements RegisterUseCase {
             new CreateUserProfileCommand(command.username(), command.email(), command.role()));
         credentialSetupPort.setup(user.id(), command.rawPassword());
         totpRecordInitPort.initForUser(user.id());
+        personalSpaceInitPort.initForUser(user.id());
         log.info("User {} registered with role {}", user.id(), command.role());
         return user;
     }

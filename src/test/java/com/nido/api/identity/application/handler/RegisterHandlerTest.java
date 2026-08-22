@@ -5,6 +5,7 @@ import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.RegisterCommand;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.CredentialSetupPort;
+import com.nido.api.identity.domain.port.out.PersonalSpaceInitPort;
 import com.nido.api.identity.domain.port.out.TotpRecordInitPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.shared.model.Role;
@@ -28,12 +29,13 @@ class RegisterHandlerTest {
     @Mock UserCommandPort userCommandPort;
     @Mock CredentialSetupPort credentialSetupPort;
     @Mock TotpRecordInitPort totpRecordInitPort;
+    @Mock PersonalSpaceInitPort personalSpaceInitPort;
 
     private RegisterHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new RegisterHandler(userCommandPort, credentialSetupPort, totpRecordInitPort);
+        handler = new RegisterHandler(userCommandPort, credentialSetupPort, totpRecordInitPort, personalSpaceInitPort);
     }
 
     @Test
@@ -70,6 +72,16 @@ class RegisterHandlerTest {
         assertThatThrownBy(() -> handler.register(cmd("someone", Role.USER), Role.USER))
             .isInstanceOf(IdentityException.InsufficientPermissions.class);
         verifyNoInteractions(userCommandPort);
+    }
+
+    @Test
+    void register_creates_the_personal_space() {
+        User created = user(UUID.randomUUID(), "newuser", Role.USER);
+        when(userCommandPort.createProfile(any(CreateUserProfileCommand.class))).thenReturn(created);
+
+        handler.register(cmd("newuser", Role.USER), Role.ADMIN);
+
+        verify(personalSpaceInitPort).initForUser(created.id());
     }
 
     @Test

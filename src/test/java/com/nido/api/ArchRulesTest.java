@@ -268,7 +268,12 @@ class ArchRulesTest {
         // identity.infra → mfa.application.port.in
         new CrossBcAppDep("identity",
             new String[]{BASE + "mfa.application.port.in.."},
-            Set.of("TotpRecordInitAdapter", "MfaAdminResetTotpAdapter", "IdentityTotpStatusAdapter", "TotpDeletionAdapter"))
+            Set.of("TotpRecordInitAdapter", "MfaAdminResetTotpAdapter", "IdentityTotpStatusAdapter", "TotpDeletionAdapter")),
+
+        // identity.infra → space.application.port.in
+        new CrossBcAppDep("identity",
+            new String[]{BASE + "space.application.port.in.."},
+            Set.of("PersonalSpaceInitAdapter", "SpaceDataDeletionAdapter"))
     );
 
     @ParameterizedTest(name = "{0}.infra → {1}: only whitelisted adapters allowed")
