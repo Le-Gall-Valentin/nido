@@ -38,6 +38,7 @@ public class SpaceExceptionHandler {
             case SpaceException.SpaceNotEmpty ex -> response(409, ex, "This space still has members.");
             case SpaceException.AlreadyMember ex -> response(409, ex, "This user is already a member.");
             case SpaceException.PersonalSpaceAlreadyExists ex -> response(409, ex, "This account already has a personal space.");
+            case SpaceException.OwnerAlreadyExists ex -> response(409, ex, "This space already has an owner.");
 
             case SpaceException.PersonalSpaceImmutable ex -> response(422, ex, "The personal space cannot be renamed, shared or deleted.");
             case SpaceException.InvalidAppearance ex -> response(422, ex, "Accent or glyph outside the allowed palette.");

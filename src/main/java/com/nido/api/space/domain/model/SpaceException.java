@@ -18,6 +18,7 @@ public abstract sealed class SpaceException extends RuntimeException
             SpaceException.SpaceNotEmpty,
             SpaceException.AlreadyMember,
             SpaceException.PersonalSpaceAlreadyExists,
+            SpaceException.OwnerAlreadyExists,
             SpaceException.DataIntegrityError {
 
     private SpaceException(String message) { super(message); }
@@ -73,6 +74,9 @@ public abstract sealed class SpaceException extends RuntimeException
     }
     public static final class PersonalSpaceAlreadyExists extends SpaceException {
         public PersonalSpaceAlreadyExists() { super("User already has a personal space"); }
+    }
+    public static final class OwnerAlreadyExists extends SpaceException {
+        public OwnerAlreadyExists() { super("Space already has an owner"); }
     }
     public static final class DataIntegrityError extends SpaceException {
         public DataIntegrityError() { super("Unexpected data integrity violation"); }

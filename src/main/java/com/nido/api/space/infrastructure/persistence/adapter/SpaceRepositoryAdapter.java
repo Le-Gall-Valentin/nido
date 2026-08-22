@@ -208,6 +208,7 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
             if (c != null) {
                 if (c.contains("uq_spaces_personal_owner")) return new SpaceException.PersonalSpaceAlreadyExists();
                 if (c.contains("uq_space_members_space_user")) return new SpaceException.AlreadyMember();
+                if (c.contains("uq_space_members_single_owner")) return new SpaceException.OwnerAlreadyExists();
             }
         }
         return new SpaceException.DataIntegrityError();

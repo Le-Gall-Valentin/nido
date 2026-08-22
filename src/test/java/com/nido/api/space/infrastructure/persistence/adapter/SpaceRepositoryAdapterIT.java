@@ -82,7 +82,7 @@ class SpaceRepositoryAdapterIT {
         adapter.add(shared.id(), alice, SpaceRole.OWNER);
 
         assertThatThrownBy(() -> adapter.add(shared.id(), bob, SpaceRole.OWNER))
-            .isInstanceOf(SpaceException.DataIntegrityError.class);
+            .isInstanceOf(SpaceException.OwnerAlreadyExists.class);
     }
 
     @Test
