@@ -61,10 +61,11 @@ export function useRemoveMember(spaceId: string) {
   const api = useSpacesPageApi()
   const queryClient = useQueryClient()
   return useMutation({
-    // memberCount changes, both in the detail and in "my spaces".
+    // memberCount changes, both in the detail and in "my spaces". Invalidating
+    // the detail key also covers the members list: React Query matches query
+    // keys by prefix, and spaceMembersKey(spaceId) extends spaceDetailKey(spaceId).
     mutationFn: (userId: string) => api.removeMember(spaceId, userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: spaceMembersKey(spaceId) })
       queryClient.invalidateQueries({ queryKey: spaceDetailKey(spaceId) })
       queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] })
     },
@@ -75,10 +76,11 @@ export function useTransferOwnership(spaceId: string) {
   const api = useSpacesPageApi()
   const queryClient = useQueryClient()
   return useMutation({
-    // myRole changes for both the previous and the new owner, everywhere it appears.
+    // myRole changes for both the previous and the new owner, everywhere it
+    // appears. Invalidating the detail key also covers the members list (see
+    // useRemoveMember).
     mutationFn: (userId: string) => api.transferOwnership(spaceId, userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: spaceMembersKey(spaceId) })
       queryClient.invalidateQueries({ queryKey: spaceDetailKey(spaceId) })
       queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] })
     },

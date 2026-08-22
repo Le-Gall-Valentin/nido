@@ -116,7 +116,7 @@ describe('useChangeMemberRole', () => {
 })
 
 describe('useRemoveMember', () => {
-  it('invalidates members, detail and ["spaces"] (memberCount changes everywhere)', async () => {
+  it('invalidates only the detail (which covers the members list by key prefix) and ["spaces"]', async () => {
     const api = fakeApi()
     const { queryClient, wrapper } = setup(api)
     const invalidate = spy(queryClient)
@@ -126,14 +126,14 @@ describe('useRemoveMember', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(api.removeMember).toHaveBeenCalledWith('s-1', 'u-2')
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: spaceMembersKey('s-1') })
+    expect(invalidate).toHaveBeenCalledTimes(2)
     expect(invalidate).toHaveBeenCalledWith({ queryKey: spaceDetailKey('s-1') })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: [SPACES_QUERY_KEY] })
   })
 })
 
 describe('useTransferOwnership', () => {
-  it('invalidates members, detail and ["spaces"] (myRole changes everywhere)', async () => {
+  it('invalidates only the detail (which covers the members list by key prefix) and ["spaces"]', async () => {
     const api = fakeApi()
     const { queryClient, wrapper } = setup(api)
     const invalidate = spy(queryClient)
@@ -143,7 +143,7 @@ describe('useTransferOwnership', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(api.transferOwnership).toHaveBeenCalledWith('s-1', 'u-2')
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: spaceMembersKey('s-1') })
+    expect(invalidate).toHaveBeenCalledTimes(2)
     expect(invalidate).toHaveBeenCalledWith({ queryKey: spaceDetailKey('s-1') })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: [SPACES_QUERY_KEY] })
   })

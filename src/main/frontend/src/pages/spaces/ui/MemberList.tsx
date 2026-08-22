@@ -76,7 +76,7 @@ export function MemberList({
               </div>
             </div>
 
-            {canManage && !isMe && !targetIsOwner ? (
+            {showManageActions ? (
               <select
                 aria-label={t('members.role_select_label', { name: deleted ? t('members.deleted_account') : member.username })}
                 value={member.role}

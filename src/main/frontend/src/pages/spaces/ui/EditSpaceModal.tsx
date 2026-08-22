@@ -1,13 +1,10 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check } from 'lucide-react'
 import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { SPACE_ACCENTS, SPACE_GLYPHS, safeAccent, safeGlyph, type SpaceDetail } from '@/entities/space'
+import { safeAccent, safeGlyph, type SpaceDetail } from '@/entities/space'
 import type { UpdateSpaceInput } from '../model/ISpacesPageApi'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
-
-const NAME_MAX = 80
-const DESCRIPTION_MAX = 280
+import { AppearancePicker, NAME_MAX, DESCRIPTION_MAX } from './AppearancePicker'
 
 interface EditSpaceModalProps {
   space: SpaceDetail
@@ -28,7 +25,7 @@ export function EditSpaceModal({ space, onClose, onUpdate, onSuccess }: EditSpac
   const [accent, setAccent] = useState<string>(originalAccent)
   const [glyph, setGlyph] = useState<string>(originalGlyph)
   const [isLoading, setIsLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<string | null>(null)
+  const [errorKey, setErrorKey] = useState<string[] | null>(null)
   const pendingRef = useRef(false)
 
   const trimmedName = name.trim()
@@ -106,44 +103,14 @@ export function EditSpaceModal({ space, onClose, onUpdate, onSuccess }: EditSpac
           {descriptionInvalid && <p className="text-xs text-status-orange mb-1">{t('edit.error.description_length')}</p>}
         </div>
 
-        <div className="mb-4">
-          <span className="mb-2 block text-[13px] font-semibold text-fg-1">{t('edit.accent')}</span>
-          <div className="flex flex-wrap gap-2">
-            {SPACE_ACCENTS.map((a) => (
-              <button
-                key={a}
-                type="button"
-                aria-label={t('edit.accent_option', { color: a })}
-                aria-pressed={accent === a}
-                disabled={isLoading}
-                onClick={() => setAccent(a)}
-                className="flex size-9 items-center justify-center rounded-full disabled:opacity-50"
-                style={{ background: a }}
-              >
-                {accent === a && <Check className="size-4 text-white" />}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mb-1">
-          <span className="mb-2 block text-[13px] font-semibold text-fg-1">{t('edit.glyph')}</span>
-          <div className="flex flex-wrap gap-2">
-            {SPACE_GLYPHS.map((g) => (
-              <button
-                key={g}
-                type="button"
-                aria-label={t('edit.glyph_option', { glyph: g })}
-                aria-pressed={glyph === g}
-                disabled={isLoading}
-                onClick={() => setGlyph(g)}
-                className={`flex size-9 items-center justify-center rounded-[10px] border-[1.5px] text-lg transition-colors disabled:opacity-50 ${glyph === g ? 'border-accent bg-accent-dim' : 'border-border bg-bg-1 hover:bg-bg-2'}`}
-              >
-                {g}
-              </button>
-            ))}
-          </div>
-        </div>
+        <AppearancePicker
+          prefix="edit"
+          accent={accent}
+          onAccentChange={setAccent}
+          glyph={glyph}
+          onGlyphChange={setGlyph}
+          disabled={isLoading}
+        />
 
         {errorKey && (
           <Alert variant="error" className="mt-4">{t(errorKey)}</Alert>
