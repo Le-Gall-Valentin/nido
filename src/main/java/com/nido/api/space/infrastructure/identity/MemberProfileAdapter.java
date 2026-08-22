@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -23,5 +24,11 @@ public class MemberProfileAdapter implements MemberProfilePort {
         return findUserUseCase.findByIds(userIds).stream()
             .map(u -> new MemberProfile(u.id(), u.username(), u.email()))
             .toList();
+    }
+
+    @Override
+    public Optional<MemberProfile> findByEmail(String email) {
+        return findUserUseCase.findByEmail(email)
+            .map(u -> new MemberProfile(u.id(), u.username(), u.email()));
     }
 }
