@@ -2,7 +2,6 @@ package com.nido.api.space.application.handler;
 
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceAppearance;
-import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.domain.port.out.SpaceCommandPort;
@@ -19,6 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,6 +42,7 @@ class CreatePersonalSpaceHandlerTest {
     @Test
     void creates_the_space_and_its_owner_membership() {
         Space created = personalSpace();
+        when(spaceRepository.findPersonalOwnedBy(userId)).thenReturn(Optional.empty());
         when(spaceCommandPort.createPersonal(userId)).thenReturn(created);
 
         UUID result = handler.createFor(userId);
@@ -53,14 +54,14 @@ class CreatePersonalSpaceHandlerTest {
     @Test
     void is_idempotent_when_the_personal_space_already_exists() {
         Space existing = personalSpace();
-        when(spaceCommandPort.createPersonal(userId))
-            .thenThrow(new SpaceException.PersonalSpaceAlreadyExists());
         when(spaceRepository.findPersonalOwnedBy(userId)).thenReturn(Optional.of(existing));
 
         UUID result = handler.createFor(userId);
 
+        // Pré-contrôle : rien n'est écrit, donc aucun flush à rattraper.
         assertThat(result).isEqualTo(existing.id());
-        verify(spaceMembershipPort, never()).add(existing.id(), userId, SpaceRole.OWNER);
+        verify(spaceCommandPort, never()).createPersonal(userId);
+        verify(spaceMembershipPort, never()).add(any(), any(), any());
     }
 
     private Space personalSpace() {
