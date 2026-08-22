@@ -31,6 +31,9 @@ public class DeleteEmptySpaceHandler implements DeleteEmptySpaceUseCase {
         Space space = spaceRepository.findById(spaceId)
             .orElseThrow(SpaceException.SpaceNotFound::new);
         if (spaceRepository.countMembers(spaceId) > 0) {
+            // Une tentative refusée intéresse plus un auditeur qu'une suppression autorisée.
+            log.warn("Platform admin {} was refused the deletion of space {}: it still has members",
+                callerId, spaceId);
             throw new SpaceException.SpaceNotEmpty();
         }
         spaceCommandPort.delete(space.id());

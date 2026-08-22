@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.HandlerMapping;
@@ -46,7 +47,8 @@ public class SpaceMembershipArgumentResolver implements HandlerMethodArgumentRes
                                   NativeWebRequest webRequest,
                                   WebDataBinderFactory binderFactory) {
         Map<String, String> pathVariables = (Map<String, String>)
-            webRequest.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, 0);
+            webRequest.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE,
+                RequestAttributes.SCOPE_REQUEST);
         String rawSpaceId = pathVariables == null ? null : pathVariables.get(SPACE_ID);
         if (rawSpaceId == null) {
             throw new IllegalStateException(

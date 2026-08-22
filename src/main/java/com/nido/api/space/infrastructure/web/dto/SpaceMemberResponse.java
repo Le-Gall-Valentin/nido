@@ -6,6 +6,11 @@ import com.nido.api.space.domain.model.SpaceRole;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * {@code username} et {@code email} sont null quand le profil du compte n'est plus
+ * résoluble, ce qui est le cas d'un compte anonymisé par une suppression RGPD. Un
+ * client qui les suppose non nuls casse au premier compte anonymisé.
+ */
 public record SpaceMemberResponse(
     UUID userId,
     String username,
