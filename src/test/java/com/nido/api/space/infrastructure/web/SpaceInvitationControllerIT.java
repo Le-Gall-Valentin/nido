@@ -14,6 +14,7 @@ import com.nido.api.space.infrastructure.persistence.repository.SpaceInvitationJ
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceMemberJpaRepository;
 import com.nido.api.space.domain.model.SpaceType;
+import com.nido.api.identity.infrastructure.web.dto.UpdateProfileRequest;
 import com.nido.api.space.infrastructure.web.dto.InviteMemberRequest;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -39,6 +40,7 @@ import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -175,6 +177,25 @@ class SpaceInvitationControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
             .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void inviting_an_account_whose_email_was_updated_to_mixed_case_still_succeeds() throws Exception {
+        String updatePayload = objectMapper.writeValueAsString(
+            new UpdateProfileRequest("carol", "Carol@TEST.com"));
+        mockMvc.perform(patch("/api/users/me")
+                .cookie(accessTokenFor(carolId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updatePayload))
+            .andExpect(status().isNoContent());
+
+        String invitePayload = objectMapper.writeValueAsString(new InviteMemberRequest("carol@test.com", SpaceRole.MEMBER));
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(invitePayload))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.email").value("carol@test.com"));
     }
 
     @Test

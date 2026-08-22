@@ -9,6 +9,7 @@ import com.nido.api.identity.domain.port.out.UserAdminPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.shared.model.Role;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,8 +44,9 @@ public class SeedHandler implements SeedUseCase {
             log.info("Database already has users, skipping seed");
             return;
         }
+        String normalizedEmail = email == null ? null : email.toLowerCase(Locale.ROOT);
         var user = userCommandPort.createProfile(
-            new CreateUserProfileCommand(username, email, Role.SUPER_ADMIN));
+            new CreateUserProfileCommand(username, normalizedEmail, Role.SUPER_ADMIN));
         credentialSetupPort.setup(user.id(), password);
         totpRecordInitPort.initForUser(user.id());
         personalSpaceInitPort.initForUser(user.id());
