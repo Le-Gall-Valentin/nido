@@ -58,6 +58,14 @@ describe('MemberList — action gating', () => {
 
   it('shows change-role select and remove button for a manageable member when I am ADMIN', () => {
     render(
+      <MemberList members={[OWNER, VIEWER]} currentUserId="u-admin" myRole="ADMIN" onChangeRole={noop} onRemove={noop} onTransfer={noop} />
+    )
+    expect(screen.getByRole('combobox')).toBeDefined()
+    expect(screen.getByLabelText('members.action_remove:carol')).toBeDefined()
+  })
+
+  it('shows change-role select and remove button for a manageable member when I am OWNER', () => {
+    render(
       <MemberList members={[OWNER, VIEWER]} currentUserId={OWNER.userId} myRole="OWNER" onChangeRole={noop} onRemove={noop} onTransfer={noop} />
     )
     expect(screen.getByRole('combobox')).toBeDefined()

@@ -7,6 +7,7 @@ import type { SpaceDetail, SpaceMember, SpaceInvitation } from '@/entities/space
 import type { ISpacesPageApi } from '../model/ISpacesPageApi'
 import { SpacesPageApiProvider } from '../model/spacesPageApiContext'
 import { SpaceDetailSection } from './SpaceDetailSection'
+import { SpaceNotAccessibleError } from '@/features/space-switcher'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k), i18n: { language: 'en' } }),
@@ -79,9 +80,11 @@ describe('SpaceDetailSection — loading and error', () => {
   })
 
   it('shows an error message, never a permission message, on a 404', async () => {
-    const api = fakeApi({ getSpaceDetail: vi.fn().mockRejectedValue(new Error('not accessible')) })
+    const api = fakeApi({ getSpaceDetail: vi.fn().mockRejectedValue(new SpaceNotAccessibleError()) })
     renderSection(api)
-    await waitFor(() => expect(screen.getByRole('alert')).toBeDefined())
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('errors.not_accessible')
+    expect(alert.textContent).not.toContain('insufficient_role')
   })
 })
 
@@ -105,6 +108,19 @@ describe('SpaceDetailSection — action visibility by role', () => {
     renderSection(fakeApi({ getSpaceDetail: vi.fn().mockResolvedValue({ ...SHARED_DETAIL, myRole: 'MEMBER' }) }))
     await screen.findByText('Chez nous')
     expect(screen.queryByText('actions.invite')).toBeNull()
+  })
+
+  it('shows Edit (the personalisation entry point) for a manager on a shared space', async () => {
+    withRole('OWNER')
+    renderSection(fakeApi())
+    expect(await screen.findByText('actions.edit')).toBeDefined()
+  })
+
+  it('hides Edit for a MEMBER', async () => {
+    withRole('MEMBER')
+    renderSection(fakeApi({ getSpaceDetail: vi.fn().mockResolvedValue({ ...SHARED_DETAIL, myRole: 'MEMBER' }) }))
+    await screen.findByText('Chez nous')
+    expect(screen.queryByText('actions.edit')).toBeNull()
   })
 
   it('shows Leave for a non-owner on a shared space', async () => {
@@ -132,6 +148,7 @@ describe('SpaceDetailSection — action visibility by role', () => {
     expect(screen.queryByText('actions.invite')).toBeNull()
     expect(screen.queryByText('actions.leave')).toBeNull()
     expect(screen.queryByText('actions.delete')).toBeNull()
+    expect(screen.queryByText('actions.edit')).toBeNull()
   })
 })
 
