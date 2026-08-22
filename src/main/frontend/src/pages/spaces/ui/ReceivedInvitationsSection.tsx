@@ -18,7 +18,7 @@ export function ReceivedInvitationsSection({ onAccepted }: ReceivedInvitationsSe
   const { t, i18n } = useTranslation('spaces')
   const { data: invitations } = useReceivedInvitations()
   const acceptInvitation = useAcceptInvitation()
-  const [errorKey, setErrorKey] = useState<string | null>(null)
+  const [errorKey, setErrorKey] = useState<string[] | null>(null)
 
   if (!invitations || invitations.length === 0) return null
 

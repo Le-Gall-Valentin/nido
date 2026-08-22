@@ -9,7 +9,7 @@ import {
   OwnerProtectedError,
   SpaceRoleAlreadyAssignedError,
   LastOwnerError,
-  SpaceNotEmptyError,
+  MemberNotFoundError,
   AlreadyMemberError,
   InvitationAlreadyPendingError,
   InvitationNotFoundError,
@@ -56,6 +56,11 @@ describe('getSpaceDetail', () => {
   it('throws NetworkError on no response', async () => {
     mock.get.mockRejectedValue(new Error('network'))
     await expect(spacesPageApi.getSpaceDetail('s-1')).rejects.toBeInstanceOf(NetworkError)
+  })
+
+  it('throws SpaceNotAccessibleError on a plain 404 (SpaceNotFound / NotAMember, indistinguishable)', async () => {
+    mock.get.mockRejectedValue(axiosErr(404))
+    await expect(spacesPageApi.getSpaceDetail('s-1')).rejects.toBeInstanceOf(SpaceNotAccessibleError)
   })
 })
 
@@ -115,8 +120,9 @@ describe('updateSpace', () => {
 
   it('omits absent fields entirely, including when clearing description with an empty string', async () => {
     mock.patch.mockResolvedValue({ status: 204 })
-    await spacesPageApi.updateSpace('s-1', { description: '' })
-    expect(mock.patch).toHaveBeenCalledWith('/spaces/s-1', { description: '' })
+    await spacesPageApi.updateSpace('s-1', { name: 'New name', description: '' })
+    // accent and glyph are absent from the input and must not appear in the body at all.
+    expect(mock.patch).toHaveBeenCalledWith('/spaces/s-1', { name: 'New name', description: '' })
   })
 
   it('throws PersonalSpaceImmutableError on 422', async () => {
@@ -130,11 +136,6 @@ describe('deleteSpace', () => {
     mock.delete.mockResolvedValue({ status: 204 })
     await spacesPageApi.deleteSpace('s-1')
     expect(mock.delete).toHaveBeenCalledWith('/spaces/s-1')
-  })
-
-  it('throws SpaceNotEmptyError on 409 SpaceNotEmpty', async () => {
-    mock.delete.mockRejectedValue(axiosErr(409, 'SpaceNotEmpty'))
-    await expect(spacesPageApi.deleteSpace('s-1')).rejects.toBeInstanceOf(SpaceNotEmptyError)
   })
 })
 
@@ -171,6 +172,11 @@ describe('removeMember', () => {
     mock.delete.mockResolvedValue({ status: 204 })
     await spacesPageApi.removeMember('s-1', 'u-1')
     expect(mock.delete).toHaveBeenCalledWith('/spaces/s-1/members/u-1')
+  })
+
+  it('throws MemberNotFoundError on 404 MemberNotFound, distinct from a vanished space', async () => {
+    mock.delete.mockRejectedValue(axiosErr(404, 'MemberNotFound'))
+    await expect(spacesPageApi.removeMember('s-1', 'u-1')).rejects.toBeInstanceOf(MemberNotFoundError)
   })
 })
 

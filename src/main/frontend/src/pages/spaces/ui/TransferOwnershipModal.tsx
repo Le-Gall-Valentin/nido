@@ -16,7 +16,7 @@ export function TransferOwnershipModal({ target, onClose, onTransfer, onSuccess 
   const { t } = useTranslation('spaces')
   const targetName = target.username ?? t('members.deleted_account')
   const [isLoading, setIsLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<string | null>(null)
+  const [errorKey, setErrorKey] = useState<string[] | null>(null)
   const pendingRef = useRef(false)
 
   async function handleSubmit() {

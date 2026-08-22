@@ -4,21 +4,37 @@
   "subtitle": "Create a group, invite people, and manage roles.",
   "loading": "Loading…",
   "close": "Close",
-
   "role": {
     "OWNER": "Owner",
     "ADMIN": "Admin",
     "MEMBER": "Member",
     "VIEWER": "Viewer"
   },
-
   "actions": {
     "edit": "Edit",
     "invite": "Invite",
     "leave": "Leave",
     "delete": "Delete"
   },
-
+  "errors": {
+    "not_accessible": "This context no longer exists or is no longer accessible.",
+    "member_not_found": "This member is no longer part of this context.",
+    "insufficient_role": "Your role in this context does not allow this action.",
+    "owner_protected": "The owner's membership is protected.",
+    "self_management": "You cannot perform this action on yourself.",
+    "already_assigned": "This member already has this role.",
+    "last_owner": "Transfer ownership before leaving this context.",
+    "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
+    "no_account": "No account exists for this address.",
+    "already_member": "This person is already a member of this context.",
+    "invitation_pending": "This address already has a pending invitation.",
+    "invitation_not_found": "This invitation could not be found.",
+    "invitation_not_pending": "This invitation is no longer pending.",
+    "invitation_expired": "This invitation has expired.",
+    "rate_limit": "Too many attempts. Please try again shortly.",
+    "network": "Could not reach the server. Check your connection.",
+    "server": "Something went wrong. Please try again later."
+  },
   "list": {
     "title": "My contexts",
     "action_create": "Create a group",
@@ -28,48 +44,24 @@
     "member_count_other": "{{count}} members",
     "empty": "You are not part of any group yet."
   },
-
   "received": {
     "title": "Invitations received",
     "expires": "Expires {{time}}",
     "action_accept": "Join"
   },
-
   "members": {
     "title": "Members",
     "empty": "No members.",
-    "load_error": "Could not load the members list.",
     "you": "you",
     "deleted_account": "Deleted account",
     "joined": "Joined {{time}}",
     "role_select_label": "Role of {{name}}",
     "action_transfer": "Transfer ownership to {{name}}",
-    "action_remove": "Remove {{name}}",
-    "error": {
-      "not_accessible": "This context no longer exists or is no longer accessible.",
-      "insufficient_role": "Your role in this context does not allow this action.",
-      "owner_protected": "The owner's membership is protected.",
-      "self_management": "You cannot perform this action on yourself.",
-      "already_assigned": "This member already has this role.",
-      "last_owner": "Transfer ownership before leaving this context.",
-      "not_empty": "Remove the remaining members before deleting this group.",
-      "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
-      "no_account": "No account exists for this address.",
-      "already_member": "This person is already a member of this context.",
-      "invitation_pending": "This address already has a pending invitation.",
-      "invitation_not_found": "This invitation could not be found.",
-      "invitation_not_pending": "This invitation is no longer pending.",
-      "invitation_expired": "This invitation has expired.",
-      "rate_limit": "Too many attempts. Please try again shortly.",
-      "network": "Could not reach the server. Check your connection.",
-      "server": "Something went wrong. Please try again later."
-    }
+    "action_remove": "Remove {{name}}"
   },
-
   "invitations": {
     "title": "Invitations",
     "empty": "No invitations issued.",
-    "load_error": "Could not load the invitations list.",
     "expires": "Expires {{time}}",
     "status": {
       "PENDING": "Pending",
@@ -77,72 +69,8 @@
       "REVOKED": "Revoked"
     },
     "action_copy": "Copy code {{code}}",
-    "action_revoke": "Revoke invitation for {{email}}",
-    "error": {
-      "not_accessible": "This context no longer exists or is no longer accessible.",
-      "insufficient_role": "Your role in this context does not allow this action.",
-      "owner_protected": "The owner's membership is protected.",
-      "self_management": "You cannot perform this action on yourself.",
-      "already_assigned": "This member already has this role.",
-      "last_owner": "Transfer ownership before leaving this context.",
-      "not_empty": "Remove the remaining members before deleting this group.",
-      "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
-      "no_account": "No account exists for this address.",
-      "already_member": "This person is already a member of this context.",
-      "invitation_pending": "This address already has a pending invitation.",
-      "invitation_not_found": "This invitation could not be found.",
-      "invitation_not_pending": "This invitation is no longer pending.",
-      "invitation_expired": "This invitation has expired.",
-      "rate_limit": "Too many attempts. Please try again shortly.",
-      "network": "Could not reach the server. Check your connection.",
-      "server": "Something went wrong. Please try again later."
-    }
+    "action_revoke": "Revoke invitation for {{email}}"
   },
-
-  "detail": {
-    "error": {
-      "not_accessible": "This context no longer exists or is no longer accessible.",
-      "insufficient_role": "Your role in this context does not allow this action.",
-      "owner_protected": "The owner's membership is protected.",
-      "self_management": "You cannot perform this action on yourself.",
-      "already_assigned": "This member already has this role.",
-      "last_owner": "Transfer ownership before leaving this context.",
-      "not_empty": "Remove the remaining members before deleting this group.",
-      "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
-      "no_account": "No account exists for this address.",
-      "already_member": "This person is already a member of this context.",
-      "invitation_pending": "This address already has a pending invitation.",
-      "invitation_not_found": "This invitation could not be found.",
-      "invitation_not_pending": "This invitation is no longer pending.",
-      "invitation_expired": "This invitation has expired.",
-      "rate_limit": "Too many attempts. Please try again shortly.",
-      "network": "Could not reach the server. Check your connection.",
-      "server": "Something went wrong. Please try again later."
-    }
-  },
-
-  "accept": {
-    "error": {
-      "not_accessible": "This context no longer exists or is no longer accessible.",
-      "insufficient_role": "Your role in this context does not allow this action.",
-      "owner_protected": "The owner's membership is protected.",
-      "self_management": "You cannot perform this action on yourself.",
-      "already_assigned": "This member already has this role.",
-      "last_owner": "Transfer ownership before leaving this context.",
-      "not_empty": "Remove the remaining members before deleting this group.",
-      "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
-      "no_account": "No account exists for this address.",
-      "already_member": "This person is already a member of this context.",
-      "invitation_pending": "This address already has a pending invitation.",
-      "invitation_not_found": "This invitation could not be found.",
-      "invitation_not_pending": "This invitation is no longer pending.",
-      "invitation_expired": "This invitation has expired.",
-      "rate_limit": "Too many attempts. Please try again shortly.",
-      "network": "Could not reach the server. Check your connection.",
-      "server": "Something went wrong. Please try again later."
-    }
-  },
-
   "create": {
     "title": "Create a group",
     "name": "Name",
@@ -157,27 +85,9 @@
     "submit": "Create",
     "error": {
       "name_length": "Name must be at most 80 characters.",
-      "description_length": "Description must be at most 280 characters.",
-      "not_accessible": "This context no longer exists or is no longer accessible.",
-      "insufficient_role": "Your role in this context does not allow this action.",
-      "owner_protected": "The owner's membership is protected.",
-      "self_management": "You cannot perform this action on yourself.",
-      "already_assigned": "This member already has this role.",
-      "last_owner": "Transfer ownership before leaving this context.",
-      "not_empty": "Remove the remaining members before deleting this group.",
-      "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
-      "no_account": "No account exists for this address.",
-      "already_member": "This person is already a member of this context.",
-      "invitation_pending": "This address already has a pending invitation.",
-      "invitation_not_found": "This invitation could not be found.",
-      "invitation_not_pending": "This invitation is no longer pending.",
-      "invitation_expired": "This invitation has expired.",
-      "rate_limit": "Too many attempts. Please try again shortly.",
-      "network": "Could not reach the server. Check your connection.",
-      "server": "Something went wrong. Please try again later."
+      "description_length": "Description must be at most 280 characters."
     }
   },
-
   "edit": {
     "title": "Edit {{name}}",
     "name": "Name",
@@ -192,27 +102,9 @@
     "submit": "Save",
     "error": {
       "name_length": "Name must be at most 80 characters.",
-      "description_length": "Description must be at most 280 characters.",
-      "not_accessible": "This context no longer exists or is no longer accessible.",
-      "insufficient_role": "Your role in this context does not allow this action.",
-      "owner_protected": "The owner's membership is protected.",
-      "self_management": "You cannot perform this action on yourself.",
-      "already_assigned": "This member already has this role.",
-      "last_owner": "Transfer ownership before leaving this context.",
-      "not_empty": "Remove the remaining members before deleting this group.",
-      "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
-      "no_account": "No account exists for this address.",
-      "already_member": "This person is already a member of this context.",
-      "invitation_pending": "This address already has a pending invitation.",
-      "invitation_not_found": "This invitation could not be found.",
-      "invitation_not_pending": "This invitation is no longer pending.",
-      "invitation_expired": "This invitation has expired.",
-      "rate_limit": "Too many attempts. Please try again shortly.",
-      "network": "Could not reach the server. Check your connection.",
-      "server": "Something went wrong. Please try again later."
+      "description_length": "Description must be at most 280 characters."
     }
   },
-
   "invite": {
     "title": "Invite a member",
     "email": "Email address",
@@ -222,107 +114,27 @@
     "submit": "Send invitation",
     "success_title": "Invitation sent",
     "success_body": "Share this code with {{email}} so they can join.",
-    "done": "Done",
-    "error": {
-      "not_accessible": "This context no longer exists or is no longer accessible.",
-      "insufficient_role": "Your role in this context does not allow this action.",
-      "owner_protected": "The owner's membership is protected.",
-      "self_management": "You cannot perform this action on yourself.",
-      "already_assigned": "This member already has this role.",
-      "last_owner": "Transfer ownership before leaving this context.",
-      "not_empty": "Remove the remaining members before deleting this group.",
-      "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
-      "no_account": "No account exists for this address.",
-      "already_member": "This person is already a member of this context.",
-      "invitation_pending": "This address already has a pending invitation.",
-      "invitation_not_found": "This invitation could not be found.",
-      "invitation_not_pending": "This invitation is no longer pending.",
-      "invitation_expired": "This invitation has expired.",
-      "rate_limit": "Too many attempts. Please try again shortly.",
-      "network": "Could not reach the server. Check your connection.",
-      "server": "Something went wrong. Please try again later."
-    }
+    "done": "Done"
   },
-
   "leave": {
     "title": "Leave {{name}}?",
     "body": "You will lose access to this group and its content. You can be invited back later.",
     "cancel": "Cancel",
-    "submit": "Leave",
-    "error": {
-      "not_accessible": "This context no longer exists or is no longer accessible.",
-      "insufficient_role": "Your role in this context does not allow this action.",
-      "owner_protected": "The owner's membership is protected.",
-      "self_management": "You cannot perform this action on yourself.",
-      "already_assigned": "This member already has this role.",
-      "last_owner": "Transfer ownership before leaving this context.",
-      "not_empty": "Remove the remaining members before deleting this group.",
-      "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
-      "no_account": "No account exists for this address.",
-      "already_member": "This person is already a member of this context.",
-      "invitation_pending": "This address already has a pending invitation.",
-      "invitation_not_found": "This invitation could not be found.",
-      "invitation_not_pending": "This invitation is no longer pending.",
-      "invitation_expired": "This invitation has expired.",
-      "rate_limit": "Too many attempts. Please try again shortly.",
-      "network": "Could not reach the server. Check your connection.",
-      "server": "Something went wrong. Please try again later."
-    }
+    "submit": "Leave"
   },
-
   "delete": {
     "title": "Delete {{name}}?",
     "body": "This will permanently delete the group and remove every member. This cannot be undone.",
     "cancel": "Cancel",
-    "submit": "Delete",
-    "error": {
-      "not_accessible": "This context no longer exists or is no longer accessible.",
-      "insufficient_role": "Your role in this context does not allow this action.",
-      "owner_protected": "The owner's membership is protected.",
-      "self_management": "You cannot perform this action on yourself.",
-      "already_assigned": "This member already has this role.",
-      "last_owner": "Transfer ownership before leaving this context.",
-      "not_empty": "Remove the remaining members before deleting this group.",
-      "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
-      "no_account": "No account exists for this address.",
-      "already_member": "This person is already a member of this context.",
-      "invitation_pending": "This address already has a pending invitation.",
-      "invitation_not_found": "This invitation could not be found.",
-      "invitation_not_pending": "This invitation is no longer pending.",
-      "invitation_expired": "This invitation has expired.",
-      "rate_limit": "Too many attempts. Please try again shortly.",
-      "network": "Could not reach the server. Check your connection.",
-      "server": "Something went wrong. Please try again later."
-    }
+    "submit": "Delete"
   },
-
   "transfer": {
     "title": "Transfer ownership to {{name}}?",
     "body": "{{name}} will become the owner of this group. You will become an admin.",
     "warning": "You will not be able to undo this yourself — only the new owner could transfer it back.",
     "cancel": "Cancel",
-    "submit": "Transfer",
-    "error": {
-      "not_accessible": "This context no longer exists or is no longer accessible.",
-      "insufficient_role": "Your role in this context does not allow this action.",
-      "owner_protected": "The owner's membership is protected.",
-      "self_management": "You cannot perform this action on yourself.",
-      "already_assigned": "This member already has this role.",
-      "last_owner": "Transfer ownership before leaving this context.",
-      "not_empty": "Remove the remaining members before deleting this group.",
-      "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
-      "no_account": "No account exists for this address.",
-      "already_member": "This person is already a member of this context.",
-      "invitation_pending": "This address already has a pending invitation.",
-      "invitation_not_found": "This invitation could not be found.",
-      "invitation_not_pending": "This invitation is no longer pending.",
-      "invitation_expired": "This invitation has expired.",
-      "rate_limit": "Too many attempts. Please try again shortly.",
-      "network": "Could not reach the server. Check your connection.",
-      "server": "Something went wrong. Please try again later."
-    }
+    "submit": "Transfer"
   },
-
   "palette": {
     "type_switch": "Switch context",
     "switch_to": "Switch to {{name}}"

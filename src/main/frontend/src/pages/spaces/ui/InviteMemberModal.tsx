@@ -21,7 +21,7 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<AssignableSpaceRole>('MEMBER')
   const [isLoading, setIsLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<string | null>(null)
+  const [errorKey, setErrorKey] = useState<string[] | null>(null)
   const [issued, setIssued] = useState<SpaceInvitation | null>(null)
   const [copied, setCopied] = useState(false)
   const pendingRef = useRef(false)

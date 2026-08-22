@@ -14,7 +14,7 @@ interface LeaveSpaceModalProps {
 export function LeaveSpaceModal({ spaceName, onClose, onLeave, onSuccess }: LeaveSpaceModalProps) {
   const { t } = useTranslation('spaces')
   const [isLoading, setIsLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<string | null>(null)
+  const [errorKey, setErrorKey] = useState<string[] | null>(null)
   const pendingRef = useRef(false)
 
   async function handleSubmit() {

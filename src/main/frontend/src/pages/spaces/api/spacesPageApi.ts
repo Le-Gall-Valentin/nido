@@ -37,11 +37,6 @@ export class LastOwnerError extends Error {
   constructor() { super('Transfer ownership before leaving this space'); this.name = 'LastOwnerError' }
 }
 
-/** 409 SpaceNotEmpty: deleting a shared group requires it have no members left but the owner. */
-export class SpaceNotEmptyError extends Error {
-  constructor() { super('This space still has members'); this.name = 'SpaceNotEmptyError' }
-}
-
 /** 409 AlreadyMember: the invited address already belongs to this space. */
 export class AlreadyMemberError extends Error {
   constructor() { super('This user is already a member'); this.name = 'AlreadyMemberError' }
@@ -55,6 +50,15 @@ export class InvitationAlreadyPendingError extends Error {
 /** 404 InvitationNotFound: unknown, foreign, or already-consumed invitation id/code. */
 export class InvitationNotFoundError extends Error {
   constructor() { super('Invitation not found'); this.name = 'InvitationNotFoundError' }
+}
+
+/**
+ * 404 MemberNotFound: the target membership was removed (e.g. by another
+ * manager) since the page loaded. Distinguishable from SpaceNotAccessibleError
+ * so a stale row never tells the user the whole context vanished.
+ */
+export class MemberNotFoundError extends Error {
+  constructor() { super('This member is no longer part of this space'); this.name = 'MemberNotFoundError' }
 }
 
 /** 409 InvitationNotPending: the invitation was already accepted or revoked. */
@@ -85,7 +89,6 @@ const CONFLICT_TITLES: Record<string, () => never> = {
   OwnerMembershipProtected: () => { throw new OwnerProtectedError() },
   RoleAlreadyAssigned: () => { throw new SpaceRoleAlreadyAssignedError() },
   LastOwnerCannotLeave: () => { throw new LastOwnerError() },
-  SpaceNotEmpty: () => { throw new SpaceNotEmptyError() },
   AlreadyMember: () => { throw new AlreadyMemberError() },
   InvitationAlreadyPending: () => { throw new InvitationAlreadyPendingError() },
   InvitationNotPending: () => { throw new InvitationNotPendingError() },
@@ -109,10 +112,12 @@ function handleError(error: unknown): never {
     if (status === 429) throw new RateLimitError()
     if (status === 403) throw new InsufficientRoleError()
     if (status === 404) {
-      if (titleOf(error) === 'InvitationNotFound') throw new InvitationNotFoundError()
-      // Any other 404 (SpaceNotFound, NotAMember, MemberNotFound) is the
-      // backend's deliberately indistinguishable "not accessible" response —
-      // never a permission problem to describe to the user.
+      const title = titleOf(error)
+      if (title === 'InvitationNotFound') throw new InvitationNotFoundError()
+      if (title === 'MemberNotFound') throw new MemberNotFoundError()
+      // Any other 404 (SpaceNotFound, NotAMember) is the backend's
+      // deliberately indistinguishable "not accessible" response — never a
+      // permission problem to describe to the user.
       throw new SpaceNotAccessibleError()
     }
     if (status === 409) {

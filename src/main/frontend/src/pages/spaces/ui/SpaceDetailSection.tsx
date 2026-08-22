@@ -48,8 +48,8 @@ export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSe
   const manager = shared && !!myRole && canManageSpace(myRole)
   const owner = shared && !!myRole && isOwner(myRole)
 
-  const { data: members, isPending: membersPending, isError: membersError } = useSpaceMembers(spaceId)
-  const { data: invitations, isPending: invitationsPending, isError: invitationsError } = useSpaceInvitations(spaceId, manager)
+  const { data: members, isPending: membersPending, isError: membersError, error: membersErrorObj } = useSpaceMembers(spaceId)
+  const { data: invitations, isPending: invitationsPending, isError: invitationsError, error: invitationsErrorObj } = useSpaceInvitations(spaceId, manager)
 
   const changeMemberRole = useChangeMemberRole(spaceId)
   const removeMember = useRemoveMember(spaceId)
@@ -60,7 +60,7 @@ export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSe
   const inviteMember = useInviteMember(spaceId)
   const revokeInvitation = useRevokeInvitation(spaceId)
 
-  const [actionErrorKey, setActionErrorKey] = useState<string | null>(null)
+  const [actionErrorKey, setActionErrorKey] = useState<string[] | null>(null)
   const [editOpen, setEditOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [leaveOpen, setLeaveOpen] = useState(false)
@@ -154,7 +154,7 @@ export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSe
           {t('members.title')}
         </h2>
         {membersPending && <Spinner label={t('loading')} fullscreen={false} />}
-        {membersError && <Alert variant="error">{t('members.load_error')}</Alert>}
+        {membersError && <Alert variant="error">{t(mapSpaceErrorToKey(membersErrorObj, 'members'))}</Alert>}
         {!membersPending && !membersError && myRole && (
           <MemberList
             members={members ?? []}
@@ -175,7 +175,7 @@ export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSe
             {t('invitations.title')}
           </h2>
           {invitationsPending && <Spinner label={t('loading')} fullscreen={false} />}
-          {invitationsError && <Alert variant="error">{t('invitations.load_error')}</Alert>}
+          {invitationsError && <Alert variant="error">{t(mapSpaceErrorToKey(invitationsErrorObj, 'invitations'))}</Alert>}
           {!invitationsPending && !invitationsError && (
             <InvitationList
               invitations={invitations ?? []}
