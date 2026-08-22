@@ -16,9 +16,11 @@ import org.springframework.web.servlet.HandlerMapping;
 import java.util.Map;
 import java.util.UUID;
 
-// Une route portant @CurrentMembership ne doit jamais déclarer aussi un
-// @PathVariable UUID spaceId : Spring convertirait le chemin avant ce résolveur
-// et rendrait 400 sur un identifiant malformé, au lieu du 404 indistinguable.
+// Les routes de contexte déclarent aussi un @PathVariable UUID spaceId, pour la
+// lisibilité et la documentation OpenAPI. Spring convertit ce paramètre avant ce
+// résolveur, donc un identifiant syntaxiquement invalide produit un 400 : choix
+// assumé, une chaîne malformée ne désigne aucun contexte. Le parsing ci-dessous
+// reste défensif, pour une éventuelle route qui ne déclarerait pas la variable.
 @Component
 public class SpaceMembershipArgumentResolver implements HandlerMethodArgumentResolver {
 

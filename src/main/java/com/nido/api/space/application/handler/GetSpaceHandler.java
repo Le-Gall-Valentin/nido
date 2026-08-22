@@ -9,6 +9,8 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.port.out.SpaceRepository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @ApplicationService
 public class GetSpaceHandler implements GetSpaceUseCase {
 
@@ -20,11 +22,11 @@ public class GetSpaceHandler implements GetSpaceUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public SpaceDetailView get(SpaceMembership membership) {
-        Space space = spaceRepository.findById(membership.spaceId())
+    public SpaceDetailView get(UUID spaceId, SpaceMembership caller) {
+        Space space = spaceRepository.findById(spaceId)
             .orElseThrow(SpaceException.SpaceNotFound::new);
         return new SpaceDetailView(space.id(), space.type(), space.name(), space.description(),
-            space.accent(), space.glyph(), membership.role(),
+            space.accent(), space.glyph(), caller.role(),
             spaceRepository.countMembers(space.id()));
     }
 }

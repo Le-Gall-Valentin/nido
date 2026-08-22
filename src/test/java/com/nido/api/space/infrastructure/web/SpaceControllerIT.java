@@ -129,11 +129,12 @@ class SpaceControllerIT {
     }
 
     @Test
-    void getSpace_is_a_404_for_a_malformed_space_id() throws Exception {
-        // Le résolveur d'adhésion doit être le seul à parser {spaceId} : si une route
-        // déclarait aussi @PathVariable UUID spaceId, Spring rendrait 400 avant lui.
+    void getSpace_is_a_400_for_a_malformed_space_id() throws Exception {
+        // Choix assumé : le @PathVariable UUID est converti par Spring avant le résolveur,
+        // donc une syntaxe invalide est une erreur de requête. Aucune fuite : une chaîne
+        // malformée ne peut désigner aucun contexte, et tout UUID valide rend 404.
         mockMvc.perform(get("/api/spaces/pas-un-uuid").cookie(accessTokenFor(aliceId, Role.USER)))
-            .andExpect(status().isNotFound());
+            .andExpect(status().isBadRequest());
     }
 
     protected UUID saveUser(String username, Role role) {
