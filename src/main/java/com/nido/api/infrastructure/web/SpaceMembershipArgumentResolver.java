@@ -16,6 +16,9 @@ import org.springframework.web.servlet.HandlerMapping;
 import java.util.Map;
 import java.util.UUID;
 
+// Une route portant @CurrentMembership ne doit jamais déclarer aussi un
+// @PathVariable UUID spaceId : Spring convertirait le chemin avant ce résolveur
+// et rendrait 400 sur un identifiant malformé, au lieu du 404 indistinguable.
 @Component
 public class SpaceMembershipArgumentResolver implements HandlerMethodArgumentResolver {
 

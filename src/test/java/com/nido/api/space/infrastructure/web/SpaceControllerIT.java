@@ -128,6 +128,14 @@ class SpaceControllerIT {
             .andExpect(status().isNotFound());
     }
 
+    @Test
+    void getSpace_is_a_404_for_a_malformed_space_id() throws Exception {
+        // Le résolveur d'adhésion doit être le seul à parser {spaceId} : si une route
+        // déclarait aussi @PathVariable UUID spaceId, Spring rendrait 400 avant lui.
+        mockMvc.perform(get("/api/spaces/pas-un-uuid").cookie(accessTokenFor(aliceId, Role.USER)))
+            .andExpect(status().isNotFound());
+    }
+
     protected UUID saveUser(String username, Role role) {
         UserIdentityEntity user = new UserIdentityEntity();
         user.setUsername(username);
