@@ -128,7 +128,7 @@ class SpaceRepositoryAdapterIT {
     }
 
     @Test
-    void findSuccessor_prefers_the_oldest_admin_then_the_oldest_member_and_never_a_viewer() {
+    void findSuccessor_prefers_the_oldest_admin_then_member_then_viewer() {
         Space shared = adapter.createShared(
             new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice));
         adapter.add(shared.id(), alice, SpaceRole.OWNER);
@@ -137,6 +137,7 @@ class SpaceRepositoryAdapterIT {
         adapter.add(shared.id(), viewer, SpaceRole.VIEWER);
         adapter.add(shared.id(), member, SpaceRole.MEMBER);
 
+        // le lecteur est plus ancien, mais le rôle primes sur l'ancienneté
         assertThat(adapter.findSuccessor(shared.id(), alice))
             .isPresent()
             .get()
@@ -149,6 +150,24 @@ class SpaceRepositoryAdapterIT {
             .isPresent()
             .get()
             .satisfies(m -> assertThat(m.userId()).isEqualTo(admin));
+    }
+
+    @Test
+    void findSuccessor_falls_back_to_a_lone_viewer_rather_than_leaving_nobody() {
+        Space shared = adapter.createShared(
+            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice));
+        adapter.add(shared.id(), alice, SpaceRole.OWNER);
+        UUID viewer = saveUser("viewer");
+        adapter.add(shared.id(), viewer, SpaceRole.VIEWER);
+
+        // Sans ce repli, le groupe serait supprimé et son contenu détruit sous les yeux
+        // des lecteurs restants.
+        assertThat(adapter.findSuccessor(shared.id(), alice))
+            .isPresent()
+            .get()
+            .satisfies(m -> assertThat(m.userId()).isEqualTo(viewer));
+
+        assertThat(adapter.findSuccessor(shared.id(), viewer)).isEmpty();
     }
 
     private UUID saveUser(String username) {

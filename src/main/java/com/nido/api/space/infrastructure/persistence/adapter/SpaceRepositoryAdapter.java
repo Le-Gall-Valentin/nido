@@ -184,13 +184,13 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
 
     @Override
     public Optional<SpaceMembership> findSuccessor(UUID spaceId, UUID excludedUserId) {
-        // Un VIEWER n'hérite jamais de la propriété : ADMIN d'abord, puis MEMBER, le plus ancien gagne.
+        // Trois paliers : le plus haut rôle restant hérite, le plus ancien d'abord. Un lecteur
+        // hérite en dernier recours, plutôt que de détruire un contenu que d'autres consultent.
         List<SpaceMemberEntity> candidates = members.findCandidates(
-            spaceId, excludedUserId, List.of(SpaceRole.ADMIN, SpaceRole.MEMBER));
+            spaceId, excludedUserId, List.of(SpaceRole.ADMIN, SpaceRole.MEMBER, SpaceRole.VIEWER));
         return candidates.stream()
-            .sorted(Comparator.comparing((SpaceMemberEntity m) -> m.getRole() != SpaceRole.ADMIN)
+            .min(Comparator.comparingInt((SpaceMemberEntity m) -> -m.getRole().rank())
                 .thenComparing(SpaceMemberEntity::getJoinedAt))
-            .findFirst()
             .map(SpaceRepositoryAdapter::toDomain);
     }
 
