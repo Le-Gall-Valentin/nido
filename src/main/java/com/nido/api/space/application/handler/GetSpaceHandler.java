@@ -23,6 +23,7 @@ public class GetSpaceHandler implements GetSpaceUseCase {
     @Override
     @Transactional(readOnly = true)
     public SpaceDetailView get(UUID spaceId, SpaceMembership caller) {
+        caller.ensureSameSpace(spaceId);
         Space space = spaceRepository.findById(spaceId)
             .orElseThrow(SpaceException.SpaceNotFound::new);
         return new SpaceDetailView(space.id(), space.type(), space.name(), space.description(),

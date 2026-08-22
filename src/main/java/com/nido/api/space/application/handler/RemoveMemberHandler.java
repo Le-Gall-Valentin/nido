@@ -24,6 +24,7 @@ public class RemoveMemberHandler implements RemoveMemberUseCase {
     @Override
     @Transactional
     public void remove(RemoveMemberCommand command, SpaceMembership caller) {
+        caller.ensureSameSpace(command.spaceId());
         caller.ensureCanManageSpace();
         if (command.targetUserId().equals(caller.userId())) {
             throw new SpaceException.SelfManagementForbidden();

@@ -21,6 +21,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -78,6 +79,14 @@ class TransferOwnershipHandlerTest {
         assertThatThrownBy(() -> handler.transfer(
                 new TransferOwnershipCommand(spaceId, ownerId), membership(ownerId, SpaceRole.OWNER)))
             .isInstanceOf(SpaceException.SelfManagementForbidden.class);
+    }
+
+    @Test
+    void a_command_targeting_another_space_than_the_authorized_one_is_refused() {
+        assertThatThrownBy(() -> handler.transfer(
+                new TransferOwnershipCommand(UUID.randomUUID(), targetId), membership(ownerId, SpaceRole.OWNER)))
+            .isInstanceOf(SpaceException.NotAMember.class);
+        verifyNoInteractions(spaceRepository, spaceMembershipPort);
     }
 
     private SpaceMembership membership(UUID userId, SpaceRole role) {

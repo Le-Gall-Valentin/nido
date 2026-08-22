@@ -64,6 +64,16 @@ class UpdateSpaceHandlerTest {
             .isInstanceOf(SpaceException.PersonalSpaceImmutable.class);
     }
 
+    @Test
+    void a_command_targeting_another_space_than_the_authorized_one_is_refused() {
+        UpdateSpaceCommand elsewhere = new UpdateSpaceCommand(
+            UUID.randomUUID(), "Nouveau nom", null, "#4a7fa0", "🏠");
+
+        assertThatThrownBy(() -> handler.update(elsewhere, membership(SpaceRole.OWNER)))
+            .isInstanceOf(SpaceException.NotAMember.class);
+        verify(spaceCommandPort, never()).update(elsewhere);
+    }
+
     private UpdateSpaceCommand command() {
         return new UpdateSpaceCommand(spaceId, "Nouveau nom", "Nouvelle description", "#4a7fa0", "🏠");
     }

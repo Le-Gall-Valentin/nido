@@ -16,6 +16,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,6 +69,14 @@ class RemoveMemberHandlerTest {
         assertThatThrownBy(() -> handler.remove(
                 new RemoveMemberCommand(spaceId, targetId), membership(callerId, SpaceRole.ADMIN)))
             .isInstanceOf(SpaceException.OwnerMembershipProtected.class);
+    }
+
+    @Test
+    void a_command_targeting_another_space_than_the_authorized_one_is_refused() {
+        assertThatThrownBy(() -> handler.remove(
+                new RemoveMemberCommand(UUID.randomUUID(), targetId), membership(callerId, SpaceRole.OWNER)))
+            .isInstanceOf(SpaceException.NotAMember.class);
+        verify(spaceMembershipPort, never()).remove(any());
     }
 
     private SpaceMembership membership(UUID userId, SpaceRole role) {

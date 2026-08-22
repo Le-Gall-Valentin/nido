@@ -30,6 +30,7 @@ public class TransferOwnershipHandler implements TransferOwnershipUseCase {
     @Override
     @Transactional
     public void transfer(TransferOwnershipCommand command, SpaceMembership caller) {
+        caller.ensureSameSpace(command.spaceId());
         caller.ensureOwner();
         if (command.newOwnerUserId().equals(caller.userId())) {
             throw new SpaceException.SelfManagementForbidden();

@@ -18,6 +18,17 @@ public record SpaceMembership(
         Objects.requireNonNull(role, "role");
     }
 
+    /**
+     * Vérifie que cette adhésion autorise bien le contexte visé par la commande.
+     * Une divergence est traitée comme une absence d'adhésion : le contexte demandé
+     * n'est pas celui dont l'appelant a prouvé être membre.
+     */
+    public void ensureSameSpace(UUID targetSpaceId) {
+        if (!spaceId.equals(targetSpaceId)) {
+            throw new SpaceException.NotAMember();
+        }
+    }
+
     public boolean isOwner() {
         return role == SpaceRole.OWNER;
     }

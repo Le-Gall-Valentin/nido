@@ -24,6 +24,7 @@ public class UpdateSpaceHandler implements UpdateSpaceUseCase {
     @Override
     @Transactional
     public void update(UpdateSpaceCommand command, SpaceMembership caller) {
+        caller.ensureSameSpace(command.spaceId());
         caller.ensureCanManageSpace();
         Space space = spaceRepository.findById(command.spaceId())
             .orElseThrow(SpaceException.SpaceNotFound::new);

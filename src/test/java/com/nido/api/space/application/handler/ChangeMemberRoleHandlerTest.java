@@ -105,6 +105,15 @@ class ChangeMemberRoleHandlerTest {
         verify(spaceMembershipPort, never()).changeRole(any(), any());
     }
 
+    @Test
+    void a_command_targeting_another_space_than_the_authorized_one_is_refused() {
+        assertThatThrownBy(() -> handler.change(
+                new ChangeMemberRoleCommand(UUID.randomUUID(), targetId, SpaceRole.ADMIN),
+                membership(callerId, SpaceRole.OWNER)))
+            .isInstanceOf(SpaceException.NotAMember.class);
+        verify(spaceMembershipPort, never()).changeRole(any(), any());
+    }
+
     private SpaceMembership membership(UUID userId, SpaceRole role) {
         return new SpaceMembership(UUID.randomUUID(), spaceId, userId, role, Instant.now());
     }

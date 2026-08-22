@@ -53,6 +53,17 @@ class SpaceMembershipTest {
         assertThat(owner.isOwner()).isTrue();
     }
 
+    @Test
+    void ensureSameSpace_accepts_its_own_space_and_refuses_any_other() {
+        SpaceMembership membership = membership(SpaceRole.OWNER);
+
+        assertThatCode(() -> membership.ensureSameSpace(membership.spaceId()))
+            .doesNotThrowAnyException();
+        // Un autre contexte est traité comme une absence d'adhésion : 404, pas 403.
+        assertThatThrownBy(() -> membership.ensureSameSpace(UUID.randomUUID()))
+            .isInstanceOf(SpaceException.NotAMember.class);
+    }
+
     private static SpaceMembership membership(SpaceRole role) {
         return new SpaceMembership(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), role, Instant.now());
     }

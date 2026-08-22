@@ -21,6 +21,7 @@ public class ChangeMemberRoleHandler implements ChangeMemberRoleUseCase {
     @Override
     @Transactional
     public void change(ChangeMemberRoleCommand command, SpaceMembership caller) {
+        caller.ensureSameSpace(command.spaceId());
         caller.ensureCanManageSpace();
         if (command.targetUserId().equals(caller.userId())) {
             throw new SpaceException.SelfManagementForbidden();
