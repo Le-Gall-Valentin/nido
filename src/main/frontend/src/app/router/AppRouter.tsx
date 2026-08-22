@@ -47,10 +47,11 @@ export function AppRouter() {
 
           <Route path={ROUTES.ACCOUNT} element={<AccountPage />} />
 
-          {/* Scoped context — Task 3 registers the members child route and the
-              /spaces groups page; until then the outlet below is empty. */}
+          {/* Scoped context subtree: the guard resolves the caller's contexts
+              before anything renders, and the layout carries the context's
+              accent down to the pages mounted under its outlet. */}
           <Route
-            path="/s/:spaceId"
+            path={ROUTES.space(':spaceId')}
             element={
               <SpaceRoute>
                 <SpaceLayout />

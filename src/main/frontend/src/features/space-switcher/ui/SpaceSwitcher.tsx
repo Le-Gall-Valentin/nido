@@ -84,9 +84,6 @@ export function SpaceSwitcher() {
           </span>
           <span className="max-w-[160px] truncate text-sm font-semibold text-fg-0">{current.name}</span>
         </span>
-        {/* Le rôle du contexte courant reste accessible même si la maquette ne
-            lui réserve pas de troisième ligne visuelle dans le bouton. */}
-        <span className="sr-only">{subtitleFor(current)}</span>
         <ChevronDown size={16} className="text-fg-3" aria-hidden="true" />
       </button>
 

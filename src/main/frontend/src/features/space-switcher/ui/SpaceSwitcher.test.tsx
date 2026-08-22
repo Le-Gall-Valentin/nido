@@ -7,6 +7,7 @@ import { SpacesApiProvider } from '../model/spacesApiContext'
 import type { ISpacesApi } from '../model/ISpacesApi'
 import type { SpaceSummary } from '@/entities/space'
 import { createTestQueryClient } from '@/shared/test'
+import { activeSpaceStore } from '../model/activeSpaceStore'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -52,10 +53,13 @@ function setup({ api = fakeApi(), initialEntries = ['/s/space-2'] }: { api?: ISp
 beforeEach(() => vi.clearAllMocks())
 
 describe('SpaceSwitcher — trigger', () => {
-  it('shows the current context name and role', async () => {
+  it('shows the current context name under the kicker', async () => {
+    // La maquette ne met pas le rôle sur le bouton : il n'apparaît qu'en
+    // sous-titre dans le panneau, où il qualifie chaque contexte listé.
     setup()
     expect(await screen.findByText('La Famille')).toBeDefined()
-    expect(screen.getByText('switcher.role.admin')).toBeDefined()
+    expect(screen.getByText('switcher.kicker')).toBeDefined()
+    expect(screen.queryByText('switcher.role.admin')).toBeNull()
   })
 
   it('is closed by default', async () => {
@@ -100,6 +104,7 @@ describe('SpaceSwitcher — panel', () => {
     const personalItem = items.find((item) => item.textContent?.includes('Alice'))!
     fireEvent.click(personalItem)
     expect(mockNavigate).toHaveBeenCalledWith('/s/personal-1')
+    expect(activeSpaceStore.getState().lastSpaceId).toBe('personal-1')
   })
 
   it('navigates to the groups page on create-or-join', async () => {
