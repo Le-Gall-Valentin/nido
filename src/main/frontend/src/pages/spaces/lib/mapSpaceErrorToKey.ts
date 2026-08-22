@@ -6,6 +6,7 @@ import {
   OwnerProtectedError,
   SpaceRoleAlreadyAssignedError,
   LastOwnerError,
+  SpaceNotEmptyError,
   AlreadyMemberError,
   InvitationAlreadyPendingError,
   InvitationNotFoundError,
@@ -27,6 +28,7 @@ export function mapSpaceErrorToKey(error: unknown, prefix: string): string {
   if (error instanceof SelfManagementError) return `${prefix}.error.self_management`
   if (error instanceof SpaceRoleAlreadyAssignedError) return `${prefix}.error.already_assigned`
   if (error instanceof LastOwnerError) return `${prefix}.error.last_owner`
+  if (error instanceof SpaceNotEmptyError) return `${prefix}.error.not_empty`
   if (error instanceof PersonalSpaceImmutableError) return `${prefix}.error.personal_immutable`
   if (error instanceof NoAccountForEmailError) return `${prefix}.error.no_account`
   if (error instanceof AlreadyMemberError) return `${prefix}.error.already_member`

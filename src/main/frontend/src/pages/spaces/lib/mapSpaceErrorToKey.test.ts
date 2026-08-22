@@ -8,6 +8,7 @@ import {
   OwnerProtectedError,
   SpaceRoleAlreadyAssignedError,
   LastOwnerError,
+  SpaceNotEmptyError,
   AlreadyMemberError,
   InvitationAlreadyPendingError,
   InvitationNotFoundError,
@@ -40,6 +41,10 @@ describe('mapSpaceErrorToKey', () => {
 
   it('maps LastOwnerError', () => {
     expect(mapSpaceErrorToKey(new LastOwnerError(), 'leave')).toBe('leave.error.last_owner')
+  })
+
+  it('maps SpaceNotEmptyError', () => {
+    expect(mapSpaceErrorToKey(new SpaceNotEmptyError(), 'delete')).toBe('delete.error.not_empty')
   })
 
   it('maps PersonalSpaceImmutableError', () => {

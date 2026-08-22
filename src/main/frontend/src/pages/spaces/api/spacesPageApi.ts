@@ -37,6 +37,11 @@ export class LastOwnerError extends Error {
   constructor() { super('Transfer ownership before leaving this space'); this.name = 'LastOwnerError' }
 }
 
+/** 409 SpaceNotEmpty: deleting a shared group requires it have no members left but the owner. */
+export class SpaceNotEmptyError extends Error {
+  constructor() { super('This space still has members'); this.name = 'SpaceNotEmptyError' }
+}
+
 /** 409 AlreadyMember: the invited address already belongs to this space. */
 export class AlreadyMemberError extends Error {
   constructor() { super('This user is already a member'); this.name = 'AlreadyMemberError' }
@@ -80,6 +85,7 @@ const CONFLICT_TITLES: Record<string, () => never> = {
   OwnerMembershipProtected: () => { throw new OwnerProtectedError() },
   RoleAlreadyAssigned: () => { throw new SpaceRoleAlreadyAssignedError() },
   LastOwnerCannotLeave: () => { throw new LastOwnerError() },
+  SpaceNotEmpty: () => { throw new SpaceNotEmptyError() },
   AlreadyMember: () => { throw new AlreadyMemberError() },
   InvitationAlreadyPending: () => { throw new InvitationAlreadyPendingError() },
   InvitationNotPending: () => { throw new InvitationNotPendingError() },

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LogOut, Trash2, UserPlus } from 'lucide-react'
+import { LogOut, Pencil, Trash2, UserPlus } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { Alert, Button, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { SpaceAvatar, SpaceRolePill, canManageSpace, isOwner, isPersonal, type SpaceMember } from '@/entities/space'
@@ -13,6 +13,7 @@ import {
   useTransferOwnership,
   useLeaveSpace,
   useDeleteSpace,
+  useUpdateSpace,
   useInviteMember,
   useRevokeInvitation,
 } from '../model/useSpaceMutations'
@@ -24,6 +25,7 @@ import { InviteMemberModal } from './InviteMemberModal'
 import { LeaveSpaceModal } from './LeaveSpaceModal'
 import { DeleteSpaceModal } from './DeleteSpaceModal'
 import { TransferOwnershipModal } from './TransferOwnershipModal'
+import { EditSpaceModal } from './EditSpaceModal'
 
 interface SpaceDetailSectionProps {
   spaceId: string
@@ -54,10 +56,12 @@ export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSe
   const transferOwnership = useTransferOwnership(spaceId)
   const leaveSpace = useLeaveSpace(spaceId)
   const deleteSpace = useDeleteSpace(spaceId)
+  const updateSpace = useUpdateSpace(spaceId)
   const inviteMember = useInviteMember(spaceId)
   const revokeInvitation = useRevokeInvitation(spaceId)
 
   const [actionErrorKey, setActionErrorKey] = useState<string | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [leaveOpen, setLeaveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -108,6 +112,12 @@ export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSe
         </div>
 
         <div className="flex shrink-0 flex-wrap gap-2">
+          {manager && (
+            <Button onClick={() => setEditOpen(true)}>
+              <Pencil className="size-4" />
+              {t('actions.edit')}
+            </Button>
+          )}
           {manager && (
             <Button
               onClick={() => setInviteOpen(true)}
@@ -174,6 +184,15 @@ export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSe
             />
           )}
         </section>
+      )}
+
+      {editOpen && (
+        <EditSpaceModal
+          space={space}
+          onClose={() => setEditOpen(false)}
+          onUpdate={(patch) => updateSpace.mutateAsync(patch)}
+          onSuccess={() => setEditOpen(false)}
+        />
       )}
 
       {inviteOpen && (

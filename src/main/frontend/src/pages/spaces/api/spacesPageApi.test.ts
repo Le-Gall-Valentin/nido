@@ -9,6 +9,7 @@ import {
   OwnerProtectedError,
   SpaceRoleAlreadyAssignedError,
   LastOwnerError,
+  SpaceNotEmptyError,
   AlreadyMemberError,
   InvitationAlreadyPendingError,
   InvitationNotFoundError,
@@ -129,6 +130,11 @@ describe('deleteSpace', () => {
     mock.delete.mockResolvedValue({ status: 204 })
     await spacesPageApi.deleteSpace('s-1')
     expect(mock.delete).toHaveBeenCalledWith('/spaces/s-1')
+  })
+
+  it('throws SpaceNotEmptyError on 409 SpaceNotEmpty', async () => {
+    mock.delete.mockRejectedValue(axiosErr(409, 'SpaceNotEmpty'))
+    await expect(spacesPageApi.deleteSpace('s-1')).rejects.toBeInstanceOf(SpaceNotEmptyError)
   })
 })
 
