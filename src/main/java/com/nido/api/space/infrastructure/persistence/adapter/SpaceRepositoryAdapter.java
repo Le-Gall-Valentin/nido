@@ -26,6 +26,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +79,13 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
     @Override
     public long countMembers(UUID spaceId) {
         return members.countBySpaceId(spaceId);
+    }
+
+    @Override
+    public List<Space> findByIds(Collection<UUID> spaceIds) {
+        return spaces.findAllById(spaceIds).stream()
+            .map(SpaceRepositoryAdapter::toDomain)
+            .toList();
     }
 
     @Override
