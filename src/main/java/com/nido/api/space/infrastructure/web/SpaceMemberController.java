@@ -5,9 +5,11 @@ import com.nido.api.infrastructure.web.CurrentMembership;
 import com.nido.api.space.application.port.in.ChangeMemberRoleUseCase;
 import com.nido.api.space.application.port.in.ListSpaceMembersUseCase;
 import com.nido.api.space.application.port.in.RemoveMemberUseCase;
+import com.nido.api.space.application.port.in.TransferOwnershipUseCase;
 import com.nido.api.space.domain.model.ChangeMemberRoleCommand;
 import com.nido.api.space.domain.model.RemoveMemberCommand;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.TransferOwnershipCommand;
 import com.nido.api.space.infrastructure.web.dto.ChangeMemberRoleRequest;
 import com.nido.api.space.infrastructure.web.dto.SpaceMemberResponse;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,13 +39,16 @@ public class SpaceMemberController {
     private final ListSpaceMembersUseCase listSpaceMembersUseCase;
     private final ChangeMemberRoleUseCase changeMemberRoleUseCase;
     private final RemoveMemberUseCase removeMemberUseCase;
+    private final TransferOwnershipUseCase transferOwnershipUseCase;
 
     public SpaceMemberController(ListSpaceMembersUseCase listSpaceMembersUseCase,
                                  ChangeMemberRoleUseCase changeMemberRoleUseCase,
-                                 RemoveMemberUseCase removeMemberUseCase) {
+                                 RemoveMemberUseCase removeMemberUseCase,
+                                 TransferOwnershipUseCase transferOwnershipUseCase) {
         this.listSpaceMembersUseCase = listSpaceMembersUseCase;
         this.changeMemberRoleUseCase = changeMemberRoleUseCase;
         this.removeMemberUseCase = removeMemberUseCase;
+        this.transferOwnershipUseCase = transferOwnershipUseCase;
     }
 
     @GetMapping
@@ -76,6 +82,17 @@ public class SpaceMemberController {
             @PathVariable UUID userId,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
         removeMemberUseCase.remove(new RemoveMemberCommand(spaceId, userId), membership);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{userId}/ownership")
+    @RateLimiting(max = 10)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> transferOwnership(
+            @PathVariable UUID spaceId,
+            @PathVariable UUID userId,
+            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+        transferOwnershipUseCase.transfer(new TransferOwnershipCommand(spaceId, userId), membership);
         return ResponseEntity.noContent().build();
     }
 }

@@ -7,6 +7,7 @@ import com.nido.api.shared.security.CurrentUser;
 import com.nido.api.space.application.port.in.CreateSharedSpaceUseCase;
 import com.nido.api.space.application.port.in.DeleteSpaceUseCase;
 import com.nido.api.space.application.port.in.GetSpaceUseCase;
+import com.nido.api.space.application.port.in.LeaveSpaceUseCase;
 import com.nido.api.space.application.port.in.ListMySpacesUseCase;
 import com.nido.api.space.application.port.in.UpdateSpaceUseCase;
 import com.nido.api.space.domain.model.CreateSharedSpaceCommand;
@@ -48,15 +49,17 @@ public class SpaceController {
     private final CreateSharedSpaceUseCase createSharedSpaceUseCase;
     private final UpdateSpaceUseCase updateSpaceUseCase;
     private final DeleteSpaceUseCase deleteSpaceUseCase;
+    private final LeaveSpaceUseCase leaveSpaceUseCase;
 
     public SpaceController(ListMySpacesUseCase listMySpacesUseCase, GetSpaceUseCase getSpaceUseCase,
             CreateSharedSpaceUseCase createSharedSpaceUseCase, UpdateSpaceUseCase updateSpaceUseCase,
-            DeleteSpaceUseCase deleteSpaceUseCase) {
+            DeleteSpaceUseCase deleteSpaceUseCase, LeaveSpaceUseCase leaveSpaceUseCase) {
         this.listMySpacesUseCase = listMySpacesUseCase;
         this.getSpaceUseCase = getSpaceUseCase;
         this.createSharedSpaceUseCase = createSharedSpaceUseCase;
         this.updateSpaceUseCase = updateSpaceUseCase;
         this.deleteSpaceUseCase = deleteSpaceUseCase;
+        this.leaveSpaceUseCase = leaveSpaceUseCase;
     }
 
     @GetMapping
@@ -111,6 +114,16 @@ public class SpaceController {
             @PathVariable UUID spaceId,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
         deleteSpaceUseCase.delete(membership);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{spaceId}/membership")
+    @RateLimiting(max = 20)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> leave(
+            @PathVariable UUID spaceId,
+            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+        leaveSpaceUseCase.leave(membership);
         return ResponseEntity.noContent().build();
     }
 }

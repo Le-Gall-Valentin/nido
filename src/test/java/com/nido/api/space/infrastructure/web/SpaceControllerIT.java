@@ -270,6 +270,45 @@ class SpaceControllerIT {
             .andExpect(status().isNotFound());
     }
 
+    @Test
+    void ownership_transfer_swaps_the_two_roles() throws Exception {
+        saveMembership(sharedSpaceId, bobId, SpaceRole.ADMIN);
+
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/members/" + bobId + "/ownership")
+                .cookie(accessTokenFor(aliceId, Role.USER)))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/spaces/" + sharedSpaceId).cookie(accessTokenFor(bobId, Role.USER)))
+            .andExpect(jsonPath("$.myRole").value("OWNER"));
+        mockMvc.perform(get("/api/spaces/" + sharedSpaceId).cookie(accessTokenFor(aliceId, Role.USER)))
+            .andExpect(jsonPath("$.myRole").value("ADMIN"));
+    }
+
+    @Test
+    void leave_is_refused_to_the_owner_and_accepted_for_a_member() throws Exception {
+        saveMembership(sharedSpaceId, bobId, SpaceRole.MEMBER);
+
+        mockMvc.perform(delete("/api/spaces/" + sharedSpaceId + "/membership")
+                .cookie(accessTokenFor(aliceId, Role.USER)))
+            .andExpect(status().isConflict());
+
+        mockMvc.perform(delete("/api/spaces/" + sharedSpaceId + "/membership")
+                .cookie(accessTokenFor(bobId, Role.USER)))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/spaces/" + sharedSpaceId).cookie(accessTokenFor(bobId, Role.USER)))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void nobody_leaves_their_personal_space() throws Exception {
+        UUID personalId = spaces.findByPersonalOwnerId(aliceId).orElseThrow().getId();
+
+        mockMvc.perform(delete("/api/spaces/" + personalId + "/membership")
+                .cookie(accessTokenFor(aliceId, Role.USER)))
+            .andExpect(status().isUnprocessableEntity());
+    }
+
     protected UUID saveUser(String username, Role role) {
         UserIdentityEntity user = new UserIdentityEntity();
         user.setUsername(username);
