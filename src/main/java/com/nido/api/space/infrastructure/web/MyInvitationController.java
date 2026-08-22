@@ -11,7 +11,6 @@ import com.nido.api.space.infrastructure.web.dto.AcceptInvitationRequest;
 import com.nido.api.space.infrastructure.web.dto.ReceivedInvitationResponse;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -58,7 +57,7 @@ public class MyInvitationController {
     @RateLimiting(mode = RateLimitMode.USER, max = 10)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<AcceptInvitationResponse> accept(
-            @Valid @RequestBody AcceptInvitationRequest request,
+            @RequestBody AcceptInvitationRequest request,
             @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
         UUID spaceId = acceptInvitationUseCase.accept(
             new AcceptInvitationCommand(request.code()), caller.userId(), caller.email());

@@ -36,6 +36,7 @@ import org.testcontainers.junit.jupiter.Container;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -179,6 +180,52 @@ class MyInvitationControllerIT {
         assertThat(mismatchResult.getResponse().getStatus()).isEqualTo(unknownResult.getResponse().getStatus());
         assertThat(mismatchResult.getResponse().getContentAsString())
             .isEqualTo(unknownResult.getResponse().getContentAsString());
+    }
+
+    // Un code vide, un code blanc ou un code trop long ne doivent rien révéler de plus qu'un
+    // code inconnu : aucune annotation de validation ne doit court-circuiter le domaine et
+    // produire un 400 distinguable du 404. Comparaison champ par champ, corps compris.
+    @Test
+    void an_empty_a_blank_and_an_overlong_code_all_answer_exactly_like_an_unknown_code() throws Exception {
+        String unknownPayload = objectMapper.writeValueAsString(new AcceptInvitationRequest("NIDO-GHOST9"));
+
+        MvcResult unknownResult = mockMvc.perform(post("/api/invitations/accept")
+                .cookie(accessTokenFor(carolId, "carol@test.com"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(unknownPayload))
+            .andExpect(status().isNotFound())
+            .andReturn();
+
+        String emptyPayload = objectMapper.writeValueAsString(new AcceptInvitationRequest(""));
+        MvcResult emptyResult = mockMvc.perform(post("/api/invitations/accept")
+                .cookie(accessTokenFor(carolId, "carol@test.com"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(emptyPayload))
+            .andExpect(status().isNotFound())
+            .andReturn();
+
+        String blankPayload = objectMapper.writeValueAsString(new AcceptInvitationRequest("   "));
+        MvcResult blankResult = mockMvc.perform(post("/api/invitations/accept")
+                .cookie(accessTokenFor(carolId, "carol@test.com"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(blankPayload))
+            .andExpect(status().isNotFound())
+            .andReturn();
+
+        String overlongPayload = objectMapper.writeValueAsString(
+            new AcceptInvitationRequest("NIDO-" + "X".repeat(200)));
+        MvcResult overlongResult = mockMvc.perform(post("/api/invitations/accept")
+                .cookie(accessTokenFor(carolId, "carol@test.com"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(overlongPayload))
+            .andExpect(status().isNotFound())
+            .andReturn();
+
+        for (MvcResult result : List.of(emptyResult, blankResult, overlongResult)) {
+            assertThat(result.getResponse().getStatus()).isEqualTo(unknownResult.getResponse().getStatus());
+            assertThat(result.getResponse().getContentAsString())
+                .isEqualTo(unknownResult.getResponse().getContentAsString());
+        }
     }
 
     @Test
