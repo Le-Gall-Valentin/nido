@@ -16,7 +16,7 @@ public class SpaceDataDeletionAdapter implements SpaceDataDeletionPort {
     }
 
     @Override
-    public void deleteSpaceData(UUID userId) {
-        handleUserDeletionUseCase.handleUserDeletion(userId);
+    public void deleteSpaceData(UUID userId, String email) {
+        handleUserDeletionUseCase.handleUserDeletion(userId, email);
     }
 }

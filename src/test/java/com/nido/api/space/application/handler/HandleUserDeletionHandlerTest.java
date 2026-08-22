@@ -6,6 +6,7 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.domain.port.out.SpaceCommandPort;
+import com.nido.api.space.domain.port.out.SpaceInvitationPort;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
 import com.nido.api.space.domain.port.out.SpaceRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,16 +31,18 @@ class HandleUserDeletionHandlerTest {
     @Mock SpaceRepository spaceRepository;
     @Mock SpaceCommandPort spaceCommandPort;
     @Mock SpaceMembershipPort spaceMembershipPort;
+    @Mock SpaceInvitationPort spaceInvitationPort;
 
     private HandleUserDeletionHandler handler;
 
     private final UUID userId = UUID.randomUUID();
     private final UUID personalSpaceId = UUID.randomUUID();
     private final UUID sharedSpaceId = UUID.randomUUID();
+    private final String userEmail = "deleted@test.com";
 
     @BeforeEach
     void setUp() {
-        handler = new HandleUserDeletionHandler(spaceRepository, spaceCommandPort, spaceMembershipPort);
+        handler = new HandleUserDeletionHandler(spaceRepository, spaceCommandPort, spaceMembershipPort, spaceInvitationPort);
     }
 
     @Test
@@ -47,7 +51,7 @@ class HandleUserDeletionHandlerTest {
         when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of(membership));
         when(spaceRepository.findById(personalSpaceId)).thenReturn(Optional.of(personal()));
 
-        handler.handleUserDeletion(userId);
+        handler.handleUserDeletion(userId, userEmail);
 
         verify(spaceCommandPort).delete(personalSpaceId);
     }
@@ -58,7 +62,7 @@ class HandleUserDeletionHandlerTest {
         when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of(membership));
         when(spaceRepository.findById(sharedSpaceId)).thenReturn(Optional.of(shared()));
 
-        handler.handleUserDeletion(userId);
+        handler.handleUserDeletion(userId, userEmail);
 
         verify(spaceMembershipPort).remove(membership.id());
         verify(spaceCommandPort, never()).delete(sharedSpaceId);
@@ -73,7 +77,7 @@ class HandleUserDeletionHandlerTest {
         when(spaceRepository.findById(sharedSpaceId)).thenReturn(Optional.of(shared()));
         when(spaceMembershipPort.findSuccessor(sharedSpaceId, userId)).thenReturn(Optional.of(successor));
 
-        handler.handleUserDeletion(userId);
+        handler.handleUserDeletion(userId, userEmail);
 
         verify(spaceMembershipPort).remove(membership.id());
         verify(spaceMembershipPort).changeRole(successor.id(), SpaceRole.OWNER);
@@ -87,9 +91,27 @@ class HandleUserDeletionHandlerTest {
         when(spaceRepository.findById(sharedSpaceId)).thenReturn(Optional.of(shared()));
         when(spaceMembershipPort.findSuccessor(sharedSpaceId, userId)).thenReturn(Optional.empty());
 
-        handler.handleUserDeletion(userId);
+        handler.handleUserDeletion(userId, userEmail);
 
         verify(spaceCommandPort).delete(sharedSpaceId);
+    }
+
+    @Test
+    void invitations_addressed_to_the_deleted_user_are_removed() {
+        when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of());
+
+        handler.handleUserDeletion(userId, userEmail);
+
+        verify(spaceInvitationPort).deleteAllForEmail(userEmail);
+    }
+
+    @Test
+    void a_null_email_skips_invitation_cleanup_without_throwing() {
+        when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of());
+
+        handler.handleUserDeletion(userId, null);
+
+        verify(spaceInvitationPort, never()).deleteAllForEmail(any());
     }
 
     private SpaceMembership membership(UUID spaceId, SpaceRole role) {

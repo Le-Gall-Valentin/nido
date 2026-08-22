@@ -79,6 +79,11 @@ public class SpaceInvitationRepositoryAdapter implements SpaceInvitationPort {
         }
     }
 
+    @Override
+    public int deleteAllForEmail(String email) {
+        return invitations.deleteAllForEmail(email);
+    }
+
     private SpaceException resolveConstraintViolation(DataIntegrityViolationException e) {
         if (e.getCause() instanceof ConstraintViolationException cve) {
             String c = cve.getConstraintName();

@@ -41,4 +41,15 @@ public interface SpaceInvitationJpaRepository extends JpaRepository<SpaceInvitat
         where i.id = :id and i.status = com.nido.api.space.domain.model.InvitationStatus.PENDING
         """)
     int revoke(@Param("id") UUID id);
+
+    // flushAutomatically: this runs mid-transaction, after other ports in the same
+    // GDPR-deletion pipeline may have scheduled but not yet flushed removals (e.g.
+    // credential/TOTP deletion via deleteById()); without it, clearAutomatically would
+    // detach those pending removals before they ever reach the database.
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        delete from SpaceInvitationEntity i
+        where lower(i.email) = lower(:email)
+        """)
+    int deleteAllForEmail(@Param("email") String email);
 }

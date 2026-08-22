@@ -6,6 +6,7 @@ import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.port.out.SpaceCommandPort;
+import com.nido.api.space.domain.port.out.SpaceInvitationPort;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
 import com.nido.api.space.domain.port.out.SpaceRepository;
 import org.slf4j.Logger;
@@ -23,18 +24,21 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
     private final SpaceRepository spaceRepository;
     private final SpaceCommandPort spaceCommandPort;
     private final SpaceMembershipPort spaceMembershipPort;
+    private final SpaceInvitationPort spaceInvitationPort;
 
     public HandleUserDeletionHandler(SpaceRepository spaceRepository,
                                      SpaceCommandPort spaceCommandPort,
-                                     SpaceMembershipPort spaceMembershipPort) {
+                                     SpaceMembershipPort spaceMembershipPort,
+                                     SpaceInvitationPort spaceInvitationPort) {
         this.spaceRepository = spaceRepository;
         this.spaceCommandPort = spaceCommandPort;
         this.spaceMembershipPort = spaceMembershipPort;
+        this.spaceInvitationPort = spaceInvitationPort;
     }
 
     @Override
     @Transactional
-    public void handleUserDeletion(UUID userId) {
+    public void handleUserDeletion(UUID userId, String email) {
         for (SpaceMembership membership : spaceMembershipPort.findByUser(userId)) {
             Optional<Space> maybeSpace = spaceRepository.findById(membership.spaceId());
             if (maybeSpace.isEmpty()) {
@@ -62,6 +66,12 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
             spaceMembershipPort.changeRole(successor.get().id(), SpaceRole.OWNER);
             log.info("Ownership of space {} passed to {} after the deletion of {}",
                 space.id(), successor.get().userId(), userId);
+        }
+        if (email != null) {
+            int deleted = spaceInvitationPort.deleteAllForEmail(email);
+            if (deleted > 0) {
+                log.info("{} invitation(s) addressed to the deleted user {} were removed", deleted, userId);
+            }
         }
     }
 }

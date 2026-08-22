@@ -30,4 +30,7 @@ public interface SpaceInvitationPort {
     boolean claim(UUID invitationId, Instant acceptedAt);
 
     void revoke(UUID invitationId);
+
+    /** Supprime toutes les invitations adressées à cet email, quel que soit leur statut. */
+    int deleteAllForEmail(String email);
 }
