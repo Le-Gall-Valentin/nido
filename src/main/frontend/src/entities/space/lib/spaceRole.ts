@@ -6,12 +6,12 @@ export function rank(role: SpaceRole): number {
   return RANKS[role]
 }
 
-/** Gérer les membres, les invitations et l'identité du groupe. */
+/** Manage members, invitations and the group's identity. */
 export function canManageSpace(role: SpaceRole): boolean {
   return role === 'OWNER' || role === 'ADMIN'
 }
 
-/** Écrire du contenu métier. Le VIEWER est en lecture seule. */
+/** Write business content. VIEWER is read-only. */
 export function canWrite(role: SpaceRole): boolean {
   return role !== 'VIEWER'
 }

@@ -46,7 +46,7 @@ export function MemberList({
       {members.map((member) => {
         const isMe = member.userId === currentUserId
         const targetIsOwner = member.role === 'OWNER'
-        const deleted = member.username === null
+        const deleted = member.username == null
         const showManageActions = canManage && !isMe && !targetIsOwner
         // A transfer target must be able to hold ownership: not a VIEWER, per the backend.
         const showTransfer = iAmOwner && !isMe && !targetIsOwner && member.role !== 'VIEWER'
@@ -85,11 +85,11 @@ export function MemberList({
                 className="rounded-[8px] border-[1.5px] border-border bg-bg-1 px-2.5 py-1.5 text-[13px] font-semibold text-fg-1 outline-none transition-all hover:border-border-2 focus:border-accent disabled:opacity-50"
               >
                 {ASSIGNABLE_ROLES.map((role) => (
-                  <option key={role} value={role}>{t(`role.${role}`)}</option>
+                  <option key={role} value={role}>{t(`space:role.${role}`)}</option>
                 ))}
               </select>
             ) : (
-              <SpaceRolePill role={member.role} label={t(`role.${member.role}`)} />
+              <SpaceRolePill role={member.role} label={t(`space:role.${member.role}`)} />
             )}
 
             <div className="flex shrink-0 items-center gap-1">

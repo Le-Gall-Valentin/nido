@@ -81,6 +81,29 @@ export class NoAccountForEmailError extends Error {
   constructor() { super('No account exists for this address'); this.name = 'NoAccountForEmailError' }
 }
 
+/**
+ * 422 InvalidAppearance, InvalidSpaceName, InvalidSpaceDescription,
+ * OwnerRoleNotAssignable: the form guards make these unreachable through
+ * this app today, but they are mapped so a future caller that skips those
+ * guards still gets a real message instead of the generic server error.
+ */
+export class InvalidAppearanceError extends Error {
+  constructor() { super('Accent or glyph outside the allowed palette'); this.name = 'InvalidAppearanceError' }
+}
+
+export class InvalidSpaceNameError extends Error {
+  constructor() { super('Space name must be between 1 and 80 characters'); this.name = 'InvalidSpaceNameError' }
+}
+
+export class InvalidSpaceDescriptionError extends Error {
+  constructor() { super('Space description must not exceed 280 characters'); this.name = 'InvalidSpaceDescriptionError' }
+}
+
+/** 422 OwnerRoleNotAssignable: OWNER is only reachable through an ownership transfer. */
+export class OwnerRoleNotAssignableError extends Error {
+  constructor() { super('The owner role is only reachable through an ownership transfer'); this.name = 'OwnerRoleNotAssignableError' }
+}
+
 // Several distinct situations share HTTP 409 (and, for invitations, 422); the
 // response body's `title` — the backend exception's class name — is the only
 // way to tell them apart. See SpaceExceptionHandler.
@@ -98,6 +121,10 @@ const UNPROCESSABLE_TITLES: Record<string, () => never> = {
   InvitationExpired: () => { throw new InvitationExpiredError() },
   PersonalSpaceImmutable: () => { throw new PersonalSpaceImmutableError() },
   NoAccountForEmail: () => { throw new NoAccountForEmailError() },
+  InvalidAppearance: () => { throw new InvalidAppearanceError() },
+  InvalidSpaceName: () => { throw new InvalidSpaceNameError() },
+  InvalidSpaceDescription: () => { throw new InvalidSpaceDescriptionError() },
+  OwnerRoleNotAssignable: () => { throw new OwnerRoleNotAssignableError() },
 }
 
 function titleOf(error: unknown): string | undefined {

@@ -17,6 +17,10 @@ import {
   InvitationExpiredError,
   PersonalSpaceImmutableError,
   NoAccountForEmailError,
+  InvalidAppearanceError,
+  InvalidSpaceNameError,
+  InvalidSpaceDescriptionError,
+  OwnerRoleNotAssignableError,
 } from '../api/spacesPageApi'
 import en from '../locales/en.json'
 import fr from '../locales/fr.json'
@@ -82,6 +86,34 @@ describe('mapSpaceErrorToKey', () => {
     expect(mapSpaceErrorToKey(new NoAccountForEmailError(), 'invite')).toEqual([
       'invite.error.no_account',
       'errors.no_account',
+    ])
+  })
+
+  it('maps InvalidAppearanceError', () => {
+    expect(mapSpaceErrorToKey(new InvalidAppearanceError(), 'edit')).toEqual([
+      'edit.error.invalid_appearance',
+      'errors.invalid_appearance',
+    ])
+  })
+
+  it('maps InvalidSpaceNameError', () => {
+    expect(mapSpaceErrorToKey(new InvalidSpaceNameError(), 'edit')).toEqual([
+      'edit.error.invalid_space_name',
+      'errors.invalid_space_name',
+    ])
+  })
+
+  it('maps InvalidSpaceDescriptionError', () => {
+    expect(mapSpaceErrorToKey(new InvalidSpaceDescriptionError(), 'edit')).toEqual([
+      'edit.error.invalid_space_description',
+      'errors.invalid_space_description',
+    ])
+  })
+
+  it('maps OwnerRoleNotAssignableError', () => {
+    expect(mapSpaceErrorToKey(new OwnerRoleNotAssignableError(), 'members')).toEqual([
+      'members.error.owner_role_not_assignable',
+      'errors.owner_role_not_assignable',
     ])
   })
 
@@ -152,6 +184,10 @@ describe('mapSpaceErrorToKey — every produced key resolves to a real translati
     LastOwnerError: new LastOwnerError(),
     PersonalSpaceImmutableError: new PersonalSpaceImmutableError(),
     NoAccountForEmailError: new NoAccountForEmailError(),
+    InvalidAppearanceError: new InvalidAppearanceError(),
+    InvalidSpaceNameError: new InvalidSpaceNameError(),
+    InvalidSpaceDescriptionError: new InvalidSpaceDescriptionError(),
+    OwnerRoleNotAssignableError: new OwnerRoleNotAssignableError(),
     AlreadyMemberError: new AlreadyMemberError(),
     InvitationAlreadyPendingError: new InvitationAlreadyPendingError(),
     InvitationNotFoundError: new InvitationNotFoundError(),

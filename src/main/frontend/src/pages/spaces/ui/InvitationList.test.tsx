@@ -12,6 +12,7 @@ const PENDING: SpaceInvitation = {
   status: 'PENDING', expiresAt: '2999-01-01T00:00:00Z', createdAt: '2024-01-01T00:00:00Z',
 }
 const REVOKED: SpaceInvitation = { ...PENDING, id: 'i-2', status: 'REVOKED' }
+const ACCEPTED: SpaceInvitation = { ...PENDING, id: 'i-3', status: 'ACCEPTED', expiresAt: '2020-01-01T00:00:00Z' }
 
 const writeText = vi.fn().mockResolvedValue(undefined)
 beforeEach(() => {
@@ -41,6 +42,23 @@ describe('InvitationList — rendering', () => {
   it('does not show a revoke action for a REVOKED invitation', () => {
     render(<InvitationList invitations={[REVOKED]} onRevoke={vi.fn()} />)
     expect(screen.queryByLabelText(/action_revoke/)).toBeNull()
+  })
+
+  it('shows the expiry line for a PENDING invitation', () => {
+    render(<InvitationList invitations={[PENDING]} onRevoke={vi.fn()} />)
+    expect(screen.getByText(/invitations\.expires/)).toBeDefined()
+  })
+
+  it('does not show the expiry line for an ACCEPTED invitation', () => {
+    // Once accepted or revoked, "expires" is meaningless — and reads as
+    // stale/wrong when the date has since passed.
+    render(<InvitationList invitations={[ACCEPTED]} onRevoke={vi.fn()} />)
+    expect(screen.queryByText(/invitations\.expires/)).toBeNull()
+  })
+
+  it('does not show the expiry line for a REVOKED invitation', () => {
+    render(<InvitationList invitations={[REVOKED]} onRevoke={vi.fn()} />)
+    expect(screen.queryByText(/invitations\.expires/)).toBeNull()
   })
 })
 

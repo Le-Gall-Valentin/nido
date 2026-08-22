@@ -64,12 +64,14 @@ function InvitationRow({ invitation, revoking, onRevoke, lang }: RowProps) {
     <li className="flex flex-wrap items-center gap-3 px-[18px] py-3.5">
       <div className="min-w-0 flex-1">
         <div className="text-[14.5px] font-semibold text-fg-0 truncate">{invitation.email}</div>
-        <div className="text-[12.5px] text-fg-3 truncate">
-          {t('invitations.expires', { time: formatRelativeTime(invitation.expiresAt, lang) })}
-        </div>
+        {invitation.status === 'PENDING' && (
+          <div className="text-[12.5px] text-fg-3 truncate">
+            {t('invitations.expires', { time: formatRelativeTime(invitation.expiresAt, lang) })}
+          </div>
+        )}
       </div>
 
-      <SpaceRolePill role={invitation.role} label={t(`role.${invitation.role}`)} />
+      <SpaceRolePill role={invitation.role} label={t(`space:role.${invitation.role}`)} />
 
       <span className={`inline-flex items-center px-[9px] py-[3px] rounded-[6px] text-[11px] font-bold tracking-[0.02em] whitespace-nowrap ${STATUS_CLASS[invitation.status]}`}>
         {t(`invitations.status.${invitation.status}`)}

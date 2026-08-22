@@ -14,6 +14,10 @@ import {
   InvitationExpiredError,
   PersonalSpaceImmutableError,
   NoAccountForEmailError,
+  InvalidAppearanceError,
+  InvalidSpaceNameError,
+  InvalidSpaceDescriptionError,
+  OwnerRoleNotAssignableError,
 } from '../api/spacesPageApi'
 
 function suffixFor(error: unknown): string {
@@ -26,6 +30,10 @@ function suffixFor(error: unknown): string {
   if (error instanceof LastOwnerError) return 'last_owner'
   if (error instanceof PersonalSpaceImmutableError) return 'personal_immutable'
   if (error instanceof NoAccountForEmailError) return 'no_account'
+  if (error instanceof InvalidAppearanceError) return 'invalid_appearance'
+  if (error instanceof InvalidSpaceNameError) return 'invalid_space_name'
+  if (error instanceof InvalidSpaceDescriptionError) return 'invalid_space_description'
+  if (error instanceof OwnerRoleNotAssignableError) return 'owner_role_not_assignable'
   if (error instanceof AlreadyMemberError) return 'already_member'
   if (error instanceof InvitationAlreadyPendingError) return 'invitation_pending'
   if (error instanceof InvitationNotFoundError) return 'invitation_not_found'

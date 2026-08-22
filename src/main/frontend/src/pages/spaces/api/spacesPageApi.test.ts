@@ -17,6 +17,10 @@ import {
   InvitationExpiredError,
   PersonalSpaceImmutableError,
   NoAccountForEmailError,
+  InvalidAppearanceError,
+  InvalidSpaceNameError,
+  InvalidSpaceDescriptionError,
+  OwnerRoleNotAssignableError,
 } from './spacesPageApi'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
@@ -129,6 +133,21 @@ describe('updateSpace', () => {
     mock.patch.mockRejectedValue(axiosErr(422, 'PersonalSpaceImmutable'))
     await expect(spacesPageApi.updateSpace('s-1', { name: 'x' })).rejects.toBeInstanceOf(PersonalSpaceImmutableError)
   })
+
+  it('throws InvalidAppearanceError on 422 InvalidAppearance', async () => {
+    mock.patch.mockRejectedValue(axiosErr(422, 'InvalidAppearance'))
+    await expect(spacesPageApi.updateSpace('s-1', { accent: '#000' })).rejects.toBeInstanceOf(InvalidAppearanceError)
+  })
+
+  it('throws InvalidSpaceNameError on 422 InvalidSpaceName', async () => {
+    mock.patch.mockRejectedValue(axiosErr(422, 'InvalidSpaceName'))
+    await expect(spacesPageApi.updateSpace('s-1', { name: 'x' })).rejects.toBeInstanceOf(InvalidSpaceNameError)
+  })
+
+  it('throws InvalidSpaceDescriptionError on 422 InvalidSpaceDescription', async () => {
+    mock.patch.mockRejectedValue(axiosErr(422, 'InvalidSpaceDescription'))
+    await expect(spacesPageApi.updateSpace('s-1', { description: 'x' })).rejects.toBeInstanceOf(InvalidSpaceDescriptionError)
+  })
 })
 
 describe('deleteSpace', () => {
@@ -164,6 +183,11 @@ describe('changeMemberRole', () => {
   it('throws ServerError on an unrecognized 409 title', async () => {
     mock.patch.mockRejectedValue(axiosErr(409, 'SomethingElse'))
     await expect(spacesPageApi.changeMemberRole('s-1', 'u-1', 'ADMIN')).rejects.toBeInstanceOf(ServerError)
+  })
+
+  it('throws OwnerRoleNotAssignableError on 422 OwnerRoleNotAssignable', async () => {
+    mock.patch.mockRejectedValue(axiosErr(422, 'OwnerRoleNotAssignable'))
+    await expect(spacesPageApi.changeMemberRole('s-1', 'u-1', 'ADMIN')).rejects.toBeInstanceOf(OwnerRoleNotAssignableError)
   })
 })
 

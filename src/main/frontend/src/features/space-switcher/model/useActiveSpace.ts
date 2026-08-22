@@ -9,9 +9,9 @@ interface ActiveSpace {
 }
 
 /**
- * Le contexte actif vient de l'URL, jamais du store : deux onglets ouverts sur
- * deux contextes doivent afficher deux contextes. Le store ne sert qu'à se
- * souvenir du dernier choix pour restaurer la navigation au démarrage.
+ * The active context comes from the URL, never from the store: two tabs open
+ * on two contexts must display two contexts. The store only remembers the
+ * last choice, to restore navigation on an unscoped entry point.
  */
 export function useActiveSpace(): ActiveSpace {
   const { spaceId } = useParams<{ spaceId: string }>()

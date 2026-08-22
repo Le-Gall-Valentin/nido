@@ -29,6 +29,17 @@ describe('MemberList — deleted accounts', () => {
       )
     ).not.toThrow()
   })
+
+  it('also treats an absent (undefined) username as a deleted account, not a blank row', () => {
+    // The `=== null` check this used to use would miss an absent field —
+    // the API contract promises null, but a strict equality check is not
+    // the defense that actually guarantees it.
+    const absentUsername = { ...DELETED, username: undefined } as unknown as SpaceMember
+    render(
+      <MemberList members={[absentUsername]} currentUserId="someone-else" myRole="OWNER" onChangeRole={noop} onRemove={noop} onTransfer={noop} />
+    )
+    expect(screen.getByText('members.deleted_account')).toBeDefined()
+  })
 })
 
 describe('MemberList — empty state', () => {
