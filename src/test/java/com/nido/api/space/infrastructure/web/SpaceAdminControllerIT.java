@@ -125,6 +125,16 @@ class SpaceAdminControllerIT {
             .andExpect(status().isNoContent());
     }
 
+    @Test
+    void a_platform_admin_is_not_a_member_and_gets_404_on_the_context_routes() throws Exception {
+        // Invariant central : les rôles de plateforme ne donnent aucun accès au contenu
+        // d'un contexte. Un admin non membre est indistinguable d'un inconnu.
+        mockMvc.perform(get("/api/spaces/" + populatedSpaceId).cookie(accessTokenFor(adminId, Role.ADMIN)))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/spaces/" + populatedSpaceId + "/members").cookie(accessTokenFor(adminId, Role.ADMIN)))
+            .andExpect(status().isNotFound());
+    }
+
     private UUID saveUser(String username, Role role) {
         UserIdentityEntity user = new UserIdentityEntity();
         user.setUsername(username);
