@@ -69,8 +69,15 @@ export function AppRouter() {
           </Route>
         </Route>
 
-        {/* Catch-all */}
-        <Route path="*" element={<DefaultRedirect />} />
+        {/* Catch-all — needs its own space list to restore the last context */}
+        <Route
+          path="*"
+          element={
+            <SpacesApiProvider api={spacesApi}>
+              <DefaultRedirect />
+            </SpacesApiProvider>
+          }
+        />
       </Routes>
     </BrowserRouter>
   )
