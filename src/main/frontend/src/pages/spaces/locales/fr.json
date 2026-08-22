@@ -1,0 +1,285 @@
+{
+  "kicker": "Contextes",
+  "title": "Membres et groupes",
+  "subtitle": "Créez un groupe, invitez des personnes et gérez les rôles.",
+  "loading": "Chargement…",
+  "close": "Fermer",
+
+  "role": {
+    "OWNER": "Propriétaire",
+    "ADMIN": "Admin",
+    "MEMBER": "Membre",
+    "VIEWER": "Lecteur"
+  },
+
+  "actions": {
+    "invite": "Inviter",
+    "leave": "Quitter",
+    "delete": "Supprimer"
+  },
+
+  "list": {
+    "title": "Mes contextes",
+    "action_create": "Créer un groupe",
+    "load_error": "Impossible de charger vos contextes.",
+    "personal_subtitle": "Espace personnel",
+    "member_count_one": "{{count}} membre",
+    "member_count_other": "{{count}} membres",
+    "empty": "Vous ne faites partie d'aucun groupe pour l'instant."
+  },
+
+  "received": {
+    "title": "Invitations reçues",
+    "expires": "Expire {{time}}",
+    "action_accept": "Rejoindre"
+  },
+
+  "members": {
+    "title": "Membres",
+    "empty": "Aucun membre.",
+    "load_error": "Impossible de charger la liste des membres.",
+    "you": "vous",
+    "deleted_account": "Compte supprimé",
+    "joined": "Arrivé·e {{time}}",
+    "role_select_label": "Rôle de {{name}}",
+    "action_transfer": "Transférer la propriété à {{name}}",
+    "action_remove": "Retirer {{name}}",
+    "error": {
+      "not_accessible": "Ce contexte n'existe plus ou n'est plus accessible.",
+      "insufficient_role": "Votre rôle dans ce contexte ne permet pas cette action.",
+      "owner_protected": "L'appartenance du propriétaire est protégée.",
+      "self_management": "Vous ne pouvez pas effectuer cette action sur vous-même.",
+      "already_assigned": "Ce membre a déjà ce rôle.",
+      "last_owner": "Transférez la propriété avant de quitter ce contexte.",
+      "personal_immutable": "L'espace personnel ne peut être ni renommé, ni partagé, ni supprimé.",
+      "no_account": "Aucun compte n'existe pour cette adresse.",
+      "already_member": "Cette personne fait déjà partie de ce contexte.",
+      "invitation_pending": "Cette adresse a déjà une invitation en attente.",
+      "invitation_not_found": "Cette invitation est introuvable.",
+      "invitation_not_pending": "Cette invitation n'est plus en attente.",
+      "invitation_expired": "Cette invitation a expiré.",
+      "rate_limit": "Trop de tentatives. Réessayez dans un instant.",
+      "network": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      "server": "Une erreur est survenue. Réessayez plus tard."
+    }
+  },
+
+  "invitations": {
+    "title": "Invitations",
+    "empty": "Aucune invitation émise.",
+    "load_error": "Impossible de charger la liste des invitations.",
+    "expires": "Expire {{time}}",
+    "status": {
+      "PENDING": "En attente",
+      "ACCEPTED": "Acceptée",
+      "REVOKED": "Révoquée"
+    },
+    "action_copy": "Copier le code {{code}}",
+    "action_revoke": "Révoquer l'invitation de {{email}}",
+    "error": {
+      "not_accessible": "Ce contexte n'existe plus ou n'est plus accessible.",
+      "insufficient_role": "Votre rôle dans ce contexte ne permet pas cette action.",
+      "owner_protected": "L'appartenance du propriétaire est protégée.",
+      "self_management": "Vous ne pouvez pas effectuer cette action sur vous-même.",
+      "already_assigned": "Ce membre a déjà ce rôle.",
+      "last_owner": "Transférez la propriété avant de quitter ce contexte.",
+      "personal_immutable": "L'espace personnel ne peut être ni renommé, ni partagé, ni supprimé.",
+      "no_account": "Aucun compte n'existe pour cette adresse.",
+      "already_member": "Cette personne fait déjà partie de ce contexte.",
+      "invitation_pending": "Cette adresse a déjà une invitation en attente.",
+      "invitation_not_found": "Cette invitation est introuvable.",
+      "invitation_not_pending": "Cette invitation n'est plus en attente.",
+      "invitation_expired": "Cette invitation a expiré.",
+      "rate_limit": "Trop de tentatives. Réessayez dans un instant.",
+      "network": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      "server": "Une erreur est survenue. Réessayez plus tard."
+    }
+  },
+
+  "detail": {
+    "error": {
+      "not_accessible": "Ce contexte n'existe plus ou n'est plus accessible.",
+      "insufficient_role": "Votre rôle dans ce contexte ne permet pas cette action.",
+      "owner_protected": "L'appartenance du propriétaire est protégée.",
+      "self_management": "Vous ne pouvez pas effectuer cette action sur vous-même.",
+      "already_assigned": "Ce membre a déjà ce rôle.",
+      "last_owner": "Transférez la propriété avant de quitter ce contexte.",
+      "personal_immutable": "L'espace personnel ne peut être ni renommé, ni partagé, ni supprimé.",
+      "no_account": "Aucun compte n'existe pour cette adresse.",
+      "already_member": "Cette personne fait déjà partie de ce contexte.",
+      "invitation_pending": "Cette adresse a déjà une invitation en attente.",
+      "invitation_not_found": "Cette invitation est introuvable.",
+      "invitation_not_pending": "Cette invitation n'est plus en attente.",
+      "invitation_expired": "Cette invitation a expiré.",
+      "rate_limit": "Trop de tentatives. Réessayez dans un instant.",
+      "network": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      "server": "Une erreur est survenue. Réessayez plus tard."
+    }
+  },
+
+  "accept": {
+    "error": {
+      "not_accessible": "Ce contexte n'existe plus ou n'est plus accessible.",
+      "insufficient_role": "Votre rôle dans ce contexte ne permet pas cette action.",
+      "owner_protected": "L'appartenance du propriétaire est protégée.",
+      "self_management": "Vous ne pouvez pas effectuer cette action sur vous-même.",
+      "already_assigned": "Ce membre a déjà ce rôle.",
+      "last_owner": "Transférez la propriété avant de quitter ce contexte.",
+      "personal_immutable": "L'espace personnel ne peut être ni renommé, ni partagé, ni supprimé.",
+      "no_account": "Aucun compte n'existe pour cette adresse.",
+      "already_member": "Cette personne fait déjà partie de ce contexte.",
+      "invitation_pending": "Cette adresse a déjà une invitation en attente.",
+      "invitation_not_found": "Cette invitation est introuvable.",
+      "invitation_not_pending": "Cette invitation n'est plus en attente.",
+      "invitation_expired": "Cette invitation a expiré.",
+      "rate_limit": "Trop de tentatives. Réessayez dans un instant.",
+      "network": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      "server": "Une erreur est survenue. Réessayez plus tard."
+    }
+  },
+
+  "create": {
+    "title": "Créer un groupe",
+    "name": "Nom",
+    "name_placeholder": "Ex. Notre appartement",
+    "description": "Description",
+    "description_placeholder": "Facultatif",
+    "accent": "Couleur d'accent",
+    "accent_option": "Couleur d'accent {{color}}",
+    "glyph": "Icône",
+    "glyph_option": "Icône {{glyph}}",
+    "cancel": "Annuler",
+    "submit": "Créer",
+    "error": {
+      "name_length": "Le nom doit compter au plus 80 caractères.",
+      "description_length": "La description doit compter au plus 280 caractères.",
+      "not_accessible": "Ce contexte n'existe plus ou n'est plus accessible.",
+      "insufficient_role": "Votre rôle dans ce contexte ne permet pas cette action.",
+      "owner_protected": "L'appartenance du propriétaire est protégée.",
+      "self_management": "Vous ne pouvez pas effectuer cette action sur vous-même.",
+      "already_assigned": "Ce membre a déjà ce rôle.",
+      "last_owner": "Transférez la propriété avant de quitter ce contexte.",
+      "personal_immutable": "L'espace personnel ne peut être ni renommé, ni partagé, ni supprimé.",
+      "no_account": "Aucun compte n'existe pour cette adresse.",
+      "already_member": "Cette personne fait déjà partie de ce contexte.",
+      "invitation_pending": "Cette adresse a déjà une invitation en attente.",
+      "invitation_not_found": "Cette invitation est introuvable.",
+      "invitation_not_pending": "Cette invitation n'est plus en attente.",
+      "invitation_expired": "Cette invitation a expiré.",
+      "rate_limit": "Trop de tentatives. Réessayez dans un instant.",
+      "network": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      "server": "Une erreur est survenue. Réessayez plus tard."
+    }
+  },
+
+  "invite": {
+    "title": "Inviter un membre",
+    "email": "Adresse e-mail",
+    "email_placeholder": "nom@exemple.fr",
+    "role": "Rôle",
+    "cancel": "Annuler",
+    "submit": "Envoyer l'invitation",
+    "success_title": "Invitation envoyée",
+    "success_body": "Transmettez ce code à {{email}} pour qu'iel puisse rejoindre le groupe.",
+    "done": "Terminé",
+    "error": {
+      "not_accessible": "Ce contexte n'existe plus ou n'est plus accessible.",
+      "insufficient_role": "Votre rôle dans ce contexte ne permet pas cette action.",
+      "owner_protected": "L'appartenance du propriétaire est protégée.",
+      "self_management": "Vous ne pouvez pas effectuer cette action sur vous-même.",
+      "already_assigned": "Ce membre a déjà ce rôle.",
+      "last_owner": "Transférez la propriété avant de quitter ce contexte.",
+      "personal_immutable": "L'espace personnel ne peut être ni renommé, ni partagé, ni supprimé.",
+      "no_account": "Aucun compte n'existe pour cette adresse.",
+      "already_member": "Cette personne fait déjà partie de ce contexte.",
+      "invitation_pending": "Cette adresse a déjà une invitation en attente.",
+      "invitation_not_found": "Cette invitation est introuvable.",
+      "invitation_not_pending": "Cette invitation n'est plus en attente.",
+      "invitation_expired": "Cette invitation a expiré.",
+      "rate_limit": "Trop de tentatives. Réessayez dans un instant.",
+      "network": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      "server": "Une erreur est survenue. Réessayez plus tard."
+    }
+  },
+
+  "leave": {
+    "title": "Quitter {{name}} ?",
+    "body": "Vous perdrez l'accès à ce groupe et à son contenu. Vous pourrez être réinvité·e plus tard.",
+    "cancel": "Annuler",
+    "submit": "Quitter",
+    "error": {
+      "not_accessible": "Ce contexte n'existe plus ou n'est plus accessible.",
+      "insufficient_role": "Votre rôle dans ce contexte ne permet pas cette action.",
+      "owner_protected": "L'appartenance du propriétaire est protégée.",
+      "self_management": "Vous ne pouvez pas effectuer cette action sur vous-même.",
+      "already_assigned": "Ce membre a déjà ce rôle.",
+      "last_owner": "Transférez la propriété avant de quitter ce contexte.",
+      "personal_immutable": "L'espace personnel ne peut être ni renommé, ni partagé, ni supprimé.",
+      "no_account": "Aucun compte n'existe pour cette adresse.",
+      "already_member": "Cette personne fait déjà partie de ce contexte.",
+      "invitation_pending": "Cette adresse a déjà une invitation en attente.",
+      "invitation_not_found": "Cette invitation est introuvable.",
+      "invitation_not_pending": "Cette invitation n'est plus en attente.",
+      "invitation_expired": "Cette invitation a expiré.",
+      "rate_limit": "Trop de tentatives. Réessayez dans un instant.",
+      "network": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      "server": "Une erreur est survenue. Réessayez plus tard."
+    }
+  },
+
+  "delete": {
+    "title": "Supprimer {{name}} ?",
+    "body": "Cela supprimera définitivement le groupe et retirera tous ses membres. Cette action est irréversible.",
+    "cancel": "Annuler",
+    "submit": "Supprimer",
+    "error": {
+      "not_accessible": "Ce contexte n'existe plus ou n'est plus accessible.",
+      "insufficient_role": "Votre rôle dans ce contexte ne permet pas cette action.",
+      "owner_protected": "L'appartenance du propriétaire est protégée.",
+      "self_management": "Vous ne pouvez pas effectuer cette action sur vous-même.",
+      "already_assigned": "Ce membre a déjà ce rôle.",
+      "last_owner": "Transférez la propriété avant de quitter ce contexte.",
+      "personal_immutable": "L'espace personnel ne peut être ni renommé, ni partagé, ni supprimé.",
+      "no_account": "Aucun compte n'existe pour cette adresse.",
+      "already_member": "Cette personne fait déjà partie de ce contexte.",
+      "invitation_pending": "Cette adresse a déjà une invitation en attente.",
+      "invitation_not_found": "Cette invitation est introuvable.",
+      "invitation_not_pending": "Cette invitation n'est plus en attente.",
+      "invitation_expired": "Cette invitation a expiré.",
+      "rate_limit": "Trop de tentatives. Réessayez dans un instant.",
+      "network": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      "server": "Une erreur est survenue. Réessayez plus tard."
+    }
+  },
+
+  "transfer": {
+    "title": "Transférer la propriété à {{name}} ?",
+    "body": "{{name}} deviendra propriétaire de ce groupe. Vous deviendrez administrateur·rice.",
+    "warning": "Vous ne pourrez pas annuler cela vous-même — seul le nouveau propriétaire pourrait la retransférer.",
+    "cancel": "Annuler",
+    "submit": "Transférer",
+    "error": {
+      "not_accessible": "Ce contexte n'existe plus ou n'est plus accessible.",
+      "insufficient_role": "Votre rôle dans ce contexte ne permet pas cette action.",
+      "owner_protected": "L'appartenance du propriétaire est protégée.",
+      "self_management": "Vous ne pouvez pas effectuer cette action sur vous-même.",
+      "already_assigned": "Ce membre a déjà ce rôle.",
+      "last_owner": "Transférez la propriété avant de quitter ce contexte.",
+      "personal_immutable": "L'espace personnel ne peut être ni renommé, ni partagé, ni supprimé.",
+      "no_account": "Aucun compte n'existe pour cette adresse.",
+      "already_member": "Cette personne fait déjà partie de ce contexte.",
+      "invitation_pending": "Cette adresse a déjà une invitation en attente.",
+      "invitation_not_found": "Cette invitation est introuvable.",
+      "invitation_not_pending": "Cette invitation n'est plus en attente.",
+      "invitation_expired": "Cette invitation a expiré.",
+      "rate_limit": "Trop de tentatives. Réessayez dans un instant.",
+      "network": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+      "server": "Une erreur est survenue. Réessayez plus tard."
+    }
+  },
+
+  "palette": {
+    "type_switch": "Changer de contexte",
+    "switch_to": "Basculer vers {{name}}"
+  }
+}
