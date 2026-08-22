@@ -21,7 +21,8 @@ final class SpaceText {
             return null;
         }
         if (trimmed.length() > CreateSharedSpaceCommand.DESCRIPTION_MAX_LENGTH) {
-            return trimmed.substring(0, CreateSharedSpaceCommand.DESCRIPTION_MAX_LENGTH);
+            // Refuser plutôt que tronquer : le domaine ne mutile pas silencieusement une saisie.
+            throw new SpaceException.InvalidSpaceDescription();
         }
         return trimmed;
     }

@@ -9,6 +9,7 @@ public abstract sealed class SpaceException extends RuntimeException
             SpaceException.PersonalSpaceImmutable,
             SpaceException.InvalidAppearance,
             SpaceException.InvalidSpaceName,
+            SpaceException.InvalidSpaceDescription,
             SpaceException.OwnerRoleNotAssignable,
             SpaceException.SelfManagementForbidden,
             SpaceException.RoleAlreadyAssigned,
@@ -44,6 +45,9 @@ public abstract sealed class SpaceException extends RuntimeException
     }
     public static final class InvalidSpaceName extends SpaceException {
         public InvalidSpaceName() { super("Space name must be between 1 and 80 characters"); }
+    }
+    public static final class InvalidSpaceDescription extends SpaceException {
+        public InvalidSpaceDescription() { super("Space description must not exceed 280 characters"); }
     }
     public static final class OwnerRoleNotAssignable extends SpaceException {
         public OwnerRoleNotAssignable() { super("The OWNER role is only reachable through an ownership transfer"); }

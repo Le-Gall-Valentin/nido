@@ -22,7 +22,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 class ArchRulesTest {
 
     private static final String BASE = "com.nido.api.";
-    private static final List<String> BCS = List.of("authentication", "identity", "mfa", "space");
+    private static final List<String> BCS = List.of("authentication", "identity", "mfa");
 
     private final JavaClasses classes = new ClassFileImporter()
         .importPackages("com.nido.api");
@@ -224,8 +224,7 @@ class ArchRulesTest {
             .resideInAnyPackage(
                 BASE + "authentication.infrastructure..",
                 BASE + "identity.infrastructure..",
-                BASE + "mfa.infrastructure..",
-                BASE + "space.infrastructure..")
+                BASE + "mfa.infrastructure..")
             .allowEmptyShould(false)
             .check(classes);
     }
