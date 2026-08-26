@@ -1,0 +1,141 @@
+{
+  "kicker": "Contextes",
+  "title": "Membres et groupes",
+  "subtitle": "Créez un groupe, invitez des personnes et gérez les rôles.",
+  "loading": "Chargement…",
+  "close": "Fermer",
+  "actions": {
+    "edit": "Modifier",
+    "invite": "Inviter",
+    "leave": "Quitter",
+    "delete": "Supprimer"
+  },
+  "errors": {
+    "not_accessible": "Ce contexte n'existe plus ou n'est plus accessible.",
+    "member_not_found": "Ce membre ne fait plus partie de ce contexte.",
+    "insufficient_role": "Votre rôle dans ce contexte ne permet pas cette action.",
+    "owner_protected": "L'appartenance du propriétaire est protégée.",
+    "self_management": "Vous ne pouvez pas effectuer cette action sur vous-même.",
+    "already_assigned": "Ce membre a déjà ce rôle.",
+    "last_owner": "Transférez la propriété avant de quitter ce contexte.",
+    "personal_immutable": "L'espace personnel ne peut être ni renommé, ni partagé, ni supprimé.",
+    "no_account": "Aucun compte n'existe pour cette adresse. Demandez à un administrateur d'en créer un.",
+    "already_member": "Cette personne fait déjà partie de ce contexte.",
+    "invitation_pending": "Cette adresse a déjà une invitation en attente.",
+    "invitation_not_found": "Cette invitation est introuvable.",
+    "invitation_not_pending": "Cette invitation n'est plus en attente.",
+    "invitation_expired": "Cette invitation a expiré.",
+    "invalid_appearance": "Cet accent ou cette icône ne fait pas partie de la palette autorisée.",
+    "invalid_space_name": "Le nom doit compter entre 1 et 80 caractères.",
+    "invalid_space_description": "La description ne doit pas dépasser 280 caractères.",
+    "owner_role_not_assignable": "Le rôle de propriétaire ne peut être attribué que par un transfert de propriété.",
+    "rate_limit": "Trop de tentatives. Réessayez dans un instant.",
+    "network": "Impossible de contacter le serveur. Vérifiez votre connexion.",
+    "server": "Une erreur est survenue. Réessayez plus tard."
+  },
+  "list": {
+    "title": "Mes contextes",
+    "action_create": "Créer un groupe",
+    "load_error": "Impossible de charger vos contextes.",
+    "personal_subtitle": "Espace personnel",
+    "member_count_one": "{{count}} membre",
+    "member_count_other": "{{count}} membres",
+    "empty": "Vous ne faites partie d'aucun groupe pour l'instant."
+  },
+  "received": {
+    "title": "Invitations reçues",
+    "expires": "Expire {{time}}",
+    "action_accept": "Rejoindre"
+  },
+  "members": {
+    "title": "Membres",
+    "empty": "Aucun membre.",
+    "you": "vous",
+    "deleted_account": "Compte supprimé",
+    "joined": "Arrivé·e {{time}}",
+    "role_select_label": "Rôle de {{name}}",
+    "action_transfer": "Transférer la propriété à {{name}}",
+    "action_remove": "Retirer {{name}}"
+  },
+  "invitations": {
+    "title": "Invitations",
+    "empty": "Aucune invitation émise.",
+    "expires": "Expire {{time}}",
+    "status": {
+      "PENDING": "En attente",
+      "ACCEPTED": "Acceptée",
+      "REVOKED": "Révoquée"
+    },
+    "action_copy": "Copier le code {{code}}",
+    "action_revoke": "Révoquer l'invitation de {{email}}"
+  },
+  "create": {
+    "title": "Créer un groupe",
+    "name": "Nom",
+    "name_placeholder": "Ex. Notre appartement",
+    "description": "Description",
+    "description_placeholder": "Facultatif",
+    "accent": "Couleur d'accent",
+    "accent_option": "Couleur d'accent {{color}}",
+    "glyph": "Icône",
+    "glyph_option": "Icône {{glyph}}",
+    "cancel": "Annuler",
+    "submit": "Créer",
+    "error": {
+      "name_length": "Le nom doit compter au plus 80 caractères.",
+      "description_length": "La description doit compter au plus 280 caractères."
+    }
+  },
+  "edit": {
+    "title": "Modifier {{name}}",
+    "name": "Nom",
+    "name_placeholder": "Ex. Notre appartement",
+    "description": "Description",
+    "description_placeholder": "Facultatif",
+    "accent": "Couleur d'accent",
+    "accent_option": "Couleur d'accent {{color}}",
+    "glyph": "Icône",
+    "glyph_option": "Icône {{glyph}}",
+    "cancel": "Annuler",
+    "submit": "Enregistrer",
+    "error": {
+      "name_length": "Le nom doit compter au plus 80 caractères.",
+      "description_length": "La description doit compter au plus 280 caractères."
+    }
+  },
+  "invite": {
+    "title": "Inviter un membre",
+    "email": "Adresse e-mail",
+    "email_placeholder": "nom@exemple.fr",
+    "role": "Rôle",
+    "cancel": "Annuler",
+    "submit": "Envoyer l'invitation",
+    "success_title": "Invitation envoyée",
+    "success_body": "{{email}} a désormais une invitation qui l'attend sur sa page de groupes.",
+    "code_hint": "Code de référence (inutile pour rejoindre)",
+    "done": "Terminé"
+  },
+  "leave": {
+    "title": "Quitter {{name}} ?",
+    "body": "Vous perdrez l'accès à ce groupe et à son contenu. Vous pourrez être réinvité·e plus tard.",
+    "cancel": "Annuler",
+    "submit": "Quitter"
+  },
+  "delete": {
+    "title": "Supprimer {{name}} ?",
+    "body": "Cela supprimera définitivement le groupe et retirera tous ses membres. Cette action est irréversible.",
+    "cancel": "Annuler",
+    "submit": "Supprimer"
+  },
+  "transfer": {
+    "title": "Transférer la propriété à {{name}} ?",
+    "body": "{{name}} deviendra propriétaire de ce groupe. Vous deviendrez administrateur·rice.",
+    "warning": "Vous ne pourrez pas annuler cela vous-même — seul le nouveau propriétaire pourrait la retransférer.",
+    "cancel": "Annuler",
+    "submit": "Transférer"
+  },
+  "palette": {
+    "type_switch": "Changer de contexte",
+    "switch_to": "Basculer vers {{name}}"
+  }
+}

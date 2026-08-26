@@ -1,0 +1,75 @@
+databaseChangeLog:
+  - changeSet:
+      id: 009-create-space-members
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: space_members
+      changes:
+        - createTable:
+            tableName: space_members
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: joined_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: space_members
+            columnNames: space_id, user_id
+            constraintName: uq_space_members_space_user
+        - sql:
+            sql: ALTER TABLE space_members ADD CONSTRAINT chk_space_members_role CHECK (role IN ('OWNER', 'ADMIN', 'MEMBER', 'VIEWER'))
+            splitStatements: false
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_space_members_single_owner ON space_members(space_id) WHERE role = 'OWNER'
+            splitStatements: false
+        - createIndex:
+            tableName: space_members
+            indexName: idx_space_members_user_id
+            columns:
+              - column:
+                  name: user_id
+        - addForeignKeyConstraint:
+            baseTableName: space_members
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_space_members_space
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: space_members
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_space_members_user
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: space_members
+            cascadeConstraints: true

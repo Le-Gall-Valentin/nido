@@ -2,6 +2,7 @@
   "brand": "Nido",
   "nav": {
     "label": "Main navigation",
+    "groups": "Members and groups",
     "settings": "Settings",
     "administration": "Administration"
   },

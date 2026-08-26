@@ -1,0 +1,16 @@
+{
+  "switcher": {
+    "kicker": "Context",
+    "title": "Switch context",
+    "trigger_label": "Current context: {{name}}. Switch context",
+    "close_label": "Close the context switcher",
+    "personal_subtitle": "Your personal data",
+    "create_action": "Create or join a group"
+  },
+  "role": {
+    "OWNER": "Owner",
+    "ADMIN": "Admin",
+    "MEMBER": "Member",
+    "VIEWER": "View only"
+  }
+}

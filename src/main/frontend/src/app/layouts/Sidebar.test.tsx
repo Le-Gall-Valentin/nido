@@ -39,6 +39,12 @@ describe('Sidebar — nav items', () => {
     expect(screen.getByText('nav.settings')).toBeDefined()
   })
 
+  it('always shows the groups entry', () => {
+    withUser('USER')
+    renderSidebar()
+    expect(screen.getByText('nav.groups')).toBeDefined()
+  })
+
   it('hides the administration entry for USER role', () => {
     withUser('USER')
     renderSidebar()

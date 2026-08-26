@@ -5,6 +5,7 @@ import { LogOut, Menu, Search, Settings } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { useShallow } from 'zustand/react/shallow'
 import { UserAvatar } from '@/entities/user'
+import { SpaceSwitcher } from '@/features/space-switcher'
 import { ROUTES } from '@/shared/config'
 
 interface TopbarProps {
@@ -57,6 +58,8 @@ export function Topbar({ onMenuOpen, onSearchOpen }: TopbarProps) {
       >
         <Menu size={18} />
       </button>
+
+      <SpaceSwitcher />
 
       {/* Search trigger — pill on sm+, icon only on mobile */}
       <div className="hidden max-w-[420px] flex-1 sm:block">
