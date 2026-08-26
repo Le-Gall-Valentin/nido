@@ -1,0 +1,99 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-create-space-invitations
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: space_invitations
+      changes:
+        - createTable:
+            tableName: space_invitations
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: code
+                  type: VARCHAR(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: UUID
+              - column:
+                  name: accepted_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: space_invitations
+            columnNames: code
+            constraintName: uq_space_invitations_code
+        - sql:
+            sql: ALTER TABLE space_invitations ADD CONSTRAINT chk_space_invitations_status CHECK (status IN ('PENDING', 'ACCEPTED', 'REVOKED'))
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE space_invitations ADD CONSTRAINT chk_space_invitations_role CHECK (role IN ('ADMIN', 'MEMBER', 'VIEWER'))
+            splitStatements: false
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_space_invitations_pending ON space_invitations(space_id, lower(email)) WHERE status = 'PENDING'
+            splitStatements: false
+        - createIndex:
+            tableName: space_invitations
+            indexName: idx_space_invitations_email
+            columns:
+              - column:
+                  name: email
+        - addForeignKeyConstraint:
+            baseTableName: space_invitations
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_space_invitations_space
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: space_invitations
+            baseColumnNames: created_by
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_space_invitations_created_by
+            onDelete: SET NULL
+      rollback:
+        - dropTable:
+            tableName: space_invitations
+            cascadeConstraints: true

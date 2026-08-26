@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Settings, Shield } from 'lucide-react'
+import { Settings, Shield, Users } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 
 export interface NavItemConfig {
@@ -11,6 +11,7 @@ export interface NavItemConfig {
 }
 
 export const NAV_CONFIG: NavItemConfig[] = [
+  { id: 'shell:spaces', to: ROUTES.SPACES, icon: Users, labelKey: 'nav.groups' },
   { id: 'shell:account', to: ROUTES.ACCOUNT, icon: Settings, labelKey: 'nav.settings' },
   { id: 'shell:users', adminOnly: true, to: ROUTES.ADMIN_USERS, icon: Shield, labelKey: 'nav.administration' },
 ]

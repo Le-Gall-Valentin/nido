@@ -11,4 +11,5 @@ public interface FindUserUseCase {
     Optional<User> findByUsername(String username);
     Optional<User> findById(UUID id);
     List<User> findByIds(Collection<UUID> ids);
+    Optional<User> findByEmail(String email);
 }

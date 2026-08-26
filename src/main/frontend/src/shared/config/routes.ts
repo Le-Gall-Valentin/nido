@@ -9,6 +9,11 @@ export const ROUTES = {
 
   // Account
   ACCOUNT: '/account',
+
+  // Spaces (contexts)
+  SPACES: '/spaces',
+  space: (spaceId: string) => `/s/${spaceId}`,
+  spaceMembers: (spaceId: string) => `/s/${spaceId}/members`,
 } as const
 
 export const ROUTE_SEGMENTS = {

@@ -33,4 +33,9 @@ public class FindUserService implements FindUserUseCase {
     public List<User> findByIds(Collection<UUID> ids) {
         return userRepository.findByIds(ids);
     }
+
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
 }

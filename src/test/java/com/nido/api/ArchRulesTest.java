@@ -22,7 +22,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 class ArchRulesTest {
 
     private static final String BASE = "com.nido.api.";
-    private static final List<String> BCS = List.of("authentication", "identity", "mfa");
+    private static final List<String> BCS = List.of("authentication", "identity", "mfa", "space");
 
     private final JavaClasses classes = new ClassFileImporter()
         .importPackages("com.nido.api");
@@ -268,7 +268,17 @@ class ArchRulesTest {
         // identity.infra → mfa.application.port.in
         new CrossBcAppDep("identity",
             new String[]{BASE + "mfa.application.port.in.."},
-            Set.of("TotpRecordInitAdapter", "MfaAdminResetTotpAdapter", "IdentityTotpStatusAdapter", "TotpDeletionAdapter"))
+            Set.of("TotpRecordInitAdapter", "MfaAdminResetTotpAdapter", "IdentityTotpStatusAdapter", "TotpDeletionAdapter")),
+
+        // identity.infra → space.application.port.in
+        new CrossBcAppDep("identity",
+            new String[]{BASE + "space.application.port.in.."},
+            Set.of("PersonalSpaceInitAdapter", "SpaceDataDeletionAdapter")),
+
+        // space.infra → identity.application.port.in
+        new CrossBcAppDep("space",
+            new String[]{BASE + "identity.application.port.in.."},
+            Set.of("MemberProfileAdapter"))
     );
 
     @ParameterizedTest(name = "{0}.infra → {1}: only whitelisted adapters allowed")

@@ -3,6 +3,7 @@ package com.nido.api.identity.application.handler;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.CredentialSetupPort;
+import com.nido.api.identity.domain.port.out.PersonalSpaceInitPort;
 import com.nido.api.identity.domain.port.out.TotpRecordInitPort;
 import com.nido.api.identity.domain.port.out.UserAdminPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
@@ -28,12 +29,13 @@ class SeedHandlerTest {
     @Mock UserCommandPort userCommandPort;
     @Mock CredentialSetupPort credentialSetupPort;
     @Mock TotpRecordInitPort totpRecordInitPort;
+    @Mock PersonalSpaceInitPort personalSpaceInitPort;
 
     private SeedHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new SeedHandler(userAdminPort, userCommandPort, credentialSetupPort, totpRecordInitPort);
+        handler = new SeedHandler(userAdminPort, userCommandPort, credentialSetupPort, totpRecordInitPort, personalSpaceInitPort);
     }
 
     @Test
@@ -51,6 +53,7 @@ class SeedHandlerTest {
 
         verify(credentialSetupPort).setup(userId, "secret");
         verify(totpRecordInitPort).initForUser(userId);
+        verify(personalSpaceInitPort).initForUser(created.id());
     }
 
     @Test

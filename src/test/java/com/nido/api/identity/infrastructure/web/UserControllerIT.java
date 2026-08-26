@@ -14,6 +14,13 @@ import com.nido.api.IntegrationTestConfig;
 import com.nido.api.mfa.infrastructure.persistence.entity.UserTotpEntity;
 import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
 import com.nido.api.shared.model.Role;
+import com.nido.api.space.domain.model.InvitationStatus;
+import com.nido.api.space.domain.model.SpaceRole;
+import com.nido.api.space.domain.model.SpaceType;
+import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
+import com.nido.api.space.infrastructure.persistence.entity.SpaceInvitationEntity;
+import com.nido.api.space.infrastructure.persistence.repository.SpaceInvitationJpaRepository;
+import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,6 +71,8 @@ class UserControllerIT {
     @Autowired UserTotpJpaRepository userTotpJpaRepository;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired TotpEncryptorFactory encryptorFactory;
+    @Autowired SpaceJpaRepository spaceJpaRepository;
+    @Autowired SpaceInvitationJpaRepository spaceInvitationJpaRepository;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -75,6 +84,8 @@ class UserControllerIT {
             .apply(SecurityMockMvcConfigurers.springSecurity())
             .build();
         rateLimitBucketStore.clearAll();
+        spaceInvitationJpaRepository.deleteAll();
+        spaceJpaRepository.deleteAll();
         refreshTokenJpaRepository.deleteAll();
         userTotpJpaRepository.deleteAll();
         userCredentialJpaRepository.deleteAll();
@@ -268,6 +279,37 @@ class UserControllerIT {
         boolean hasTokens = refreshTokenJpaRepository.findAll().stream()
             .anyMatch(t -> targetId.equals(t.getUserId()));
         assertThat(hasTokens).isFalse();
+    }
+
+    @Test
+    void deleteUser_asSuperAdmin_removesInvitationsAddressedToTheDeletedEmail() throws Exception {
+        UUID targetId = userIdentityJpaRepository.findByUsername("testuser").get().getId();
+        UUID adminId = userIdentityJpaRepository.findByUsername("superadmin").get().getId();
+
+        SpaceEntity space = new SpaceEntity();
+        space.setType(SpaceType.SHARED);
+        space.setName("Chez Superadmin");
+        space.setAccent("#c17a5c");
+        space.setGlyph("🏡");
+        space.setCreatedBy(adminId);
+        UUID spaceId = spaceJpaRepository.saveAndFlush(space).getId();
+
+        SpaceInvitationEntity invitation = new SpaceInvitationEntity();
+        invitation.setSpaceId(spaceId);
+        invitation.setEmail("testuser@test.com");
+        invitation.setRole(SpaceRole.MEMBER);
+        invitation.setCode("NIDO-GDPR01");
+        invitation.setStatus(InvitationStatus.PENDING);
+        invitation.setExpiresAt(Instant.now().plusSeconds(3600));
+        invitation.setCreatedBy(adminId);
+        UUID invitationId = spaceInvitationJpaRepository.saveAndFlush(invitation).getId();
+
+        Cookie access = loginAs("superadmin", "adminpass");
+
+        mockMvc.perform(delete("/api/users/" + targetId).cookie(access))
+            .andExpect(status().isNoContent());
+
+        assertThat(spaceInvitationJpaRepository.findById(invitationId)).isEmpty();
     }
 
     @Test

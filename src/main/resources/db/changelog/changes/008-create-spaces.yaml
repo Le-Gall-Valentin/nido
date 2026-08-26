@@ -1,0 +1,78 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-create-spaces
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: spaces
+      changes:
+        - createTable:
+            tableName: spaces
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(80)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR(280)
+              - column:
+                  name: accent
+                  type: VARCHAR(7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: glyph
+                  type: VARCHAR(8)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: personal_owner_id
+                  type: UUID
+              - column:
+                  name: created_by
+                  type: UUID
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE spaces ADD CONSTRAINT chk_spaces_type CHECK (type IN ('PERSONAL', 'SHARED'))
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE spaces ADD CONSTRAINT chk_spaces_accent_format CHECK (accent ~ '^#[0-9a-f]{6}$')
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE spaces ADD CONSTRAINT chk_spaces_personal_owner CHECK ((type = 'PERSONAL') = (personal_owner_id IS NOT NULL))
+            splitStatements: false
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_spaces_personal_owner ON spaces(personal_owner_id) WHERE type = 'PERSONAL'
+            splitStatements: false
+        - addForeignKeyConstraint:
+            baseTableName: spaces
+            baseColumnNames: created_by
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_spaces_created_by
+            onDelete: SET NULL
+      rollback:
+        - dropTable:
+            tableName: spaces
+            cascadeConstraints: true

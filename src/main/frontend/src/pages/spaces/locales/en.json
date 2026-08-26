@@ -1,0 +1,141 @@
+{
+  "kicker": "Contexts",
+  "title": "Members and groups",
+  "subtitle": "Create a group, invite people, and manage roles.",
+  "loading": "Loading…",
+  "close": "Close",
+  "actions": {
+    "edit": "Edit",
+    "invite": "Invite",
+    "leave": "Leave",
+    "delete": "Delete"
+  },
+  "errors": {
+    "not_accessible": "This context no longer exists or is no longer accessible.",
+    "member_not_found": "This member is no longer part of this context.",
+    "insufficient_role": "Your role in this context does not allow this action.",
+    "owner_protected": "The owner's membership is protected.",
+    "self_management": "You cannot perform this action on yourself.",
+    "already_assigned": "This member already has this role.",
+    "last_owner": "Transfer ownership before leaving this context.",
+    "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
+    "no_account": "No account exists for this address. Ask an administrator to create one.",
+    "already_member": "This person is already a member of this context.",
+    "invitation_pending": "This address already has a pending invitation.",
+    "invitation_not_found": "This invitation could not be found.",
+    "invitation_not_pending": "This invitation is no longer pending.",
+    "invitation_expired": "This invitation has expired.",
+    "invalid_appearance": "This accent or icon is not part of the allowed palette.",
+    "invalid_space_name": "Name must be between 1 and 80 characters.",
+    "invalid_space_description": "Description must not exceed 280 characters.",
+    "owner_role_not_assignable": "The owner role can only be assigned by transferring ownership.",
+    "rate_limit": "Too many attempts. Please try again shortly.",
+    "network": "Could not reach the server. Check your connection.",
+    "server": "Something went wrong. Please try again later."
+  },
+  "list": {
+    "title": "My contexts",
+    "action_create": "Create a group",
+    "load_error": "Could not load your contexts.",
+    "personal_subtitle": "Personal space",
+    "member_count_one": "{{count}} member",
+    "member_count_other": "{{count}} members",
+    "empty": "You are not part of any group yet."
+  },
+  "received": {
+    "title": "Invitations received",
+    "expires": "Expires {{time}}",
+    "action_accept": "Join"
+  },
+  "members": {
+    "title": "Members",
+    "empty": "No members.",
+    "you": "you",
+    "deleted_account": "Deleted account",
+    "joined": "Joined {{time}}",
+    "role_select_label": "Role of {{name}}",
+    "action_transfer": "Transfer ownership to {{name}}",
+    "action_remove": "Remove {{name}}"
+  },
+  "invitations": {
+    "title": "Invitations",
+    "empty": "No invitations issued.",
+    "expires": "Expires {{time}}",
+    "status": {
+      "PENDING": "Pending",
+      "ACCEPTED": "Accepted",
+      "REVOKED": "Revoked"
+    },
+    "action_copy": "Copy code {{code}}",
+    "action_revoke": "Revoke invitation for {{email}}"
+  },
+  "create": {
+    "title": "Create a group",
+    "name": "Name",
+    "name_placeholder": "e.g. Our apartment",
+    "description": "Description",
+    "description_placeholder": "Optional",
+    "accent": "Accent color",
+    "accent_option": "Accent color {{color}}",
+    "glyph": "Icon",
+    "glyph_option": "Icon {{glyph}}",
+    "cancel": "Cancel",
+    "submit": "Create",
+    "error": {
+      "name_length": "Name must be at most 80 characters.",
+      "description_length": "Description must be at most 280 characters."
+    }
+  },
+  "edit": {
+    "title": "Edit {{name}}",
+    "name": "Name",
+    "name_placeholder": "e.g. Our apartment",
+    "description": "Description",
+    "description_placeholder": "Optional",
+    "accent": "Accent color",
+    "accent_option": "Accent color {{color}}",
+    "glyph": "Icon",
+    "glyph_option": "Icon {{glyph}}",
+    "cancel": "Cancel",
+    "submit": "Save",
+    "error": {
+      "name_length": "Name must be at most 80 characters.",
+      "description_length": "Description must be at most 280 characters."
+    }
+  },
+  "invite": {
+    "title": "Invite a member",
+    "email": "Email address",
+    "email_placeholder": "name@example.com",
+    "role": "Role",
+    "cancel": "Cancel",
+    "submit": "Send invitation",
+    "success_title": "Invitation sent",
+    "success_body": "{{email}} now has an invitation waiting on their groups page.",
+    "code_hint": "Reference code (not needed to join)",
+    "done": "Done"
+  },
+  "leave": {
+    "title": "Leave {{name}}?",
+    "body": "You will lose access to this group and its content. You can be invited back later.",
+    "cancel": "Cancel",
+    "submit": "Leave"
+  },
+  "delete": {
+    "title": "Delete {{name}}?",
+    "body": "This will permanently delete the group and remove every member. This cannot be undone.",
+    "cancel": "Cancel",
+    "submit": "Delete"
+  },
+  "transfer": {
+    "title": "Transfer ownership to {{name}}?",
+    "body": "{{name}} will become the owner of this group. You will become an admin.",
+    "warning": "You will not be able to undo this yourself — only the new owner could transfer it back.",
+    "cancel": "Cancel",
+    "submit": "Transfer"
+  },
+  "palette": {
+    "type_switch": "Switch context",
+    "switch_to": "Switch to {{name}}"
+  }
+}
