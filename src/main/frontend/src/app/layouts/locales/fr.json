@@ -4,8 +4,7 @@
     "label": "Navigation principale",
     "groups": "Membres et groupes",
     "settings": "Paramètres",
-    "administration": "Administration",
-    "members": "Membres"
+    "administration": "Administration"
   },
   "topbar": {
     "menu_label": "Ouvrir le menu",

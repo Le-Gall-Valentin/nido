@@ -4,8 +4,7 @@
     "label": "Main navigation",
     "groups": "Members and groups",
     "settings": "Settings",
-    "administration": "Administration",
-    "members": "Members"
+    "administration": "Administration"
   },
   "topbar": {
     "menu_label": "Open menu",

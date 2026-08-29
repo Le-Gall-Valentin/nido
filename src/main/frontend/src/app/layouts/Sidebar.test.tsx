@@ -113,38 +113,25 @@ describe('Sidebar — nav items, always visible', () => {
   })
 })
 
-describe('Sidebar — space-scoped items are always reachable, not gated behind entering a space', () => {
-  it('shows Membres while on the account page, resolved to the personal space', async () => {
+describe('Sidebar — Membres et groupes is a single entry, matching the mockup', () => {
+  // The mockup has exactly one "Membres & groupes" nav item — no separate
+  // per-space "Membres" item alongside it (drilling into a group from
+  // /spaces already reaches its members page). A prior fix mistakenly
+  // added a second "Membres" item; this locks in that there is only one.
+  it('shows exactly one groups-related entry, on the account page', async () => {
     withUser('USER')
     renderSidebar('/account')
+    await screen.findByText('nav.groups')
 
-    const link = await screen.findByRole('link', { name: /nav\.members/ })
-    expect(link.getAttribute('href')).toBe('/s/personal-1/members')
+    expect(screen.queryByText('nav.members')).toBeNull()
   })
 
-  it('shows Membres while on the administration page', async () => {
-    withUser('SUPER_ADMIN')
-    renderSidebar('/administration/users')
-
-    expect(await screen.findByText('nav.members')).toBeDefined()
-  })
-
-  it('resolves Membres to the remembered space when one was chosen before', async () => {
+  it('shows exactly one groups-related entry, while inside a space', async () => {
     withUser('USER')
-    activeSpaceStore.getState().remember('space-2')
-    renderSidebar('/account')
-
-    const link = await screen.findByRole('link', { name: /nav\.members/ })
-    expect(link.getAttribute('href')).toBe('/s/space-2/members')
-  })
-
-  it("keeps Membres pointed at the URL's own space when already inside one", async () => {
-    withUser('USER')
-    activeSpaceStore.getState().remember('space-2')
     renderSidebar('/s/personal-1/members')
+    await screen.findByText('nav.groups')
 
-    const link = await screen.findByRole('link', { name: /nav\.members/ })
-    expect(link.getAttribute('href')).toBe('/s/personal-1/members')
+    expect(screen.queryByText('nav.members')).toBeNull()
   })
 })
 
