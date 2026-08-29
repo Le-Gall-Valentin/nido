@@ -1,6 +1,6 @@
 import { render, screen, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { MemoryRouter, useNavigate } from 'react-router-dom'
+import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import type { AuthState, AuthActions } from '@/features/auth/model/authStore'
 
@@ -24,7 +24,10 @@ function renderSidebar(path = '/administration/users', open = false) {
   const onClose = vi.fn()
   render(
     <MemoryRouter initialEntries={[path]}>
-      <Sidebar open={open} onClose={onClose} />
+      <Routes>
+        <Route path="/s/:spaceId/*" element={<Sidebar open={open} onClose={onClose} />} />
+        <Route path="*" element={<Sidebar open={open} onClose={onClose} />} />
+      </Routes>
     </MemoryRouter>
   )
   return { onClose }
@@ -103,5 +106,36 @@ describe('Sidebar — onClose behaviour', () => {
     const before = onClose.mock.calls.length
     screen.getByText('go').click()
     expect(onClose.mock.calls.length).toBeGreaterThan(before)
+  })
+})
+
+describe('Sidebar — space-scoped nav', () => {
+  it('shows the space nav items when the route carries a spaceId', () => {
+    withUser('USER')
+    renderSidebar('/s/space-1/members')
+    expect(screen.getByText('nav.members')).toBeDefined()
+  })
+
+  it('hides the global nav entries when the route carries a spaceId', () => {
+    withUser('USER')
+    renderSidebar('/s/space-1/members')
+    expect(screen.queryByText('nav.groups')).toBeNull()
+    expect(screen.queryByText('nav.settings')).toBeNull()
+    expect(screen.queryByText('nav.administration')).toBeNull()
+  })
+
+  it('shows a back-to-groups link pointing at /spaces', () => {
+    withUser('USER')
+    renderSidebar('/s/space-1/members')
+    const link = screen.getByRole('link', { name: /back_to_groups/ })
+    expect(link.getAttribute('href')).toBe('/spaces')
+  })
+
+  it('shows the global nav and no back link outside a space route', () => {
+    withUser('USER')
+    renderSidebar('/account')
+    expect(screen.getByText('nav.groups')).toBeDefined()
+    expect(screen.queryByText('nav.members')).toBeNull()
+    expect(screen.queryByRole('link', { name: /back_to_groups/ })).toBeNull()
   })
 })
