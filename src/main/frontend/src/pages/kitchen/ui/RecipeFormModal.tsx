@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { RECIPE_CATEGORY_META, RECIPE_CATEGORY_ORDER, RECIPE_UNITS } from '../lib/recipeCategoryMeta'
+import { RECIPE_CATEGORY_META, RECIPE_CATEGORY_ORDER } from '../lib/recipeCategoryMeta'
+import { RECIPE_UNITS, RECIPE_UNIT_LABEL_KEY } from '../lib/recipeUnitMeta'
 import type { MeasurementUnit, Recipe, RecipeInput, RecipeCategory } from '../model/types'
 
 interface IngredientDraft {
@@ -121,7 +122,7 @@ export function RecipeFormModal({ open, onClose, onSubmit, initialRecipe }: Reci
                 onChange={(e) => updateIngredient(index, { unit: e.target.value as MeasurementUnit })}
                 className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-2 py-[11px] text-[13px] text-fg-0"
               >
-                {RECIPE_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                {RECIPE_UNITS.map((u) => <option key={u} value={u}>{t(RECIPE_UNIT_LABEL_KEY[u])}</option>)}
               </select>
               <button type="button" onClick={() => removeIngredient(index)} aria-label={t('form.remove')} className="p-2 text-fg-3 hover:text-status-red">
                 <X className="size-4" />

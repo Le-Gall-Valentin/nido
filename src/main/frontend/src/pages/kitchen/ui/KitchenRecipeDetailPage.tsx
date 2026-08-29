@@ -8,6 +8,7 @@ import type { IKitchenApi } from '../model/IKitchenApi'
 import { KitchenApiProvider } from '../model/kitchenApiContext'
 import { useRecipe } from '../model/useRecipe'
 import { RECIPE_CATEGORY_META } from '../lib/recipeCategoryMeta'
+import { RECIPE_UNIT_LABEL_KEY } from '../lib/recipeUnitMeta'
 
 interface KitchenRecipeDetailPageProps {
   api?: IKitchenApi
@@ -47,7 +48,7 @@ function KitchenRecipeDetailPageContent() {
             {recipe.ingredients.map((ing, index) => (
               <li key={index} className="flex justify-between border-b border-border py-1.5 text-sm last:border-b-0">
                 <span className="text-fg-2">{ing.name}</span>
-                <span className="font-semibold text-fg-0">{ing.quantity} {ing.unit}</span>
+                <span className="font-semibold text-fg-0">{ing.quantity} {t(RECIPE_UNIT_LABEL_KEY[ing.unit])}</span>
               </li>
             ))}
           </ul>

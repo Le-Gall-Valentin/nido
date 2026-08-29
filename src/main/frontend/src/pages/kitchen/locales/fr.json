@@ -1,11 +1,21 @@
 {
   "loading": "Chargement…",
   "delete": "Supprimer",
+  "edit": "Modifier",
   "favorite": "Ajouter aux favoris",
   "unfavorite": "Retirer des favoris",
   "error": { "load_failed": "Impossible de charger ces données." },
+  "delete_confirm": {
+    "title": "Supprimer « {{name}} » ?", "body": "Cette recette et ses ingrédients seront définitivement supprimés. Cette action est irréversible.",
+    "cancel": "Annuler", "submit": "Supprimer", "error": "Échec de la suppression. Réessayez."
+  },
   "category": {
     "plat": "Plat", "express": "Express", "vegetarian": "Végétarien", "dessert": "Dessert", "soup": "Soupe"
+  },
+  "unit": {
+    "GRAM": "g", "KILOGRAM": "kg", "MILLILITER": "ml", "CENTILITER": "cl", "LITER": "l",
+    "PIECE": "pièce(s)", "SLICE": "tranche(s)", "TABLESPOON": "c. à s.", "TEASPOON": "c. à c.",
+    "PINCH": "pincée(s)", "SACHET": "sachet(s)"
   },
   "recipes": {
     "title": "Recettes", "new_recipe": "Nouvelle recette", "search_placeholder": "Rechercher une recette, un ingrédient…",

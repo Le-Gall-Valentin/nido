@@ -46,6 +46,7 @@ describe('KitchenRecipeDetailPage', () => {
 
     expect(await screen.findByText('Pâtes bolognaise')).toBeDefined()
     expect(screen.getByText('Pâtes')).toBeDefined()
+    expect(screen.getByText('500 unit.GRAM')).toBeDefined()
     expect(screen.getByText("Faire revenir l'oignon.")).toBeDefined()
   })
 })

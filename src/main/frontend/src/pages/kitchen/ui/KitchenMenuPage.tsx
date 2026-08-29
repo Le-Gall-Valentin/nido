@@ -11,6 +11,7 @@ import { useMenuEntries } from '../model/useMenuEntries'
 import { useShoppingList } from '../model/useShoppingList'
 import { useAddMenuEntry, useRemoveMenuEntry, useUpdateMenuEntryPortions } from '../model/useMenuMutations'
 import { startOfWeek, addDays, toISODate, weekDates } from '../lib/weekRange'
+import { RECIPE_UNIT_LABEL_KEY } from '../lib/recipeUnitMeta'
 import type { MenuEntry, Recipe } from '../model/types'
 
 interface KitchenMenuPageProps {
@@ -164,7 +165,7 @@ function KitchenMenuPageContent({ initialWeekStart }: { initialWeekStart?: Date 
               {(shoppingList ?? []).map((line, index) => (
                 <li key={index} className="flex justify-between border-b border-border py-1.5 text-sm last:border-b-0">
                   <span className="text-fg-2">{line.name}</span>
-                  <span className="font-semibold text-fg-0">{line.quantity} {line.unit}</span>
+                  <span className="font-semibold text-fg-0">{line.quantity} {t(RECIPE_UNIT_LABEL_KEY[line.unit])}</span>
                 </li>
               ))}
             </ul>
