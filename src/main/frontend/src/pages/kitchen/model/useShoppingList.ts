@@ -10,5 +10,6 @@ export function useShoppingList(spaceId: string, from: string, to: string) {
   return useQuery({
     queryKey: shoppingListKey(spaceId, from, to),
     queryFn: () => api.getShoppingList(spaceId, from, to),
+    enabled: !!spaceId,
   })
 }

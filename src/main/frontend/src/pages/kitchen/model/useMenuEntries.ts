@@ -10,5 +10,6 @@ export function useMenuEntries(spaceId: string, from: string, to: string) {
   return useQuery({
     queryKey: menuEntriesKey(spaceId, from, to),
     queryFn: () => api.listMenuEntries(spaceId, from, to),
+    enabled: !!spaceId,
   })
 }
