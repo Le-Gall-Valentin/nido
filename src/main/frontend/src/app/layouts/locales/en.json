@@ -4,15 +4,17 @@
     "label": "Main navigation",
     "groups": "Members and groups",
     "settings": "Settings",
+    "settings_profile": "Profile",
+    "settings_security": "Security",
+    "settings_preferences": "Preferences",
     "administration": "Administration",
-    "members": "Members",
-    "back_to_groups": "Groups",
     "kitchen": "Kitchen",
     "kitchen_recipes": "Recipes",
-    "kitchen_menu": "Menu"
+    "kitchen_menu": "Menu",
+    "collapse": "Collapse",
+    "expand": "Expand"
   },
   "topbar": {
-    "menu_label": "Open menu",
     "search_label": "Search",
     "search_placeholder": "Search…",
     "profile_label": "Profile menu",

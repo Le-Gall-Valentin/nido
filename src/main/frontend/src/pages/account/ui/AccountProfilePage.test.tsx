@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { AccountPage } from './AccountPage'
+import { AccountProfilePage } from './AccountProfilePage'
 import type { IAccountApi } from '../model/IAccountApi'
 import type { User } from '@/entities/user'
 
@@ -17,13 +17,8 @@ vi.mock('zustand/react/shallow', () => ({
   useShallow: (fn: unknown) => fn,
 }))
 
-vi.mock('@/features/totp', () => ({
-  totpApi: {},
-}))
-
-// The account api is injected through the page's composition seam (api prop).
 const fakeApi: IAccountApi = { updateProfile: vi.fn(), changePassword: vi.fn() }
-const renderPage = () => render(<AccountPage api={fakeApi} />)
+const renderPage = () => render(<AccountProfilePage api={fakeApi} />)
 
 vi.mock('./ProfileSummaryCard', () => ({
   ProfileSummaryCard: () => <div data-testid="profile-summary" />,
@@ -31,18 +26,6 @@ vi.mock('./ProfileSummaryCard', () => ({
 
 vi.mock('./ProfileEditSection', () => ({
   ProfileEditSection: () => <div data-testid="profile-edit" />,
-}))
-
-vi.mock('./TwoFactorSection', () => ({
-  TwoFactorSection: () => <div data-testid="totp-section" />,
-}))
-
-vi.mock('./PreferencesSection', () => ({
-  PreferencesSection: () => <div data-testid="preferences-section" />,
-}))
-
-vi.mock('./ChangePasswordSection', () => ({
-  ChangePasswordSection: () => <div data-testid="password-section" />,
 }))
 
 const BASE_USER: User = {
@@ -63,28 +46,28 @@ beforeEach(() => {
   mockUseAuth.mockReset()
 })
 
-describe('AccountPage', () => {
+describe('AccountProfilePage', () => {
   it('returns null when user is null', () => {
     makeState({ user: null })
     const { container } = renderPage()
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders all sections when user is present', () => {
+  it('renders the profile sections only', () => {
     makeState()
-    const { getByTestId } = renderPage()
+    const { getByTestId, queryByTestId } = renderPage()
     expect(getByTestId('profile-summary')).toBeDefined()
     expect(getByTestId('profile-edit')).toBeDefined()
-    expect(getByTestId('totp-section')).toBeDefined()
-    expect(getByTestId('preferences-section')).toBeDefined()
-    expect(getByTestId('password-section')).toBeDefined()
+    expect(queryByTestId('totp-section')).toBeNull()
+    expect(queryByTestId('preferences-section')).toBeNull()
+    expect(queryByTestId('password-section')).toBeNull()
   })
 
   it('renders the page heading with kicker, title and subtitle', () => {
     makeState()
     const { getByText, getByRole } = renderPage()
     expect(getByText('kicker')).toBeDefined()
-    expect(getByRole('heading', { level: 1, name: 'title' })).toBeDefined()
-    expect(getByText('subtitle')).toBeDefined()
+    expect(getByRole('heading', { level: 1, name: 'pages.profile.title' })).toBeDefined()
+    expect(getByText('pages.profile.subtitle')).toBeDefined()
   })
 })

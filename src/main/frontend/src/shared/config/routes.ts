@@ -9,6 +9,9 @@ export const ROUTES = {
 
   // Account
   ACCOUNT: '/account',
+  ACCOUNT_PROFILE: '/account/profile',
+  ACCOUNT_SECURITY: '/account/security',
+  ACCOUNT_PREFERENCES: '/account/preferences',
 
   // Spaces (contexts)
   SPACES: '/spaces',
