@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,12 +40,13 @@ class ToggleRecipeFavoriteHandlerTest {
     }
 
     @Test
-    void flips_a_non_favorite_recipe_to_favorite() {
-        when(recipeRepository.findById(recipeId)).thenReturn(Optional.of(recipe(false)), Optional.of(recipe(true)));
+    void flips_a_non_favorite_recipe_to_favorite_reading_the_recipe_only_once() {
+        when(recipeRepository.findById(recipeId)).thenReturn(Optional.of(recipe(false)));
         SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.MEMBER, Instant.now());
 
         Recipe result = handler.toggleFavorite(recipeId, caller);
 
+        verify(recipeRepository, times(1)).findById(recipeId);
         verify(recipeRepository).setFavorite(recipeId, true);
         assertThat(result.favorite()).isTrue();
     }

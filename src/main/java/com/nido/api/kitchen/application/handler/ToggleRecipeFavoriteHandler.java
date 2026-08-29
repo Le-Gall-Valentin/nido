@@ -27,7 +27,10 @@ public class ToggleRecipeFavoriteHandler implements ToggleRecipeFavoriteUseCase 
             throw new KitchenException.RecipeNotFound();
         }
         caller.ensureCanWrite();
-        recipeRepository.setFavorite(recipeId, !existing.favorite());
-        return recipeRepository.findById(recipeId).orElseThrow(KitchenException.RecipeNotFound::new);
+        boolean toggled = !existing.favorite();
+        recipeRepository.setFavorite(recipeId, toggled);
+        return new Recipe(existing.id(), existing.spaceId(), existing.name(), existing.category(),
+            existing.minutes(), existing.referencePortions(), toggled, existing.ingredients(),
+            existing.steps(), existing.createdAt(), existing.updatedAt());
     }
 }
