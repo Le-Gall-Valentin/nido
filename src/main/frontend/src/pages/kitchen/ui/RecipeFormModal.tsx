@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
-import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { RECIPE_CATEGORY_META, RECIPE_CATEGORY_ORDER } from '../lib/recipeCategoryMeta'
 import { RECIPE_UNITS, RECIPE_UNIT_LABEL_KEY } from '../lib/recipeUnitMeta'
 import type { MeasurementUnit, Recipe, RecipeInput, RecipeCategory } from '../model/types'
@@ -135,10 +135,14 @@ export function RecipeFormModal({ open, onClose, onSubmit, initialRecipe }: Reci
         <div className="flex flex-col gap-2">
           <span className="text-[13px] font-semibold text-fg-1">{t('form.steps_title')}</span>
           {draft.steps.map((step, index) => (
-            <div key={index} className="flex items-end gap-2">
-              <Input label={t('form.step_label', { number: index + 1 })} value={step}
+            <div key={index} className="flex items-start gap-2">
+              <span className="mt-[9px] grid size-6 shrink-0 place-items-center rounded-full bg-bg-2 text-[11.5px] font-bold text-fg-3">
+                {index + 1}
+              </span>
+              <Textarea label={t('form.step_label', { number: index + 1 })} value={step} rows={2}
+                placeholder={t('form.step_placeholder')}
                 onChange={(e) => updateStep(index, e.target.value)} />
-              <button type="button" onClick={() => removeStep(index)} aria-label={t('form.remove')} className="p-2 text-fg-3 hover:text-status-red">
+              <button type="button" onClick={() => removeStep(index)} aria-label={t('form.remove')} className="mt-[9px] p-2 text-fg-3 hover:text-status-red">
                 <X className="size-4" />
               </button>
             </div>
