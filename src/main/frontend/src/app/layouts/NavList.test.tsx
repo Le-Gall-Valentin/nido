@@ -24,10 +24,10 @@ const ITEMS: NavItemConfig[] = [
   },
 ]
 
-function renderList(spaceId: string | undefined, pathname: string, collapsed = false) {
+function renderList(spaceId: string | undefined, pathname: string, alwaysExpanded = false) {
   return render(
     <MemoryRouter>
-      <NavList items={ITEMS} spaceId={spaceId} pathname={pathname} collapsed={collapsed} />
+      <NavList items={ITEMS} spaceId={spaceId} pathname={pathname} alwaysExpanded={alwaysExpanded} />
     </MemoryRouter>
   )
 }
@@ -78,14 +78,9 @@ describe('NavList — children disclosure', () => {
     expect(parentLink.className).toContain('bg-accent-dim')
   })
 
-  it('never expands children while collapsed, even on an active child route', () => {
-    renderList('space-1', '/s/space-1/kitchen/menu', true)
-    expect(screen.queryByText('nav.kitchen_menu')).toBeNull()
-  })
-
-  it('hides every label while collapsed', () => {
+  it('expands every parent with children when alwaysExpanded, regardless of the active route', () => {
     renderList('space-1', '/s/space-1/members', true)
-    expect(screen.queryByText('nav.groups')).toBeNull()
-    expect(screen.queryByText('nav.members')).toBeNull()
+    expect(screen.getByText('nav.kitchen_recipes')).toBeDefined()
+    expect(screen.getByText('nav.kitchen_menu')).toBeDefined()
   })
 })

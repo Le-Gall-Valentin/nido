@@ -18,16 +18,17 @@ function setup({
   user = { id: '1', username: 'alice.dupont', email: 'alice@example.fr', role: 'USER' as const },
   logout = vi.fn().mockResolvedValue(undefined),
   onSearchOpen = vi.fn(),
+  onMenuOpen = vi.fn(),
 } = {}) {
   mockUseAuth.mockImplementation(
     (selector) => selector({ user, logout } as unknown as AuthState & AuthActions)
   )
   render(
     <MemoryRouter>
-      <Topbar onSearchOpen={onSearchOpen} />
+      <Topbar onSearchOpen={onSearchOpen} onMenuOpen={onMenuOpen} />
     </MemoryRouter>
   )
-  return { onSearchOpen, logout }
+  return { onSearchOpen, onMenuOpen, logout }
 }
 
 beforeEach(() => vi.clearAllMocks())
@@ -39,6 +40,14 @@ describe('Topbar — search', () => {
     const searchButtons = screen.getAllByLabelText('topbar.search_label')
     fireEvent.click(searchButtons[0])
     expect(onSearchOpen).toHaveBeenCalledOnce()
+  })
+})
+
+describe('Topbar — mobile menu', () => {
+  it('calls onMenuOpen when the burger button is clicked', () => {
+    const { onMenuOpen } = setup()
+    fireEvent.click(screen.getByLabelText('topbar.menu_label'))
+    expect(onMenuOpen).toHaveBeenCalledOnce()
   })
 })
 
