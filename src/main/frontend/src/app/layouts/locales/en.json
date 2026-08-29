@@ -5,8 +5,7 @@
     "groups": "Members and groups",
     "settings": "Settings",
     "administration": "Administration",
-    "members": "Members",
-    "back_to_groups": "Groups"
+    "members": "Members"
   },
   "topbar": {
     "menu_label": "Open menu",
