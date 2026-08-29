@@ -19,4 +19,11 @@ describe('Input', () => {
     render(<Input label="Password" id="password" suffix={<span>toggle</span>} />)
     expect(screen.getByText('toggle')).not.toBeNull()
   })
+
+  it('keeps the label accessible but visually hidden when srOnlyLabel is set', () => {
+    render(<Input label="Ingredient name" id="ingredient" srOnlyLabel />)
+    const label = screen.getByText('Ingredient name')
+    expect(label.className).toContain('sr-only')
+    expect(screen.getByLabelText('Ingredient name')).not.toBeNull()
+  })
 })

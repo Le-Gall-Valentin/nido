@@ -44,6 +44,18 @@ describe('RecipeFormModal — create', () => {
     expect(screen.getAllByLabelText('form.ingredient_name_label')).toHaveLength(2)
   })
 
+  it('does not repeat a visible label on every ingredient row', () => {
+    render(<RecipeFormModal open onClose={vi.fn()} onSubmit={vi.fn()} initialRecipe={null} />)
+
+    fireEvent.click(screen.getByText('form.add_ingredient'))
+
+    const nameInputs = screen.getAllByPlaceholderText('form.ingredient_name_placeholder')
+    expect(nameInputs).toHaveLength(2)
+    for (const label of screen.getAllByText('form.ingredient_name_label')) {
+      expect(label.className).toContain('sr-only')
+    }
+  })
+
   it('shows translated unit labels instead of the raw enum', () => {
     render(<RecipeFormModal open onClose={vi.fn()} onSubmit={vi.fn()} initialRecipe={null} />)
 

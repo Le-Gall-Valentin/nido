@@ -3,15 +3,17 @@ import { useId, type InputHTMLAttributes, type ReactNode } from 'react'
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
   suffix?: ReactNode
+  /** Keeps the label accessible to screen readers without showing it — for repeated rows (e.g. a list of ingredients) where a visible label per row is redundant. */
+  srOnlyLabel?: boolean
 }
 
-export function Input({ label, suffix, className = '', ...props }: InputProps) {
+export function Input({ label, suffix, srOnlyLabel, className = '', ...props }: InputProps) {
   const generatedId = useId()
   const id = props.id ?? props.name ?? generatedId
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-[13px] font-semibold text-fg-1">
+      <label htmlFor={id} className={srOnlyLabel ? 'sr-only' : 'text-[13px] font-semibold text-fg-1'}>
         {label}
       </label>
       <div className="relative">
