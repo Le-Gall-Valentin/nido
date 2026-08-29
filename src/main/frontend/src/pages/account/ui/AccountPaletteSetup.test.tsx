@@ -12,7 +12,7 @@ vi.mock('@/shared/lib', () => ({
 }))
 
 vi.mock('@/shared/config', () => ({
-  ROUTES: { ACCOUNT: '/account' },
+  ROUTES: { ACCOUNT_PROFILE: '/account/profile', ACCOUNT_SECURITY: '/account/security', ACCOUNT_PREFERENCES: '/account/preferences' },
 }))
 
 describe('AccountPaletteSetup', () => {
@@ -26,16 +26,18 @@ describe('AccountPaletteSetup', () => {
     expect(mockUsePaletteItems).toHaveBeenCalledWith('account', expect.any(Array))
   })
 
-  it('registers 5 items including page and 4 sections', () => {
+  it('registers the 3 real sub-pages, one per navigable route', () => {
     render(<AccountPaletteSetup />)
-    const items = mockUsePaletteItems.mock.calls[0][1] as { id: string }[]
-    expect(items).toHaveLength(5)
+    const items = mockUsePaletteItems.mock.calls[0][1] as { id: string; to: string }[]
     expect(items.map(i => i.id)).toEqual([
-      'account:page',
       'account:profile',
-      'account:twofa',
+      'account:security',
       'account:preferences',
-      'account:password',
+    ])
+    expect(items.map(i => i.to)).toEqual([
+      '/account/profile',
+      '/account/security',
+      '/account/preferences',
     ])
   })
 })

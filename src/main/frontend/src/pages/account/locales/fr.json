@@ -3,6 +3,11 @@
   "title": "Mon compte",
   "subtitle": "Gérez vos informations personnelles et votre mot de passe.",
   "member_since": "Membre depuis le {{date}}",
+  "pages": {
+    "profile": { "title": "Profil", "subtitle": "Vos informations personnelles et votre présence dans l'organisation." },
+    "security": { "title": "Sécurité", "subtitle": "Double authentification et mot de passe." },
+    "preferences": { "title": "Préférences", "subtitle": "Apparence et langue de l'interface." }
+  },
   "profile": {
     "title": "Informations personnelles",
     "subtitle": "Visible des autres utilisateurs de l'organisation.",

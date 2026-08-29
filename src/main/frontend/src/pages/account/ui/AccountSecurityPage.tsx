@@ -4,18 +4,15 @@ import { useAuth } from '@/features/auth'
 import { totpApi } from '@/features/totp'
 import { accountApi } from '../api/accountApi'
 import type { IAccountApi } from '../model/IAccountApi'
-import { ProfileSummaryCard } from './ProfileSummaryCard'
-import { ProfileEditSection } from './ProfileEditSection'
 import { TwoFactorSection } from './TwoFactorSection'
-import { PreferencesSection } from './PreferencesSection'
 import { ChangePasswordSection } from './ChangePasswordSection'
 
-interface AccountPageProps {
+interface AccountSecurityPageProps {
   /** Composition seam: defaults to the real implementation; tests inject a fake. */
   api?: IAccountApi
 }
 
-export function AccountPage({ api = accountApi }: AccountPageProps = {}) {
+export function AccountSecurityPage({ api = accountApi }: AccountSecurityPageProps = {}) {
   const { t } = useTranslation('account')
   const { user, patchUser } = useAuth(
     useShallow(s => ({ user: s.user, patchUser: s.patchUser }))
@@ -29,25 +26,15 @@ export function AccountPage({ api = accountApi }: AccountPageProps = {}) {
         <p className="mb-1.5 text-[13px] font-semibold uppercase tracking-[0.05em] text-fg-3">
           {t('kicker')}
         </p>
-        <h1 className="text-[32px] font-semibold tracking-tight text-fg-0">{t('title')}</h1>
-        <p className="mt-1 text-[15px] text-fg-2">{t('subtitle')}</p>
+        <h1 className="text-[32px] font-semibold tracking-tight text-fg-0">{t('pages.security.title')}</h1>
+        <p className="mt-1 text-[15px] text-fg-2">{t('pages.security.subtitle')}</p>
       </div>
-
-      <ProfileSummaryCard user={user} />
-
-      <ProfileEditSection
-        user={user}
-        onPatch={patchUser}
-        onUpdateProfile={api.updateProfile}
-      />
 
       <TwoFactorSection
         user={user}
         onPatch={patchUser}
         enrollApi={totpApi}
       />
-
-      <PreferencesSection />
 
       <ChangePasswordSection
         onChangePassword={api.changePassword}
