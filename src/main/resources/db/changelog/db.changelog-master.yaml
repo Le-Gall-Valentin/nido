@@ -29,3 +29,12 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/010-create-space-invitations.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/011-create-kitchen-recipes.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/012-create-kitchen-recipe-ingredients.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/013-create-kitchen-recipe-steps.yaml
+      relativeToChangelogFile: false

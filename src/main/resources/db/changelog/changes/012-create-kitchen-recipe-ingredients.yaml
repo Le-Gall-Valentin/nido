@@ -1,0 +1,65 @@
+databaseChangeLog:
+  - changeSet:
+      id: 012-create-kitchen-recipe-ingredients
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: kitchen_recipe_ingredients
+      changes:
+        - createTable:
+            tableName: kitchen_recipe_ingredients
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: recipe_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: position
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantity
+                  type: NUMERIC(10,3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: unit
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE kitchen_recipe_ingredients ADD CONSTRAINT chk_kitchen_recipe_ingredients_unit CHECK (unit IN ('GRAM', 'KILOGRAM', 'MILLILITER', 'CENTILITER', 'LITER', 'PIECE', 'SLICE', 'TABLESPOON', 'TEASPOON', 'PINCH', 'SACHET'))
+            splitStatements: false
+        - createIndex:
+            tableName: kitchen_recipe_ingredients
+            indexName: idx_kitchen_recipe_ingredients_recipe_id
+            columns:
+              - column:
+                  name: recipe_id
+        - addForeignKeyConstraint:
+            baseTableName: kitchen_recipe_ingredients
+            baseColumnNames: recipe_id
+            referencedTableName: kitchen_recipes
+            referencedColumnNames: id
+            constraintName: fk_kitchen_recipe_ingredients_recipe
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: kitchen_recipe_ingredients
+            cascadeConstraints: true
