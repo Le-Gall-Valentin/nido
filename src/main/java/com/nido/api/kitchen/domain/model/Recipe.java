@@ -11,12 +11,14 @@ public record Recipe(
     UUID id,
     UUID spaceId,
     String name,
+    String description,
     RecipeCategory category,
     int minutes,
     int referencePortions,
     boolean favorite,
     List<RecipeIngredient> ingredients,
     List<String> steps,
+    String note,
     Instant createdAt,
     Instant updatedAt
 ) {

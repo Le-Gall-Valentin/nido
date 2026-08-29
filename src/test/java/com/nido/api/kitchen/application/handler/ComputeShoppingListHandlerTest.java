@@ -43,9 +43,9 @@ class ComputeShoppingListHandlerTest {
     void scales_each_entrys_ingredients_by_its_own_portions_before_merging() {
         LocalDate monday = LocalDate.of(2026, 9, 7);
         LocalDate tuesday = LocalDate.of(2026, 9, 8);
-        Recipe recipe = new Recipe(recipeId, spaceId, "Pâtes bolognaise", RecipeCategory.PLAT, 35, 4,
+        Recipe recipe = new Recipe(recipeId, spaceId, "Pâtes bolognaise", null, RecipeCategory.PLAT, 35, 4,
             false, List.of(new RecipeIngredient("Pâtes", BigDecimal.valueOf(400), MeasurementUnit.GRAM)),
-            List.of(), Instant.now(), Instant.now());
+            List.of(), null, Instant.now(), Instant.now());
         MenuEntry mondayEntry = new MenuEntry(UUID.randomUUID(), spaceId, monday, recipeId, 4, 0);
         MenuEntry tuesdayEntry = new MenuEntry(UUID.randomUUID(), spaceId, tuesday, recipeId, 2, 0);
         when(menuRepository.findBySpaceIdAndDateRange(spaceId, monday, tuesday))

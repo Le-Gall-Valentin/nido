@@ -41,8 +41,8 @@ class ListMenuEntriesHandlerTest {
         LocalDate from = LocalDate.of(2026, 9, 7);
         LocalDate to = LocalDate.of(2026, 9, 13);
         MenuEntry entry = new MenuEntry(UUID.randomUUID(), spaceId, from, recipeId, 4, 0);
-        Recipe recipe = new Recipe(recipeId, spaceId, "Pâtes bolognaise", RecipeCategory.PLAT, 35, 4,
-            false, List.of(), List.of(), Instant.now(), Instant.now());
+        Recipe recipe = new Recipe(recipeId, spaceId, "Pâtes bolognaise", null, RecipeCategory.PLAT, 35, 4,
+            false, List.of(), List.of(), null, Instant.now(), Instant.now());
         when(menuRepository.findBySpaceIdAndDateRange(spaceId, from, to)).thenReturn(List.of(entry));
         when(recipeRepository.findByIds(List.of(recipeId))).thenReturn(List.of(recipe));
         SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.VIEWER, Instant.now());

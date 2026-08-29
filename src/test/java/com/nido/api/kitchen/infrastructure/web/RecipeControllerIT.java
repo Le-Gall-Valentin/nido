@@ -89,8 +89,8 @@ class RecipeControllerIT {
 
     private String createRecipeBody() {
         return """
-            {"name":"Pâtes bolognaise","category":"PLAT","minutes":35,"referencePortions":4,
-             "ingredients":[{"name":"Pâtes","quantity":500,"unit":"GRAM"}],"steps":["Cuire les pâtes."]}
+            {"name":"Pâtes bolognaise","description":"Un classique familial.","category":"PLAT","minutes":35,"referencePortions":4,
+             "ingredients":[{"name":"Pâtes","quantity":500,"unit":"GRAM"}],"steps":["Cuire les pâtes."],"note":"Encore meilleur réchauffé."}
             """;
     }
 
@@ -100,12 +100,40 @@ class RecipeControllerIT {
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(createRecipeBody()))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.name").value("Pâtes bolognaise"))
+            .andExpect(jsonPath("$.description").value("Un classique familial."))
+            .andExpect(jsonPath("$.note").value("Encore meilleur réchauffé."))
             .andExpect(jsonPath("$.favorite").value(false));
 
         mockMvc.perform(get("/api/spaces/" + spaceId + "/kitchen/recipes").cookie(accessTokenFor(aliceId)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].lastPlannedOn").doesNotExist());
+    }
+
+    @Test
+    void a_recipe_can_be_created_without_a_description_or_note() throws Exception {
+        String body = """
+            {"name":"Pâtes bolognaise","category":"PLAT","minutes":35,"referencePortions":4,
+             "ingredients":[{"name":"Pâtes","quantity":500,"unit":"GRAM"}],"steps":["Cuire les pâtes."]}
+            """;
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.description").doesNotExist())
+            .andExpect(jsonPath("$.note").doesNotExist());
+    }
+
+    @Test
+    void creating_a_recipe_with_a_too_long_description_is_rejected() throws Exception {
+        String body = """
+            {"name":"Pâtes bolognaise","description":"%s","category":"PLAT","minutes":35,"referencePortions":4,
+             "ingredients":[{"name":"Pâtes","quantity":500,"unit":"GRAM"}],"steps":[]}
+            """.formatted("x".repeat(2001));
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest());
     }
 
     @Test

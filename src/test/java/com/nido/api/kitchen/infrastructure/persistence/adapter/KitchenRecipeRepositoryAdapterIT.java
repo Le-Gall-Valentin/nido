@@ -55,11 +55,11 @@ class KitchenRecipeRepositoryAdapterIT {
     }
 
     private CreateRecipeCommand bolognaise() {
-        return new CreateRecipeCommand(spaceId, "Pâtes bolognaise", RecipeCategory.PLAT, 35, 4,
+        return new CreateRecipeCommand(spaceId, "Pâtes bolognaise", "Un classique familial.", RecipeCategory.PLAT, 35, 4,
             List.of(
                 new RecipeIngredient("Pâtes", BigDecimal.valueOf(500), MeasurementUnit.GRAM),
                 new RecipeIngredient("Oignon", BigDecimal.ONE, MeasurementUnit.PIECE)),
-            List.of("Faire revenir l'oignon.", "Ajouter la sauce."));
+            List.of("Faire revenir l'oignon.", "Ajouter la sauce."), "Encore meilleur réchauffé.");
     }
 
     @Test
@@ -67,24 +67,28 @@ class KitchenRecipeRepositoryAdapterIT {
         Recipe created = adapter.create(bolognaise());
 
         assertThat(created.name()).isEqualTo("Pâtes bolognaise");
+        assertThat(created.description()).isEqualTo("Un classique familial.");
         assertThat(created.favorite()).isFalse();
         assertThat(created.ingredients()).extracting(RecipeIngredient::name).containsExactly("Pâtes", "Oignon");
         assertThat(created.steps()).containsExactly("Faire revenir l'oignon.", "Ajouter la sauce.");
+        assertThat(created.note()).isEqualTo("Encore meilleur réchauffé.");
     }
 
     @Test
     void update_replaces_all_ingredients_and_steps() {
         Recipe created = adapter.create(bolognaise());
 
-        Recipe updated = adapter.update(new UpdateRecipeCommand(created.id(), spaceId, "Pâtes bolo maison",
+        Recipe updated = adapter.update(new UpdateRecipeCommand(created.id(), spaceId, "Pâtes bolo maison", "Version maison.",
             RecipeCategory.PLAT, 40, 4,
             List.of(new RecipeIngredient("Pâtes", BigDecimal.valueOf(400), MeasurementUnit.GRAM)),
-            List.of("Une seule étape.")));
+            List.of("Une seule étape."), "Se congèle bien."));
 
         assertThat(updated.name()).isEqualTo("Pâtes bolo maison");
+        assertThat(updated.description()).isEqualTo("Version maison.");
         assertThat(updated.ingredients()).hasSize(1);
         assertThat(updated.ingredients().get(0).quantity()).isEqualByComparingTo("400");
         assertThat(updated.steps()).containsExactly("Une seule étape.");
+        assertThat(updated.note()).isEqualTo("Se congèle bien.");
     }
 
     @Test
@@ -120,8 +124,8 @@ class KitchenRecipeRepositoryAdapterIT {
         otherSpace.setAccent("#4a7fa0");
         otherSpace.setGlyph("🌿");
         UUID otherSpaceId = spaceJpaRepository.saveAndFlush(otherSpace).getId();
-        adapter.create(new CreateRecipeCommand(otherSpaceId, "Curry", RecipeCategory.VEGETARIAN, 30, 4,
-            List.of(new RecipeIngredient("Riz", BigDecimal.valueOf(300), MeasurementUnit.GRAM)), List.of()));
+        adapter.create(new CreateRecipeCommand(otherSpaceId, "Curry", null, RecipeCategory.VEGETARIAN, 30, 4,
+            List.of(new RecipeIngredient("Riz", BigDecimal.valueOf(300), MeasurementUnit.GRAM)), List.of(), null));
 
         List<Recipe> found = adapter.findBySpaceId(spaceId);
 

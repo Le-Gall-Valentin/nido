@@ -8,11 +8,13 @@ public record UpdateRecipeCommand(
     UUID recipeId,
     UUID spaceId,
     String name,
+    String description,
     RecipeCategory category,
     int minutes,
     int referencePortions,
     List<RecipeIngredient> ingredients,
-    List<String> steps
+    List<String> steps,
+    String note
 ) {
     public UpdateRecipeCommand {
         Objects.requireNonNull(recipeId, "recipeId");

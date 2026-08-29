@@ -58,10 +58,12 @@ public class KitchenRecipeRepositoryAdapter implements RecipeRepository {
         RecipeEntity e = new RecipeEntity();
         e.setSpaceId(command.spaceId());
         e.setName(command.name());
+        e.setDescription(command.description());
         e.setCategory(command.category());
         e.setMinutes(command.minutes());
         e.setReferencePortions(command.referencePortions());
         e.setFavorite(false);
+        e.setNote(command.note());
         RecipeEntity saved = recipes.saveAndFlush(e);
         saveIngredientsAndSteps(saved.getId(), command.ingredients(), command.steps());
         return findById(saved.getId()).orElseThrow(KitchenException.RecipeNotFound::new);
@@ -72,9 +74,11 @@ public class KitchenRecipeRepositoryAdapter implements RecipeRepository {
     public Recipe update(UpdateRecipeCommand command) {
         RecipeEntity e = recipes.findById(command.recipeId()).orElseThrow(KitchenException.RecipeNotFound::new);
         e.setName(command.name());
+        e.setDescription(command.description());
         e.setCategory(command.category());
         e.setMinutes(command.minutes());
         e.setReferencePortions(command.referencePortions());
+        e.setNote(command.note());
         recipes.saveAndFlush(e);
         ingredients.deleteByRecipeId(e.getId());
         steps.deleteByRecipeId(e.getId());
@@ -143,10 +147,11 @@ public class KitchenRecipeRepositoryAdapter implements RecipeRepository {
     }
 
     private Recipe toDomain(RecipeEntity e, List<RecipeIngredientEntity> ingredientEntities, List<RecipeStepEntity> stepEntities) {
-        return new Recipe(e.getId(), e.getSpaceId(), e.getName(), e.getCategory(), e.getMinutes(), e.getReferencePortions(),
+        return new Recipe(e.getId(), e.getSpaceId(), e.getName(), e.getDescription(), e.getCategory(), e.getMinutes(), e.getReferencePortions(),
             e.isFavorite(),
             ingredientEntities.stream().map(i -> new RecipeIngredient(i.getName(), i.getQuantity(), i.getUnit())).toList(),
             stepEntities.stream().map(RecipeStepEntity::getText).toList(),
+            e.getNote(),
             e.getCreatedAt(), e.getUpdatedAt());
     }
 }

@@ -12,12 +12,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RecipeTest {
 
     private Recipe recipeFor4() {
-        return new Recipe(UUID.randomUUID(), UUID.randomUUID(), "Pâtes bolognaise", RecipeCategory.PLAT,
+        return new Recipe(UUID.randomUUID(), UUID.randomUUID(), "Pâtes bolognaise", null, RecipeCategory.PLAT,
             35, 4, false,
             List.of(
                 new RecipeIngredient("Pâtes", BigDecimal.valueOf(500), MeasurementUnit.GRAM),
                 new RecipeIngredient("Oignon", BigDecimal.ONE, MeasurementUnit.PIECE)),
-            List.of("Faire revenir l'oignon.", "Ajouter la sauce."),
+            List.of("Faire revenir l'oignon.", "Ajouter la sauce."), null,
             Instant.now(), Instant.now());
     }
 

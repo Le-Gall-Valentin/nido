@@ -37,10 +37,10 @@ class ListRecipesHandlerTest {
 
     @Test
     void attaches_the_last_planned_date_when_known() {
-        Recipe planned = new Recipe(UUID.randomUUID(), spaceId, "Pâtes bolognaise", RecipeCategory.PLAT, 35, 4,
-            false, List.of(), List.of(), Instant.now(), Instant.now());
-        Recipe neverPlanned = new Recipe(UUID.randomUUID(), spaceId, "Curry", RecipeCategory.VEGETARIAN, 30, 4,
-            false, List.of(), List.of(), Instant.now(), Instant.now());
+        Recipe planned = new Recipe(UUID.randomUUID(), spaceId, "Pâtes bolognaise", null, RecipeCategory.PLAT, 35, 4,
+            false, List.of(), List.of(), null, Instant.now(), Instant.now());
+        Recipe neverPlanned = new Recipe(UUID.randomUUID(), spaceId, "Curry", null, RecipeCategory.VEGETARIAN, 30, 4,
+            false, List.of(), List.of(), null, Instant.now(), Instant.now());
         when(recipeRepository.findBySpaceId(spaceId)).thenReturn(List.of(planned, neverPlanned));
         when(menuRepository.lastPlannedOnBySpace(spaceId)).thenReturn(Map.of(planned.id(), LocalDate.of(2026, 9, 7)));
         SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.VIEWER, Instant.now());
