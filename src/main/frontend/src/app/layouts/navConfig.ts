@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Settings, Shield, Users } from 'lucide-react'
+import { CookingPot, Settings, Shield, Users } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 
 export interface NavItemConfig {
@@ -28,4 +28,10 @@ export interface SpaceNavItemConfig {
 // placeholder entries for future modules (Cuisine, Organisation, ...).
 export const SPACE_NAV_CONFIG: SpaceNavItemConfig[] = [
   { id: 'space:members', to: ROUTES.spaceMembers, icon: Users, labelKey: 'nav.members' },
+  {
+    id: 'space:kitchen', to: ROUTES.spaceKitchenRecipes, icon: CookingPot, labelKey: 'nav.kitchen',
+    children: [
+      { id: 'space:kitchen:recipes', to: ROUTES.spaceKitchenRecipes, icon: CookingPot, labelKey: 'nav.kitchen_recipes' },
+    ],
+  },
 ]
