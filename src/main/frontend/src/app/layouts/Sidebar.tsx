@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/features/auth'
@@ -7,7 +7,8 @@ import { useFocusTrap } from '@/shared/lib'
 import { NidoMark } from '@/shared/ui'
 import { ROUTES } from '@/shared/config'
 import { isAdminRole } from '@/entities/user'
-import { NAV_CONFIG } from './navConfig'
+import { NAV_CONFIG, SPACE_NAV_CONFIG } from './navConfig'
+import { SpaceNav } from './SpaceNav'
 
 const BRAND_LOGO_GRADIENT = 'linear-gradient(135deg, var(--brand-icon-from), var(--brand-icon-to))'
 
@@ -45,6 +46,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const { t } = useTranslation('shell')
   const user = useAuth((s) => s.user)
   const { pathname } = useLocation()
+  const { spaceId } = useParams<{ spaceId: string }>()
   const sidebarRef = useRef<HTMLElement>(null)
 
   const prevPathname = useRef(pathname)
@@ -91,9 +93,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         className="flex flex-1 flex-col gap-[3px] overflow-y-auto px-3 py-2"
         aria-label={t('nav.label')}
       >
-        {visibleItems.map((item) => (
-          <NavItem key={item.to} to={item.to} icon={item.icon} label={t(item.labelKey)} pathname={pathname} />
-        ))}
+        {spaceId ? (
+          <SpaceNav items={SPACE_NAV_CONFIG} spaceId={spaceId} pathname={pathname} />
+        ) : (
+          visibleItems.map((item) => (
+            <NavItem key={item.to} to={item.to} icon={item.icon} label={t(item.labelKey)} pathname={pathname} />
+          ))
+        )}
       </nav>
     </aside>
   )
