@@ -1,0 +1,71 @@
+databaseChangeLog:
+  - changeSet:
+      id: 014-create-kitchen-menu-entries
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: kitchen_menu_entries
+      changes:
+        - createTable:
+            tableName: kitchen_menu_entries
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: recipe_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: portions
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: position
+                  type: INT
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: kitchen_menu_entries
+            indexName: idx_kitchen_menu_entries_space_id_date
+            columns:
+              - column:
+                  name: space_id
+              - column:
+                  name: date
+        - addForeignKeyConstraint:
+            baseTableName: kitchen_menu_entries
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_kitchen_menu_entries_space
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: kitchen_menu_entries
+            baseColumnNames: recipe_id
+            referencedTableName: kitchen_recipes
+            referencedColumnNames: id
+            constraintName: fk_kitchen_menu_entries_recipe
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: kitchen_menu_entries
+            cascadeConstraints: true
