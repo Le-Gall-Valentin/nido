@@ -16,6 +16,12 @@ public interface MenuEntryJpaRepository extends JpaRepository<MenuEntryEntity, U
 
     long countBySpaceIdAndDate(UUID spaceId, LocalDate date);
 
+    // Serializes position assignment for a given (space, date) within the caller's
+    // transaction so concurrent inserts can't read the same count and collide on
+    // the same position: the lock is held until the transaction commits/rolls back.
+    @Query(value = "select pg_advisory_xact_lock(hashtext(:key))", nativeQuery = true)
+    void lockPositionAssignment(@Param("key") String key);
+
     @Query("""
         select new com.nido.api.kitchen.infrastructure.persistence.repository.LastPlannedOn(m.recipeId, max(m.date))
         from MenuEntryEntity m
