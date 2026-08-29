@@ -43,6 +43,15 @@ describe('RecipeFormModal — create', () => {
 
     expect(screen.getAllByLabelText('form.ingredient_name_label')).toHaveLength(2)
   })
+
+  it('shows translated unit labels instead of the raw enum', () => {
+    render(<RecipeFormModal open onClose={vi.fn()} onSubmit={vi.fn()} initialRecipe={null} />)
+
+    const options = screen.getAllByLabelText<HTMLSelectElement>('form.ingredient_unit_label')[0].querySelectorAll('option')
+
+    expect(options[0]).toHaveProperty('textContent', 'unit.GRAM')
+    expect(Array.from(options).some((o) => o.textContent === 'GRAM')).toBe(false)
+  })
 })
 
 describe('RecipeFormModal — edit', () => {

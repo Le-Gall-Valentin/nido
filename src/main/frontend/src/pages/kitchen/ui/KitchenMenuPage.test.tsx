@@ -65,10 +65,11 @@ describe('KitchenMenuPage', () => {
     expect(await screen.findByText('Pâtes bolognaise')).toBeDefined()
   })
 
-  it('shows the computed shopping list', async () => {
+  it('shows the computed shopping list with a translated unit', async () => {
     setup()
 
     expect(await screen.findByText('Pâtes')).toBeDefined()
+    expect(screen.getByText('500 unit.GRAM')).toBeDefined()
   })
 
   it('removes a planned meal', async () => {

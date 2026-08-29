@@ -1,11 +1,21 @@
 {
   "loading": "Loading…",
   "delete": "Delete",
+  "edit": "Edit",
   "favorite": "Add to favorites",
   "unfavorite": "Remove from favorites",
   "error": { "load_failed": "Could not load this data." },
+  "delete_confirm": {
+    "title": "Delete \"{{name}}\"?", "body": "This recipe and its ingredients will be permanently deleted. This action cannot be undone.",
+    "cancel": "Cancel", "submit": "Delete", "error": "Failed to delete. Please try again."
+  },
   "category": {
     "plat": "Main course", "express": "Express", "vegetarian": "Vegetarian", "dessert": "Dessert", "soup": "Soup"
+  },
+  "unit": {
+    "GRAM": "g", "KILOGRAM": "kg", "MILLILITER": "ml", "CENTILITER": "cl", "LITER": "l",
+    "PIECE": "piece(s)", "SLICE": "slice(s)", "TABLESPOON": "tbsp", "TEASPOON": "tsp",
+    "PINCH": "pinch(es)", "SACHET": "sachet(s)"
   },
   "recipes": {
     "title": "Recipes", "new_recipe": "New recipe", "search_placeholder": "Search a recipe or ingredient…",

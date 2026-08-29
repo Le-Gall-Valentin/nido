@@ -15,8 +15,3 @@ export const RECIPE_CATEGORY_META: Record<RecipeCategory, RecipeCategoryMeta> = 
 }
 
 export const RECIPE_CATEGORY_ORDER: RecipeCategory[] = ['PLAT', 'EXPRESS', 'VEGETARIAN', 'DESSERT', 'SOUP']
-
-export const RECIPE_UNITS = [
-  'GRAM', 'KILOGRAM', 'MILLILITER', 'CENTILITER', 'LITER',
-  'PIECE', 'SLICE', 'TABLESPOON', 'TEASPOON', 'PINCH', 'SACHET',
-] as const
