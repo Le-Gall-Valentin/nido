@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Check, ChevronDown, UserPlus } from 'lucide-react'
 import { SpaceAvatar, isPersonal, type SpaceSummary, type SpaceRole } from '@/entities/space'
@@ -7,6 +7,7 @@ import { ROUTES } from '@/shared/config'
 import { useMySpaces } from '../model/useMySpaces'
 import { useActiveSpace } from '../model/useActiveSpace'
 import { activeSpaceStore } from '../model/activeSpaceStore'
+import { replaceSpaceInPath } from '../model/replaceSpaceInPath'
 
 // The personal space must always appear first in the list, regardless of
 // the order the API returns.
@@ -17,6 +18,7 @@ function sortSpaces(spaces: SpaceSummary[]): SpaceSummary[] {
 export function SpaceSwitcher() {
   const { t } = useTranslation('space')
   const navigate = useNavigate()
+  const location = useLocation()
   const { spaceId } = useActiveSpace()
   const { data: spaces } = useMySpaces()
   const [open, setOpen] = useState(false)
@@ -49,7 +51,13 @@ export function SpaceSwitcher() {
 
   function choose(space: SpaceSummary): void {
     activeSpaceStore.getState().remember(space.id)
-    navigate(ROUTES.space(space.id))
+    // Stay on the current page, just refreshed for the new context — only a
+    // space-scoped URL (/s/:spaceId/...) needs its spaceId segment swapped;
+    // an unscoped page (e.g. /account) doesn't move at all.
+    const nextPath = replaceSpaceInPath(location.pathname, space.id)
+    if (nextPath !== location.pathname) {
+      navigate({ pathname: nextPath, search: location.search, hash: location.hash })
+    }
     closeMenu()
   }
 

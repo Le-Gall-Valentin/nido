@@ -103,8 +103,29 @@ describe('SpaceSwitcher — panel', () => {
     const items = screen.getAllByRole('menuitem')
     const personalItem = items.find((item) => item.textContent?.includes('Alice'))!
     fireEvent.click(personalItem)
-    expect(mockNavigate).toHaveBeenCalledWith('/s/personal-1')
+    expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/s/personal-1', search: '', hash: '' })
     expect(activeSpaceStore.getState().lastSpaceId).toBe('personal-1')
+  })
+
+  it('stays on the current page, swapping only the space id, when deep in a section', async () => {
+    setup({ initialEntries: ['/s/space-2/kitchen/recipes'] })
+    const trigger = await screen.findByRole('button', { expanded: false })
+    fireEvent.click(trigger)
+    const items = screen.getAllByRole('menuitem')
+    const personalItem = items.find((item) => item.textContent?.includes('Alice'))!
+    fireEvent.click(personalItem)
+    expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/s/personal-1/kitchen/recipes', search: '', hash: '' })
+  })
+
+  it('does not navigate when the current page is not space-scoped', async () => {
+    setup({ initialEntries: ['/account'] })
+    const trigger = await screen.findByRole('button', { expanded: false })
+    fireEvent.click(trigger)
+    const items = screen.getAllByRole('menuitem')
+    const familyItem = items.find((item) => item.textContent?.includes('La Famille'))!
+    fireEvent.click(familyItem)
+    expect(mockNavigate).not.toHaveBeenCalled()
+    expect(activeSpaceStore.getState().lastSpaceId).toBe('space-2')
   })
 
   it('navigates to the groups page on create-or-join', async () => {
