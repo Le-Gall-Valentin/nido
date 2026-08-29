@@ -46,8 +46,8 @@ class AddMenuEntryHandlerTest {
     }
 
     private Recipe recipe(UUID inSpace) {
-        return new Recipe(recipeId, inSpace, "Pâtes bolognaise", RecipeCategory.PLAT, 35, 4,
-            false, List.of(), List.of(), Instant.now(), Instant.now());
+        return new Recipe(recipeId, inSpace, "Pâtes bolognaise", null, RecipeCategory.PLAT, 35, 4,
+            false, List.of(), List.of(), null, Instant.now(), Instant.now());
     }
 
     @Test

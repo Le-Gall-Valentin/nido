@@ -35,8 +35,8 @@ class ToggleRecipeFavoriteHandlerTest {
     }
 
     private Recipe recipe(boolean favorite) {
-        return new Recipe(recipeId, spaceId, "Pâtes bolognaise", RecipeCategory.PLAT, 35, 4,
-            favorite, List.of(), List.of(), Instant.now(), Instant.now());
+        return new Recipe(recipeId, spaceId, "Pâtes bolognaise", "Un classique.", RecipeCategory.PLAT, 35, 4,
+            favorite, List.of(), List.of(), "Se congèle bien.", Instant.now(), Instant.now());
     }
 
     @Test
@@ -49,5 +49,7 @@ class ToggleRecipeFavoriteHandlerTest {
         verify(recipeRepository, times(1)).findById(recipeId);
         verify(recipeRepository).setFavorite(recipeId, true);
         assertThat(result.favorite()).isTrue();
+        assertThat(result.description()).isEqualTo("Un classique.");
+        assertThat(result.note()).isEqualTo("Se congèle bien.");
     }
 }

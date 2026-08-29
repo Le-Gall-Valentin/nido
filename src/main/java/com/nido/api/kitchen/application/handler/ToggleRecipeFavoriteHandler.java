@@ -29,8 +29,8 @@ public class ToggleRecipeFavoriteHandler implements ToggleRecipeFavoriteUseCase 
         caller.ensureCanWrite();
         boolean toggled = !existing.favorite();
         recipeRepository.setFavorite(recipeId, toggled);
-        return new Recipe(existing.id(), existing.spaceId(), existing.name(), existing.category(),
+        return new Recipe(existing.id(), existing.spaceId(), existing.name(), existing.description(), existing.category(),
             existing.minutes(), existing.referencePortions(), toggled, existing.ingredients(),
-            existing.steps(), existing.createdAt(), existing.updatedAt());
+            existing.steps(), existing.note(), existing.createdAt(), existing.updatedAt());
     }
 }

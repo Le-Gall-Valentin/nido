@@ -37,6 +37,9 @@ public class RecipeEntity {
     @Column(nullable = false, length = 120)
     private String name;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private RecipeCategory category;
@@ -49,6 +52,9 @@ public class RecipeEntity {
 
     @Column(nullable = false)
     private boolean favorite;
+
+    @Column(columnDefinition = "TEXT")
+    private String note;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

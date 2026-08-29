@@ -90,8 +90,8 @@ public class RecipeController {
             @PathVariable UUID spaceId,
             @Valid @RequestBody CreateRecipeRequest request,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
-        CreateRecipeCommand command = new CreateRecipeCommand(spaceId, request.name(), request.category(),
-            request.minutes(), request.referencePortions(), toDomainIngredients(request.ingredients()), request.steps());
+        CreateRecipeCommand command = new CreateRecipeCommand(spaceId, request.name(), request.description(), request.category(),
+            request.minutes(), request.referencePortions(), toDomainIngredients(request.ingredients()), request.steps(), request.note());
         Recipe created = createRecipeUseCase.create(command, membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(RecipeResponse.from(created));
     }
@@ -103,8 +103,8 @@ public class RecipeController {
             @PathVariable UUID spaceId, @PathVariable UUID recipeId,
             @Valid @RequestBody UpdateRecipeRequest request,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
-        UpdateRecipeCommand command = new UpdateRecipeCommand(recipeId, spaceId, request.name(), request.category(),
-            request.minutes(), request.referencePortions(), toDomainIngredients(request.ingredients()), request.steps());
+        UpdateRecipeCommand command = new UpdateRecipeCommand(recipeId, spaceId, request.name(), request.description(), request.category(),
+            request.minutes(), request.referencePortions(), toDomainIngredients(request.ingredients()), request.steps(), request.note());
         return ResponseEntity.ok(RecipeResponse.from(updateRecipeUseCase.update(command, membership)));
     }
 

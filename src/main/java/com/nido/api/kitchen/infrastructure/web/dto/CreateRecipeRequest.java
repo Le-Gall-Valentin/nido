@@ -14,9 +14,11 @@ import java.util.List;
 @Schema(description = "Création d'une recette")
 public record CreateRecipeRequest(
     @Schema(example = "Pâtes bolognaise") @NotBlank @Size(max = 120) String name,
+    @Size(max = 2000) String description,
     @NotNull RecipeCategory category,
     @Min(1) int minutes,
     @Min(1) int referencePortions,
     @NotEmpty @Valid List<RecipeIngredientRequest> ingredients,
-    @NotNull List<@NotBlank @Size(max = 2000) String> steps
+    @NotNull List<@NotBlank @Size(max = 2000) String> steps,
+    @Size(max = 2000) String note
 ) {}

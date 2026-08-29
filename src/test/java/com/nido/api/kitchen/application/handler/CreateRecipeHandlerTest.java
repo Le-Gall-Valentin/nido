@@ -41,14 +41,14 @@ class CreateRecipeHandlerTest {
     }
 
     private CreateRecipeCommand command() {
-        return new CreateRecipeCommand(spaceId, "Pâtes bolognaise", RecipeCategory.PLAT, 35, 4,
-            List.of(new RecipeIngredient("Pâtes", BigDecimal.valueOf(500), MeasurementUnit.GRAM)), List.of());
+        return new CreateRecipeCommand(spaceId, "Pâtes bolognaise", null, RecipeCategory.PLAT, 35, 4,
+            List.of(new RecipeIngredient("Pâtes", BigDecimal.valueOf(500), MeasurementUnit.GRAM)), List.of(), null);
     }
 
     @Test
     void a_member_can_create_a_recipe() {
-        Recipe created = new Recipe(UUID.randomUUID(), spaceId, "Pâtes bolognaise", RecipeCategory.PLAT, 35, 4,
-            false, List.of(), List.of(), Instant.now(), Instant.now());
+        Recipe created = new Recipe(UUID.randomUUID(), spaceId, "Pâtes bolognaise", null, RecipeCategory.PLAT, 35, 4,
+            false, List.of(), List.of(), null, Instant.now(), Instant.now());
         when(recipeRepository.create(command())).thenReturn(created);
 
         Recipe result = handler.create(command(), membership(SpaceRole.MEMBER, spaceId));

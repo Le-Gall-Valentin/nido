@@ -7,11 +7,13 @@ import java.util.UUID;
 public record CreateRecipeCommand(
     UUID spaceId,
     String name,
+    String description,
     RecipeCategory category,
     int minutes,
     int referencePortions,
     List<RecipeIngredient> ingredients,
-    List<String> steps
+    List<String> steps,
+    String note
 ) {
     public CreateRecipeCommand {
         Objects.requireNonNull(spaceId, "spaceId");

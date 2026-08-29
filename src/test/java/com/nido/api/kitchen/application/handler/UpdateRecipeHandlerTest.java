@@ -41,13 +41,13 @@ class UpdateRecipeHandlerTest {
     }
 
     private Recipe existing(UUID inSpace) {
-        return new Recipe(recipeId, inSpace, "Pâtes bolognaise", RecipeCategory.PLAT, 35, 4,
-            false, List.of(), List.of(), Instant.now(), Instant.now());
+        return new Recipe(recipeId, inSpace, "Pâtes bolognaise", null, RecipeCategory.PLAT, 35, 4,
+            false, List.of(), List.of(), null, Instant.now(), Instant.now());
     }
 
     private UpdateRecipeCommand command() {
-        return new UpdateRecipeCommand(recipeId, spaceId, "Pâtes bolo maison", RecipeCategory.PLAT, 40, 4,
-            List.of(), List.of());
+        return new UpdateRecipeCommand(recipeId, spaceId, "Pâtes bolo maison", null, RecipeCategory.PLAT, 40, 4,
+            List.of(), List.of(), null);
     }
 
     @Test
