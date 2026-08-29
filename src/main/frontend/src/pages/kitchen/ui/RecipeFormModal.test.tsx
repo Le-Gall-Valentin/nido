@@ -52,6 +52,26 @@ describe('RecipeFormModal — create', () => {
     expect(options[0]).toHaveProperty('textContent', 'unit.GRAM')
     expect(Array.from(options).some((o) => o.textContent === 'GRAM')).toBe(false)
   })
+
+  it('uses a resizable, multi-line textarea for each step', () => {
+    const onSubmit = vi.fn()
+    render(<RecipeFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialRecipe={null} />)
+
+    fireEvent.change(screen.getByLabelText('form.name_label'), { target: { value: 'Riz cantonais' } })
+    fireEvent.change(screen.getAllByLabelText('form.ingredient_name_label')[0], { target: { value: 'Riz' } })
+    fireEvent.change(screen.getAllByLabelText('form.ingredient_quantity_label')[0], { target: { value: '200' } })
+    fireEvent.click(screen.getByText('form.add_step'))
+
+    const step = screen.getByLabelText<HTMLTextAreaElement>('form.step_label')
+    expect(step.tagName).toBe('TEXTAREA')
+    expect(step.rows).toBe(2)
+    expect(step.className).toContain('resize-y')
+
+    fireEvent.change(step, { target: { value: "Faire revenir l'oignon." } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ steps: ["Faire revenir l'oignon."] }))
+  })
 })
 
 describe('RecipeFormModal — edit', () => {

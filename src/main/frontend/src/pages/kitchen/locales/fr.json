@@ -29,7 +29,8 @@
     "create_title": "Nouvelle recette", "edit_title": "Modifier la recette", "name_label": "Nom", "category_label": "Catégorie",
     "minutes_label": "Minutes", "portions_label": "Portions de référence", "ingredients_title": "Ingrédients",
     "ingredient_name_label": "Nom de l'ingrédient", "ingredient_quantity_label": "Quantité", "ingredient_unit_label": "Unité",
-    "add_ingredient": "Ajouter un ingrédient", "steps_title": "Étapes", "step_label": "Étape {{number}}", "add_step": "Ajouter une étape",
+    "add_ingredient": "Ajouter un ingrédient", "steps_title": "Étapes", "step_label": "Étape {{number}}",
+    "step_placeholder": "Décrivez l'étape…", "add_step": "Ajouter une étape",
     "remove": "Retirer", "cancel": "Annuler", "save": "Enregistrer", "name_required": "Donnez un nom à la recette.",
     "ingredient_required": "Ajoutez au moins un ingrédient."
   },
