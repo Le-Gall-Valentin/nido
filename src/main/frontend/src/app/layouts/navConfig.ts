@@ -22,14 +22,13 @@ export interface NavItemConfig {
 // route — it never depends on whether the current URL happens to carry a
 // spaceId. Only modules that actually have a route/page belong here — no
 // placeholder entries for future modules (Cuisine, Organisation, ...).
+//
+// The mockup has exactly one "Membres & groupes" entry, no separate
+// per-space "Membres" item: /spaces already lets you drill into a group to
+// reach its members page (SpaceListSection → SpaceMembersPage), which is
+// the same "click a group card to open its detail" flow the mockup uses.
 export const NAV_CONFIG: NavItemConfig[] = [
   { id: 'nav:spaces', to: () => ROUTES.SPACES, icon: Users, labelKey: 'nav.groups' },
-  {
-    id: 'nav:members',
-    to: (spaceId) => (spaceId ? ROUTES.spaceMembers(spaceId) : undefined),
-    icon: Users,
-    labelKey: 'nav.members',
-  },
   { id: 'nav:account', to: () => ROUTES.ACCOUNT, icon: Settings, labelKey: 'nav.settings' },
   { id: 'nav:users', adminOnly: true, to: () => ROUTES.ADMIN_USERS, icon: Shield, labelKey: 'nav.administration' },
 ]
