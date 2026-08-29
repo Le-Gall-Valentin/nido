@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Settings, Shield, Users } from 'lucide-react'
+import { Lock, Settings, Shield, SlidersHorizontal, User, Users } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 
 export interface NavItemConfig {
@@ -29,6 +29,16 @@ export interface NavItemConfig {
 // the same "click a group card to open its detail" flow the mockup uses.
 export const NAV_CONFIG: NavItemConfig[] = [
   { id: 'nav:spaces', to: () => ROUTES.SPACES, icon: Users, labelKey: 'nav.groups' },
-  { id: 'nav:account', to: () => ROUTES.ACCOUNT, icon: Settings, labelKey: 'nav.settings' },
+  {
+    // The mockup's fourth sub-category, Notifications, has no backing feature
+    // (no notification system exists yet) — only the three that map to real
+    // account content are listed here.
+    id: 'nav:account', to: () => ROUTES.ACCOUNT_PROFILE, icon: Settings, labelKey: 'nav.settings',
+    children: [
+      { id: 'nav:account:profile', to: () => ROUTES.ACCOUNT_PROFILE, icon: User, labelKey: 'nav.settings_profile' },
+      { id: 'nav:account:security', to: () => ROUTES.ACCOUNT_SECURITY, icon: Lock, labelKey: 'nav.settings_security' },
+      { id: 'nav:account:preferences', to: () => ROUTES.ACCOUNT_PREFERENCES, icon: SlidersHorizontal, labelKey: 'nav.settings_preferences' },
+    ],
+  },
   { id: 'nav:users', adminOnly: true, to: () => ROUTES.ADMIN_USERS, icon: Shield, labelKey: 'nav.administration' },
 ]

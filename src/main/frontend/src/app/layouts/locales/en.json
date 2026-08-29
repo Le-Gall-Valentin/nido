@@ -4,10 +4,14 @@
     "label": "Main navigation",
     "groups": "Members and groups",
     "settings": "Settings",
-    "administration": "Administration"
+    "settings_profile": "Profile",
+    "settings_security": "Security",
+    "settings_preferences": "Preferences",
+    "administration": "Administration",
+    "collapse": "Collapse",
+    "expand": "Expand"
   },
   "topbar": {
-    "menu_label": "Open menu",
     "search_label": "Search",
     "search_placeholder": "Search…",
     "profile_label": "Profile menu",

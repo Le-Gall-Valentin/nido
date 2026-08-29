@@ -11,7 +11,9 @@ import { PublicOnlyRoute } from './PublicOnlyRoute'
 import { DefaultRedirect } from './DefaultRedirect'
 
 const AdminUsersPage = lazy(() => import('@/pages/admin-users'))
-const AccountPage = lazy(() => import('@/pages/account'))
+const AccountProfilePage = lazy(() => import('@/pages/account'))
+const AccountSecurityPage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountSecurityPage })))
+const AccountPreferencesPage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountPreferencesPage })))
 const SpacesPage = lazy(() => import('@/pages/spaces'))
 const SpaceMembersPage = lazy(() => import('@/pages/spaces').then((m) => ({ default: m.SpaceMembersPage })))
 
@@ -47,7 +49,12 @@ export function AppRouter() {
             <Route path={ROUTES.ADMIN_USERS} element={<AdminUsersPage />} />
           </Route>
 
-          <Route path={ROUTES.ACCOUNT} element={<AccountPage />} />
+          <Route path={ROUTES.ACCOUNT} element={<Outlet />}>
+            <Route index element={<Navigate to="profile" replace />} />
+            <Route path="profile" element={<AccountProfilePage />} />
+            <Route path="security" element={<AccountSecurityPage />} />
+            <Route path="preferences" element={<AccountPreferencesPage />} />
+          </Route>
 
           <Route path={ROUTES.SPACES} element={<SpacesPage />} />
 

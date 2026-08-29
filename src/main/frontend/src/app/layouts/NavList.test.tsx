@@ -24,10 +24,10 @@ const ITEMS: NavItemConfig[] = [
   },
 ]
 
-function renderList(spaceId: string | undefined, pathname: string) {
+function renderList(spaceId: string | undefined, pathname: string, collapsed = false) {
   return render(
     <MemoryRouter>
-      <NavList items={ITEMS} spaceId={spaceId} pathname={pathname} />
+      <NavList items={ITEMS} spaceId={spaceId} pathname={pathname} collapsed={collapsed} />
     </MemoryRouter>
   )
 }
@@ -70,5 +70,22 @@ describe('NavList — children disclosure', () => {
     renderList('space-1', '/s/space-1/kitchen/menu')
     const menuLink = screen.getByRole('link', { name: /nav\.kitchen_menu/ })
     expect(menuLink.className).toContain('bg-accent-dim')
+  })
+
+  it('keeps the parent highlighted while a sibling child is active, not just its own link', () => {
+    renderList('space-1', '/s/space-1/kitchen/menu')
+    const parentLink = screen.getByRole('link', { name: /^nav\.kitchen$/ })
+    expect(parentLink.className).toContain('bg-accent-dim')
+  })
+
+  it('never expands children while collapsed, even on an active child route', () => {
+    renderList('space-1', '/s/space-1/kitchen/menu', true)
+    expect(screen.queryByText('nav.kitchen_menu')).toBeNull()
+  })
+
+  it('hides every label while collapsed', () => {
+    renderList('space-1', '/s/space-1/members', true)
+    expect(screen.queryByText('nav.groups')).toBeNull()
+    expect(screen.queryByText('nav.members')).toBeNull()
   })
 })

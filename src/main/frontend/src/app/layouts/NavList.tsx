@@ -6,6 +6,8 @@ export interface NavListProps {
   items: NavItemConfig[]
   spaceId: string | undefined
   pathname: string
+  /** While collapsed, labels and sub-navigation are hidden — icon rail only, matching the mockup's collapsed sidebar. */
+  collapsed?: boolean
 }
 
 /**
@@ -14,9 +16,10 @@ export interface NavListProps {
  * known) is skipped entirely — never a dead link. A parent's children
  * render exactly when the current path already points at one of them;
  * there is no separate click-to-expand affordance to keep in sync with
- * the route.
+ * the route. The parent itself stays highlighted for as long as any of
+ * its children is the active route, not just its own link.
  */
-export function NavList({ items, spaceId, pathname }: NavListProps) {
+export function NavList({ items, spaceId, pathname, collapsed }: NavListProps) {
   const { t } = useTranslation('shell')
 
   return (
@@ -24,13 +27,21 @@ export function NavList({ items, spaceId, pathname }: NavListProps) {
       {items.map((item) => {
         const to = item.to(spaceId)
         if (!to) return null
-        const expanded = item.children?.some((child) => {
+        const onActiveChild = item.children?.some((child) => {
           const childTo = child.to(spaceId)
-          return !!childTo && pathname.startsWith(childTo)
+          return !!childTo && (pathname === childTo || pathname.startsWith(`${childTo}/`))
         }) ?? false
+        const expanded = !collapsed && !!item.children && onActiveChild
         return (
           <div key={item.id}>
-            <NavItem to={to} icon={item.icon} label={t(item.labelKey)} pathname={pathname} />
+            <NavItem
+              to={to}
+              icon={item.icon}
+              label={t(item.labelKey)}
+              pathname={pathname}
+              activeOverride={item.children ? onActiveChild : undefined}
+              hideLabel={collapsed}
+            />
             {expanded && (
               <div className="ml-[22px] mt-[2px] flex flex-col gap-[2px] border-l border-border pl-[11px]">
                 {item.children!.map((child) => {
