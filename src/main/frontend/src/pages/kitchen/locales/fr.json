@@ -1,0 +1,27 @@
+{
+  "loading": "Chargement…",
+  "delete": "Supprimer",
+  "favorite": "Ajouter aux favoris",
+  "unfavorite": "Retirer des favoris",
+  "error": { "load_failed": "Impossible de charger ces données." },
+  "category": {
+    "plat": "Plat", "express": "Express", "vegetarian": "Végétarien", "dessert": "Dessert", "soup": "Soupe"
+  },
+  "recipes": {
+    "title": "Recettes", "new_recipe": "Nouvelle recette", "search_placeholder": "Rechercher une recette, un ingrédient…",
+    "clear_search": "Effacer la recherche", "empty": "Aucune recette pour le moment."
+  },
+  "detail": {
+    "back_to_recipes": "Toutes les recettes", "ingredients_title": "Ingrédients", "steps_title": "Préparation",
+    "no_steps": "Aucune étape renseignée.", "portions_label": "personnes"
+  },
+  "form": {
+    "create_title": "Nouvelle recette", "edit_title": "Modifier la recette", "name_label": "Nom", "category_label": "Catégorie",
+    "minutes_label": "Minutes", "portions_label": "Portions de référence", "ingredients_title": "Ingrédients",
+    "ingredient_name_label": "Nom de l'ingrédient", "ingredient_quantity_label": "Quantité", "ingredient_unit_label": "Unité",
+    "add_ingredient": "Ajouter un ingrédient", "steps_title": "Étapes", "step_label": "Étape {{number}}", "add_step": "Ajouter une étape",
+    "remove": "Retirer", "cancel": "Annuler", "save": "Enregistrer", "name_required": "Donnez un nom à la recette.",
+    "ingredient_required": "Ajoutez au moins un ingrédient."
+  },
+  "menu": {}
+}

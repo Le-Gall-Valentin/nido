@@ -14,6 +14,9 @@ const AdminUsersPage = lazy(() => import('@/pages/admin-users'))
 const AccountPage = lazy(() => import('@/pages/account'))
 const SpacesPage = lazy(() => import('@/pages/spaces'))
 const SpaceMembersPage = lazy(() => import('@/pages/spaces').then((m) => ({ default: m.SpaceMembersPage })))
+const KitchenRecipesPage = lazy(() => import('@/pages/kitchen'))
+const KitchenRecipeDetailPage = lazy(() =>
+  import('@/pages/kitchen').then((m) => ({ default: m.KitchenRecipeDetailPage })))
 
 export function AppRouter() {
   return (
@@ -66,6 +69,11 @@ export function AppRouter() {
           >
             <Route index element={<Navigate to="members" replace />} />
             <Route path="members" element={<SpaceMembersPage />} />
+            <Route path="kitchen">
+              <Route index element={<Navigate to="recipes" replace />} />
+              <Route path="recipes" element={<KitchenRecipesPage />} />
+              <Route path="recipes/:recipeId" element={<KitchenRecipeDetailPage />} />
+            </Route>
           </Route>
         </Route>
 

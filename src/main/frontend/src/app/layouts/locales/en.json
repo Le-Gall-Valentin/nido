@@ -6,7 +6,9 @@
     "settings": "Settings",
     "administration": "Administration",
     "members": "Members",
-    "back_to_groups": "Groups"
+    "back_to_groups": "Groups",
+    "kitchen": "Kitchen",
+    "kitchen_recipes": "Recipes"
   },
   "topbar": {
     "menu_label": "Open menu",
