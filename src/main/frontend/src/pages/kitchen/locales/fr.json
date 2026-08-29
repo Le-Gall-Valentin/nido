@@ -1,0 +1,46 @@
+{
+  "loading": "Chargement…",
+  "delete": "Supprimer",
+  "edit": "Modifier",
+  "favorite": "Ajouter aux favoris",
+  "unfavorite": "Retirer des favoris",
+  "error": { "load_failed": "Impossible de charger ces données." },
+  "delete_confirm": {
+    "title": "Supprimer « {{name}} » ?", "body": "Cette recette et ses ingrédients seront définitivement supprimés. Cette action est irréversible.",
+    "cancel": "Annuler", "submit": "Supprimer", "error": "Échec de la suppression. Réessayez."
+  },
+  "category": {
+    "plat": "Plat", "express": "Express", "vegetarian": "Végétarien", "dessert": "Dessert", "soup": "Soupe"
+  },
+  "unit": {
+    "GRAM": "g", "KILOGRAM": "kg", "MILLILITER": "ml", "CENTILITER": "cl", "LITER": "l",
+    "PIECE": "pièce(s)", "SLICE": "tranche(s)", "TABLESPOON": "c. à s.", "TEASPOON": "c. à c.",
+    "PINCH": "pincée(s)", "SACHET": "sachet(s)"
+  },
+  "recipes": {
+    "title": "Recettes", "new_recipe": "Nouvelle recette", "search_placeholder": "Rechercher une recette, un ingrédient…",
+    "clear_search": "Effacer la recherche", "empty": "Aucune recette pour le moment."
+  },
+  "detail": {
+    "back_to_recipes": "Toutes les recettes", "ingredients_title": "Ingrédients", "steps_title": "Préparation",
+    "no_steps": "Aucune étape renseignée.", "portions_label": "personnes", "note_title": "Note"
+  },
+  "form": {
+    "create_title": "Nouvelle recette", "edit_title": "Modifier la recette", "name_label": "Nom", "category_label": "Catégorie",
+    "description_label": "Description", "description_placeholder": "Décrivez brièvement la recette (facultatif)…",
+    "minutes_label": "Minutes", "portions_label": "Portions de référence", "ingredients_title": "Ingrédients",
+    "ingredient_name_label": "Nom de l'ingrédient", "ingredient_name_placeholder": "Ingrédient",
+    "ingredient_quantity_label": "Quantité", "ingredient_unit_label": "Unité",
+    "add_ingredient": "Ajouter un ingrédient", "steps_title": "Étapes", "step_label": "Étape {{number}}",
+    "step_placeholder": "Décrivez l'étape…", "add_step": "Ajouter une étape",
+    "note_label": "Note", "note_placeholder": "Astuce, variante, remarque (facultatif)…",
+    "remove": "Retirer", "cancel": "Annuler", "save": "Enregistrer", "name_required": "Donnez un nom à la recette.",
+    "ingredient_required": "Ajoutez au moins un ingrédient."
+  },
+  "menu": {
+    "title": "Menu de la semaine", "previous_week": "Semaine précédente", "next_week": "Semaine suivante",
+    "add_meal": "Ajouter un repas", "confirm_add": "Ajouter", "remove_meal": "Retirer ce repas",
+    "portions_label": "Portions", "shopping_list_title": "Courses à prévoir",
+    "shopping_list_subtitle": "Quantités ajustées au nombre de personnes de chaque repas.", "shopping_list_empty": "Planifiez un repas pour voir la liste apparaître."
+  }
+}

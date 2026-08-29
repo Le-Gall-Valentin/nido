@@ -1,0 +1,46 @@
+{
+  "loading": "Loading…",
+  "delete": "Delete",
+  "edit": "Edit",
+  "favorite": "Add to favorites",
+  "unfavorite": "Remove from favorites",
+  "error": { "load_failed": "Could not load this data." },
+  "delete_confirm": {
+    "title": "Delete \"{{name}}\"?", "body": "This recipe and its ingredients will be permanently deleted. This action cannot be undone.",
+    "cancel": "Cancel", "submit": "Delete", "error": "Failed to delete. Please try again."
+  },
+  "category": {
+    "plat": "Main course", "express": "Express", "vegetarian": "Vegetarian", "dessert": "Dessert", "soup": "Soup"
+  },
+  "unit": {
+    "GRAM": "g", "KILOGRAM": "kg", "MILLILITER": "ml", "CENTILITER": "cl", "LITER": "l",
+    "PIECE": "piece(s)", "SLICE": "slice(s)", "TABLESPOON": "tbsp", "TEASPOON": "tsp",
+    "PINCH": "pinch(es)", "SACHET": "sachet(s)"
+  },
+  "recipes": {
+    "title": "Recipes", "new_recipe": "New recipe", "search_placeholder": "Search a recipe or ingredient…",
+    "clear_search": "Clear search", "empty": "No recipes yet."
+  },
+  "detail": {
+    "back_to_recipes": "All recipes", "ingredients_title": "Ingredients", "steps_title": "Preparation",
+    "no_steps": "No steps yet.", "portions_label": "servings", "note_title": "Note"
+  },
+  "form": {
+    "create_title": "New recipe", "edit_title": "Edit recipe", "name_label": "Name", "category_label": "Category",
+    "description_label": "Description", "description_placeholder": "Briefly describe the recipe (optional)…",
+    "minutes_label": "Minutes", "portions_label": "Reference servings", "ingredients_title": "Ingredients",
+    "ingredient_name_label": "Ingredient name", "ingredient_name_placeholder": "Ingredient",
+    "ingredient_quantity_label": "Quantity", "ingredient_unit_label": "Unit",
+    "add_ingredient": "Add an ingredient", "steps_title": "Steps", "step_label": "Step {{number}}",
+    "step_placeholder": "Describe the step…", "add_step": "Add a step",
+    "note_label": "Note", "note_placeholder": "Tip, variation, remark (optional)…",
+    "remove": "Remove", "cancel": "Cancel", "save": "Save", "name_required": "Give the recipe a name.",
+    "ingredient_required": "Add at least one ingredient."
+  },
+  "menu": {
+    "title": "Weekly menu", "previous_week": "Previous week", "next_week": "Next week",
+    "add_meal": "Add a meal", "confirm_add": "Add", "remove_meal": "Remove this meal",
+    "portions_label": "Servings", "shopping_list_title": "Shopping list",
+    "shopping_list_subtitle": "Quantities scaled to each meal's servings.", "shopping_list_empty": "Plan a meal to see the list appear."
+  }
+}

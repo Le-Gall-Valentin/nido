@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 016-add-kitchen-recipes-description-and-note
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: kitchen_recipes
+                columnName: description
+      changes:
+        - addColumn:
+            tableName: kitchen_recipes
+            columns:
+              - column:
+                  name: description
+                  type: TEXT
+                  constraints:
+                    nullable: true
+              - column:
+                  name: note
+                  type: TEXT
+                  constraints:
+                    nullable: true
+      rollback:
+        - dropColumn:
+            tableName: kitchen_recipes
+            columnName: description
+        - dropColumn:
+            tableName: kitchen_recipes
+            columnName: note

@@ -33,7 +33,7 @@ export function Dialog({ open, onClose, title, children, maxWidth = 'max-w-md' }
         className="fixed inset-0 bg-[rgba(44,42,38,0.32)]"
         onClick={onClose}
       />
-      <div ref={panelRef} className={`relative z-10 w-full ${maxWidth} rounded-[18px] bg-bg-1 p-[26px] pt-6 shadow-[0_20px_60px_rgba(44,42,38,0.24)]`}>
+      <div ref={panelRef} className={`relative z-10 flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-y-auto rounded-[18px] bg-bg-1 p-[26px] pt-6 shadow-[0_20px_60px_rgba(44,42,38,0.24)]`}>
         <h2 id={titleId} className="sr-only">{title}</h2>
         {children}
       </div>

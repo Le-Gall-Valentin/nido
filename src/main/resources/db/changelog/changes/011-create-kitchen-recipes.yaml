@@ -1,0 +1,83 @@
+databaseChangeLog:
+  - changeSet:
+      id: 011-create-kitchen-recipes
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: kitchen_recipes
+      changes:
+        - createTable:
+            tableName: kitchen_recipes
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: minutes
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reference_portions
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: favorite
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE kitchen_recipes ADD CONSTRAINT chk_kitchen_recipes_category CHECK (category IN ('PLAT', 'EXPRESS', 'VEGETARIAN', 'DESSERT', 'SOUP'))
+            splitStatements: false
+        - createIndex:
+            tableName: kitchen_recipes
+            indexName: idx_kitchen_recipes_space_id
+            columns:
+              - column:
+                  name: space_id
+        - addForeignKeyConstraint:
+            baseTableName: kitchen_recipes
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_kitchen_recipes_space
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: kitchen_recipes
+            cascadeConstraints: true

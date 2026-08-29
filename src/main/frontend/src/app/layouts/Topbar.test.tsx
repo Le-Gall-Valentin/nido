@@ -17,7 +17,6 @@ const mockUseAuth = vi.mocked(useAuth)
 function setup({
   user = { id: '1', username: 'alice.dupont', email: 'alice@example.fr', role: 'USER' as const },
   logout = vi.fn().mockResolvedValue(undefined),
-  onMenuOpen = vi.fn(),
   onSearchOpen = vi.fn(),
 } = {}) {
   mockUseAuth.mockImplementation(
@@ -25,21 +24,13 @@ function setup({
   )
   render(
     <MemoryRouter>
-      <Topbar onMenuOpen={onMenuOpen} onSearchOpen={onSearchOpen} />
+      <Topbar onSearchOpen={onSearchOpen} />
     </MemoryRouter>
   )
-  return { onMenuOpen, onSearchOpen, logout }
+  return { onSearchOpen, logout }
 }
 
 beforeEach(() => vi.clearAllMocks())
-
-describe('Topbar — hamburger', () => {
-  it('calls onMenuOpen when the hamburger button is clicked', () => {
-    const { onMenuOpen } = setup()
-    fireEvent.click(screen.getByLabelText('topbar.menu_label'))
-    expect(onMenuOpen).toHaveBeenCalledOnce()
-  })
-})
 
 describe('Topbar — search', () => {
   it('calls onSearchOpen when the search trigger is clicked', () => {
