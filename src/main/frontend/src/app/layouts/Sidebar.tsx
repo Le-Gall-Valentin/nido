@@ -18,7 +18,7 @@ interface NavItemProps {
   pathname: string
 }
 
-function NavItem({ to, icon: Icon, label, pathname }: NavItemProps) {
+export function NavItem({ to, icon: Icon, label, pathname }: NavItemProps) {
   const active = pathname === to || (to !== ROUTES.ACCOUNT && pathname.startsWith(to))
 
   return (
