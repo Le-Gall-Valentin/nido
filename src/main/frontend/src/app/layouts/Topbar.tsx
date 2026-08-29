@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { LogOut, Menu, Search, Settings } from 'lucide-react'
+import { LogOut, Search, Settings } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { useShallow } from 'zustand/react/shallow'
 import { UserAvatar } from '@/entities/user'
@@ -9,11 +9,10 @@ import { SpaceSwitcher } from '@/features/space-switcher'
 import { ROUTES } from '@/shared/config'
 
 interface TopbarProps {
-  onMenuOpen: () => void
   onSearchOpen: () => void
 }
 
-export function Topbar({ onMenuOpen, onSearchOpen }: TopbarProps) {
+export function Topbar({ onSearchOpen }: TopbarProps) {
   const { t } = useTranslation('shell')
   const { user, logout } = useAuth(useShallow((s) => ({ user: s.user, logout: s.logout })))
   const [menuOpen, setMenuOpen] = useState(false)
@@ -49,16 +48,6 @@ export function Topbar({ onMenuOpen, onSearchOpen }: TopbarProps) {
 
   return (
     <header className="sticky top-0 z-30 flex h-[68px] shrink-0 items-center gap-4 border-b border-border bg-bg-2/85 px-4 backdrop-blur-md md:px-6">
-      {/* Mobile hamburger */}
-      <button
-        type="button"
-        className="grid size-10 place-items-center rounded-[11px] border border-border bg-bg-1 text-fg-2 transition-colors hover:text-fg-0 md:hidden"
-        onClick={onMenuOpen}
-        aria-label={t('topbar.menu_label')}
-      >
-        <Menu size={18} />
-      </button>
-
       <SpaceSwitcher />
 
       {/* Search trigger — pill on sm+, icon only on mobile */}
