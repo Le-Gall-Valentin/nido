@@ -15,3 +15,17 @@ export const NAV_CONFIG: NavItemConfig[] = [
   { id: 'shell:account', to: ROUTES.ACCOUNT, icon: Settings, labelKey: 'nav.settings' },
   { id: 'shell:users', adminOnly: true, to: ROUTES.ADMIN_USERS, icon: Shield, labelKey: 'nav.administration' },
 ]
+
+export interface SpaceNavItemConfig {
+  id: string
+  to: (spaceId: string) => string
+  icon: LucideIcon
+  labelKey: string
+  children?: SpaceNavItemConfig[]
+}
+
+// Only modules that actually have a route/page belong here — no
+// placeholder entries for future modules (Cuisine, Organisation, ...).
+export const SPACE_NAV_CONFIG: SpaceNavItemConfig[] = [
+  { id: 'space:members', to: ROUTES.spaceMembers, icon: Users, labelKey: 'nav.members' },
+]
