@@ -111,11 +111,11 @@ export function RecipeFormModal({ open, onClose, onSubmit, initialRecipe }: Reci
         <div className="flex flex-col gap-2">
           <span className="text-[13px] font-semibold text-fg-1">{t('form.ingredients_title')}</span>
           {draft.ingredients.map((ing, index) => (
-            <div key={index} className="flex items-end gap-2">
-              <Input label={t('form.ingredient_name_label')} value={ing.name}
-                onChange={(e) => updateIngredient(index, { name: e.target.value })} />
-              <Input label={t('form.ingredient_quantity_label')} type="number" value={ing.quantity} className="w-24"
-                onChange={(e) => updateIngredient(index, { quantity: e.target.value })} />
+            <div key={index} className="flex items-center gap-2">
+              <Input label={t('form.ingredient_name_label')} srOnlyLabel placeholder={t('form.ingredient_name_placeholder')}
+                value={ing.name} onChange={(e) => updateIngredient(index, { name: e.target.value })} />
+              <Input label={t('form.ingredient_quantity_label')} srOnlyLabel type="number" placeholder="0"
+                value={ing.quantity} className="w-24" onChange={(e) => updateIngredient(index, { quantity: e.target.value })} />
               <select
                 aria-label={t('form.ingredient_unit_label')}
                 value={ing.unit}
