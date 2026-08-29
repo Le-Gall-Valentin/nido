@@ -89,10 +89,11 @@ public class KitchenRecipeRepositoryAdapter implements RecipeRepository {
     }
 
     @Override
+    @Transactional
     public void setFavorite(UUID recipeId, boolean favorite) {
-        RecipeEntity e = recipes.findById(recipeId).orElseThrow(KitchenException.RecipeNotFound::new);
-        e.setFavorite(favorite);
-        recipes.saveAndFlush(e);
+        if (recipes.setFavorite(recipeId, favorite) == 0) {
+            throw new KitchenException.RecipeNotFound();
+        }
     }
 
     private void saveIngredientsAndSteps(UUID recipeId, List<RecipeIngredient> ingredientList, List<String> stepList) {
