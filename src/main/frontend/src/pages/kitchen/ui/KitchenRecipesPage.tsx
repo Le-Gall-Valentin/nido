@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Star, Clock, Users, Plus } from 'lucide-react'
+import { Star, Clock, Users, Plus, Pencil } from 'lucide-react'
 import { Alert, Button, SearchInput, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { ROUTES } from '@/shared/config'
 import { kitchenApi } from '../api/kitchenApi'
 import type { IKitchenApi } from '../model/IKitchenApi'
 import { KitchenApiProvider } from '../model/kitchenApiContext'
 import { useRecipes } from '../model/useRecipes'
-import { useCreateRecipe, useDeleteRecipe, useToggleFavorite } from '../model/useRecipeMutations'
+import { useCreateRecipe, useDeleteRecipe, useToggleFavorite, useUpdateRecipe } from '../model/useRecipeMutations'
 import { RECIPE_CATEGORY_META } from '../lib/recipeCategoryMeta'
 import { RecipeFormModal } from './RecipeFormModal'
+import { DeleteRecipeModal } from './DeleteRecipeModal'
 import type { Recipe, RecipeInput } from '../model/types'
 
 interface KitchenRecipesPageProps {
@@ -34,6 +35,9 @@ function KitchenRecipesPageContent() {
   const toggleFavorite = useToggleFavorite(spaceId)
   const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
+  const [deletingRecipe, setDeletingRecipe] = useState<Recipe | null>(null)
+  const updateRecipe = useUpdateRecipe(spaceId, editingRecipe?.id ?? '')
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -44,6 +48,10 @@ function KitchenRecipesPageContent() {
 
   function handleCreate(input: RecipeInput) {
     createRecipe.mutate(input, { onSuccess: () => setCreateOpen(false) })
+  }
+
+  function handleUpdate(input: RecipeInput) {
+    updateRecipe.mutate(input, { onSuccess: () => setEditingRecipe(null) })
   }
 
   if (isPending) return <Spinner label={t('loading')} fullscreen={false} />
@@ -89,7 +97,11 @@ function KitchenRecipesPageContent() {
                   <span className="flex items-center gap-1"><Users className="size-3.5" /> {recipe.referencePortions}</span>
                 </div>
                 <div className="flex gap-2 border-t border-border pt-2.5">
-                  <button type="button" onClick={() => deleteRecipe.mutate(recipe.id)}
+                  <button type="button" onClick={() => setEditingRecipe(recipe)}
+                    className="flex flex-1 items-center justify-center gap-1 rounded-[9px] py-1.5 text-xs font-semibold text-fg-2 hover:bg-bg-2">
+                    <Pencil className="size-3.5" /> {t('edit')}
+                  </button>
+                  <button type="button" onClick={() => setDeletingRecipe(recipe)}
                     className="flex-1 rounded-[9px] py-1.5 text-xs font-semibold text-status-red hover:bg-status-red-dim">
                     {t('delete')}
                   </button>
@@ -100,7 +112,19 @@ function KitchenRecipesPageContent() {
         </div>
       )}
 
-      <RecipeFormModal open={createOpen} onClose={() => setCreateOpen(false)} onSubmit={handleCreate} initialRecipe={null as Recipe | null} />
+      <RecipeFormModal open={createOpen} onClose={() => setCreateOpen(false)} onSubmit={handleCreate} initialRecipe={null} />
+
+      {editingRecipe && (
+        <RecipeFormModal open onClose={() => setEditingRecipe(null)} onSubmit={handleUpdate} initialRecipe={editingRecipe} />
+      )}
+
+      {deletingRecipe && (
+        <DeleteRecipeModal
+          recipeName={deletingRecipe.name}
+          onClose={() => setDeletingRecipe(null)}
+          onDelete={() => deleteRecipe.mutateAsync(deletingRecipe.id)}
+        />
+      )}
     </div>
   )
 }

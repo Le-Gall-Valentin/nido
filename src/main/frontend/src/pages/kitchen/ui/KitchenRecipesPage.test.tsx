@@ -12,7 +12,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 const RECIPES: Recipe[] = [
-  { id: 'r1', name: 'Pâtes bolognaise', category: 'PLAT', minutes: 35, referencePortions: 4, favorite: false, ingredients: [], steps: [] },
+  { id: 'r1', name: 'Pâtes bolognaise', category: 'PLAT', minutes: 35, referencePortions: 4, favorite: false, ingredients: [{ name: 'Pâtes', quantity: 400, unit: 'GRAM' }], steps: [] },
   { id: 'r2', name: 'Curry de légumes', category: 'VEGETARIAN', minutes: 30, referencePortions: 4, favorite: true, ingredients: [], steps: [] },
 ]
 
@@ -65,13 +65,36 @@ describe('KitchenRecipesPage', () => {
     expect(screen.getByText('Curry de légumes')).toBeDefined()
   })
 
-  it('deletes a recipe', async () => {
+  it('deletes a recipe after confirming', async () => {
     const { api } = setup()
     await screen.findByText('Pâtes bolognaise')
 
     fireEvent.click(screen.getAllByText('delete')[0])
+    expect(api.deleteRecipe).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('delete_confirm.submit'))
 
     await waitFor(() => expect(api.deleteRecipe).toHaveBeenCalledWith('space-1', 'r1'))
+  })
+
+  it('does not delete when the confirmation is cancelled', async () => {
+    const { api } = setup()
+    await screen.findByText('Pâtes bolognaise')
+
+    fireEvent.click(screen.getAllByText('delete')[0])
+    fireEvent.click(screen.getByText('delete_confirm.cancel'))
+
+    expect(api.deleteRecipe).not.toHaveBeenCalled()
+    expect(screen.queryByText('delete_confirm.submit')).toBeNull()
+  })
+
+  it('edits a recipe', async () => {
+    const { api } = setup()
+    await screen.findByText('Pâtes bolognaise')
+
+    fireEvent.click(screen.getAllByText('edit')[0])
+    fireEvent.click(screen.getByText('form.save'))
+
+    await waitFor(() => expect(api.updateRecipe).toHaveBeenCalledWith('space-1', 'r1', expect.objectContaining({ name: 'Pâtes bolognaise' })))
   })
 
   it('toggles favorite', async () => {
