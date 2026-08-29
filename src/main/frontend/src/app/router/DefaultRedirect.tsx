@@ -1,17 +1,14 @@
-import { useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
-import { isPersonal } from '@/entities/space'
-import { activeSpaceStore, useMySpaces } from '@/features/space-switcher'
+import { useCurrentSpaceId } from '@/features/space-switcher'
 import { ROUTES } from '@/shared/config'
 import { Spinner } from '@/shared/ui'
 import { useAuthGuard } from './useAuthGuard'
 
 /**
- * The unscoped entry point: restores the last context the user was in
- * (validated against their current list, since it may have disappeared —
- * left, deleted, revoked), falling back to their personal space. The list is
- * only fetched once authenticated, and this waits for a first load rather
- * than deciding without one.
+ * The unscoped entry point: lands on the same space useCurrentSpaceId
+ * resolves for the persistent sidebar (remembered context, falling back to
+ * the personal space), so the nav and this redirect never disagree about
+ * "your current space." The list is only fetched once authenticated.
  *
  * Unlike SpaceRoute it does decide on a cached list that is still refetching,
  * and it falls back to the account page when the list cannot be loaded at
@@ -21,22 +18,11 @@ import { useAuthGuard } from './useAuthGuard'
  */
 export function DefaultRedirect() {
   const { isInitializing, isAuthenticated, t } = useAuthGuard()
-  const { data: spaces, isLoading } = useMySpaces({ enabled: isAuthenticated })
-  const lastSpaceId = activeSpaceStore((s) => s.lastSpaceId)
-
-  const remembered = lastSpaceId ? spaces?.find((space) => space.id === lastSpaceId) : undefined
-  const stale = !!lastSpaceId && !!spaces && !remembered
-
-  useEffect(() => {
-    if (stale) activeSpaceStore.getState().forget()
-  }, [stale])
+  const { spaceId, isLoading } = useCurrentSpaceId({ enabled: isAuthenticated })
 
   if (isInitializing) return <Spinner label={t('loading')} />
   if (!isAuthenticated) return <Navigate to={ROUTES.LOGIN} replace />
   if (isLoading) return <Spinner label={t('loading')} />
 
-  if (remembered) return <Navigate to={ROUTES.space(remembered.id)} replace />
-
-  const personal = spaces?.find((space) => isPersonal(space))
-  return <Navigate to={personal ? ROUTES.space(personal.id) : ROUTES.ACCOUNT} replace />
+  return <Navigate to={spaceId ? ROUTES.space(spaceId) : ROUTES.ACCOUNT} replace />
 }

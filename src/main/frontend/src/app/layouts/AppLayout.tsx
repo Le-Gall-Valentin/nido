@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
+import { useCurrentSpaceId } from '@/features/space-switcher'
 import { usePaletteItems } from '@/shared/lib'
 import { isAdminRole } from '@/entities/user'
 import { Sidebar } from './Sidebar'
@@ -27,17 +28,17 @@ function PageLoader() {
 export function AppLayout() {
   const { t } = useTranslation('shell')
   const user = useAuth((s) => s.user)
+  const { spaceId } = useCurrentSpaceId()
 
   const paletteItems = useMemo(
     () => {
       const pageGroup = t('palette.type_page')
-      return [
-        ...NAV_CONFIG
-          .filter((item) => !item.adminOnly || isAdminRole(user?.role))
-          .map((item) => ({ id: item.id, label: t(item.labelKey), to: item.to, icon: item.icon, group: pageGroup })),
-      ]
+      return NAV_CONFIG
+        .filter((item) => !item.adminOnly || isAdminRole(user?.role))
+        .map((item) => ({ id: item.id, label: t(item.labelKey), to: item.to(spaceId), icon: item.icon, group: pageGroup }))
+        .filter((item) => !!item.to)
     },
-    [t, user?.role]
+    [t, user?.role, spaceId]
   )
 
   usePaletteItems('shell', paletteItems)
