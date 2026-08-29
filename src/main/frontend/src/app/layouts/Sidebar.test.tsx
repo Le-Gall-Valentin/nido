@@ -1,12 +1,13 @@
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import { SpacesApiProvider, activeSpaceStore } from '@/features/space-switcher'
 import type { ISpacesApi } from '@/features/space-switcher'
 import type { SpaceSummary } from '@/entities/space'
 import { Sidebar } from './Sidebar'
+import { sidebarCollapseStore } from './sidebarCollapseStore'
 import type { AuthState, AuthActions } from '@/features/auth/model/authStore'
 
 vi.mock('react-i18next', () => ({
@@ -51,28 +52,27 @@ function withUser(role: 'SUPER_ADMIN' | 'ADMIN' | 'USER' | null) {
   )
 }
 
-function renderSidebar(path = '/administration/users', open = false, api: ISpacesApi = fakeApi()) {
-  const onClose = vi.fn()
+function renderSidebar(path = '/administration/users', api: ISpacesApi = fakeApi()) {
   const queryClient = createTestQueryClient()
-  render(
+  return render(
     <QueryClientProvider client={queryClient}>
       <SpacesApiProvider api={api}>
         <MemoryRouter initialEntries={[path]}>
           <Routes>
-            <Route path="/s/:spaceId/*" element={<Sidebar open={open} onClose={onClose} />} />
-            <Route path="*" element={<Sidebar open={open} onClose={onClose} />} />
+            <Route path="/s/:spaceId/*" element={<Sidebar />} />
+            <Route path="*" element={<Sidebar />} />
           </Routes>
         </MemoryRouter>
       </SpacesApiProvider>
     </QueryClientProvider>
   )
-  return { onClose }
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
   vi.stubGlobal('localStorage', new MemoryStorage())
   activeSpaceStore.setState({ lastSpaceId: null })
+  sidebarCollapseStore.setState({ collapsed: false })
 })
 
 describe('Sidebar — nav items, always visible', () => {
@@ -135,43 +135,61 @@ describe('Sidebar — Membres et groupes is a single entry, matching the mockup'
   })
 })
 
+describe('Sidebar — Paramètres sub-navigation', () => {
+  it("shows the 3 real sub-categories, not the mockup's unimplemented Notifications", () => {
+    withUser('USER')
+    renderSidebar('/account/security')
+
+    expect(screen.getByText('nav.settings_profile')).toBeDefined()
+    expect(screen.getByText('nav.settings_security')).toBeDefined()
+    expect(screen.getByText('nav.settings_preferences')).toBeDefined()
+    expect(screen.queryByText(/notification/i)).toBeNull()
+  })
+
+  it('keeps "Paramètres" highlighted while on a sibling sub-page (Sécurité), not just its own link', () => {
+    withUser('USER')
+    renderSidebar('/account/security')
+
+    const parentLink = screen.getByRole('link', { name: /nav\.settings$/ })
+    expect(parentLink.className).toContain('bg-accent-dim')
+  })
+
+  it('collapses the sub-navigation entirely when the sidebar is collapsed', () => {
+    withUser('USER')
+    sidebarCollapseStore.setState({ collapsed: true })
+    renderSidebar('/account/security')
+
+    expect(screen.queryByText('nav.settings_security')).toBeNull()
+  })
+})
+
+describe('Sidebar — collapse toggle', () => {
+  it('hides item labels once collapsed', () => {
+    withUser('USER')
+    renderSidebar('/account')
+
+    fireEvent.click(screen.getByLabelText('nav.collapse'))
+
+    expect(screen.queryByText('nav.groups')).toBeNull()
+    expect(screen.getByLabelText('nav.expand')).toBeDefined()
+  })
+
+  it('persists the collapsed preference across remounts', () => {
+    withUser('USER')
+    const { unmount } = renderSidebar('/account')
+    fireEvent.click(screen.getByLabelText('nav.collapse'))
+    unmount()
+
+    renderSidebar('/account')
+    expect(screen.queryByText('nav.groups')).toBeNull()
+  })
+})
+
 describe('Sidebar — brand', () => {
   it('renders the brand name linking to the account page', () => {
     withUser('USER')
     renderSidebar()
     const link = screen.getByRole('link', { name: /brand/ })
     expect(link.getAttribute('href')).toBe('/account')
-  })
-})
-
-function NavigateTrigger({ to }: { to: string }) {
-  const nav = useNavigate()
-  return <button onClick={() => { act(() => { nav(to) }) }}>go</button>
-}
-
-describe('Sidebar — onClose behaviour', () => {
-  it('does not call onClose on initial mount', () => {
-    withUser('USER')
-    const { onClose } = renderSidebar()
-    expect(onClose).not.toHaveBeenCalled()
-  })
-
-  it('calls onClose when the route changes', async () => {
-    withUser('USER')
-    const onClose = vi.fn()
-    const queryClient = createTestQueryClient()
-    render(
-      <QueryClientProvider client={queryClient}>
-        <SpacesApiProvider api={fakeApi()}>
-          <MemoryRouter initialEntries={['/administration/users']}>
-            <Sidebar open onClose={onClose} />
-            <NavigateTrigger to="/account" />
-          </MemoryRouter>
-        </SpacesApiProvider>
-      </QueryClientProvider>
-    )
-    const before = onClose.mock.calls.length
-    screen.getByText('go').click()
-    expect(onClose.mock.calls.length).toBeGreaterThan(before)
   })
 })
