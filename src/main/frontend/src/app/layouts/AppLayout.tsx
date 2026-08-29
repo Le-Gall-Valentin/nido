@@ -6,7 +6,7 @@ import { useCurrentSpaceId } from '@/features/space-switcher'
 import { usePaletteItems } from '@/shared/lib'
 import { isAdminRole } from '@/entities/user'
 import { Sidebar } from './Sidebar'
-import { MobileBottomNav } from './MobileBottomNav'
+import { MobileNavDrawer } from './MobileNavDrawer'
 import { GroupAccentStrip } from './GroupAccentStrip'
 import { Topbar } from './Topbar'
 import { CommandPalette } from './CommandPalette'
@@ -51,6 +51,17 @@ export function AppLayout() {
   const openPalette = () => setPaletteOpen(true)
   const closePalette = () => setPaletteOpen(false)
 
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const openMobileNav = () => setMobileNavOpen(true)
+  const closeMobileNav = () => setMobileNavOpen(false)
+
+  // A route change (tapping a nav link, or any other navigation) always
+  // means the drawer's job is done — close it so it never lingers open
+  // over the newly-loaded page.
+  useEffect(() => {
+    setMobileNavOpen(false)
+  }, [pathname])
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -77,16 +88,18 @@ export function AppLayout() {
       <Sidebar />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar onSearchOpen={openPalette} />
+        <Topbar onSearchOpen={openPalette} onMenuOpen={openMobileNav} />
         <GroupAccentStrip />
-        <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
+        <main className="flex-1 overflow-y-auto">
           <Suspense fallback={<PageLoader />}>
             <Outlet />
           </Suspense>
         </main>
       </div>
 
-      <MobileBottomNav items={visibleNavItems} spaceId={spaceId} pathname={pathname} />
+      {mobileNavOpen && (
+        <MobileNavDrawer items={visibleNavItems} spaceId={spaceId} pathname={pathname} onClose={closeMobileNav} />
+      )}
 
       {paletteOpen && <CommandPalette onClose={closePalette} />}
     </div>

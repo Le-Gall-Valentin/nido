@@ -10,13 +10,12 @@
     "administration": "Administration",
     "kitchen": "Kitchen",
     "kitchen_recipes": "Recipes",
-    "kitchen_menu": "Menu",
-    "collapse": "Collapse",
-    "expand": "Expand"
+    "kitchen_menu": "Menu"
   },
   "topbar": {
     "search_label": "Search",
     "search_placeholder": "Search…",
+    "menu_label": "Open menu",
     "profile_label": "Profile menu",
     "close_menu_label": "Close menu"
   },

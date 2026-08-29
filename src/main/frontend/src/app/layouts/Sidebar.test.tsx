@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -7,7 +7,6 @@ import { SpacesApiProvider, activeSpaceStore } from '@/features/space-switcher'
 import type { ISpacesApi } from '@/features/space-switcher'
 import type { SpaceSummary } from '@/entities/space'
 import { Sidebar } from './Sidebar'
-import { sidebarCollapseStore } from './sidebarCollapseStore'
 import type { AuthState, AuthActions } from '@/features/auth/model/authStore'
 
 vi.mock('react-i18next', () => ({
@@ -72,7 +71,6 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.stubGlobal('localStorage', new MemoryStorage())
   activeSpaceStore.setState({ lastSpaceId: null })
-  sidebarCollapseStore.setState({ collapsed: false })
 })
 
 describe('Sidebar — nav items, always visible', () => {
@@ -152,36 +150,6 @@ describe('Sidebar — Paramètres sub-navigation', () => {
 
     const parentLink = screen.getByRole('link', { name: /nav\.settings$/ })
     expect(parentLink.className).toContain('bg-accent-dim')
-  })
-
-  it('collapses the sub-navigation entirely when the sidebar is collapsed', () => {
-    withUser('USER')
-    sidebarCollapseStore.setState({ collapsed: true })
-    renderSidebar('/account/security')
-
-    expect(screen.queryByText('nav.settings_security')).toBeNull()
-  })
-})
-
-describe('Sidebar — collapse toggle', () => {
-  it('hides item labels once collapsed', () => {
-    withUser('USER')
-    renderSidebar('/account')
-
-    fireEvent.click(screen.getByLabelText('nav.collapse'))
-
-    expect(screen.queryByText('nav.groups')).toBeNull()
-    expect(screen.getByLabelText('nav.expand')).toBeDefined()
-  })
-
-  it('persists the collapsed preference across remounts', () => {
-    withUser('USER')
-    const { unmount } = renderSidebar('/account')
-    fireEvent.click(screen.getByLabelText('nav.collapse'))
-    unmount()
-
-    renderSidebar('/account')
-    expect(screen.queryByText('nav.groups')).toBeNull()
   })
 })
 
