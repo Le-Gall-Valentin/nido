@@ -23,15 +23,17 @@
   },
   "detail": {
     "back_to_recipes": "All recipes", "ingredients_title": "Ingredients", "steps_title": "Preparation",
-    "no_steps": "No steps yet.", "portions_label": "servings"
+    "no_steps": "No steps yet.", "portions_label": "servings", "note_title": "Note"
   },
   "form": {
     "create_title": "New recipe", "edit_title": "Edit recipe", "name_label": "Name", "category_label": "Category",
+    "description_label": "Description", "description_placeholder": "Briefly describe the recipe (optional)…",
     "minutes_label": "Minutes", "portions_label": "Reference servings", "ingredients_title": "Ingredients",
     "ingredient_name_label": "Ingredient name", "ingredient_name_placeholder": "Ingredient",
     "ingredient_quantity_label": "Quantity", "ingredient_unit_label": "Unit",
     "add_ingredient": "Add an ingredient", "steps_title": "Steps", "step_label": "Step {{number}}",
     "step_placeholder": "Describe the step…", "add_step": "Add a step",
+    "note_label": "Note", "note_placeholder": "Tip, variation, remark (optional)…",
     "remove": "Remove", "cancel": "Cancel", "save": "Save", "name_required": "Give the recipe a name.",
     "ingredient_required": "Add at least one ingredient."
   },

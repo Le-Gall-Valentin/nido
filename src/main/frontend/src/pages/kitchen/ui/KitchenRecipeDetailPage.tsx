@@ -40,6 +40,7 @@ function KitchenRecipeDetailPageContent() {
 
       <h1 className="text-[27px] font-bold text-fg-0">{recipe.name}</h1>
       <p className="mt-1 text-sm text-fg-3">{t(meta.labelKey)} · {recipe.minutes} min · {recipe.referencePortions} {t('detail.portions_label')}</p>
+      {recipe.description && <p className="mt-3 text-sm text-fg-2">{recipe.description}</p>}
 
       <div className="mt-6 grid gap-5 md:grid-cols-2">
         <div className="rounded-2xl border border-border bg-bg-1 p-5">
@@ -69,6 +70,13 @@ function KitchenRecipeDetailPageContent() {
           )}
         </div>
       </div>
+
+      {recipe.note && (
+        <div className="mt-5 rounded-2xl border border-border bg-bg-1 p-5">
+          <h2 className="mb-2 text-base font-semibold text-fg-0">{t('detail.note_title')}</h2>
+          <p className="text-sm text-fg-2">{recipe.note}</p>
+        </div>
+      )}
     </div>
   )
 }

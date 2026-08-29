@@ -19,9 +19,25 @@ describe('RecipeFormModal — create', () => {
     fireEvent.click(screen.getByText('form.save'))
 
     expect(onSubmit).toHaveBeenCalledWith({
-      name: 'Riz cantonais', category: 'PLAT', minutes: 20, referencePortions: 2,
-      ingredients: [{ name: 'Riz', quantity: 200, unit: 'GRAM' }], steps: [],
+      name: 'Riz cantonais', description: null, category: 'PLAT', minutes: 20, referencePortions: 2,
+      ingredients: [{ name: 'Riz', quantity: 200, unit: 'GRAM' }], steps: [], note: null,
     })
+  })
+
+  it('submits an optional description and note when filled in', () => {
+    const onSubmit = vi.fn()
+    render(<RecipeFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialRecipe={null} />)
+
+    fireEvent.change(screen.getByLabelText('form.name_label'), { target: { value: 'Riz cantonais' } })
+    fireEvent.change(screen.getByLabelText('form.description_label'), { target: { value: 'Un plat rapide.' } })
+    fireEvent.change(screen.getAllByLabelText('form.ingredient_name_label')[0], { target: { value: 'Riz' } })
+    fireEvent.change(screen.getAllByLabelText('form.ingredient_quantity_label')[0], { target: { value: '200' } })
+    fireEvent.change(screen.getByLabelText('form.note_label'), { target: { value: 'Se congèle bien.' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      description: 'Un plat rapide.', note: 'Se congèle bien.',
+    }))
   })
 
   it('rejects a blank name', () => {
@@ -89,10 +105,12 @@ describe('RecipeFormModal — create', () => {
 describe('RecipeFormModal — edit', () => {
   it('pre-fills the fields from the given recipe', () => {
     render(<RecipeFormModal open onClose={vi.fn()} onSubmit={vi.fn()} initialRecipe={{
-      id: 'r1', name: 'Riz cantonais', category: 'PLAT', minutes: 20, referencePortions: 2,
-      favorite: false, ingredients: [{ name: 'Riz', quantity: 200, unit: 'GRAM' }], steps: [],
+      id: 'r1', name: 'Riz cantonais', description: 'Un plat rapide.', category: 'PLAT', minutes: 20, referencePortions: 2,
+      favorite: false, ingredients: [{ name: 'Riz', quantity: 200, unit: 'GRAM' }], steps: [], note: 'Se congèle bien.',
     }} />)
 
     expect(screen.getByLabelText('form.name_label')).toHaveProperty('value', 'Riz cantonais')
+    expect(screen.getByLabelText('form.description_label')).toHaveProperty('value', 'Un plat rapide.')
+    expect(screen.getByLabelText('form.note_label')).toHaveProperty('value', 'Se congèle bien.')
   })
 })

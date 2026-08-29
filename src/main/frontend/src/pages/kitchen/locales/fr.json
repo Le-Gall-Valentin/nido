@@ -23,15 +23,17 @@
   },
   "detail": {
     "back_to_recipes": "Toutes les recettes", "ingredients_title": "Ingrédients", "steps_title": "Préparation",
-    "no_steps": "Aucune étape renseignée.", "portions_label": "personnes"
+    "no_steps": "Aucune étape renseignée.", "portions_label": "personnes", "note_title": "Note"
   },
   "form": {
     "create_title": "Nouvelle recette", "edit_title": "Modifier la recette", "name_label": "Nom", "category_label": "Catégorie",
+    "description_label": "Description", "description_placeholder": "Décrivez brièvement la recette (facultatif)…",
     "minutes_label": "Minutes", "portions_label": "Portions de référence", "ingredients_title": "Ingrédients",
     "ingredient_name_label": "Nom de l'ingrédient", "ingredient_name_placeholder": "Ingrédient",
     "ingredient_quantity_label": "Quantité", "ingredient_unit_label": "Unité",
     "add_ingredient": "Ajouter un ingrédient", "steps_title": "Étapes", "step_label": "Étape {{number}}",
     "step_placeholder": "Décrivez l'étape…", "add_step": "Ajouter une étape",
+    "note_label": "Note", "note_placeholder": "Astuce, variante, remarque (facultatif)…",
     "remove": "Retirer", "cancel": "Annuler", "save": "Enregistrer", "name_required": "Donnez un nom à la recette.",
     "ingredient_required": "Ajoutez au moins un ingrédient."
   },
