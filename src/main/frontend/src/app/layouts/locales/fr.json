@@ -8,7 +8,8 @@
     "members": "Membres",
     "back_to_groups": "Groupes",
     "kitchen": "Cuisine",
-    "kitchen_recipes": "Recettes"
+    "kitchen_recipes": "Recettes",
+    "kitchen_menu": "Menu"
   },
   "topbar": {
     "menu_label": "Ouvrir le menu",

@@ -23,5 +23,10 @@
     "remove": "Remove", "cancel": "Cancel", "save": "Save", "name_required": "Give the recipe a name.",
     "ingredient_required": "Add at least one ingredient."
   },
-  "menu": {}
+  "menu": {
+    "title": "Weekly menu", "previous_week": "Previous week", "next_week": "Next week",
+    "add_meal": "Add a meal", "confirm_add": "Add", "remove_meal": "Remove this meal",
+    "portions_label": "Servings", "shopping_list_title": "Shopping list",
+    "shopping_list_subtitle": "Quantities scaled to each meal's servings.", "shopping_list_empty": "Plan a meal to see the list appear."
+  }
 }
