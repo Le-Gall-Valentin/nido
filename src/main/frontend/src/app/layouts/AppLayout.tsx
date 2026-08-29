@@ -1,10 +1,13 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
+import { useCurrentSpaceId } from '@/features/space-switcher'
 import { usePaletteItems } from '@/shared/lib'
 import { isAdminRole } from '@/entities/user'
 import { Sidebar } from './Sidebar'
+import { MobileBottomNav } from './MobileBottomNav'
+import { GroupAccentStrip } from './GroupAccentStrip'
 import { Topbar } from './Topbar'
 import { CommandPalette } from './CommandPalette'
 import { NAV_CONFIG } from './navConfig'
@@ -27,28 +30,26 @@ function PageLoader() {
 export function AppLayout() {
   const { t } = useTranslation('shell')
   const user = useAuth((s) => s.user)
+  const { spaceId } = useCurrentSpaceId()
+  const { pathname } = useLocation()
+
+  const visibleNavItems = useMemo(
+    () => NAV_CONFIG.filter((item) => !item.adminOnly || isAdminRole(user?.role)),
+    [user?.role]
+  )
 
   const paletteItems = useMemo(
-    () => {
-      const pageGroup = t('palette.type_page')
-      return [
-        ...NAV_CONFIG
-          .filter((item) => !item.adminOnly || isAdminRole(user?.role))
-          .map((item) => ({ id: item.id, label: t(item.labelKey), to: item.to, icon: item.icon, group: pageGroup })),
-      ]
-    },
-    [t, user?.role]
+    () => visibleNavItems
+      .map((item) => ({ id: item.id, label: t(item.labelKey), to: item.to(spaceId), icon: item.icon, group: t('palette.type_page') }))
+      .filter((item) => !!item.to),
+    [t, visibleNavItems, spaceId]
   )
 
   usePaletteItems('shell', paletteItems)
 
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
-
-  const openSidebar = useCallback(() => setSidebarOpen(true), [])
-  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
-  const openPalette = useCallback(() => setPaletteOpen(true), [])
-  const closePalette = useCallback(() => setPaletteOpen(false), [])
+  const openPalette = () => setPaletteOpen(true)
+  const closePalette = () => setPaletteOpen(false)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -72,24 +73,20 @@ export function AppLayout() {
   return (
     <div className="flex h-screen overflow-hidden bg-bg-0">
       <PaletteSetups />
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
-          aria-hidden="true"
-          onClick={closeSidebar}
-        />
-      )}
 
-      <Sidebar open={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar onMenuOpen={openSidebar} onSearchOpen={openPalette} />
-        <main className="flex-1 overflow-y-auto">
+        <Topbar onSearchOpen={openPalette} />
+        <GroupAccentStrip />
+        <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
           <Suspense fallback={<PageLoader />}>
             <Outlet />
           </Suspense>
         </main>
       </div>
+
+      <MobileBottomNav items={visibleNavItems} spaceId={spaceId} pathname={pathname} />
 
       {paletteOpen && <CommandPalette onClose={closePalette} />}
     </div>

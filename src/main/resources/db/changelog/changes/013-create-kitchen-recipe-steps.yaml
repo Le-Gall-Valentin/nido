@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: 013-create-kitchen-recipe-steps
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: kitchen_recipe_steps
+      changes:
+        - createTable:
+            tableName: kitchen_recipe_steps
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: recipe_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: position
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: text
+                  type: VARCHAR(2000)
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: kitchen_recipe_steps
+            indexName: idx_kitchen_recipe_steps_recipe_id
+            columns:
+              - column:
+                  name: recipe_id
+        - addForeignKeyConstraint:
+            baseTableName: kitchen_recipe_steps
+            baseColumnNames: recipe_id
+            referencedTableName: kitchen_recipes
+            referencedColumnNames: id
+            constraintName: fk_kitchen_recipe_steps_recipe
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: kitchen_recipe_steps
+            cascadeConstraints: true

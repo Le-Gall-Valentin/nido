@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 015-add-kitchen-menu-entries-position-unique
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - indexExists:
+                indexName: uq_kitchen_menu_entries_space_date_position
+      changes:
+        - addUniqueConstraint:
+            tableName: kitchen_menu_entries
+            columnNames: space_id, date, position
+            constraintName: uq_kitchen_menu_entries_space_date_position
+      rollback:
+        - dropUniqueConstraint:
+            tableName: kitchen_menu_entries
+            constraintName: uq_kitchen_menu_entries_space_date_position

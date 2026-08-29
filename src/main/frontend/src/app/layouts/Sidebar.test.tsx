@@ -1,7 +1,13 @@
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { createTestQueryClient } from '@/shared/test'
+import { SpacesApiProvider, activeSpaceStore } from '@/features/space-switcher'
+import type { ISpacesApi } from '@/features/space-switcher'
+import type { SpaceSummary } from '@/entities/space'
 import { Sidebar } from './Sidebar'
+import { sidebarCollapseStore } from './sidebarCollapseStore'
 import type { AuthState, AuthActions } from '@/features/auth/model/authStore'
 
 vi.mock('react-i18next', () => ({
@@ -13,6 +19,32 @@ vi.mock('@/features/auth', () => ({ useAuth: vi.fn() }))
 import { useAuth } from '@/features/auth'
 const mockUseAuth = vi.mocked(useAuth)
 
+// Node's own global `localStorage` shadows jsdom's real Storage in this test
+// environment (see activeSpaceStore.test.ts for the same workaround).
+class MemoryStorage implements Storage {
+  private readonly map = new Map<string, string>()
+  get length(): number { return this.map.size }
+  clear(): void { this.map.clear() }
+  getItem(key: string): string | null { return this.map.has(key) ? this.map.get(key)! : null }
+  key(index: number): string | null { return Array.from(this.map.keys())[index] ?? null }
+  removeItem(key: string): void { this.map.delete(key) }
+  setItem(key: string, value: string): void { this.map.set(key, value) }
+}
+
+const PERSONAL: SpaceSummary = {
+  id: 'personal-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1,
+}
+const FAMILY: SpaceSummary = {
+  id: 'space-2', type: 'SHARED', name: 'La Famille', accent: '#c17a5c', glyph: '🏡', myRole: 'ADMIN', memberCount: 4,
+}
+
+function fakeApi(spaces: SpaceSummary[] = [PERSONAL, FAMILY]): ISpacesApi {
+  return {
+    listMySpaces: vi.fn().mockResolvedValue(spaces),
+    getSpace: vi.fn(),
+  }
+}
+
 function withUser(role: 'SUPER_ADMIN' | 'ADMIN' | 'USER' | null) {
   const user = role !== null ? { id: '1', username: 'alice.dupont', role } : null
   mockUseAuth.mockImplementation(
@@ -20,22 +52,30 @@ function withUser(role: 'SUPER_ADMIN' | 'ADMIN' | 'USER' | null) {
   )
 }
 
-function renderSidebar(path = '/administration/users', open = false) {
-  const onClose = vi.fn()
-  render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/s/:spaceId/*" element={<Sidebar open={open} onClose={onClose} />} />
-        <Route path="*" element={<Sidebar open={open} onClose={onClose} />} />
-      </Routes>
-    </MemoryRouter>
+function renderSidebar(path = '/administration/users', api: ISpacesApi = fakeApi()) {
+  const queryClient = createTestQueryClient()
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <SpacesApiProvider api={api}>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path="/s/:spaceId/*" element={<Sidebar />} />
+            <Route path="*" element={<Sidebar />} />
+          </Routes>
+        </MemoryRouter>
+      </SpacesApiProvider>
+    </QueryClientProvider>
   )
-  return { onClose }
 }
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.stubGlobal('localStorage', new MemoryStorage())
+  activeSpaceStore.setState({ lastSpaceId: null })
+  sidebarCollapseStore.setState({ collapsed: false })
+})
 
-describe('Sidebar — nav items', () => {
+describe('Sidebar — nav items, always visible', () => {
   it('always shows the settings entry', () => {
     withUser('USER')
     renderSidebar()
@@ -73,69 +113,83 @@ describe('Sidebar — nav items', () => {
   })
 })
 
+describe('Sidebar — Membres et groupes is a single entry, matching the mockup', () => {
+  // The mockup has exactly one "Membres & groupes" nav item — no separate
+  // per-space "Membres" item alongside it (drilling into a group from
+  // /spaces already reaches its members page). A prior fix mistakenly
+  // added a second "Membres" item; this locks in that there is only one.
+  it('shows exactly one groups-related entry, on the account page', async () => {
+    withUser('USER')
+    renderSidebar('/account')
+    await screen.findByText('nav.groups')
+
+    expect(screen.queryByText('nav.members')).toBeNull()
+  })
+
+  it('shows exactly one groups-related entry, while inside a space', async () => {
+    withUser('USER')
+    renderSidebar('/s/personal-1/members')
+    await screen.findByText('nav.groups')
+
+    expect(screen.queryByText('nav.members')).toBeNull()
+  })
+})
+
+describe('Sidebar — Paramètres sub-navigation', () => {
+  it("shows the 3 real sub-categories, not the mockup's unimplemented Notifications", () => {
+    withUser('USER')
+    renderSidebar('/account/security')
+
+    expect(screen.getByText('nav.settings_profile')).toBeDefined()
+    expect(screen.getByText('nav.settings_security')).toBeDefined()
+    expect(screen.getByText('nav.settings_preferences')).toBeDefined()
+    expect(screen.queryByText(/notification/i)).toBeNull()
+  })
+
+  it('keeps "Paramètres" highlighted while on a sibling sub-page (Sécurité), not just its own link', () => {
+    withUser('USER')
+    renderSidebar('/account/security')
+
+    const parentLink = screen.getByRole('link', { name: /nav\.settings$/ })
+    expect(parentLink.className).toContain('bg-accent-dim')
+  })
+
+  it('collapses the sub-navigation entirely when the sidebar is collapsed', () => {
+    withUser('USER')
+    sidebarCollapseStore.setState({ collapsed: true })
+    renderSidebar('/account/security')
+
+    expect(screen.queryByText('nav.settings_security')).toBeNull()
+  })
+})
+
+describe('Sidebar — collapse toggle', () => {
+  it('hides item labels once collapsed', () => {
+    withUser('USER')
+    renderSidebar('/account')
+
+    fireEvent.click(screen.getByLabelText('nav.collapse'))
+
+    expect(screen.queryByText('nav.groups')).toBeNull()
+    expect(screen.getByLabelText('nav.expand')).toBeDefined()
+  })
+
+  it('persists the collapsed preference across remounts', () => {
+    withUser('USER')
+    const { unmount } = renderSidebar('/account')
+    fireEvent.click(screen.getByLabelText('nav.collapse'))
+    unmount()
+
+    renderSidebar('/account')
+    expect(screen.queryByText('nav.groups')).toBeNull()
+  })
+})
+
 describe('Sidebar — brand', () => {
   it('renders the brand name linking to the account page', () => {
     withUser('USER')
     renderSidebar()
     const link = screen.getByRole('link', { name: /brand/ })
     expect(link.getAttribute('href')).toBe('/account')
-  })
-})
-
-function NavigateTrigger({ to }: { to: string }) {
-  const nav = useNavigate()
-  return <button onClick={() => { act(() => { nav(to) }) }}>go</button>
-}
-
-describe('Sidebar — onClose behaviour', () => {
-  it('does not call onClose on initial mount', () => {
-    withUser('USER')
-    const { onClose } = renderSidebar()
-    expect(onClose).not.toHaveBeenCalled()
-  })
-
-  it('calls onClose when the route changes', async () => {
-    withUser('USER')
-    const onClose = vi.fn()
-    render(
-      <MemoryRouter initialEntries={['/administration/users']}>
-        <Sidebar open onClose={onClose} />
-        <NavigateTrigger to="/account" />
-      </MemoryRouter>
-    )
-    const before = onClose.mock.calls.length
-    screen.getByText('go').click()
-    expect(onClose.mock.calls.length).toBeGreaterThan(before)
-  })
-})
-
-describe('Sidebar — space-scoped nav', () => {
-  it('shows the space nav items when the route carries a spaceId', () => {
-    withUser('USER')
-    renderSidebar('/s/space-1/members')
-    expect(screen.getByText('nav.members')).toBeDefined()
-  })
-
-  it('hides the global nav entries when the route carries a spaceId', () => {
-    withUser('USER')
-    renderSidebar('/s/space-1/members')
-    expect(screen.queryByText('nav.groups')).toBeNull()
-    expect(screen.queryByText('nav.settings')).toBeNull()
-    expect(screen.queryByText('nav.administration')).toBeNull()
-  })
-
-  it('shows a back-to-groups link pointing at /spaces', () => {
-    withUser('USER')
-    renderSidebar('/s/space-1/members')
-    const link = screen.getByRole('link', { name: /back_to_groups/ })
-    expect(link.getAttribute('href')).toBe('/spaces')
-  })
-
-  it('shows the global nav and no back link outside a space route', () => {
-    withUser('USER')
-    renderSidebar('/account')
-    expect(screen.getByText('nav.groups')).toBeDefined()
-    expect(screen.queryByText('nav.members')).toBeNull()
-    expect(screen.queryByRole('link', { name: /back_to_groups/ })).toBeNull()
   })
 })

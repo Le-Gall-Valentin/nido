@@ -1,5 +1,7 @@
 import './locales'
-import { AccountPage } from './ui/AccountPage'
+import { AccountProfilePage } from './ui/AccountProfilePage'
+import { AccountSecurityPage } from './ui/AccountSecurityPage'
+import { AccountPreferencesPage } from './ui/AccountPreferencesPage'
 import { AccountPaletteSetup } from './ui/AccountPaletteSetup'
-export { AccountPage, AccountPaletteSetup }
-export default AccountPage
+export { AccountProfilePage, AccountSecurityPage, AccountPreferencesPage, AccountPaletteSetup }
+export default AccountProfilePage

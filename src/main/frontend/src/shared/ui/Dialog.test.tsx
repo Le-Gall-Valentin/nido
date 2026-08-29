@@ -58,6 +58,17 @@ describe('Dialog', () => {
     expect(dialog?.getAttribute('aria-modal')).toBe('true')
   })
 
+  it('caps the panel height to the viewport and scrolls overflowing content', () => {
+    const { container } = render(
+      <Dialog open={true} onClose={vi.fn()} title="Test">
+        <p>Content</p>
+      </Dialog>
+    )
+    const panel = container.querySelector('[role="dialog"] > div:last-child')
+    expect(panel?.className).toContain('max-h-[90vh]')
+    expect(panel?.className).toContain('overflow-y-auto')
+  })
+
   it('links aria-labelledby to the sr-only title element', () => {
     const { container } = render(
       <Dialog open={true} onClose={vi.fn()} title="My Dialog Title">

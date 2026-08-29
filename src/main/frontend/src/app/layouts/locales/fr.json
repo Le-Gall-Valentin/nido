@@ -4,12 +4,17 @@
     "label": "Navigation principale",
     "groups": "Membres et groupes",
     "settings": "Paramètres",
+    "settings_profile": "Profil",
+    "settings_security": "Sécurité",
+    "settings_preferences": "Préférences",
     "administration": "Administration",
-    "members": "Membres",
-    "back_to_groups": "Groupes"
+    "kitchen": "Cuisine",
+    "kitchen_recipes": "Recettes",
+    "kitchen_menu": "Menu",
+    "collapse": "Réduire",
+    "expand": "Agrandir"
   },
   "topbar": {
-    "menu_label": "Ouvrir le menu",
     "search_label": "Rechercher",
     "search_placeholder": "Rechercher…",
     "profile_label": "Menu du profil",

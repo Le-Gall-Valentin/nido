@@ -11,9 +11,15 @@ import { PublicOnlyRoute } from './PublicOnlyRoute'
 import { DefaultRedirect } from './DefaultRedirect'
 
 const AdminUsersPage = lazy(() => import('@/pages/admin-users'))
-const AccountPage = lazy(() => import('@/pages/account'))
+const AccountProfilePage = lazy(() => import('@/pages/account'))
+const AccountSecurityPage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountSecurityPage })))
+const AccountPreferencesPage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountPreferencesPage })))
 const SpacesPage = lazy(() => import('@/pages/spaces'))
 const SpaceMembersPage = lazy(() => import('@/pages/spaces').then((m) => ({ default: m.SpaceMembersPage })))
+const KitchenRecipesPage = lazy(() => import('@/pages/kitchen'))
+const KitchenRecipeDetailPage = lazy(() =>
+  import('@/pages/kitchen').then((m) => ({ default: m.KitchenRecipeDetailPage })))
+const KitchenMenuPage = lazy(() => import('@/pages/kitchen').then((m) => ({ default: m.KitchenMenuPage })))
 
 export function AppRouter() {
   return (
@@ -47,7 +53,12 @@ export function AppRouter() {
             <Route path={ROUTES.ADMIN_USERS} element={<AdminUsersPage />} />
           </Route>
 
-          <Route path={ROUTES.ACCOUNT} element={<AccountPage />} />
+          <Route path={ROUTES.ACCOUNT} element={<Outlet />}>
+            <Route index element={<Navigate to="profile" replace />} />
+            <Route path="profile" element={<AccountProfilePage />} />
+            <Route path="security" element={<AccountSecurityPage />} />
+            <Route path="preferences" element={<AccountPreferencesPage />} />
+          </Route>
 
           <Route path={ROUTES.SPACES} element={<SpacesPage />} />
 
@@ -66,6 +77,12 @@ export function AppRouter() {
           >
             <Route index element={<Navigate to="members" replace />} />
             <Route path="members" element={<SpaceMembersPage />} />
+            <Route path="kitchen">
+              <Route index element={<Navigate to="recipes" replace />} />
+              <Route path="recipes" element={<KitchenRecipesPage />} />
+              <Route path="recipes/:recipeId" element={<KitchenRecipeDetailPage />} />
+              <Route path="menu" element={<KitchenMenuPage />} />
+            </Route>
           </Route>
         </Route>
 
