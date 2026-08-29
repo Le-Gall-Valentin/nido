@@ -2,15 +2,17 @@ import { useId, type TextareaHTMLAttributes } from 'react'
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: string
+  /** Keeps the label accessible to screen readers without showing it — for repeated rows (e.g. a numbered list of steps) where a visible label per row is redundant. */
+  srOnlyLabel?: boolean
 }
 
-export function Textarea({ label, className = '', ...props }: TextareaProps) {
+export function Textarea({ label, srOnlyLabel, className = '', ...props }: TextareaProps) {
   const generatedId = useId()
   const id = props.id ?? props.name ?? generatedId
 
   return (
     <div className="flex flex-1 flex-col gap-1.5">
-      <label htmlFor={id} className="sr-only">
+      <label htmlFor={id} className={srOnlyLabel ? 'sr-only' : 'text-[13px] font-semibold text-fg-1'}>
         {label}
       </label>
       <textarea

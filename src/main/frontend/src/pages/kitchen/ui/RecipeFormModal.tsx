@@ -19,14 +19,29 @@ interface RecipeFormModalProps {
   initialRecipe: Recipe | null
 }
 
-function draftFrom(recipe: Recipe | null): { name: string; category: RecipeCategory; minutes: string; referencePortions: string; ingredients: IngredientDraft[]; steps: string[] } {
+interface RecipeDraft {
+  name: string
+  description: string
+  category: RecipeCategory
+  minutes: string
+  referencePortions: string
+  ingredients: IngredientDraft[]
+  steps: string[]
+  note: string
+}
+
+function draftFrom(recipe: Recipe | null): RecipeDraft {
   if (!recipe) {
-    return { name: '', category: 'PLAT', minutes: '', referencePortions: '', ingredients: [{ name: '', quantity: '', unit: 'GRAM' }], steps: [] }
+    return {
+      name: '', description: '', category: 'PLAT', minutes: '', referencePortions: '',
+      ingredients: [{ name: '', quantity: '', unit: 'GRAM' }], steps: [], note: '',
+    }
   }
   return {
-    name: recipe.name, category: recipe.category, minutes: String(recipe.minutes), referencePortions: String(recipe.referencePortions),
+    name: recipe.name, description: recipe.description ?? '', category: recipe.category,
+    minutes: String(recipe.minutes), referencePortions: String(recipe.referencePortions),
     ingredients: recipe.ingredients.map((i) => ({ name: i.name, quantity: String(i.quantity), unit: i.unit })),
-    steps: recipe.steps,
+    steps: recipe.steps, note: recipe.note ?? '',
   }
 }
 
@@ -74,11 +89,13 @@ export function RecipeFormModal({ open, onClose, onSubmit, initialRecipe }: Reci
     setError('')
     onSubmit({
       name: draft.name.trim(),
+      description: draft.description.trim() || null,
       category: draft.category,
       minutes: Number(draft.minutes) || 1,
       referencePortions: Number(draft.referencePortions) || 1,
       ingredients,
       steps: draft.steps.map((s) => s.trim()).filter(Boolean),
+      note: draft.note.trim() || null,
     })
   }
 
@@ -107,6 +124,10 @@ export function RecipeFormModal({ open, onClose, onSubmit, initialRecipe }: Reci
           <Input label={t('form.portions_label')} type="number" min={1} value={draft.referencePortions}
             onChange={(e) => setDraft((d) => ({ ...d, referencePortions: e.target.value }))} />
         </div>
+
+        <Textarea label={t('form.description_label')} value={draft.description} rows={2}
+          placeholder={t('form.description_placeholder')}
+          onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))} />
 
         <div className="flex flex-col gap-2">
           <span className="text-[13px] font-semibold text-fg-1">{t('form.ingredients_title')}</span>
@@ -139,7 +160,7 @@ export function RecipeFormModal({ open, onClose, onSubmit, initialRecipe }: Reci
               <span className="mt-[9px] grid size-6 shrink-0 place-items-center rounded-full bg-bg-2 text-[11.5px] font-bold text-fg-3">
                 {index + 1}
               </span>
-              <Textarea label={t('form.step_label', { number: index + 1 })} value={step} rows={2}
+              <Textarea label={t('form.step_label', { number: index + 1 })} srOnlyLabel value={step} rows={2}
                 placeholder={t('form.step_placeholder')}
                 onChange={(e) => updateStep(index, e.target.value)} />
               <button type="button" onClick={() => removeStep(index)} aria-label={t('form.remove')} className="mt-[9px] p-2 text-fg-3 hover:text-status-red">
@@ -149,6 +170,10 @@ export function RecipeFormModal({ open, onClose, onSubmit, initialRecipe }: Reci
           ))}
           <Button type="button" onClick={addStep} className="self-start">{t('form.add_step')}</Button>
         </div>
+
+        <Textarea label={t('form.note_label')} value={draft.note} rows={2}
+          placeholder={t('form.note_placeholder')}
+          onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))} />
 
         {error && <p className="text-sm font-medium text-status-red">{error}</p>}
 

@@ -13,23 +13,27 @@ export interface RecipeIngredient {
 export interface Recipe {
   id: string
   name: string
+  description?: string | null
   category: RecipeCategory
   minutes: number
   referencePortions: number
   favorite: boolean
   ingredients: RecipeIngredient[]
   steps: string[]
+  note?: string | null
   /** Only populated by the list endpoint; absent (undefined) on a single-recipe fetch. */
   lastPlannedOn?: string | null
 }
 
 export interface RecipeInput {
   name: string
+  description?: string | null
   category: RecipeCategory
   minutes: number
   referencePortions: number
   ingredients: RecipeIngredient[]
   steps: string[]
+  note?: string | null
 }
 
 export interface MenuEntry {
