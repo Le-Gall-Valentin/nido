@@ -16,6 +16,7 @@ export const ROUTES = {
   spaceMembers: (spaceId: string) => `/s/${spaceId}/members`,
   spaceKitchenRecipes: (spaceId: string) => `/s/${spaceId}/kitchen/recipes`,
   spaceKitchenRecipe: (spaceId: string, recipeId: string) => `/s/${spaceId}/kitchen/recipes/${recipeId}`,
+  spaceKitchenMenu: (spaceId: string) => `/s/${spaceId}/kitchen/menu`,
 } as const
 
 export const ROUTE_SEGMENTS = {
