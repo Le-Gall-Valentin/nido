@@ -8,6 +8,7 @@ import com.nido.api.kitchen.infrastructure.persistence.entity.MenuEntryEntity;
 import com.nido.api.kitchen.infrastructure.persistence.repository.LastPlannedOn;
 import com.nido.api.kitchen.infrastructure.persistence.repository.MenuEntryJpaRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -38,7 +39,11 @@ public class KitchenMenuRepositoryAdapter implements MenuRepository {
     }
 
     @Override
+    @Transactional
     public MenuEntry add(AddMenuEntryCommand command) {
+        // Locks (space, date) for the rest of this transaction so a concurrent add()
+        // for the same day can't read the same count and collide on position.
+        entries.lockPositionAssignment(command.spaceId() + "|" + command.date());
         MenuEntryEntity e = new MenuEntryEntity();
         e.setSpaceId(command.spaceId());
         e.setDate(command.date());

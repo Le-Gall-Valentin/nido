@@ -18,9 +18,15 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -71,6 +77,36 @@ class KitchenMenuRepositoryAdapterIT {
 
         assertThat(first.position()).isZero();
         assertThat(second.position()).isEqualTo(1);
+    }
+
+    @Test
+    void add_never_assigns_the_same_position_twice_for_concurrent_inserts() throws Exception {
+        LocalDate monday = LocalDate.of(2026, 9, 7);
+        int concurrentAdds = 5;
+        CyclicBarrier barrier = new CyclicBarrier(concurrentAdds);
+        ExecutorService pool = Executors.newFixedThreadPool(concurrentAdds);
+        try {
+            List<Future<MenuEntry>> futures = List.of(
+                pool.submit(() -> addAfterBarrier(barrier, spaceId, monday)),
+                pool.submit(() -> addAfterBarrier(barrier, spaceId, monday)),
+                pool.submit(() -> addAfterBarrier(barrier, spaceId, monday)),
+                pool.submit(() -> addAfterBarrier(barrier, spaceId, monday)),
+                pool.submit(() -> addAfterBarrier(barrier, spaceId, monday)));
+
+            Set<Integer> positions = new HashSet<>();
+            for (Future<MenuEntry> future : futures) {
+                positions.add(future.get().position());
+            }
+
+            assertThat(positions).hasSize(concurrentAdds).containsExactlyInAnyOrder(0, 1, 2, 3, 4);
+        } finally {
+            pool.shutdown();
+        }
+    }
+
+    private MenuEntry addAfterBarrier(CyclicBarrier barrier, UUID spaceId, LocalDate date) throws Exception {
+        barrier.await();
+        return adapter.add(new AddMenuEntryCommand(spaceId, date, recipeId, 4));
     }
 
     @Test
