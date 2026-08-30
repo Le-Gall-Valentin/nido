@@ -152,7 +152,7 @@ function KitchenRecipesPageContent() {
       <RecipeFormModal open={createOpen} onClose={() => setCreateOpen(false)} onSubmit={handleCreate} initialRecipe={null} />
 
       {editingRecipe && (
-        <RecipeFormModal open onClose={() => setEditingRecipe(null)} onSubmit={handleUpdate} initialRecipe={editingRecipe} />
+        <RecipeFormModal key={editingRecipe.id} open onClose={() => setEditingRecipe(null)} onSubmit={handleUpdate} initialRecipe={editingRecipe} />
       )}
 
       {deletingRecipe && (

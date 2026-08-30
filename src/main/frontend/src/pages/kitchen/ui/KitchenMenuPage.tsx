@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import { Alert, Spinner } from '@/shared/ui'
+import { useMySpaces } from '@/features/space-switcher'
+import { canWrite } from '@/entities/space'
 import { kitchenApi } from '../api/kitchenApi'
 import type { IKitchenApi } from '../model/IKitchenApi'
 import { KitchenApiProvider } from '../model/kitchenApiContext'
@@ -49,9 +51,13 @@ function KitchenMenuPageContent({ initialWeekStart }: { initialWeekStart?: Date 
   const { data: recipes } = useRecipes(spaceId)
   const { data: entries, isPending, isError } = useMenuEntries(spaceId, from, to)
   const { data: shoppingList } = useShoppingList(spaceId, from, to)
+  const { data: mySpaces } = useMySpaces()
   const addEntry = useAddMenuEntry(spaceId)
   const removeEntry = useRemoveMenuEntry(spaceId)
   const updatePortions = useUpdateMenuEntryPortions(spaceId)
+
+  const currentSpace = mySpaces?.find((space) => space.id === spaceId)
+  const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
 
   const sortedRecipes = useMemo(() => sortByLastPlanned(recipes ?? []), [recipes])
   const entriesByDate = useMemo(() => {
@@ -65,6 +71,7 @@ function KitchenMenuPageContent({ initialWeekStart }: { initialWeekStart?: Date 
   const [pickerDate, setPickerDate] = useState<string | null>(null)
   const [pickerRecipeId, setPickerRecipeId] = useState('')
   const [pickerPortions, setPickerPortions] = useState('4')
+  const [actionError, setActionError] = useState(false)
 
   function openPicker(date: string) {
     const defaultRecipe = sortedRecipes[0]
@@ -77,7 +84,7 @@ function KitchenMenuPageContent({ initialWeekStart }: { initialWeekStart?: Date 
     if (!pickerDate || !pickerRecipeId) return
     addEntry.mutate(
       { date: pickerDate, recipeId: pickerRecipeId, portions: Number(pickerPortions) || 1 },
-      { onSuccess: () => setPickerDate(null) }
+      { onSuccess: () => setPickerDate(null), onError: () => setActionError(true) }
     )
   }
 
@@ -101,6 +108,8 @@ function KitchenMenuPageContent({ initialWeekStart }: { initialWeekStart?: Date 
         </div>
       </div>
 
+      {actionError && <Alert variant="error">{t('error.action_failed')}</Alert>}
+
       <div className="grid gap-5 md:grid-cols-[1.3fr_1fr]">
         <div className="rounded-2xl border border-border bg-bg-1 p-5">
           <div className="flex flex-col gap-4">
@@ -114,20 +123,30 @@ function KitchenMenuPageContent({ initialWeekStart }: { initialWeekStart?: Date 
                     {dayEntries.map((entry) => (
                       <div key={entry.id} className="flex items-center gap-2 rounded-[9px] border border-border px-3 py-2">
                         <span className="flex-1 truncate text-sm text-fg-1">{entry.recipeName}</span>
-                        <input
-                          type="number" min={1} defaultValue={entry.portions} aria-label={t('menu.portions_label')}
-                          key={`${entry.id}-${entry.portions}`}
-                          onBlur={(e) => updatePortions.mutate({ entryId: entry.id, portions: Number(e.target.value) || 1 })}
-                          className="w-14 rounded-md border border-border bg-bg-1 px-1.5 py-1 text-center text-xs"
-                        />
-                        <button type="button" aria-label={t('menu.remove_meal')} onClick={() => removeEntry.mutate(entry.id)}
-                          className="p-1 text-fg-3 hover:text-status-red">
-                          <Trash2 className="size-3.5" />
-                        </button>
+                        {canWriteHere ? (
+                          <input
+                            type="number" min={1} defaultValue={entry.portions} aria-label={t('menu.portions_label')}
+                            key={`${entry.id}-${entry.portions}`}
+                            onBlur={(e) => updatePortions.mutate(
+                              { entryId: entry.id, portions: Number(e.target.value) || 1 },
+                              { onError: () => setActionError(true) }
+                            )}
+                            className="w-14 rounded-md border border-border bg-bg-1 px-1.5 py-1 text-center text-xs"
+                          />
+                        ) : (
+                          <span className="w-14 text-center text-xs text-fg-2">{entry.portions}</span>
+                        )}
+                        {canWriteHere && (
+                          <button type="button" aria-label={t('menu.remove_meal')}
+                            onClick={() => removeEntry.mutate(entry.id, { onError: () => setActionError(true) })}
+                            className="p-1 text-fg-3 hover:text-status-red">
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        )}
                       </div>
                     ))}
 
-                    {pickerDate === date ? (
+                    {canWriteHere && (pickerDate === date ? (
                       <div className="flex items-center gap-2 rounded-[9px] border border-dashed border-border-2 px-3 py-2">
                         <select value={pickerRecipeId} onChange={(e) => setPickerRecipeId(e.target.value)}
                           className="flex-1 rounded-md border border-border bg-bg-1 px-2 py-1 text-xs">
@@ -147,7 +166,7 @@ function KitchenMenuPageContent({ initialWeekStart }: { initialWeekStart?: Date 
                         className="rounded-[9px] border border-dashed border-border-2 px-3 py-2 text-left text-xs font-semibold text-fg-3 hover:text-fg-1">
                         + {t('menu.add_meal')}
                       </button>
-                    )}
+                    ))}
                   </div>
                 </div>
               )

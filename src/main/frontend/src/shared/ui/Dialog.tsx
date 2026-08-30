@@ -23,6 +23,12 @@ export function Dialog({ open, onClose, title, children, maxWidth = 'max-w-md' }
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, onClose])
 
+  useEffect(() => {
+    if (!open) return
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    return () => previouslyFocused?.focus()
+  }, [open])
+
   if (!open) return null
 
   return (
