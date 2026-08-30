@@ -35,8 +35,23 @@ class AuthenticationExceptionHandlerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getDetail()).isEqualTo("Authentication required");
+        assertThat(response.getBody().getDetail()).isEqualTo("Invalid credentials");
         assertThat(response.getBody().getTitle()).isEqualTo("AuthenticationError");
+    }
+
+    @Test
+    void handle_userNotActive_isIndistinguishableFromInvalidCredentials() {
+        // A wrong-password attempt and a right-password-but-disabled-account attempt must produce
+        // byte-identical responses, or an attacker probing passwords against a known username could
+        // tell the exact moment they guessed right from a change in the response body.
+        var invalidCredentials = handler.handle(new AuthenticationException.InvalidCredentials(), request);
+        var userNotActive = handler.handle(new AuthenticationException.UserNotActive(), request);
+
+        assertThat(userNotActive.getStatusCode()).isEqualTo(invalidCredentials.getStatusCode());
+        assertThat(userNotActive.getBody()).isNotNull();
+        assertThat(invalidCredentials.getBody()).isNotNull();
+        assertThat(userNotActive.getBody().getTitle()).isEqualTo(invalidCredentials.getBody().getTitle());
+        assertThat(userNotActive.getBody().getDetail()).isEqualTo(invalidCredentials.getBody().getDetail());
     }
 
     @Test
