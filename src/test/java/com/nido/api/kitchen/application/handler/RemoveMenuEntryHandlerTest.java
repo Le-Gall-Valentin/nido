@@ -3,6 +3,7 @@ package com.nido.api.kitchen.application.handler;
 import com.nido.api.kitchen.domain.model.KitchenException;
 import com.nido.api.kitchen.domain.model.MenuEntry;
 import com.nido.api.kitchen.domain.port.out.MenuRepository;
+import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -56,5 +58,14 @@ class RemoveMenuEntryHandlerTest {
 
         assertThatThrownBy(() -> handler.remove(entryId, membership(SpaceRole.MEMBER)))
             .isInstanceOf(KitchenException.MenuEntryNotFound.class);
+    }
+
+    @Test
+    void a_viewer_cannot_remove_an_entry_in_their_own_space() {
+        when(menuRepository.findById(entryId)).thenReturn(Optional.of(entry(spaceId)));
+
+        assertThatThrownBy(() -> handler.remove(entryId, membership(SpaceRole.VIEWER)))
+            .isInstanceOf(SpaceException.InsufficientRole.class);
+        verify(menuRepository, never()).remove(entryId);
     }
 }
