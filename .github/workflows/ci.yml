@@ -21,7 +21,7 @@ jobs:
           cache: maven
 
       - name: Run backend tests (unit + integration)
-        run: ./mvnw -B verify
+        run: bash mvnw -B verify
 
   frontend:
     name: Frontend tests
