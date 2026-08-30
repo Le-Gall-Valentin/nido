@@ -1,0 +1,11 @@
+target/
+node_modules/
+src/main/resources/static/
+.git/
+.idea/
+.vscode/
+docs/
+*.log
+.env
+.env.*
+!.env.example
