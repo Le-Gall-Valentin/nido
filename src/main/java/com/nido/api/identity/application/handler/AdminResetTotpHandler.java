@@ -7,7 +7,6 @@ import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.MfaAdminResetTotpPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.annotation.ApplicationService;
-import com.nido.api.shared.service.RoleHierarchy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,9 +32,7 @@ public class AdminResetTotpHandler implements AdminResetTotpUseCase {
         }
         User target = userRepository.findById(command.targetUserId())
             .orElseThrow(IdentityException.UserNotFound::new);
-        if (!RoleHierarchy.canManage(command.callerRole(), target.role())) {
-            throw new IdentityException.InsufficientPermissions();
-        }
+        target.ensureTotpCanBeResetBy(command.callerRole());
         mfaResetTotp.disableTotpIfEnabled(command.targetUserId());
         log.info("TOTP reset for user {} by caller {}", command.targetUserId(), command.callerId());
     }
