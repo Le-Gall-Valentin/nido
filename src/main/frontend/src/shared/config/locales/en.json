@@ -5,5 +5,14 @@
     "retry": "Try again",
     "reload": "Reload page",
     "spaces_unavailable": "Could not load your contexts. Check your connection and try again."
+  },
+  "transfer": {
+    "copy_title": "Copy \"{{name}}\" to…",
+    "move_title": "Move \"{{name}}\" to…",
+    "no_destination": "No other context available.",
+    "cancel": "Cancel",
+    "copy_submit": "Copy",
+    "move_submit": "Move",
+    "error": "Something went wrong. Please try again."
   }
 }

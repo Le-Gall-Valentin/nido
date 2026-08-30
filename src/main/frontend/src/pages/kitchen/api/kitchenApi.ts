@@ -69,6 +69,24 @@ export const kitchenApi: IKitchenApi = {
     }
   },
 
+  async copyRecipe(spaceId, recipeId, destinationSpaceId) {
+    try {
+      const res = await client.post<Recipe>(`/spaces/${spaceId}/kitchen/recipes/${recipeId}/copy`, { destinationSpaceId })
+      return res.data
+    } catch (error) {
+      handleError(error)
+    }
+  },
+
+  async moveRecipe(spaceId, recipeId, destinationSpaceId) {
+    try {
+      const res = await client.post<Recipe>(`/spaces/${spaceId}/kitchen/recipes/${recipeId}/move`, { destinationSpaceId })
+      return res.data
+    } catch (error) {
+      handleError(error)
+    }
+  },
+
   async listMenuEntries(spaceId, from, to) {
     try {
       const res = await client.get<MenuEntry[]>(`/spaces/${spaceId}/kitchen/menu`, { params: { from, to } })

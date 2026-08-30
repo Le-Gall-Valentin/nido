@@ -5,5 +5,14 @@
     "retry": "Réessayer",
     "reload": "Recharger la page",
     "spaces_unavailable": "Impossible de charger vos contextes. Vérifiez votre connexion et réessayez."
+  },
+  "transfer": {
+    "copy_title": "Copier « {{name}} » vers…",
+    "move_title": "Déplacer « {{name}} » vers…",
+    "no_destination": "Aucun autre contexte disponible.",
+    "cancel": "Annuler",
+    "copy_submit": "Copier",
+    "move_submit": "Déplacer",
+    "error": "Une erreur est survenue. Réessayez."
   }
 }
