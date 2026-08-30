@@ -8,9 +8,6 @@ import com.nido.api.mfa.domain.port.out.TotpCodeReplayPort;
 import com.nido.api.mfa.domain.port.out.TotpCodeValidatorPort;
 import com.nido.api.mfa.domain.port.out.UserTotpLifecyclePort;
 import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
-import com.nido.api.mfa.domain.model.*;
-import com.nido.api.mfa.application.dto.*;
-import com.nido.api.mfa.domain.port.out.*;
 import com.nido.api.shared.annotation.ApplicationService;
 import org.springframework.transaction.annotation.Transactional;
 
