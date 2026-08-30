@@ -58,6 +58,22 @@ describe('kitchenApi — recipes', () => {
 
     expect(mockClient.patch).toHaveBeenCalledWith('/spaces/space-1/kitchen/recipes/r1/favorite')
   })
+
+  it('copies a recipe to another space', async () => {
+    mockClient.post.mockResolvedValue({ data: { id: 'r3', ...RECIPE_INPUT, favorite: false } })
+
+    await kitchenApi.copyRecipe('space-1', 'r1', 'space-2')
+
+    expect(mockClient.post).toHaveBeenCalledWith('/spaces/space-1/kitchen/recipes/r1/copy', { destinationSpaceId: 'space-2' })
+  })
+
+  it('moves a recipe to another space', async () => {
+    mockClient.post.mockResolvedValue({ data: { id: 'r1', ...RECIPE_INPUT, favorite: false } })
+
+    await kitchenApi.moveRecipe('space-1', 'r1', 'space-2')
+
+    expect(mockClient.post).toHaveBeenCalledWith('/spaces/space-1/kitchen/recipes/r1/move', { destinationSpaceId: 'space-2' })
+  })
 })
 
 describe('kitchenApi — menu', () => {
