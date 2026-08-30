@@ -92,7 +92,7 @@ export function DisableTotpModal({ open, onClose, onSuccess, onDisable }: Disabl
             type="submit"
             disabled={code.length < 6}
             isLoading={isLoading}
-            className="border-transparent font-semibold text-bg-0"
+            className="border-transparent font-semibold !text-bg-0 transition hover:brightness-90"
             style={{ background: 'var(--color-status-red)' }}
           >
             {t('disable.submit')}

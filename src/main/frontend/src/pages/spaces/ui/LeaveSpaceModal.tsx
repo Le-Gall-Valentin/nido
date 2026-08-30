@@ -56,7 +56,7 @@ export function LeaveSpaceModal({ spaceName, onClose, onLeave, onSuccess }: Leav
         <Button
           onClick={() => { void handleSubmit() }}
           isLoading={isLoading}
-          className="border-transparent font-semibold text-bg-0"
+          className="border-transparent font-semibold !text-bg-0 transition hover:brightness-90"
           style={{ background: 'var(--color-status-red)' }}
         >
           <LogOut className="size-4" />
