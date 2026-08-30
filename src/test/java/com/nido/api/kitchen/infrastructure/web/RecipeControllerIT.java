@@ -67,6 +67,7 @@ class RecipeControllerIT {
     private UUID bobId;
     private UUID spaceId;
     private UUID otherSpaceId;
+    private UUID bobsSpaceId;
 
     @BeforeEach
     void setUp() {
@@ -85,6 +86,8 @@ class RecipeControllerIT {
         saveMembership(spaceId, bobId, SpaceRole.VIEWER);
         otherSpaceId = saveSharedSpace("Autre groupe");
         saveMembership(otherSpaceId, aliceId, SpaceRole.OWNER);
+        bobsSpaceId = saveSharedSpace("Chez Bob");
+        saveMembership(bobsSpaceId, bobId, SpaceRole.OWNER);
     }
 
     private String createRecipeBody() {
@@ -225,6 +228,99 @@ class RecipeControllerIT {
             .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/spaces/" + spaceId + "/kitchen/recipes/" + recipeId).cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void copying_a_recipe_creates_it_in_the_destination_and_keeps_the_source() throws Exception {
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(createRecipeBody()))
+            .andReturn().getResponse().getContentAsString();
+        String recipeId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes/" + recipeId + "/copy")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"destinationSpaceId\":\"" + otherSpaceId + "\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("Pâtes bolognaise"))
+            .andExpect(jsonPath("$.favorite").value(false));
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/kitchen/recipes/" + recipeId).cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk());
+        mockMvc.perform(get("/api/spaces/" + otherSpaceId + "/kitchen/recipes").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void moving_a_recipe_creates_it_in_the_destination_and_removes_the_source() throws Exception {
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(createRecipeBody()))
+            .andReturn().getResponse().getContentAsString();
+        String recipeId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes/" + recipeId + "/move")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"destinationSpaceId\":\"" + otherSpaceId + "\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("Pâtes bolognaise"));
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/kitchen/recipes/" + recipeId).cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/spaces/" + otherSpaceId + "/kitchen/recipes").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void a_viewer_can_copy_a_recipe_into_a_space_where_they_have_write_access() throws Exception {
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(createRecipeBody()))
+            .andReturn().getResponse().getContentAsString();
+        String recipeId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes/" + recipeId + "/copy")
+                .cookie(accessTokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"destinationSpaceId\":\"" + bobsSpaceId + "\"}"))
+            .andExpect(status().isCreated());
+    }
+
+    @Test
+    void a_viewer_cannot_move_a_recipe_even_into_a_space_where_they_have_write_access() throws Exception {
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(createRecipeBody()))
+            .andReturn().getResponse().getContentAsString();
+        String recipeId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes/" + recipeId + "/move")
+                .cookie(accessTokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"destinationSpaceId\":\"" + bobsSpaceId + "\"}"))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void transferring_into_the_same_space_is_rejected() throws Exception {
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(createRecipeBody()))
+            .andReturn().getResponse().getContentAsString();
+        String recipeId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes/" + recipeId + "/copy")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"destinationSpaceId\":\"" + spaceId + "\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void copying_into_a_space_the_caller_does_not_belong_to_is_not_found() throws Exception {
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(createRecipeBody()))
+            .andReturn().getResponse().getContentAsString();
+        String recipeId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes/" + recipeId + "/copy")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"destinationSpaceId\":\"" + bobsSpaceId + "\"}"))
             .andExpect(status().isNotFound());
     }
 

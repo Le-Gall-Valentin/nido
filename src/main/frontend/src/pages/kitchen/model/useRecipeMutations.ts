@@ -45,3 +45,37 @@ export function useToggleFavorite(spaceId: string) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: recipesKey(spaceId) }),
   })
 }
+
+interface TransferVariables {
+  recipeId: string
+  destinationSpaceId: string
+}
+
+/**
+ * Copy/move both invalidate recipesKey for the source AND the destination
+ * space — cheap even if the destination's list was never fetched, and
+ * necessary since the item now also (or only, for move) exists there.
+ */
+export function useCopyRecipe(spaceId: string) {
+  const api = useKitchenApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ recipeId, destinationSpaceId }: TransferVariables) => api.copyRecipe(spaceId, recipeId, destinationSpaceId),
+    onSuccess: (_recipe, { destinationSpaceId }) => {
+      queryClient.invalidateQueries({ queryKey: recipesKey(spaceId) })
+      queryClient.invalidateQueries({ queryKey: recipesKey(destinationSpaceId) })
+    },
+  })
+}
+
+export function useMoveRecipe(spaceId: string) {
+  const api = useKitchenApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ recipeId, destinationSpaceId }: TransferVariables) => api.moveRecipe(spaceId, recipeId, destinationSpaceId),
+    onSuccess: (_recipe, { destinationSpaceId }) => {
+      queryClient.invalidateQueries({ queryKey: recipesKey(spaceId) })
+      queryClient.invalidateQueries({ queryKey: recipesKey(destinationSpaceId) })
+    },
+  })
+}

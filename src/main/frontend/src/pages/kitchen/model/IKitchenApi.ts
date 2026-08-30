@@ -12,6 +12,8 @@ export interface IKitchenApi {
   updateRecipe(spaceId: string, recipeId: string, input: RecipeInput): Promise<Recipe>
   deleteRecipe(spaceId: string, recipeId: string): Promise<void>
   toggleFavorite(spaceId: string, recipeId: string): Promise<Recipe>
+  copyRecipe(spaceId: string, recipeId: string, destinationSpaceId: string): Promise<Recipe>
+  moveRecipe(spaceId: string, recipeId: string, destinationSpaceId: string): Promise<Recipe>
 
   listMenuEntries(spaceId: string, from: string, to: string): Promise<MenuEntry[]>
   addMenuEntry(spaceId: string, date: string, recipeId: string, portions: number): Promise<MenuEntry>
