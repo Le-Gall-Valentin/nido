@@ -76,4 +76,28 @@ describe('ThemeProvider', () => {
       'useTheme must be used inside ThemeProvider'
     )
   })
+
+  it('falls back to system when localStorage.getItem throws (e.g. private browsing)', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => { throw new DOMException('blocked', 'SecurityError') },
+      setItem: vi.fn(),
+    })
+
+    const { result } = renderHook(() => useTheme(), { wrapper })
+
+    expect(result.current.theme).toBe('system')
+  })
+
+  it('keeps the in-memory theme when localStorage.setItem throws', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => null,
+      setItem: () => { throw new DOMException('blocked', 'SecurityError') },
+    })
+    const { result } = renderHook(() => useTheme(), { wrapper })
+
+    act(() => result.current.setTheme('dark'))
+
+    expect(result.current.theme).toBe('dark')
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+  })
 })

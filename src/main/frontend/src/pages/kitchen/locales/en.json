@@ -4,7 +4,7 @@
   "edit": "Edit",
   "favorite": "Add to favorites",
   "unfavorite": "Remove from favorites",
-  "error": { "load_failed": "Could not load this data." },
+  "error": { "load_failed": "Could not load this data.", "action_failed": "Action failed. Please try again." },
   "delete_confirm": {
     "title": "Delete \"{{name}}\"?", "body": "This recipe and its ingredients will be permanently deleted. This action cannot be undone.",
     "cancel": "Cancel", "submit": "Delete", "error": "Failed to delete. Please try again."

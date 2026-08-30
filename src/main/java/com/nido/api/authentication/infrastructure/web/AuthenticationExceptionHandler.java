@@ -21,11 +21,15 @@ public class AuthenticationExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ProblemDetail> handle(AuthenticationException e, HttpServletRequest request) {
         AuthErrorResponse response = switch (e) {
+            // UserNotActive is deliberately indistinguishable from InvalidCredentials: LoginHandler
+            // checks the password before isActive specifically so a wrong-password attempt and a
+            // right-password-but-disabled-account attempt produce the same response, denying an
+            // attacker probing passwords against a known username any signal that they guessed right.
             case AuthenticationException.InvalidCredentials ignored ->
                     response(401, "Invalid credentials");
 
             case AuthenticationException.UserNotActive ignored ->
-                    response(401, "Authentication required");
+                    response(401, "Invalid credentials");
 
             case AuthenticationException.UserNotFound ignored ->
                     response(401, "Authentication required");
