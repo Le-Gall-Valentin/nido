@@ -22,6 +22,8 @@ function fakeApi(): IKitchenApi {
     updateRecipe: vi.fn(),
     deleteRecipe: vi.fn(),
     toggleFavorite: vi.fn(),
+    copyRecipe: vi.fn(),
+    moveRecipe: vi.fn(),
     listMenuEntries: vi.fn(),
     addMenuEntry: vi.fn(),
     updateMenuEntryPortions: vi.fn(),
