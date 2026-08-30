@@ -16,18 +16,36 @@ function applyTheme(theme: Theme): void {
   }
 }
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
+// localStorage can throw (private browsing, blocked storage). ThemeProvider sits above
+// ErrorBoundary in App.tsx, so an uncaught throw here would blank the entire app instead of
+// just falling back to the system theme — every read and write must swallow failures.
+
+function readStoredTheme(): Theme {
+  try {
     const stored = localStorage.getItem(STORAGE_KEY)
     return isTheme(stored) ? stored : 'system'
-  })
+  } catch {
+    return 'system'
+  }
+}
+
+function writeStoredTheme(theme: Theme): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, theme)
+  } catch {
+    // Storage denied: the in-memory state below still updates.
+  }
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setThemeState] = useState<Theme>(readStoredTheme)
 
   useEffect(() => {
     applyTheme(theme)
   }, [theme])
 
   function setTheme(newTheme: Theme): void {
-    localStorage.setItem(STORAGE_KEY, newTheme)
+    writeStoredTheme(newTheme)
     setThemeState(newTheme)
   }
 
