@@ -237,7 +237,10 @@
                     </execution>
                     <execution>
                         <id>npm-build</id>
-                        <phase>prepare-package</phase>
+                        <!-- Must run before process-resources copies src/main/resources/** to
+                             target/classes, or the frontend's build output (written into
+                             src/main/resources/static) misses that copy and never reaches the jar. -->
+                        <phase>generate-resources</phase>
                         <goals><goal>npm</goal></goals>
                         <configuration>
                             <arguments>run build</arguments>
