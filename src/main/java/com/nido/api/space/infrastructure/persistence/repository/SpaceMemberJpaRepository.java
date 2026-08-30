@@ -30,10 +30,13 @@ public interface SpaceMemberJpaRepository extends JpaRepository<SpaceMemberEntit
         """)
     List<MemberCount> countBySpaceIds(@Param("spaceIds") Collection<UUID> spaceIds);
 
+    // No ORDER BY here: the caller (SpaceRepositoryAdapter.findSuccessor) picks the successor via
+    // Comparator.min() over the full candidate list, by rank then joinedAt — a DB-side ordering
+    // would be redundant and, since m.role is a STRING-mapped enum, `order by role asc` would sort
+    // alphabetically rather than by rank, which is actively misleading to a reader.
     @Query("""
         select m from SpaceMemberEntity m
         where m.spaceId = :spaceId and m.userId <> :excludedUserId and m.role in :roles
-        order by m.role asc, m.joinedAt asc
         """)
     List<SpaceMemberEntity> findCandidates(@Param("spaceId") UUID spaceId,
                                            @Param("excludedUserId") UUID excludedUserId,
