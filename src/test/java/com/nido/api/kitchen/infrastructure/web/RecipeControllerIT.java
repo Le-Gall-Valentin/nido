@@ -32,6 +32,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -167,6 +169,32 @@ class RecipeControllerIT {
             {"name":"Vide","category":"PLAT","minutes":10,"referencePortions":1,
              "ingredients":[],"steps":[]}
             """;
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void creating_a_recipe_with_more_than_100_ingredients_is_rejected() throws Exception {
+        String ingredients = IntStream.range(0, 101)
+            .mapToObj(i -> "{\"name\":\"Ingrédient " + i + "\",\"quantity\":1,\"unit\":\"GRAM\"}")
+            .collect(Collectors.joining(","));
+        String body = "{\"name\":\"Trop d'ingrédients\",\"category\":\"PLAT\",\"minutes\":10,\"referencePortions\":1,"
+            + "\"ingredients\":[" + ingredients + "],\"steps\":[]}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void creating_a_recipe_with_more_than_100_steps_is_rejected() throws Exception {
+        String steps = IntStream.range(0, 101)
+            .mapToObj(i -> "\"Étape " + i + "\"")
+            .collect(Collectors.joining(","));
+        String body = "{\"name\":\"Trop d'étapes\",\"category\":\"PLAT\",\"minutes\":10,\"referencePortions\":1,"
+            + "\"ingredients\":[{\"name\":\"Sel\",\"quantity\":1,\"unit\":\"GRAM\"}],\"steps\":[" + steps + "]}";
 
         mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))

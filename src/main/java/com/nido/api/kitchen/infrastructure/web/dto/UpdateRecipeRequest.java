@@ -18,7 +18,7 @@ public record UpdateRecipeRequest(
     @NotNull RecipeCategory category,
     @Min(1) int minutes,
     @Min(1) int referencePortions,
-    @NotEmpty @Valid List<RecipeIngredientRequest> ingredients,
-    @NotNull List<@NotBlank @Size(max = 2000) String> steps,
+    @NotEmpty @Size(max = 100) @Valid List<RecipeIngredientRequest> ingredients,
+    @NotNull @Size(max = 100) List<@NotBlank @Size(max = 2000) String> steps,
     @Size(max = 2000) String note
 ) {}
