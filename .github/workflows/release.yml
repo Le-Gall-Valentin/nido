@@ -33,10 +33,10 @@ jobs:
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - name: Set project version
-        run: ./mvnw -B org.codehaus.mojo:versions-maven-plugin:2.16.2:set -DnewVersion=${{ steps.version.outputs.version }} -DgenerateBackupPoms=false
+        run: bash mvnw -B org.codehaus.mojo:versions-maven-plugin:2.16.2:set -DnewVersion=${{ steps.version.outputs.version }} -DgenerateBackupPoms=false
 
       - name: Build jar
-        run: ./mvnw -B -DskipTests package
+        run: bash mvnw -B -DskipTests package
 
       - name: Upload jar to the release
         env:
