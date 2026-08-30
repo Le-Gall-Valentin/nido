@@ -1,5 +1,6 @@
 import { render, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
+import { useState } from 'react'
 import { Dialog } from './Dialog'
 
 vi.mock('@/shared/lib', () => ({
@@ -81,5 +82,28 @@ describe('Dialog', () => {
     const h2 = container.querySelector('h2')
     expect(h2?.id).toBe(titleId)
     expect(h2?.textContent).toBe('My Dialog Title')
+  })
+
+  it('restores focus to the triggering element when it closes', () => {
+    function Harness() {
+      const [open, setOpen] = useState(false)
+      return (
+        <div>
+          <button onClick={() => setOpen(true)}>Open</button>
+          <Dialog open={open} onClose={() => setOpen(false)} title="Test">
+            <p>Content</p>
+          </Dialog>
+        </div>
+      )
+    }
+    const { getByText } = render(<Harness />)
+    const trigger = getByText('Open')
+    trigger.focus()
+    expect(document.activeElement).toBe(trigger)
+
+    fireEvent.click(trigger)
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(document.activeElement).toBe(trigger)
   })
 })
