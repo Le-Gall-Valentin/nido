@@ -2,10 +2,12 @@ package com.nido.api.kitchen.infrastructure.web;
 
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import com.nido.api.infrastructure.web.CurrentMembership;
+import com.nido.api.kitchen.application.port.in.CopyRecipeUseCase;
 import com.nido.api.kitchen.application.port.in.CreateRecipeUseCase;
 import com.nido.api.kitchen.application.port.in.DeleteRecipeUseCase;
 import com.nido.api.kitchen.application.port.in.GetRecipeUseCase;
 import com.nido.api.kitchen.application.port.in.ListRecipesUseCase;
+import com.nido.api.kitchen.application.port.in.MoveRecipeUseCase;
 import com.nido.api.kitchen.application.port.in.ToggleRecipeFavoriteUseCase;
 import com.nido.api.kitchen.application.port.in.UpdateRecipeUseCase;
 import com.nido.api.kitchen.domain.model.CreateRecipeCommand;
@@ -16,6 +18,7 @@ import com.nido.api.kitchen.infrastructure.web.dto.CreateRecipeRequest;
 import com.nido.api.kitchen.infrastructure.web.dto.RecipeIngredientRequest;
 import com.nido.api.kitchen.infrastructure.web.dto.RecipeResponse;
 import com.nido.api.kitchen.infrastructure.web.dto.RecipeSummaryResponse;
+import com.nido.api.kitchen.infrastructure.web.dto.TransferRecipeRequest;
 import com.nido.api.kitchen.infrastructure.web.dto.UpdateRecipeRequest;
 import com.nido.api.space.domain.model.SpaceMembership;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -49,19 +52,25 @@ public class RecipeController {
     private final UpdateRecipeUseCase updateRecipeUseCase;
     private final DeleteRecipeUseCase deleteRecipeUseCase;
     private final ToggleRecipeFavoriteUseCase toggleRecipeFavoriteUseCase;
+    private final CopyRecipeUseCase copyRecipeUseCase;
+    private final MoveRecipeUseCase moveRecipeUseCase;
 
     public RecipeController(ListRecipesUseCase listRecipesUseCase,
                             GetRecipeUseCase getRecipeUseCase,
                             CreateRecipeUseCase createRecipeUseCase,
                             UpdateRecipeUseCase updateRecipeUseCase,
                             DeleteRecipeUseCase deleteRecipeUseCase,
-                            ToggleRecipeFavoriteUseCase toggleRecipeFavoriteUseCase) {
+                            ToggleRecipeFavoriteUseCase toggleRecipeFavoriteUseCase,
+                            CopyRecipeUseCase copyRecipeUseCase,
+                            MoveRecipeUseCase moveRecipeUseCase) {
         this.listRecipesUseCase = listRecipesUseCase;
         this.getRecipeUseCase = getRecipeUseCase;
         this.createRecipeUseCase = createRecipeUseCase;
         this.updateRecipeUseCase = updateRecipeUseCase;
         this.deleteRecipeUseCase = deleteRecipeUseCase;
         this.toggleRecipeFavoriteUseCase = toggleRecipeFavoriteUseCase;
+        this.copyRecipeUseCase = copyRecipeUseCase;
+        this.moveRecipeUseCase = moveRecipeUseCase;
     }
 
     @GetMapping
@@ -125,6 +134,28 @@ public class RecipeController {
             @PathVariable UUID spaceId, @PathVariable UUID recipeId,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
         return ResponseEntity.ok(RecipeResponse.from(toggleRecipeFavoriteUseCase.toggleFavorite(recipeId, membership)));
+    }
+
+    @PostMapping("/{recipeId}/copy")
+    @RateLimiting(max = 20)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<RecipeResponse> copy(
+            @PathVariable UUID spaceId, @PathVariable UUID recipeId,
+            @Valid @RequestBody TransferRecipeRequest request,
+            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+        Recipe copied = copyRecipeUseCase.copy(recipeId, request.destinationSpaceId(), membership);
+        return ResponseEntity.status(HttpStatus.CREATED).body(RecipeResponse.from(copied));
+    }
+
+    @PostMapping("/{recipeId}/move")
+    @RateLimiting(max = 20)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<RecipeResponse> move(
+            @PathVariable UUID spaceId, @PathVariable UUID recipeId,
+            @Valid @RequestBody TransferRecipeRequest request,
+            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+        Recipe moved = moveRecipeUseCase.move(recipeId, request.destinationSpaceId(), membership);
+        return ResponseEntity.status(HttpStatus.CREATED).body(RecipeResponse.from(moved));
     }
 
     private static List<RecipeIngredient> toDomainIngredients(List<RecipeIngredientRequest> requested) {
