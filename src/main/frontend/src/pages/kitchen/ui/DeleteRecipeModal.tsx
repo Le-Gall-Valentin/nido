@@ -50,7 +50,7 @@ export function DeleteRecipeModal({ recipeName, onClose, onDelete }: DeleteRecip
         <Button
           onClick={() => { void handleSubmit() }}
           isLoading={isLoading}
-          className="border-transparent font-semibold text-bg-0"
+          className="border-transparent font-semibold !text-bg-0 transition hover:brightness-90"
           style={{ background: 'var(--color-status-red)' }}
         >
           <Trash2 className="size-4" />
