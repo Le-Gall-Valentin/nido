@@ -15,9 +15,10 @@ export class RoleAlreadyAssignedError extends Error {
   constructor() { super('User already has this role'); this.name = 'RoleAlreadyAssignedError' }
 }
 
-function handleError(error: unknown): never {
+function handleError(error: unknown, onConflict?: () => never): never {
   if (isAxiosError(error)) {
     const status = error.response?.status
+    if (status === 409 && onConflict) onConflict()
     if (status === 429) throw new RateLimitError()
     if (status === 403) throw new ForbiddenError()
     if (status === 404) throw new NotFoundError()
@@ -47,15 +48,7 @@ export const adminUsersApi: IAdminUsersApi = {
     try {
       await client.post('/users', { username, email, password, role })
     } catch (error) {
-      if (isAxiosError(error)) {
-        const status = error.response?.status
-        if (status === 409) throw new ConflictError()
-        if (status === 429) throw new RateLimitError()
-        if (status === 403) throw new ForbiddenError()
-        if (status === 404) throw new NotFoundError()
-        if (status !== undefined) throw new ServerError()
-      }
-      throw new NetworkError()
+      handleError(error, () => { throw new ConflictError() })
     }
   },
 
@@ -63,15 +56,7 @@ export const adminUsersApi: IAdminUsersApi = {
     try {
       await client.patch(`/users/${id}`, { role })
     } catch (error) {
-      if (isAxiosError(error)) {
-        const status = error.response?.status
-        if (status === 409) throw new RoleAlreadyAssignedError()
-        if (status === 429) throw new RateLimitError()
-        if (status === 403) throw new ForbiddenError()
-        if (status === 404) throw new NotFoundError()
-        if (status !== undefined) throw new ServerError()
-      }
-      throw new NetworkError()
+      handleError(error, () => { throw new RoleAlreadyAssignedError() })
     }
   },
 
