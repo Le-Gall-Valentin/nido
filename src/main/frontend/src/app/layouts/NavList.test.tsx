@@ -24,10 +24,16 @@ const ITEMS: NavItemConfig[] = [
   },
 ]
 
-function renderList(spaceId: string | undefined, pathname: string, alwaysExpanded = false) {
+function renderList(spaceId: string | undefined, pathname: string, alwaysExpanded = false, hasPendingInvitations = false) {
   return render(
     <MemoryRouter>
-      <NavList items={ITEMS} spaceId={spaceId} pathname={pathname} alwaysExpanded={alwaysExpanded} />
+      <NavList
+        items={ITEMS}
+        spaceId={spaceId}
+        pathname={pathname}
+        alwaysExpanded={alwaysExpanded}
+        hasPendingInvitations={hasPendingInvitations}
+      />
     </MemoryRouter>
   )
 }
@@ -82,5 +88,23 @@ describe('NavList — children disclosure', () => {
     renderList('space-1', '/s/space-1/members', true)
     expect(screen.getByText('nav.kitchen_recipes')).toBeDefined()
     expect(screen.getByText('nav.kitchen_menu')).toBeDefined()
+  })
+})
+
+describe('NavList — pending invitations badge', () => {
+  it('shows a badge on the groups item when hasPendingInvitations is true', () => {
+    renderList(undefined, '/spaces', false, true)
+    expect(screen.getByText('nav.pending_invitations')).toBeDefined()
+  })
+
+  it('shows no badge when hasPendingInvitations is false', () => {
+    renderList(undefined, '/spaces', false, false)
+    expect(screen.queryByText('nav.pending_invitations')).toBeNull()
+  })
+
+  it('does not badge unrelated items even when hasPendingInvitations is true', () => {
+    renderList('space-1', '/s/space-1/kitchen/menu', true, true)
+    // Only one badge total: the groups item, never kitchen or its children.
+    expect(screen.getAllByText('nav.pending_invitations')).toHaveLength(1)
   })
 })

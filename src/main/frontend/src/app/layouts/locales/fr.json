@@ -10,7 +10,8 @@
     "administration": "Administration",
     "kitchen": "Cuisine",
     "kitchen_recipes": "Recettes",
-    "kitchen_menu": "Menu"
+    "kitchen_menu": "Menu",
+    "pending_invitations": "Invitations en attente"
   },
   "topbar": {
     "search_label": "Rechercher",
