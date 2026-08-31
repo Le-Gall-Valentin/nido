@@ -1,0 +1,75 @@
+databaseChangeLog:
+  - changeSet:
+      id: 018-create-shopping-items
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: shopping_items
+      changes:
+        - createTable:
+            tableName: shopping_items
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantity_label
+                  type: VARCHAR(40)
+              - column:
+                  name: done
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: position
+                  type: INT
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: shopping_items
+            indexName: idx_shopping_items_space_id_category_id
+            columns:
+              - column:
+                  name: space_id
+              - column:
+                  name: category_id
+        - addForeignKeyConstraint:
+            baseTableName: shopping_items
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_shopping_items_space
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: shopping_items
+            baseColumnNames: category_id
+            referencedTableName: shopping_categories
+            referencedColumnNames: id
+            constraintName: fk_shopping_items_category
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: shopping_items
+            cascadeConstraints: true
