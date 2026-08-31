@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
 import { useCurrentSpaceId } from '@/features/space-switcher'
+import { useHasPendingInvitations } from '@/pages/spaces/invitations'
 import { usePaletteItems } from '@/shared/lib'
 import { isAdminRole } from '@/entities/user'
 import { Sidebar } from './Sidebar'
@@ -32,6 +33,7 @@ export function AppLayout() {
   const user = useAuth((s) => s.user)
   const { spaceId } = useCurrentSpaceId()
   const { pathname } = useLocation()
+  const hasPendingInvitations = useHasPendingInvitations()
 
   const visibleNavItems = useMemo(
     () => NAV_CONFIG.filter((item) => !item.adminOnly || isAdminRole(user?.role)),
@@ -85,7 +87,7 @@ export function AppLayout() {
     <div className="flex h-screen overflow-hidden bg-bg-0">
       <PaletteSetups />
 
-      <Sidebar />
+      <Sidebar hasPendingInvitations={hasPendingInvitations} />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar onSearchOpen={openPalette} onMenuOpen={openMobileNav} />
@@ -98,7 +100,13 @@ export function AppLayout() {
       </div>
 
       {mobileNavOpen && (
-        <MobileNavDrawer items={visibleNavItems} spaceId={spaceId} pathname={pathname} onClose={closeMobileNav} />
+        <MobileNavDrawer
+          items={visibleNavItems}
+          spaceId={spaceId}
+          pathname={pathname}
+          onClose={closeMobileNav}
+          hasPendingInvitations={hasPendingInvitations}
+        />
       )}
 
       {paletteOpen && <CommandPalette onClose={closePalette} />}

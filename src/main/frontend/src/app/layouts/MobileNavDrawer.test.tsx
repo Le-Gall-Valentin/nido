@@ -23,10 +23,16 @@ const ITEMS: NavItemConfig[] = [
   },
 ]
 
-function setup(onClose = vi.fn()) {
+function setup(onClose = vi.fn(), hasPendingInvitations = false) {
   render(
     <MemoryRouter>
-      <MobileNavDrawer items={ITEMS} spaceId="space-1" pathname="/spaces" onClose={onClose} />
+      <MobileNavDrawer
+        items={ITEMS}
+        spaceId="space-1"
+        pathname="/spaces"
+        onClose={onClose}
+        hasPendingInvitations={hasPendingInvitations}
+      />
     </MemoryRouter>
   )
   return { onClose }
@@ -61,5 +67,15 @@ describe('MobileNavDrawer', () => {
     const { onClose } = setup()
     fireEvent.click(screen.getByText('nav.groups'))
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('shows a badge on the groups entry when there are pending invitations', () => {
+    setup(vi.fn(), true)
+    expect(screen.getByText('nav.pending_invitations')).toBeDefined()
+  })
+
+  it('shows no badge when there are no pending invitations', () => {
+    setup(vi.fn(), false)
+    expect(screen.queryByText('nav.pending_invitations')).toBeNull()
   })
 })

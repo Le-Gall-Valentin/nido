@@ -14,6 +14,7 @@ interface MobileNavDrawerProps {
   spaceId: string | undefined
   pathname: string
   onClose: () => void
+  hasPendingInvitations?: boolean
 }
 
 /**
@@ -23,7 +24,7 @@ interface MobileNavDrawerProps {
  * tab bar, this scales to any number of top-level modules and never loses
  * access to sub-navigation.
  */
-export function MobileNavDrawer({ items, spaceId, pathname, onClose }: MobileNavDrawerProps) {
+export function MobileNavDrawer({ items, spaceId, pathname, onClose, hasPendingInvitations }: MobileNavDrawerProps) {
   const { t } = useTranslation('shell')
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
@@ -76,7 +77,7 @@ export function MobileNavDrawer({ items, spaceId, pathname, onClose }: MobileNav
           aria-label={t('nav.label')}
           onClick={onClose}
         >
-          <NavList items={items} spaceId={spaceId} pathname={pathname} alwaysExpanded />
+          <NavList items={items} spaceId={spaceId} pathname={pathname} alwaysExpanded hasPendingInvitations={hasPendingInvitations} />
         </nav>
       </div>
     </div>

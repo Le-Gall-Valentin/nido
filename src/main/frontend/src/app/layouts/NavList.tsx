@@ -8,6 +8,8 @@ export interface NavListProps {
   pathname: string
   /** Renders every parent's children regardless of the active route — used by the mobile drawer, where sub-navigation must stay reachable without first navigating into the section. */
   alwaysExpanded?: boolean
+  /** Marks the "Membres et groupes" item (nav:spaces) with a badge — the only item this currently applies to. */
+  hasPendingInvitations?: boolean
 }
 
 /**
@@ -19,7 +21,7 @@ export interface NavListProps {
  * without a separate click-to-expand affordance; the mobile drawer instead
  * passes `alwaysExpanded` so every sub-item stays visible at all times.
  */
-export function NavList({ items, spaceId, pathname, alwaysExpanded }: NavListProps) {
+export function NavList({ items, spaceId, pathname, alwaysExpanded, hasPendingInvitations }: NavListProps) {
   const { t } = useTranslation('shell')
 
   return (
@@ -40,6 +42,7 @@ export function NavList({ items, spaceId, pathname, alwaysExpanded }: NavListPro
               label={t(item.labelKey)}
               pathname={pathname}
               activeOverride={item.children ? onActiveChild : undefined}
+              hasBadge={item.id === 'nav:spaces' && !!hasPendingInvitations}
             />
             {expanded && (
               <div className="ml-[22px] mt-[2px] flex flex-col gap-[2px] border-l border-border pl-[11px]">
