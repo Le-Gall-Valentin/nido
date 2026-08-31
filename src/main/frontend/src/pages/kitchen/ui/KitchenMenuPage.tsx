@@ -15,6 +15,7 @@ import { useAddMenuEntry, useRemoveMenuEntry, useUpdateMenuEntryPortions } from 
 import { startOfWeek, addDays, toISODate, weekDates } from '../lib/weekRange'
 import { RECIPE_UNIT_LABEL_KEY } from '../lib/recipeUnitMeta'
 import type { MenuEntry, Recipe } from '../model/types'
+import { ExportToShoppingListModal } from '@/features/export-menu-to-shopping-list'
 
 interface KitchenMenuPageProps {
   api?: IKitchenApi
@@ -72,6 +73,7 @@ function KitchenMenuPageContent({ initialWeekStart }: { initialWeekStart?: Date 
   const [pickerRecipeId, setPickerRecipeId] = useState('')
   const [pickerPortions, setPickerPortions] = useState('4')
   const [actionError, setActionError] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
 
   function openPicker(date: string) {
     const defaultRecipe = sortedRecipes[0]
@@ -180,17 +182,33 @@ function KitchenMenuPageContent({ initialWeekStart }: { initialWeekStart?: Date 
           {(shoppingList ?? []).length === 0 ? (
             <p className="text-sm text-fg-3">{t('menu.shopping_list_empty')}</p>
           ) : (
-            <ul className="flex flex-col gap-2">
-              {(shoppingList ?? []).map((line, index) => (
-                <li key={index} className="flex justify-between border-b border-border py-1.5 text-sm last:border-b-0">
-                  <span className="text-fg-2">{line.name}</span>
-                  <span className="font-semibold text-fg-0">{line.quantity} {t(RECIPE_UNIT_LABEL_KEY[line.unit])}</span>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="flex flex-col gap-2">
+                {(shoppingList ?? []).map((line, index) => (
+                  <li key={index} className="flex justify-between border-b border-border py-1.5 text-sm last:border-b-0">
+                    <span className="text-fg-2">{line.name}</span>
+                    <span className="font-semibold text-fg-0">{line.quantity} {t(RECIPE_UNIT_LABEL_KEY[line.unit])}</span>
+                  </li>
+                ))}
+              </ul>
+              {canWriteHere && (
+                <button type="button" onClick={() => setExportOpen(true)}
+                  className="mt-4 w-full rounded-[10px] border border-dashed border-border-2 px-3 py-2 text-xs font-semibold text-fg-3 hover:text-fg-1">
+                  {t('menu.export_to_shopping_list')}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
+
+      <ExportToShoppingListModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        spaceId={spaceId}
+        shoppingList={shoppingList ?? []}
+        onImported={() => setExportOpen(false)}
+      />
     </div>
   )
 }
