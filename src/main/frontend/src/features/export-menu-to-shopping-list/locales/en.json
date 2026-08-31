@@ -1,0 +1,13 @@
+{
+  "title": "Send to shopping list",
+  "subtitle": "Uncheck what you already have, adjust quantity or category if needed.",
+  "bulk_category_label": "Category for imported items",
+  "include_line": "Include \"{{name}}\"",
+  "quantity_for": "Quantity for \"{{name}}\"",
+  "category_for": "Category for \"{{name}}\"",
+  "cancel": "Cancel",
+  "confirm": "Send to shopping list",
+  "success": "Items sent to the shopping list.",
+  "view_shopping_list": "view shopping list",
+  "error": "Failed to send. Try again."
+}
