@@ -1,0 +1,23 @@
+{
+  "title": "Shopping list",
+  "loading": "Loading…",
+  "empty": "Nothing here yet. Add your first item above.",
+  "clear_done": "Remove checked",
+  "clear_all": "Clear all",
+  "remaining_count": "{{count}} item left",
+  "remaining_count_plural": "{{count}} items left",
+  "add_item_placeholder": "Add an item…",
+  "add_item": "Add",
+  "category_label": "Category",
+  "category_remaining": "{{count}} to get",
+  "category_rename": "Rename",
+  "category_rename_confirm": "Confirm",
+  "category_delete": "Delete category \"{{name}}\"",
+  "form_cancel": "Cancel",
+  "toggle_done": "Check \"{{name}}\"",
+  "recategorize": "Move \"{{name}}\" to another category",
+  "delete_item": "Delete \"{{name}}\"",
+  "new_category_placeholder": "New category…",
+  "new_category": "New category",
+  "error": { "load_failed": "Couldn't load the shopping list.", "action_failed": "Action failed. Try again." }
+}

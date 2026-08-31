@@ -2,7 +2,7 @@ import { isAxiosError } from 'axios'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
 import type { IShoppingApi } from '../model/IShoppingApi'
-import type { ShoppingCategory, ShoppingImportLine, ShoppingItem } from '../model/types'
+import type { ShoppingCategory, ShoppingItem } from '../model/types'
 
 function handleError(error: unknown): never {
   if (isAxiosError(error)) {
