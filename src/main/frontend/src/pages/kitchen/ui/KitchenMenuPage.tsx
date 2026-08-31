@@ -15,7 +15,7 @@ import { useAddMenuEntry, useRemoveMenuEntry, useUpdateMenuEntryPortions } from 
 import { startOfWeek, addDays, toISODate, weekDates } from '../lib/weekRange'
 import { RECIPE_UNIT_LABEL_KEY } from '../lib/recipeUnitMeta'
 import type { MenuEntry, Recipe } from '../model/types'
-import { ExportToShoppingListModal } from '@/features/export-menu-to-shopping-list'
+import { ExportToShoppingListModal, type ExportableShoppingLine } from '@/features/export-menu-to-shopping-list'
 
 interface KitchenMenuPageProps {
   api?: IKitchenApi
@@ -61,6 +61,14 @@ function KitchenMenuPageContent({ initialWeekStart }: { initialWeekStart?: Date 
   const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
 
   const sortedRecipes = useMemo(() => sortByLastPlanned(recipes ?? []), [recipes])
+  // The export feature is kitchen-agnostic (no notion of recipes or measurement
+  // units) — it only ever sees an already-formatted display string.
+  const exportableShoppingList: ExportableShoppingLine[] = useMemo(
+    () => (shoppingList ?? []).map((line) => ({
+      name: line.name, formattedQuantity: `${line.quantity} ${t(RECIPE_UNIT_LABEL_KEY[line.unit])}`,
+    })),
+    [shoppingList, t]
+  )
   const entriesByDate = useMemo(() => {
     const map = new Map<string, MenuEntry[]>()
     for (const entry of entries ?? []) {
@@ -206,7 +214,7 @@ function KitchenMenuPageContent({ initialWeekStart }: { initialWeekStart?: Date 
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         spaceId={spaceId}
-        shoppingList={shoppingList ?? []}
+        shoppingList={exportableShoppingList}
         onImported={() => setExportOpen(false)}
       />
     </div>

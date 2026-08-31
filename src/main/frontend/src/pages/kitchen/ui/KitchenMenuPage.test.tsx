@@ -14,8 +14,8 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-vi.mock('@/pages/shopping', async () => {
-  const actual = await vi.importActual<typeof import('@/pages/shopping')>('@/pages/shopping')
+vi.mock('@/entities/shopping-list', async () => {
+  const actual = await vi.importActual<typeof import('@/entities/shopping-list')>('@/entities/shopping-list')
   return {
     ...actual,
     useShoppingCategories: () => ({ data: [{ id: 'cat-1', name: 'Épicerie', position: 0, fallback: false }] }),

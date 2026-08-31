@@ -7,8 +7,7 @@ import { SpacesApiProvider } from '@/features/space-switcher'
 import type { ISpacesApi } from '@/features/space-switcher'
 import type { SpaceSummary } from '@/entities/space'
 import { ShoppingListPage } from './ShoppingListPage'
-import type { IShoppingApi } from '../model/IShoppingApi'
-import type { ShoppingCategory, ShoppingItem } from '../model/types'
+import type { IShoppingApi, ShoppingCategory, ShoppingItem } from '@/entities/shopping-list'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),

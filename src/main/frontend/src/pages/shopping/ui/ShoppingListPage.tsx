@@ -5,14 +5,12 @@ import { Plus, Trash2, X, Check } from 'lucide-react'
 import { Alert, Spinner, Input } from '@/shared/ui'
 import { useMySpaces } from '@/features/space-switcher'
 import { canWrite } from '@/entities/space'
-import { shoppingApi } from '../api/shoppingApi'
-import type { IShoppingApi } from '../model/IShoppingApi'
-import { ShoppingApiProvider } from '../model/shoppingApiContext'
-import { useShoppingCategories } from '../model/useShoppingCategories'
-import { useShoppingItems } from '../model/useShoppingItems'
-import { useCreateCategory, useRenameCategory, useDeleteCategory } from '../model/useCategoryMutations'
-import { useAddItem, useUpdateItem, useToggleItemDone, useDeleteItem, useClearDoneItems, useClearAllItems } from '../model/useItemMutations'
-import type { ShoppingItem } from '../model/types'
+import {
+  shoppingApi, ShoppingApiProvider, useShoppingCategories, useShoppingItems,
+  useCreateCategory, useRenameCategory, useDeleteCategory,
+  useAddItem, useUpdateItem, useToggleItemDone, useDeleteItem, useClearDoneItems, useClearAllItems,
+  type IShoppingApi, type ShoppingItem,
+} from '@/entities/shopping-list'
 
 interface ShoppingListPageProps {
   api?: IShoppingApi

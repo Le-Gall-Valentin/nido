@@ -3,15 +3,21 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Dialog, Button, Alert, Input } from '@/shared/ui'
 import { ROUTES } from '@/shared/config'
-import { RECIPE_UNIT_LABEL_KEY, type ShoppingListLine } from '@/pages/kitchen'
-import { shoppingApi, ShoppingApiProvider, useShoppingCategories, useImportFromMenu } from '@/pages/shopping'
-import type { IShoppingApi } from '@/pages/shopping'
+import {
+  shoppingApi, ShoppingApiProvider, useShoppingCategories, useImportFromMenu, type IShoppingApi,
+} from '@/entities/shopping-list'
+
+/** A suggested ingredient line, already formatted by the caller — this feature has no notion of recipes or measurement units. */
+export interface ExportableShoppingLine {
+  name: string
+  formattedQuantity: string
+}
 
 interface ExportToShoppingListModalProps {
   open: boolean
   onClose: () => void
   spaceId: string
-  shoppingList: ShoppingListLine[]
+  shoppingList: ExportableShoppingLine[]
   onImported: () => void
   api?: IShoppingApi
 }
@@ -29,13 +35,11 @@ function ExportToShoppingListModalContent({
   spaceId, shoppingList, onClose, onImported,
 }: Omit<ExportToShoppingListModalProps, 'open' | 'api'>) {
   const { t } = useTranslation('exportMenuToShoppingList')
-  const { t: tKitchen } = useTranslation('kitchen')
   const { data: categories } = useShoppingCategories(spaceId)
   const importFromMenu = useImportFromMenu(spaceId)
 
   const [checked, setChecked] = useState<boolean[]>(() => shoppingList.map(() => true))
-  const [quantityDrafts, setQuantityDrafts] = useState<string[]>(() =>
-    shoppingList.map((line) => `${line.quantity} ${tKitchen(RECIPE_UNIT_LABEL_KEY[line.unit])}`))
+  const [quantityDrafts, setQuantityDrafts] = useState<string[]>(() => shoppingList.map((line) => line.formattedQuantity))
   const [rowCategoryId, setRowCategoryId] = useState<string[]>(() => shoppingList.map(() => ''))
   const [bulkCategoryId, setBulkCategoryId] = useState('')
   const [error, setError] = useState(false)

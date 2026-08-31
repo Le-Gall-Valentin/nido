@@ -3,18 +3,16 @@ import { describe, it, expect, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
-import type { ShoppingListLine } from '@/pages/kitchen'
-import { ExportToShoppingListModal } from './ExportToShoppingListModal'
-import type { IShoppingApi } from '@/pages/shopping'
-import type { ShoppingCategory } from '@/pages/shopping'
+import type { IShoppingApi, ShoppingCategory } from '@/entities/shopping-list'
+import { ExportToShoppingListModal, type ExportableShoppingLine } from './ExportToShoppingListModal'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-const LINES: ShoppingListLine[] = [
-  { name: 'Poulet', quantity: 800, unit: 'GRAM' },
-  { name: 'Riz', quantity: 300, unit: 'GRAM' },
+const LINES: ExportableShoppingLine[] = [
+  { name: 'Poulet', formattedQuantity: '800 g' },
+  { name: 'Riz', formattedQuantity: '300 g' },
 ]
 
 const CATEGORIES: ShoppingCategory[] = [
@@ -65,7 +63,7 @@ describe('ExportToShoppingListModal', () => {
     setup()
 
     expect(await screen.findByText('Poulet')).toBeDefined()
-    expect(screen.getByDisplayValue('800 unit.GRAM')).toBeDefined()
+    expect(screen.getByDisplayValue('800 g')).toBeDefined()
     expect(screen.getAllByLabelText('include_line')[0]).toHaveProperty('checked', true)
   })
 
@@ -77,7 +75,7 @@ describe('ExportToShoppingListModal', () => {
     fireEvent.click(screen.getByText('confirm'))
 
     await waitFor(() => expect(api.importFromMenu).toHaveBeenCalledWith('space-1', [
-      { name: 'Riz', quantityLabel: '300 unit.GRAM', categoryId: 'cat-1' },
+      { name: 'Riz', quantityLabel: '300 g', categoryId: 'cat-1' },
     ]))
     expect(onImported).toHaveBeenCalled()
   })
@@ -94,8 +92,8 @@ describe('ExportToShoppingListModal', () => {
     fireEvent.click(screen.getByText('confirm'))
 
     await waitFor(() => expect(api.importFromMenu).toHaveBeenCalledWith('space-1', [
-      { name: 'Poulet', quantityLabel: '800 unit.GRAM', categoryId: 'cat-2' },
-      { name: 'Riz', quantityLabel: '300 unit.GRAM', categoryId: 'cat-2' },
+      { name: 'Poulet', quantityLabel: '800 g', categoryId: 'cat-2' },
+      { name: 'Riz', quantityLabel: '300 g', categoryId: 'cat-2' },
     ]))
   })
 
@@ -109,8 +107,8 @@ describe('ExportToShoppingListModal', () => {
     fireEvent.click(screen.getByText('confirm'))
 
     await waitFor(() => expect(api.importFromMenu).toHaveBeenCalledWith('space-1', [
-      { name: 'Poulet', quantityLabel: '800 unit.GRAM', categoryId: 'cat-1' },
-      { name: 'Riz', quantityLabel: '300 unit.GRAM', categoryId: 'cat-2' },
+      { name: 'Poulet', quantityLabel: '800 g', categoryId: 'cat-1' },
+      { name: 'Riz', quantityLabel: '300 g', categoryId: 'cat-2' },
     ]))
   })
 
@@ -118,7 +116,7 @@ describe('ExportToShoppingListModal', () => {
     const { api } = setup()
     await screen.findByText('Poulet')
 
-    fireEvent.change(screen.getByDisplayValue('800 unit.GRAM'), { target: { value: '1 kg' } })
+    fireEvent.change(screen.getByDisplayValue('800 g'), { target: { value: '1 kg' } })
     fireEvent.click(screen.getByText('confirm'))
 
     await waitFor(() => expect(api.importFromMenu).toHaveBeenCalledWith('space-1', expect.arrayContaining([
