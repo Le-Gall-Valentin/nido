@@ -19,9 +19,12 @@ interface NavItemProps {
   pathname: string
   /** Overrides the pathname-derived active check — used for a parent item that should stay highlighted while any of its children is the active route. */
   activeOverride?: boolean
+  /** Shows a small red dot on the icon — currently only used for pending invitations on the groups item. */
+  hasBadge?: boolean
 }
 
-export function NavItem({ to, icon: Icon, label, pathname, activeOverride }: NavItemProps) {
+export function NavItem({ to, icon: Icon, label, pathname, activeOverride, hasBadge }: NavItemProps) {
+  const { t } = useTranslation('shell')
   const active = activeOverride ?? (pathname === to || pathname.startsWith(`${to}/`))
 
   return (
@@ -33,8 +36,14 @@ export function NavItem({ to, icon: Icon, label, pathname, activeOverride }: Nav
           : 'font-medium text-fg-1 hover:bg-bg-3 hover:text-fg-0'
       }`}
     >
-      <Icon size={19} className={`shrink-0 ${active ? 'text-accent' : 'text-fg-2'}`} />
+      <span className="relative inline-flex shrink-0">
+        <Icon size={19} className={active ? 'text-accent' : 'text-fg-2'} />
+        {hasBadge && (
+          <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-status-red" aria-hidden="true" />
+        )}
+      </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
+      {hasBadge && <span className="sr-only">{t('nav.pending_invitations')}</span>}
     </Link>
   )
 }
@@ -46,7 +55,11 @@ export function NavItem({ to, icon: Icon, label, pathname, activeOverride }: Nav
  * unreachable, so the full nav is always shown. Replaced by
  * MobileNavDrawer below the md breakpoint.
  */
-export function Sidebar() {
+interface SidebarProps {
+  hasPendingInvitations?: boolean
+}
+
+export function Sidebar({ hasPendingInvitations }: SidebarProps = {}) {
   const { t } = useTranslation('shell')
   const user = useAuth((s) => s.user)
   const { pathname } = useLocation()
@@ -74,7 +87,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex flex-1 flex-col gap-[3px] overflow-y-auto px-3 py-2" aria-label={t('nav.label')}>
-        <NavList items={visibleItems} spaceId={spaceId} pathname={pathname} />
+        <NavList items={visibleItems} spaceId={spaceId} pathname={pathname} hasPendingInvitations={hasPendingInvitations} />
       </nav>
     </aside>
   )
