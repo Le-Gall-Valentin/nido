@@ -51,15 +51,15 @@ function withUser(role: 'SUPER_ADMIN' | 'ADMIN' | 'USER' | null) {
   )
 }
 
-function renderSidebar(path = '/administration/users', api: ISpacesApi = fakeApi()) {
+function renderSidebar(path = '/administration/users', api: ISpacesApi = fakeApi(), hasPendingInvitations = false) {
   const queryClient = createTestQueryClient()
   return render(
     <QueryClientProvider client={queryClient}>
       <SpacesApiProvider api={api}>
         <MemoryRouter initialEntries={[path]}>
           <Routes>
-            <Route path="/s/:spaceId/*" element={<Sidebar />} />
-            <Route path="*" element={<Sidebar />} />
+            <Route path="/s/:spaceId/*" element={<Sidebar hasPendingInvitations={hasPendingInvitations} />} />
+            <Route path="*" element={<Sidebar hasPendingInvitations={hasPendingInvitations} />} />
           </Routes>
         </MemoryRouter>
       </SpacesApiProvider>
@@ -150,6 +150,20 @@ describe('Sidebar — Paramètres sub-navigation', () => {
 
     const parentLink = screen.getByRole('link', { name: /nav\.settings$/ })
     expect(parentLink.className).toContain('bg-accent-dim')
+  })
+})
+
+describe('Sidebar — pending invitations badge', () => {
+  it('shows a badge on the groups entry when there are pending invitations', () => {
+    withUser('USER')
+    renderSidebar('/administration/users', fakeApi(), true)
+    expect(screen.getByText('nav.pending_invitations')).toBeDefined()
+  })
+
+  it('shows no badge when there are no pending invitations', () => {
+    withUser('USER')
+    renderSidebar('/administration/users', fakeApi(), false)
+    expect(screen.queryByText('nav.pending_invitations')).toBeNull()
   })
 })
 
