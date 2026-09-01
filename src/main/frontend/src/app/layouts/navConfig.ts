@@ -25,12 +25,22 @@ export interface NavItemConfig {
 // Organisation, Documents).
 //
 // Order follows the mockup's NAV_DEFS, filtered down to what actually
-// exists: Cuisine, then Membres & groupes, then Administration, then
-// Paramètres. The mockup has exactly one "Membres & groupes" entry, no
-// separate per-space "Membres" item: /spaces already lets you drill into a
-// group to reach its members page (SpaceListSection → SpaceMembersPage),
-// the same "click a group card to open its detail" flow the mockup uses.
+// exists: Organisation, then Cuisine, then Membres & groupes, then
+// Administration, then Paramètres. The mockup has exactly one "Membres &
+// groupes" entry, no separate per-space "Membres" item: /spaces already
+// lets you drill into a group to reach its members page (SpaceListSection
+// → SpaceMembersPage), the same "click a group card to open its detail"
+// flow the mockup uses.
 export const NAV_CONFIG: NavItemConfig[] = [
+  {
+    id: 'nav:organisation',
+    to: (spaceId) => (spaceId ? ROUTES.spaceOrganisationCourses(spaceId) : undefined),
+    icon: ShoppingCart,
+    labelKey: 'nav.organisation',
+    children: [
+      { id: 'nav:organisation:courses', to: (spaceId) => (spaceId ? ROUTES.spaceOrganisationCourses(spaceId) : undefined), icon: ShoppingCart, labelKey: 'nav.organisation_courses' },
+    ],
+  },
   {
     id: 'nav:kitchen',
     to: (spaceId) => (spaceId ? ROUTES.spaceKitchenRecipes(spaceId) : undefined),
@@ -39,15 +49,6 @@ export const NAV_CONFIG: NavItemConfig[] = [
     children: [
       { id: 'nav:kitchen:recipes', to: (spaceId) => (spaceId ? ROUTES.spaceKitchenRecipes(spaceId) : undefined), icon: CookingPot, labelKey: 'nav.kitchen_recipes' },
       { id: 'nav:kitchen:menu', to: (spaceId) => (spaceId ? ROUTES.spaceKitchenMenu(spaceId) : undefined), icon: Calendar, labelKey: 'nav.kitchen_menu' },
-    ],
-  },
-  {
-    id: 'nav:organisation',
-    to: (spaceId) => (spaceId ? ROUTES.spaceOrganisationCourses(spaceId) : undefined),
-    icon: ShoppingCart,
-    labelKey: 'nav.organisation',
-    children: [
-      { id: 'nav:organisation:courses', to: (spaceId) => (spaceId ? ROUTES.spaceOrganisationCourses(spaceId) : undefined), icon: ShoppingCart, labelKey: 'nav.organisation_courses' },
     ],
   },
   { id: 'nav:spaces', to: () => ROUTES.SPACES, icon: Users, labelKey: 'nav.groups' },
