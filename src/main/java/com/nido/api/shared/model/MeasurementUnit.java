@@ -1,4 +1,4 @@
-package com.nido.api.kitchen.domain.model;
+package com.nido.api.shared.model;
 
 import java.math.BigDecimal;
 

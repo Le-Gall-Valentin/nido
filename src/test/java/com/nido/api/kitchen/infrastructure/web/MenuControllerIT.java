@@ -5,7 +5,7 @@ import com.nido.api.IntegrationTestConfig;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
-import com.nido.api.kitchen.domain.model.MeasurementUnit;
+import com.nido.api.shared.model.MeasurementUnit;
 import com.nido.api.kitchen.domain.model.RecipeCategory;
 import com.nido.api.kitchen.infrastructure.persistence.entity.RecipeEntity;
 import com.nido.api.kitchen.infrastructure.persistence.entity.RecipeIngredientEntity;

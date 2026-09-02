@@ -1,5 +1,7 @@
 package com.nido.api.kitchen.domain.model;
 
+import com.nido.api.shared.model.MeasurementUnit;
+
 import java.math.BigDecimal;
 import java.util.Objects;
 

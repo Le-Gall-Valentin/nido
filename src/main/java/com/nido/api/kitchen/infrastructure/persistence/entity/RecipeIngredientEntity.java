@@ -1,6 +1,6 @@
 package com.nido.api.kitchen.infrastructure.persistence.entity;
 
-import com.nido.api.kitchen.domain.model.MeasurementUnit;
+import com.nido.api.shared.model.MeasurementUnit;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
