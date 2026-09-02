@@ -14,5 +14,10 @@
     "copy_submit": "Copier",
     "move_submit": "Déplacer",
     "error": "Une erreur est survenue. Réessayez."
+  },
+  "unit": {
+    "GRAM": "g", "KILOGRAM": "kg", "MILLILITER": "ml", "CENTILITER": "cl", "LITER": "l",
+    "PIECE": "pièce(s)", "SLICE": "tranche(s)", "TABLESPOON": "c. à s.", "TEASPOON": "c. à c.",
+    "PINCH": "pincée(s)", "SACHET": "sachet(s)"
   }
 }

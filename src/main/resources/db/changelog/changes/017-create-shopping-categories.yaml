@@ -1,0 +1,58 @@
+databaseChangeLog:
+  - changeSet:
+      id: 017-create-shopping-categories
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: shopping_categories
+      changes:
+        - createTable:
+            tableName: shopping_categories
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(60)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: position
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fallback
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: shopping_categories
+            indexName: idx_shopping_categories_space_id
+            columns:
+              - column:
+                  name: space_id
+        - addForeignKeyConstraint:
+            baseTableName: shopping_categories
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_shopping_categories_space
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: shopping_categories
+            cascadeConstraints: true

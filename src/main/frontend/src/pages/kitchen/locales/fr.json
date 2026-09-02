@@ -41,6 +41,7 @@
     "title": "Menu de la semaine", "previous_week": "Semaine précédente", "next_week": "Semaine suivante",
     "add_meal": "Ajouter un repas", "confirm_add": "Ajouter", "remove_meal": "Retirer ce repas",
     "portions_label": "Portions", "shopping_list_title": "Courses à prévoir",
-    "shopping_list_subtitle": "Quantités ajustées au nombre de personnes de chaque repas.", "shopping_list_empty": "Planifiez un repas pour voir la liste apparaître."
+    "shopping_list_subtitle": "Quantités ajustées au nombre de personnes de chaque repas.", "shopping_list_empty": "Planifiez un repas pour voir la liste apparaître.",
+    "export_to_shopping_list": "Envoyer vers la liste de courses"
   }
 }

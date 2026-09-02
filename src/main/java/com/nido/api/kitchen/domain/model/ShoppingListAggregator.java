@@ -1,5 +1,8 @@
 package com.nido.api.kitchen.domain.model;
 
+import com.nido.api.shared.model.MeasurementUnit;
+import com.nido.api.shared.model.UnitFamily;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.Normalizer;

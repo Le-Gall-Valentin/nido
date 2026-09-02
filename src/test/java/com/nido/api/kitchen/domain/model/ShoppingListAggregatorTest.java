@@ -1,5 +1,6 @@
 package com.nido.api.kitchen.domain.model;
 
+import com.nido.api.shared.model.MeasurementUnit;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;

@@ -1,0 +1,178 @@
+package com.nido.api.shopping.infrastructure.persistence.adapter;
+
+import com.nido.api.IntegrationTestConfig;
+import com.nido.api.shopping.domain.model.AddShoppingItemCommand;
+import com.nido.api.shopping.domain.model.ShoppingItem;
+import com.nido.api.shopping.domain.model.UpdateShoppingItemCommand;
+import com.nido.api.shared.model.MeasurementUnit;
+import com.nido.api.space.domain.model.SpaceType;
+import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
+import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@IntegrationTestConfig
+class ShoppingItemRepositoryAdapterIT {
+
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
+
+    @Container
+    @ServiceConnection
+    @SuppressWarnings("resource")
+    static GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
+
+    @Autowired ShoppingItemRepositoryAdapter adapter;
+    @Autowired ShoppingCategoryRepositoryAdapter categoryAdapter;
+    @Autowired SpaceJpaRepository spaceJpaRepository;
+
+    private UUID spaceId;
+    private UUID categoryId;
+    private UUID otherCategoryId;
+
+    @BeforeEach
+    void setUp() {
+        SpaceEntity space = new SpaceEntity();
+        space.setType(SpaceType.SHARED);
+        space.setName("Chez Valentin");
+        space.setAccent("#c17a5c");
+        space.setGlyph("🏡");
+        spaceId = spaceJpaRepository.saveAndFlush(space).getId();
+        categoryId = categoryAdapter.create(spaceId, "Épicerie", false).id();
+        otherCategoryId = categoryAdapter.create(spaceId, "Maison & divers", true).id();
+    }
+
+    @Test
+    void add_assigns_incrementing_position_within_the_same_category() {
+        ShoppingItem first = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", new BigDecimal("500"), MeasurementUnit.GRAM));
+        ShoppingItem second = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null, null));
+
+        assertThat(first.position()).isZero();
+        assertThat(second.position()).isEqualTo(1);
+        assertThat(second.quantity()).isNull();
+        assertThat(second.unit()).isNull();
+    }
+
+    @Test
+    void add_allows_a_quantity_without_a_unit() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Œufs", new BigDecimal("6"), null));
+
+        assertThat(created.quantity()).isEqualByComparingTo(new BigDecimal("6"));
+        assertThat(created.unit()).isNull();
+    }
+
+    @Test
+    void add_allows_a_unit_without_a_quantity() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Farine", null, MeasurementUnit.KILOGRAM));
+
+        assertThat(created.quantity()).isNull();
+        assertThat(created.unit()).isEqualTo(MeasurementUnit.KILOGRAM);
+    }
+
+    @Test
+    void add_and_findById_round_trip_the_quantity_scale_correctly() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", new BigDecimal("500"), MeasurementUnit.GRAM));
+
+        // Read back through a fresh query, not the in-memory object `add` returned — this is
+        // what actually exercises the NUMERIC(10,3) column's scale on the way out of Postgres.
+        ShoppingItem reread = adapter.findById(created.id()).orElseThrow();
+
+        assertThat(reread.quantity()).isEqualByComparingTo(new BigDecimal("500"));
+        assertThat(reread.unit()).isEqualTo(MeasurementUnit.GRAM);
+    }
+
+    @Test
+    void update_replaces_name_quantity_and_category() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", new BigDecimal("500"), MeasurementUnit.GRAM));
+
+        ShoppingItem updated = adapter.update(new UpdateShoppingItemCommand(created.id(), spaceId, otherCategoryId, "Pâtes complètes", new BigDecimal("1"), MeasurementUnit.KILOGRAM));
+
+        assertThat(updated.categoryId()).isEqualTo(otherCategoryId);
+        assertThat(updated.name()).isEqualTo("Pâtes complètes");
+        assertThat(updated.quantity()).isEqualByComparingTo(new BigDecimal("1"));
+        assertThat(updated.unit()).isEqualTo(MeasurementUnit.KILOGRAM);
+    }
+
+    @Test
+    void toggleDone_flips_the_flag_each_call() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+
+        adapter.toggleDone(created.id());
+        assertThat(adapter.findById(created.id())).get().extracting(ShoppingItem::done).isEqualTo(true);
+
+        adapter.toggleDone(created.id());
+        assertThat(adapter.findById(created.id())).get().extracting(ShoppingItem::done).isEqualTo(false);
+    }
+
+    @Test
+    void findBySpaceIdAndDoneFalse_excludes_done_items() {
+        ShoppingItem pending = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+        ShoppingItem done = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null, null));
+        adapter.toggleDone(done.id());
+
+        assertThat(adapter.findBySpaceIdAndDoneFalse(spaceId)).extracting(ShoppingItem::id).containsExactly(pending.id());
+    }
+
+    @Test
+    void delete_removes_the_item() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+
+        adapter.delete(created.id());
+
+        assertThat(adapter.findById(created.id())).isEmpty();
+    }
+
+    @Test
+    void deleteDoneBySpaceId_only_removes_done_items() {
+        ShoppingItem pending = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+        ShoppingItem done = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null, null));
+        adapter.toggleDone(done.id());
+
+        adapter.deleteDoneBySpaceId(spaceId);
+
+        assertThat(adapter.findBySpaceId(spaceId)).extracting(ShoppingItem::id).containsExactly(pending.id());
+    }
+
+    @Test
+    void deleteAllBySpaceId_removes_every_item() {
+        adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+        adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null, null));
+
+        adapter.deleteAllBySpaceId(spaceId);
+
+        assertThat(adapter.findBySpaceId(spaceId)).isEmpty();
+    }
+
+    @Test
+    void reassignCategory_moves_every_item_from_one_category_to_another() {
+        ShoppingItem itemA = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+        ShoppingItem itemB = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null, null));
+
+        adapter.reassignCategory(categoryId, otherCategoryId);
+
+        assertThat(adapter.findById(itemA.id())).get().extracting(ShoppingItem::categoryId).isEqualTo(otherCategoryId);
+        assertThat(adapter.findById(itemB.id())).get().extracting(ShoppingItem::categoryId).isEqualTo(otherCategoryId);
+    }
+
+    @Test
+    void deleting_the_space_cascades_its_items() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+
+        spaceJpaRepository.deleteById(spaceId);
+        spaceJpaRepository.flush();
+
+        assertThat(adapter.findById(created.id())).isEmpty();
+    }
+}

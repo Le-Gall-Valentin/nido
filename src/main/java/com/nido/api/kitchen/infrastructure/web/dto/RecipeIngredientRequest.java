@@ -1,6 +1,6 @@
 package com.nido.api.kitchen.infrastructure.web.dto;
 
-import com.nido.api.kitchen.domain.model.MeasurementUnit;
+import com.nido.api.shared.model.MeasurementUnit;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;

@@ -11,6 +11,8 @@
     "kitchen": "Kitchen",
     "kitchen_recipes": "Recipes",
     "kitchen_menu": "Menu",
+    "organisation": "Organisation",
+    "organisation_courses": "Shopping list",
     "pending_invitations": "Pending invitations"
   },
   "topbar": {

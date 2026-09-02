@@ -1,6 +1,6 @@
 package com.nido.api.kitchen.application.handler;
 
-import com.nido.api.kitchen.domain.model.MeasurementUnit;
+import com.nido.api.shared.model.MeasurementUnit;
 import com.nido.api.kitchen.domain.model.MenuEntry;
 import com.nido.api.kitchen.domain.model.Recipe;
 import com.nido.api.kitchen.domain.model.RecipeCategory;

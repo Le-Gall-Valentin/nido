@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Calendar, CookingPot, Lock, Settings, Shield, SlidersHorizontal, User, Users } from 'lucide-react'
+import { Calendar, CookingPot, Lock, Settings, Shield, ShoppingCart, SlidersHorizontal, User, Users } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 
 export interface NavItemConfig {
@@ -25,12 +25,22 @@ export interface NavItemConfig {
 // Organisation, Documents).
 //
 // Order follows the mockup's NAV_DEFS, filtered down to what actually
-// exists: Cuisine, then Membres & groupes, then Administration, then
-// Paramètres. The mockup has exactly one "Membres & groupes" entry, no
-// separate per-space "Membres" item: /spaces already lets you drill into a
-// group to reach its members page (SpaceListSection → SpaceMembersPage),
-// the same "click a group card to open its detail" flow the mockup uses.
+// exists: Organisation, then Cuisine, then Membres & groupes, then
+// Administration, then Paramètres. The mockup has exactly one "Membres &
+// groupes" entry, no separate per-space "Membres" item: /spaces already
+// lets you drill into a group to reach its members page (SpaceListSection
+// → SpaceMembersPage), the same "click a group card to open its detail"
+// flow the mockup uses.
 export const NAV_CONFIG: NavItemConfig[] = [
+  {
+    id: 'nav:organisation',
+    to: (spaceId) => (spaceId ? ROUTES.spaceOrganisationCourses(spaceId) : undefined),
+    icon: ShoppingCart,
+    labelKey: 'nav.organisation',
+    children: [
+      { id: 'nav:organisation:courses', to: (spaceId) => (spaceId ? ROUTES.spaceOrganisationCourses(spaceId) : undefined), icon: ShoppingCart, labelKey: 'nav.organisation_courses' },
+    ],
+  },
   {
     id: 'nav:kitchen',
     to: (spaceId) => (spaceId ? ROUTES.spaceKitchenRecipes(spaceId) : undefined),
