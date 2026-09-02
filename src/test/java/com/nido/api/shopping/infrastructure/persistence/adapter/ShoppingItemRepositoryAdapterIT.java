@@ -4,6 +4,7 @@ import com.nido.api.IntegrationTestConfig;
 import com.nido.api.shopping.domain.model.AddShoppingItemCommand;
 import com.nido.api.shopping.domain.model.ShoppingItem;
 import com.nido.api.shopping.domain.model.UpdateShoppingItemCommand;
+import com.nido.api.shared.model.MeasurementUnit;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
@@ -15,6 +16,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -54,28 +56,30 @@ class ShoppingItemRepositoryAdapterIT {
 
     @Test
     void add_assigns_incrementing_position_within_the_same_category() {
-        ShoppingItem first = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", "500 g"));
-        ShoppingItem second = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null));
+        ShoppingItem first = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", new BigDecimal("500"), MeasurementUnit.GRAM));
+        ShoppingItem second = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null, null));
 
         assertThat(first.position()).isZero();
         assertThat(second.position()).isEqualTo(1);
-        assertThat(second.quantityLabel()).isNull();
+        assertThat(second.quantity()).isNull();
+        assertThat(second.unit()).isNull();
     }
 
     @Test
     void update_replaces_name_quantity_and_category() {
-        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", "500 g"));
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", new BigDecimal("500"), MeasurementUnit.GRAM));
 
-        ShoppingItem updated = adapter.update(new UpdateShoppingItemCommand(created.id(), spaceId, otherCategoryId, "Pâtes complètes", "1 kg"));
+        ShoppingItem updated = adapter.update(new UpdateShoppingItemCommand(created.id(), spaceId, otherCategoryId, "Pâtes complètes", new BigDecimal("1"), MeasurementUnit.KILOGRAM));
 
         assertThat(updated.categoryId()).isEqualTo(otherCategoryId);
         assertThat(updated.name()).isEqualTo("Pâtes complètes");
-        assertThat(updated.quantityLabel()).isEqualTo("1 kg");
+        assertThat(updated.quantity()).isEqualByComparingTo(new BigDecimal("1"));
+        assertThat(updated.unit()).isEqualTo(MeasurementUnit.KILOGRAM);
     }
 
     @Test
     void toggleDone_flips_the_flag_each_call() {
-        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null));
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
 
         adapter.toggleDone(created.id());
         assertThat(adapter.findById(created.id())).get().extracting(ShoppingItem::done).isEqualTo(true);
@@ -86,8 +90,8 @@ class ShoppingItemRepositoryAdapterIT {
 
     @Test
     void findBySpaceIdAndDoneFalse_excludes_done_items() {
-        ShoppingItem pending = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null));
-        ShoppingItem done = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null));
+        ShoppingItem pending = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+        ShoppingItem done = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null, null));
         adapter.toggleDone(done.id());
 
         assertThat(adapter.findBySpaceIdAndDoneFalse(spaceId)).extracting(ShoppingItem::id).containsExactly(pending.id());
@@ -95,7 +99,7 @@ class ShoppingItemRepositoryAdapterIT {
 
     @Test
     void delete_removes_the_item() {
-        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null));
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
 
         adapter.delete(created.id());
 
@@ -104,8 +108,8 @@ class ShoppingItemRepositoryAdapterIT {
 
     @Test
     void deleteDoneBySpaceId_only_removes_done_items() {
-        ShoppingItem pending = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null));
-        ShoppingItem done = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null));
+        ShoppingItem pending = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+        ShoppingItem done = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null, null));
         adapter.toggleDone(done.id());
 
         adapter.deleteDoneBySpaceId(spaceId);
@@ -115,8 +119,8 @@ class ShoppingItemRepositoryAdapterIT {
 
     @Test
     void deleteAllBySpaceId_removes_every_item() {
-        adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null));
-        adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null));
+        adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+        adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null, null));
 
         adapter.deleteAllBySpaceId(spaceId);
 
@@ -125,8 +129,8 @@ class ShoppingItemRepositoryAdapterIT {
 
     @Test
     void reassignCategory_moves_every_item_from_one_category_to_another() {
-        ShoppingItem itemA = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null));
-        ShoppingItem itemB = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null));
+        ShoppingItem itemA = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+        ShoppingItem itemB = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null, null));
 
         adapter.reassignCategory(categoryId, otherCategoryId);
 
@@ -136,7 +140,7 @@ class ShoppingItemRepositoryAdapterIT {
 
     @Test
     void deleting_the_space_cascades_its_items() {
-        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null));
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
 
         spaceJpaRepository.deleteById(spaceId);
         spaceJpaRepository.flush();

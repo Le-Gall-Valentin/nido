@@ -88,11 +88,13 @@ class ShoppingItemControllerIT {
 
     @Test
     void a_member_can_add_toggle_and_delete_an_item() throws Exception {
-        String body = "{\"categoryId\":\"" + categoryId + "\",\"name\":\"Pâtes\",\"quantityLabel\":\"500 g\"}";
+        String body = "{\"categoryId\":\"" + categoryId + "\",\"name\":\"Pâtes\",\"quantity\":500,\"unit\":\"GRAM\"}";
         String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/shopping/items")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.name").value("Pâtes"))
+            .andExpect(jsonPath("$.quantity").value(500))
+            .andExpect(jsonPath("$.unit").value("GRAM"))
             .andReturn().getResponse().getContentAsString();
         String itemId = objectMapper.readTree(created).get("id").asText();
 
@@ -128,21 +130,23 @@ class ShoppingItemControllerIT {
 
     @Test
     void importing_from_menu_upserts_by_normalized_name_and_never_touches_done_items() throws Exception {
-        String firstImport = "{\"lines\":[{\"name\":\"Poulet\",\"quantityLabel\":\"800 g\",\"categoryId\":\"" + categoryId + "\"}]}";
+        String firstImport = "{\"lines\":[{\"name\":\"Poulet\",\"quantity\":800,\"unit\":\"GRAM\",\"categoryId\":\"" + categoryId + "\"}]}";
         mockMvc.perform(post("/api/spaces/" + spaceId + "/shopping/items/import-from-menu")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(firstImport))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].quantityLabel").value("800 g"));
+            .andExpect(jsonPath("$[0].quantity").value(800))
+            .andExpect(jsonPath("$[0].unit").value("GRAM"));
 
-        String secondImport = "{\"lines\":[{\"name\":\"Poulets\",\"quantityLabel\":\"1 kg\",\"categoryId\":\"" + categoryId + "\"}]}";
+        String secondImport = "{\"lines\":[{\"name\":\"Poulets\",\"quantity\":1,\"unit\":\"KILOGRAM\",\"categoryId\":\"" + categoryId + "\"}]}";
         mockMvc.perform(post("/api/spaces/" + spaceId + "/shopping/items/import-from-menu")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(secondImport))
             .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/spaces/" + spaceId + "/shopping/items").cookie(accessTokenFor(aliceId)))
             .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].quantityLabel").value("1 kg"));
+            .andExpect(jsonPath("$[0].quantity").value(1))
+            .andExpect(jsonPath("$[0].unit").value("KILOGRAM"));
     }
 
     @Test

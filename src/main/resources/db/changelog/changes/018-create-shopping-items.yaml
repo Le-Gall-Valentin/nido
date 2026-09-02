@@ -34,8 +34,11 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
-                  name: quantity_label
-                  type: VARCHAR(40)
+                  name: quantity
+                  type: NUMERIC(10,3)
+              - column:
+                  name: unit
+                  type: VARCHAR(20)
               - column:
                   name: done
                   type: BOOLEAN
@@ -47,6 +50,9 @@ databaseChangeLog:
                   type: INT
                   constraints:
                     nullable: false
+        - sql:
+            sql: ALTER TABLE shopping_items ADD CONSTRAINT chk_shopping_items_unit CHECK (unit IN ('GRAM', 'KILOGRAM', 'MILLILITER', 'CENTILITER', 'LITER', 'PIECE', 'SLICE', 'TABLESPOON', 'TEASPOON', 'PINCH', 'SACHET'))
+            splitStatements: false
         - createIndex:
             tableName: shopping_items
             indexName: idx_shopping_items_space_id_category_id

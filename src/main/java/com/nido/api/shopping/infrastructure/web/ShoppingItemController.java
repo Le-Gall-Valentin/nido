@@ -87,7 +87,7 @@ public class ShoppingItemController {
             @PathVariable UUID spaceId, @Valid @RequestBody AddShoppingItemRequest request,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
         ShoppingItem created = addShoppingItemUseCase.add(
-            new AddShoppingItemCommand(spaceId, request.categoryId(), request.name(), request.quantityLabel()), membership);
+            new AddShoppingItemCommand(spaceId, request.categoryId(), request.name(), request.quantity(), request.unit()), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(ShoppingItemResponse.from(created));
     }
 
@@ -98,7 +98,7 @@ public class ShoppingItemController {
             @PathVariable UUID spaceId, @PathVariable UUID itemId, @Valid @RequestBody UpdateShoppingItemRequest request,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
         ShoppingItem updated = updateShoppingItemUseCase.update(
-            new UpdateShoppingItemCommand(itemId, spaceId, request.categoryId(), request.name(), request.quantityLabel()), membership);
+            new UpdateShoppingItemCommand(itemId, spaceId, request.categoryId(), request.name(), request.quantity(), request.unit()), membership);
         return ResponseEntity.ok(ShoppingItemResponse.from(updated));
     }
 
@@ -147,7 +147,7 @@ public class ShoppingItemController {
             @PathVariable UUID spaceId, @Valid @RequestBody ImportShoppingItemsRequest request,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
         List<ShoppingImportLine> lines = request.lines().stream()
-            .map(l -> new ShoppingImportLine(l.name(), l.quantityLabel(), l.categoryId())).toList();
+            .map(l -> new ShoppingImportLine(l.name(), l.quantity(), l.unit(), l.categoryId())).toList();
         List<ShoppingItem> imported = importShoppingItemsFromMenuUseCase.importItems(
             new ImportShoppingItemsCommand(spaceId, lines), membership);
         return ResponseEntity.ok(imported.stream().map(ShoppingItemResponse::from).toList());

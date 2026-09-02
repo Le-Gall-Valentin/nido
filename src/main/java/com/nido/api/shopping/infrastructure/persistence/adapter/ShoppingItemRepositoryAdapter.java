@@ -46,7 +46,8 @@ public class ShoppingItemRepositoryAdapter implements ShoppingItemRepository {
         e.setSpaceId(command.spaceId());
         e.setCategoryId(command.categoryId());
         e.setName(command.name());
-        e.setQuantityLabel(command.quantityLabel());
+        e.setQuantity(command.quantity());
+        e.setUnit(command.unit());
         e.setDone(false);
         e.setPosition((int) items.countBySpaceIdAndCategoryId(command.spaceId(), command.categoryId()));
         return toDomain(items.saveAndFlush(e));
@@ -57,7 +58,8 @@ public class ShoppingItemRepositoryAdapter implements ShoppingItemRepository {
         ShoppingItemEntity e = items.findById(command.itemId()).orElseThrow(ShoppingException.ItemNotFound::new);
         e.setCategoryId(command.categoryId());
         e.setName(command.name());
-        e.setQuantityLabel(command.quantityLabel());
+        e.setQuantity(command.quantity());
+        e.setUnit(command.unit());
         return toDomain(items.saveAndFlush(e));
     }
 
@@ -93,6 +95,6 @@ public class ShoppingItemRepositoryAdapter implements ShoppingItemRepository {
     }
 
     private static ShoppingItem toDomain(ShoppingItemEntity e) {
-        return new ShoppingItem(e.getId(), e.getSpaceId(), e.getCategoryId(), e.getName(), e.getQuantityLabel(), e.isDone(), e.getPosition());
+        return new ShoppingItem(e.getId(), e.getSpaceId(), e.getCategoryId(), e.getName(), e.getQuantity(), e.getUnit(), e.isDone(), e.getPosition());
     }
 }

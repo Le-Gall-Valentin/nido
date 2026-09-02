@@ -1,5 +1,6 @@
 package com.nido.api.shopping.application.handler;
 
+import com.nido.api.shared.model.MeasurementUnit;
 import com.nido.api.shopping.domain.model.ShoppingCategory;
 import com.nido.api.shopping.domain.model.ShoppingException;
 import com.nido.api.shopping.domain.model.ShoppingItem;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,15 +45,15 @@ class UpdateShoppingItemHandlerTest {
     }
 
     private ShoppingItem item(UUID inSpace) {
-        return new ShoppingItem(itemId, inSpace, categoryId, "Pâtes", "500 g", false, 0);
+        return new ShoppingItem(itemId, inSpace, categoryId, "Pâtes", new BigDecimal("500"), MeasurementUnit.GRAM, false, 0);
     }
 
     @Test
     void a_member_can_update_an_item_in_their_space() {
-        UpdateShoppingItemCommand command = new UpdateShoppingItemCommand(itemId, spaceId, categoryId, "Pâtes complètes", "1 kg");
+        UpdateShoppingItemCommand command = new UpdateShoppingItemCommand(itemId, spaceId, categoryId, "Pâtes complètes", new BigDecimal("1"), MeasurementUnit.KILOGRAM);
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item(spaceId)));
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(new ShoppingCategory(categoryId, spaceId, "Épicerie", 0, false)));
-        ShoppingItem updated = new ShoppingItem(itemId, spaceId, categoryId, "Pâtes complètes", "1 kg", false, 0);
+        ShoppingItem updated = new ShoppingItem(itemId, spaceId, categoryId, "Pâtes complètes", new BigDecimal("1"), MeasurementUnit.KILOGRAM, false, 0);
         when(itemRepository.update(command)).thenReturn(updated);
 
         ShoppingItem result = handler.update(command, membership(SpaceRole.MEMBER));
@@ -61,7 +63,7 @@ class UpdateShoppingItemHandlerTest {
 
     @Test
     void an_item_from_another_space_is_not_found() {
-        UpdateShoppingItemCommand command = new UpdateShoppingItemCommand(itemId, spaceId, categoryId, "Pâtes complètes", "1 kg");
+        UpdateShoppingItemCommand command = new UpdateShoppingItemCommand(itemId, spaceId, categoryId, "Pâtes complètes", new BigDecimal("1"), MeasurementUnit.KILOGRAM);
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item(UUID.randomUUID())));
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
@@ -70,7 +72,7 @@ class UpdateShoppingItemHandlerTest {
 
     @Test
     void a_target_category_from_another_space_is_not_found() {
-        UpdateShoppingItemCommand command = new UpdateShoppingItemCommand(itemId, spaceId, categoryId, "Pâtes complètes", "1 kg");
+        UpdateShoppingItemCommand command = new UpdateShoppingItemCommand(itemId, spaceId, categoryId, "Pâtes complètes", new BigDecimal("1"), MeasurementUnit.KILOGRAM);
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item(spaceId)));
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(new ShoppingCategory(categoryId, UUID.randomUUID(), "Épicerie", 0, false)));
 
@@ -80,7 +82,7 @@ class UpdateShoppingItemHandlerTest {
 
     @Test
     void a_viewer_cannot_update_an_item() {
-        UpdateShoppingItemCommand command = new UpdateShoppingItemCommand(itemId, spaceId, categoryId, "Pâtes complètes", "1 kg");
+        UpdateShoppingItemCommand command = new UpdateShoppingItemCommand(itemId, spaceId, categoryId, "Pâtes complètes", new BigDecimal("1"), MeasurementUnit.KILOGRAM);
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);

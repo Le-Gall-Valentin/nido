@@ -57,11 +57,11 @@ public class ImportShoppingItemsFromMenuHandler implements ImportShoppingItemsFr
                 .findFirst();
             if (match.isPresent()) {
                 ShoppingItem updated = itemRepository.update(new UpdateShoppingItemCommand(
-                    match.get().id(), command.spaceId(), line.categoryId(), match.get().name(), line.quantityLabel()));
+                    match.get().id(), command.spaceId(), line.categoryId(), match.get().name(), line.quantity(), line.unit()));
                 result.add(updated);
             } else {
                 ShoppingItem created = itemRepository.add(new AddShoppingItemCommand(
-                    command.spaceId(), line.categoryId(), line.name(), line.quantityLabel()));
+                    command.spaceId(), line.categoryId(), line.name(), line.quantity(), line.unit()));
                 result.add(created);
                 pending.add(created);
             }

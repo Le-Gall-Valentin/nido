@@ -1,5 +1,6 @@
 package com.nido.api.shopping.application.handler;
 
+import com.nido.api.shared.model.MeasurementUnit;
 import com.nido.api.shopping.domain.model.AddShoppingItemCommand;
 import com.nido.api.shopping.domain.model.ShoppingCategory;
 import com.nido.api.shopping.domain.model.ShoppingException;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,9 +45,9 @@ class AddShoppingItemHandlerTest {
 
     @Test
     void a_member_can_add_an_item_to_a_category_in_their_space() {
-        AddShoppingItemCommand command = new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", "500 g");
+        AddShoppingItemCommand command = new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", new BigDecimal("500"), MeasurementUnit.GRAM);
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(new ShoppingCategory(categoryId, spaceId, "Épicerie", 0, false)));
-        ShoppingItem created = new ShoppingItem(UUID.randomUUID(), spaceId, categoryId, "Pâtes", "500 g", false, 0);
+        ShoppingItem created = new ShoppingItem(UUID.randomUUID(), spaceId, categoryId, "Pâtes", new BigDecimal("500"), MeasurementUnit.GRAM, false, 0);
         when(itemRepository.add(command)).thenReturn(created);
 
         ShoppingItem result = handler.add(command, membership(SpaceRole.MEMBER));
@@ -55,7 +57,7 @@ class AddShoppingItemHandlerTest {
 
     @Test
     void a_category_from_another_space_is_not_found() {
-        AddShoppingItemCommand command = new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null);
+        AddShoppingItemCommand command = new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null);
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(new ShoppingCategory(categoryId, UUID.randomUUID(), "Épicerie", 0, false)));
 
         assertThatThrownBy(() -> handler.add(command, membership(SpaceRole.MEMBER)))
@@ -64,7 +66,7 @@ class AddShoppingItemHandlerTest {
 
     @Test
     void a_viewer_cannot_add_an_item() {
-        AddShoppingItemCommand command = new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null);
+        AddShoppingItemCommand command = new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null);
 
         assertThatThrownBy(() -> handler.add(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);

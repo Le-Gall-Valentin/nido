@@ -38,7 +38,7 @@ class ToggleShoppingItemDoneHandlerTest {
     }
 
     private ShoppingItem item(UUID inSpace) {
-        return new ShoppingItem(itemId, inSpace, UUID.randomUUID(), "Pâtes", null, false, 0);
+        return new ShoppingItem(itemId, inSpace, UUID.randomUUID(), "Pâtes", null, null, false, 0);
     }
 
     @Test

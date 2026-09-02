@@ -1,7 +1,10 @@
 package com.nido.api.shopping.infrastructure.persistence.entity;
 
+import com.nido.api.shared.model.MeasurementUnit;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -9,6 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.UuidGenerator;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
@@ -31,8 +35,12 @@ public class ShoppingItemEntity {
     @Column(nullable = false, length = 120)
     private String name;
 
-    @Column(name = "quantity_label", length = 40)
-    private String quantityLabel;
+    @Column(precision = 10, scale = 3)
+    private BigDecimal quantity;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private MeasurementUnit unit;
 
     @Column(nullable = false)
     private boolean done;
