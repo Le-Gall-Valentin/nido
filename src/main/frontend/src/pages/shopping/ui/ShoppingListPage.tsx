@@ -137,31 +137,33 @@ function ShoppingListPageContent() {
       <p className="mb-4 text-xs text-fg-3">{t('remaining_count', { count: remaining })}</p>
 
       {canWriteHere && (
-        <div className="mb-6 flex items-center gap-2">
+        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center">
           <Input
             label={t('add_item_placeholder')} srOnlyLabel
             value={newItemName} onChange={(e) => setNewItemName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleAddItem() }}
-            placeholder={t('add_item_placeholder')} aria-label={t('add_item_placeholder')} className="flex-1"
+            placeholder={t('add_item_placeholder')} aria-label={t('add_item_placeholder')} className="w-full sm:flex-1"
           />
-          <Input
-            label={t('quantity_label')} srOnlyLabel type="number" min={0}
-            value={newItemQuantity} onChange={(e) => setNewItemQuantity(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleAddItem() }}
-            placeholder={t('quantity_placeholder')} aria-label={t('quantity_label')} className="w-20"
-          />
-          <select value={newItemUnit} onChange={(e) => setNewItemUnit(e.target.value as MeasurementUnit | '')}
-            aria-label={t('unit_label')} className="rounded-[9px] border border-border bg-bg-1 px-2 py-2 text-xs">
-            <option value="">{t('unit_none')}</option>
-            {MEASUREMENT_UNITS.map((u) => <option key={u} value={u}>{tCommon(MEASUREMENT_UNIT_LABEL_KEY[u])}</option>)}
-          </select>
+          <div className="flex gap-2">
+            <Input
+              label={t('quantity_label')} srOnlyLabel type="number" min={0}
+              value={newItemQuantity} onChange={(e) => setNewItemQuantity(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAddItem() }}
+              placeholder={t('quantity_placeholder')} aria-label={t('quantity_label')} className="w-20"
+            />
+            <select value={newItemUnit} onChange={(e) => setNewItemUnit(e.target.value as MeasurementUnit | '')}
+              aria-label={t('unit_label')} className="flex-1 rounded-[9px] border border-border bg-bg-1 px-2 py-2 text-xs sm:flex-none">
+              <option value="">{t('unit_none')}</option>
+              {MEASUREMENT_UNITS.map((u) => <option key={u} value={u}>{tCommon(MEASUREMENT_UNIT_LABEL_KEY[u])}</option>)}
+            </select>
+          </div>
           <select value={effectiveCategoryId} onChange={(e) => setNewItemCategoryId(e.target.value)}
-            aria-label={t('category_label')} className="rounded-[9px] border border-border bg-bg-1 px-2 py-2 text-xs">
+            aria-label={t('category_label')} className="w-full rounded-[9px] border border-border bg-bg-1 px-2 py-2 text-xs sm:w-auto">
             {(categories ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <button type="button" onClick={handleAddItem} aria-label={t('add_item')}
-            className="grid size-9 place-items-center rounded-[10px] bg-accent text-bg-0">
-            <Plus className="size-4" />
+            className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-accent px-3 py-2 text-xs font-semibold text-bg-0 sm:size-9 sm:w-9 sm:shrink-0 sm:p-0">
+            <Plus className="size-4" /> <span className="sm:hidden">{t('add_item')}</span>
           </button>
         </div>
       )}
