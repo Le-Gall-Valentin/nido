@@ -88,6 +88,9 @@ class ShoppingItemControllerIT {
 
     @Test
     void a_member_can_add_toggle_and_delete_an_item() throws Exception {
+        // jsonPath(...).value(500) relies on Jackson serializing the BigDecimal quantity as a
+        // bare JSON number rather than a string — if that serialization ever changes, this
+        // assertion (and the others like it below) would need to switch to value("500").
         String body = "{\"categoryId\":\"" + categoryId + "\",\"name\":\"Pâtes\",\"quantity\":500,\"unit\":\"GRAM\"}";
         String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/shopping/items")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))

@@ -23,6 +23,9 @@ public class CreateShoppingCategoryHandler implements CreateShoppingCategoryUseC
     public ShoppingCategory create(UUID spaceId, String name, SpaceMembership caller) {
         caller.ensureSameSpace(spaceId);
         caller.ensureCanWrite();
+        // A space that has never had its categories listed yet still needs its
+        // fallback category to exist before a custom one can safely be deleted later.
+        DefaultShoppingCategorySeeder.seedIfMissing(categoryRepository, spaceId);
         return categoryRepository.create(spaceId, name, false);
     }
 }

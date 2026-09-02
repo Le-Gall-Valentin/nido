@@ -66,6 +66,34 @@ class ShoppingItemRepositoryAdapterIT {
     }
 
     @Test
+    void add_allows_a_quantity_without_a_unit() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Œufs", new BigDecimal("6"), null));
+
+        assertThat(created.quantity()).isEqualByComparingTo(new BigDecimal("6"));
+        assertThat(created.unit()).isNull();
+    }
+
+    @Test
+    void add_allows_a_unit_without_a_quantity() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Farine", null, MeasurementUnit.KILOGRAM));
+
+        assertThat(created.quantity()).isNull();
+        assertThat(created.unit()).isEqualTo(MeasurementUnit.KILOGRAM);
+    }
+
+    @Test
+    void add_and_findById_round_trip_the_quantity_scale_correctly() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", new BigDecimal("500"), MeasurementUnit.GRAM));
+
+        // Read back through a fresh query, not the in-memory object `add` returned — this is
+        // what actually exercises the NUMERIC(10,3) column's scale on the way out of Postgres.
+        ShoppingItem reread = adapter.findById(created.id()).orElseThrow();
+
+        assertThat(reread.quantity()).isEqualByComparingTo(new BigDecimal("500"));
+        assertThat(reread.unit()).isEqualTo(MeasurementUnit.GRAM);
+    }
+
+    @Test
     void update_replaces_name_quantity_and_category() {
         ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", new BigDecimal("500"), MeasurementUnit.GRAM));
 

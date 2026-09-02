@@ -7,11 +7,12 @@ import com.nido.api.space.domain.model.SpaceRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,16 +36,21 @@ class ListShoppingCategoriesHandlerTest {
     }
 
     @Test
-    void seeds_default_categories_the_first_time_a_space_has_none() {
+    void seeds_the_exact_default_category_names_in_order_the_first_time_a_space_has_none() {
         when(categoryRepository.existsBySpaceId(spaceId)).thenReturn(false);
         List<ShoppingCategory> seeded = List.of(new ShoppingCategory(UUID.randomUUID(), spaceId, "Maison & divers", 7, true));
         when(categoryRepository.findBySpaceId(spaceId)).thenReturn(seeded);
 
         List<ShoppingCategory> result = handler.list(membership());
 
-        InOrder order = inOrder(categoryRepository);
-        order.verify(categoryRepository, times(7)).create(eq(spaceId), anyString(), eq(false));
-        order.verify(categoryRepository).create(spaceId, "Maison & divers", true);
+        ArgumentCaptor<String> names = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Boolean> fallbacks = ArgumentCaptor.forClass(Boolean.class);
+        verify(categoryRepository, times(8)).create(eq(spaceId), names.capture(), fallbacks.capture());
+
+        List<String> expectedNames = new ArrayList<>(DefaultShoppingCategorySeeder.DEFAULT_CATEGORY_NAMES);
+        expectedNames.add(DefaultShoppingCategorySeeder.DEFAULT_FALLBACK_CATEGORY_NAME);
+        assertThat(names.getAllValues()).containsExactlyElementsOf(expectedNames);
+        assertThat(fallbacks.getAllValues()).containsExactly(false, false, false, false, false, false, false, true);
         assertThat(result).isEqualTo(seeded);
     }
 

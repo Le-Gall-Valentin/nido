@@ -50,6 +50,11 @@ databaseChangeLog:
                   type: INT
                   constraints:
                     nullable: false
+        # Kept in sync by hand with com.nido.api.shared.model.MeasurementUnit — migrations
+        # are immutable snapshots and must not depend on application code, so this list is
+        # duplicated here deliberately (same pattern as kitchen_recipe_ingredients' own
+        # chk_kitchen_recipe_ingredients_unit). Adding a MeasurementUnit value requires a
+        # new migration that ALTERs this constraint, not just a Java-side enum change.
         - sql:
             sql: ALTER TABLE shopping_items ADD CONSTRAINT chk_shopping_items_unit CHECK (unit IN ('GRAM', 'KILOGRAM', 'MILLILITER', 'CENTILITER', 'LITER', 'PIECE', 'SLICE', 'TABLESPOON', 'TEASPOON', 'PINCH', 'SACHET'))
             splitStatements: false

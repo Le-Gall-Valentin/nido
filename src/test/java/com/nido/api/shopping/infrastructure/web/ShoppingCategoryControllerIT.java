@@ -82,10 +82,18 @@ class ShoppingCategoryControllerIT {
     }
 
     @Test
-    void listing_categories_the_first_time_seeds_and_returns_the_defaults() throws Exception {
+    void listing_categories_the_first_time_seeds_and_returns_the_exact_defaults_in_order() throws Exception {
         mockMvc.perform(get("/api/spaces/" + spaceId + "/shopping/categories").cookie(accessTokenFor(aliceId)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(8))
+            .andExpect(jsonPath("$[0].name").value("Fruits & légumes"))
+            .andExpect(jsonPath("$[0].fallback").value(false))
+            .andExpect(jsonPath("$[1].name").value("Viande & poisson"))
+            .andExpect(jsonPath("$[2].name").value("Crémerie"))
+            .andExpect(jsonPath("$[3].name").value("Épicerie"))
+            .andExpect(jsonPath("$[4].name").value("Surgelés"))
+            .andExpect(jsonPath("$[5].name").value("Boissons"))
+            .andExpect(jsonPath("$[6].name").value("Hygiène & entretien"))
             .andExpect(jsonPath("$[7].name").value("Maison & divers"))
             .andExpect(jsonPath("$[7].fallback").value(true));
     }
@@ -108,6 +116,22 @@ class ShoppingCategoryControllerIT {
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Bricolage & jardin\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("Bricolage & jardin"));
+
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/shopping/categories/" + categoryId).cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void creating_a_category_directly_without_listing_first_still_seeds_a_fallback_so_deleting_it_later_succeeds() throws Exception {
+        // No GET /categories here — this space has never had its categories listed,
+        // only a direct POST. CreateShoppingCategoryHandler must seed the defaults
+        // (including the fallback) itself before creating the custom category, or
+        // deleting it below would 404 looking for a fallback that doesn't exist.
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/shopping/categories")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Bricolage\"}"))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+        String categoryId = objectMapper.readTree(created).get("id").asText();
 
         mockMvc.perform(delete("/api/spaces/" + spaceId + "/shopping/categories/" + categoryId).cookie(accessTokenFor(aliceId)))
             .andExpect(status().isNoContent());

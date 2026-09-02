@@ -16,8 +16,9 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -42,9 +43,14 @@ public class ImportShoppingItemsFromMenuHandler implements ImportShoppingItemsFr
         Set<UUID> validCategoryIds = categoryRepository.findBySpaceId(command.spaceId()).stream()
             .map(ShoppingCategory::id).collect(Collectors.toSet());
 
-        // Mutable working copy: a new line added earlier in this same batch must be
-        // matchable by a later line with the same normalized name too.
-        List<ShoppingItem> pending = new ArrayList<>(itemRepository.findBySpaceIdAndDoneFalse(command.spaceId()));
+        // Normalized once per pending item up front, then looked up by key per line —
+        // avoids renormalizing every pending item's name for every import line.
+        // putIfAbsent: a new line added earlier in this same batch must be matchable by
+        // a later line with the same normalized name too, and on a name collision the
+        // earliest-seen item keeps matching, same as the original ordered scan did.
+        Map<String, ShoppingItem> pendingByNormalizedName = new HashMap<>();
+        itemRepository.findBySpaceIdAndDoneFalse(command.spaceId())
+            .forEach(item -> pendingByNormalizedName.putIfAbsent(ShoppingItemNameNormalizer.normalize(item.name()), item));
 
         List<ShoppingItem> result = new ArrayList<>();
         for (ShoppingImportLine line : command.lines()) {
@@ -52,18 +58,16 @@ public class ImportShoppingItemsFromMenuHandler implements ImportShoppingItemsFr
                 throw new ShoppingException.CategoryNotFound();
             }
             String normalized = ShoppingItemNameNormalizer.normalize(line.name());
-            Optional<ShoppingItem> match = pending.stream()
-                .filter(item -> ShoppingItemNameNormalizer.normalize(item.name()).equals(normalized))
-                .findFirst();
-            if (match.isPresent()) {
+            ShoppingItem match = pendingByNormalizedName.get(normalized);
+            if (match != null) {
                 ShoppingItem updated = itemRepository.update(new UpdateShoppingItemCommand(
-                    match.get().id(), command.spaceId(), line.categoryId(), match.get().name(), line.quantity(), line.unit()));
+                    match.id(), command.spaceId(), line.categoryId(), match.name(), line.quantity(), line.unit()));
                 result.add(updated);
             } else {
                 ShoppingItem created = itemRepository.add(new AddShoppingItemCommand(
                     command.spaceId(), line.categoryId(), line.name(), line.quantity(), line.unit()));
                 result.add(created);
-                pending.add(created);
+                pendingByNormalizedName.put(normalized, created);
             }
         }
         return result;
