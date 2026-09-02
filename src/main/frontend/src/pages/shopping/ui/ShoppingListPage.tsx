@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Plus, Trash2, X, Check } from 'lucide-react'
 import { Alert, Spinner, Input } from '@/shared/ui'
+import { MEASUREMENT_UNITS, MEASUREMENT_UNIT_LABEL_KEY, type MeasurementUnit } from '@/shared/lib'
 import { useMySpaces } from '@/features/space-switcher'
 import { canWrite } from '@/entities/space'
 import {
@@ -26,6 +27,7 @@ export function ShoppingListPage({ api = shoppingApi }: ShoppingListPageProps = 
 
 function ShoppingListPageContent() {
   const { t } = useTranslation('shopping')
+  const { t: tCommon } = useTranslation('common')
   const { spaceId = '' } = useParams<{ spaceId: string }>()
   const { data: categories, isPending, isError } = useShoppingCategories(spaceId)
   const { data: items } = useShoppingItems(spaceId)
@@ -46,10 +48,20 @@ function ShoppingListPageContent() {
 
   const [actionError, setActionError] = useState(false)
   const [newItemName, setNewItemName] = useState('')
+  const [newItemQuantity, setNewItemQuantity] = useState('')
+  const [newItemUnit, setNewItemUnit] = useState<MeasurementUnit | ''>('')
   const [newItemCategoryId, setNewItemCategoryId] = useState('')
   const [newCategoryName, setNewCategoryName] = useState('')
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
+
+  function formatQuantity(item: ShoppingItem): string | null {
+    const parts = [
+      item.quantity != null ? String(item.quantity) : null,
+      item.unit ? tCommon(MEASUREMENT_UNIT_LABEL_KEY[item.unit]) : null,
+    ].filter((p): p is string => p != null)
+    return parts.length > 0 ? parts.join(' ') : null
+  }
 
   const itemsByCategory = useMemo(() => {
     const map = new Map<string, ShoppingItem[]>()
@@ -69,8 +81,10 @@ function ShoppingListPageContent() {
   function handleAddItem() {
     const name = newItemName.trim()
     if (!name || !effectiveCategoryId) return
-    runMutation(addItem.mutateAsync({ categoryId: effectiveCategoryId, name }))
-      .then(() => { setNewItemName(''); setNewItemCategoryId(effectiveCategoryId) })
+    const quantity = newItemQuantity.trim() === '' ? null : Number(newItemQuantity)
+    const unit = newItemUnit === '' ? null : newItemUnit
+    runMutation(addItem.mutateAsync({ categoryId: effectiveCategoryId, name, quantity, unit }))
+      .then(() => { setNewItemName(''); setNewItemQuantity(''); setNewItemUnit(''); setNewItemCategoryId(effectiveCategoryId) })
       .catch(() => {})
   }
 
@@ -122,6 +136,17 @@ function ShoppingListPageContent() {
             onKeyDown={(e) => { if (e.key === 'Enter') handleAddItem() }}
             placeholder={t('add_item_placeholder')} aria-label={t('add_item_placeholder')} className="flex-1"
           />
+          <Input
+            label={t('quantity_label')} srOnlyLabel type="number" min={0}
+            value={newItemQuantity} onChange={(e) => setNewItemQuantity(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddItem() }}
+            placeholder={t('quantity_placeholder')} aria-label={t('quantity_label')} className="w-20"
+          />
+          <select value={newItemUnit} onChange={(e) => setNewItemUnit(e.target.value as MeasurementUnit | '')}
+            aria-label={t('unit_label')} className="rounded-[9px] border border-border bg-bg-1 px-2 py-2 text-xs">
+            <option value="">{t('unit_none')}</option>
+            {MEASUREMENT_UNITS.map((u) => <option key={u} value={u}>{tCommon(MEASUREMENT_UNIT_LABEL_KEY[u])}</option>)}
+          </select>
           <select value={effectiveCategoryId} onChange={(e) => setNewItemCategoryId(e.target.value)}
             aria-label={t('category_label')} className="rounded-[9px] border border-border bg-bg-1 px-2 py-2 text-xs">
             {(categories ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -182,11 +207,11 @@ function ShoppingListPageContent() {
                         {item.done && <Check className="size-3.5 text-accent" />}
                       </button>
                       <span className={`flex-1 text-sm ${item.done ? 'text-fg-4 line-through' : 'text-fg-1'}`}>{item.name}</span>
-                      {item.quantityLabel && <span className="text-xs text-fg-3">{item.quantityLabel}</span>}
+                      {formatQuantity(item) && <span className="text-xs text-fg-3">{formatQuantity(item)}</span>}
                       {canWriteHere && (
                         <select value={item.categoryId}
                           onChange={(e) => runMutation(updateItem.mutateAsync({
-                            itemId: item.id, categoryId: e.target.value, name: item.name, quantityLabel: item.quantityLabel,
+                            itemId: item.id, categoryId: e.target.value, name: item.name, quantity: item.quantity, unit: item.unit,
                           })).catch(() => {})}
                           aria-label={t('recategorize', { name: item.name })} className="rounded-md border border-border bg-bg-1 px-1 py-1 text-xs">
                           {(categories ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

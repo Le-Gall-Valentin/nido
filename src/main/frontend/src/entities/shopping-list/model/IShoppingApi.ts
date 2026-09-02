@@ -1,3 +1,4 @@
+import type { MeasurementUnit } from '@/shared/lib'
 import type { ShoppingCategory, ShoppingImportLine, ShoppingItem } from './types'
 
 /**
@@ -12,8 +13,8 @@ export interface IShoppingApi {
   deleteCategory(spaceId: string, categoryId: string): Promise<void>
 
   listItems(spaceId: string): Promise<ShoppingItem[]>
-  addItem(spaceId: string, categoryId: string, name: string, quantityLabel?: string | null): Promise<ShoppingItem>
-  updateItem(spaceId: string, itemId: string, categoryId: string, name: string, quantityLabel?: string | null): Promise<ShoppingItem>
+  addItem(spaceId: string, categoryId: string, name: string, quantity?: number | null, unit?: MeasurementUnit | null): Promise<ShoppingItem>
+  updateItem(spaceId: string, itemId: string, categoryId: string, name: string, quantity?: number | null, unit?: MeasurementUnit | null): Promise<ShoppingItem>
   toggleItemDone(spaceId: string, itemId: string): Promise<void>
   deleteItem(spaceId: string, itemId: string): Promise<void>
   clearDoneItems(spaceId: string): Promise<void>

@@ -50,16 +50,16 @@ export const shoppingApi: IShoppingApi = {
     } catch (error) { handleError(error) }
   },
 
-  async addItem(spaceId, categoryId, name, quantityLabel) {
+  async addItem(spaceId, categoryId, name, quantity, unit) {
     try {
-      const res = await client.post<ShoppingItem>(`/spaces/${spaceId}/shopping/items`, { categoryId, name, quantityLabel })
+      const res = await client.post<ShoppingItem>(`/spaces/${spaceId}/shopping/items`, { categoryId, name, quantity, unit })
       return res.data
     } catch (error) { handleError(error) }
   },
 
-  async updateItem(spaceId, itemId, categoryId, name, quantityLabel) {
+  async updateItem(spaceId, itemId, categoryId, name, quantity, unit) {
     try {
-      const res = await client.patch<ShoppingItem>(`/spaces/${spaceId}/shopping/items/${itemId}`, { categoryId, name, quantityLabel })
+      const res = await client.patch<ShoppingItem>(`/spaces/${spaceId}/shopping/items/${itemId}`, { categoryId, name, quantity, unit })
       return res.data
     } catch (error) { handleError(error) }
   },

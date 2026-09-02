@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import type { MeasurementUnit } from '@/shared/lib'
 import { useShoppingApi } from './shoppingApiContext'
 import { shoppingItemsKey } from './useShoppingItems'
 import type { ShoppingImportLine } from './types'
@@ -7,8 +8,8 @@ export function useAddItem(spaceId: string) {
   const api = useShoppingApi()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ categoryId, name, quantityLabel }: { categoryId: string; name: string; quantityLabel?: string | null }) =>
-      api.addItem(spaceId, categoryId, name, quantityLabel),
+    mutationFn: ({ categoryId, name, quantity, unit }: { categoryId: string; name: string; quantity?: number | null; unit?: MeasurementUnit | null }) =>
+      api.addItem(spaceId, categoryId, name, quantity, unit),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: shoppingItemsKey(spaceId) }),
   })
 }
@@ -17,8 +18,8 @@ export function useUpdateItem(spaceId: string) {
   const api = useShoppingApi()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ itemId, categoryId, name, quantityLabel }: { itemId: string; categoryId: string; name: string; quantityLabel?: string | null }) =>
-      api.updateItem(spaceId, itemId, categoryId, name, quantityLabel),
+    mutationFn: ({ itemId, categoryId, name, quantity, unit }: { itemId: string; categoryId: string; name: string; quantity?: number | null; unit?: MeasurementUnit | null }) =>
+      api.updateItem(spaceId, itemId, categoryId, name, quantity, unit),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: shoppingItemsKey(spaceId) }),
   })
 }

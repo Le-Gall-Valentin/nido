@@ -19,7 +19,7 @@ const CATEGORIES: ShoppingCategory[] = [
 ]
 
 const ITEMS: ShoppingItem[] = [
-  { id: 'i1', categoryId: 'cat-1', name: 'Pâtes', quantityLabel: '500 g', done: false, position: 0 },
+  { id: 'i1', categoryId: 'cat-1', name: 'Pâtes', quantity: 500, unit: 'GRAM', done: false, position: 0 },
 ]
 
 const CURRENT_SPACE: SpaceSummary = {
@@ -77,7 +77,7 @@ describe('ShoppingListPage', () => {
     expect(screen.getByText('Pâtes')).toBeDefined()
   })
 
-  it('adds an item to the selected category', async () => {
+  it('adds an item with no quantity to the selected category', async () => {
     const api = fakeApi({ addItem: vi.fn().mockResolvedValue({ ...ITEMS[0], id: 'i2', name: 'Riz' }) })
     setup(api)
     await screen.findByText('Pâtes')
@@ -85,17 +85,30 @@ describe('ShoppingListPage', () => {
     fireEvent.change(screen.getByLabelText('add_item_placeholder'), { target: { value: 'Riz' } })
     fireEvent.click(screen.getByLabelText('add_item'))
 
-    await waitFor(() => expect(api.addItem).toHaveBeenCalledWith('space-1', 'cat-1', 'Riz', undefined))
+    await waitFor(() => expect(api.addItem).toHaveBeenCalledWith('space-1', 'cat-1', 'Riz', null, null))
   })
 
-  it('recategorizes an item via its row dropdown', async () => {
+  it('adds an item with an optional quantity and unit', async () => {
+    const api = fakeApi({ addItem: vi.fn().mockResolvedValue({ ...ITEMS[0], id: 'i2', name: 'Riz' }) })
+    setup(api)
+    await screen.findByText('Pâtes')
+
+    fireEvent.change(screen.getByLabelText('add_item_placeholder'), { target: { value: 'Riz' } })
+    fireEvent.change(screen.getByLabelText('quantity_label'), { target: { value: '300' } })
+    fireEvent.change(screen.getByLabelText('unit_label'), { target: { value: 'GRAM' } })
+    fireEvent.click(screen.getByLabelText('add_item'))
+
+    await waitFor(() => expect(api.addItem).toHaveBeenCalledWith('space-1', 'cat-1', 'Riz', 300, 'GRAM'))
+  })
+
+  it('recategorizes an item via its row dropdown, preserving its quantity and unit', async () => {
     const api = fakeApi()
     setup(api)
     await screen.findByText('Pâtes')
 
     fireEvent.change(screen.getByLabelText('recategorize'), { target: { value: 'cat-2' } })
 
-    await waitFor(() => expect(api.updateItem).toHaveBeenCalledWith('space-1', 'i1', 'cat-2', 'Pâtes', '500 g'))
+    await waitFor(() => expect(api.updateItem).toHaveBeenCalledWith('space-1', 'i1', 'cat-2', 'Pâtes', 500, 'GRAM'))
   })
 
   it('toggles an item done', async () => {

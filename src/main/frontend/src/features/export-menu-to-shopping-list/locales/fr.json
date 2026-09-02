@@ -4,6 +4,8 @@
   "bulk_category_label": "Catégorie pour les articles importés",
   "include_line": "Inclure « {{name}} »",
   "quantity_for": "Quantité de « {{name}} »",
+  "unit_for": "Unité de « {{name}} »",
+  "unit_none": "—",
   "category_for": "Catégorie de « {{name}} »",
   "cancel": "Annuler",
   "confirm": "Envoyer vers les courses",

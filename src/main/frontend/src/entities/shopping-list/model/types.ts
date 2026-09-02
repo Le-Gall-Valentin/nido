@@ -1,3 +1,5 @@
+import type { MeasurementUnit } from '@/shared/lib'
+
 export interface ShoppingCategory {
   id: string
   name: string
@@ -9,13 +11,15 @@ export interface ShoppingItem {
   id: string
   categoryId: string
   name: string
-  quantityLabel?: string | null
+  quantity?: number | null
+  unit?: MeasurementUnit | null
   done: boolean
   position: number
 }
 
 export interface ShoppingImportLine {
   name: string
-  quantityLabel?: string | null
+  quantity?: number | null
+  unit?: MeasurementUnit | null
   categoryId: string
 }

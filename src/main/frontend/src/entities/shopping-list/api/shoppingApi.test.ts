@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { client } from '@/shared/api'
 import { NotFoundError, ForbiddenError, RateLimitError, NetworkError } from '@/shared/lib'
 import { shoppingApi } from './shoppingApi'
+import type { ShoppingImportLine } from '../model/types'
 
 vi.mock('@/shared/api', () => ({
   client: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
@@ -58,17 +59,17 @@ describe('shoppingApi — items', () => {
   it('adds an item', async () => {
     mockClient.post.mockResolvedValue({ data: { id: 'i1' } })
 
-    await shoppingApi.addItem('space-1', 'c1', 'Pâtes', '500 g')
+    await shoppingApi.addItem('space-1', 'c1', 'Pâtes', 500, 'GRAM')
 
-    expect(mockClient.post).toHaveBeenCalledWith('/spaces/space-1/shopping/items', { categoryId: 'c1', name: 'Pâtes', quantityLabel: '500 g' })
+    expect(mockClient.post).toHaveBeenCalledWith('/spaces/space-1/shopping/items', { categoryId: 'c1', name: 'Pâtes', quantity: 500, unit: 'GRAM' })
   })
 
   it('updates an item', async () => {
     mockClient.patch.mockResolvedValue({ data: { id: 'i1' } })
 
-    await shoppingApi.updateItem('space-1', 'i1', 'c2', 'Pâtes complètes', '1 kg')
+    await shoppingApi.updateItem('space-1', 'i1', 'c2', 'Pâtes complètes', 1, 'KILOGRAM')
 
-    expect(mockClient.patch).toHaveBeenCalledWith('/spaces/space-1/shopping/items/i1', { categoryId: 'c2', name: 'Pâtes complètes', quantityLabel: '1 kg' })
+    expect(mockClient.patch).toHaveBeenCalledWith('/spaces/space-1/shopping/items/i1', { categoryId: 'c2', name: 'Pâtes complètes', quantity: 1, unit: 'KILOGRAM' })
   })
 
   it('toggles an item done with no request body', async () => {
@@ -105,7 +106,7 @@ describe('shoppingApi — items', () => {
 
   it('imports items from the menu', async () => {
     mockClient.post.mockResolvedValue({ data: [{ id: 'i1' }] })
-    const lines = [{ name: 'Poulet', quantityLabel: '1 kg', categoryId: 'c1' }]
+    const lines: ShoppingImportLine[] = [{ name: 'Poulet', quantity: 1, unit: 'KILOGRAM', categoryId: 'c1' }]
 
     await shoppingApi.importFromMenu('space-1', lines)
 

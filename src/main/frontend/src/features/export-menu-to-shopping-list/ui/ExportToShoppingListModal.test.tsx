@@ -11,8 +11,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 const LINES: ExportableShoppingLine[] = [
-  { name: 'Poulet', formattedQuantity: '800 g' },
-  { name: 'Riz', formattedQuantity: '300 g' },
+  { name: 'Poulet', quantity: 800, unit: 'GRAM' },
+  { name: 'Riz', quantity: 300, unit: 'GRAM' },
 ]
 
 const CATEGORIES: ShoppingCategory[] = [
@@ -55,15 +55,16 @@ function setup(api: IShoppingApi = fakeApi(), onClose = vi.fn(), onImported = vi
 // The mocked `t` above discards the interpolation object entirely, so
 // `t('include_line', { name: 'Poulet' })` and `t('include_line', { name: 'Riz' })`
 // both resolve to the literal key `'include_line'` — every row's checkbox (and
-// every row's category select) shares that one label. Select by position
+// every row's category/unit select) shares that one label. Select by position
 // instead, in the same order as LINES (Poulet = index 0, Riz = index 1).
 
 describe('ExportToShoppingListModal', () => {
-  it('lists every suggested ingredient, checked by default, with its formatted quantity', async () => {
+  it('lists every suggested ingredient, checked by default, with its quantity and unit prefilled', async () => {
     setup()
 
     expect(await screen.findByText('Poulet')).toBeDefined()
-    expect(screen.getByDisplayValue('800 g')).toBeDefined()
+    expect(screen.getByDisplayValue('800')).toBeDefined()
+    expect(screen.getAllByLabelText('unit_for')[0]).toHaveProperty('value', 'GRAM')
     expect(screen.getAllByLabelText('include_line')[0]).toHaveProperty('checked', true)
   })
 
@@ -75,7 +76,7 @@ describe('ExportToShoppingListModal', () => {
     fireEvent.click(screen.getByText('confirm'))
 
     await waitFor(() => expect(api.importFromMenu).toHaveBeenCalledWith('space-1', [
-      { name: 'Riz', quantityLabel: '300 g', categoryId: 'cat-1' },
+      { name: 'Riz', quantity: 300, unit: 'GRAM', categoryId: 'cat-1' },
     ]))
     expect(onImported).toHaveBeenCalled()
   })
@@ -92,8 +93,8 @@ describe('ExportToShoppingListModal', () => {
     fireEvent.click(screen.getByText('confirm'))
 
     await waitFor(() => expect(api.importFromMenu).toHaveBeenCalledWith('space-1', [
-      { name: 'Poulet', quantityLabel: '800 g', categoryId: 'cat-2' },
-      { name: 'Riz', quantityLabel: '300 g', categoryId: 'cat-2' },
+      { name: 'Poulet', quantity: 800, unit: 'GRAM', categoryId: 'cat-2' },
+      { name: 'Riz', quantity: 300, unit: 'GRAM', categoryId: 'cat-2' },
     ]))
   })
 
@@ -107,20 +108,32 @@ describe('ExportToShoppingListModal', () => {
     fireEvent.click(screen.getByText('confirm'))
 
     await waitFor(() => expect(api.importFromMenu).toHaveBeenCalledWith('space-1', [
-      { name: 'Poulet', quantityLabel: '800 g', categoryId: 'cat-1' },
-      { name: 'Riz', quantityLabel: '300 g', categoryId: 'cat-2' },
+      { name: 'Poulet', quantity: 800, unit: 'GRAM', categoryId: 'cat-1' },
+      { name: 'Riz', quantity: 300, unit: 'GRAM', categoryId: 'cat-2' },
     ]))
   })
 
-  it('editing a quantity draft sends the edited text', async () => {
+  it('editing a quantity draft sends the edited value', async () => {
     const { api } = setup()
     await screen.findByText('Poulet')
 
-    fireEvent.change(screen.getByDisplayValue('800 g'), { target: { value: '1 kg' } })
+    fireEvent.change(screen.getByDisplayValue('800'), { target: { value: '1' } })
     fireEvent.click(screen.getByText('confirm'))
 
     await waitFor(() => expect(api.importFromMenu).toHaveBeenCalledWith('space-1', expect.arrayContaining([
-      { name: 'Poulet', quantityLabel: '1 kg', categoryId: 'cat-1' },
+      { name: 'Poulet', quantity: 1, unit: 'GRAM', categoryId: 'cat-1' },
+    ])))
+  })
+
+  it('changing a unit draft sends the edited unit', async () => {
+    const { api } = setup()
+    await screen.findByText('Poulet')
+
+    fireEvent.change(screen.getAllByLabelText('unit_for')[0], { target: { value: 'KILOGRAM' } })
+    fireEvent.click(screen.getByText('confirm'))
+
+    await waitFor(() => expect(api.importFromMenu).toHaveBeenCalledWith('space-1', expect.arrayContaining([
+      { name: 'Poulet', quantity: 800, unit: 'KILOGRAM', categoryId: 'cat-1' },
     ])))
   })
 

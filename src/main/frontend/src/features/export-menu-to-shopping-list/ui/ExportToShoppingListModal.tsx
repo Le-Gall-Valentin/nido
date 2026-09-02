@@ -3,14 +3,16 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Dialog, Button, Alert, Input } from '@/shared/ui'
 import { ROUTES } from '@/shared/config'
+import { MEASUREMENT_UNITS, MEASUREMENT_UNIT_LABEL_KEY, type MeasurementUnit } from '@/shared/lib'
 import {
   shoppingApi, ShoppingApiProvider, useShoppingCategories, useImportFromMenu, type IShoppingApi,
 } from '@/entities/shopping-list'
 
-/** A suggested ingredient line, already formatted by the caller — this feature has no notion of recipes or measurement units. */
+/** A suggested ingredient line — this feature has no notion of recipes, only a name and an optional structured quantity. */
 export interface ExportableShoppingLine {
   name: string
-  formattedQuantity: string
+  quantity?: number | null
+  unit?: MeasurementUnit | null
 }
 
 interface ExportToShoppingListModalProps {
@@ -35,11 +37,13 @@ function ExportToShoppingListModalContent({
   spaceId, shoppingList, onClose, onImported,
 }: Omit<ExportToShoppingListModalProps, 'open' | 'api'>) {
   const { t } = useTranslation('exportMenuToShoppingList')
+  const { t: tCommon } = useTranslation('common')
   const { data: categories } = useShoppingCategories(spaceId)
   const importFromMenu = useImportFromMenu(spaceId)
 
   const [checked, setChecked] = useState<boolean[]>(() => shoppingList.map(() => true))
-  const [quantityDrafts, setQuantityDrafts] = useState<string[]>(() => shoppingList.map((line) => line.formattedQuantity))
+  const [quantityDrafts, setQuantityDrafts] = useState<string[]>(() => shoppingList.map((line) => (line.quantity != null ? String(line.quantity) : '')))
+  const [unitDrafts, setUnitDrafts] = useState<(MeasurementUnit | '')[]>(() => shoppingList.map((line) => line.unit ?? ''))
   const [rowCategoryId, setRowCategoryId] = useState<string[]>(() => shoppingList.map(() => ''))
   const [bulkCategoryId, setBulkCategoryId] = useState('')
   const [error, setError] = useState(false)
@@ -61,11 +65,20 @@ function ExportToShoppingListModalContent({
     setRowCategoryId((rows) => rows.map((id, i) => (i === index ? categoryId : id)))
   }
 
+  function setRowUnit(index: number, unit: MeasurementUnit | '') {
+    setUnitDrafts((units) => units.map((u, i) => (i === index ? unit : u)))
+  }
+
   function handleConfirm() {
     const lines = shoppingList
       .map((line, i) => ({ line, i }))
       .filter(({ i }) => checked[i])
-      .map(({ line, i }) => ({ name: line.name, quantityLabel: quantityDrafts[i], categoryId: rowCategoryId[i] }))
+      .map(({ line, i }) => ({
+        name: line.name,
+        quantity: quantityDrafts[i].trim() === '' ? null : Number(quantityDrafts[i]),
+        unit: unitDrafts[i] === '' ? null : unitDrafts[i],
+        categoryId: rowCategoryId[i],
+      }))
     setError(false)
     importFromMenu.mutateAsync(lines)
       .then(() => { setImported(true); onImported() })
@@ -94,8 +107,13 @@ function ExportToShoppingListModalContent({
             <input type="checkbox" checked={checked[i]} aria-label={t('include_line', { name: line.name })}
               onChange={(e) => setChecked((c) => c.map((v, idx) => (idx === i ? e.target.checked : v)))} />
             <span className="flex-1 text-sm text-fg-1">{line.name}</span>
-            <Input label={t('quantity_for', { name: line.name })} srOnlyLabel value={quantityDrafts[i]} className="w-28 text-xs"
+            <Input label={t('quantity_for', { name: line.name })} srOnlyLabel type="number" min={0} value={quantityDrafts[i]} className="w-20 text-xs"
               onChange={(e) => setQuantityDrafts((d) => d.map((v, idx) => (idx === i ? e.target.value : v)))} />
+            <select value={unitDrafts[i]} onChange={(e) => setRowUnit(i, e.target.value as MeasurementUnit | '')}
+              aria-label={t('unit_for', { name: line.name })} className="rounded-md border border-border bg-bg-1 px-2 py-1 text-xs">
+              <option value="">{t('unit_none')}</option>
+              {MEASUREMENT_UNITS.map((u) => <option key={u} value={u}>{tCommon(MEASUREMENT_UNIT_LABEL_KEY[u])}</option>)}
+            </select>
             <select value={rowCategoryId[i]} onChange={(e) => setRowCategory(i, e.target.value)}
               aria-label={t('category_for', { name: line.name })} className="rounded-md border border-border bg-bg-1 px-2 py-1 text-xs">
               {(categories ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
