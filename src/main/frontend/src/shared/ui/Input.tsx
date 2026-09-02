@@ -1,4 +1,5 @@
 import { useId, type InputHTMLAttributes, type ReactNode } from 'react'
+import { twMerge } from 'tailwind-merge'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
@@ -19,7 +20,11 @@ export function Input({ label, suffix, srOnlyLabel, className = '', ...props }: 
       <div className="relative">
         <input
           id={id}
-          className={`w-full rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none placeholder:text-fg-3 transition-all hover:border-border-2 focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-ring)] ${suffix ? 'pr-11' : ''} ${className}`}
+          className={twMerge(
+            'w-full rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none placeholder:text-fg-3 transition-all hover:border-border-2 focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-ring)]',
+            suffix ? 'pr-11' : '',
+            className
+          )}
           {...props}
         />
         {suffix && (
