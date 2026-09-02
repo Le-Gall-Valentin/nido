@@ -14,6 +14,17 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
+const { mockImportFromMenu } = vi.hoisted(() => ({ mockImportFromMenu: vi.fn().mockResolvedValue([]) }))
+
+vi.mock('@/entities/shopping-list', async () => {
+  const actual = await vi.importActual<typeof import('@/entities/shopping-list')>('@/entities/shopping-list')
+  return {
+    ...actual,
+    useShoppingCategories: () => ({ data: [{ id: 'cat-1', name: 'Épicerie', position: 0, fallback: false }] }),
+    useImportFromMenu: () => ({ mutateAsync: mockImportFromMenu, isPending: false }),
+  }
+})
+
 const RECIPES: Recipe[] = [
   { id: 'r1', name: 'Pâtes bolognaise', category: 'PLAT', minutes: 35, referencePortions: 4, favorite: false, ingredients: [], steps: [], lastPlannedOn: '2026-08-01' },
   { id: 'r2', name: 'Curry de légumes', category: 'VEGETARIAN', minutes: 30, referencePortions: 4, favorite: false, ingredients: [], steps: [], lastPlannedOn: null },
@@ -108,6 +119,21 @@ describe('KitchenMenuPage', () => {
 
     await waitFor(() => expect(api.addMenuEntry).toHaveBeenCalledWith(
       'space-1', expect.any(String), 'r2', 4))
+  })
+
+  it('opens the export modal and imports the checked lines to the shopping list', async () => {
+    mockImportFromMenu.mockClear()
+    setup(fakeApi({ getShoppingList: vi.fn().mockResolvedValue(SHOPPING_LIST) }))
+    await screen.findByText('Pâtes')
+
+    fireEvent.click(screen.getByText('menu.export_to_shopping_list'))
+    expect(await screen.findByText('title')).toBeDefined() // ExportToShoppingListModal's own (mocked) i18n
+
+    fireEvent.click(await screen.findByText('confirm'))
+
+    await waitFor(() => expect(mockImportFromMenu).toHaveBeenCalledWith([
+      { name: 'Pâtes', quantity: 500, unit: 'GRAM', categoryId: 'cat-1' },
+    ]))
   })
 })
 

@@ -1,0 +1,31 @@
+{
+  "title": "Courses",
+  "loading": "Chargement…",
+  "empty": "Liste vide. Ajoutez un premier article ci-dessus.",
+  "clear_done": "Retirer les cochés",
+  "clear_all": "Tout vider",
+  "remaining_count": "{{count}} article restant",
+  "remaining_count_plural": "{{count}} articles restants",
+  "add_item_placeholder": "Ajouter un article…",
+  "add_item": "Ajouter",
+  "quantity_label": "Quantité",
+  "quantity_placeholder": "Qté",
+  "unit_label": "Unité",
+  "unit_none": "—",
+  "category_label": "Catégorie",
+  "category_remaining": "{{count}} à prendre",
+  "category_rename": "Renommer",
+  "category_rename_confirm": "Valider",
+  "category_delete": "Supprimer la catégorie « {{name}} »",
+  "form_cancel": "Annuler",
+  "toggle_done": "Cocher « {{name}} »",
+  "recategorize": "Changer la catégorie de « {{name}} »",
+  "delete_item": "Supprimer « {{name}} »",
+  "new_category_placeholder": "Nouvelle catégorie…",
+  "new_category": "Nouvelle catégorie",
+  "error": {
+    "load_failed": "Impossible de charger la liste de courses.",
+    "action_failed": "Échec de l'action. Réessayez.",
+    "quantity_invalid": "La quantité doit être un nombre supérieur à 0."
+  }
+}

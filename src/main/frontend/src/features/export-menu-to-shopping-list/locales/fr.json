@@ -1,0 +1,16 @@
+{
+  "title": "Envoyer vers la liste de courses",
+  "subtitle": "Décochez ce que vous avez déjà, ajustez la quantité ou la catégorie si besoin.",
+  "bulk_category_label": "Catégorie pour les articles importés",
+  "include_line": "Inclure « {{name}} »",
+  "quantity_for": "Quantité de « {{name}} »",
+  "unit_for": "Unité de « {{name}} »",
+  "unit_none": "—",
+  "category_for": "Catégorie de « {{name}} »",
+  "cancel": "Annuler",
+  "confirm": "Envoyer vers les courses",
+  "success": "Articles envoyés vers la liste de courses.",
+  "view_shopping_list": "voir les courses",
+  "error": "Échec de l'envoi. Réessayez.",
+  "quantity_invalid": "La quantité doit être un nombre supérieur à 0."
+}

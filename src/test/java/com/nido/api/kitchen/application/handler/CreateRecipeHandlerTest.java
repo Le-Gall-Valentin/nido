@@ -1,7 +1,7 @@
 package com.nido.api.kitchen.application.handler;
 
 import com.nido.api.kitchen.domain.model.CreateRecipeCommand;
-import com.nido.api.kitchen.domain.model.MeasurementUnit;
+import com.nido.api.shared.model.MeasurementUnit;
 import com.nido.api.kitchen.domain.model.Recipe;
 import com.nido.api.kitchen.domain.model.RecipeCategory;
 import com.nido.api.kitchen.domain.model.RecipeIngredient;

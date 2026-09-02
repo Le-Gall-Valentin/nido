@@ -1,6 +1,6 @@
 package com.nido.api.kitchen.infrastructure.web.dto;
 
-import com.nido.api.kitchen.domain.model.MeasurementUnit;
+import com.nido.api.shared.model.MeasurementUnit;
 import com.nido.api.kitchen.domain.model.ShoppingListLine;
 
 import java.math.BigDecimal;

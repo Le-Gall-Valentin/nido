@@ -1,0 +1,86 @@
+databaseChangeLog:
+  - changeSet:
+      id: 018-create-shopping-items
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: shopping_items
+      changes:
+        - createTable:
+            tableName: shopping_items
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(120)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantity
+                  type: NUMERIC(10,3)
+              - column:
+                  name: unit
+                  type: VARCHAR(20)
+              - column:
+                  name: done
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: position
+                  type: INT
+                  constraints:
+                    nullable: false
+        # Kept in sync by hand with com.nido.api.shared.model.MeasurementUnit — migrations
+        # are immutable snapshots and must not depend on application code, so this list is
+        # duplicated here deliberately (same pattern as kitchen_recipe_ingredients' own
+        # chk_kitchen_recipe_ingredients_unit). Adding a MeasurementUnit value requires a
+        # new migration that ALTERs this constraint, not just a Java-side enum change.
+        - sql:
+            sql: ALTER TABLE shopping_items ADD CONSTRAINT chk_shopping_items_unit CHECK (unit IN ('GRAM', 'KILOGRAM', 'MILLILITER', 'CENTILITER', 'LITER', 'PIECE', 'SLICE', 'TABLESPOON', 'TEASPOON', 'PINCH', 'SACHET'))
+            splitStatements: false
+        - createIndex:
+            tableName: shopping_items
+            indexName: idx_shopping_items_space_id_category_id
+            columns:
+              - column:
+                  name: space_id
+              - column:
+                  name: category_id
+        - addForeignKeyConstraint:
+            baseTableName: shopping_items
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_shopping_items_space
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: shopping_items
+            baseColumnNames: category_id
+            referencedTableName: shopping_categories
+            referencedColumnNames: id
+            constraintName: fk_shopping_items_category
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: shopping_items
+            cascadeConstraints: true
