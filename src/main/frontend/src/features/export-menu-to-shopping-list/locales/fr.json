@@ -11,5 +11,6 @@
   "confirm": "Envoyer vers les courses",
   "success": "Articles envoyés vers la liste de courses.",
   "view_shopping_list": "voir les courses",
-  "error": "Échec de l'envoi. Réessayez."
+  "error": "Échec de l'envoi. Réessayez.",
+  "quantity_invalid": "La quantité doit être un nombre supérieur à 0."
 }

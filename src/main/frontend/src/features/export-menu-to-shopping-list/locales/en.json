@@ -11,5 +11,6 @@
   "confirm": "Send to shopping list",
   "success": "Items sent to the shopping list.",
   "view_shopping_list": "view shopping list",
-  "error": "Failed to send. Try again."
+  "error": "Failed to send. Try again.",
+  "quantity_invalid": "Quantity must be a number greater than 0."
 }

@@ -8,7 +8,7 @@ interface ShoppingApiProviderProps {
   children: ReactNode
 }
 
-/** Injects the IShoppingApi implementation consumed by this page's hooks. */
+/** Injects the IShoppingApi implementation consumed by the shopping-list page and the menu-export feature's hooks. */
 export function ShoppingApiProvider({ api, children }: ShoppingApiProviderProps) {
   return <ShoppingApiContext.Provider value={api}>{children}</ShoppingApiContext.Provider>
 }

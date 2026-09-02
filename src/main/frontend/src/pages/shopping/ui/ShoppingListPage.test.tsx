@@ -141,6 +141,52 @@ describe('ShoppingListPage', () => {
     await waitFor(() => expect(api.clearDoneItems).toHaveBeenCalledWith('space-1'))
   })
 
+  it('clears all items', async () => {
+    const api = fakeApi()
+    setup(api)
+    await screen.findByText('Pâtes')
+
+    fireEvent.click(screen.getByText('clear_all'))
+
+    await waitFor(() => expect(api.clearAllItems).toHaveBeenCalledWith('space-1'))
+  })
+
+  it('renames a category', async () => {
+    const api = fakeApi({ renameCategory: vi.fn().mockResolvedValue({ ...CATEGORIES[0], name: 'Épicerie fine' }) })
+    setup(api)
+    await screen.findByText('Pâtes')
+
+    // Both categories render a rename control; cat-1 ("Épicerie") is the first in position order.
+    // The other category's rename *button* shares the same accessible name, so scope to the input.
+    fireEvent.click(screen.getAllByText('category_rename')[0])
+    fireEvent.change(screen.getByLabelText('category_rename', { selector: 'input' }), { target: { value: 'Épicerie fine' } })
+    fireEvent.click(screen.getByLabelText('category_rename_confirm'))
+
+    await waitFor(() => expect(api.renameCategory).toHaveBeenCalledWith('space-1', 'cat-1', 'Épicerie fine'))
+  })
+
+  it('shows a category header even when it has no items yet', async () => {
+    setup()
+    await screen.findByText('Pâtes')
+
+    // "Maison & divers" (cat-2, empty) also appears as an <option> in every category
+    // <select>, so scope to the section heading span to prove the header itself renders.
+    expect(screen.getByText('Maison & divers', { selector: 'span' })).toBeDefined()
+  })
+
+  it('shows an error and does not submit when the quantity is not a positive number', async () => {
+    const api = fakeApi()
+    setup(api)
+    await screen.findByText('Pâtes')
+
+    fireEvent.change(screen.getByLabelText('add_item_placeholder'), { target: { value: 'Riz' } })
+    fireEvent.change(screen.getByLabelText('quantity_label'), { target: { value: '-5' } })
+    fireEvent.click(screen.getByLabelText('add_item'))
+
+    expect(await screen.findByText('error.quantity_invalid')).toBeDefined()
+    expect(api.addItem).not.toHaveBeenCalled()
+  })
+
   it('creates a new category', async () => {
     const api = fakeApi({ createCategory: vi.fn().mockResolvedValue({ id: 'cat-3', name: 'Bricolage', position: 2, fallback: false }) })
     setup(api)
@@ -185,6 +231,26 @@ describe('ShoppingListPage — mutation errors', () => {
 
     fireEvent.change(screen.getByLabelText('add_item_placeholder'), { target: { value: 'Riz' } })
     fireEvent.click(screen.getByLabelText('add_item'))
+
+    expect(await screen.findByText('error.action_failed')).toBeDefined()
+  })
+
+  it('shows an error message when recategorizing an item fails', async () => {
+    const api = fakeApi({ updateItem: vi.fn().mockRejectedValue(new Error('boom')) })
+    setup(api)
+    await screen.findByText('Pâtes')
+
+    fireEvent.change(screen.getByLabelText('recategorize'), { target: { value: 'cat-2' } })
+
+    expect(await screen.findByText('error.action_failed')).toBeDefined()
+  })
+
+  it('shows an error message when deleting an item fails', async () => {
+    const api = fakeApi({ deleteItem: vi.fn().mockRejectedValue(new Error('boom')) })
+    setup(api)
+    await screen.findByText('Pâtes')
+
+    fireEvent.click(screen.getByLabelText('delete_item'))
 
     expect(await screen.findByText('error.action_failed')).toBeDefined()
   })

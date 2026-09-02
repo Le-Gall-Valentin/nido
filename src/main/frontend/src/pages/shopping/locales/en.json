@@ -23,5 +23,9 @@
   "delete_item": "Delete \"{{name}}\"",
   "new_category_placeholder": "New category…",
   "new_category": "New category",
-  "error": { "load_failed": "Couldn't load the shopping list.", "action_failed": "Action failed. Try again." }
+  "error": {
+    "load_failed": "Couldn't load the shopping list.",
+    "action_failed": "Action failed. Try again.",
+    "quantity_invalid": "Quantity must be a number greater than 0."
+  }
 }

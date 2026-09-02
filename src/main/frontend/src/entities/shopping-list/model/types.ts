@@ -11,15 +11,15 @@ export interface ShoppingItem {
   id: string
   categoryId: string
   name: string
-  quantity?: number | null
-  unit?: MeasurementUnit | null
+  quantity: number | null
+  unit: MeasurementUnit | null
   done: boolean
   position: number
 }
 
 export interface ShoppingImportLine {
   name: string
-  quantity?: number | null
-  unit?: MeasurementUnit | null
+  quantity: number | null
+  unit: MeasurementUnit | null
   categoryId: string
 }

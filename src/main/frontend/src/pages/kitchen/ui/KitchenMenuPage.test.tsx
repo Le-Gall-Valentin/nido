@@ -14,12 +14,14 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
+const { mockImportFromMenu } = vi.hoisted(() => ({ mockImportFromMenu: vi.fn().mockResolvedValue([]) }))
+
 vi.mock('@/entities/shopping-list', async () => {
   const actual = await vi.importActual<typeof import('@/entities/shopping-list')>('@/entities/shopping-list')
   return {
     ...actual,
     useShoppingCategories: () => ({ data: [{ id: 'cat-1', name: 'Épicerie', position: 0, fallback: false }] }),
-    useImportFromMenu: () => ({ mutateAsync: vi.fn().mockResolvedValue([]), isPending: false }),
+    useImportFromMenu: () => ({ mutateAsync: mockImportFromMenu, isPending: false }),
   }
 })
 
@@ -120,12 +122,18 @@ describe('KitchenMenuPage', () => {
   })
 
   it('opens the export modal and imports the checked lines to the shopping list', async () => {
+    mockImportFromMenu.mockClear()
     setup(fakeApi({ getShoppingList: vi.fn().mockResolvedValue(SHOPPING_LIST) }))
     await screen.findByText('Pâtes')
 
     fireEvent.click(screen.getByText('menu.export_to_shopping_list'))
-
     expect(await screen.findByText('title')).toBeDefined() // ExportToShoppingListModal's own (mocked) i18n
+
+    fireEvent.click(await screen.findByText('confirm'))
+
+    await waitFor(() => expect(mockImportFromMenu).toHaveBeenCalledWith([
+      { name: 'Pâtes', quantity: 500, unit: 'GRAM', categoryId: 'cat-1' },
+    ]))
   })
 })
 

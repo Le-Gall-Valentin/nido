@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Dialog, Button, Alert, Input } from '@/shared/ui'
@@ -47,14 +47,17 @@ function ExportToShoppingListModalContent({
   const [rowCategoryId, setRowCategoryId] = useState<string[]>(() => shoppingList.map(() => ''))
   const [bulkCategoryId, setBulkCategoryId] = useState('')
   const [error, setError] = useState(false)
+  const [quantityError, setQuantityError] = useState(false)
   const [imported, setImported] = useState(false)
+  const defaultCategoryApplied = useRef(false)
 
   useEffect(() => {
-    if (categories && categories.length > 0 && rowCategoryId.every((id) => id === '')) {
+    if (!defaultCategoryApplied.current && categories && categories.length > 0) {
+      defaultCategoryApplied.current = true
       setBulkCategoryId(categories[0].id)
       setRowCategoryId(shoppingList.map(() => categories[0].id))
     }
-  }, [categories, rowCategoryId, shoppingList])
+  }, [categories, shoppingList])
 
   function applyBulkCategory(categoryId: string) {
     setBulkCategoryId(categoryId)
@@ -70,15 +73,23 @@ function ExportToShoppingListModalContent({
   }
 
   function handleConfirm() {
-    const lines = shoppingList
+    const included = shoppingList
       .map((line, i) => ({ line, i }))
       .filter(({ i }) => checked[i])
-      .map(({ line, i }) => ({
-        name: line.name,
-        quantity: quantityDrafts[i].trim() === '' ? null : Number(quantityDrafts[i]),
-        unit: unitDrafts[i] === '' ? null : unitDrafts[i],
-        categoryId: rowCategoryId[i],
-      }))
+
+    const quantities = included.map(({ i }) => (quantityDrafts[i].trim() === '' ? null : Number(quantityDrafts[i])))
+    if (quantities.some((quantity) => quantity != null && (!Number.isFinite(quantity) || quantity <= 0))) {
+      setQuantityError(true)
+      return
+    }
+    setQuantityError(false)
+
+    const lines = included.map(({ line, i }, index) => ({
+      name: line.name,
+      quantity: quantities[index],
+      unit: unitDrafts[i] === '' ? null : unitDrafts[i],
+      categoryId: rowCategoryId[i],
+    }))
     setError(false)
     importFromMenu.mutateAsync(lines)
       .then(() => { setImported(true); onImported() })
@@ -89,6 +100,7 @@ function ExportToShoppingListModalContent({
     <Dialog open onClose={onClose} title={t('title')}>
       <p className="mb-4 text-xs text-fg-3">{t('subtitle')}</p>
 
+      {quantityError && <Alert variant="error" className="mb-3">{t('quantity_invalid')}</Alert>}
       {error && <Alert variant="error" className="mb-3">{t('error')}</Alert>}
 
       {(categories ?? []).length > 0 && (

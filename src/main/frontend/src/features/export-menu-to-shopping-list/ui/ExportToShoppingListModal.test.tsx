@@ -146,4 +146,24 @@ describe('ExportToShoppingListModal', () => {
 
     expect(await screen.findByText('error')).toBeDefined()
   })
+
+  it('clicking cancel calls onClose', async () => {
+    const { onClose } = setup()
+    await screen.findByText('Poulet')
+
+    fireEvent.click(screen.getByText('cancel'))
+
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('shows an error and does not submit when a quantity draft is not a positive number', async () => {
+    const { api } = setup()
+    await screen.findByText('Poulet')
+
+    fireEvent.change(screen.getByDisplayValue('800'), { target: { value: '-1' } })
+    fireEvent.click(screen.getByText('confirm'))
+
+    expect(await screen.findByText('quantity_invalid')).toBeDefined()
+    expect(api.importFromMenu).not.toHaveBeenCalled()
+  })
 })

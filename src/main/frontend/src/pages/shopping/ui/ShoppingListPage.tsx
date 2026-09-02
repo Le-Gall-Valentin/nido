@@ -47,6 +47,7 @@ function ShoppingListPageContent() {
   const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
 
   const [actionError, setActionError] = useState(false)
+  const [quantityError, setQuantityError] = useState(false)
   const [newItemName, setNewItemName] = useState('')
   const [newItemQuantity, setNewItemQuantity] = useState('')
   const [newItemUnit, setNewItemUnit] = useState<MeasurementUnit | ''>('')
@@ -81,7 +82,13 @@ function ShoppingListPageContent() {
   function handleAddItem() {
     const name = newItemName.trim()
     if (!name || !effectiveCategoryId) return
-    const quantity = newItemQuantity.trim() === '' ? null : Number(newItemQuantity)
+    const trimmedQuantity = newItemQuantity.trim()
+    const quantity = trimmedQuantity === '' ? null : Number(trimmedQuantity)
+    if (quantity != null && (!Number.isFinite(quantity) || quantity <= 0)) {
+      setQuantityError(true)
+      return
+    }
+    setQuantityError(false)
     const unit = newItemUnit === '' ? null : newItemUnit
     runMutation(addItem.mutateAsync({ categoryId: effectiveCategoryId, name, quantity, unit }))
       .then(() => { setNewItemName(''); setNewItemQuantity(''); setNewItemUnit(''); setNewItemCategoryId(effectiveCategoryId) })
@@ -124,6 +131,7 @@ function ShoppingListPageContent() {
         )}
       </div>
 
+      {quantityError && <Alert variant="error">{t('error.quantity_invalid')}</Alert>}
       {actionError && <Alert variant="error">{t('error.action_failed')}</Alert>}
 
       <p className="mb-4 text-xs text-fg-3">{t('remaining_count', { count: remaining })}</p>
@@ -164,7 +172,6 @@ function ShoppingListPageContent() {
         <div className="flex flex-col gap-5">
           {(categories ?? []).map((category) => {
             const categoryItems = itemsByCategory.get(category.id) ?? []
-            if (categoryItems.length === 0) return null
             return (
               <div key={category.id}>
                 <div className="mb-1.5 flex items-center gap-2">
@@ -200,14 +207,16 @@ function ShoppingListPageContent() {
                   )}
                 </div>
                 <div className="rounded-2xl border border-border bg-bg-1">
-                  {categoryItems.map((item) => (
+                  {categoryItems.map((item) => {
+                    const quantityLabel = formatQuantity(item)
+                    return (
                     <div key={item.id} className="flex items-center gap-2 border-b border-border px-4 py-2.5 last:border-b-0">
                       <button type="button" onClick={() => runMutation(toggleItemDone.mutateAsync(item.id)).catch(() => {})}
                         aria-label={t('toggle_done', { name: item.name })} className="grid size-5 place-items-center rounded-md border border-border">
                         {item.done && <Check className="size-3.5 text-accent" />}
                       </button>
                       <span className={`flex-1 text-sm ${item.done ? 'text-fg-4 line-through' : 'text-fg-1'}`}>{item.name}</span>
-                      {formatQuantity(item) && <span className="text-xs text-fg-3">{formatQuantity(item)}</span>}
+                      {quantityLabel && <span className="text-xs text-fg-3">{quantityLabel}</span>}
                       {canWriteHere && (
                         <select value={item.categoryId}
                           onChange={(e) => runMutation(updateItem.mutateAsync({
@@ -224,7 +233,8 @@ function ShoppingListPageContent() {
                         </button>
                       )}
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )

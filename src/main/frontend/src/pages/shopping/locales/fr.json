@@ -23,5 +23,9 @@
   "delete_item": "Supprimer « {{name}} »",
   "new_category_placeholder": "Nouvelle catégorie…",
   "new_category": "Nouvelle catégorie",
-  "error": { "load_failed": "Impossible de charger la liste de courses.", "action_failed": "Échec de l'action. Réessayez." }
+  "error": {
+    "load_failed": "Impossible de charger la liste de courses.",
+    "action_failed": "Échec de l'action. Réessayez.",
+    "quantity_invalid": "La quantité doit être un nombre supérieur à 0."
+  }
 }
