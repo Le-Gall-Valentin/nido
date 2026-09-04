@@ -10,6 +10,10 @@
   "edit": "Modifier",
   "delete": "Supprimer",
   "move": "Déplacer vers…",
+  "change_status": "Changer le statut de {{title}} (glisser ou cliquer)",
+  "change_status_dialog_title": "Déplacer « {{title}} » vers…",
+  "change_status_target_current": "{{column}} (colonne actuelle)",
+  "change_status_target_blocked": "{{column}} (sous-tâches incomplètes)",
   "form": {
     "create_title": "Nouvelle tâche",
     "edit_title": "Modifier la tâche",

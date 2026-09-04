@@ -5,7 +5,7 @@ import { Plus, Pencil, ArrowRightLeft, Repeat } from 'lucide-react'
 import {
   DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core'
-import { Alert, Spinner } from '@/shared/ui'
+import { Alert, Dialog, Spinner } from '@/shared/ui'
 import { useMySpaces, useWritableSpaces } from '@/features/space-switcher'
 import { canWrite, isPersonal, useSpaceMembers, TransferDialog } from '@/entities/space'
 import { UserAvatar } from '@/entities/user'
@@ -47,13 +47,33 @@ interface TaskCardProps {
   onEdit: (task: Task) => void
   onMove: (task: Task) => void
   onDelete: (task: Task) => void
+  onChangeStatus: (task: Task) => void
 }
 
-function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, onEdit, onMove, onDelete }: TaskCardProps) {
+function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, onEdit, onMove, onDelete, onChangeStatus }: TaskCardProps) {
   const { t } = useTranslation('tasks')
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: task.id })
   const meta = TASK_PRIORITY_META[task.priority]
   const doneSubtasks = task.subtasks.filter((s) => s.done).length
+  const changeStatusLabel = t('change_status', { title: task.title })
+
+  const priorityRowContent = (
+    <>
+      <span className={`flex items-center gap-1 font-semibold ${meta.textClassName}`}>
+        <span className={`size-1.5 rounded-full ${meta.dotClassName}`} />
+        {t(meta.labelKey)}
+      </span>
+      {task.dueDate && <span className={isOverdue(task.dueDate) ? 'text-status-red' : 'text-fg-4'}>{task.dueDate}</span>}
+      {task.assigneeIds.length > 0 && (
+        <div className="ml-auto flex -space-x-1.5">
+          {task.assigneeIds.map((userId) => {
+            const member = members?.find((m) => m.userId === userId)
+            return <UserAvatar key={userId} username={member?.username ?? '?'} role="USER" className="size-6 rounded-full border-2 border-bg-1 text-[10px]" />
+          })}
+        </div>
+      )}
+    </>
+  )
 
   return (
     <div
@@ -68,7 +88,14 @@ function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, 
           className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-[6px] border-2 ${task.status === 'DONE' ? 'border-status-green bg-status-green' : 'border-border'}`}>
           {task.status === 'DONE' && <span className="text-[10px] font-bold text-white">✓</span>}
         </button>
-        <span className={`flex-1 text-sm ${task.status === 'DONE' ? 'text-fg-3 line-through' : 'text-fg-0'}`}>{task.title}</span>
+        {canWriteHere ? (
+          <button type="button" onClick={() => onChangeStatus(task)} aria-label={changeStatusLabel}
+            className={`flex-1 text-left text-sm ${task.status === 'DONE' ? 'text-fg-3 line-through' : 'text-fg-0'}`}>
+            {task.title}
+          </button>
+        ) : (
+          <span className={`flex-1 text-sm ${task.status === 'DONE' ? 'text-fg-3 line-through' : 'text-fg-0'}`}>{task.title}</span>
+        )}
         {task.recurring && <Repeat className="mt-0.5 size-3.5 shrink-0 text-fg-3" />}
       </div>
 
@@ -87,21 +114,14 @@ function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, 
         </div>
       )}
 
-      <div className="flex items-center gap-2 pl-[30px] text-[11.5px]">
-        <span className={`flex items-center gap-1 font-semibold ${meta.textClassName}`}>
-          <span className={`size-1.5 rounded-full ${meta.dotClassName}`} />
-          {t(meta.labelKey)}
-        </span>
-        {task.dueDate && <span className={isOverdue(task.dueDate) ? 'text-status-red' : 'text-fg-4'}>{task.dueDate}</span>}
-        {task.assigneeIds.length > 0 && (
-          <div className="ml-auto flex -space-x-1.5">
-            {task.assigneeIds.map((userId) => {
-              const member = members?.find((m) => m.userId === userId)
-              return <UserAvatar key={userId} username={member?.username ?? '?'} role="USER" className="size-6 rounded-full border-2 border-bg-1 text-[10px]" />
-            })}
-          </div>
-        )}
-      </div>
+      {canWriteHere ? (
+        <button type="button" onClick={() => onChangeStatus(task)} aria-label={changeStatusLabel}
+          className="flex w-full items-center gap-2 pl-[30px] text-left text-[11.5px]">
+          {priorityRowContent}
+        </button>
+      ) : (
+        <div className="flex items-center gap-2 pl-[30px] text-[11.5px]">{priorityRowContent}</div>
+      )}
 
       {canWriteHere && (
         <div className="flex gap-1 border-t border-border pt-2">
@@ -155,6 +175,7 @@ function TasksPageContent() {
   const [formState, setFormState] = useState<{ mode: 'create' } | { mode: 'edit'; task: Task } | null>(null)
   const [deletingTask, setDeletingTask] = useState<Task | null>(null)
   const [movingTask, setMovingTask] = useState<Task | null>(null)
+  const [statusPickerTask, setStatusPickerTask] = useState<Task | null>(null)
 
   const currentSpace = mySpaces?.find((s) => s.id === spaceId)
   const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
@@ -201,6 +222,13 @@ function TasksPageContent() {
     await moveTask.mutateAsync({ taskId: movingTask.id, destinationSpaceId })
   }
 
+  function handlePickStatus(status: TaskStatus) {
+    if (!statusPickerTask) return
+    const resolved = resolveTaskMove(tasks ?? [], statusPickerTask.id, status)
+    if (resolved) changeTaskStatus.mutate({ taskId: statusPickerTask.id, status })
+    setStatusPickerTask(null)
+  }
+
   if (isPending) return <Spinner label={t('loading')} fullscreen={false} />
   if (isError) return <Alert variant="error">{t('error.load_failed')}</Alert>
 
@@ -211,6 +239,7 @@ function TasksPageContent() {
     onEdit: (task: Task) => setFormState({ mode: 'edit', task }),
     onMove: (task: Task) => setMovingTask(task),
     onDelete: (task: Task) => setDeletingTask(task),
+    onChangeStatus: (task: Task) => setStatusPickerTask(task),
   }
 
   return (
@@ -260,6 +289,29 @@ function TasksPageContent() {
           onClose={() => setMovingTask(null)}
           onConfirm={handleMoveConfirm}
         />
+      )}
+
+      {statusPickerTask && (
+        <Dialog open onClose={() => setStatusPickerTask(null)} title={t('change_status_dialog_title', { title: statusPickerTask.title })}>
+          <p className="mb-3 text-sm font-semibold text-fg-1">{t('change_status_dialog_title', { title: statusPickerTask.title })}</p>
+          <div className="flex flex-col gap-1">
+            {COLUMN_ORDER.map((status) => {
+              const isCurrent = status === statusPickerTask.status
+              const blockedBySubtasks = status === 'DONE' && statusPickerTask.subtasks.some((s) => !s.done)
+              const label = isCurrent
+                ? t('change_status_target_current', { column: t(`column.${status}`) })
+                : blockedBySubtasks
+                  ? t('change_status_target_blocked', { column: t(`column.${status}`) })
+                  : t(`column.${status}`)
+              return (
+                <button key={status} type="button" disabled={isCurrent || blockedBySubtasks} onClick={() => handlePickStatus(status)}
+                  className="rounded-md px-3 py-2 text-left text-sm hover:bg-bg-2 disabled:text-fg-4 disabled:hover:bg-transparent">
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </Dialog>
       )}
     </div>
   )
