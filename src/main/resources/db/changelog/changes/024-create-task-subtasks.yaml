@@ -1,0 +1,58 @@
+databaseChangeLog:
+  - changeSet:
+      id: 024-create-task-subtasks
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: task_subtasks
+      changes:
+        - createTable:
+            tableName: task_subtasks
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: task_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: position
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: text
+                  type: VARCHAR(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: done
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: task_subtasks
+            indexName: idx_task_subtasks_task_id
+            columns:
+              - column:
+                  name: task_id
+        - addForeignKeyConstraint:
+            baseTableName: task_subtasks
+            baseColumnNames: task_id
+            referencedTableName: tasks
+            referencedColumnNames: id
+            constraintName: fk_task_subtasks_task
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: task_subtasks
+            cascadeConstraints: true

@@ -1,0 +1,58 @@
+databaseChangeLog:
+  - changeSet:
+      id: 023-create-task-assignees
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: task_assignees
+      changes:
+        - createTable:
+            tableName: task_assignees
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: task_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: task_assignees
+            columnNames: task_id, user_id
+            constraintName: uq_task_assignees_task_user
+        - createIndex:
+            tableName: task_assignees
+            indexName: idx_task_assignees_task_id
+            columns:
+              - column:
+                  name: task_id
+        - addForeignKeyConstraint:
+            baseTableName: task_assignees
+            baseColumnNames: task_id
+            referencedTableName: tasks
+            referencedColumnNames: id
+            constraintName: fk_task_assignees_task
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: task_assignees
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_task_assignees_user
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: task_assignees
+            cascadeConstraints: true
