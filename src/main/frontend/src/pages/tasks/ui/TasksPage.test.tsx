@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -112,5 +112,66 @@ describe('TasksPage', () => {
     fireEvent.click(screen.getByText('Comparer les prix'))
 
     await waitFor(() => expect(api.toggleSubtask).toHaveBeenCalledWith('space-1', 't1', 's1'))
+  })
+
+  it('tapping the task title opens the status picker and changes the status', async () => {
+    const { api } = setup()
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByText('Prendre RDV'))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.click(within(dialog).getByText('column.DOING'))
+
+    await waitFor(() => expect(api.changeTaskStatus).toHaveBeenCalledWith('space-1', 't1', 'DOING'))
+  })
+
+  it('tapping the priority/due row also opens the status picker', async () => {
+    const { api } = setup()
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByText('priority.HIGH'))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.click(within(dialog).getByText('column.DONE'))
+
+    await waitFor(() => expect(api.changeTaskStatus).toHaveBeenCalledWith('space-1', 't1', 'DONE'))
+  })
+
+  it('disables the current column and disables DONE when subtasks are incomplete', async () => {
+    const withSubtask: Task = { ...TASKS[0], subtasks: [{ id: 's1', text: 'A', done: false }] }
+    const api = fakeApi({ listTasks: vi.fn().mockResolvedValue([withSubtask]) })
+    setup(api)
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByText('Prendre RDV'))
+    const dialog = screen.getByRole('dialog')
+    const buttons = within(dialog).getAllByRole('button')
+
+    expect((buttons[0] as HTMLButtonElement).disabled).toBe(true) // TODO — current status
+    expect((buttons[1] as HTMLButtonElement).disabled).toBe(false) // DOING — selectable
+    expect((buttons[2] as HTMLButtonElement).disabled).toBe(true) // DONE — blocked by incomplete subtask
+  })
+
+  it('does not show status-change buttons without write access', async () => {
+    const api = fakeApi()
+    const readOnlySpace: SpaceSummary = { ...CURRENT_SPACE, myRole: 'VIEWER' }
+    const queryClient = createTestQueryClient()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SpacesApiProvider api={fakeSpacesApi([readOnlySpace])}>
+          <SpaceMembersApiProvider api={fakeMembersApi()}>
+            <MemoryRouter initialEntries={['/s/space-1/organisation/tasks']}>
+              <Routes>
+                <Route path="/s/:spaceId/organisation/tasks" element={<TasksPage api={api} />} />
+              </Routes>
+            </MemoryRouter>
+          </SpaceMembersApiProvider>
+        </SpacesApiProvider>
+      </QueryClientProvider>
+    )
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByText('Prendre RDV'))
+
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 })

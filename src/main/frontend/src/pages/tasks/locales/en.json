@@ -10,6 +10,10 @@
   "edit": "Edit",
   "delete": "Delete",
   "move": "Move to…",
+  "change_status": "Change status of {{title}} (drag or click)",
+  "change_status_dialog_title": "Move \"{{title}}\" to…",
+  "change_status_target_current": "{{column}} (current column)",
+  "change_status_target_blocked": "{{column}} (subtasks incomplete)",
   "form": {
     "create_title": "New task",
     "edit_title": "Edit task",
