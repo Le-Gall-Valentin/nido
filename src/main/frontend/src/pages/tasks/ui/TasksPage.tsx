@@ -81,7 +81,7 @@ function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, 
       {...listeners}
       {...attributes}
       style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
-      className="flex flex-col gap-2 rounded-2xl border border-border bg-bg-1 p-3"
+      className="touch-none flex flex-col gap-2 rounded-2xl border border-border bg-bg-1 p-3"
     >
       <div className="flex items-start gap-2.5">
         <button type="button" aria-label={t('toggle_done', { title: task.title })} onClick={() => onToggleDone(task)}
