@@ -1,8 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Plus, Trash2, X, Check } from 'lucide-react'
-import { Alert, Spinner, Input } from '@/shared/ui'
+import { Plus, Trash2, X, Check, GripVertical } from 'lucide-react'
+import {
+  DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
+  type DragEndEvent, type DragStartEvent,
+} from '@dnd-kit/core'
+import { Alert, Spinner, Input, Dialog } from '@/shared/ui'
 import { MEASUREMENT_UNITS, MEASUREMENT_UNIT_LABEL_KEY, type MeasurementUnit } from '@/shared/lib'
 import { useMySpaces } from '@/features/space-switcher'
 import { canWrite } from '@/entities/space'
@@ -12,6 +16,7 @@ import {
   useAddItem, useUpdateItem, useToggleItemDone, useDeleteItem, useClearDoneItems, useClearAllItems,
   type IShoppingApi, type ShoppingItem,
 } from '@/entities/shopping-list'
+import { resolveItemMove } from './resolveItemMove'
 
 interface ShoppingListPageProps {
   api?: IShoppingApi
@@ -55,6 +60,10 @@ function ShoppingListPageContent() {
   const [newCategoryName, setNewCategoryName] = useState('')
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
+  const [movingItem, setMovingItem] = useState<ShoppingItem | null>(null)
+  const [activeDragItem, setActiveDragItem] = useState<ShoppingItem | null>(null)
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   function formatQuantity(item: ShoppingItem): string | null {
     const parts = [
@@ -106,6 +115,26 @@ function ShoppingListPageContent() {
     const name = renameDraft.trim()
     if (!name) return
     runMutation(renameCategory.mutateAsync({ categoryId: renamingId, name })).then(() => setRenamingId(null)).catch(() => {})
+  }
+
+  function moveItemToCategory(item: ShoppingItem, categoryId: string) {
+    setMovingItem(null)
+    runMutation(updateItem.mutateAsync({
+      itemId: item.id, categoryId, name: item.name, quantity: item.quantity, unit: item.unit,
+    })).catch(() => {})
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveDragItem((items ?? []).find((i) => i.id === event.active.id) ?? null)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveDragItem(null)
+    const { active, over } = event
+    if (!over) return
+    const item = resolveItemMove(items ?? [], String(active.id), String(over.id))
+    if (!item) return
+    moveItemToCategory(item, String(over.id))
   }
 
   if (isPending) return <Spinner label={t('loading')} fullscreen={false} />
@@ -171,77 +200,88 @@ function ShoppingListPageContent() {
       {(items ?? []).length === 0 ? (
         <p className="text-sm text-fg-3">{t('empty')}</p>
       ) : (
-        <div className="flex flex-col gap-5">
-          {(categories ?? []).map((category) => {
-            const categoryItems = itemsByCategory.get(category.id) ?? []
-            return (
-              <div key={category.id}>
-                <div className="mb-1.5 flex items-center gap-2">
-                  {renamingId === category.id ? (
-                    <>
-                      <Input label={t('category_rename')} srOnlyLabel value={renameDraft} onChange={(e) => setRenameDraft(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') confirmRename() }} className="h-7 text-xs" />
-                      <button type="button" onClick={confirmRename} aria-label={t('category_rename_confirm')}><Check className="size-3.5" /></button>
-                      <button type="button" onClick={() => setRenamingId(null)} aria-label={t('form_cancel')}><X className="size-3.5" /></button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-xs font-semibold uppercase tracking-wide text-fg-3">{category.name}</span>
-                      <span className="text-xs text-fg-4">
-                        {t('category_remaining', { count: categoryItems.filter((i) => !i.done).length })}
-                      </span>
-                      {canWriteHere && (
-                        <div className="ml-auto flex gap-1">
-                          <button type="button" onClick={() => { setRenamingId(category.id); setRenameDraft(category.name) }}
-                            aria-label={t('category_rename')} className="text-fg-3">
-                            {t('category_rename')}
-                          </button>
-                          {!category.fallback && (
-                            <button type="button"
-                              onClick={() => runMutation(deleteCategory.mutateAsync(category.id)).catch(() => {})}
-                              aria-label={t('category_delete', { name: category.name })} className="text-status-red">
-                              <Trash2 className="size-3.5" />
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveDragItem(null)}>
+          <div className="flex flex-col gap-5">
+            {(categories ?? []).map((category) => {
+              const categoryItems = itemsByCategory.get(category.id) ?? []
+              return (
+                <CategoryDropZone key={category.id} categoryId={category.id}>
+                  <div className="mb-1.5 flex items-center gap-2">
+                    {renamingId === category.id ? (
+                      <>
+                        <Input label={t('category_rename')} srOnlyLabel value={renameDraft} onChange={(e) => setRenameDraft(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') confirmRename() }} className="h-7 text-xs" />
+                        <button type="button" onClick={confirmRename} aria-label={t('category_rename_confirm')}><Check className="size-3.5" /></button>
+                        <button type="button" onClick={() => setRenamingId(null)} aria-label={t('form_cancel')}><X className="size-3.5" /></button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xs font-semibold uppercase tracking-wide text-fg-3">{category.name}</span>
+                        <span className="text-xs text-fg-4">
+                          {t('category_remaining', { count: categoryItems.filter((i) => !i.done).length })}
+                        </span>
+                        {canWriteHere && (
+                          <div className="ml-auto flex gap-1">
+                            <button type="button" onClick={() => { setRenamingId(category.id); setRenameDraft(category.name) }}
+                              aria-label={t('category_rename')} className="text-fg-3">
+                              {t('category_rename')}
                             </button>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div className="rounded-2xl border border-border bg-bg-1">
-                  {categoryItems.map((item) => {
-                    const quantityLabel = formatQuantity(item)
-                    return (
-                    <div key={item.id} className="flex items-center gap-2 border-b border-border px-4 py-2.5 last:border-b-0">
-                      <button type="button" onClick={() => runMutation(toggleItemDone.mutateAsync(item.id)).catch(() => {})}
-                        aria-label={t('toggle_done', { name: item.name })} className="grid size-5 place-items-center rounded-md border border-border">
-                        {item.done && <Check className="size-3.5 text-accent" />}
-                      </button>
-                      <span className={`flex-1 text-sm ${item.done ? 'text-fg-4 line-through' : 'text-fg-1'}`}>{item.name}</span>
-                      {quantityLabel && <span className="text-xs text-fg-3">{quantityLabel}</span>}
-                      {canWriteHere && (
-                        <select value={item.categoryId}
-                          onChange={(e) => runMutation(updateItem.mutateAsync({
-                            itemId: item.id, categoryId: e.target.value, name: item.name, quantity: item.quantity, unit: item.unit,
-                          })).catch(() => {})}
-                          aria-label={t('recategorize', { name: item.name })} className="rounded-md border border-border bg-bg-1 px-1 py-1 text-xs">
-                          {(categories ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                      )}
-                      {canWriteHere && (
-                        <button type="button" onClick={() => runMutation(deleteItem.mutateAsync(item.id)).catch(() => {})}
-                          aria-label={t('delete_item', { name: item.name })} className="p-1 text-fg-3 hover:text-status-red">
-                          <Trash2 className="size-3.5" />
-                        </button>
-                      )}
+                            {!category.fallback && (
+                              <button type="button"
+                                onClick={() => runMutation(deleteCategory.mutateAsync(category.id)).catch(() => {})}
+                                aria-label={t('category_delete', { name: category.name })} className="text-status-red">
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {categoryItems.length > 0 && (
+                    <div className="rounded-2xl border border-border bg-bg-1">
+                      {categoryItems.map((item) => (
+                        <ShoppingItemRow
+                          key={item.id} item={item} canWrite={canWriteHere} quantityLabel={formatQuantity(item)}
+                          onToggleDone={() => runMutation(toggleItemDone.mutateAsync(item.id)).catch(() => {})}
+                          onDelete={() => runMutation(deleteItem.mutateAsync(item.id)).catch(() => {})}
+                          onRequestMove={() => setMovingItem(item)}
+                          moveLabel={t('move_item', { name: item.name })}
+                          toggleLabel={t('toggle_done', { name: item.name })}
+                          deleteLabel={t('delete_item', { name: item.name })}
+                        />
+                      ))}
                     </div>
-                    )
-                  })}
-                </div>
+                  )}
+                </CategoryDropZone>
+              )
+            })}
+          </div>
+          <DragOverlay>
+            {activeDragItem && (
+              <div className="rounded-md border border-accent bg-bg-1 px-3 py-1.5 text-sm text-fg-1 shadow-lg">
+                {activeDragItem.name}
               </div>
-            )
-          })}
-        </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {movingItem && (
+        <Dialog open onClose={() => setMovingItem(null)} title={t('move_item_dialog_title', { name: movingItem.name })}>
+          <p className="mb-3 text-sm font-semibold text-fg-1">{t('move_item_dialog_title', { name: movingItem.name })}</p>
+          <div className="flex flex-col gap-1">
+            {(categories ?? []).map((c) => {
+              const isCurrent = c.id === movingItem.categoryId
+              return (
+                <button key={c.id} type="button" disabled={isCurrent} onClick={() => moveItemToCategory(movingItem, c.id)}
+                  className="rounded-md px-3 py-2 text-left text-sm hover:bg-bg-2 disabled:text-fg-4 disabled:hover:bg-transparent">
+                  {isCurrent ? t('move_item_target_current', { category: c.name }) : c.name}
+                </button>
+              )
+            })}
+          </div>
+        </Dialog>
       )}
 
       {canWriteHere && (
@@ -254,6 +294,61 @@ function ShoppingListPageContent() {
             <Plus className="size-3.5" /> {t('new_category')}
           </button>
         </div>
+      )}
+    </div>
+  )
+}
+
+interface CategoryDropZoneProps {
+  categoryId: string
+  children: ReactNode
+}
+
+// The whole category block (header + items, if any) is the drop target — this way an
+// empty category never needs a placeholder box of its own: its header is always visible
+// and is itself big enough to drop on.
+function CategoryDropZone({ categoryId, children }: CategoryDropZoneProps) {
+  const { setNodeRef, isOver } = useDroppable({ id: categoryId })
+  return (
+    <div ref={setNodeRef} className={`transition-colors ${isOver ? 'bg-accent/10' : ''}`}>
+      {children}
+    </div>
+  )
+}
+
+interface ShoppingItemRowProps {
+  item: ShoppingItem
+  canWrite: boolean
+  quantityLabel: string | null
+  onToggleDone: () => void
+  onDelete: () => void
+  onRequestMove: () => void
+  moveLabel: string
+  toggleLabel: string
+  deleteLabel: string
+}
+
+function ShoppingItemRow({
+  item, canWrite, quantityLabel, onToggleDone, onDelete, onRequestMove, moveLabel, toggleLabel, deleteLabel,
+}: ShoppingItemRowProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
+  return (
+    <div className={`flex items-center gap-2 border-b border-border px-4 py-2.5 last:border-b-0 ${isDragging ? 'opacity-40' : ''}`}>
+      <button type="button" onClick={onToggleDone} aria-label={toggleLabel} className="grid size-5 place-items-center rounded-md border border-border">
+        {item.done && <Check className="size-3.5 text-accent" />}
+      </button>
+      <span className={`flex-1 text-sm ${item.done ? 'text-fg-4 line-through' : 'text-fg-1'}`}>{item.name}</span>
+      {quantityLabel && <span className="text-xs text-fg-3">{quantityLabel}</span>}
+      {canWrite && (
+        <button ref={setNodeRef} {...listeners} {...attributes} type="button" onClick={onRequestMove}
+          aria-label={moveLabel} className="grid size-6 shrink-0 touch-none place-items-center rounded-md text-fg-3 hover:text-fg-1 active:cursor-grabbing">
+          <GripVertical className="size-4" />
+        </button>
+      )}
+      {canWrite && (
+        <button type="button" onClick={onDelete} aria-label={deleteLabel} className="p-1 text-fg-3 hover:text-status-red">
+          <Trash2 className="size-3.5" />
+        </button>
       )}
     </div>
   )

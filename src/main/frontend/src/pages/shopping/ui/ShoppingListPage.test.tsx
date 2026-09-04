@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -101,14 +101,27 @@ describe('ShoppingListPage', () => {
     await waitFor(() => expect(api.addItem).toHaveBeenCalledWith('space-1', 'cat-1', 'Riz', 300, 'GRAM'))
   })
 
-  it('recategorizes an item via its row dropdown, preserving its quantity and unit', async () => {
+  it('moves an item to another category via the fallback dialog, preserving its quantity and unit', async () => {
     const api = fakeApi()
     setup(api)
     await screen.findByText('Pâtes')
 
-    fireEvent.change(screen.getByLabelText('recategorize'), { target: { value: 'cat-2' } })
+    fireEvent.click(screen.getByLabelText('move_item'))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.click(within(dialog).getByText('Maison & divers'))
 
     await waitFor(() => expect(api.updateItem).toHaveBeenCalledWith('space-1', 'i1', 'cat-2', 'Pâtes', 500, 'GRAM'))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('disables the item\'s current category in the fallback dialog', async () => {
+    setup()
+    await screen.findByText('Pâtes')
+
+    fireEvent.click(screen.getByLabelText('move_item'))
+    const dialog = screen.getByRole('dialog')
+
+    expect(within(dialog).getByText('move_item_target_current')).toHaveProperty('disabled', true)
   })
 
   it('toggles an item done', async () => {
@@ -217,7 +230,7 @@ describe('ShoppingListPage — read-only role', () => {
     await screen.findByText('Pâtes')
 
     expect(screen.queryByLabelText('add_item_placeholder')).toBeNull()
-    expect(screen.queryByLabelText('recategorize')).toBeNull()
+    expect(screen.queryByLabelText('move_item')).toBeNull()
     expect(screen.queryByLabelText('delete_item')).toBeNull()
     expect(screen.queryByText('new_category')).toBeNull()
   })
@@ -235,12 +248,13 @@ describe('ShoppingListPage — mutation errors', () => {
     expect(await screen.findByText('error.action_failed')).toBeDefined()
   })
 
-  it('shows an error message when recategorizing an item fails', async () => {
+  it('shows an error message when moving an item to another category fails', async () => {
     const api = fakeApi({ updateItem: vi.fn().mockRejectedValue(new Error('boom')) })
     setup(api)
     await screen.findByText('Pâtes')
 
-    fireEvent.change(screen.getByLabelText('recategorize'), { target: { value: 'cat-2' } })
+    fireEvent.click(screen.getByLabelText('move_item'))
+    fireEvent.click(within(screen.getByRole('dialog')).getByText('Maison & divers'))
 
     expect(await screen.findByText('error.action_failed')).toBeDefined()
   })
