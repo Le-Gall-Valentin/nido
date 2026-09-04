@@ -4,6 +4,7 @@ import { LoginPage } from '@/pages/login'
 import { ROUTES } from '@/shared/config'
 import { AppLayout, SpaceLayout } from '@/app/layouts'
 import { SpaceMembersApiProvider } from '@/entities/space'
+import { TasksApiProvider, tasksApi } from '@/entities/tasks'
 import { SpacesApiProvider, spacesApi } from '@/features/space-switcher'
 import { SpacesPageApiProvider, spacesPageApi } from '@/pages/spaces/invitations'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -46,7 +47,9 @@ export function AppRouter() {
               <SpacesApiProvider api={spacesApi}>
                 <SpacesPageApiProvider api={spacesPageApi}>
                   <SpaceMembersApiProvider api={spacesPageApi}>
-                    <AppLayout />
+                    <TasksApiProvider api={tasksApi}>
+                      <AppLayout />
+                    </TasksApiProvider>
                   </SpaceMembersApiProvider>
                 </SpacesPageApiProvider>
               </SpacesApiProvider>
