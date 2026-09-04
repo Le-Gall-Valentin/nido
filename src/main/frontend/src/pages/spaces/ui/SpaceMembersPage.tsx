@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/shared/config'
+import { SpaceMembersApiProvider } from '@/entities/space'
 import { useActiveSpace } from '@/features/space-switcher'
 import { spacesPageApi } from '../api/spacesPageApi'
 import type { ISpacesPageApi } from '../model/ISpacesPageApi'
@@ -19,7 +20,9 @@ interface SpaceMembersPageProps {
 export function SpaceMembersPage({ api = spacesPageApi }: SpaceMembersPageProps = {}) {
   return (
     <SpacesPageApiProvider api={api}>
-      <SpaceMembersPageContent />
+      <SpaceMembersApiProvider api={api}>
+        <SpaceMembersPageContent />
+      </SpaceMembersApiProvider>
     </SpacesPageApiProvider>
   )
 }

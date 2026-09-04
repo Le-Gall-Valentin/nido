@@ -4,10 +4,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { LogOut, Pencil, Trash2, UserPlus } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { Alert, Button, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { SpaceAvatar, SpaceRolePill, canManageSpace, isOwner, isPersonal, type SpaceMember } from '@/entities/space'
+import { SpaceAvatar, SpaceRolePill, canManageSpace, isOwner, isPersonal, useSpaceMembers, type SpaceMember } from '@/entities/space'
 import { SpaceNotAccessibleError, SPACES_QUERY_KEY } from '@/features/space-switcher'
 import { useSpaceDetail } from '../model/useSpaceDetail'
-import { useSpaceMembers } from '../model/useSpaceMembers'
 import { useSpaceInvitations } from '../model/useSpaceInvitations'
 import {
   useChangeMemberRole,
