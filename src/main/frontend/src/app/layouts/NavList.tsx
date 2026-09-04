@@ -10,6 +10,8 @@ export interface NavListProps {
   alwaysExpanded?: boolean
   /** Marks the "Membres et groupes" item (nav:spaces) with a badge — the only item this currently applies to. */
   hasPendingInvitations?: boolean
+  /** Numeric badge on the "Tâches" child item (nav:organisation:tasks) — the only item this currently applies to. */
+  openTaskCount?: number
 }
 
 /**
@@ -21,7 +23,7 @@ export interface NavListProps {
  * without a separate click-to-expand affordance; the mobile drawer instead
  * passes `alwaysExpanded` so every sub-item stays visible at all times.
  */
-export function NavList({ items, spaceId, pathname, alwaysExpanded, hasPendingInvitations }: NavListProps) {
+export function NavList({ items, spaceId, pathname, alwaysExpanded, hasPendingInvitations, openTaskCount }: NavListProps) {
   const { t } = useTranslation('shell')
 
   return (
@@ -50,7 +52,8 @@ export function NavList({ items, spaceId, pathname, alwaysExpanded, hasPendingIn
                   const childTo = child.to(spaceId)
                   if (!childTo) return null
                   return (
-                    <NavItem key={child.id} to={childTo} icon={child.icon} label={t(child.labelKey)} pathname={pathname} />
+                    <NavItem key={child.id} to={childTo} icon={child.icon} label={t(child.labelKey)} pathname={pathname}
+                      badgeCount={child.id === 'nav:organisation:tasks' ? openTaskCount : undefined} />
                   )
                 })}
               </div>

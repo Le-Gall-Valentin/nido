@@ -22,9 +22,20 @@ const ITEMS: NavItemConfig[] = [
       { id: 'nav:kitchen:menu', to: (spaceId) => (spaceId ? `/s/${spaceId}/kitchen/menu` : undefined), icon: Calendar, labelKey: 'nav.kitchen_menu' },
     ],
   },
+  {
+    id: 'nav:organisation',
+    to: (spaceId) => (spaceId ? `/s/${spaceId}/organisation/tasks` : undefined),
+    icon: Calendar,
+    labelKey: 'nav.organisation',
+    children: [
+      { id: 'nav:organisation:tasks', to: (spaceId) => (spaceId ? `/s/${spaceId}/organisation/tasks` : undefined), icon: Calendar, labelKey: 'nav.organisation_tasks' },
+    ],
+  },
 ]
 
-function renderList(spaceId: string | undefined, pathname: string, alwaysExpanded = false, hasPendingInvitations = false) {
+function renderList(
+  spaceId: string | undefined, pathname: string, alwaysExpanded = false, hasPendingInvitations = false, openTaskCount = 0
+) {
   return render(
     <MemoryRouter>
       <NavList
@@ -33,6 +44,7 @@ function renderList(spaceId: string | undefined, pathname: string, alwaysExpande
         pathname={pathname}
         alwaysExpanded={alwaysExpanded}
         hasPendingInvitations={hasPendingInvitations}
+        openTaskCount={openTaskCount}
       />
     </MemoryRouter>
   )
@@ -106,5 +118,23 @@ describe('NavList — pending invitations badge', () => {
     renderList('space-1', '/s/space-1/kitchen/menu', true, true)
     // Only one badge total: the groups item, never kitchen or its children.
     expect(screen.getAllByText('nav.pending_invitations')).toHaveLength(1)
+  })
+})
+
+describe('NavList — open task count badge', () => {
+  it('shows the count on the tasks item when there are open tasks', () => {
+    renderList('space-1', '/s/space-1/organisation/tasks', true, false, 3)
+    expect(screen.getByText('3')).toBeDefined()
+  })
+
+  it('shows no badge when the count is zero', () => {
+    renderList('space-1', '/s/space-1/organisation/tasks', true, false, 0)
+    expect(screen.queryByText('nav.open_tasks')).toBeNull()
+  })
+
+  it('never badges the parent Organisation item, only its Tâches child', () => {
+    renderList('space-1', '/s/space-1/organisation/tasks', true, false, 3)
+    const parentLink = screen.getByRole('link', { name: /^nav\.organisation$/ })
+    expect(parentLink.textContent).not.toContain('3')
   })
 })
