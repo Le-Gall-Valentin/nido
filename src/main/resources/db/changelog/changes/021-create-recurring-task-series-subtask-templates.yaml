@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: 021-create-recurring-task-series-subtask-templates
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: recurring_task_series_subtask_templates
+      changes:
+        - createTable:
+            tableName: recurring_task_series_subtask_templates
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: series_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: position
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: text
+                  type: VARCHAR(200)
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: recurring_task_series_subtask_templates
+            indexName: idx_recurring_task_series_subtask_templates_series_id
+            columns:
+              - column:
+                  name: series_id
+        - addForeignKeyConstraint:
+            baseTableName: recurring_task_series_subtask_templates
+            baseColumnNames: series_id
+            referencedTableName: recurring_task_series
+            referencedColumnNames: id
+            constraintName: fk_recurring_task_series_subtask_templates_series
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: recurring_task_series_subtask_templates
+            cascadeConstraints: true

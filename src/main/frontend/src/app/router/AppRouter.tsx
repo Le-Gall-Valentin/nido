@@ -3,6 +3,8 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom
 import { LoginPage } from '@/pages/login'
 import { ROUTES } from '@/shared/config'
 import { AppLayout, SpaceLayout } from '@/app/layouts'
+import { SpaceMembersApiProvider } from '@/entities/space'
+import { TasksApiProvider, tasksApi } from '@/entities/tasks'
 import { SpacesApiProvider, spacesApi } from '@/features/space-switcher'
 import { SpacesPageApiProvider, spacesPageApi } from '@/pages/spaces/invitations'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -22,6 +24,7 @@ const KitchenRecipeDetailPage = lazy(() =>
   import('@/pages/kitchen').then((m) => ({ default: m.KitchenRecipeDetailPage })))
 const KitchenMenuPage = lazy(() => import('@/pages/kitchen').then((m) => ({ default: m.KitchenMenuPage })))
 const ShoppingListPage = lazy(() => import('@/pages/shopping'))
+const TasksPage = lazy(() => import('@/pages/tasks'))
 
 export function AppRouter() {
   return (
@@ -43,7 +46,11 @@ export function AppRouter() {
             <ProtectedRoute>
               <SpacesApiProvider api={spacesApi}>
                 <SpacesPageApiProvider api={spacesPageApi}>
-                  <AppLayout />
+                  <SpaceMembersApiProvider api={spacesPageApi}>
+                    <TasksApiProvider api={tasksApi}>
+                      <AppLayout />
+                    </TasksApiProvider>
+                  </SpaceMembersApiProvider>
                 </SpacesPageApiProvider>
               </SpacesApiProvider>
             </ProtectedRoute>
@@ -90,6 +97,7 @@ export function AppRouter() {
             <Route path="organisation">
               <Route index element={<Navigate to="courses" replace />} />
               <Route path="courses" element={<ShoppingListPage />} />
+              <Route path="tasks" element={<TasksPage />} />
             </Route>
           </Route>
         </Route>

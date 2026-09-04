@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
-import type { SpaceDetail, SpaceMember, SpaceInvitation } from '@/entities/space'
+import { SpaceMembersApiProvider, type SpaceDetail, type SpaceMember, type SpaceInvitation } from '@/entities/space'
 import type { ISpacesPageApi } from '../model/ISpacesPageApi'
 import { SpacesPageApiProvider } from '../model/spacesPageApiContext'
 import { SpaceDetailSection } from './SpaceDetailSection'
@@ -69,7 +69,9 @@ function renderSection(
 ) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <SpacesPageApiProvider api={api}>{children}</SpacesPageApiProvider>
+      <SpacesPageApiProvider api={api}>
+        <SpaceMembersApiProvider api={api}>{children}</SpaceMembersApiProvider>
+      </SpacesPageApiProvider>
     </QueryClientProvider>
   )
   return {

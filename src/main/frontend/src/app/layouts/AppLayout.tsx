@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
 import { useCurrentSpaceId } from '@/features/space-switcher'
 import { useHasPendingInvitations } from '@/pages/spaces/invitations'
+import { useOpenTaskCount } from '@/pages/tasks/openTaskCount'
 import { usePaletteItems } from '@/shared/lib'
 import { isAdminRole } from '@/entities/user'
 import { Sidebar } from './Sidebar'
@@ -34,6 +35,7 @@ export function AppLayout() {
   const { spaceId } = useCurrentSpaceId()
   const { pathname } = useLocation()
   const hasPendingInvitations = useHasPendingInvitations()
+  const openTaskCount = useOpenTaskCount(spaceId)
 
   const visibleNavItems = useMemo(
     () => NAV_CONFIG.filter((item) => !item.adminOnly || isAdminRole(user?.role)),
@@ -87,7 +89,7 @@ export function AppLayout() {
     <div className="fixed inset-0 flex overflow-hidden bg-bg-0">
       <PaletteSetups />
 
-      <Sidebar hasPendingInvitations={hasPendingInvitations} />
+      <Sidebar hasPendingInvitations={hasPendingInvitations} openTaskCount={openTaskCount} />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar onSearchOpen={openPalette} onMenuOpen={openMobileNav} />
@@ -106,6 +108,7 @@ export function AppLayout() {
           pathname={pathname}
           onClose={closeMobileNav}
           hasPendingInvitations={hasPendingInvitations}
+          openTaskCount={openTaskCount}
         />
       )}
 

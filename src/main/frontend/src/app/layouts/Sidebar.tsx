@@ -21,11 +21,14 @@ interface NavItemProps {
   activeOverride?: boolean
   /** Shows a small red dot on the icon — currently only used for pending invitations on the groups item. */
   hasBadge?: boolean
+  /** Shows a numeric pill instead of a dot — used for the open task count on "Tâches". Ignored when 0 or undefined. */
+  badgeCount?: number
 }
 
-export function NavItem({ to, icon: Icon, label, pathname, activeOverride, hasBadge }: NavItemProps) {
+export function NavItem({ to, icon: Icon, label, pathname, activeOverride, hasBadge, badgeCount }: NavItemProps) {
   const { t } = useTranslation('shell')
   const active = activeOverride ?? (pathname === to || pathname.startsWith(`${to}/`))
+  const showCount = !!badgeCount && badgeCount > 0
 
   return (
     <Link
@@ -44,6 +47,12 @@ export function NavItem({ to, icon: Icon, label, pathname, activeOverride, hasBa
       </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {hasBadge && <span className="sr-only">{t('nav.pending_invitations')}</span>}
+      {showCount && (
+        <span className="ml-auto flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full bg-status-red px-1 text-[11px] font-bold text-white">
+          {badgeCount}
+        </span>
+      )}
+      {showCount && <span className="sr-only">{t('nav.open_tasks', { count: badgeCount })}</span>}
     </Link>
   )
 }
@@ -57,9 +66,10 @@ export function NavItem({ to, icon: Icon, label, pathname, activeOverride, hasBa
  */
 interface SidebarProps {
   hasPendingInvitations?: boolean
+  openTaskCount?: number
 }
 
-export function Sidebar({ hasPendingInvitations }: SidebarProps = {}) {
+export function Sidebar({ hasPendingInvitations, openTaskCount }: SidebarProps = {}) {
   const { t } = useTranslation('shell')
   const user = useAuth((s) => s.user)
   const { pathname } = useLocation()
@@ -87,7 +97,7 @@ export function Sidebar({ hasPendingInvitations }: SidebarProps = {}) {
 
       {/* Nav */}
       <nav className="flex flex-1 flex-col gap-[3px] overflow-y-auto px-3 py-2" aria-label={t('nav.label')}>
-        <NavList items={visibleItems} spaceId={spaceId} pathname={pathname} hasPendingInvitations={hasPendingInvitations} />
+        <NavList items={visibleItems} spaceId={spaceId} pathname={pathname} hasPendingInvitations={hasPendingInvitations} openTaskCount={openTaskCount} />
       </nav>
     </aside>
   )

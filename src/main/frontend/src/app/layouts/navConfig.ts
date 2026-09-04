@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Calendar, CookingPot, Lock, Settings, Shield, ShoppingCart, SlidersHorizontal, User, Users } from 'lucide-react'
+import { Calendar, CheckSquare, CookingPot, Lock, Settings, Shield, ShoppingCart, SlidersHorizontal, User, Users } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 
 export interface NavItemConfig {
@@ -39,6 +39,7 @@ export const NAV_CONFIG: NavItemConfig[] = [
     labelKey: 'nav.organisation',
     children: [
       { id: 'nav:organisation:courses', to: (spaceId) => (spaceId ? ROUTES.spaceOrganisationCourses(spaceId) : undefined), icon: ShoppingCart, labelKey: 'nav.organisation_courses' },
+      { id: 'nav:organisation:tasks', to: (spaceId) => (spaceId ? ROUTES.spaceOrganisationTasks(spaceId) : undefined), icon: CheckSquare, labelKey: 'nav.organisation_tasks' },
     ],
   },
   {
