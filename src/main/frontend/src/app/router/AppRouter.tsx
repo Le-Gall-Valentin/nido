@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom
 import { LoginPage } from '@/pages/login'
 import { ROUTES } from '@/shared/config'
 import { AppLayout, SpaceLayout } from '@/app/layouts'
+import { SpaceMembersApiProvider } from '@/entities/space'
 import { SpacesApiProvider, spacesApi } from '@/features/space-switcher'
 import { SpacesPageApiProvider, spacesPageApi } from '@/pages/spaces/invitations'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -43,7 +44,9 @@ export function AppRouter() {
             <ProtectedRoute>
               <SpacesApiProvider api={spacesApi}>
                 <SpacesPageApiProvider api={spacesPageApi}>
-                  <AppLayout />
+                  <SpaceMembersApiProvider api={spacesPageApi}>
+                    <AppLayout />
+                  </SpaceMembersApiProvider>
                 </SpacesPageApiProvider>
               </SpacesApiProvider>
             </ProtectedRoute>
