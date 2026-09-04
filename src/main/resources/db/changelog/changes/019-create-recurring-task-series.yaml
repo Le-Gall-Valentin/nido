@@ -1,0 +1,79 @@
+databaseChangeLog:
+  - changeSet:
+      id: 019-create-recurring-task-series
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: recurring_task_series
+      changes:
+        - createTable:
+            tableName: recurring_task_series
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: priority
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: interval_type
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: interval_count
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: anchor_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: occurrence_count
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: current_rotation_index
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE recurring_task_series ADD CONSTRAINT chk_recurring_task_series_priority CHECK (priority IN ('HIGH', 'MED', 'LOW'))
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE recurring_task_series ADD CONSTRAINT chk_recurring_task_series_interval_type CHECK (interval_type IN ('DAILY', 'WEEKLY', 'MONTHLY'))
+            splitStatements: false
+        - addForeignKeyConstraint:
+            baseTableName: recurring_task_series
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_recurring_task_series_space
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: recurring_task_series
+            cascadeConstraints: true

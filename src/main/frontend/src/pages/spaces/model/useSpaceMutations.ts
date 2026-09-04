@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { spaceMembersKey } from '@/entities/space'
 import { SPACES_QUERY_KEY } from '@/features/space-switcher'
 import type { AssignableSpaceRole, CreateSpaceInput, UpdateSpaceInput } from './ISpacesPageApi'
 import { useSpacesPageApi } from './spacesPageApiContext'
 import { spaceDetailKey } from './useSpaceDetail'
-import { spaceMembersKey } from './useSpaceMembers'
 import { spaceInvitationsKey } from './useSpaceInvitations'
 import { RECEIVED_INVITATIONS_QUERY_KEY } from './useReceivedInvitations'
 

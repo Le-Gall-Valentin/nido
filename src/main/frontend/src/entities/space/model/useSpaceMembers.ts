@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { useSpacesPageApi } from './spacesPageApiContext'
+import { useSpaceMembersApi } from './spaceMembersApiContext'
 
 export function spaceMembersKey(spaceId: string) {
   return ['space', spaceId, 'members'] as const
 }
 
 export function useSpaceMembers(spaceId: string | undefined) {
-  const api = useSpacesPageApi()
+  const api = useSpaceMembersApi()
   return useQuery({
     queryKey: spaceMembersKey(spaceId ?? ''),
     queryFn: () => api.listMembers(spaceId as string),

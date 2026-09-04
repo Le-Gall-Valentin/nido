@@ -1,0 +1,82 @@
+databaseChangeLog:
+  - changeSet:
+      id: 022-create-tasks
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: tasks
+      changes:
+        - createTable:
+            tableName: tasks
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: priority
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: due_date
+                  type: DATE
+              - column:
+                  name: recurring_series_id
+                  type: UUID
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE tasks ADD CONSTRAINT chk_tasks_status CHECK (status IN ('TODO', 'DOING', 'DONE'))
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE tasks ADD CONSTRAINT chk_tasks_priority CHECK (priority IN ('HIGH', 'MED', 'LOW'))
+            splitStatements: false
+        - createIndex:
+            tableName: tasks
+            indexName: idx_tasks_space_id
+            columns:
+              - column:
+                  name: space_id
+        - addForeignKeyConstraint:
+            baseTableName: tasks
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_tasks_space
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: tasks
+            baseColumnNames: recurring_series_id
+            referencedTableName: recurring_task_series
+            referencedColumnNames: id
+            constraintName: fk_tasks_recurring_series
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: tasks
+            cascadeConstraints: true

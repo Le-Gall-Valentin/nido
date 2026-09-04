@@ -1,0 +1,59 @@
+databaseChangeLog:
+  - changeSet:
+      id: 020-create-recurring-task-series-members
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: recurring_task_series_members
+      changes:
+        - createTable:
+            tableName: recurring_task_series_members
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: series_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: position
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: recurring_task_series_members
+            indexName: idx_recurring_task_series_members_series_id
+            columns:
+              - column:
+                  name: series_id
+        - addForeignKeyConstraint:
+            baseTableName: recurring_task_series_members
+            baseColumnNames: series_id
+            referencedTableName: recurring_task_series
+            referencedColumnNames: id
+            constraintName: fk_recurring_task_series_members_series
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: recurring_task_series_members
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_recurring_task_series_members_user
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: recurring_task_series_members
+            cascadeConstraints: true

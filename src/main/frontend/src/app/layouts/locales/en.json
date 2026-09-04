@@ -13,7 +13,10 @@
     "kitchen_menu": "Menu",
     "organisation": "Organisation",
     "organisation_courses": "Shopping list",
-    "pending_invitations": "Pending invitations"
+    "organisation_tasks": "Tasks",
+    "pending_invitations": "Pending invitations",
+    "open_tasks_one": "{{count}} open task",
+    "open_tasks_other": "{{count}} open tasks"
   },
   "topbar": {
     "search_label": "Search",
