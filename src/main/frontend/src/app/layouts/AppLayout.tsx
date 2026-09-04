@@ -84,7 +84,7 @@ export function AppLayout() {
   }, [])
 
   return (
-    <div className="flex h-screen overflow-hidden bg-bg-0">
+    <div className="fixed inset-0 flex overflow-hidden bg-bg-0">
       <PaletteSetups />
 
       <Sidebar hasPendingInvitations={hasPendingInvitations} />
