@@ -23,6 +23,7 @@ const KitchenRecipeDetailPage = lazy(() =>
   import('@/pages/kitchen').then((m) => ({ default: m.KitchenRecipeDetailPage })))
 const KitchenMenuPage = lazy(() => import('@/pages/kitchen').then((m) => ({ default: m.KitchenMenuPage })))
 const ShoppingListPage = lazy(() => import('@/pages/shopping'))
+const TasksPage = lazy(() => import('@/pages/tasks'))
 
 export function AppRouter() {
   return (
@@ -93,6 +94,7 @@ export function AppRouter() {
             <Route path="organisation">
               <Route index element={<Navigate to="courses" replace />} />
               <Route path="courses" element={<ShoppingListPage />} />
+              <Route path="tasks" element={<TasksPage />} />
             </Route>
           </Route>
         </Route>
