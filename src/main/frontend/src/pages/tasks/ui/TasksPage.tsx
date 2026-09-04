@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Plus, Pencil, ArrowRightLeft, Repeat } from 'lucide-react'
+import { Plus, Pencil, ArrowRightLeft, GripVertical, Repeat } from 'lucide-react'
 import {
   DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core'
@@ -77,11 +77,8 @@ function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, 
 
   return (
     <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
       style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
-      className="touch-none flex flex-col gap-2 rounded-2xl border border-border bg-bg-1 p-3"
+      className="flex flex-col gap-2 rounded-2xl border border-border bg-bg-1 p-3"
     >
       <div className="flex items-start gap-2.5">
         <button type="button" aria-label={t('toggle_done', { title: task.title })} onClick={() => onToggleDone(task)}
@@ -97,6 +94,13 @@ function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, 
           <span className={`flex-1 text-sm ${task.status === 'DONE' ? 'text-fg-3 line-through' : 'text-fg-0'}`}>{task.title}</span>
         )}
         {task.recurring && <Repeat className="mt-0.5 size-3.5 shrink-0 text-fg-3" />}
+        {canWriteHere && (
+          <button ref={setNodeRef} {...listeners} {...attributes} type="button" onClick={() => onChangeStatus(task)}
+            aria-label={changeStatusLabel}
+            className="grid size-6 shrink-0 touch-none place-items-center rounded-md text-fg-3 hover:text-fg-1 active:cursor-grabbing">
+            <GripVertical className="size-4" />
+          </button>
+        )}
       </div>
 
       {task.subtasks.length > 0 && (
