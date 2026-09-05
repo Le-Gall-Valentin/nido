@@ -29,7 +29,13 @@ public class ListTransactionsHandler implements ListTransactionsUseCase {
         return list(month, caller, LocalDate.now());
     }
 
-    /** Package-visible overload with an explicit "today" — lets tests materialize deterministically. */
+    /**
+     * Package-visible overload with an explicit "today" — lets tests materialize deterministically.
+     * Annotated in its own right (not just via the public overload) so an external caller invoking
+     * it directly through the Spring proxy — e.g. an integration test — still gets the transaction
+     * boundary the advisory lock in {@code RecurringTransactionMaterializer} depends on.
+     */
+    @Transactional
     List<Transaction> list(YearMonth month, SpaceMembership caller, LocalDate today) {
         RecurringTransactionMaterializer.materializeDueOccurrences(transactionRepository, seriesRepository, caller.spaceId(), today);
         return transactionRepository.findBySpaceIdAndMonth(caller.spaceId(), month);

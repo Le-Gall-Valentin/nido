@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,5 +63,6 @@ class GetProjectionHandlerTest {
         assertThat(projection.upcoming()).containsExactly(
             new ProjectedOccurrence(rent.id(), "Loyer", new BigDecimal("800.00"), TransactionType.EXPENSE, LocalDate.of(2026, 1, 28)));
         assertThat(projection.projectedEndOfMonthBalance()).isEqualByComparingTo("-850.00");
+        verify(seriesRepository).lockForMaterialization(spaceId);
     }
 }

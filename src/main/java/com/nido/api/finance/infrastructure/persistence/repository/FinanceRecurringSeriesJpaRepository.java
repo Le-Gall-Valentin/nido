@@ -19,4 +19,11 @@ public interface FinanceRecurringSeriesJpaRepository extends JpaRepository<Finan
     // across the whole OR.
     @Query("SELECT s FROM FinanceRecurringSeriesEntity s WHERE s.spaceId = :spaceId AND (s.endDate IS NULL OR s.endDate >= :asOf)")
     List<FinanceRecurringSeriesEntity> findActiveBySpaceId(@Param("spaceId") UUID spaceId, @Param("asOf") LocalDate asOf);
+
+    // Held for the rest of the transaction: serializes concurrent materialization for the
+    // same space so two requests can't both read the same lastMaterializedDate and each
+    // insert the same occurrence — see finance_transactions' recurring-series/date unique
+    // constraint for the belt-and-suspenders backstop.
+    @Query(value = "select pg_advisory_xact_lock(hashtext(:key))", nativeQuery = true)
+    void lockMaterialization(@Param("key") String key);
 }
