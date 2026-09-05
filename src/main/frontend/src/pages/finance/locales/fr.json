@@ -22,6 +22,15 @@
     "move": "Déplacer vers…",
     "recurring": "Récurrente"
   },
+  "recurring_series": {
+    "manage": "Gérer les opérations récurrentes",
+    "title": "Gérer les opérations récurrentes",
+    "empty": "Aucune opération récurrente.",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "edit_title": "Modifier l'opération récurrente",
+    "end_date_label": "Date de fin"
+  },
   "categories": {
     "title": "Gérer les catégories",
     "manage": "Gérer les catégories",

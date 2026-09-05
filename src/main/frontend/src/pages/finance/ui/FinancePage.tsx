@@ -15,13 +15,16 @@ import {
   useCreateTransaction, useCreateRecurringSeries, useUpdateTransaction, useDeleteTransaction, useMoveTransaction, useSetBudget,
   useCreateCategory, useUpdateCategory, useDeleteCategory, useBalances, useSettleDebt,
   useSavingsGoals, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,
-  type IFinanceApi, type Transaction, type SavingsGoal, type Category, type CategoryAmount,
+  useRecurringSeries, useUpdateRecurringSeries, useDeleteRecurringSeries,
+  type IFinanceApi, type Transaction, type SavingsGoal, type Category, type CategoryAmount, type RecurringSeries,
 } from '@/entities/finance'
 import { CategoryIconBadge } from './CategoryIconBadge'
 import { TransactionFormModal, type TransactionFormInput } from './TransactionFormModal'
 import { DeleteTransactionModal } from './DeleteTransactionModal'
 import { CategoryManagerModal } from './CategoryManagerModal'
 import { BudgetManagerModal } from './BudgetManagerModal'
+import { RecurringSeriesManagerModal } from './RecurringSeriesManagerModal'
+import { RecurringSeriesFormModal, type RecurringSeriesFormInput } from './RecurringSeriesFormModal'
 import { SettleDebtModal } from './SettleDebtModal'
 import { SavingsGoalFormModal, type SavingsGoalFormInput } from './SavingsGoalFormModal'
 import { AddContributionModal } from './AddContributionModal'
@@ -90,12 +93,15 @@ function FinancePageContent() {
   const { data: transactions, isPending, isError } = useTransactions(spaceId, month)
   const { data: stats } = useFinanceStats(spaceId, month)
   const { data: projection } = useProjection(spaceId, month)
+  const { data: recurringSeries } = useRecurringSeries(spaceId)
   const { data: members } = useSpaceMembers(spaceId)
   const { data: mySpaces } = useMySpaces()
   const { data: writableDestinations } = useWritableSpaces(spaceId)
 
   const createTransaction = useCreateTransaction(spaceId)
   const createRecurringSeries = useCreateRecurringSeries(spaceId)
+  const updateRecurringSeries = useUpdateRecurringSeries(spaceId)
+  const deleteRecurringSeries = useDeleteRecurringSeries(spaceId)
   const updateTransaction = useUpdateTransaction(spaceId)
   const deleteTransaction = useDeleteTransaction(spaceId)
   const moveTransaction = useMoveTransaction(spaceId)
@@ -116,6 +122,9 @@ function FinancePageContent() {
   const [movingTransaction, setMovingTransaction] = useState<Transaction | null>(null)
   const [managingCategories, setManagingCategories] = useState(false)
   const [managingBudget, setManagingBudget] = useState(false)
+  const [managingRecurringSeries, setManagingRecurringSeries] = useState(false)
+  const [editingSeries, setEditingSeries] = useState<RecurringSeries | null>(null)
+  const [deletingSeries, setDeletingSeries] = useState<RecurringSeries | null>(null)
   const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null)
   const [settlingTransfer, setSettlingTransfer] = useState<{ fromMemberId: string; toMemberId: string; amount: number } | null>(null)
   const [goalFormState, setGoalFormState] = useState<{ mode: 'create' } | { mode: 'edit'; goal: SavingsGoal } | null>(null)
@@ -124,6 +133,11 @@ function FinancePageContent() {
   function handleDeleteCategory(categoryId: string) {
     setCategoryDeleteError(null)
     deleteCategory.mutate(categoryId, { onError: () => setCategoryDeleteError('in_use') })
+  }
+
+  function handleUpdateSeriesSubmit(input: RecurringSeriesFormInput) {
+    if (!editingSeries) return
+    updateRecurringSeries.mutate({ seriesId: editingSeries.id, ...input }, { onSuccess: () => setEditingSeries(null) })
   }
 
   function memberLabel(memberId: string): string {
@@ -291,7 +305,14 @@ function FinancePageContent() {
       </section>
 
       <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
-        <h2 className="mb-3 text-[15px] font-semibold text-fg-0">{t('transactions.title')}</h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-[15px] font-semibold text-fg-0">{t('transactions.title')}</h2>
+          {canWriteHere && (
+            <button type="button" onClick={() => setManagingRecurringSeries(true)} className="shrink-0 text-sm font-semibold text-accent">
+              {t('recurring_series.manage')}
+            </button>
+          )}
+        </div>
         <ul className="divide-y divide-border">
           {(transactions ?? []).map((transaction) => {
             const category = categoryById.get(transaction.categoryId)
@@ -456,6 +477,36 @@ function FinancePageContent() {
           budgetLines={stats?.budgetVsActual ?? []}
           onSave={(categoryId, monthlyLimit) => setBudget.mutate({ categoryId, monthlyLimit })}
           onClose={() => setManagingBudget(false)}
+        />
+      )}
+
+      {managingRecurringSeries && (
+        <RecurringSeriesManagerModal
+          series={recurringSeries ?? []}
+          onEdit={(series) => setEditingSeries(series)}
+          onDelete={(seriesId) => setDeletingSeries((recurringSeries ?? []).find((s) => s.id === seriesId) ?? null)}
+          onClose={() => setManagingRecurringSeries(false)}
+        />
+      )}
+
+      {editingSeries && (
+        <RecurringSeriesFormModal
+          series={editingSeries}
+          categories={categories ?? []}
+          members={members ?? []}
+          canPickContributors={!spaceIsPersonal}
+          onSubmit={handleUpdateSeriesSubmit}
+          onCancel={() => setEditingSeries(null)}
+        />
+      )}
+
+      {deletingSeries && (
+        <DeleteTransactionModal
+          label={deletingSeries.label}
+          isPending={deleteRecurringSeries.isPending}
+          error={deleteRecurringSeries.isError ? 'error' : null}
+          onCancel={() => setDeletingSeries(null)}
+          onConfirm={() => deleteRecurringSeries.mutate(deletingSeries.id, { onSuccess: () => setDeletingSeries(null) })}
         />
       )}
 

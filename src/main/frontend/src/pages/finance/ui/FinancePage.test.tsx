@@ -103,4 +103,44 @@ describe('FinancePage', () => {
 
     await waitFor(() => expect(setBudget).toHaveBeenCalledWith('space-1', 'c1', 150))
   })
+
+  it('edits a recurring series from the manager modal', async () => {
+    const updateRecurringSeries = vi.fn()
+    renderPage(fakeApi({
+      listRecurringSeries: vi.fn().mockResolvedValue([{
+        id: 's1', label: 'Loyer', amount: 800, type: 'EXPENSE', categoryId: 'c1', payerId: 'u-1',
+        contributors: [], intervalType: 'MONTHLY', intervalCount: 1, anchorDate: '2026-01-01', endDate: null,
+      }]),
+      updateRecurringSeries,
+    }))
+
+    await waitFor(() => expect(screen.getByText('recurring_series.manage')).toBeDefined())
+    fireEvent.click(screen.getByText('recurring_series.manage'))
+    fireEvent.click(screen.getByLabelText('recurring_series.edit'))
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Loyer révisé' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    await waitFor(() => expect(updateRecurringSeries).toHaveBeenCalledWith(
+      'space-1', 's1', 'Loyer révisé', 800, 'EXPENSE', 'c1', 'u-1', [],
+      { intervalType: 'MONTHLY', intervalCount: 1, anchorDate: '2026-01-01', endDate: null }
+    ))
+  })
+
+  it('deletes a recurring series from the manager modal', async () => {
+    const deleteRecurringSeries = vi.fn()
+    renderPage(fakeApi({
+      listRecurringSeries: vi.fn().mockResolvedValue([{
+        id: 's1', label: 'Loyer', amount: 800, type: 'EXPENSE', categoryId: 'c1', payerId: 'u-1',
+        contributors: [], intervalType: 'MONTHLY', intervalCount: 1, anchorDate: '2026-01-01', endDate: null,
+      }]),
+      deleteRecurringSeries,
+    }))
+
+    await waitFor(() => expect(screen.getByText('recurring_series.manage')).toBeDefined())
+    fireEvent.click(screen.getByText('recurring_series.manage'))
+    fireEvent.click(screen.getByLabelText('recurring_series.delete'))
+    fireEvent.click(screen.getByText('delete_confirm.confirm'))
+
+    await waitFor(() => expect(deleteRecurringSeries).toHaveBeenCalledWith('space-1', 's1'))
+  })
 })
