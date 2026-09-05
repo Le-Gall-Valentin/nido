@@ -582,8 +582,8 @@ function FinancePageContent() {
           amount={settlingTransfer.amount}
           isPending={settleDebt.isPending}
           onCancel={() => setSettlingTransfer(null)}
-          onConfirm={(date) => settleDebt.mutate(
-            { fromMemberId: settlingTransfer.fromMemberId, toMemberId: settlingTransfer.toMemberId, amount: settlingTransfer.amount, date },
+          onConfirm={(amount, date) => settleDebt.mutate(
+            { fromMemberId: settlingTransfer.fromMemberId, toMemberId: settlingTransfer.toMemberId, amount, date },
             { onSuccess: () => setSettlingTransfer(null) }
           )}
         />
