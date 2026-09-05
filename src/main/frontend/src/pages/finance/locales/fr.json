@@ -27,7 +27,15 @@
     "delete_in_use": "Cette catégorie est toujours utilisée par des opérations.",
     "new_category_label": "Nouvelle catégorie",
     "new_category_placeholder": "Nom de la catégorie",
-    "add": "Ajouter"
+    "add": "Ajouter",
+    "choose_appearance": "Choisir l'icône et la couleur",
+    "edit_appearance": "Modifier l'icône et la couleur",
+    "appearance_title": "Icône et couleur",
+    "color_label": "Couleur",
+    "icon_search_label": "Rechercher une icône",
+    "icon_search_placeholder": "Rechercher une icône…",
+    "icon_no_results": "Aucune icône trouvée.",
+    "icon_confirm": "Valider"
   },
   "balances": {
     "title": "Remboursements entre membres",
