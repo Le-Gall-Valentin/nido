@@ -11,7 +11,7 @@ describe('DeleteTransactionModal', () => {
     const onConfirm = vi.fn()
     render(<DeleteTransactionModal label="Courses" onConfirm={onConfirm} onCancel={vi.fn()} isPending={false} error={null} />)
 
-    expect(screen.getByText(/Courses/)).toBeDefined()
+    expect(screen.getByRole('heading', { level: 3, name: /Courses/ })).toBeDefined()
     fireEvent.click(screen.getByText('delete_confirm.confirm'))
 
     expect(onConfirm).toHaveBeenCalled()
