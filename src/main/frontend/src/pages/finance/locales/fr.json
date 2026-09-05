@@ -9,6 +9,7 @@
   "budget": {
     "title": "Budget vs réel",
     "edit": "Modifier",
+    "set": "Définir un budget",
     "over": "Dépassé de {{amount}}",
     "remaining": "{{amount}} restants"
   },
