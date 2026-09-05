@@ -10,6 +10,8 @@ import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 @ApplicationService
 public class AddSavingsContributionHandler implements AddSavingsContributionUseCase {
 
@@ -27,6 +29,12 @@ public class AddSavingsContributionHandler implements AddSavingsContributionUseC
         SavingsGoal goal = savingsGoalRepository.findById(command.goalId()).orElseThrow(FinanceException.SavingsGoalNotFound::new);
         if (!goal.spaceId().equals(command.spaceId())) {
             throw new FinanceException.SavingsGoalNotFound();
+        }
+        BigDecimal alreadyContributed = savingsGoalRepository.findContributionsByGoalId(goal.id()).stream()
+            .map(SavingsContribution::amount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (alreadyContributed.add(command.amount()).compareTo(goal.targetAmount()) > 0) {
+            throw new FinanceException.ContributionExceedsGoalTarget();
         }
         return savingsGoalRepository.addContribution(command);
     }

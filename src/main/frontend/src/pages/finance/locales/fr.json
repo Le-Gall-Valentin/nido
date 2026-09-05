@@ -93,6 +93,7 @@
     "glyph_option": "Icône {{glyph}}",
     "contribute_title": "Contribuer à « {{name}} »",
     "contributor_label": "Contributeur",
+    "contribution_too_high": "Le montant ne peut pas dépasser ce qu'il reste pour atteindre l'objectif.",
     "progress": "{{contributed}} sur {{target}}",
     "empty": "Aucun objectif pour l'instant. Créez votre première cagnotte.",
     "done": "Atteint !",
