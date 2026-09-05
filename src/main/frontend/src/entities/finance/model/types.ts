@@ -130,6 +130,8 @@ export interface SavingsGoal {
   name: string
   targetAmount: number
   targetDate: string | null
+  color: string
+  glyph: string
   totalContributed: number
   contributions: SavingsContribution[]
 }

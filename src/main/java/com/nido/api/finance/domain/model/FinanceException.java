@@ -5,7 +5,7 @@ public abstract sealed class FinanceException extends RuntimeException
             FinanceException.CategoryNotFound, FinanceException.CategoryInUse,
             FinanceException.SameSpaceTransfer, FinanceException.InvalidContributionShares, FinanceException.PayerRequired,
             FinanceException.InvalidEndDate, FinanceException.NotAPartyToSettlement,
-            FinanceException.SavingsGoalNotFound, FinanceException.DecryptionFailed {
+            FinanceException.SavingsGoalNotFound, FinanceException.InvalidSavingsGoalAppearance, FinanceException.DecryptionFailed {
 
     private FinanceException(String message) { super(message); }
 
@@ -53,6 +53,11 @@ public abstract sealed class FinanceException extends RuntimeException
 
     public static final class SavingsGoalNotFound extends FinanceException {
         public SavingsGoalNotFound() { super("Savings goal not found"); }
+    }
+
+    /** Thrown when a savings goal's color or glyph falls outside the fixed, validated design palette. */
+    public static final class InvalidSavingsGoalAppearance extends FinanceException {
+        public InvalidSavingsGoalAppearance() { super("Color or glyph outside the allowed palette"); }
     }
 
     /** Thrown when a stored ciphertext cannot be decrypted (wrong/rotated master secret, corruption). */

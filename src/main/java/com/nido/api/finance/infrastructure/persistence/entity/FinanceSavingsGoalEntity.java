@@ -40,6 +40,12 @@ public class FinanceSavingsGoalEntity {
     @Column(name = "target_date")
     private LocalDate targetDate;
 
+    @Column(nullable = false, length = 7)
+    private String color;
+
+    @Column(nullable = false, length = 8)
+    private String glyph;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

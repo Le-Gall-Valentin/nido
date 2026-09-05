@@ -34,6 +34,7 @@ import { SavingsGoalFormModal, type SavingsGoalFormInput } from './SavingsGoalFo
 import { AddContributionModal } from './AddContributionModal'
 import { SavingsGoalContributionsModal } from './SavingsGoalContributionsModal'
 import { formatAmount } from '../lib/formatAmount'
+import { safeSavingsGoalColor, safeSavingsGoalGlyph } from '../lib/savingsGoalAppearance'
 
 interface FinancePageProps {
   api?: IFinanceApi
@@ -464,8 +465,8 @@ function FinancePageContent() {
                     className="cursor-pointer rounded-[14px] border border-border p-4 text-left transition-colors hover:bg-bg-2"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="grid size-10 shrink-0 place-items-center rounded-[11px] bg-accent text-white">
-                        <PiggyBank size={19} />
+                      <div className="grid size-10 shrink-0 place-items-center rounded-[11px] text-xl" style={{ background: safeSavingsGoalColor(goal.color) }}>
+                        {safeSavingsGoalGlyph(goal.glyph)}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-fg-0">{goal.name}</p>
@@ -497,8 +498,8 @@ function FinancePageContent() {
 
                     <div className="mt-3 h-[9px] overflow-hidden rounded-full bg-bg-2">
                       <div
-                        className={`h-full rounded-full transition-all ${done ? 'bg-status-green' : 'bg-accent'}`}
-                        style={{ width: `${percent}%` }}
+                        className={`h-full rounded-full transition-all ${done ? 'bg-status-green' : ''}`}
+                        style={{ width: `${percent}%`, background: done ? undefined : safeSavingsGoalColor(goal.color) }}
                       />
                     </div>
 
@@ -744,6 +745,8 @@ function FinancePageContent() {
       {viewingGoal && (
         <SavingsGoalContributionsModal
           goalName={viewingGoal.name}
+          color={viewingGoal.color}
+          glyph={viewingGoal.glyph}
           contributions={viewingGoal.contributions}
           memberLabel={memberLabel}
           onClose={() => setViewingGoal(null)}

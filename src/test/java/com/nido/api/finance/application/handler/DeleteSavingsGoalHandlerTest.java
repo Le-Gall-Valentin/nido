@@ -40,7 +40,7 @@ class DeleteSavingsGoalHandlerTest {
 
     @Test
     void a_member_can_delete_a_savings_goal() {
-        SavingsGoal existing = new SavingsGoal(goalId, spaceId, "Vacances", new BigDecimal("2000.00"), null);
+        SavingsGoal existing = new SavingsGoal(goalId, spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
         when(savingsGoalRepository.findById(goalId)).thenReturn(Optional.of(existing));
 
         handler.delete(goalId, spaceId, membership(SpaceRole.MEMBER));
@@ -50,7 +50,7 @@ class DeleteSavingsGoalHandlerTest {
 
     @Test
     void deleting_a_goal_belonging_to_another_space_is_rejected() {
-        SavingsGoal existing = new SavingsGoal(goalId, UUID.randomUUID(), "Vacances", new BigDecimal("2000.00"), null);
+        SavingsGoal existing = new SavingsGoal(goalId, UUID.randomUUID(), "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
         when(savingsGoalRepository.findById(goalId)).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> handler.delete(goalId, spaceId, membership(SpaceRole.MEMBER)))

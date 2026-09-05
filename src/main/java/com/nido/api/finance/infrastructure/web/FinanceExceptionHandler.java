@@ -27,6 +27,7 @@ public class FinanceExceptionHandler {
             case FinanceException.InvalidEndDate ignored -> new FinanceErrorResponse(400, "The end date must be on or after the anchor date.");
             case FinanceException.NotAPartyToSettlement ignored -> new FinanceErrorResponse(403, "Only the debtor or the creditor can settle this debt.");
             case FinanceException.SavingsGoalNotFound ignored -> new FinanceErrorResponse(404, "Savings goal not found.");
+            case FinanceException.InvalidSavingsGoalAppearance ignored -> new FinanceErrorResponse(422, "Color or glyph outside the allowed palette.");
             case FinanceException.DecryptionFailed ignored -> new FinanceErrorResponse(500, "Could not process the requested finance data.");
         };
         ProblemDetail problem = ProblemDetailFactory.of(

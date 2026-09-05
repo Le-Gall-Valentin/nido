@@ -38,8 +38,8 @@ class CreateSavingsGoalHandlerTest {
 
     @Test
     void a_member_can_create_a_savings_goal() {
-        CreateSavingsGoalCommand command = new CreateSavingsGoalCommand(spaceId, "Vacances", new BigDecimal("2000.00"), null);
-        SavingsGoal created = new SavingsGoal(UUID.randomUUID(), spaceId, "Vacances", new BigDecimal("2000.00"), null);
+        CreateSavingsGoalCommand command = new CreateSavingsGoalCommand(spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
+        SavingsGoal created = new SavingsGoal(UUID.randomUUID(), spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
         when(savingsGoalRepository.create(command)).thenReturn(created);
 
         SavingsGoal result = handler.create(command, membership(SpaceRole.MEMBER));
@@ -49,7 +49,7 @@ class CreateSavingsGoalHandlerTest {
 
     @Test
     void a_viewer_cannot_create_a_savings_goal() {
-        CreateSavingsGoalCommand command = new CreateSavingsGoalCommand(spaceId, "Vacances", new BigDecimal("2000.00"), null);
+        CreateSavingsGoalCommand command = new CreateSavingsGoalCommand(spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);

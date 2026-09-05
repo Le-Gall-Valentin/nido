@@ -141,8 +141,8 @@ export function useCreateSavingsGoal(spaceId: string) {
   const api = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: { name: string; targetAmount: number; targetDate: string | null }) =>
-      api.createSavingsGoal(spaceId, input.name, input.targetAmount, input.targetDate),
+    mutationFn: (input: { name: string; targetAmount: number; targetDate: string | null; color: string; glyph: string }) =>
+      api.createSavingsGoal(spaceId, input.name, input.targetAmount, input.targetDate, input.color, input.glyph),
     onSuccess: () => invalidateSpace(queryClient, spaceId),
   })
 }
@@ -151,8 +151,8 @@ export function useUpdateSavingsGoal(spaceId: string) {
   const api = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: { goalId: string; name: string; targetAmount: number; targetDate: string | null }) =>
-      api.updateSavingsGoal(spaceId, input.goalId, input.name, input.targetAmount, input.targetDate),
+    mutationFn: (input: { goalId: string; name: string; targetAmount: number; targetDate: string | null; color: string; glyph: string }) =>
+      api.updateSavingsGoal(spaceId, input.goalId, input.name, input.targetAmount, input.targetDate, input.color, input.glyph),
     onSuccess: () => invalidateSpace(queryClient, spaceId),
   })
 }

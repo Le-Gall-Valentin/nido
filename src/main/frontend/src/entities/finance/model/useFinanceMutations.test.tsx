@@ -22,7 +22,7 @@ function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
     listTransactions: vi.fn(), createTransaction: vi.fn(), updateTransaction: vi.fn(), deleteTransaction: vi.fn(), moveTransaction: vi.fn(),
     listRecurringSeries: vi.fn(), createRecurringSeries: vi.fn(), updateRecurringSeries: vi.fn(), deleteRecurringSeries: vi.fn(),
     getStats: vi.fn(), getProjection: vi.fn(),
-    getBalances: vi.fn(), settleDebt: vi.fn(),
+    getBalances: vi.fn(), settleDebt: vi.fn(), listSettlements: vi.fn(),
     listSavingsGoals: vi.fn(), createSavingsGoal: vi.fn(), updateSavingsGoal: vi.fn(), deleteSavingsGoal: vi.fn(), addSavingsContribution: vi.fn(),
     ...overrides,
   }

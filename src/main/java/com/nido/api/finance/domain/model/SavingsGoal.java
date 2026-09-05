@@ -5,11 +5,13 @@ import java.time.LocalDate;
 import java.util.Objects;
 import java.util.UUID;
 
-public record SavingsGoal(UUID id, UUID spaceId, String name, BigDecimal targetAmount, LocalDate targetDate) {
+public record SavingsGoal(UUID id, UUID spaceId, String name, BigDecimal targetAmount, LocalDate targetDate, String color, String glyph) {
     public SavingsGoal {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(spaceId, "spaceId");
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(targetAmount, "targetAmount");
+        Objects.requireNonNull(color, "color");
+        Objects.requireNonNull(glyph, "glyph");
     }
 }

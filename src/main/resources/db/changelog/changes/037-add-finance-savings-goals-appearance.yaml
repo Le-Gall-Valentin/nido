@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 037-add-finance-savings-goals-appearance
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: finance_savings_goals
+                columnName: color
+      changes:
+        - addColumn:
+            tableName: finance_savings_goals
+            columns:
+              - column:
+                  name: color
+                  type: VARCHAR(7)
+              - column:
+                  name: glyph
+                  type: VARCHAR(8)
+        - sql:
+            sql: UPDATE finance_savings_goals SET color = '#5c7a58', glyph = '🎯' WHERE color IS NULL
+            splitStatements: false
+        - addNotNullConstraint:
+            tableName: finance_savings_goals
+            columnName: color
+            columnDataType: VARCHAR(7)
+        - addNotNullConstraint:
+            tableName: finance_savings_goals
+            columnName: glyph
+            columnDataType: VARCHAR(8)
+        - sql:
+            sql: ALTER TABLE finance_savings_goals ADD CONSTRAINT chk_finance_savings_goals_color_format CHECK (color ~ '^#[0-9a-f]{6}$')
+            splitStatements: false
+      rollback:
+        - dropColumn:
+            tableName: finance_savings_goals
+            columnName: color
+        - dropColumn:
+            tableName: finance_savings_goals
+            columnName: glyph

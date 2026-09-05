@@ -55,6 +55,8 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
         e.setNameEncrypted(encryptor.encrypt(command.name()));
         e.setTargetAmountEncrypted(encryptor.encrypt(command.targetAmount().toPlainString()));
         e.setTargetDate(command.targetDate());
+        e.setColor(command.color());
+        e.setGlyph(command.glyph());
         FinanceSavingsGoalEntity saved = goals.saveAndFlush(e);
         return toDomain(saved, command.spaceId());
     }
@@ -67,6 +69,8 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
         e.setNameEncrypted(encryptor.encrypt(command.name()));
         e.setTargetAmountEncrypted(encryptor.encrypt(command.targetAmount().toPlainString()));
         e.setTargetDate(command.targetDate());
+        e.setColor(command.color());
+        e.setGlyph(command.glyph());
         FinanceSavingsGoalEntity saved = goals.saveAndFlush(e);
         return toDomain(saved, command.spaceId());
     }
@@ -103,6 +107,6 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
     private SavingsGoal toDomain(FinanceSavingsGoalEntity e, UUID spaceId) {
         TextEncryptor encryptor = encryptorFactory.forSpace(spaceId);
         return new SavingsGoal(e.getId(), e.getSpaceId(), encryptor.decrypt(e.getNameEncrypted()),
-            new BigDecimal(encryptor.decrypt(e.getTargetAmountEncrypted())), e.getTargetDate());
+            new BigDecimal(encryptor.decrypt(e.getTargetAmountEncrypted())), e.getTargetDate(), e.getColor(), e.getGlyph());
     }
 }

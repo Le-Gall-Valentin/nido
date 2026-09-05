@@ -67,7 +67,7 @@ class SavingsGoalRepositoryAdapterIT {
 
     @Test
     void create_persists_the_goal_with_an_encrypted_name_and_target() {
-        SavingsGoal created = adapter.create(new CreateSavingsGoalCommand(spaceId, "Vacances d'été", new BigDecimal("2000.00"), LocalDate.of(2026, 7, 1)));
+        SavingsGoal created = adapter.create(new CreateSavingsGoalCommand(spaceId, "Vacances d'été", new BigDecimal("2000.00"), LocalDate.of(2026, 7, 1), "#5c7a58", "🎯"));
 
         assertThat(created.name()).isEqualTo("Vacances d'été");
         assertThat(created.targetAmount()).isEqualByComparingTo("2000.00");
@@ -77,17 +77,19 @@ class SavingsGoalRepositoryAdapterIT {
 
     @Test
     void update_changes_the_name_and_target_amount() {
-        SavingsGoal created = adapter.create(new CreateSavingsGoalCommand(spaceId, "Ancien nom", new BigDecimal("1000.00"), null));
+        SavingsGoal created = adapter.create(new CreateSavingsGoalCommand(spaceId, "Ancien nom", new BigDecimal("1000.00"), null, "#5c7a58", "🎯"));
 
-        SavingsGoal updated = adapter.update(new UpdateSavingsGoalCommand(created.id(), spaceId, "Nouveau nom", new BigDecimal("1500.00"), LocalDate.of(2026, 12, 1)));
+        SavingsGoal updated = adapter.update(new UpdateSavingsGoalCommand(created.id(), spaceId, "Nouveau nom", new BigDecimal("1500.00"), LocalDate.of(2026, 12, 1), "#c17a5c", "🏖️"));
 
         assertThat(updated.name()).isEqualTo("Nouveau nom");
         assertThat(updated.targetAmount()).isEqualByComparingTo("1500.00");
+        assertThat(updated.color()).isEqualTo("#c17a5c");
+        assertThat(updated.glyph()).isEqualTo("🏖️");
     }
 
     @Test
     void addContribution_persists_an_encrypted_contribution_linked_to_the_goal() {
-        SavingsGoal created = adapter.create(new CreateSavingsGoalCommand(spaceId, "Vacances", new BigDecimal("2000.00"), null));
+        SavingsGoal created = adapter.create(new CreateSavingsGoalCommand(spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯"));
 
         adapter.addContribution(new AddSavingsContributionCommand(created.id(), spaceId, aliceId, new BigDecimal("100.00"), LocalDate.of(2026, 1, 5)));
 
@@ -97,7 +99,7 @@ class SavingsGoalRepositoryAdapterIT {
 
     @Test
     void findBySpaceId_and_delete_behave_as_expected() {
-        SavingsGoal created = adapter.create(new CreateSavingsGoalCommand(spaceId, "Vacances", new BigDecimal("2000.00"), null));
+        SavingsGoal created = adapter.create(new CreateSavingsGoalCommand(spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯"));
 
         assertThat(adapter.findBySpaceId(spaceId)).hasSize(1);
 

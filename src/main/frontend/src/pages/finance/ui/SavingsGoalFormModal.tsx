@@ -2,11 +2,15 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { SavingsGoal } from '@/entities/finance'
+import { SavingsGoalAppearancePicker } from './SavingsGoalAppearancePicker'
+import { SAVINGS_GOAL_COLORS, SAVINGS_GOAL_GLYPHS } from '../lib/savingsGoalAppearance'
 
 export interface SavingsGoalFormInput {
   name: string
   targetAmount: number
   targetDate: string | null
+  color: string
+  glyph: string
 }
 
 interface SavingsGoalFormModalProps {
@@ -21,6 +25,8 @@ export function SavingsGoalFormModal({ mode, goal, onSubmit, onCancel }: Savings
   const [name, setName] = useState(goal?.name ?? '')
   const [targetAmount, setTargetAmount] = useState(goal ? String(goal.targetAmount) : '')
   const [targetDate, setTargetDate] = useState(goal?.targetDate ?? '')
+  const [color, setColor] = useState(goal?.color ?? SAVINGS_GOAL_COLORS[0])
+  const [glyph, setGlyph] = useState(goal?.glyph ?? SAVINGS_GOAL_GLYPHS[0])
   const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: React.FormEvent) {
@@ -35,7 +41,7 @@ export function SavingsGoalFormModal({ mode, goal, onSubmit, onCancel }: Savings
       return
     }
     setError(null)
-    onSubmit({ name: name.trim(), targetAmount: amount, targetDate: targetDate || null })
+    onSubmit({ name: name.trim(), targetAmount: amount, targetDate: targetDate || null, color, glyph })
   }
 
   return (
@@ -44,6 +50,7 @@ export function SavingsGoalFormModal({ mode, goal, onSubmit, onCancel }: Savings
         <Input label={t('savings.name_label')} value={name} onChange={(e) => setName(e.target.value)} />
         <Input label={t('savings.target_amount_label')} type="number" step="0.01" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} />
         <Input label={t('savings.target_date_label')} type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+        <SavingsGoalAppearancePicker color={color} onColorChange={setColor} glyph={glyph} onGlyphChange={setGlyph} />
 
         {error && <p className="text-sm font-medium text-status-red">{error}</p>}
 
