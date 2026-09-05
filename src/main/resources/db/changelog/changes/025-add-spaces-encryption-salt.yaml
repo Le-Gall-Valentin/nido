@@ -16,7 +16,7 @@ databaseChangeLog:
                   name: encryption_salt
                   type: VARCHAR(32)
         - sql:
-            sql: UPDATE spaces SET encryption_salt = md5(random()::text || clock_timestamp()::text) WHERE encryption_salt IS NULL
+            sql: UPDATE spaces SET encryption_salt = md5(gen_random_uuid()::text || gen_random_uuid()::text) WHERE encryption_salt IS NULL
             splitStatements: false
         - addNotNullConstraint:
             tableName: spaces
