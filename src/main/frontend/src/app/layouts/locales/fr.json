@@ -14,6 +14,7 @@
     "organisation": "Organisation",
     "organisation_courses": "Courses",
     "organisation_tasks": "Tâches",
+    "finance": "Finances",
     "pending_invitations": "Invitations en attente",
     "open_tasks_one": "{{count}} tâche ouverte",
     "open_tasks_other": "{{count}} tâches ouvertes"
