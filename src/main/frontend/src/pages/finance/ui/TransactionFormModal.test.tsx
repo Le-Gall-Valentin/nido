@@ -76,4 +76,24 @@ describe('TransactionFormModal', () => {
 
     expect(screen.queryByText('form.payer_none')).toBeNull()
   })
+
+  it('anchors a recurring series to the transaction date, with no separate "starting on" field', () => {
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit })
+
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Loyer' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '800' } })
+    fireEvent.change(screen.getByLabelText('form.category_label'), { target: { value: 'c1' } })
+    fireEvent.change(screen.getByLabelText('form.date_label'), { target: { value: '2026-02-01' } })
+    fireEvent.click(screen.getByLabelText('form.recurring_label'))
+
+    expect(screen.queryByText('form.recurrence_anchor_date_label')).toBeNull()
+
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      date: '2026-02-01',
+      recurrence: expect.objectContaining({ anchorDate: '2026-02-01', intervalType: 'MONTHLY', intervalCount: 1 }),
+    }))
+  })
 })
