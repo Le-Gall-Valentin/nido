@@ -1,8 +1,11 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.domain.model.Budget;
+import com.nido.api.finance.domain.model.Category;
+import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SetBudgetCommand;
 import com.nido.api.finance.domain.port.out.BudgetRepository;
+import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
@@ -14,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,12 +28,13 @@ import static org.mockito.Mockito.when;
 class SetBudgetHandlerTest {
 
     @Mock BudgetRepository budgetRepository;
+    @Mock CategoryRepository categoryRepository;
     private SetBudgetHandler handler;
     private final UUID spaceId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        handler = new SetBudgetHandler(budgetRepository);
+        handler = new SetBudgetHandler(budgetRepository, categoryRepository);
     }
 
     private SpaceMembership membership(SpaceRole role) {
@@ -39,7 +44,9 @@ class SetBudgetHandlerTest {
     @Test
     void a_member_can_set_a_budget() {
         SetBudgetCommand command = new SetBudgetCommand(spaceId, UUID.randomUUID(), new BigDecimal("450.00"));
+        Category category = new Category(command.categoryId(), spaceId, "Alimentation", "#f59e0b", "Utensils", true);
         Budget saved = new Budget(UUID.randomUUID(), spaceId, command.categoryId(), command.monthlyLimit());
+        when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(category));
         when(budgetRepository.upsert(command)).thenReturn(saved);
 
         Budget result = handler.set(command, membership(SpaceRole.MEMBER));
@@ -61,5 +68,25 @@ class SetBudgetHandlerTest {
 
         assertThatThrownBy(() -> handler.set(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(SpaceException.NotAMember.class);
+    }
+
+    @Test
+    void setting_a_budget_for_a_category_that_belongs_to_a_different_space_is_rejected() {
+        UUID otherSpaceId = UUID.randomUUID();
+        SetBudgetCommand command = new SetBudgetCommand(spaceId, UUID.randomUUID(), new BigDecimal("450.00"));
+        Category category = new Category(command.categoryId(), otherSpaceId, "Alimentation", "#f59e0b", "Utensils", true);
+        when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(category));
+
+        assertThatThrownBy(() -> handler.set(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.CategoryNotFound.class);
+    }
+
+    @Test
+    void setting_a_budget_for_a_category_that_does_not_exist_is_rejected() {
+        SetBudgetCommand command = new SetBudgetCommand(spaceId, UUID.randomUUID(), new BigDecimal("450.00"));
+        when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> handler.set(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.CategoryNotFound.class);
     }
 }

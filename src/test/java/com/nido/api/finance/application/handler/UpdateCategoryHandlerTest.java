@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.domain.model.Category;
+import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.UpdateCategoryCommand;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.space.domain.model.SpaceException;
@@ -13,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,7 +40,9 @@ class UpdateCategoryHandlerTest {
     @Test
     void a_member_can_rename_a_category() {
         UpdateCategoryCommand command = new UpdateCategoryCommand(UUID.randomUUID(), spaceId, "Nouveau nom", "#22c55e", "Heart");
+        Category existing = new Category(command.categoryId(), spaceId, "Ancien nom", "#22c55e", "Heart", false);
         Category updated = new Category(command.categoryId(), spaceId, "Nouveau nom", "#22c55e", "Heart", false);
+        when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(existing));
         when(categoryRepository.update(command)).thenReturn(updated);
 
         Category result = handler.update(command, membership(SpaceRole.MEMBER));
@@ -52,5 +56,27 @@ class UpdateCategoryHandlerTest {
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);
+    }
+
+    @Test
+    void updating_a_category_that_belongs_to_a_different_space_is_rejected() {
+        UUID categoryId = UUID.randomUUID();
+        UUID otherSpaceId = UUID.randomUUID();
+        UpdateCategoryCommand command = new UpdateCategoryCommand(categoryId, spaceId, "Nouveau nom", "#22c55e", "Heart");
+        Category existing = new Category(categoryId, otherSpaceId, "Ancien nom", "#22c55e", "Heart", false);
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.CategoryNotFound.class);
+    }
+
+    @Test
+    void updating_a_category_that_does_not_exist_is_rejected() {
+        UUID categoryId = UUID.randomUUID();
+        UpdateCategoryCommand command = new UpdateCategoryCommand(categoryId, spaceId, "Nouveau nom", "#22c55e", "Heart");
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.CategoryNotFound.class);
     }
 }
