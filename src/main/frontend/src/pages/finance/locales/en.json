@@ -93,6 +93,7 @@
     "glyph_option": "Icon {{glyph}}",
     "contribute_title": "Contribute to \"{{name}}\"",
     "contributor_label": "Contributor",
+    "contribution_too_high": "The amount cannot exceed what's left to reach the goal.",
     "progress": "{{contributed}} of {{target}}",
     "empty": "No goals yet. Create your first one.",
     "done": "Reached!",

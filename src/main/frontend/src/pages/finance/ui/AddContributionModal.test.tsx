@@ -12,11 +12,32 @@ const members: SpaceMember[] = [{ userId: 'alice', username: 'alice', email: 'a@
 describe('AddContributionModal', () => {
   it('submits the selected member, amount and date', () => {
     const onSubmit = vi.fn()
-    render(<AddContributionModal goalName="Vacances" members={members} onSubmit={onSubmit} onCancel={vi.fn()} isPending={false} />)
+    render(<AddContributionModal goalName="Vacances" remaining={2000} members={members} onSubmit={onSubmit} onCancel={vi.fn()} isPending={false} />)
 
     fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '100' } })
     fireEvent.click(screen.getByText('form.save'))
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ memberId: 'alice', amount: 100 }))
+  })
+
+  it('allows a contribution up to exactly what remains on the goal', () => {
+    const onSubmit = vi.fn()
+    render(<AddContributionModal goalName="Vacances" remaining={50} members={members} onSubmit={onSubmit} onCancel={vi.fn()} isPending={false} />)
+
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '50' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ amount: 50 }))
+  })
+
+  it('rejects a contribution that would exceed the goal target', () => {
+    const onSubmit = vi.fn()
+    render(<AddContributionModal goalName="Vacances" remaining={50} members={members} onSubmit={onSubmit} onCancel={vi.fn()} isPending={false} />)
+
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '51' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText('savings.contribution_too_high')).toBeDefined()
   })
 })

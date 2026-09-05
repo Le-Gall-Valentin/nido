@@ -734,6 +734,7 @@ function FinancePageContent() {
       {contributingGoal && (
         <AddContributionModal
           goalName={contributingGoal.name}
+          remaining={contributingGoal.targetAmount - contributingGoal.totalContributed}
           members={members ?? []}
           isPending={addSavingsContribution.isPending}
           onCancel={() => setContributingGoal(null)}

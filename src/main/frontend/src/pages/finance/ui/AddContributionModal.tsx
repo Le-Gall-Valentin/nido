@@ -11,13 +11,15 @@ export interface AddContributionInput {
 
 interface AddContributionModalProps {
   goalName: string
+  /** What's left to reach the goal's target (targetAmount - totalContributed). A contribution cannot exceed it. */
+  remaining: number
   members: SpaceMember[]
   onSubmit: (input: AddContributionInput) => void
   onCancel: () => void
   isPending: boolean
 }
 
-export function AddContributionModal({ goalName, members, onSubmit, onCancel, isPending }: AddContributionModalProps) {
+export function AddContributionModal({ goalName, remaining, members, onSubmit, onCancel, isPending }: AddContributionModalProps) {
   const { t } = useTranslation('finance')
   const [memberId, setMemberId] = useState(members[0]?.userId ?? '')
   const [amount, setAmount] = useState('')
@@ -29,6 +31,10 @@ export function AddContributionModal({ goalName, members, onSubmit, onCancel, is
     const numericAmount = Number(amount)
     if (!amount || Number.isNaN(numericAmount) || numericAmount <= 0) {
       setError(t('form.amount_required'))
+      return
+    }
+    if (numericAmount > remaining) {
+      setError(t('savings.contribution_too_high'))
       return
     }
     setError(null)
