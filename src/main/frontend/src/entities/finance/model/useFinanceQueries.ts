@@ -22,6 +22,9 @@ export function projectionKey(spaceId: string, month: string) {
 export function balancesKey(spaceId: string) {
   return ['finance', spaceId, 'balances'] as const
 }
+export function settlementsBetweenKey(spaceId: string, memberAId: string, memberBId: string) {
+  return ['finance', spaceId, 'settlements', memberAId, memberBId] as const
+}
 export function savingsGoalsKey(spaceId: string) {
   return ['finance', spaceId, 'savings-goals'] as const
 }
@@ -86,6 +89,15 @@ export function useBalances(spaceId: string | undefined) {
     queryKey: balancesKey(spaceId ?? ''),
     queryFn: () => api.getBalances(spaceId as string),
     enabled: !!spaceId,
+  })
+}
+
+export function useSettlementsBetween(spaceId: string | undefined, memberAId: string | undefined, memberBId: string | undefined) {
+  const api = useFinanceApi()
+  return useQuery({
+    queryKey: settlementsBetweenKey(spaceId ?? '', memberAId ?? '', memberBId ?? ''),
+    queryFn: () => api.listSettlements(spaceId as string, memberAId as string, memberBId as string),
+    enabled: !!spaceId && !!memberAId && !!memberBId,
   })
 }
 
