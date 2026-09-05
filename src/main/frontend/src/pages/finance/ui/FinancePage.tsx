@@ -210,14 +210,14 @@ function FinancePageContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(210px,100%),1fr))] gap-3">
         <StatCard icon={Wallet} tintClassName="bg-accent-dim text-accent" label={t('stats.balance')} value={formatAmount(stats?.balance ?? 0)} />
         <StatCard icon={TrendingDown} tintClassName="bg-status-red-dim text-status-red" label={t('stats.spent')} value={formatAmount(stats?.totalExpense ?? 0)} />
         <StatCard icon={TrendingUp} tintClassName="bg-status-green-dim text-status-green" label={t('stats.income')} value={formatAmount(stats?.totalIncome ?? 0)} />
         <StatCard icon={PiggyBank} tintClassName="bg-status-blue-dim text-status-blue" label={t('stats.remaining_budget')} value={formatAmount(stats?.remainingBudget ?? 0)} />
       </div>
 
-      <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(360px,1fr))] gap-4">
+      <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(min(360px,100%),1fr))] gap-4">
         <section className="rounded-2xl border border-border bg-bg-1 p-4">
           <h2 className="mb-3 text-[15px] font-semibold text-fg-0">{t('breakdown.title')}</h2>
           {(stats?.breakdown ?? []).length === 0 ? (
