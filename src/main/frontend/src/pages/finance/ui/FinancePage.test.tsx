@@ -215,4 +215,22 @@ describe('FinancePage', () => {
     await waitFor(() => expect(screen.getAllByText(/→/).length).toBe(2))
     expect(screen.getAllByText('balances.settle')).toHaveLength(1)
   })
+
+  it('records a partial settlement for less than the full debt', async () => {
+    const settleDebt = vi.fn()
+    renderPage(fakeApi({
+      getBalances: vi.fn().mockResolvedValue({
+        netByMember: [],
+        suggestedTransfers: [{ fromMemberId: 'u-1', toMemberId: 'u-2', amount: 500 }],
+      }),
+      settleDebt,
+    }))
+
+    await waitFor(() => expect(screen.getByText('balances.settle')).toBeDefined())
+    fireEvent.click(screen.getByText('balances.settle'))
+    fireEvent.change(screen.getByLabelText('balances.settle_amount_label'), { target: { value: '250' } })
+    fireEvent.click(screen.getByText('balances.settle_confirm'))
+
+    await waitFor(() => expect(settleDebt).toHaveBeenCalledWith('space-1', 'u-1', 'u-2', 250, expect.any(String)))
+  })
 })

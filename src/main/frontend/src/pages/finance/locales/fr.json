@@ -58,6 +58,9 @@
     "settle": "Régler",
     "settle_title": "Régler cette dette",
     "settle_message": "{{from}} doit {{amount}} € à {{to}}.",
+    "settle_amount_label": "Montant remboursé",
+    "settle_amount_required": "Le montant doit être supérieur à zéro.",
+    "settle_amount_too_high": "Le montant ne peut pas dépasser la dette restante.",
     "settle_date_label": "Date du règlement",
     "settle_confirm": "Confirmer",
     "all_settled": "Tout le monde est à jour."

@@ -58,6 +58,9 @@
     "settle": "Settle up",
     "settle_title": "Settle this debt",
     "settle_message": "{{from}} owes {{to}} {{amount}} €.",
+    "settle_amount_label": "Amount repaid",
+    "settle_amount_required": "The amount must be greater than zero.",
+    "settle_amount_too_high": "The amount cannot exceed the remaining debt.",
     "settle_date_label": "Settlement date",
     "settle_confirm": "Confirm",
     "all_settled": "Everyone is settled up."
