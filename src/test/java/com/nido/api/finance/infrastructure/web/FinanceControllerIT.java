@@ -145,6 +145,37 @@ class FinanceControllerIT {
     }
 
     @Test
+    void a_third_member_cannot_settle_a_debt_between_two_others() throws Exception {
+        UUID carolId = saveUser("carol");
+        saveMembership(spaceId, carolId, SpaceRole.ADMIN);
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
+                .cookie(accessTokenFor(carolId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":20.00,\"date\":\"2026-01-02\"}"))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void listing_settlements_between_two_members_returns_them_newest_first() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":20.00,\"date\":\"2026-01-02\"}"))
+            .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":15.00,\"date\":\"2026-02-01\"}"))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/balances/settlements")
+                .param("memberAId", aliceId.toString()).param("memberBId", bobId.toString())
+                .cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].amount").value(15.00))
+            .andExpect(jsonPath("$[1].amount").value(20.00));
+    }
+
+    @Test
     void creating_and_contributing_to_a_savings_goal() throws Exception {
         String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/savings-goals")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
