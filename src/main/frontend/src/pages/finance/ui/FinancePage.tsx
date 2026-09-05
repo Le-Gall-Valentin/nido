@@ -534,15 +534,6 @@ function FinancePageContent() {
         />
       )}
 
-      {viewingTransaction && (
-        <TransactionDetailModal
-          transaction={viewingTransaction}
-          category={categoryById.get(viewingTransaction.categoryId)}
-          members={members ?? []}
-          onClose={() => setViewingTransaction(null)}
-        />
-      )}
-
       {deletingTransaction && (
         <DeleteTransactionModal
           label={deletingTransaction.label}
@@ -663,6 +654,17 @@ function FinancePageContent() {
             { goalId: contributingGoal.id, ...input },
             { onSuccess: () => setContributingGoal(null) }
           )}
+        />
+      )}
+
+      {/* Rendered last so it always stacks above whichever list modal (category, member) opened it —
+          every Dialog shares the same z-index, and later DOM siblings paint on top of earlier ones. */}
+      {viewingTransaction && (
+        <TransactionDetailModal
+          transaction={viewingTransaction}
+          category={categoryById.get(viewingTransaction.categoryId)}
+          members={members ?? []}
+          onClose={() => setViewingTransaction(null)}
         />
       )}
     </div>
