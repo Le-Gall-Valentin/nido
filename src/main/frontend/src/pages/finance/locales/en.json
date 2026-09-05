@@ -19,6 +19,16 @@
     "move": "Move to…",
     "recurring": "Recurring"
   },
+  "categories": {
+    "title": "Manage categories",
+    "manage": "Manage categories",
+    "edit": "Edit",
+    "delete": "Delete",
+    "delete_in_use": "This category is still used by existing transactions.",
+    "new_category_label": "New category",
+    "new_category_placeholder": "Category name",
+    "add": "Add"
+  },
   "form": {
     "create_title": "New transaction",
     "edit_title": "Edit transaction",

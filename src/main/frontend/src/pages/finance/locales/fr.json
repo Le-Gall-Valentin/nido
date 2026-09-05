@@ -19,6 +19,16 @@
     "move": "Déplacer vers…",
     "recurring": "Récurrente"
   },
+  "categories": {
+    "title": "Gérer les catégories",
+    "manage": "Gérer les catégories",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "delete_in_use": "Cette catégorie est toujours utilisée par des opérations.",
+    "new_category_label": "Nouvelle catégorie",
+    "new_category_placeholder": "Nom de la catégorie",
+    "add": "Ajouter"
+  },
   "form": {
     "create_title": "Nouvelle opération",
     "edit_title": "Modifier l'opération",
