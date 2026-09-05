@@ -51,11 +51,11 @@ function fakeSpacesApi(mySpaces: SpaceSummary[] = [CURRENT_SPACE]): ISpacesApi {
   return { listMySpaces: vi.fn().mockResolvedValue(mySpaces), getSpace: vi.fn() }
 }
 
-function renderPage(api: IFinanceApi) {
+function renderPage(api: IFinanceApi, space: SpaceSummary = CURRENT_SPACE) {
   const queryClient = createTestQueryClient()
   return render(
     <QueryClientProvider client={queryClient}>
-      <SpacesApiProvider api={fakeSpacesApi()}>
+      <SpacesApiProvider api={fakeSpacesApi([space])}>
         <SpaceMembersApiProvider api={fakeMembersApi()}>
           <MemoryRouter initialEntries={['/s/space-1/finance']}>
             <Routes>
@@ -278,5 +278,19 @@ describe('FinancePage', () => {
 
     await waitFor(() => expect(listSettlements).toHaveBeenCalledWith('space-1', 'u-1', 'u-2'))
     await waitFor(() => expect(screen.getByText(/20,00/)).toBeDefined())
+  })
+
+  it('shows the manage-categories button to a member who can write', async () => {
+    renderPage(fakeApi())
+
+    await waitFor(() => expect(screen.getByText('stats.balance')).toBeDefined())
+    expect(screen.getByText('categories.manage')).toBeDefined()
+  })
+
+  it('hides the manage-categories button from a read-only viewer, since every action inside it requires write access', async () => {
+    renderPage(fakeApi(), { ...CURRENT_SPACE, myRole: 'VIEWER' })
+
+    await waitFor(() => expect(screen.getByText('stats.balance')).toBeDefined())
+    expect(screen.queryByText('categories.manage')).toBeNull()
   })
 })
