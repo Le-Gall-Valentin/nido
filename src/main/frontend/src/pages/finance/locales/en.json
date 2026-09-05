@@ -8,6 +8,8 @@
   "breakdown": { "title": "Spending breakdown", "empty": "No spending yet this month." },
   "budget": {
     "title": "Budget vs actual",
+    "manage": "Manage budget",
+    "manage_title": "Manage budgets",
     "edit": "Edit",
     "set": "Set a budget",
     "over": "Over by {{amount}}",

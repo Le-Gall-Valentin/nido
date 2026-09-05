@@ -21,9 +21,11 @@ import { CategoryIconBadge } from './CategoryIconBadge'
 import { TransactionFormModal, type TransactionFormInput } from './TransactionFormModal'
 import { DeleteTransactionModal } from './DeleteTransactionModal'
 import { CategoryManagerModal } from './CategoryManagerModal'
+import { BudgetManagerModal } from './BudgetManagerModal'
 import { SettleDebtModal } from './SettleDebtModal'
 import { SavingsGoalFormModal, type SavingsGoalFormInput } from './SavingsGoalFormModal'
 import { AddContributionModal } from './AddContributionModal'
+import { formatAmount } from '../lib/formatAmount'
 
 interface FinancePageProps {
   api?: IFinanceApi
@@ -39,10 +41,6 @@ export function FinancePage({ api = financeApi }: FinancePageProps = {}) {
 
 function currentMonth(): string {
   return new Date().toISOString().slice(0, 7)
-}
-
-function formatAmount(amount: number): string {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount)
 }
 
 function StatCard({ icon: Icon, tintClassName, label, value }: { icon: typeof Wallet; tintClassName: string; label: string; value: string }) {
@@ -116,9 +114,8 @@ function FinancePageContent() {
   const [formState, setFormState] = useState<{ mode: 'create' } | { mode: 'edit'; transaction: Transaction } | null>(null)
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
   const [movingTransaction, setMovingTransaction] = useState<Transaction | null>(null)
-  const [editingBudgetFor, setEditingBudgetFor] = useState<string | null>(null)
-  const [budgetInput, setBudgetInput] = useState('')
   const [managingCategories, setManagingCategories] = useState(false)
+  const [managingBudget, setManagingBudget] = useState(false)
   const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null)
   const [settlingTransfer, setSettlingTransfer] = useState<{ fromMemberId: string; toMemberId: string; amount: number } | null>(null)
   const [goalFormState, setGoalFormState] = useState<{ mode: 'create' } | { mode: 'edit'; goal: SavingsGoal } | null>(null)
@@ -180,18 +177,6 @@ function FinancePageContent() {
     await moveTransaction.mutateAsync({ transactionId: movingTransaction.id, destinationSpaceId })
   }
 
-  function handleBudgetSave(categoryId: string) {
-    const value = Number(budgetInput)
-    if (budgetInput.trim() !== '' && !Number.isNaN(value) && value >= 0) {
-      setBudget.mutate({ categoryId, monthlyLimit: value }, { onSuccess: () => setEditingBudgetFor(null) })
-    }
-  }
-
-  function handleStartSetBudget(categoryId: string) {
-    setEditingBudgetFor(categoryId)
-    setBudgetInput('')
-  }
-
   if (isPending || categoriesPending) return <Spinner label={t('loading')} fullscreen={false} />
   if (isError || categoriesError) return <Alert variant="error">{t('error.load_failed')}</Alert>
 
@@ -249,7 +234,14 @@ function FinancePageContent() {
         </section>
 
         <section className="rounded-2xl border border-border bg-bg-1 p-4">
-          <h2 className="mb-3 text-[15px] font-semibold text-fg-0">{t('budget.title')}</h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-[15px] font-semibold text-fg-0">{t('budget.title')}</h2>
+            {canWriteHere && (
+              <button type="button" onClick={() => setManagingBudget(true)} className="shrink-0 text-sm font-semibold text-accent">
+                {t('budget.manage')}
+              </button>
+            )}
+          </div>
           <ul className="space-y-4">
             {(stats?.budgetVsActual ?? []).map((line) => {
               const category = categoryById.get(line.categoryId)
@@ -265,21 +257,7 @@ function FinancePageContent() {
                       {(over || warning) && <AlertTriangle size={13} className={over ? 'text-status-red' : 'text-status-orange'} />}
                       {category?.label ?? line.categoryId}
                     </span>
-                    {editingBudgetFor === line.categoryId ? (
-                      <span className="flex items-center gap-1.5">
-                        <input type="number" step="0.01" value={budgetInput} onChange={(e) => setBudgetInput(e.target.value)}
-                          className="w-20 rounded-[8px] border-[1.5px] border-border bg-bg-1 px-2 py-1 text-sm text-fg-0 outline-none focus:border-accent" />
-                        <button type="button" onClick={() => handleBudgetSave(line.categoryId)} className="text-sm font-semibold text-accent">{t('form.save')}</button>
-                      </span>
-                    ) : (
-                      <span className="text-fg-2">
-                        {formatAmount(line.spent)} / {formatAmount(line.monthlyLimit)}
-                        {canWriteHere && (
-                          <button type="button" onClick={() => { setEditingBudgetFor(line.categoryId); setBudgetInput(String(line.monthlyLimit)) }}
-                            className="ml-2 text-xs font-semibold text-fg-3 hover:text-fg-1">{t('budget.edit')}</button>
-                        )}
-                      </span>
-                    )}
+                    <span className="text-fg-2">{formatAmount(line.spent)} / {formatAmount(line.monthlyLimit)}</span>
                   </div>
                   <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-bg-2">
                     <div className="h-2 rounded-full transition-all" style={{ width: `${percent}%`, backgroundColor: barColor }} />
@@ -290,24 +268,6 @@ function FinancePageContent() {
                 </li>
               )
             })}
-            {canWriteHere && (categories ?? [])
-              .filter((category) => !(stats?.budgetVsActual ?? []).some((line) => line.categoryId === category.id))
-              .map((category) => (
-                <li key={category.id} className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-fg-1">{category.label}</span>
-                  {editingBudgetFor === category.id ? (
-                    <span className="flex items-center gap-1.5">
-                      <input type="number" step="0.01" value={budgetInput} onChange={(e) => setBudgetInput(e.target.value)}
-                        className="w-20 rounded-[8px] border-[1.5px] border-border bg-bg-1 px-2 py-1 text-sm text-fg-0 outline-none focus:border-accent" />
-                      <button type="button" onClick={() => handleBudgetSave(category.id)} className="text-sm font-semibold text-accent">{t('form.save')}</button>
-                    </span>
-                  ) : (
-                    <button type="button" onClick={() => handleStartSetBudget(category.id)} className="text-xs font-semibold text-accent">
-                      {t('budget.set')}
-                    </button>
-                  )}
-                </li>
-              ))}
           </ul>
         </section>
       </div>
@@ -487,6 +447,15 @@ function FinancePageContent() {
           onDelete={handleDeleteCategory}
           onClose={() => setManagingCategories(false)}
           deleteError={categoryDeleteError}
+        />
+      )}
+
+      {managingBudget && (
+        <BudgetManagerModal
+          categories={categories ?? []}
+          budgetLines={stats?.budgetVsActual ?? []}
+          onSave={(categoryId, monthlyLimit) => setBudget.mutate({ categoryId, monthlyLimit })}
+          onClose={() => setManagingBudget(false)}
         />
       )}
 

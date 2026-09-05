@@ -8,6 +8,8 @@
   "breakdown": { "title": "Répartition des dépenses", "empty": "Aucune dépense ce mois-ci." },
   "budget": {
     "title": "Budget vs réel",
+    "manage": "Gérer le budget",
+    "manage_title": "Gérer les budgets",
     "edit": "Modifier",
     "set": "Définir un budget",
     "over": "Dépassé de {{amount}}",
