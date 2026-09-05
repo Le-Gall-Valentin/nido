@@ -143,4 +143,25 @@ describe('FinancePage', () => {
 
     await waitFor(() => expect(deleteRecurringSeries).toHaveBeenCalledWith('space-1', 's1'))
   })
+
+  it('shows a tooltip with the category, percentage and amount when hovering a donut segment', async () => {
+    renderPage(fakeApi({
+      getStats: vi.fn().mockResolvedValue({
+        balance: 0, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
+        breakdown: [{ categoryId: 'c1', amount: 45.3 }], budgetVsActual: [],
+      }),
+    }))
+
+    await waitFor(() => expect(screen.getByText('Alimentation')).toBeDefined())
+    expect(screen.queryByRole('tooltip')).toBeNull()
+
+    fireEvent.mouseEnter(screen.getByRole('img', { name: /Alimentation/ }))
+    const tooltip = screen.getByRole('tooltip')
+    expect(tooltip.textContent).toContain('Alimentation')
+    expect(tooltip.textContent).toContain('100%')
+    expect(tooltip.textContent).toContain('45,30')
+
+    fireEvent.mouseLeave(screen.getByRole('img', { name: /Alimentation/ }))
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
 })

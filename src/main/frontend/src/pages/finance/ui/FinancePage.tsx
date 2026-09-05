@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -62,25 +62,57 @@ function StatCard({ icon: Icon, tintClassName, label, value }: { icon: typeof Wa
 
 /** A hand-drawn SVG donut (no charting library in this app) with a colored ring segment per category. */
 function BreakdownDonut({ breakdown, categoryById }: { breakdown: CategoryAmount[]; categoryById: Map<string, Category> }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [hovered, setHovered] = useState<{ categoryId: string; x: number; y: number } | null>(null)
   const total = breakdown.reduce((sum, row) => sum + row.amount, 0)
   const radius = 52
   const circumference = 2 * Math.PI * radius
   let offset = 0
+
+  function handlePointerMove(categoryId: string, e: React.MouseEvent) {
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (!rect) return
+    setHovered({ categoryId, x: e.clientX - rect.left, y: e.clientY - rect.top })
+  }
+
+  const hoveredRow = hovered ? breakdown.find((row) => row.categoryId === hovered.categoryId) : null
+  const hoveredCategory = hoveredRow ? categoryById.get(hoveredRow.categoryId) : null
+  const hoveredPercent = hoveredRow && total > 0 ? Math.round((hoveredRow.amount / total) * 100) : 0
+
   return (
-    <svg width={128} height={128} viewBox="0 0 128 128" className="-rotate-90 shrink-0">
-      <circle cx={64} cy={64} r={radius} fill="none" stroke="var(--color-bg-3)" strokeWidth={20} />
-      {total > 0 && breakdown.map((row) => {
-        const category = categoryById.get(row.categoryId)
-        const dash = (row.amount / total) * circumference
-        const segmentOffset = offset
-        offset += dash
-        return (
-          <circle key={row.categoryId} cx={64} cy={64} r={radius} fill="none"
-            stroke={category?.color ?? 'var(--color-fg-3)'} strokeWidth={20}
-            strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-segmentOffset} />
-        )
-      })}
-    </svg>
+    <div ref={containerRef} className="relative shrink-0">
+      <svg width={128} height={128} viewBox="0 0 128 128" className="-rotate-90">
+        <circle cx={64} cy={64} r={radius} fill="none" stroke="var(--color-bg-3)" strokeWidth={20} />
+        {total > 0 && breakdown.map((row) => {
+          const category = categoryById.get(row.categoryId)
+          const dash = (row.amount / total) * circumference
+          const segmentOffset = offset
+          offset += dash
+          const percent = Math.round((row.amount / total) * 100)
+          return (
+            <circle key={row.categoryId} cx={64} cy={64} r={radius} fill="none"
+              stroke={category?.color ?? 'var(--color-fg-3)'} strokeWidth={20}
+              strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-segmentOffset}
+              role="img" aria-label={`${category?.label ?? row.categoryId}: ${percent}%, ${formatAmount(row.amount)}`}
+              className="cursor-pointer"
+              onMouseEnter={(e) => handlePointerMove(row.categoryId, e)}
+              onMouseMove={(e) => handlePointerMove(row.categoryId, e)}
+              onMouseLeave={() => setHovered(null)} />
+          )
+        })}
+      </svg>
+      {hovered && hoveredRow && (
+        <div role="tooltip"
+          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+10px)] whitespace-nowrap rounded-[8px] border border-border bg-bg-1 px-2.5 py-1.5 text-xs shadow-[0_4px_16px_rgba(44,42,38,0.16)]"
+          style={{ left: hovered.x, top: hovered.y }}>
+          <p className="flex items-center gap-1.5 font-medium text-fg-0">
+            <span className="size-2 shrink-0 rounded-[2px]" style={{ backgroundColor: hoveredCategory?.color }} />
+            {hoveredCategory?.label ?? hoveredRow.categoryId}
+          </p>
+          <p className="text-fg-3">{hoveredPercent}% · {formatAmount(hoveredRow.amount)}</p>
+        </div>
+      )}
+    </div>
   )
 }
 
