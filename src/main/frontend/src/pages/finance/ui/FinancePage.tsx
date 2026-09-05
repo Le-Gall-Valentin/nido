@@ -210,7 +210,7 @@ function FinancePageContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-3">
         <StatCard icon={Wallet} tintClassName="bg-accent-dim text-accent" label={t('stats.balance')} value={formatAmount(stats?.balance ?? 0)} />
         <StatCard icon={TrendingDown} tintClassName="bg-status-red-dim text-status-red" label={t('stats.spent')} value={formatAmount(stats?.totalExpense ?? 0)} />
         <StatCard icon={TrendingUp} tintClassName="bg-status-green-dim text-status-green" label={t('stats.income')} value={formatAmount(stats?.totalIncome ?? 0)} />
