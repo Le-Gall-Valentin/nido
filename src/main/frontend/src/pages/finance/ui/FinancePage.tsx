@@ -6,7 +6,7 @@ import { Alert, Dialog, Spinner } from '@/shared/ui'
 import { useMySpaces, useWritableSpaces } from '@/features/space-switcher'
 import { canWrite, isPersonal, useSpaceMembers, TransferDialog } from '@/entities/space'
 import {
-  financeApi, FinanceApiProvider, useCategories, useBudgets, useTransactions, useFinanceStats,
+  financeApi, FinanceApiProvider, useCategories, useBudgets, useTransactions, useFinanceStats, useProjection,
   useCreateTransaction, useCreateRecurringSeries, useUpdateTransaction, useDeleteTransaction, useMoveTransaction, useSetBudget,
   useCreateCategory, useUpdateCategory, useDeleteCategory, useBalances, useSettleDebt,
   useSavingsGoals, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,
@@ -48,6 +48,7 @@ function FinancePageContent() {
   const { data: budgets } = useBudgets(spaceId)
   const { data: transactions, isPending, isError } = useTransactions(spaceId, month)
   const { data: stats } = useFinanceStats(spaceId, month)
+  const { data: projection } = useProjection(spaceId, month)
   const { data: members } = useSpaceMembers(spaceId)
   const { data: mySpaces } = useMySpaces()
   const { data: writableDestinations } = useWritableSpaces(spaceId)
@@ -225,6 +226,22 @@ function FinancePageContent() {
             )
           })}
         </ul>
+      </section>
+
+      <section className="rounded-lg border p-4">
+        <h2 className="mb-3 font-medium">{t('projection.title')}</h2>
+        <p className="text-sm">
+          {t('projection.end_of_month_balance', { amount: formatAmount(projection?.projectedEndOfMonthBalance ?? 0) })}
+        </p>
+        {(projection?.upcoming.length ?? 0) > 0 && (
+          <ul className="mt-2 space-y-1 text-sm text-fg-3">
+            {projection?.upcoming.map((occurrence, i) => (
+              <li key={i}>
+                {occurrence.date} — {occurrence.label} ({occurrence.type === 'EXPENSE' ? '-' : '+'}{formatAmount(occurrence.amount)})
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="rounded-lg border p-4">

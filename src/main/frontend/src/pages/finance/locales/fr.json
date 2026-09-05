@@ -55,6 +55,10 @@
     "contributor_label": "Contributeur",
     "progress": "{{contributed}} / {{target}}"
   },
+  "projection": {
+    "title": "Projection de fin de mois",
+    "end_of_month_balance": "Solde estimé en fin de mois : {{amount}}"
+  },
   "form": {
     "create_title": "Nouvelle opération",
     "edit_title": "Modifier l'opération",
