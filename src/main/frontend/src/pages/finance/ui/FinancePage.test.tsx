@@ -200,4 +200,19 @@ describe('FinancePage', () => {
 
     await waitFor(() => expect(screen.getByText('transactions.detail_title')).toBeDefined())
   })
+
+  it('only offers to settle a debt the current user is a party to', async () => {
+    renderPage(fakeApi({
+      getBalances: vi.fn().mockResolvedValue({
+        netByMember: [],
+        suggestedTransfers: [
+          { fromMemberId: 'u-1', toMemberId: 'u-2', amount: 100 },
+          { fromMemberId: 'u-2', toMemberId: 'u-3', amount: 50 },
+        ],
+      }),
+    }))
+
+    await waitFor(() => expect(screen.getAllByText(/→/).length).toBe(2))
+    expect(screen.getAllByText('balances.settle')).toHaveLength(1)
+  })
 })
