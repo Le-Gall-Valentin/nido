@@ -4,6 +4,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { Dialog, Button, Input } from '@/shared/ui'
 import type { Category } from '@/entities/finance'
 import { CategoryIconBadge } from './CategoryIconBadge'
+import { IconPickerModal } from './IconPickerModal'
 
 interface CategoryManagerModalProps {
   categories: Category[]
@@ -26,6 +27,7 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
   const [editLabel, setEditLabel] = useState('')
   const [editColor, setEditColor] = useState('')
   const [editIcon, setEditIcon] = useState('')
+  const [pickerTarget, setPickerTarget] = useState<'new' | 'edit' | null>(null)
 
   function startEdit(category: Category) {
     setEditingId(category.id)
@@ -47,6 +49,17 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
     setNewIcon(DEFAULT_NEW_ICON)
   }
 
+  function handleAppearanceConfirm(icon: string, color: string) {
+    if (pickerTarget === 'new') {
+      setNewIcon(icon)
+      setNewColor(color)
+    } else if (pickerTarget === 'edit') {
+      setEditIcon(icon)
+      setEditColor(color)
+    }
+    setPickerTarget(null)
+  }
+
   return (
     <Dialog open onClose={onClose} title={t('categories.title')} maxWidth="max-w-lg">
       <h3 className="mb-4 text-[19px] font-semibold text-fg-0">{t('categories.title')}</h3>
@@ -58,12 +71,11 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
           if (editingId === category.id) {
             return (
               <li key={category.id} className="flex items-center gap-2 rounded-[10px] bg-bg-2 p-2">
-                <input type="color" value={editColor} onChange={(e) => setEditColor(e.target.value)}
-                  className="size-8 shrink-0 cursor-pointer rounded-[8px] border-[1.5px] border-border bg-bg-1 p-0.5" />
+                <button type="button" aria-label={t('categories.edit_appearance')} onClick={() => setPickerTarget('edit')}>
+                  <CategoryIconBadge category={{ color: editColor, icon: editIcon }} size={32} />
+                </button>
                 <input value={editLabel} onChange={(e) => setEditLabel(e.target.value)}
                   className="flex-1 rounded-[8px] border-[1.5px] border-border bg-bg-1 px-2.5 py-1.5 text-sm text-fg-0 outline-none focus:border-accent" />
-                <input value={editIcon} onChange={(e) => setEditIcon(e.target.value)}
-                  className="w-28 rounded-[8px] border-[1.5px] border-border bg-bg-1 px-2.5 py-1.5 text-sm text-fg-0 outline-none focus:border-accent" />
                 <button type="button" onClick={saveEdit} className="text-sm font-semibold text-accent">{t('form.save')}</button>
               </li>
             )
@@ -86,14 +98,22 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
       </ul>
 
       <div className="mt-4 flex items-end gap-2 border-t border-border pt-4">
-        <input type="color" value={newColor} onChange={(e) => setNewColor(e.target.value)}
-          className="size-[42px] shrink-0 cursor-pointer rounded-[10px] border-[1.5px] border-border bg-bg-1 p-1" />
+        <button type="button" aria-label={t('categories.choose_appearance')} onClick={() => setPickerTarget('new')}>
+          <CategoryIconBadge category={{ color: newColor, icon: newIcon }} size={42} />
+        </button>
         <Input label={t('categories.new_category_label')} srOnlyLabel placeholder={t('categories.new_category_placeholder')}
           value={newLabel} onChange={(e) => setNewLabel(e.target.value)} className="flex-1" />
-        <input value={newIcon} onChange={(e) => setNewIcon(e.target.value)}
-          className="w-28 rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-sm text-fg-0 outline-none focus:border-accent" />
         <Button type="button" onClick={handleCreate}>{t('categories.add')}</Button>
       </div>
+
+      {pickerTarget && (
+        <IconPickerModal
+          initialIcon={pickerTarget === 'new' ? newIcon : editIcon}
+          initialColor={pickerTarget === 'new' ? newColor : editColor}
+          onConfirm={handleAppearanceConfirm}
+          onCancel={() => setPickerTarget(null)}
+        />
+      )}
     </Dialog>
   )
 }

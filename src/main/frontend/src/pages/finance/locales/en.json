@@ -27,7 +27,15 @@
     "delete_in_use": "This category is still used by existing transactions.",
     "new_category_label": "New category",
     "new_category_placeholder": "Category name",
-    "add": "Add"
+    "add": "Add",
+    "choose_appearance": "Choose icon and color",
+    "edit_appearance": "Edit icon and color",
+    "appearance_title": "Icon and color",
+    "color_label": "Color",
+    "icon_search_label": "Search for an icon",
+    "icon_search_placeholder": "Search for an icon…",
+    "icon_no_results": "No icon found.",
+    "icon_confirm": "Confirm"
   },
   "balances": {
     "title": "Balances between members",

@@ -44,4 +44,45 @@ describe('CategoryManagerModal', () => {
 
     expect(screen.getByText('categories.delete_in_use')).toBeDefined()
   })
+
+  it('creates a new category with an icon chosen from the appearance picker', () => {
+    const onCreate = vi.fn()
+    render(<CategoryManagerModal categories={categories} onCreate={onCreate} onUpdate={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} deleteError={null} />)
+
+    fireEvent.change(screen.getByLabelText('categories.new_category_label'), { target: { value: 'Sport' } })
+    fireEvent.click(screen.getByLabelText('categories.choose_appearance'))
+    fireEvent.change(screen.getByLabelText('categories.icon_search_label'), { target: { value: 'circle' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Circle' }))
+    fireEvent.click(screen.getByText('categories.icon_confirm'))
+    fireEvent.click(screen.getByText('categories.add'))
+
+    expect(onCreate).toHaveBeenCalledWith('Sport', expect.any(String), 'Circle')
+  })
+
+  it('creates a new category with a color chosen from the appearance picker', () => {
+    const onCreate = vi.fn()
+    render(<CategoryManagerModal categories={categories} onCreate={onCreate} onUpdate={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} deleteError={null} />)
+
+    fireEvent.change(screen.getByLabelText('categories.new_category_label'), { target: { value: 'Sport' } })
+    fireEvent.click(screen.getByLabelText('categories.choose_appearance'))
+    fireEvent.change(screen.getByLabelText('categories.color_label'), { target: { value: '#112233' } })
+    fireEvent.click(screen.getByText('categories.icon_confirm'))
+    fireEvent.click(screen.getByText('categories.add'))
+
+    expect(onCreate).toHaveBeenCalledWith('Sport', '#112233', expect.any(String))
+  })
+
+  it('updates an existing category with an icon chosen from the appearance picker', () => {
+    const onUpdate = vi.fn()
+    render(<CategoryManagerModal categories={categories} onCreate={vi.fn()} onUpdate={onUpdate} onDelete={vi.fn()} onClose={vi.fn()} deleteError={null} />)
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'categories.edit' })[0])
+    fireEvent.click(screen.getByLabelText('categories.edit_appearance'))
+    fireEvent.change(screen.getByLabelText('categories.icon_search_label'), { target: { value: 'circle' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Circle' }))
+    fireEvent.click(screen.getByText('categories.icon_confirm'))
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onUpdate).toHaveBeenCalledWith('c1', 'Alimentation', expect.any(String), 'Circle')
+  })
 })
