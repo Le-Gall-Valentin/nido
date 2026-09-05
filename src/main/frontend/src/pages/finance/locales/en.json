@@ -9,6 +9,7 @@
   "budget": {
     "title": "Budget vs actual",
     "edit": "Edit",
+    "set": "Set a budget",
     "over": "Over by {{amount}}",
     "remaining": "{{amount}} left"
   },

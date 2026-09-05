@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
@@ -89,5 +89,17 @@ describe('FinancePage', () => {
     }))
 
     await waitFor(() => expect(screen.getByText(/Loyer/)).toBeDefined())
+  })
+
+  it('offers to set a budget for a category that does not have one yet, and saves it', async () => {
+    const setBudget = vi.fn()
+    renderPage(fakeApi({ setBudget }))
+
+    await waitFor(() => expect(screen.getByText('budget.set')).toBeDefined())
+    fireEvent.click(screen.getByText('budget.set'))
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '150' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    await waitFor(() => expect(setBudget).toHaveBeenCalledWith('space-1', 'c1', 150))
   })
 })

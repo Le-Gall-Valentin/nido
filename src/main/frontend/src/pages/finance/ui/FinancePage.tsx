@@ -182,9 +182,14 @@ function FinancePageContent() {
 
   function handleBudgetSave(categoryId: string) {
     const value = Number(budgetInput)
-    if (!Number.isNaN(value) && value >= 0) {
+    if (budgetInput.trim() !== '' && !Number.isNaN(value) && value >= 0) {
       setBudget.mutate({ categoryId, monthlyLimit: value }, { onSuccess: () => setEditingBudgetFor(null) })
     }
+  }
+
+  function handleStartSetBudget(categoryId: string) {
+    setEditingBudgetFor(categoryId)
+    setBudgetInput('')
   }
 
   if (isPending || categoriesPending) return <Spinner label={t('loading')} fullscreen={false} />
@@ -285,6 +290,24 @@ function FinancePageContent() {
                 </li>
               )
             })}
+            {canWriteHere && (categories ?? [])
+              .filter((category) => !(stats?.budgetVsActual ?? []).some((line) => line.categoryId === category.id))
+              .map((category) => (
+                <li key={category.id} className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-fg-1">{category.label}</span>
+                  {editingBudgetFor === category.id ? (
+                    <span className="flex items-center gap-1.5">
+                      <input type="number" step="0.01" value={budgetInput} onChange={(e) => setBudgetInput(e.target.value)}
+                        className="w-20 rounded-[8px] border-[1.5px] border-border bg-bg-1 px-2 py-1 text-sm text-fg-0 outline-none focus:border-accent" />
+                      <button type="button" onClick={() => handleBudgetSave(category.id)} className="text-sm font-semibold text-accent">{t('form.save')}</button>
+                    </span>
+                  ) : (
+                    <button type="button" onClick={() => handleStartSetBudget(category.id)} className="text-xs font-semibold text-accent">
+                      {t('budget.set')}
+                    </button>
+                  )}
+                </li>
+              ))}
           </ul>
         </section>
       </div>
