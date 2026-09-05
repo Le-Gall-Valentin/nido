@@ -28,6 +28,7 @@ export function RecurringSeriesManagerModal({ series, onEdit, onDelete, onClose 
                 <p className="truncate text-sm font-medium text-fg-0">{s.label}</p>
                 <p className="truncate text-xs text-fg-3">
                   {formatAmount(s.amount)} · {t('form.recurrence_interval_count_label')} {s.intervalCount} {t(`form.interval.${s.intervalType}`)}
+                  {s.endDate && <> · {t('recurring_series.end_date_label')}: {s.endDate}</>}
                 </p>
               </div>
               <button type="button" aria-label={t('recurring_series.edit')} onClick={() => onEdit(s)}

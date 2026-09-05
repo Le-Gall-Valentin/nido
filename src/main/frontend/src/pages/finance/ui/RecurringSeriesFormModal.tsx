@@ -73,6 +73,10 @@ export function RecurringSeriesFormModal({ series, categories, members, canPickC
       setError(t('form.shares_invalid'))
       return
     }
+    if (endDate && endDate < anchorDate) {
+      setError(t('recurring_series.end_date_before_start'))
+      return
+    }
     setError(null)
     onSubmit({
       label: label.trim(), amount: numericAmount, type, categoryId, payerId: payerId || null,

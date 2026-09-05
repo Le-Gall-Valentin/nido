@@ -112,4 +112,51 @@ describe('TransactionFormModal', () => {
       recurrence: expect.objectContaining({ intervalType: 'YEARLY' }),
     }))
   })
+
+  it('creates a recurring series with no end date by default', () => {
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit })
+
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Loyer' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '800' } })
+    fireEvent.change(screen.getByLabelText('form.category_label'), { target: { value: 'c1' } })
+    fireEvent.click(screen.getByLabelText('form.recurring_label'))
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      recurrence: expect.objectContaining({ endDate: null }),
+    }))
+  })
+
+  it('creates a recurring series with an end date, for a fixed-term loan', () => {
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit })
+
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Prêt voiture' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '250' } })
+    fireEvent.change(screen.getByLabelText('form.category_label'), { target: { value: 'c1' } })
+    fireEvent.click(screen.getByLabelText('form.recurring_label'))
+    fireEvent.change(screen.getByLabelText('recurring_series.end_date_label'), { target: { value: '2027-06-01' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      recurrence: expect.objectContaining({ endDate: '2027-06-01' }),
+    }))
+  })
+
+  it('rejects an end date that comes before the start date', () => {
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit })
+
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Prêt voiture' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '250' } })
+    fireEvent.change(screen.getByLabelText('form.category_label'), { target: { value: 'c1' } })
+    fireEvent.change(screen.getByLabelText('form.date_label'), { target: { value: '2026-06-01' } })
+    fireEvent.click(screen.getByLabelText('form.recurring_label'))
+    fireEvent.change(screen.getByLabelText('recurring_series.end_date_label'), { target: { value: '2026-01-01' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText('recurring_series.end_date_before_start')).toBeDefined()
+  })
 })
