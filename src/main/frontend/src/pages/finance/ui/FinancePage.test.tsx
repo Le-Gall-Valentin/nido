@@ -91,11 +91,12 @@ describe('FinancePage', () => {
     await waitFor(() => expect(screen.getByText(/Loyer/)).toBeDefined())
   })
 
-  it('offers to set a budget for a category that does not have one yet, and saves it', async () => {
+  it('opens the budget manager modal and sets a budget for a category that does not have one yet', async () => {
     const setBudget = vi.fn()
     renderPage(fakeApi({ setBudget }))
 
-    await waitFor(() => expect(screen.getByText('budget.set')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('budget.manage')).toBeDefined())
+    fireEvent.click(screen.getByText('budget.manage'))
     fireEvent.click(screen.getByText('budget.set'))
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '150' } })
     fireEvent.click(screen.getByText('form.save'))
