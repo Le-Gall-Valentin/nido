@@ -68,7 +68,7 @@ public class SavingsGoalController {
             @PathVariable UUID spaceId, @Valid @RequestBody CreateSavingsGoalRequest request,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
         SavingsGoal created = createSavingsGoalUseCase.create(
-            new CreateSavingsGoalCommand(spaceId, request.name(), request.targetAmount(), request.targetDate()), membership);
+            new CreateSavingsGoalCommand(spaceId, request.name(), request.targetAmount(), request.targetDate(), request.color(), request.glyph()), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(SavingsGoalResponse.from(new SavingsGoalDetail(created, List.of())));
     }
 
@@ -79,7 +79,7 @@ public class SavingsGoalController {
             @PathVariable UUID spaceId, @PathVariable UUID goalId, @Valid @RequestBody UpdateSavingsGoalRequest request,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
         SavingsGoal updated = updateSavingsGoalUseCase.update(
-            new UpdateSavingsGoalCommand(goalId, spaceId, request.name(), request.targetAmount(), request.targetDate()), membership);
+            new UpdateSavingsGoalCommand(goalId, spaceId, request.name(), request.targetAmount(), request.targetDate(), request.color(), request.glyph()), membership);
         return ResponseEntity.ok(SavingsGoalResponse.from(new SavingsGoalDetail(updated, List.of())));
     }
 

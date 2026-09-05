@@ -42,14 +42,14 @@ class UpdateSavingsGoalHandlerTest {
     }
 
     private SavingsGoal existingInSameSpace(UUID goalId) {
-        return new SavingsGoal(goalId, spaceId, "Vacances", new BigDecimal("2000.00"), null);
+        return new SavingsGoal(goalId, spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
     }
 
     @Test
     void a_member_can_update_a_savings_goal() {
-        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(UUID.randomUUID(), spaceId, "Nouveau nom", new BigDecimal("2500.00"), null);
+        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(UUID.randomUUID(), spaceId, "Nouveau nom", new BigDecimal("2500.00"), null, "#5c7a58", "🎯");
         when(savingsGoalRepository.findById(command.goalId())).thenReturn(Optional.of(existingInSameSpace(command.goalId())));
-        SavingsGoal updated = new SavingsGoal(command.goalId(), spaceId, "Nouveau nom", new BigDecimal("2500.00"), null);
+        SavingsGoal updated = new SavingsGoal(command.goalId(), spaceId, "Nouveau nom", new BigDecimal("2500.00"), null, "#5c7a58", "🎯");
         when(savingsGoalRepository.update(command)).thenReturn(updated);
 
         SavingsGoal result = handler.update(command, membership(SpaceRole.MEMBER));
@@ -60,8 +60,8 @@ class UpdateSavingsGoalHandlerTest {
     @Test
     void updating_a_savings_goal_that_belongs_to_a_different_space_is_rejected() {
         UUID goalId = UUID.randomUUID();
-        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(goalId, spaceId, "Nouveau nom", new BigDecimal("2500.00"), null);
-        SavingsGoal foreign = new SavingsGoal(goalId, UUID.randomUUID(), "Vacances", new BigDecimal("2000.00"), null);
+        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(goalId, spaceId, "Nouveau nom", new BigDecimal("2500.00"), null, "#5c7a58", "🎯");
+        SavingsGoal foreign = new SavingsGoal(goalId, UUID.randomUUID(), "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
         when(savingsGoalRepository.findById(goalId)).thenReturn(Optional.of(foreign));
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
@@ -72,7 +72,7 @@ class UpdateSavingsGoalHandlerTest {
     @Test
     void updating_a_savings_goal_that_does_not_exist_is_rejected() {
         UUID goalId = UUID.randomUUID();
-        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(goalId, spaceId, "Nouveau nom", new BigDecimal("2500.00"), null);
+        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(goalId, spaceId, "Nouveau nom", new BigDecimal("2500.00"), null, "#5c7a58", "🎯");
         when(savingsGoalRepository.findById(goalId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
@@ -81,7 +81,7 @@ class UpdateSavingsGoalHandlerTest {
 
     @Test
     void a_viewer_cannot_update_a_savings_goal() {
-        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(UUID.randomUUID(), spaceId, "Nouveau nom", new BigDecimal("2500.00"), null);
+        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(UUID.randomUUID(), spaceId, "Nouveau nom", new BigDecimal("2500.00"), null, "#5c7a58", "🎯");
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);

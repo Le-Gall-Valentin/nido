@@ -33,7 +33,7 @@ class ListSavingsGoalsHandlerTest {
 
     @Test
     void combines_each_goal_with_its_contributions() {
-        SavingsGoal goal = new SavingsGoal(UUID.randomUUID(), spaceId, "Vacances", new BigDecimal("2000.00"), null);
+        SavingsGoal goal = new SavingsGoal(UUID.randomUUID(), spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
         when(savingsGoalRepository.findBySpaceId(spaceId)).thenReturn(List.of(goal));
         when(savingsGoalRepository.findContributionsByGoalId(goal.id())).thenReturn(List.of());
         SpaceMembership membership = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.MEMBER, Instant.now());

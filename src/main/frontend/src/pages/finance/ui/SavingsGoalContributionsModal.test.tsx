@@ -18,9 +18,14 @@ const contributions: SavingsContribution[] = [
 
 describe('SavingsGoalContributionsModal', () => {
   it('lists every contribution with who, when and how much', () => {
-    render(<SavingsGoalContributionsModal goalName="Vacances" contributions={contributions} memberLabel={memberLabel} onClose={vi.fn()} />)
+    render(
+      <SavingsGoalContributionsModal
+        goalName="Vacances" color="#4a7fa0" glyph="🏠" contributions={contributions} memberLabel={memberLabel} onClose={vi.fn()}
+      />
+    )
 
     expect(screen.getByText('Vacances')).toBeDefined()
+    expect(screen.getByText('🏠')).toBeDefined()
     expect(screen.getByText('alice')).toBeDefined()
     expect(screen.getByText('2026-01-05')).toBeDefined()
     expect(screen.getByText(/100,00/)).toBeDefined()
@@ -30,7 +35,11 @@ describe('SavingsGoalContributionsModal', () => {
   })
 
   it('shows an empty state when the goal has no contributions yet', () => {
-    render(<SavingsGoalContributionsModal goalName="Vacances" contributions={[]} memberLabel={memberLabel} onClose={vi.fn()} />)
+    render(
+      <SavingsGoalContributionsModal
+        goalName="Vacances" color="#4a7fa0" glyph="🏠" contributions={[]} memberLabel={memberLabel} onClose={vi.fn()}
+      />
+    )
 
     expect(screen.getByText('savings.contributions_empty')).toBeDefined()
   })

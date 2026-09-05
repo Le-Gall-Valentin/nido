@@ -179,7 +179,7 @@ class FinanceControllerIT {
     void creating_and_contributing_to_a_savings_goal() throws Exception {
         String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/savings-goals")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Vacances\",\"targetAmount\":2000.00}"))
+                .content("{\"name\":\"Vacances\",\"targetAmount\":2000.00,\"color\":\"#5c7a58\",\"glyph\":\"🎯\"}"))
             .andExpect(status().isCreated())
             .andReturn().getResponse().getContentAsString();
         String goalId = objectMapper.readTree(created).get("id").asText();

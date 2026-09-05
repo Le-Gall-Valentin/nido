@@ -165,16 +165,16 @@ export const financeApi: IFinanceApi = {
     } catch (error) { handleError(error) }
   },
 
-  async createSavingsGoal(spaceId, name, targetAmount, targetDate) {
+  async createSavingsGoal(spaceId, name, targetAmount, targetDate, color, glyph) {
     try {
-      const res = await client.post<SavingsGoal>(`/spaces/${spaceId}/finance/savings-goals`, { name, targetAmount, targetDate })
+      const res = await client.post<SavingsGoal>(`/spaces/${spaceId}/finance/savings-goals`, { name, targetAmount, targetDate, color, glyph })
       return res.data
     } catch (error) { handleError(error) }
   },
 
-  async updateSavingsGoal(spaceId, goalId, name, targetAmount, targetDate) {
+  async updateSavingsGoal(spaceId, goalId, name, targetAmount, targetDate, color, glyph) {
     try {
-      const res = await client.patch<SavingsGoal>(`/spaces/${spaceId}/finance/savings-goals/${goalId}`, { name, targetAmount, targetDate })
+      const res = await client.patch<SavingsGoal>(`/spaces/${spaceId}/finance/savings-goals/${goalId}`, { name, targetAmount, targetDate, color, glyph })
       return res.data
     } catch (error) { handleError(error) }
   },

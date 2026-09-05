@@ -9,5 +9,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record UpdateSavingsGoalRequest(
-    @NotBlank @Size(max = 100) String name, @NotNull @DecimalMin("0.01") BigDecimal targetAmount, LocalDate targetDate
+    @NotBlank @Size(max = 100) String name, @NotNull @DecimalMin("0.01") BigDecimal targetAmount, LocalDate targetDate,
+    @NotBlank @Size(max = 7) String color, @NotBlank @Size(max = 8) String glyph
 ) {}

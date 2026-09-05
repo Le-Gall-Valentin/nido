@@ -43,7 +43,7 @@ class AddSavingsContributionHandlerTest {
     @Test
     void a_member_can_add_a_contribution() {
         AddSavingsContributionCommand command = new AddSavingsContributionCommand(UUID.randomUUID(), spaceId, UUID.randomUUID(), new BigDecimal("100.00"), LocalDate.of(2026, 1, 5));
-        SavingsGoal goal = new SavingsGoal(command.goalId(), spaceId, "Vacances", new BigDecimal("2000.00"), null);
+        SavingsGoal goal = new SavingsGoal(command.goalId(), spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
         when(savingsGoalRepository.findById(command.goalId())).thenReturn(Optional.of(goal));
         SavingsContribution created = new SavingsContribution(UUID.randomUUID(), command.goalId(), command.memberId(), command.amount(), command.date());
         when(savingsGoalRepository.addContribution(command)).thenReturn(created);
@@ -56,7 +56,7 @@ class AddSavingsContributionHandlerTest {
     @Test
     void adding_a_contribution_to_a_goal_that_belongs_to_a_different_space_is_rejected() {
         AddSavingsContributionCommand command = new AddSavingsContributionCommand(UUID.randomUUID(), spaceId, UUID.randomUUID(), new BigDecimal("100.00"), LocalDate.of(2026, 1, 5));
-        SavingsGoal foreign = new SavingsGoal(command.goalId(), UUID.randomUUID(), "Vacances", new BigDecimal("2000.00"), null);
+        SavingsGoal foreign = new SavingsGoal(command.goalId(), UUID.randomUUID(), "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
         when(savingsGoalRepository.findById(command.goalId())).thenReturn(Optional.of(foreign));
 
         assertThatThrownBy(() -> handler.add(command, membership(SpaceRole.MEMBER)))
