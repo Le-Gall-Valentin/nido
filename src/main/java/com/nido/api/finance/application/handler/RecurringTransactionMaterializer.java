@@ -45,14 +45,23 @@ final class RecurringTransactionMaterializer {
             }
             List<LocalDate> due = RecurrenceProjector.occurrencesBetween(
                 series.anchorDate(), series.intervalType(), series.intervalCount(), series.endDate(), from, today);
+            if (due.isEmpty()) {
+                continue;
+            }
             // series.contributors() is already a resolved List<Contribution> (fixed at series
             // creation time by CreateRecurringSeriesHandler) — every materialized occurrence
             // reuses those same fixed shares verbatim, no re-splitting, no re-validation.
             for (LocalDate date : due) {
                 transactionRepository.create(new CreateTransactionCommand(spaceId, series.label(), series.amount(),
                     series.type(), series.categoryId(), date, series.payerId(), List.of(), series.id()), series.contributors());
-                seriesRepository.advanceLastMaterializedDate(series.id(), date);
             }
+            // Advancing the cursor once per series rather than once per occurrence is just as
+            // safe: this whole method already runs inside the caller's single @Transactional
+            // boundary, so a crash partway through rolls back every create() above alongside
+            // this update regardless — but it cuts what used to be 2 reads + 1 write per
+            // overdue occurrence (hundreds of round trips for a long-neglected daily series)
+            // down to a single write per series.
+            seriesRepository.advanceLastMaterializedDate(series.id(), due.get(due.size() - 1));
         }
     }
 }
