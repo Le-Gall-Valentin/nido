@@ -75,6 +75,7 @@
   },
   "savings": {
     "title": "Savings goals",
+    "subtitle": "Everyone chips in, the pot grows together.",
     "new_goal": "New goal",
     "edit": "Edit",
     "delete": "Delete",
@@ -88,7 +89,11 @@
     "target_date_label": "Target date",
     "contribute_title": "Contribute to \"{{name}}\"",
     "contributor_label": "Contributor",
-    "progress": "{{contributed}} / {{target}}"
+    "progress": "{{contributed}} of {{target}}",
+    "empty": "No goals yet. Create your first one.",
+    "done": "Reached!",
+    "contributions_title": "Contributions",
+    "contributions_empty": "No contributions for this goal yet."
   },
   "projection": {
     "title": "End-of-month projection",

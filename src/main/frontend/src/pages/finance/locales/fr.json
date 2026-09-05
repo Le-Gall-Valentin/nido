@@ -75,6 +75,7 @@
   },
   "savings": {
     "title": "Objectifs d'épargne",
+    "subtitle": "Chacun contribue, la cagnotte progresse ensemble.",
     "new_goal": "Nouvel objectif",
     "edit": "Modifier",
     "delete": "Supprimer",
@@ -88,7 +89,11 @@
     "target_date_label": "Date cible",
     "contribute_title": "Contribuer à « {{name}} »",
     "contributor_label": "Contributeur",
-    "progress": "{{contributed}} / {{target}}"
+    "progress": "{{contributed}} sur {{target}}",
+    "empty": "Aucun objectif pour l'instant. Créez votre première cagnotte.",
+    "done": "Atteint !",
+    "contributions_title": "Contributions",
+    "contributions_empty": "Aucune contribution pour cet objectif pour le moment."
   },
   "projection": {
     "title": "Projection de fin de mois",

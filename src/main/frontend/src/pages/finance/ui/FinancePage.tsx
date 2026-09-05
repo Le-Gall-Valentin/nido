@@ -32,6 +32,7 @@ import { RecurringSeriesFormModal, type RecurringSeriesFormInput } from './Recur
 import { SettleDebtModal } from './SettleDebtModal'
 import { SavingsGoalFormModal, type SavingsGoalFormInput } from './SavingsGoalFormModal'
 import { AddContributionModal } from './AddContributionModal'
+import { SavingsGoalContributionsModal } from './SavingsGoalContributionsModal'
 import { formatAmount } from '../lib/formatAmount'
 
 interface FinancePageProps {
@@ -168,6 +169,7 @@ function FinancePageContent() {
   const [viewingHistoryBetween, setViewingHistoryBetween] = useState<{ memberAId: string; memberBId: string } | null>(null)
   const [goalFormState, setGoalFormState] = useState<{ mode: 'create' } | { mode: 'edit'; goal: SavingsGoal } | null>(null)
   const [contributingGoal, setContributingGoal] = useState<SavingsGoal | null>(null)
+  const [viewingGoal, setViewingGoal] = useState<SavingsGoal | null>(null)
 
   const { data: settlementsBetween } = useSettlementsBetween(spaceId, viewingHistoryBetween?.memberAId, viewingHistoryBetween?.memberBId)
 
@@ -427,35 +429,113 @@ function FinancePageContent() {
 
       {!spaceIsPersonal && (
         <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold text-fg-0">{t('savings.title')}</h2>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-[15px] font-semibold text-fg-0">{t('savings.title')}</h2>
+              <p className="mt-0.5 text-xs text-fg-3">{t('savings.subtitle')}</p>
+            </div>
             {canWriteHere && (
-              <button type="button" onClick={() => setGoalFormState({ mode: 'create' })} className="text-sm font-semibold text-accent">{t('savings.new_goal')}</button>
+              <button
+                type="button"
+                onClick={() => setGoalFormState({ mode: 'create' })}
+                className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent-dim px-3 py-1.5 text-sm font-semibold text-accent"
+              >
+                <Plus size={16} />
+                {t('savings.new_goal')}
+              </button>
             )}
           </div>
-          <ul className="space-y-4">
-            {(savingsGoals ?? []).map((goal) => {
-              const percent = goal.targetAmount > 0 ? Math.min(100, (goal.totalContributed / goal.targetAmount) * 100) : 0
-              return (
-                <li key={goal.id}>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-fg-1">{goal.name}</span>
-                    <span className="text-fg-2">{t('savings.progress', { contributed: formatAmount(goal.totalContributed), target: formatAmount(goal.targetAmount) })}</span>
-                  </div>
-                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-bg-2">
-                    <div className="h-2 rounded-full bg-accent transition-all" style={{ width: `${percent}%` }} />
-                  </div>
-                  {canWriteHere && (
-                    <div className="mt-1.5 flex gap-3 text-xs font-semibold">
-                      <button type="button" onClick={() => setContributingGoal(goal)} className="text-accent">{t('savings.contribute')}</button>
-                      <button type="button" onClick={() => setGoalFormState({ mode: 'edit', goal })} className="text-fg-3 hover:text-fg-1">{t('savings.edit')}</button>
-                      <button type="button" onClick={() => deleteSavingsGoal.mutate(goal.id)} className="text-fg-3 hover:text-status-red">{t('savings.delete')}</button>
+
+          {(savingsGoals ?? []).length === 0 ? (
+            <p className="py-6 text-center text-sm text-fg-3">{t('savings.empty')}</p>
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(260px,100%),1fr))] gap-3.5">
+              {(savingsGoals ?? []).map((goal) => {
+                const percent = goal.targetAmount > 0 ? Math.min(100, (goal.totalContributed / goal.targetAmount) * 100) : 0
+                const done = percent >= 100
+                const contributors = [...new Map(goal.contributions.map((c) => [c.memberId, c])).values()].slice(0, 4)
+                return (
+                  <div
+                    key={goal.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setViewingGoal(goal)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setViewingGoal(goal) }}
+                    className="cursor-pointer rounded-[14px] border border-border p-4 text-left transition-colors hover:bg-bg-2"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="grid size-10 shrink-0 place-items-center rounded-[11px] bg-accent text-white">
+                        <PiggyBank size={19} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-fg-0">{goal.name}</p>
+                        <p className="truncate text-xs text-fg-3">
+                          {t('savings.progress', { contributed: formatAmount(goal.totalContributed), target: formatAmount(goal.targetAmount) })}
+                        </p>
+                      </div>
+                      {canWriteHere && (
+                        <div className="flex shrink-0 gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setGoalFormState({ mode: 'edit', goal }) }}
+                            aria-label={t('savings.edit')}
+                            className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-bg-3 hover:text-fg-1"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); deleteSavingsGoal.mutate(goal.id) }}
+                            aria-label={t('savings.delete')}
+                            className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-bg-3 hover:text-status-red"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+
+                    <div className="mt-3 h-[9px] overflow-hidden rounded-full bg-bg-2">
+                      <div
+                        className={`h-full rounded-full transition-all ${done ? 'bg-status-green' : 'bg-accent'}`}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+
+                    <div className="mt-2.5 flex items-center justify-between gap-2">
+                      <div className="flex items-center">
+                        {contributors.map((contribution) => (
+                          <UserAvatar
+                            key={contribution.memberId}
+                            username={memberLabel(contribution.memberId)}
+                            role="USER"
+                            className="-mr-1.5 size-[22px] rounded-full text-[8.5px] ring-2 ring-bg-1"
+                          />
+                        ))}
+                        {done ? (
+                          <span className="ml-2 flex items-center gap-1 text-xs font-semibold text-status-green">
+                            <CheckCircle2 size={14} />
+                            {t('savings.done')}
+                          </span>
+                        ) : (
+                          <span className="ml-2 text-xs font-semibold text-fg-3">{Math.round(percent)}%</span>
+                        )}
+                      </div>
+                      {canWriteHere && !done && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setContributingGoal(goal) }}
+                          className="shrink-0 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white"
+                        >
+                          {t('savings.contribute')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </section>
       )}
 
@@ -658,6 +738,15 @@ function FinancePageContent() {
             { goalId: contributingGoal.id, ...input },
             { onSuccess: () => setContributingGoal(null) }
           )}
+        />
+      )}
+
+      {viewingGoal && (
+        <SavingsGoalContributionsModal
+          goalName={viewingGoal.name}
+          contributions={viewingGoal.contributions}
+          memberLabel={memberLabel}
+          onClose={() => setViewingGoal(null)}
         />
       )}
 
