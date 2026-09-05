@@ -63,7 +63,10 @@
     "settle_amount_too_high": "Le montant ne peut pas dépasser la dette restante.",
     "settle_date_label": "Date du règlement",
     "settle_confirm": "Confirmer",
-    "all_settled": "Tout le monde est à jour."
+    "all_settled": "Tout le monde est à jour.",
+    "member_payments_empty": "Aucun paiement de ce membre ce mois-ci.",
+    "history_title": "Historique des règlements",
+    "history_empty": "Aucun règlement entre ces deux membres."
   },
   "savings": {
     "title": "Objectifs d'épargne",

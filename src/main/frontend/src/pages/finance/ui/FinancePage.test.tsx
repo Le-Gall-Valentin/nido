@@ -37,6 +37,7 @@ function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
     getStats: vi.fn().mockResolvedValue({ balance: 0, totalExpense: 0, totalIncome: 0, remainingBudget: 0, breakdown: [], budgetVsActual: [] }),
     getProjection: vi.fn().mockResolvedValue({ actualBalanceSoFar: 0, upcoming: [], projectedEndOfMonthBalance: 0 }),
     getBalances: vi.fn().mockResolvedValue({ netByMember: [], suggestedTransfers: [] }), settleDebt: vi.fn(),
+    listSettlements: vi.fn().mockResolvedValue([]),
     listSavingsGoals: vi.fn().mockResolvedValue([]), createSavingsGoal: vi.fn(), updateSavingsGoal: vi.fn(), deleteSavingsGoal: vi.fn(), addSavingsContribution: vi.fn(),
     ...overrides,
   }
@@ -232,5 +233,45 @@ describe('FinancePage', () => {
     fireEvent.click(screen.getByText('balances.settle_confirm'))
 
     await waitFor(() => expect(settleDebt).toHaveBeenCalledWith('space-1', 'u-1', 'u-2', 250, expect.any(String)))
+  })
+
+  it('opens a member\'s payments, then the full detail of one, from the balances list', async () => {
+    renderPage(fakeApi({
+      getBalances: vi.fn().mockResolvedValue({
+        netByMember: [{ memberId: 'u-1', net: 100 }],
+        suggestedTransfers: [],
+      }),
+      listTransactions: vi.fn().mockResolvedValue([{
+        id: 't1', label: 'Salaire', amount: 1000, type: 'INCOME', categoryId: 'c1', date: '2026-01-05',
+        payerId: 'u-1', contributors: [], recurring: false,
+      }]),
+    }))
+
+    await waitFor(() => expect(screen.getAllByText('alice').length).toBeGreaterThan(0))
+    fireEvent.click(screen.getAllByText('alice')[0])
+
+    const memberModal = await waitFor(() => screen.getByRole('dialog', { name: 'alice' }))
+    fireEvent.click(within(memberModal).getByText('Salaire'))
+
+    await waitFor(() => expect(screen.getByText('transactions.detail_title')).toBeDefined())
+  })
+
+  it('opens the settlement history between two members when clicking a debt', async () => {
+    const listSettlements = vi.fn().mockResolvedValue([
+      { id: 's1', fromMemberId: 'u-1', toMemberId: 'u-2', amount: 20, date: '2026-01-02' },
+    ])
+    renderPage(fakeApi({
+      getBalances: vi.fn().mockResolvedValue({
+        netByMember: [],
+        suggestedTransfers: [{ fromMemberId: 'u-1', toMemberId: 'u-2', amount: 500 }],
+      }),
+      listSettlements,
+    }))
+
+    await waitFor(() => expect(screen.getByText(/→/)).toBeDefined())
+    fireEvent.click(screen.getByText(/→/))
+
+    await waitFor(() => expect(listSettlements).toHaveBeenCalledWith('space-1', 'u-1', 'u-2'))
+    await waitFor(() => expect(screen.getByText(/20,00/)).toBeDefined())
   })
 })
