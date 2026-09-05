@@ -9,13 +9,16 @@ import {
   financeApi, FinanceApiProvider, useCategories, useBudgets, useTransactions, useFinanceStats,
   useCreateTransaction, useCreateRecurringSeries, useUpdateTransaction, useDeleteTransaction, useMoveTransaction, useSetBudget,
   useCreateCategory, useUpdateCategory, useDeleteCategory, useBalances, useSettleDebt,
-  type IFinanceApi, type Transaction,
+  useSavingsGoals, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,
+  type IFinanceApi, type Transaction, type SavingsGoal,
 } from '@/entities/finance'
 import { resolveCategoryIcon } from '../lib/resolveCategoryIcon'
 import { TransactionFormModal, type TransactionFormInput } from './TransactionFormModal'
 import { DeleteTransactionModal } from './DeleteTransactionModal'
 import { CategoryManagerModal } from './CategoryManagerModal'
 import { SettleDebtModal } from './SettleDebtModal'
+import { SavingsGoalFormModal, type SavingsGoalFormInput } from './SavingsGoalFormModal'
+import { AddContributionModal } from './AddContributionModal'
 
 interface FinancePageProps {
   api?: IFinanceApi
@@ -60,6 +63,11 @@ function FinancePageContent() {
   const deleteCategory = useDeleteCategory(spaceId)
   const { data: balances } = useBalances(spaceId)
   const settleDebt = useSettleDebt(spaceId)
+  const { data: savingsGoals } = useSavingsGoals(spaceId)
+  const createSavingsGoal = useCreateSavingsGoal(spaceId)
+  const updateSavingsGoal = useUpdateSavingsGoal(spaceId)
+  const deleteSavingsGoal = useDeleteSavingsGoal(spaceId)
+  const addSavingsContribution = useAddSavingsContribution(spaceId)
 
   const [formState, setFormState] = useState<{ mode: 'create' } | { mode: 'edit'; transaction: Transaction } | null>(null)
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
@@ -69,6 +77,8 @@ function FinancePageContent() {
   const [managingCategories, setManagingCategories] = useState(false)
   const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null)
   const [settlingTransfer, setSettlingTransfer] = useState<{ fromMemberId: string; toMemberId: string; amount: number } | null>(null)
+  const [goalFormState, setGoalFormState] = useState<{ mode: 'create' } | { mode: 'edit'; goal: SavingsGoal } | null>(null)
+  const [contributingGoal, setContributingGoal] = useState<SavingsGoal | null>(null)
 
   function handleDeleteCategory(categoryId: string) {
     setCategoryDeleteError(null)
@@ -77,6 +87,17 @@ function FinancePageContent() {
 
   function memberLabel(memberId: string): string {
     return members?.find((m) => m.userId === memberId)?.username ?? memberId
+  }
+
+  function handleGoalFormSubmit(input: SavingsGoalFormInput) {
+    if (goalFormState?.mode === 'edit') {
+      updateSavingsGoal.mutate(
+        { goalId: goalFormState.goal.id, ...input },
+        { onSuccess: () => setGoalFormState(null) }
+      )
+      return
+    }
+    createSavingsGoal.mutate(input, { onSuccess: () => setGoalFormState(null) })
   }
 
   const currentSpace = mySpaces?.find((s) => s.id === spaceId)
@@ -259,6 +280,40 @@ function FinancePageContent() {
         </section>
       )}
 
+      {!spaceIsPersonal && (
+        <section className="rounded-lg border p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-medium">{t('savings.title')}</h2>
+            {canWriteHere && (
+              <button type="button" onClick={() => setGoalFormState({ mode: 'create' })} className="text-sm text-fg-1 underline">{t('savings.new_goal')}</button>
+            )}
+          </div>
+          <ul className="space-y-3">
+            {(savingsGoals ?? []).map((goal) => {
+              const percent = goal.targetAmount > 0 ? Math.min(100, (goal.totalContributed / goal.targetAmount) * 100) : 0
+              return (
+                <li key={goal.id}>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{goal.name}</span>
+                    <span>{t('savings.progress', { contributed: formatAmount(goal.totalContributed), target: formatAmount(goal.targetAmount) })}</span>
+                  </div>
+                  <div className="mt-1 h-2 rounded-full bg-bg-2">
+                    <div className="h-2 rounded-full bg-fg-1" style={{ width: `${percent}%` }} />
+                  </div>
+                  {canWriteHere && (
+                    <div className="mt-1 flex gap-3 text-xs">
+                      <button type="button" onClick={() => setContributingGoal(goal)} className="underline">{t('savings.contribute')}</button>
+                      <button type="button" onClick={() => setGoalFormState({ mode: 'edit', goal })} className="underline">{t('savings.edit')}</button>
+                      <button type="button" onClick={() => deleteSavingsGoal.mutate(goal.id)} className="underline">{t('savings.delete')}</button>
+                    </div>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
+
       {formState && (
         <TransactionFormModal
           mode={formState.mode}
@@ -312,6 +367,28 @@ function FinancePageContent() {
           onConfirm={(date) => settleDebt.mutate(
             { fromMemberId: settlingTransfer.fromMemberId, toMemberId: settlingTransfer.toMemberId, amount: settlingTransfer.amount, date },
             { onSuccess: () => setSettlingTransfer(null) }
+          )}
+        />
+      )}
+
+      {goalFormState && (
+        <SavingsGoalFormModal
+          mode={goalFormState.mode}
+          goal={goalFormState.mode === 'edit' ? goalFormState.goal : undefined}
+          onSubmit={handleGoalFormSubmit}
+          onCancel={() => setGoalFormState(null)}
+        />
+      )}
+
+      {contributingGoal && (
+        <AddContributionModal
+          goalName={contributingGoal.name}
+          members={members ?? []}
+          isPending={addSavingsContribution.isPending}
+          onCancel={() => setContributingGoal(null)}
+          onSubmit={(input) => addSavingsContribution.mutate(
+            { goalId: contributingGoal.id, ...input },
+            { onSuccess: () => setContributingGoal(null) }
           )}
         />
       )}

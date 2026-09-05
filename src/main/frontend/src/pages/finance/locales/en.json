@@ -38,6 +38,23 @@
     "settle_confirm": "Confirm",
     "all_settled": "Everyone is settled up."
   },
+  "savings": {
+    "title": "Savings goals",
+    "new_goal": "New goal",
+    "edit": "Edit",
+    "delete": "Delete",
+    "contribute": "Contribute",
+    "create_title": "New savings goal",
+    "edit_title": "Edit goal",
+    "name_label": "Goal name",
+    "name_required": "The name is required.",
+    "target_amount_label": "Target amount",
+    "target_amount_required": "The target amount must be greater than zero.",
+    "target_date_label": "Target date",
+    "contribute_title": "Contribute to \"{{name}}\"",
+    "contributor_label": "Contributor",
+    "progress": "{{contributed}} / {{target}}"
+  },
   "form": {
     "create_title": "New transaction",
     "edit_title": "Edit transaction",

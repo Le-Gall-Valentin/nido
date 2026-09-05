@@ -38,6 +38,23 @@
     "settle_confirm": "Confirmer",
     "all_settled": "Tout le monde est à jour."
   },
+  "savings": {
+    "title": "Objectifs d'épargne",
+    "new_goal": "Nouvel objectif",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "contribute": "Contribuer",
+    "create_title": "Nouvel objectif d'épargne",
+    "edit_title": "Modifier l'objectif",
+    "name_label": "Nom de l'objectif",
+    "name_required": "Le nom est obligatoire.",
+    "target_amount_label": "Montant cible",
+    "target_amount_required": "Le montant cible doit être supérieur à zéro.",
+    "target_date_label": "Date cible",
+    "contribute_title": "Contribuer à « {{name}} »",
+    "contributor_label": "Contributeur",
+    "progress": "{{contributed}} / {{target}}"
+  },
   "form": {
     "create_title": "Nouvelle opération",
     "edit_title": "Modifier l'opération",
