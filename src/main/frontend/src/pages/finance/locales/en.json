@@ -29,6 +29,15 @@
     "new_category_placeholder": "Category name",
     "add": "Add"
   },
+  "balances": {
+    "title": "Balances between members",
+    "settle": "Settle up",
+    "settle_title": "Settle this debt",
+    "settle_message": "{{from}} owes {{to}} {{amount}} €.",
+    "settle_date_label": "Settlement date",
+    "settle_confirm": "Confirm",
+    "all_settled": "Everyone is settled up."
+  },
   "form": {
     "create_title": "New transaction",
     "edit_title": "Edit transaction",
