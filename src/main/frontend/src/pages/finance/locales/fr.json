@@ -88,7 +88,7 @@
     "recurring_label": "Opération récurrente",
     "recurrence_interval_type_label": "Fréquence",
     "recurrence_interval_count_label": "Tous les",
-    "interval": { "DAILY": "jour(s)", "WEEKLY": "semaine(s)", "MONTHLY": "mois" },
+    "interval": { "DAILY": "jour(s)", "WEEKLY": "semaine(s)", "MONTHLY": "mois", "YEARLY": "an(s)" },
     "cancel": "Annuler",
     "save": "Enregistrer"
   },

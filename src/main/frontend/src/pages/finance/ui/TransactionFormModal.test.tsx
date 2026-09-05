@@ -96,4 +96,20 @@ describe('TransactionFormModal', () => {
       recurrence: expect.objectContaining({ anchorDate: '2026-02-01', intervalType: 'MONTHLY', intervalCount: 1 }),
     }))
   })
+
+  it('offers a yearly recurrence interval', () => {
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit })
+
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Assurance' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '250' } })
+    fireEvent.change(screen.getByLabelText('form.category_label'), { target: { value: 'c1' } })
+    fireEvent.click(screen.getByLabelText('form.recurring_label'))
+    fireEvent.change(screen.getByLabelText('form.recurrence_interval_type_label'), { target: { value: 'YEARLY' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      recurrence: expect.objectContaining({ intervalType: 'YEARLY' }),
+    }))
+  })
 })

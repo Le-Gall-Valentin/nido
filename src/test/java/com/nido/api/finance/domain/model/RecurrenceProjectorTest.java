@@ -56,6 +56,21 @@ class RecurrenceProjectorTest {
     }
 
     @Test
+    void yearly_anchored_on_leap_day_clamps_without_drifting() {
+        LocalDate anchor = LocalDate.of(2028, 2, 29);
+
+        assertThat(RecurrenceProjector.occurrenceDate(anchor, RecurrenceInterval.YEARLY, 1, 1)).isEqualTo(LocalDate.of(2029, 2, 28));
+        assertThat(RecurrenceProjector.occurrenceDate(anchor, RecurrenceInterval.YEARLY, 1, 4)).isEqualTo(LocalDate.of(2032, 2, 29));
+    }
+
+    @Test
+    void yearly_supports_a_multi_year_step() {
+        LocalDate anchor = LocalDate.of(2026, 1, 15);
+
+        assertThat(RecurrenceProjector.occurrenceDate(anchor, RecurrenceInterval.YEARLY, 2, 1)).isEqualTo(LocalDate.of(2028, 1, 15));
+    }
+
+    @Test
     void occurrences_between_returns_empty_when_the_range_is_entirely_before_the_anchor() {
         LocalDate anchor = LocalDate.of(2026, 6, 1);
 

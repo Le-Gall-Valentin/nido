@@ -46,7 +46,7 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
   const [customizeShares, setCustomizeShares] = useState(false)
   const [customShares, setCustomShares] = useState<Record<string, number>>({})
   const [recurring, setRecurring] = useState(false)
-  const [intervalType, setIntervalType] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY'>('MONTHLY')
+  const [intervalType, setIntervalType] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'>('MONTHLY')
   const [intervalCount, setIntervalCount] = useState('1')
   const [error, setError] = useState<string | null>(null)
 
@@ -167,11 +167,12 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
                   onChange={(e) => setIntervalCount(e.target.value)} />
                 <select
                   aria-label={t('form.recurrence_interval_type_label')}
-                  value={intervalType} onChange={(e) => setIntervalType(e.target.value as 'DAILY' | 'WEEKLY' | 'MONTHLY')}
+                  value={intervalType} onChange={(e) => setIntervalType(e.target.value as 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY')}
                   className={SELECT_CLASSNAME}>
-                  <option value="DAILY">{t('interval.DAILY')}</option>
-                  <option value="WEEKLY">{t('interval.WEEKLY')}</option>
-                  <option value="MONTHLY">{t('interval.MONTHLY')}</option>
+                  <option value="DAILY">{t('form.interval.DAILY')}</option>
+                  <option value="WEEKLY">{t('form.interval.WEEKLY')}</option>
+                  <option value="MONTHLY">{t('form.interval.MONTHLY')}</option>
+                  <option value="YEARLY">{t('form.interval.YEARLY')}</option>
                 </select>
               </div>
             )}
