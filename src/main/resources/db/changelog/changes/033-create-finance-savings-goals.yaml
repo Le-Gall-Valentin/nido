@@ -1,0 +1,55 @@
+databaseChangeLog:
+  - changeSet:
+      id: 033-create-finance-savings-goals
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: finance_savings_goals
+      changes:
+        - createTable:
+            tableName: finance_savings_goals
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name_encrypted
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: target_amount_encrypted
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: target_date
+                  type: DATE
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: finance_savings_goals
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_finance_savings_goals_space
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: finance_savings_goals
+            cascadeConstraints: true

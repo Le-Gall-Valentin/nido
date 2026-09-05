@@ -1,0 +1,63 @@
+databaseChangeLog:
+  - changeSet:
+      id: 031-create-finance-transaction-contributors
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: finance_transaction_contributors
+      changes:
+        - createTable:
+            tableName: finance_transaction_contributors
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: transaction_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: share_amount_encrypted
+                  type: TEXT
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: finance_transaction_contributors
+            columnNames: transaction_id, user_id
+            constraintName: uq_finance_transaction_contributors_transaction_user
+        - createIndex:
+            tableName: finance_transaction_contributors
+            indexName: idx_finance_transaction_contributors_transaction_id
+            columns:
+              - column:
+                  name: transaction_id
+        - addForeignKeyConstraint:
+            baseTableName: finance_transaction_contributors
+            baseColumnNames: transaction_id
+            referencedTableName: finance_transactions
+            referencedColumnNames: id
+            constraintName: fk_finance_transaction_contributors_transaction
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: finance_transaction_contributors
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_finance_transaction_contributors_user
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: finance_transaction_contributors
+            cascadeConstraints: true
