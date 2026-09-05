@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Dialog } from '@/shared/ui'
+import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { HandCoins } from 'lucide-react'
 
 interface SettleDebtModalProps {
   fromLabel: string
@@ -17,16 +18,19 @@ export function SettleDebtModal({ fromLabel, toLabel, amount, onConfirm, onCance
 
   return (
     <Dialog open onClose={onCancel} title={t('balances.settle_title')}>
-      <p className="text-sm">{t('balances.settle_message', { from: fromLabel, to: toLabel, amount })}</p>
-      <div className="mt-3">
-        <label htmlFor="settle-date" className="block text-sm font-medium">{t('balances.settle_date_label')}</label>
-        <input id="settle-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 w-full rounded-md border px-3 py-2" />
+      <div className="mb-[15px] grid size-[46px] place-items-center rounded-[13px] bg-accent-dim text-accent">
+        <HandCoins className="size-6" />
       </div>
-      <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="rounded-md px-4 py-2 text-sm">{t('form.cancel')}</button>
-        <button type="button" onClick={() => onConfirm(date)} disabled={isPending} className="rounded-md bg-fg-1 px-4 py-2 text-sm text-bg-1 disabled:opacity-50">
+      <h3 className="mb-2 text-[19px] font-semibold text-fg-0">{t('balances.settle_title')}</h3>
+      <p className="mb-4 text-sm leading-relaxed text-fg-2">{t('balances.settle_message', { from: fromLabel, to: toLabel, amount })}</p>
+
+      <Input label={t('balances.settle_date_label')} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+
+      <div className="mt-5 flex justify-end gap-2">
+        <Button type="button" onClick={onCancel} disabled={isPending}>{t('form.cancel')}</Button>
+        <Button type="button" onClick={() => onConfirm(date)} isLoading={isPending} style={CTA_BUTTON_STYLE}>
           {t('balances.settle_confirm')}
-        </button>
+        </Button>
       </div>
     </Dialog>
   )

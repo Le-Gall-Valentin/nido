@@ -5,7 +5,7 @@
   "error": { "load_failed": "Could not load finances." },
   "type": { "EXPENSE": "Expense", "INCOME": "Income" },
   "stats": { "balance": "Balance", "spent": "Spent this month", "income": "Income this month", "remaining_budget": "Left to spend" },
-  "breakdown": { "title": "Spending breakdown" },
+  "breakdown": { "title": "Spending breakdown", "empty": "No spending yet this month." },
   "budget": {
     "title": "Budget vs actual",
     "edit": "Edit",

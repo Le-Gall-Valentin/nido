@@ -1,18 +1,22 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Plus, Pencil, ArrowRightLeft, Trash2, Repeat, Settings2 } from 'lucide-react'
+import {
+  Plus, Pencil, ArrowRightLeft, Trash2, Repeat, Settings2, Wallet, TrendingDown, TrendingUp, PiggyBank,
+  AlertTriangle, HandCoins, Target,
+} from 'lucide-react'
 import { Alert, Spinner } from '@/shared/ui'
 import { useMySpaces, useWritableSpaces } from '@/features/space-switcher'
 import { canWrite, isPersonal, useSpaceMembers, TransferDialog } from '@/entities/space'
+import { UserAvatar } from '@/entities/user'
 import {
   financeApi, FinanceApiProvider, useCategories, useTransactions, useFinanceStats, useProjection,
   useCreateTransaction, useCreateRecurringSeries, useUpdateTransaction, useDeleteTransaction, useMoveTransaction, useSetBudget,
   useCreateCategory, useUpdateCategory, useDeleteCategory, useBalances, useSettleDebt,
   useSavingsGoals, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,
-  type IFinanceApi, type Transaction, type SavingsGoal,
+  type IFinanceApi, type Transaction, type SavingsGoal, type Category, type CategoryAmount,
 } from '@/entities/finance'
-import { resolveCategoryIcon } from '../lib/resolveCategoryIcon'
+import { CategoryIconBadge } from './CategoryIconBadge'
 import { TransactionFormModal, type TransactionFormInput } from './TransactionFormModal'
 import { DeleteTransactionModal } from './DeleteTransactionModal'
 import { CategoryManagerModal } from './CategoryManagerModal'
@@ -38,6 +42,44 @@ function currentMonth(): string {
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount)
+}
+
+function StatCard({ icon: Icon, tintClassName, label, value }: { icon: typeof Wallet; tintClassName: string; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-border bg-bg-1 p-4">
+      <div className={`grid size-9 shrink-0 place-items-center rounded-[10px] ${tintClassName}`}>
+        <Icon size={18} />
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-[13px] text-fg-3">{label}</p>
+        <p className="text-[21px] font-semibold text-fg-0">{value}</p>
+      </div>
+    </div>
+  )
+}
+
+/** A hand-drawn SVG donut (no charting library in this app) with a colored ring segment per category. */
+function BreakdownDonut({ breakdown, categoryById }: { breakdown: CategoryAmount[]; categoryById: Map<string, Category> }) {
+  const total = breakdown.reduce((sum, row) => sum + row.amount, 0)
+  const radius = 52
+  const circumference = 2 * Math.PI * radius
+  let offset = 0
+  return (
+    <svg width={128} height={128} viewBox="0 0 128 128" className="-rotate-90 shrink-0">
+      <circle cx={64} cy={64} r={radius} fill="none" stroke="var(--color-bg-3)" strokeWidth={20} />
+      {total > 0 && breakdown.map((row) => {
+        const category = categoryById.get(row.categoryId)
+        const dash = (row.amount / total) * circumference
+        const segmentOffset = offset
+        offset += dash
+        return (
+          <circle key={row.categoryId} cx={64} cy={64} r={radius} fill="none"
+            stroke={category?.color ?? 'var(--color-fg-3)'} strokeWidth={20}
+            strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-segmentOffset} />
+        )
+      })}
+    </svg>
+  )
 }
 
 function FinancePageContent() {
@@ -105,6 +147,7 @@ function FinancePageContent() {
   const spaceIsPersonal = currentSpace ? isPersonal(currentSpace) : false
 
   const categoryById = new Map((categories ?? []).map((c) => [c.id, c]))
+  const breakdownTotal = (stats?.breakdown ?? []).reduce((sum, row) => sum + row.amount, 0)
 
   function handleFormSubmit(input: TransactionFormInput) {
     if (formState?.mode === 'edit') {
@@ -146,79 +189,94 @@ function FinancePageContent() {
   if (isError || categoriesError) return <Alert variant="error">{t('error.load_failed')}</Alert>
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{t('title')}</h1>
-        <div className="flex items-center gap-2">
-          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="rounded-md border px-3 py-2 text-sm" />
-          <button type="button" onClick={() => setManagingCategories(true)} className="flex items-center gap-1 rounded-md border px-3 py-2 text-sm">
+    <div className="mx-auto max-w-[1100px] px-5 py-6 md:px-10 md:py-[34px]">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-fg-0">{t('title')}</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)}
+            className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-2.5 text-sm text-fg-0 outline-none focus:border-accent" />
+          <button type="button" onClick={() => setManagingCategories(true)}
+            className="flex items-center gap-1.5 rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-2.5 text-sm font-semibold text-fg-2 hover:bg-bg-2">
             <Settings2 size={16} /> {t('categories.manage')}
           </button>
           {canWriteHere && (
             <button type="button" onClick={() => setFormState({ mode: 'create' })}
-              className="flex items-center gap-1 rounded-md bg-fg-1 px-3 py-2 text-sm text-bg-1">
+              className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2.5 text-sm font-semibold text-white">
               <Plus size={16} /> {t('new_transaction')}
             </button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <div className="rounded-lg border p-4"><p className="text-sm text-fg-3">{t('stats.balance')}</p><p className="text-lg font-semibold">{formatAmount(stats?.balance ?? 0)}</p></div>
-        <div className="rounded-lg border p-4"><p className="text-sm text-fg-3">{t('stats.spent')}</p><p className="text-lg font-semibold">{formatAmount(stats?.totalExpense ?? 0)}</p></div>
-        <div className="rounded-lg border p-4"><p className="text-sm text-fg-3">{t('stats.income')}</p><p className="text-lg font-semibold">{formatAmount(stats?.totalIncome ?? 0)}</p></div>
-        <div className="rounded-lg border p-4"><p className="text-sm text-fg-3">{t('stats.remaining_budget')}</p><p className="text-lg font-semibold">{formatAmount(stats?.remainingBudget ?? 0)}</p></div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard icon={Wallet} tintClassName="bg-accent-dim text-accent" label={t('stats.balance')} value={formatAmount(stats?.balance ?? 0)} />
+        <StatCard icon={TrendingDown} tintClassName="bg-status-red-dim text-status-red" label={t('stats.spent')} value={formatAmount(stats?.totalExpense ?? 0)} />
+        <StatCard icon={TrendingUp} tintClassName="bg-status-green-dim text-status-green" label={t('stats.income')} value={formatAmount(stats?.totalIncome ?? 0)} />
+        <StatCard icon={PiggyBank} tintClassName="bg-status-blue-dim text-status-blue" label={t('stats.remaining_budget')} value={formatAmount(stats?.remainingBudget ?? 0)} />
       </div>
 
-      <section className="rounded-lg border p-4">
-        <h2 className="mb-3 font-medium">{t('breakdown.title')}</h2>
-        <ul className="space-y-2">
-          {(stats?.breakdown ?? []).map((row) => {
-            const category = categoryById.get(row.categoryId)
-            return (
-              <li key={row.categoryId} className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: category?.color }} />
-                  {category?.label ?? row.categoryId}
-                </span>
-                <span>{formatAmount(row.amount)}</span>
-              </li>
-            )
-          })}
-        </ul>
+      <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
+        <h2 className="mb-3 text-[15px] font-semibold text-fg-0">{t('breakdown.title')}</h2>
+        {(stats?.breakdown ?? []).length === 0 ? (
+          <p className="text-sm text-fg-3">{t('breakdown.empty')}</p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-6">
+            <BreakdownDonut breakdown={stats?.breakdown ?? []} categoryById={categoryById} />
+            <ul className="flex-1 space-y-2">
+              {(stats?.breakdown ?? []).map((row) => {
+                const category = categoryById.get(row.categoryId)
+                const percent = breakdownTotal > 0 ? Math.round((row.amount / breakdownTotal) * 100) : 0
+                return (
+                  <li key={row.categoryId} className="flex items-center gap-2 text-sm">
+                    <span className="size-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: category?.color }} />
+                    <span className="flex-1 truncate text-fg-1">{category?.label ?? row.categoryId}</span>
+                    <span className="text-fg-3">{percent}%</span>
+                    <span className="w-20 text-right font-medium text-fg-0">{formatAmount(row.amount)}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
       </section>
 
-      <section className="rounded-lg border p-4">
-        <h2 className="mb-3 font-medium">{t('budget.title')}</h2>
-        <ul className="space-y-3">
+      <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
+        <h2 className="mb-3 text-[15px] font-semibold text-fg-0">{t('budget.title')}</h2>
+        <ul className="space-y-4">
           {(stats?.budgetVsActual ?? []).map((line) => {
             const category = categoryById.get(line.categoryId)
-            const percent = line.monthlyLimit > 0 ? Math.min(100, (line.spent / line.monthlyLimit) * 100) : 0
-            const over = line.spent > line.monthlyLimit
+            const ratio = line.monthlyLimit > 0 ? line.spent / line.monthlyLimit : 0
+            const percent = Math.min(100, ratio * 100)
+            const over = ratio > 1
+            const warning = ratio >= 0.8 && !over
+            const barColor = over ? 'var(--color-status-red)' : warning ? 'var(--color-status-orange)' : (category?.color ?? 'var(--color-accent)')
             return (
               <li key={line.categoryId}>
                 <div className="flex items-center justify-between text-sm">
-                  <span>{category?.label ?? line.categoryId}</span>
+                  <span className="flex items-center gap-1.5 font-medium text-fg-1">
+                    {(over || warning) && <AlertTriangle size={13} className={over ? 'text-status-red' : 'text-status-orange'} />}
+                    {category?.label ?? line.categoryId}
+                  </span>
                   {editingBudgetFor === line.categoryId ? (
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1.5">
                       <input type="number" step="0.01" value={budgetInput} onChange={(e) => setBudgetInput(e.target.value)}
-                        className="w-20 rounded-md border px-2 py-1 text-sm" />
-                      <button type="button" onClick={() => handleBudgetSave(line.categoryId)} className="text-sm text-fg-1 underline">{t('form.save')}</button>
+                        className="w-20 rounded-[8px] border-[1.5px] border-border bg-bg-1 px-2 py-1 text-sm text-fg-0 outline-none focus:border-accent" />
+                      <button type="button" onClick={() => handleBudgetSave(line.categoryId)} className="text-sm font-semibold text-accent">{t('form.save')}</button>
                     </span>
                   ) : (
-                    <span>
+                    <span className="text-fg-2">
                       {formatAmount(line.spent)} / {formatAmount(line.monthlyLimit)}
                       {canWriteHere && (
                         <button type="button" onClick={() => { setEditingBudgetFor(line.categoryId); setBudgetInput(String(line.monthlyLimit)) }}
-                          className="ml-2 text-xs text-fg-3 underline">{t('budget.edit')}</button>
+                          className="ml-2 text-xs font-semibold text-fg-3 hover:text-fg-1">{t('budget.edit')}</button>
                       )}
                     </span>
                   )}
                 </div>
-                <div className="mt-1 h-2 rounded-full bg-bg-2">
-                  <div className={`h-2 rounded-full ${over ? 'bg-red-500' : 'bg-fg-1'}`} style={{ width: `${percent}%` }} />
+                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-bg-2">
+                  <div className="h-2 rounded-full transition-all" style={{ width: `${percent}%`, backgroundColor: barColor }} />
                 </div>
-                <p className="mt-1 text-xs text-fg-3">
+                <p className={`mt-1 text-xs ${over ? 'text-status-red' : 'text-fg-3'}`}>
                   {over ? t('budget.over', { amount: formatAmount(line.spent - line.monthlyLimit) }) : t('budget.remaining', { amount: formatAmount(line.monthlyLimit - line.spent) })}
                 </p>
               </li>
@@ -227,9 +285,11 @@ function FinancePageContent() {
         </ul>
       </section>
 
-      <section className="rounded-lg border p-4">
-        <h2 className="mb-3 font-medium">{t('projection.title')}</h2>
-        <p className="text-sm">
+      <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
+        <h2 className="mb-3 flex items-center gap-1.5 text-[15px] font-semibold text-fg-0">
+          <Target size={16} className="text-fg-3" /> {t('projection.title')}
+        </h2>
+        <p className="text-sm text-fg-1">
           {t('projection.end_of_month_balance', { amount: formatAmount(projection?.projectedEndOfMonthBalance ?? 0) })}
         </p>
         {(projection?.upcoming.length ?? 0) > 0 && (
@@ -243,33 +303,46 @@ function FinancePageContent() {
         )}
       </section>
 
-      <section className="rounded-lg border p-4">
-        <h2 className="mb-3 font-medium">{t('transactions.title')}</h2>
-        <ul className="divide-y">
+      <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
+        <h2 className="mb-3 text-[15px] font-semibold text-fg-0">{t('transactions.title')}</h2>
+        <ul className="divide-y divide-border">
           {(transactions ?? []).map((transaction) => {
             const category = categoryById.get(transaction.categoryId)
-            const Icon = resolveCategoryIcon(category?.icon ?? 'Circle')
+            const payer = members?.find((m) => m.userId === transaction.payerId)
             return (
-              <li key={transaction.id} className="flex items-center justify-between py-3">
-                <span className="flex items-center gap-3">
-                  <Icon size={18} color={category?.color} />
-                  <span>
-                    <span className="block text-sm font-medium">{transaction.label}{transaction.recurring && <Repeat size={12} className="ml-1 inline" />}</span>
-                    <span className="block text-xs text-fg-3">{category?.label} · {transaction.date}</span>
-                  </span>
+              <li key={transaction.id} className="flex items-center gap-3 py-3">
+                <CategoryIconBadge category={category} />
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1.5 truncate text-sm font-medium text-fg-0">
+                    {transaction.label}
+                    {transaction.recurring && (
+                      <span className="flex items-center gap-0.5 rounded-full bg-bg-2 px-1.5 py-0.5 text-[10.5px] font-semibold text-fg-3">
+                        <Repeat size={10} /> {t('transactions.recurring')}
+                      </span>
+                    )}
+                  </p>
+                  <p className="truncate text-xs text-fg-3">{category?.label} · {transaction.date}</p>
+                </div>
+                {payer && <UserAvatar username={payer.username ?? '?'} role="USER" className="size-6 shrink-0 rounded-full text-[10px]" />}
+                <span className={`shrink-0 text-sm font-semibold ${transaction.type === 'EXPENSE' ? 'text-fg-0' : 'text-status-green'}`}>
+                  {transaction.type === 'EXPENSE' ? '-' : '+'}{formatAmount(transaction.amount)}
                 </span>
-                <span className="flex items-center gap-3">
-                  <span className={transaction.type === 'EXPENSE' ? 'text-red-600' : 'text-green-600'}>
-                    {transaction.type === 'EXPENSE' ? '-' : '+'}{formatAmount(transaction.amount)}
+                {canWriteHere && (
+                  <span className="flex shrink-0 items-center gap-0.5">
+                    <button type="button" aria-label={t('transactions.edit')} onClick={() => setFormState({ mode: 'edit', transaction })}
+                      className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-bg-2 hover:text-fg-1">
+                      <Pencil size={15} />
+                    </button>
+                    <button type="button" aria-label={t('transactions.move')} onClick={() => setMovingTransaction(transaction)}
+                      className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-bg-2 hover:text-fg-1">
+                      <ArrowRightLeft size={15} />
+                    </button>
+                    <button type="button" aria-label={t('transactions.delete')} onClick={() => setDeletingTransaction(transaction)}
+                      className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-status-red-dim hover:text-status-red">
+                      <Trash2 size={15} />
+                    </button>
                   </span>
-                  {canWriteHere && (
-                    <>
-                      <button type="button" aria-label={t('transactions.edit')} onClick={() => setFormState({ mode: 'edit', transaction })}><Pencil size={16} /></button>
-                      <button type="button" aria-label={t('transactions.move')} onClick={() => setMovingTransaction(transaction)}><ArrowRightLeft size={16} /></button>
-                      <button type="button" aria-label={t('transactions.delete')} onClick={() => setDeletingTransaction(transaction)}><Trash2 size={16} /></button>
-                    </>
-                  )}
-                </span>
+                )}
               </li>
             )
           })}
@@ -277,17 +350,33 @@ function FinancePageContent() {
       </section>
 
       {!spaceIsPersonal && (
-        <section className="rounded-lg border p-4">
-          <h2 className="mb-3 font-medium">{t('balances.title')}</h2>
+        <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
+          <h2 className="mb-3 flex items-center gap-1.5 text-[15px] font-semibold text-fg-0">
+            <HandCoins size={16} className="text-fg-3" /> {t('balances.title')}
+          </h2>
+          {(balances?.netByMember.length ?? 0) > 0 && (
+            <ul className="mb-3 space-y-2">
+              {balances?.netByMember.map((row) => (
+                <li key={row.memberId} className="flex items-center gap-2.5 text-sm">
+                  <UserAvatar username={memberLabel(row.memberId)} role="USER" className="size-7 rounded-full text-[11px]" />
+                  <span className="flex-1 text-fg-1">{memberLabel(row.memberId)}</span>
+                  <span className={`font-semibold ${row.net > 0 ? 'text-status-green' : row.net < 0 ? 'text-status-red' : 'text-fg-3'}`}>
+                    {row.net > 0 ? '+' : ''}{formatAmount(row.net)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
           {(balances?.suggestedTransfers.length ?? 0) === 0 ? (
             <p className="text-sm text-fg-3">{t('balances.all_settled')}</p>
           ) : (
             <ul className="space-y-2">
               {balances?.suggestedTransfers.map((transfer, i) => (
-                <li key={i} className="flex items-center justify-between text-sm">
-                  <span>{memberLabel(transfer.fromMemberId)} → {memberLabel(transfer.toMemberId)}: {formatAmount(transfer.amount)}</span>
+                <li key={i} className="flex items-center justify-between rounded-[10px] bg-bg-2 px-3 py-2 text-sm">
+                  <span className="text-fg-1">{memberLabel(transfer.fromMemberId)} → {memberLabel(transfer.toMemberId)}: <span className="font-semibold text-fg-0">{formatAmount(transfer.amount)}</span></span>
                   {canWriteHere && (
-                    <button type="button" onClick={() => setSettlingTransfer(transfer)} className="text-sm text-fg-1 underline">{t('balances.settle')}</button>
+                    <button type="button" onClick={() => setSettlingTransfer(transfer)}
+                      className="rounded-[8px] bg-accent px-2.5 py-1 text-xs font-semibold text-white">{t('balances.settle')}</button>
                   )}
                 </li>
               ))}
@@ -297,30 +386,30 @@ function FinancePageContent() {
       )}
 
       {!spaceIsPersonal && (
-        <section className="rounded-lg border p-4">
+        <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-medium">{t('savings.title')}</h2>
+            <h2 className="text-[15px] font-semibold text-fg-0">{t('savings.title')}</h2>
             {canWriteHere && (
-              <button type="button" onClick={() => setGoalFormState({ mode: 'create' })} className="text-sm text-fg-1 underline">{t('savings.new_goal')}</button>
+              <button type="button" onClick={() => setGoalFormState({ mode: 'create' })} className="text-sm font-semibold text-accent">{t('savings.new_goal')}</button>
             )}
           </div>
-          <ul className="space-y-3">
+          <ul className="space-y-4">
             {(savingsGoals ?? []).map((goal) => {
               const percent = goal.targetAmount > 0 ? Math.min(100, (goal.totalContributed / goal.targetAmount) * 100) : 0
               return (
                 <li key={goal.id}>
                   <div className="flex items-center justify-between text-sm">
-                    <span>{goal.name}</span>
-                    <span>{t('savings.progress', { contributed: formatAmount(goal.totalContributed), target: formatAmount(goal.targetAmount) })}</span>
+                    <span className="font-medium text-fg-1">{goal.name}</span>
+                    <span className="text-fg-2">{t('savings.progress', { contributed: formatAmount(goal.totalContributed), target: formatAmount(goal.targetAmount) })}</span>
                   </div>
-                  <div className="mt-1 h-2 rounded-full bg-bg-2">
-                    <div className="h-2 rounded-full bg-fg-1" style={{ width: `${percent}%` }} />
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-bg-2">
+                    <div className="h-2 rounded-full bg-accent transition-all" style={{ width: `${percent}%` }} />
                   </div>
                   {canWriteHere && (
-                    <div className="mt-1 flex gap-3 text-xs">
-                      <button type="button" onClick={() => setContributingGoal(goal)} className="underline">{t('savings.contribute')}</button>
-                      <button type="button" onClick={() => setGoalFormState({ mode: 'edit', goal })} className="underline">{t('savings.edit')}</button>
-                      <button type="button" onClick={() => deleteSavingsGoal.mutate(goal.id)} className="underline">{t('savings.delete')}</button>
+                    <div className="mt-1.5 flex gap-3 text-xs font-semibold">
+                      <button type="button" onClick={() => setContributingGoal(goal)} className="text-accent">{t('savings.contribute')}</button>
+                      <button type="button" onClick={() => setGoalFormState({ mode: 'edit', goal })} className="text-fg-3 hover:text-fg-1">{t('savings.edit')}</button>
+                      <button type="button" onClick={() => deleteSavingsGoal.mutate(goal.id)} className="text-fg-3 hover:text-status-red">{t('savings.delete')}</button>
                     </div>
                   )}
                 </li>

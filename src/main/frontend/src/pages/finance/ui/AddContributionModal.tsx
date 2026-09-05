@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Dialog } from '@/shared/ui'
+import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { SpaceMember } from '@/entities/space'
 
 export interface AddContributionInput {
@@ -37,25 +37,23 @@ export function AddContributionModal({ goalName, members, onSubmit, onCancel, is
 
   return (
     <Dialog open onClose={onCancel} title={t('savings.contribute_title', { name: goalName })}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <div>
-          <label htmlFor="contribution-member" className="block text-sm font-medium">{t('savings.contributor_label')}</label>
-          <select id="contribution-member" value={memberId} onChange={(e) => setMemberId(e.target.value)} className="mt-1 w-full rounded-md border px-3 py-2">
+      <h3 className="mb-4 text-[19px] font-semibold text-fg-0">{t('savings.contribute_title', { name: goalName })}</h3>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="contribution-member" className="text-[13px] font-semibold text-fg-1">{t('savings.contributor_label')}</label>
+          <select id="contribution-member" value={memberId} onChange={(e) => setMemberId(e.target.value)}
+            className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent">
             {members.map((m) => <option key={m.userId} value={m.userId}>{m.username ?? m.email}</option>)}
           </select>
         </div>
-        <div>
-          <label htmlFor="contribution-amount" className="block text-sm font-medium">{t('form.amount_label')}</label>
-          <input id="contribution-amount" type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-1 w-full rounded-md border px-3 py-2" />
-        </div>
-        <div>
-          <label htmlFor="contribution-date" className="block text-sm font-medium">{t('form.date_label')}</label>
-          <input id="contribution-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 w-full rounded-md border px-3 py-2" />
-        </div>
+        <Input label={t('form.amount_label')} type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <Input label={t('form.date_label')} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+
+        {error && <p className="text-sm font-medium text-status-red">{error}</p>}
+
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onCancel} className="rounded-md px-4 py-2 text-sm">{t('form.cancel')}</button>
-          <button type="submit" disabled={isPending} className="rounded-md bg-fg-1 px-4 py-2 text-sm text-bg-1 disabled:opacity-50">{t('form.save')}</button>
+          <Button type="button" onClick={onCancel}>{t('form.cancel')}</Button>
+          <Button type="submit" isLoading={isPending} style={CTA_BUTTON_STYLE}>{t('form.save')}</Button>
         </div>
       </form>
     </Dialog>
