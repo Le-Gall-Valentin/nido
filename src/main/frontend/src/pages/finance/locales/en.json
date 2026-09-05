@@ -88,7 +88,6 @@
     "recurring_label": "Recurring transaction",
     "recurrence_interval_type_label": "Frequency",
     "recurrence_interval_count_label": "Every",
-    "recurrence_anchor_date_label": "Starting on",
     "interval": { "DAILY": "day(s)", "WEEKLY": "week(s)", "MONTHLY": "month(s)" },
     "cancel": "Cancel",
     "save": "Save"
