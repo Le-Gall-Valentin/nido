@@ -51,7 +51,7 @@ class ListTransactionsHandlerTest {
         RecurringTransactionSeries series = new RecurringTransactionSeries(UUID.randomUUID(), spaceId, "Loyer",
             new BigDecimal("800.00"), TransactionType.EXPENSE, categoryId, null, List.of(),
             RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null, null);
-        when(seriesRepository.findActiveBySpaceId(spaceId, LocalDate.of(2026, 1, 1))).thenReturn(List.of(series));
+        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(series));
         when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of());
 
         handler.list(YearMonth.of(2026, 1), membership(), LocalDate.of(2026, 1, 1));
@@ -67,7 +67,7 @@ class ListTransactionsHandlerTest {
         RecurringTransactionSeries series = new RecurringTransactionSeries(UUID.randomUUID(), spaceId, "Loyer",
             new BigDecimal("800.00"), TransactionType.EXPENSE, categoryId, null, List.of(),
             RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null, LocalDate.of(2026, 1, 1));
-        when(seriesRepository.findActiveBySpaceId(spaceId, LocalDate.of(2026, 1, 1))).thenReturn(List.of(series));
+        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(series));
         when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of());
 
         handler.list(YearMonth.of(2026, 1), membership(), LocalDate.of(2026, 1, 1));
@@ -79,7 +79,7 @@ class ListTransactionsHandlerTest {
     void returns_the_transactions_for_the_requested_month() {
         Transaction transaction = new Transaction(UUID.randomUUID(), spaceId, "T", new BigDecimal("10.00"),
             TransactionType.EXPENSE, categoryId, LocalDate.of(2026, 1, 15), null, List.of(), null, Instant.now());
-        when(seriesRepository.findActiveBySpaceId(spaceId, LocalDate.of(2026, 1, 20))).thenReturn(List.of());
+        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of());
         when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of(transaction));
 
         List<Transaction> result = handler.list(YearMonth.of(2026, 1), membership(), LocalDate.of(2026, 1, 20));

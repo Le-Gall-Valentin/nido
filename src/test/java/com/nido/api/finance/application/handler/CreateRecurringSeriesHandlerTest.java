@@ -105,6 +105,17 @@ class CreateRecurringSeriesHandlerTest {
     }
 
     @Test
+    void creating_a_recurring_series_with_an_end_date_before_the_anchor_date_is_rejected() {
+        CreateRecurringSeriesCommand command = new CreateRecurringSeriesCommand(spaceId, "Prêt voiture", new BigDecimal("250.00"),
+            TransactionType.EXPENSE, UUID.randomUUID(), null, List.of(), RecurrenceInterval.MONTHLY, 1,
+            LocalDate.of(2026, 6, 1), LocalDate.of(2026, 1, 1));
+
+        assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.InvalidEndDate.class);
+        verify(seriesRepository, never()).create(any(), any());
+    }
+
+    @Test
     void a_viewer_cannot_create_a_recurring_series() {
         CreateRecurringSeriesCommand command = new CreateRecurringSeriesCommand(spaceId, "Loyer", new BigDecimal("800.00"),
             TransactionType.EXPENSE, UUID.randomUUID(), null, List.of(), RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null);

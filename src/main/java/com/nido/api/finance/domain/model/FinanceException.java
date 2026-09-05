@@ -4,7 +4,7 @@ public abstract sealed class FinanceException extends RuntimeException
     permits FinanceException.TransactionNotFound, FinanceException.RecurringSeriesNotFound,
             FinanceException.CategoryNotFound, FinanceException.CategoryInUse,
             FinanceException.SameSpaceTransfer, FinanceException.InvalidContributionShares, FinanceException.PayerRequired,
-            FinanceException.SavingsGoalNotFound, FinanceException.DecryptionFailed {
+            FinanceException.InvalidEndDate, FinanceException.SavingsGoalNotFound, FinanceException.DecryptionFailed {
 
     private FinanceException(String message) { super(message); }
 
@@ -38,6 +38,11 @@ public abstract sealed class FinanceException extends RuntimeException
     /** Thrown when a transaction or recurring series has contributors (a split) but no payer — someone must have advanced the money being split. */
     public static final class PayerRequired extends FinanceException {
         public PayerRequired() { super("A payer is required when the transaction has contributors"); }
+    }
+
+    /** Thrown when a recurring series' end date is before its anchor date — it would never produce a single occurrence. */
+    public static final class InvalidEndDate extends FinanceException {
+        public InvalidEndDate() { super("The end date must be on or after the anchor date"); }
     }
 
     public static final class SavingsGoalNotFound extends FinanceException {

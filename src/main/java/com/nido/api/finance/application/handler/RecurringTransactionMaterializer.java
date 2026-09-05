@@ -32,7 +32,13 @@ final class RecurringTransactionMaterializer {
         // got here first has committed its advanced lastMaterializedDate, so they see it's
         // already covered instead of double-inserting the same occurrence.
         seriesRepository.lockForMaterialization(spaceId);
-        for (RecurringTransactionSeries series : seriesRepository.findActiveBySpaceId(spaceId, today)) {
+        // Deliberately not findActiveBySpaceId(spaceId, today): a series whose endDate has
+        // already passed by the time anyone opens the page would be excluded from that query
+        // entirely, silently dropping any of its occurrences that were never materialized
+        // while it was still "active" (e.g. a fixed-term loan nobody checked on until after
+        // it ended). occurrencesBetween already stops at series.endDate() on its own, so
+        // considering every series here is safe and still correct.
+        for (RecurringTransactionSeries series : seriesRepository.findBySpaceId(spaceId)) {
             LocalDate from = series.lastMaterializedDate() == null ? series.anchorDate() : series.lastMaterializedDate().plusDays(1);
             if (from.isAfter(today)) {
                 continue;

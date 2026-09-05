@@ -142,6 +142,17 @@ class UpdateRecurringSeriesHandlerTest {
     }
 
     @Test
+    void updating_a_recurring_series_with_an_end_date_before_the_anchor_date_is_rejected() {
+        UpdateRecurringSeriesCommand command = new UpdateRecurringSeriesCommand(UUID.randomUUID(), spaceId, "Prêt voiture",
+            new BigDecimal("250.00"), TransactionType.EXPENSE, UUID.randomUUID(), null, List.of(),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 1, 1));
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.InvalidEndDate.class);
+        verify(seriesRepository, never()).update(any(), any());
+    }
+
+    @Test
     void a_viewer_cannot_update_a_recurring_series() {
         UpdateRecurringSeriesCommand command = new UpdateRecurringSeriesCommand(UUID.randomUUID(), spaceId, "Loyer modifié",
             new BigDecimal("850.00"), TransactionType.EXPENSE, UUID.randomUUID(), null, List.of(),

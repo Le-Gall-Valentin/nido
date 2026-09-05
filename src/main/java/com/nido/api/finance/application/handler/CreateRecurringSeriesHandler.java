@@ -31,6 +31,9 @@ public class CreateRecurringSeriesHandler implements CreateRecurringSeriesUseCas
         if (!resolved.isEmpty() && command.payerId() == null) {
             throw new FinanceException.PayerRequired();
         }
+        if (command.endDate() != null && command.endDate().isBefore(command.anchorDate())) {
+            throw new FinanceException.InvalidEndDate();
+        }
         return seriesRepository.create(command, resolved);
     }
 }
