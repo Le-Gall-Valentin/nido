@@ -29,6 +29,15 @@
     "new_category_placeholder": "Nom de la catégorie",
     "add": "Ajouter"
   },
+  "balances": {
+    "title": "Remboursements entre membres",
+    "settle": "Régler",
+    "settle_title": "Régler cette dette",
+    "settle_message": "{{from}} doit {{amount}} € à {{to}}.",
+    "settle_date_label": "Date du règlement",
+    "settle_confirm": "Confirmer",
+    "all_settled": "Tout le monde est à jour."
+  },
   "form": {
     "create_title": "Nouvelle opération",
     "edit_title": "Modifier l'opération",

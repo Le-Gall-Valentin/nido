@@ -8,13 +8,14 @@ import { canWrite, isPersonal, useSpaceMembers, TransferDialog } from '@/entitie
 import {
   financeApi, FinanceApiProvider, useCategories, useBudgets, useTransactions, useFinanceStats,
   useCreateTransaction, useCreateRecurringSeries, useUpdateTransaction, useDeleteTransaction, useMoveTransaction, useSetBudget,
-  useCreateCategory, useUpdateCategory, useDeleteCategory,
+  useCreateCategory, useUpdateCategory, useDeleteCategory, useBalances, useSettleDebt,
   type IFinanceApi, type Transaction,
 } from '@/entities/finance'
 import { resolveCategoryIcon } from '../lib/resolveCategoryIcon'
 import { TransactionFormModal, type TransactionFormInput } from './TransactionFormModal'
 import { DeleteTransactionModal } from './DeleteTransactionModal'
 import { CategoryManagerModal } from './CategoryManagerModal'
+import { SettleDebtModal } from './SettleDebtModal'
 
 interface FinancePageProps {
   api?: IFinanceApi
@@ -57,6 +58,8 @@ function FinancePageContent() {
   const createCategory = useCreateCategory(spaceId)
   const updateCategory = useUpdateCategory(spaceId)
   const deleteCategory = useDeleteCategory(spaceId)
+  const { data: balances } = useBalances(spaceId)
+  const settleDebt = useSettleDebt(spaceId)
 
   const [formState, setFormState] = useState<{ mode: 'create' } | { mode: 'edit'; transaction: Transaction } | null>(null)
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
@@ -65,10 +68,15 @@ function FinancePageContent() {
   const [budgetInput, setBudgetInput] = useState('')
   const [managingCategories, setManagingCategories] = useState(false)
   const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null)
+  const [settlingTransfer, setSettlingTransfer] = useState<{ fromMemberId: string; toMemberId: string; amount: number } | null>(null)
 
   function handleDeleteCategory(categoryId: string) {
     setCategoryDeleteError(null)
     deleteCategory.mutate(categoryId, { onError: () => setCategoryDeleteError('in_use') })
+  }
+
+  function memberLabel(memberId: string): string {
+    return members?.find((m) => m.userId === memberId)?.username ?? memberId
   }
 
   const currentSpace = mySpaces?.find((s) => s.id === spaceId)
@@ -231,6 +239,26 @@ function FinancePageContent() {
         </ul>
       </section>
 
+      {!spaceIsPersonal && (
+        <section className="rounded-lg border p-4">
+          <h2 className="mb-3 font-medium">{t('balances.title')}</h2>
+          {(balances?.suggestedTransfers.length ?? 0) === 0 ? (
+            <p className="text-sm text-fg-3">{t('balances.all_settled')}</p>
+          ) : (
+            <ul className="space-y-2">
+              {balances?.suggestedTransfers.map((transfer, i) => (
+                <li key={i} className="flex items-center justify-between text-sm">
+                  <span>{memberLabel(transfer.fromMemberId)} → {memberLabel(transfer.toMemberId)}: {formatAmount(transfer.amount)}</span>
+                  {canWriteHere && (
+                    <button type="button" onClick={() => setSettlingTransfer(transfer)} className="text-sm text-fg-1 underline">{t('balances.settle')}</button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       {formState && (
         <TransactionFormModal
           mode={formState.mode}
@@ -271,6 +299,20 @@ function FinancePageContent() {
           onDelete={handleDeleteCategory}
           onClose={() => setManagingCategories(false)}
           deleteError={categoryDeleteError}
+        />
+      )}
+
+      {settlingTransfer && (
+        <SettleDebtModal
+          fromLabel={memberLabel(settlingTransfer.fromMemberId)}
+          toLabel={memberLabel(settlingTransfer.toMemberId)}
+          amount={settlingTransfer.amount}
+          isPending={settleDebt.isPending}
+          onCancel={() => setSettlingTransfer(null)}
+          onConfirm={(date) => settleDebt.mutate(
+            { fromMemberId: settlingTransfer.fromMemberId, toMemberId: settlingTransfer.toMemberId, amount: settlingTransfer.amount, date },
+            { onSuccess: () => setSettlingTransfer(null) }
+          )}
         />
       )}
     </div>
