@@ -6,6 +6,7 @@ import {
   AlertTriangle, HandCoins, Target,
 } from 'lucide-react'
 import { Alert, Spinner } from '@/shared/ui'
+import { useAuth } from '@/features/auth'
 import { useMySpaces, useWritableSpaces } from '@/features/space-switcher'
 import { canWrite, isPersonal, useSpaceMembers, TransferDialog } from '@/entities/space'
 import { UserAvatar } from '@/entities/user'
@@ -85,6 +86,7 @@ function BreakdownDonut({ breakdown, categoryById }: { breakdown: CategoryAmount
 function FinancePageContent() {
   const { t } = useTranslation('finance')
   const { spaceId = '' } = useParams<{ spaceId: string }>()
+  const currentUserId = useAuth((s) => s.user)?.id ?? null
   const [month, setMonth] = useState(currentMonth())
   const { data: categories, isPending: categoriesPending, isError: categoriesError } = useCategories(spaceId)
   const { data: transactions, isPending, isError } = useTransactions(spaceId, month)
@@ -426,6 +428,7 @@ function FinancePageContent() {
           categories={categories ?? []}
           members={members ?? []}
           canPickContributors={!spaceIsPersonal}
+          currentUserId={currentUserId}
           onSubmit={handleFormSubmit}
           onCancel={() => setFormState(null)}
         />

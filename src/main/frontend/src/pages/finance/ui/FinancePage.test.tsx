@@ -14,6 +14,11 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),
 }))
 
+vi.mock('@/features/auth', () => ({ useAuth: vi.fn() }))
+import { useAuth } from '@/features/auth'
+const mockUseAuth = vi.mocked(useAuth)
+mockUseAuth.mockImplementation((selector) => selector({ user: { id: 'u-1' } } as never))
+
 const MEMBERS: SpaceMember[] = [
   { userId: 'u-1', username: 'alice', email: 'a@test.com', role: 'MEMBER', joinedAt: '2024-01-01T00:00:00Z' },
 ]
