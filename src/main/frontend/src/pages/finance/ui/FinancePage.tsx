@@ -217,75 +217,77 @@ function FinancePageContent() {
         <StatCard icon={PiggyBank} tintClassName="bg-status-blue-dim text-status-blue" label={t('stats.remaining_budget')} value={formatAmount(stats?.remainingBudget ?? 0)} />
       </div>
 
-      <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
-        <h2 className="mb-3 text-[15px] font-semibold text-fg-0">{t('breakdown.title')}</h2>
-        {(stats?.breakdown ?? []).length === 0 ? (
-          <p className="text-sm text-fg-3">{t('breakdown.empty')}</p>
-        ) : (
-          <div className="flex flex-wrap items-center gap-6">
-            <BreakdownDonut breakdown={stats?.breakdown ?? []} categoryById={categoryById} />
-            <ul className="flex-1 space-y-2">
-              {(stats?.breakdown ?? []).map((row) => {
-                const category = categoryById.get(row.categoryId)
-                const percent = breakdownTotal > 0 ? Math.round((row.amount / breakdownTotal) * 100) : 0
-                return (
-                  <li key={row.categoryId} className="flex items-center gap-2 text-sm">
-                    <span className="size-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: category?.color }} />
-                    <span className="flex-1 truncate text-fg-1">{category?.label ?? row.categoryId}</span>
-                    <span className="text-fg-3">{percent}%</span>
-                    <span className="w-20 text-right font-medium text-fg-0">{formatAmount(row.amount)}</span>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        )}
-      </section>
+      <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(360px,1fr))] gap-4">
+        <section className="rounded-2xl border border-border bg-bg-1 p-4">
+          <h2 className="mb-3 text-[15px] font-semibold text-fg-0">{t('breakdown.title')}</h2>
+          {(stats?.breakdown ?? []).length === 0 ? (
+            <p className="text-sm text-fg-3">{t('breakdown.empty')}</p>
+          ) : (
+            <div className="flex flex-wrap items-center gap-6">
+              <BreakdownDonut breakdown={stats?.breakdown ?? []} categoryById={categoryById} />
+              <ul className="flex-1 space-y-2">
+                {(stats?.breakdown ?? []).map((row) => {
+                  const category = categoryById.get(row.categoryId)
+                  const percent = breakdownTotal > 0 ? Math.round((row.amount / breakdownTotal) * 100) : 0
+                  return (
+                    <li key={row.categoryId} className="flex items-center gap-2 text-sm">
+                      <span className="size-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: category?.color }} />
+                      <span className="flex-1 truncate text-fg-1">{category?.label ?? row.categoryId}</span>
+                      <span className="text-fg-3">{percent}%</span>
+                      <span className="w-20 text-right font-medium text-fg-0">{formatAmount(row.amount)}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+        </section>
 
-      <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
-        <h2 className="mb-3 text-[15px] font-semibold text-fg-0">{t('budget.title')}</h2>
-        <ul className="space-y-4">
-          {(stats?.budgetVsActual ?? []).map((line) => {
-            const category = categoryById.get(line.categoryId)
-            const ratio = line.monthlyLimit > 0 ? line.spent / line.monthlyLimit : 0
-            const percent = Math.min(100, ratio * 100)
-            const over = ratio > 1
-            const warning = ratio >= 0.8 && !over
-            const barColor = over ? 'var(--color-status-red)' : warning ? 'var(--color-status-orange)' : (category?.color ?? 'var(--color-accent)')
-            return (
-              <li key={line.categoryId}>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1.5 font-medium text-fg-1">
-                    {(over || warning) && <AlertTriangle size={13} className={over ? 'text-status-red' : 'text-status-orange'} />}
-                    {category?.label ?? line.categoryId}
-                  </span>
-                  {editingBudgetFor === line.categoryId ? (
-                    <span className="flex items-center gap-1.5">
-                      <input type="number" step="0.01" value={budgetInput} onChange={(e) => setBudgetInput(e.target.value)}
-                        className="w-20 rounded-[8px] border-[1.5px] border-border bg-bg-1 px-2 py-1 text-sm text-fg-0 outline-none focus:border-accent" />
-                      <button type="button" onClick={() => handleBudgetSave(line.categoryId)} className="text-sm font-semibold text-accent">{t('form.save')}</button>
+        <section className="rounded-2xl border border-border bg-bg-1 p-4">
+          <h2 className="mb-3 text-[15px] font-semibold text-fg-0">{t('budget.title')}</h2>
+          <ul className="space-y-4">
+            {(stats?.budgetVsActual ?? []).map((line) => {
+              const category = categoryById.get(line.categoryId)
+              const ratio = line.monthlyLimit > 0 ? line.spent / line.monthlyLimit : 0
+              const percent = Math.min(100, ratio * 100)
+              const over = ratio > 1
+              const warning = ratio >= 0.8 && !over
+              const barColor = over ? 'var(--color-status-red)' : warning ? 'var(--color-status-orange)' : (category?.color ?? 'var(--color-accent)')
+              return (
+                <li key={line.categoryId}>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-1.5 font-medium text-fg-1">
+                      {(over || warning) && <AlertTriangle size={13} className={over ? 'text-status-red' : 'text-status-orange'} />}
+                      {category?.label ?? line.categoryId}
                     </span>
-                  ) : (
-                    <span className="text-fg-2">
-                      {formatAmount(line.spent)} / {formatAmount(line.monthlyLimit)}
-                      {canWriteHere && (
-                        <button type="button" onClick={() => { setEditingBudgetFor(line.categoryId); setBudgetInput(String(line.monthlyLimit)) }}
-                          className="ml-2 text-xs font-semibold text-fg-3 hover:text-fg-1">{t('budget.edit')}</button>
-                      )}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-bg-2">
-                  <div className="h-2 rounded-full transition-all" style={{ width: `${percent}%`, backgroundColor: barColor }} />
-                </div>
-                <p className={`mt-1 text-xs ${over ? 'text-status-red' : 'text-fg-3'}`}>
-                  {over ? t('budget.over', { amount: formatAmount(line.spent - line.monthlyLimit) }) : t('budget.remaining', { amount: formatAmount(line.monthlyLimit - line.spent) })}
-                </p>
-              </li>
-            )
-          })}
-        </ul>
-      </section>
+                    {editingBudgetFor === line.categoryId ? (
+                      <span className="flex items-center gap-1.5">
+                        <input type="number" step="0.01" value={budgetInput} onChange={(e) => setBudgetInput(e.target.value)}
+                          className="w-20 rounded-[8px] border-[1.5px] border-border bg-bg-1 px-2 py-1 text-sm text-fg-0 outline-none focus:border-accent" />
+                        <button type="button" onClick={() => handleBudgetSave(line.categoryId)} className="text-sm font-semibold text-accent">{t('form.save')}</button>
+                      </span>
+                    ) : (
+                      <span className="text-fg-2">
+                        {formatAmount(line.spent)} / {formatAmount(line.monthlyLimit)}
+                        {canWriteHere && (
+                          <button type="button" onClick={() => { setEditingBudgetFor(line.categoryId); setBudgetInput(String(line.monthlyLimit)) }}
+                            className="ml-2 text-xs font-semibold text-fg-3 hover:text-fg-1">{t('budget.edit')}</button>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-bg-2">
+                    <div className="h-2 rounded-full transition-all" style={{ width: `${percent}%`, backgroundColor: barColor }} />
+                  </div>
+                  <p className={`mt-1 text-xs ${over ? 'text-status-red' : 'text-fg-3'}`}>
+                    {over ? t('budget.over', { amount: formatAmount(line.spent - line.monthlyLimit) }) : t('budget.remaining', { amount: formatAmount(line.monthlyLimit - line.spent) })}
+                  </p>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      </div>
 
       <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
         <h2 className="mb-3 flex items-center gap-1.5 text-[15px] font-semibold text-fg-0">
