@@ -22,6 +22,7 @@ import { CategoryIconBadge } from './CategoryIconBadge'
 import { TransactionFormModal, type TransactionFormInput } from './TransactionFormModal'
 import { DeleteTransactionModal } from './DeleteTransactionModal'
 import { TransactionDetailModal } from './TransactionDetailModal'
+import { CategoryTransactionsModal } from './CategoryTransactionsModal'
 import { CategoryManagerModal } from './CategoryManagerModal'
 import { BudgetManagerModal } from './BudgetManagerModal'
 import { RecurringSeriesManagerModal } from './RecurringSeriesManagerModal'
@@ -62,7 +63,7 @@ function StatCard({ icon: Icon, tintClassName, label, value }: { icon: typeof Wa
 }
 
 /** A hand-drawn SVG donut (no charting library in this app) with a colored ring segment per category. */
-function BreakdownDonut({ breakdown, categoryById }: { breakdown: CategoryAmount[]; categoryById: Map<string, Category> }) {
+function BreakdownDonut({ breakdown, categoryById, onSegmentClick }: { breakdown: CategoryAmount[]; categoryById: Map<string, Category>; onSegmentClick: (categoryId: string) => void }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [hovered, setHovered] = useState<{ categoryId: string; x: number; y: number } | null>(null)
   const total = breakdown.reduce((sum, row) => sum + row.amount, 0)
@@ -96,6 +97,7 @@ function BreakdownDonut({ breakdown, categoryById }: { breakdown: CategoryAmount
               strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-segmentOffset}
               role="img" aria-label={`${category?.label ?? row.categoryId}: ${percent}%, ${formatAmount(row.amount)}`}
               className="cursor-pointer"
+              onClick={() => onSegmentClick(row.categoryId)}
               onMouseEnter={(e) => handlePointerMove(row.categoryId, e)}
               onMouseMove={(e) => handlePointerMove(row.categoryId, e)}
               onMouseLeave={() => setHovered(null)} />
@@ -154,6 +156,7 @@ function FinancePageContent() {
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
   const [movingTransaction, setMovingTransaction] = useState<Transaction | null>(null)
   const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null)
+  const [viewingCategoryId, setViewingCategoryId] = useState<string | null>(null)
   const [managingCategories, setManagingCategories] = useState(false)
   const [managingBudget, setManagingBudget] = useState(false)
   const [managingRecurringSeries, setManagingRecurringSeries] = useState(false)
@@ -263,17 +266,20 @@ function FinancePageContent() {
               <p className="text-sm text-fg-3">{t('breakdown.empty')}</p>
             ) : (
               <div className="flex w-full flex-col items-center gap-4 sm:flex-row sm:gap-6">
-                <BreakdownDonut breakdown={stats?.breakdown ?? []} categoryById={categoryById} />
+                <BreakdownDonut breakdown={stats?.breakdown ?? []} categoryById={categoryById} onSegmentClick={setViewingCategoryId} />
                 <ul className="w-full space-y-2 sm:w-auto sm:flex-1">
                   {(stats?.breakdown ?? []).map((row) => {
                     const category = categoryById.get(row.categoryId)
                     const percent = breakdownTotal > 0 ? Math.round((row.amount / breakdownTotal) * 100) : 0
                     return (
-                      <li key={row.categoryId} className="flex items-center gap-2 text-sm">
-                        <span className="size-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: category?.color }} />
-                        <span className="flex-1 truncate text-fg-1">{category?.label ?? row.categoryId}</span>
-                        <span className="text-fg-3">{percent}%</span>
-                        <span className="w-20 text-right font-medium text-fg-0">{formatAmount(row.amount)}</span>
+                      <li key={row.categoryId}>
+                        <button type="button" onClick={() => setViewingCategoryId(row.categoryId)}
+                          className="flex w-full items-center gap-2 rounded-lg text-left text-sm transition-colors hover:bg-bg-2">
+                          <span className="size-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: category?.color }} />
+                          <span className="flex-1 truncate text-fg-1">{category?.label ?? row.categoryId}</span>
+                          <span className="text-fg-3">{percent}%</span>
+                          <span className="w-20 text-right font-medium text-fg-0">{formatAmount(row.amount)}</span>
+                        </button>
                       </li>
                     )
                   })}
@@ -302,19 +308,22 @@ function FinancePageContent() {
               const barColor = over ? 'var(--color-status-red)' : warning ? 'var(--color-status-orange)' : (category?.color ?? 'var(--color-accent)')
               return (
                 <li key={line.categoryId}>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-1.5 font-medium text-fg-1">
-                      {(over || warning) && <AlertTriangle size={13} className={over ? 'text-status-red' : 'text-status-orange'} />}
-                      {category?.label ?? line.categoryId}
-                    </span>
-                    <span className="text-fg-2">{formatAmount(line.spent)} / {formatAmount(line.monthlyLimit)}</span>
-                  </div>
-                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-bg-2">
-                    <div className="h-2 rounded-full transition-all" style={{ width: `${percent}%`, backgroundColor: barColor }} />
-                  </div>
-                  <p className={`mt-1 text-xs ${over ? 'text-status-red' : 'text-fg-3'}`}>
-                    {over ? t('budget.over', { amount: formatAmount(line.spent - line.monthlyLimit) }) : t('budget.remaining', { amount: formatAmount(line.monthlyLimit - line.spent) })}
-                  </p>
+                  <button type="button" onClick={() => setViewingCategoryId(line.categoryId)}
+                    className="w-full rounded-lg text-left transition-colors hover:bg-bg-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5 font-medium text-fg-1">
+                        {(over || warning) && <AlertTriangle size={13} className={over ? 'text-status-red' : 'text-status-orange'} />}
+                        {category?.label ?? line.categoryId}
+                      </span>
+                      <span className="text-fg-2">{formatAmount(line.spent)} / {formatAmount(line.monthlyLimit)}</span>
+                    </div>
+                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-bg-2">
+                      <div className="h-2 rounded-full transition-all" style={{ width: `${percent}%`, backgroundColor: barColor }} />
+                    </div>
+                    <p className={`mt-1 text-xs ${over ? 'text-status-red' : 'text-fg-3'}`}>
+                      {over ? t('budget.over', { amount: formatAmount(line.spent - line.monthlyLimit) }) : t('budget.remaining', { amount: formatAmount(line.monthlyLimit - line.spent) })}
+                    </p>
+                  </button>
                 </li>
               )
             })}
@@ -476,6 +485,16 @@ function FinancePageContent() {
           currentUserId={currentUserId}
           onSubmit={handleFormSubmit}
           onCancel={() => setFormState(null)}
+        />
+      )}
+
+      {viewingCategoryId && (
+        <CategoryTransactionsModal
+          category={categoryById.get(viewingCategoryId)}
+          transactions={(transactions ?? []).filter((transaction) => transaction.categoryId === viewingCategoryId)}
+          members={members ?? []}
+          onSelectTransaction={setViewingTransaction}
+          onClose={() => setViewingCategoryId(null)}
         />
       )}
 
