@@ -27,6 +27,11 @@ final class RecurringTransactionMaterializer {
     static void materializeDueOccurrences(
             TransactionRepository transactionRepository, RecurringTransactionSeriesRepository seriesRepository,
             UUID spaceId, LocalDate today) {
+        // Several read paths (list, stats, projection) can race to materialize the same
+        // space on a single page load — this blocks concurrent callers until whichever one
+        // got here first has committed its advanced lastMaterializedDate, so they see it's
+        // already covered instead of double-inserting the same occurrence.
+        seriesRepository.lockForMaterialization(spaceId);
         for (RecurringTransactionSeries series : seriesRepository.findActiveBySpaceId(spaceId, today)) {
             LocalDate from = series.lastMaterializedDate() == null ? series.anchorDate() : series.lastMaterializedDate().plusDays(1);
             if (from.isAfter(today)) {

@@ -60,6 +60,7 @@ class GetFinanceStatsHandlerTest {
         handler.getStats(YearMonth.of(2026, 1), membership(), LocalDate.of(2026, 1, 20));
 
         verify(seriesRepository).findActiveBySpaceId(spaceId, LocalDate.of(2026, 1, 20));
+        verify(seriesRepository).lockForMaterialization(spaceId);
     }
 
     @Test

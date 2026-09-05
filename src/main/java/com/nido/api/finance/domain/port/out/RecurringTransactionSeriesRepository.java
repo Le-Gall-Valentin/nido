@@ -25,4 +25,13 @@ public interface RecurringTransactionSeriesRepository {
     RecurringTransactionSeries update(UpdateRecurringSeriesCommand command, List<Contribution> contributors);
     void delete(UUID seriesId);
     RecurringTransactionSeries advanceLastMaterializedDate(UUID seriesId, LocalDate newDate);
+
+    /**
+     * Serializes concurrent lazy materialization for a space: held until the caller's
+     * transaction commits or rolls back, so two requests racing to materialize the same
+     * due occurrence can't both read the same {@code lastMaterializedDate} and each insert
+     * it — the second one blocks here until the first commits, then sees the advanced
+     * cursor and has nothing left to do. See {@code RecurringTransactionMaterializer}.
+     */
+    void lockForMaterialization(UUID spaceId);
 }

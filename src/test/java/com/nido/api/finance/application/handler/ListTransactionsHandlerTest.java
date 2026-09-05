@@ -59,6 +59,7 @@ class ListTransactionsHandlerTest {
         verify(transactionRepository).create(new CreateTransactionCommand(spaceId, "Loyer", new BigDecimal("800.00"),
             TransactionType.EXPENSE, categoryId, LocalDate.of(2026, 1, 1), null, List.of(), series.id()), List.of());
         verify(seriesRepository).advanceLastMaterializedDate(series.id(), LocalDate.of(2026, 1, 1));
+        verify(seriesRepository).lockForMaterialization(spaceId);
     }
 
     @Test

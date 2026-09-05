@@ -107,6 +107,12 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
         return findById(seriesId).orElseThrow(FinanceException.RecurringSeriesNotFound::new);
     }
 
+    @Override
+    @Transactional
+    public void lockForMaterialization(UUID spaceId) {
+        series.lockMaterialization("finance-materialize|" + spaceId);
+    }
+
     private void saveContributors(UUID seriesId, TextEncryptor encryptor, List<Contribution> resolved) {
         for (Contribution c : resolved) {
             FinanceRecurringSeriesContributorEntity ce = new FinanceRecurringSeriesContributorEntity();

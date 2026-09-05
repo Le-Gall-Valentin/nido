@@ -101,3 +101,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/034-create-finance-savings-contributions.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/035-add-finance-transactions-recurring-series-date-unique.yaml
+      relativeToChangelogFile: false
