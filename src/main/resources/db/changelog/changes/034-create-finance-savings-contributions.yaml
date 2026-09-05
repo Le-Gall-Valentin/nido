@@ -1,0 +1,70 @@
+databaseChangeLog:
+  - changeSet:
+      id: 034-create-finance-savings-contributions
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: finance_savings_contributions
+      changes:
+        - createTable:
+            tableName: finance_savings_contributions
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: goal_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount_encrypted
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: contributed_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: finance_savings_contributions
+            indexName: idx_finance_savings_contributions_goal_id
+            columns:
+              - column:
+                  name: goal_id
+        - addForeignKeyConstraint:
+            baseTableName: finance_savings_contributions
+            baseColumnNames: goal_id
+            referencedTableName: finance_savings_goals
+            referencedColumnNames: id
+            constraintName: fk_finance_savings_contributions_goal
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: finance_savings_contributions
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_finance_savings_contributions_user
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: finance_savings_contributions
+            cascadeConstraints: true

@@ -1,0 +1,63 @@
+databaseChangeLog:
+  - changeSet:
+      id: 029-create-finance-recurring-series-contributors
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: finance_recurring_series_contributors
+      changes:
+        - createTable:
+            tableName: finance_recurring_series_contributors
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: series_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: share_amount_encrypted
+                  type: TEXT
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: finance_recurring_series_contributors
+            columnNames: series_id, user_id
+            constraintName: uq_finance_recurring_series_contributors_series_user
+        - createIndex:
+            tableName: finance_recurring_series_contributors
+            indexName: idx_finance_recurring_series_contributors_series_id
+            columns:
+              - column:
+                  name: series_id
+        - addForeignKeyConstraint:
+            baseTableName: finance_recurring_series_contributors
+            baseColumnNames: series_id
+            referencedTableName: finance_recurring_transaction_series
+            referencedColumnNames: id
+            constraintName: fk_finance_recurring_series_contributors_series
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: finance_recurring_series_contributors
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_finance_recurring_series_contributors_user
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: finance_recurring_series_contributors
+            cascadeConstraints: true
