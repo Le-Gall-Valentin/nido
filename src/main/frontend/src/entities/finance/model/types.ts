@@ -1,5 +1,5 @@
 export type TransactionType = 'EXPENSE' | 'INCOME'
-export type RecurrenceInterval = 'DAILY' | 'WEEKLY' | 'MONTHLY'
+export type RecurrenceInterval = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
 
 export interface Category {
   id: string
