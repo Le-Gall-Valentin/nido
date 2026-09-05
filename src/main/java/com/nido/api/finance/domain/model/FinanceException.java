@@ -4,7 +4,8 @@ public abstract sealed class FinanceException extends RuntimeException
     permits FinanceException.TransactionNotFound, FinanceException.RecurringSeriesNotFound,
             FinanceException.CategoryNotFound, FinanceException.CategoryInUse,
             FinanceException.SameSpaceTransfer, FinanceException.InvalidContributionShares, FinanceException.PayerRequired,
-            FinanceException.InvalidEndDate, FinanceException.SavingsGoalNotFound, FinanceException.DecryptionFailed {
+            FinanceException.InvalidEndDate, FinanceException.NotAPartyToSettlement,
+            FinanceException.SavingsGoalNotFound, FinanceException.DecryptionFailed {
 
     private FinanceException(String message) { super(message); }
 
@@ -43,6 +44,11 @@ public abstract sealed class FinanceException extends RuntimeException
     /** Thrown when a recurring series' end date is before its anchor date — it would never produce a single occurrence. */
     public static final class InvalidEndDate extends FinanceException {
         public InvalidEndDate() { super("The end date must be on or after the anchor date"); }
+    }
+
+    /** Thrown when settling a debt whose caller is neither the debtor nor the creditor — a third space member, even one who can write, has no business settling someone else's debt. */
+    public static final class NotAPartyToSettlement extends FinanceException {
+        public NotAPartyToSettlement() { super("Only the debtor or the creditor can settle this debt"); }
     }
 
     public static final class SavingsGoalNotFound extends FinanceException {
