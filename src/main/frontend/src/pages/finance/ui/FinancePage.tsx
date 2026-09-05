@@ -222,29 +222,31 @@ function FinancePageContent() {
       </div>
 
       <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(min(360px,100%),1fr))] gap-4">
-        <section className="rounded-2xl border border-border bg-bg-1 p-4">
+        <section className="flex flex-col rounded-2xl border border-border bg-bg-1 p-4">
           <h2 className="mb-3 text-[15px] font-semibold text-fg-0">{t('breakdown.title')}</h2>
-          {(stats?.breakdown ?? []).length === 0 ? (
-            <p className="text-sm text-fg-3">{t('breakdown.empty')}</p>
-          ) : (
-            <div className="flex flex-wrap items-center gap-6">
-              <BreakdownDonut breakdown={stats?.breakdown ?? []} categoryById={categoryById} />
-              <ul className="flex-1 space-y-2">
-                {(stats?.breakdown ?? []).map((row) => {
-                  const category = categoryById.get(row.categoryId)
-                  const percent = breakdownTotal > 0 ? Math.round((row.amount / breakdownTotal) * 100) : 0
-                  return (
-                    <li key={row.categoryId} className="flex items-center gap-2 text-sm">
-                      <span className="size-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: category?.color }} />
-                      <span className="flex-1 truncate text-fg-1">{category?.label ?? row.categoryId}</span>
-                      <span className="text-fg-3">{percent}%</span>
-                      <span className="w-20 text-right font-medium text-fg-0">{formatAmount(row.amount)}</span>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )}
+          <div className="flex flex-1 items-center justify-center">
+            {(stats?.breakdown ?? []).length === 0 ? (
+              <p className="text-sm text-fg-3">{t('breakdown.empty')}</p>
+            ) : (
+              <div className="flex w-full flex-col items-center gap-4 sm:flex-row sm:gap-6">
+                <BreakdownDonut breakdown={stats?.breakdown ?? []} categoryById={categoryById} />
+                <ul className="w-full space-y-2 sm:w-auto sm:flex-1">
+                  {(stats?.breakdown ?? []).map((row) => {
+                    const category = categoryById.get(row.categoryId)
+                    const percent = breakdownTotal > 0 ? Math.round((row.amount / breakdownTotal) * 100) : 0
+                    return (
+                      <li key={row.categoryId} className="flex items-center gap-2 text-sm">
+                        <span className="size-2.5 shrink-0 rounded-[3px]" style={{ backgroundColor: category?.color }} />
+                        <span className="flex-1 truncate text-fg-1">{category?.label ?? row.categoryId}</span>
+                        <span className="text-fg-3">{percent}%</span>
+                        <span className="w-20 text-right font-medium text-fg-0">{formatAmount(row.amount)}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
+          </div>
         </section>
 
         <section className="rounded-2xl border border-border bg-bg-1 p-4">
