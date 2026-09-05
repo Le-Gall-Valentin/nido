@@ -399,20 +399,24 @@ function FinancePageContent() {
                 </div>
               ) : (
                 balances?.suggestedTransfers.map((transfer, i) => (
-                  <div key={i} className="flex items-center gap-2.5 rounded-[11px] bg-bg-2 p-2.5">
-                    <UserAvatar username={memberLabel(transfer.fromMemberId)} role="USER" className="size-7 shrink-0 rounded-full text-[10.5px]" />
-                    <ArrowRight size={16} className="shrink-0 text-fg-3" />
-                    <UserAvatar username={memberLabel(transfer.toMemberId)} role="USER" className="size-7 shrink-0 rounded-full text-[10.5px]" />
-                    <button type="button"
-                      onClick={() => setViewingHistoryBetween({ memberAId: transfer.fromMemberId, memberBId: transfer.toMemberId })}
-                      className="min-w-0 flex-1 truncate rounded text-left text-sm text-fg-1 hover:underline">
-                      {memberLabel(transfer.fromMemberId)} → {memberLabel(transfer.toMemberId)}
-                    </button>
-                    <span className="shrink-0 text-sm font-semibold text-fg-0">{formatAmount(transfer.amount)}</span>
-                    {(transfer.fromMemberId === currentUserId || transfer.toMemberId === currentUserId) && (
-                      <button type="button" onClick={() => setSettlingTransfer(transfer)}
-                        className="shrink-0 rounded-[8px] bg-accent px-2.5 py-1 text-xs font-semibold text-white">{t('balances.settle')}</button>
-                    )}
+                  <div key={i} className="flex flex-col gap-2 rounded-[11px] bg-bg-2 p-2.5 sm:flex-row sm:items-center sm:gap-2.5">
+                    <div className="flex items-center gap-2.5 sm:contents">
+                      <UserAvatar username={memberLabel(transfer.fromMemberId)} role="USER" className="size-7 shrink-0 rounded-full text-[10.5px]" />
+                      <ArrowRight size={16} className="shrink-0 text-fg-3" />
+                      <UserAvatar username={memberLabel(transfer.toMemberId)} role="USER" className="size-7 shrink-0 rounded-full text-[10.5px]" />
+                      <button type="button"
+                        onClick={() => setViewingHistoryBetween({ memberAId: transfer.fromMemberId, memberBId: transfer.toMemberId })}
+                        className="min-w-0 flex-1 truncate rounded text-left text-sm text-fg-1 hover:underline">
+                        {memberLabel(transfer.fromMemberId)} → {memberLabel(transfer.toMemberId)}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 sm:contents">
+                      <span className="shrink-0 text-sm font-semibold text-fg-0">{formatAmount(transfer.amount)}</span>
+                      {(transfer.fromMemberId === currentUserId || transfer.toMemberId === currentUserId) && (
+                        <button type="button" onClick={() => setSettlingTransfer(transfer)}
+                          className="shrink-0 rounded-[8px] bg-accent px-2.5 py-1 text-xs font-semibold text-white">{t('balances.settle')}</button>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
