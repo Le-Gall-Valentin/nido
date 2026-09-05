@@ -4,6 +4,7 @@ import com.nido.api.finance.application.port.in.CreateRecurringSeriesUseCase;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionSplitter;
 import com.nido.api.finance.domain.model.CreateRecurringSeriesCommand;
+import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
 import com.nido.api.shared.annotation.ApplicationService;
@@ -27,6 +28,9 @@ public class CreateRecurringSeriesHandler implements CreateRecurringSeriesUseCas
         caller.ensureSameSpace(command.spaceId());
         caller.ensureCanWrite();
         List<Contribution> resolved = ContributionSplitter.resolve(command.amount(), command.contributors());
+        if (!resolved.isEmpty() && command.payerId() == null) {
+            throw new FinanceException.PayerRequired();
+        }
         return seriesRepository.create(command, resolved);
     }
 }

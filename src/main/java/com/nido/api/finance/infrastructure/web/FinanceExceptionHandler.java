@@ -24,6 +24,7 @@ public class FinanceExceptionHandler {
             case FinanceException.CategoryInUse ignored -> new FinanceErrorResponse(409, "Category is still used by existing transactions.");
             case FinanceException.SameSpaceTransfer ignored -> new FinanceErrorResponse(400, "Cannot transfer a transaction into its own context.");
             case FinanceException.InvalidContributionShares ignored -> new FinanceErrorResponse(400, "Contribution shares must sum to the transaction amount.");
+            case FinanceException.PayerRequired ignored -> new FinanceErrorResponse(400, "A payer is required when the transaction has contributors.");
             case FinanceException.SavingsGoalNotFound ignored -> new FinanceErrorResponse(404, "Savings goal not found.");
             case FinanceException.DecryptionFailed ignored -> new FinanceErrorResponse(500, "Could not process the requested finance data.");
         };
