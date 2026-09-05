@@ -1,18 +1,20 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Plus, Pencil, ArrowRightLeft, Trash2, Repeat } from 'lucide-react'
+import { Plus, Pencil, ArrowRightLeft, Trash2, Repeat, Settings2 } from 'lucide-react'
 import { Alert, Dialog, Spinner } from '@/shared/ui'
 import { useMySpaces, useWritableSpaces } from '@/features/space-switcher'
 import { canWrite, isPersonal, useSpaceMembers, TransferDialog } from '@/entities/space'
 import {
   financeApi, FinanceApiProvider, useCategories, useBudgets, useTransactions, useFinanceStats,
   useCreateTransaction, useCreateRecurringSeries, useUpdateTransaction, useDeleteTransaction, useMoveTransaction, useSetBudget,
+  useCreateCategory, useUpdateCategory, useDeleteCategory,
   type IFinanceApi, type Transaction,
 } from '@/entities/finance'
 import { resolveCategoryIcon } from '../lib/resolveCategoryIcon'
 import { TransactionFormModal, type TransactionFormInput } from './TransactionFormModal'
 import { DeleteTransactionModal } from './DeleteTransactionModal'
+import { CategoryManagerModal } from './CategoryManagerModal'
 
 interface FinancePageProps {
   api?: IFinanceApi
@@ -52,12 +54,22 @@ function FinancePageContent() {
   const deleteTransaction = useDeleteTransaction(spaceId)
   const moveTransaction = useMoveTransaction(spaceId)
   const setBudget = useSetBudget(spaceId)
+  const createCategory = useCreateCategory(spaceId)
+  const updateCategory = useUpdateCategory(spaceId)
+  const deleteCategory = useDeleteCategory(spaceId)
 
   const [formState, setFormState] = useState<{ mode: 'create' } | { mode: 'edit'; transaction: Transaction } | null>(null)
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
   const [movingTransaction, setMovingTransaction] = useState<Transaction | null>(null)
   const [editingBudgetFor, setEditingBudgetFor] = useState<string | null>(null)
   const [budgetInput, setBudgetInput] = useState('')
+  const [managingCategories, setManagingCategories] = useState(false)
+  const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null)
+
+  function handleDeleteCategory(categoryId: string) {
+    setCategoryDeleteError(null)
+    deleteCategory.mutate(categoryId, { onError: () => setCategoryDeleteError('in_use') })
+  }
 
   const currentSpace = mySpaces?.find((s) => s.id === spaceId)
   const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
@@ -110,6 +122,9 @@ function FinancePageContent() {
         <h1 className="text-xl font-semibold">{t('title')}</h1>
         <div className="flex items-center gap-2">
           <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="rounded-md border px-3 py-2 text-sm" />
+          <button type="button" onClick={() => setManagingCategories(true)} className="flex items-center gap-1 rounded-md border px-3 py-2 text-sm">
+            <Settings2 size={16} /> {t('categories.manage')}
+          </button>
           {canWriteHere && (
             <button type="button" onClick={() => setFormState({ mode: 'create' })}
               className="flex items-center gap-1 rounded-md bg-fg-1 px-3 py-2 text-sm text-bg-1">
@@ -245,6 +260,17 @@ function FinancePageContent() {
           destinations={writableDestinations ?? []}
           onClose={() => setMovingTransaction(null)}
           onConfirm={handleMoveConfirm}
+        />
+      )}
+
+      {managingCategories && (
+        <CategoryManagerModal
+          categories={categories ?? []}
+          onCreate={(label, color, icon) => createCategory.mutate({ label, color, icon })}
+          onUpdate={(categoryId, label, color, icon) => updateCategory.mutate({ categoryId, label, color, icon })}
+          onDelete={handleDeleteCategory}
+          onClose={() => setManagingCategories(false)}
+          deleteError={categoryDeleteError}
         />
       )}
     </div>
