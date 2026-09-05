@@ -254,6 +254,11 @@ describe('FinancePage', () => {
     fireEvent.click(within(memberModal).getByText('Salaire'))
 
     await waitFor(() => expect(screen.getByText('transactions.detail_title')).toBeDefined())
+    // Every Dialog shares the same z-index, so with two open at once the later DOM sibling
+    // paints on top — the transaction detail must be the last dialog rendered, or it would
+    // be visually hidden behind the member modal that opened it (a real regression once).
+    const dialogs = screen.getAllByRole('dialog')
+    expect(dialogs[dialogs.length - 1]).toBe(screen.getByRole('dialog', { name: 'transactions.detail_title' }))
   })
 
   it('opens the settlement history between two members when clicking a debt', async () => {
