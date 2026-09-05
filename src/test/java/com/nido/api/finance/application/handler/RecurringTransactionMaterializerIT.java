@@ -104,6 +104,30 @@ class RecurringTransactionMaterializerIT {
         assertThat(materialized.get(0).date()).isEqualTo(anchor);
     }
 
+    @Test
+    void still_materializes_a_fixed_term_series_backlog_even_after_its_end_date_has_already_passed() {
+        // A 3-month loan: anchored Jan 1, ends Mar 1 — but nobody opens the Finances page
+        // until August, long after the series "ended". Every occurrence up to the end date
+        // is still owed and must still be materialized, not silently dropped because the
+        // series looks expired by the time anyone reads it.
+        LocalDate anchor = LocalDate.of(2026, 1, 1);
+        LocalDate endDate = LocalDate.of(2026, 3, 1);
+        LocalDate today = LocalDate.of(2026, 8, 20);
+        seriesRepository.create(new CreateRecurringSeriesCommand(
+            spaceId, "Prêt voiture", new BigDecimal("250.00"), TransactionType.EXPENSE, categoryId, null,
+            List.of(), RecurrenceInterval.MONTHLY, 1, anchor, endDate), List.of());
+        SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.MEMBER, Instant.now());
+
+        statsHandler.getStats(YearMonth.of(2026, 1), caller, today);
+
+        List<Transaction> materialized = transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1));
+        assertThat(materialized).extracting(Transaction::date).containsExactly(anchor);
+        List<Transaction> marchOccurrence = transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 3));
+        assertThat(marchOccurrence).extracting(Transaction::date).containsExactly(endDate);
+        List<Transaction> aprilOnward = transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 4));
+        assertThat(aprilOnward).isEmpty();
+    }
+
     private void getStatsAfterBarrier(CyclicBarrier barrier, SpaceMembership caller, LocalDate today) {
         try {
             barrier.await();

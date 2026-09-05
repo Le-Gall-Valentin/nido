@@ -53,19 +53,19 @@ class GetFinanceStatsHandlerTest {
 
     @Test
     void materializes_due_occurrences_before_computing_stats() {
-        when(seriesRepository.findActiveBySpaceId(spaceId, LocalDate.of(2026, 1, 20))).thenReturn(List.of());
+        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of());
         when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of());
         when(budgetRepository.findBySpaceId(spaceId)).thenReturn(List.of());
 
         handler.getStats(YearMonth.of(2026, 1), membership(), LocalDate.of(2026, 1, 20));
 
-        verify(seriesRepository).findActiveBySpaceId(spaceId, LocalDate.of(2026, 1, 20));
+        verify(seriesRepository).findBySpaceId(spaceId);
         verify(seriesRepository).lockForMaterialization(spaceId);
     }
 
     @Test
     void computes_balance_category_breakdown_and_budget_vs_actual() {
-        when(seriesRepository.findActiveBySpaceId(spaceId, LocalDate.of(2026, 1, 20))).thenReturn(List.of());
+        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of());
         when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of(
             transaction(new BigDecimal("50.00"), TransactionType.EXPENSE, foodCategory),
             transaction(new BigDecimal("30.00"), TransactionType.EXPENSE, transportCategory),

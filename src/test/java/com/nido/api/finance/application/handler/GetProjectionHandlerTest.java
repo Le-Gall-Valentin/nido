@@ -50,7 +50,7 @@ class GetProjectionHandlerTest {
         LocalDate today = LocalDate.of(2026, 1, 10);
         Transaction soFar = new Transaction(UUID.randomUUID(), spaceId, "Courses", new BigDecimal("50.00"),
             TransactionType.EXPENSE, categoryId, LocalDate.of(2026, 1, 5), null, List.of(), null, Instant.now());
-        when(seriesRepository.findActiveBySpaceId(spaceId, today)).thenReturn(List.of());
+        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of());
         when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of(soFar));
         RecurringTransactionSeries rent = new RecurringTransactionSeries(UUID.randomUUID(), spaceId, "Loyer",
             new BigDecimal("800.00"), TransactionType.EXPENSE, categoryId, null, List.of(),

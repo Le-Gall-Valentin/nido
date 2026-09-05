@@ -31,6 +31,9 @@ public class UpdateRecurringSeriesHandler implements UpdateRecurringSeriesUseCas
         if (!resolved.isEmpty() && command.payerId() == null) {
             throw new FinanceException.PayerRequired();
         }
+        if (command.endDate() != null && command.endDate().isBefore(command.anchorDate())) {
+            throw new FinanceException.InvalidEndDate();
+        }
         RecurringTransactionSeries existing = seriesRepository.findById(command.seriesId())
             .orElseThrow(FinanceException.RecurringSeriesNotFound::new);
         if (!existing.spaceId().equals(command.spaceId())) {
