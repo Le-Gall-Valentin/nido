@@ -39,6 +39,7 @@ class CategoryRepositoryAdapterIT {
     @Autowired FinanceCategoryJpaRepository jpaRepository;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired UserIdentityJpaRepository userJpaRepository;
+    @Autowired TransactionRepositoryAdapter transactionAdapter;
 
     private UUID spaceId;
 
@@ -108,6 +109,16 @@ class CategoryRepositoryAdapterIT {
         Category created = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils"), true);
 
         assertThat(adapter.isReferencedByTransactions(created.id())).isFalse();
+    }
+
+    @Test
+    void isReferencedByTransactions_is_true_once_a_transaction_uses_the_category() {
+        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils"), true);
+        transactionAdapter.create(new com.nido.api.finance.domain.model.CreateTransactionCommand(
+            spaceId, "Courses", new java.math.BigDecimal("10.00"), com.nido.api.finance.domain.model.TransactionType.EXPENSE,
+            created.id(), java.time.LocalDate.of(2026, 1, 1), null, java.util.List.of(), null), java.util.List.of());
+
+        assertThat(adapter.isReferencedByTransactions(created.id())).isTrue();
     }
 
     @Test
