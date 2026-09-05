@@ -341,10 +341,10 @@ function FinancePageContent() {
       </section>
 
       <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1">
           <h2 className="text-[15px] font-semibold text-fg-0">{t('transactions.title')}</h2>
           {canWriteHere && (
-            <button type="button" onClick={() => setManagingRecurringSeries(true)} className="shrink-0 text-sm font-semibold text-accent">
+            <button type="button" onClick={() => setManagingRecurringSeries(true)} className="ml-auto shrink-0 text-sm font-semibold text-accent">
               {t('recurring_series.manage')}
             </button>
           )}
