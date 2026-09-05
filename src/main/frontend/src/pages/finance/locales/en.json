@@ -22,7 +22,8 @@
     "move": "Move to…",
     "recurring": "Recurring",
     "detail_title": "Transaction details",
-    "close": "Close"
+    "close": "Close",
+    "category_empty": "No transactions for this category this month."
   },
   "recurring_series": {
     "manage": "Manage recurring transactions",

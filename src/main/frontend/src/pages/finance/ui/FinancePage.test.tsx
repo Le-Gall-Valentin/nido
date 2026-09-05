@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
@@ -178,5 +178,26 @@ describe('FinancePage', () => {
 
     await waitFor(() => expect(screen.getByText('transactions.detail_title')).toBeDefined())
     expect(screen.getByText('100%')).toBeDefined()
+  })
+
+  it('opens the category transactions, then the full detail of one, from the breakdown legend', async () => {
+    renderPage(fakeApi({
+      getStats: vi.fn().mockResolvedValue({
+        balance: 0, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
+        breakdown: [{ categoryId: 'c1', amount: 45.3 }], budgetVsActual: [],
+      }),
+      listTransactions: vi.fn().mockResolvedValue([{
+        id: 't1', label: 'Courses', amount: 45.3, type: 'EXPENSE', categoryId: 'c1', date: '2026-01-15',
+        payerId: 'u-1', contributors: [], recurring: false,
+      }]),
+    }))
+
+    await waitFor(() => expect(screen.getAllByText('Alimentation').length).toBeGreaterThan(0))
+    fireEvent.click(screen.getAllByText('Alimentation')[0])
+
+    const categoryModal = await waitFor(() => screen.getByRole('dialog', { name: /Alimentation/ }))
+    fireEvent.click(within(categoryModal).getByText('Courses'))
+
+    await waitFor(() => expect(screen.getByText('transactions.detail_title')).toBeDefined())
   })
 })

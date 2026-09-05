@@ -22,7 +22,8 @@
     "move": "Déplacer vers…",
     "recurring": "Récurrente",
     "detail_title": "Détail de l'opération",
-    "close": "Fermer"
+    "close": "Fermer",
+    "category_empty": "Aucune opération pour cette catégorie ce mois-ci."
   },
   "recurring_series": {
     "manage": "Gérer les opérations récurrentes",
