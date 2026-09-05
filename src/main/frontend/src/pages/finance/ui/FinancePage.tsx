@@ -63,7 +63,7 @@ function StatCard({ icon: Icon, tintClassName, label, value }: { icon: typeof Wa
 }
 
 /** A hand-drawn SVG donut (no charting library in this app) with a colored ring segment per category. */
-function BreakdownDonut({ breakdown, categoryById, onSegmentClick }: { breakdown: CategoryAmount[]; categoryById: Map<string, Category>; onSegmentClick: (categoryId: string) => void }) {
+function BreakdownDonut({ breakdown, categoryById }: { breakdown: CategoryAmount[]; categoryById: Map<string, Category> }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [hovered, setHovered] = useState<{ categoryId: string; x: number; y: number } | null>(null)
   const total = breakdown.reduce((sum, row) => sum + row.amount, 0)
@@ -96,8 +96,6 @@ function BreakdownDonut({ breakdown, categoryById, onSegmentClick }: { breakdown
               stroke={category?.color ?? 'var(--color-fg-3)'} strokeWidth={20}
               strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-segmentOffset}
               role="img" aria-label={`${category?.label ?? row.categoryId}: ${percent}%, ${formatAmount(row.amount)}`}
-              className="cursor-pointer"
-              onClick={() => onSegmentClick(row.categoryId)}
               onMouseEnter={(e) => handlePointerMove(row.categoryId, e)}
               onMouseMove={(e) => handlePointerMove(row.categoryId, e)}
               onMouseLeave={() => setHovered(null)} />
@@ -266,7 +264,7 @@ function FinancePageContent() {
               <p className="text-sm text-fg-3">{t('breakdown.empty')}</p>
             ) : (
               <div className="flex w-full flex-col items-center gap-4 sm:flex-row sm:gap-6">
-                <BreakdownDonut breakdown={stats?.breakdown ?? []} categoryById={categoryById} onSegmentClick={setViewingCategoryId} />
+                <BreakdownDonut breakdown={stats?.breakdown ?? []} categoryById={categoryById} />
                 <ul className="w-full space-y-2 sm:w-auto sm:flex-1">
                   {(stats?.breakdown ?? []).map((row) => {
                     const category = categoryById.get(row.categoryId)
