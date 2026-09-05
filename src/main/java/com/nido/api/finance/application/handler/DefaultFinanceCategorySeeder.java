@@ -1,0 +1,38 @@
+package com.nido.api.finance.application.handler;
+
+import com.nido.api.finance.domain.model.CreateCategoryCommand;
+import com.nido.api.finance.domain.port.out.CategoryRepository;
+
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Seeds a space's default Finance categories the first time anything
+ * touches its categories — mirrors {@code DefaultShoppingCategorySeeder}:
+ * shared between listing and creating a custom category so a category can
+ * never exist without its defaults alongside it, regardless of which
+ * endpoint a client hits first.
+ */
+final class DefaultFinanceCategorySeeder {
+
+    private record DefaultCategory(String label, String color, String icon) {}
+
+    private static final List<DefaultCategory> DEFAULTS = List.of(
+        new DefaultCategory("Alimentation", "#f59e0b", "Utensils"),
+        new DefaultCategory("Logement", "#6366f1", "Home"),
+        new DefaultCategory("Transport", "#0ea5e9", "Car"),
+        new DefaultCategory("Loisirs", "#ec4899", "Gamepad2"),
+        new DefaultCategory("Santé", "#ef4444", "HeartPulse"),
+        new DefaultCategory("Abonnements", "#8b5cf6", "Repeat"),
+        new DefaultCategory("Divers", "#64748b", "MoreHorizontal"),
+        new DefaultCategory("Revenu", "#22c55e", "Wallet"));
+
+    private DefaultFinanceCategorySeeder() {}
+
+    static void seedIfMissing(CategoryRepository categoryRepository, UUID spaceId) {
+        if (!categoryRepository.existsBySpaceId(spaceId)) {
+            DEFAULTS.forEach(d -> categoryRepository.create(
+                new CreateCategoryCommand(spaceId, d.label(), d.color(), d.icon()), true));
+        }
+    }
+}
