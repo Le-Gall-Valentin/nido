@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import type { IFinanceApi } from './IFinanceApi'
 import { FinanceApiProvider } from './financeApiContext'
-import { useCategories, useTransactions, useFinanceStats, useBalances } from './useFinanceQueries'
+import { useCategories, useTransactions, useFinanceStats, useBalances, useSettlementsBetween } from './useFinanceQueries'
 
 function wrapper(api: IFinanceApi) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -22,7 +22,7 @@ function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
     listTransactions: vi.fn(), createTransaction: vi.fn(), updateTransaction: vi.fn(), deleteTransaction: vi.fn(), moveTransaction: vi.fn(),
     listRecurringSeries: vi.fn(), createRecurringSeries: vi.fn(), updateRecurringSeries: vi.fn(), deleteRecurringSeries: vi.fn(),
     getStats: vi.fn(), getProjection: vi.fn(),
-    getBalances: vi.fn(), settleDebt: vi.fn(),
+    getBalances: vi.fn(), settleDebt: vi.fn(), listSettlements: vi.fn(),
     listSavingsGoals: vi.fn(), createSavingsGoal: vi.fn(), updateSavingsGoal: vi.fn(), deleteSavingsGoal: vi.fn(), addSavingsContribution: vi.fn(),
     ...overrides,
   }
@@ -70,5 +70,17 @@ describe('useBalances', () => {
     const { result } = renderHook(() => useBalances('space-1'), { wrapper: wrapper(api) })
 
     await waitFor(() => expect(result.current.data).toEqual(balances))
+  })
+})
+
+describe('useSettlementsBetween', () => {
+  it('fetches settlements between the two given members', async () => {
+    const settlements = [{ id: 's1', fromMemberId: 'u-1', toMemberId: 'u-2', amount: 20, date: '2026-01-02' }]
+    const api = fakeApi({ listSettlements: vi.fn().mockResolvedValue(settlements) })
+
+    const { result } = renderHook(() => useSettlementsBetween('space-1', 'u-1', 'u-2'), { wrapper: wrapper(api) })
+
+    await waitFor(() => expect(result.current.data).toEqual(settlements))
+    expect(api.listSettlements).toHaveBeenCalledWith('space-1', 'u-1', 'u-2')
   })
 })

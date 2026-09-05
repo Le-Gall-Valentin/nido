@@ -1,6 +1,6 @@
 import type {
   Balances, Budget, Category, ContributionInput, FinanceStats, Projection, RecurrenceInput,
-  RecurringSeries, SavingsGoal, Transaction, TransactionType,
+  RecurringSeries, SavingsGoal, SettlementRecord, Transaction, TransactionType,
 } from './types'
 
 /**
@@ -45,6 +45,7 @@ export interface IFinanceApi {
 
   getBalances(spaceId: string): Promise<Balances>
   settleDebt(spaceId: string, fromMemberId: string, toMemberId: string, amount: number, date: string): Promise<void>
+  listSettlements(spaceId: string, memberAId: string, memberBId: string): Promise<SettlementRecord[]>
 
   listSavingsGoals(spaceId: string): Promise<SavingsGoal[]>
   createSavingsGoal(spaceId: string, name: string, targetAmount: number, targetDate: string | null): Promise<SavingsGoal>

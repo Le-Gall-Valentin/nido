@@ -2,7 +2,7 @@ import { isAxiosError } from 'axios'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
 import type { IFinanceApi } from '../model/IFinanceApi'
-import type { Balances, Budget, Category, FinanceStats, Projection, RecurringSeries, SavingsGoal, Transaction } from '../model/types'
+import type { Balances, Budget, Category, FinanceStats, Projection, RecurringSeries, SavingsGoal, SettlementRecord, Transaction } from '../model/types'
 
 function handleError(error: unknown): never {
   if (isAxiosError(error)) {
@@ -146,6 +146,15 @@ export const financeApi: IFinanceApi = {
   async settleDebt(spaceId, fromMemberId, toMemberId, amount, date) {
     try {
       await client.post(`/spaces/${spaceId}/finance/balances/settle`, { fromMemberId, toMemberId, amount, date })
+    } catch (error) { handleError(error) }
+  },
+
+  async listSettlements(spaceId, memberAId, memberBId) {
+    try {
+      const res = await client.get<SettlementRecord[]>(`/spaces/${spaceId}/finance/balances/settlements`, {
+        params: { memberAId, memberBId },
+      })
+      return res.data
     } catch (error) { handleError(error) }
   },
 

@@ -51,6 +51,18 @@ describe('financeApi', () => {
     })
   })
 
+  it('listSettlements fetches settlements between the two given members', async () => {
+    const settlements = [{ id: 's1', fromMemberId: 'bob', toMemberId: 'alice', amount: 20, date: '2026-01-02' }]
+    vi.mocked(client.get).mockResolvedValueOnce({ data: settlements })
+
+    const result = await financeApi.listSettlements('space-1', 'bob', 'alice')
+
+    expect(client.get).toHaveBeenCalledWith('/spaces/space-1/finance/balances/settlements', {
+      params: { memberAId: 'bob', memberBId: 'alice' },
+    })
+    expect(result).toEqual(settlements)
+  })
+
   it('translates a 403 response into ForbiddenError', async () => {
     vi.mocked(client.get).mockRejectedValueOnce(new AxiosError('Forbidden', undefined, undefined, undefined, { status: 403 } as never))
 

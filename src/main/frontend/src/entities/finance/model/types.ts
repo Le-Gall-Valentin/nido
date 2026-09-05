@@ -110,6 +110,14 @@ export interface Balances {
   suggestedTransfers: SuggestedTransfer[]
 }
 
+export interface SettlementRecord {
+  id: string
+  fromMemberId: string
+  toMemberId: string
+  amount: number
+  date: string
+}
+
 export interface SavingsContribution {
   id: string
   memberId: string
