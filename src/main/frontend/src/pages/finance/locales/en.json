@@ -55,6 +55,11 @@
   },
   "balances": {
     "title": "Balances between members",
+    "subtitle": "Shared expenses split evenly · who owes what",
+    "paid_prefix": "paid {{amount}}",
+    "status_owes": "owes",
+    "status_owed": "is owed",
+    "status_settled": "settled",
     "settle": "Settle up",
     "settle_title": "Settle this debt",
     "settle_message": "{{from}} owes {{to}} {{amount}} €.",
