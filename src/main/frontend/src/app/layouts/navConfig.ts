@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Calendar, CheckSquare, CookingPot, Lock, Settings, Shield, ShoppingCart, SlidersHorizontal, User, Users } from 'lucide-react'
+import { Calendar, CheckSquare, CookingPot, Lock, Settings, Shield, ShoppingCart, SlidersHorizontal, User, Users, Wallet } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 
 export interface NavItemConfig {
@@ -21,16 +21,16 @@ export interface NavItemConfig {
 // The sidebar shows this exact list at all times, for every authenticated
 // route — it never depends on whether the current URL happens to carry a
 // spaceId. Only modules that actually have a route/page belong here — no
-// placeholder entries for future modules (Dashboard, Finances,
-// Organisation, Documents).
+// placeholder entries for future modules (Dashboard, Organisation,
+// Documents).
 //
 // Order follows the mockup's NAV_DEFS, filtered down to what actually
-// exists: Organisation, then Cuisine, then Membres & groupes, then
-// Administration, then Paramètres. The mockup has exactly one "Membres &
-// groupes" entry, no separate per-space "Membres" item: /spaces already
-// lets you drill into a group to reach its members page (SpaceListSection
-// → SpaceMembersPage), the same "click a group card to open its detail"
-// flow the mockup uses.
+// exists: Organisation, then Cuisine, then Finances, then Membres &
+// groupes, then Administration, then Paramètres. The mockup has exactly
+// one "Membres & groupes" entry, no separate per-space "Membres" item:
+// /spaces already lets you drill into a group to reach its members page
+// (SpaceListSection → SpaceMembersPage), the same "click a group card to
+// open its detail" flow the mockup uses.
 export const NAV_CONFIG: NavItemConfig[] = [
   {
     id: 'nav:organisation',
@@ -52,6 +52,7 @@ export const NAV_CONFIG: NavItemConfig[] = [
       { id: 'nav:kitchen:menu', to: (spaceId) => (spaceId ? ROUTES.spaceKitchenMenu(spaceId) : undefined), icon: Calendar, labelKey: 'nav.kitchen_menu' },
     ],
   },
+  { id: 'nav:finance', to: (spaceId) => (spaceId ? ROUTES.spaceFinance(spaceId) : undefined), icon: Wallet, labelKey: 'nav.finance' },
   { id: 'nav:spaces', to: () => ROUTES.SPACES, icon: Users, labelKey: 'nav.groups' },
   { id: 'nav:users', adminOnly: true, to: () => ROUTES.ADMIN_USERS, icon: Shield, labelKey: 'nav.administration' },
   {
