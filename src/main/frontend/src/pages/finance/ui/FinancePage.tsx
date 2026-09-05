@@ -372,7 +372,7 @@ function FinancePageContent() {
               {balances?.suggestedTransfers.map((transfer, i) => (
                 <li key={i} className="flex items-center justify-between rounded-[10px] bg-bg-2 px-3 py-2 text-sm">
                   <span className="text-fg-1">{memberLabel(transfer.fromMemberId)} → {memberLabel(transfer.toMemberId)}: <span className="font-semibold text-fg-0">{formatAmount(transfer.amount)}</span></span>
-                  {canWriteHere && (
+                  {(transfer.fromMemberId === currentUserId || transfer.toMemberId === currentUserId) && (
                     <button type="button" onClick={() => setSettlingTransfer(transfer)}
                       className="rounded-[8px] bg-accent px-2.5 py-1 text-xs font-semibold text-white">{t('balances.settle')}</button>
                   )}
