@@ -24,21 +24,25 @@ interface TransactionFormModalProps {
   members: SpaceMember[]
   /** False in a PERSONAL space — payer/contributors/recurrence-rotation concepts don't apply there. */
   canPickContributors: boolean
+  /** The logged-in user's id — pre-selects them as the payer for a new shared transaction, since that's who usually fills out this form. */
+  currentUserId?: string | null
   onSubmit: (input: TransactionFormInput) => void
   onCancel: () => void
 }
 
 const SELECT_CLASSNAME = 'rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent'
 
-export function TransactionFormModal({ mode, transaction, categories, members, canPickContributors, onSubmit, onCancel }: TransactionFormModalProps) {
+export function TransactionFormModal({ mode, transaction, categories, members, canPickContributors, currentUserId = null, onSubmit, onCancel }: TransactionFormModalProps) {
   const { t } = useTranslation('finance')
   const [label, setLabel] = useState(transaction?.label ?? '')
   const [amount, setAmount] = useState(transaction ? String(transaction.amount) : '')
   const [type, setType] = useState<TransactionType>(transaction?.type ?? 'EXPENSE')
   const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? categories[0]?.id ?? '')
   const [date, setDate] = useState(transaction?.date ?? new Date().toISOString().slice(0, 10))
-  const [payerId, setPayerId] = useState<string>(transaction?.payerId ?? '')
-  const [contributorIds, setContributorIds] = useState<string[]>(transaction?.contributors.map((c) => c.memberId) ?? [])
+  const [payerId, setPayerId] = useState<string>(transaction?.payerId ?? currentUserId ?? '')
+  const [contributorIds, setContributorIds] = useState<string[]>(
+    transaction?.contributors.map((c) => c.memberId) ?? (canPickContributors ? members.map((m) => m.userId) : [])
+  )
   const [customizeShares, setCustomizeShares] = useState(false)
   const [customShares, setCustomShares] = useState<Record<string, number>>({})
   const [recurring, setRecurring] = useState(false)
@@ -64,6 +68,10 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
     }
     if (!categoryId) {
       setError(t('form.category_required'))
+      return
+    }
+    if (canPickContributors && !payerId) {
+      setError(t('form.payer_required'))
       return
     }
     const resolved = resolveContributionShares(numericAmount, contributorIds, customizeShares ? customShares : null)
@@ -110,7 +118,6 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
             <div className="flex flex-col gap-1.5">
               <label htmlFor="finance-payer" className="text-[13px] font-semibold text-fg-1">{t('form.payer_label')}</label>
               <select id="finance-payer" value={payerId} onChange={(e) => setPayerId(e.target.value)} className={SELECT_CLASSNAME}>
-                <option value="">{t('form.payer_none')}</option>
                 {members.map((m) => <option key={m.userId} value={m.userId}>{m.username ?? m.email}</option>)}
               </select>
             </div>

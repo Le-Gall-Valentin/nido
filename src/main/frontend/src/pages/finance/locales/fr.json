@@ -78,7 +78,7 @@
     "category_required": "La catégorie est obligatoire.",
     "date_label": "Date",
     "payer_label": "Payé par",
-    "payer_none": "Personne",
+    "payer_required": "Il faut indiquer qui a payé.",
     "contributors_label": "Contributeurs",
     "customize_shares_label": "Personnaliser les parts",
     "shares_invalid": "La somme des parts doit être égale au montant total.",

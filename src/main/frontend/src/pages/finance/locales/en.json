@@ -78,7 +78,7 @@
     "category_required": "The category is required.",
     "date_label": "Date",
     "payer_label": "Paid by",
-    "payer_none": "Nobody",
+    "payer_required": "You must specify who paid.",
     "contributors_label": "Contributors",
     "customize_shares_label": "Customize shares",
     "shares_invalid": "Shares must sum to the total amount.",
