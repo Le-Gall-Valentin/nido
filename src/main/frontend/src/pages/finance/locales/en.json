@@ -55,6 +55,10 @@
     "contributor_label": "Contributor",
     "progress": "{{contributed}} / {{target}}"
   },
+  "projection": {
+    "title": "End-of-month projection",
+    "end_of_month_balance": "Estimated end-of-month balance: {{amount}}"
+  },
   "form": {
     "create_title": "New transaction",
     "edit_title": "Edit transaction",
