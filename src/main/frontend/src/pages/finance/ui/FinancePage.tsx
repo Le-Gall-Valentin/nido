@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, ArrowRightLeft, Trash2, Repeat, Settings2 } from 'lucide-react'
-import { Alert, Dialog, Spinner } from '@/shared/ui'
+import { Alert, Spinner } from '@/shared/ui'
 import { useMySpaces, useWritableSpaces } from '@/features/space-switcher'
 import { canWrite, isPersonal, useSpaceMembers, TransferDialog } from '@/entities/space'
 import {
-  financeApi, FinanceApiProvider, useCategories, useBudgets, useTransactions, useFinanceStats, useProjection,
+  financeApi, FinanceApiProvider, useCategories, useTransactions, useFinanceStats, useProjection,
   useCreateTransaction, useCreateRecurringSeries, useUpdateTransaction, useDeleteTransaction, useMoveTransaction, useSetBudget,
   useCreateCategory, useUpdateCategory, useDeleteCategory, useBalances, useSettleDebt,
   useSavingsGoals, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,
@@ -45,7 +45,6 @@ function FinancePageContent() {
   const { spaceId = '' } = useParams<{ spaceId: string }>()
   const [month, setMonth] = useState(currentMonth())
   const { data: categories, isPending: categoriesPending, isError: categoriesError } = useCategories(spaceId)
-  const { data: budgets } = useBudgets(spaceId)
   const { data: transactions, isPending, isError } = useTransactions(spaceId, month)
   const { data: stats } = useFinanceStats(spaceId, month)
   const { data: projection } = useProjection(spaceId, month)
