@@ -1,0 +1,29 @@
+databaseChangeLog:
+  - changeSet:
+      id: 036-finance-transactions-recurring-series-set-null-on-delete
+      author: nido
+      changes:
+        # Deleting a recurring series should stop future occurrences without erasing the
+        # months of real spending it already produced — detach past transactions from the
+        # series instead of cascading their deletion.
+        - dropForeignKeyConstraint:
+            baseTableName: finance_transactions
+            constraintName: fk_finance_transactions_recurring_series
+        - addForeignKeyConstraint:
+            baseTableName: finance_transactions
+            baseColumnNames: recurring_series_id
+            constraintName: fk_finance_transactions_recurring_series
+            referencedTableName: finance_recurring_transaction_series
+            referencedColumnNames: id
+            onDelete: SET NULL
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: finance_transactions
+            constraintName: fk_finance_transactions_recurring_series
+        - addForeignKeyConstraint:
+            baseTableName: finance_transactions
+            baseColumnNames: recurring_series_id
+            constraintName: fk_finance_transactions_recurring_series
+            referencedTableName: finance_recurring_transaction_series
+            referencedColumnNames: id
+            onDelete: CASCADE

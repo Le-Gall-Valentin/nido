@@ -1,6 +1,5 @@
 package com.nido.api.finance.application.handler;
 
-import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
@@ -56,13 +55,17 @@ class DeleteTransactionHandlerTest {
     }
 
     @Test
-    void deleting_a_transaction_that_belongs_to_a_recurring_series_is_rejected() {
+    void a_member_can_delete_a_past_occurrence_materialized_by_a_recurring_series() {
+        // Deleting one materialized occurrence doesn't affect the series' own cursor
+        // (lastMaterializedDate) or bring the row back — see RecurringTransactionMaterializer.
+        // Canceling the series itself instead is DeleteRecurringSeriesHandler's job.
         Transaction recurring = new Transaction(transactionId, spaceId, "T", new BigDecimal("10.00"), TransactionType.EXPENSE,
             UUID.randomUUID(), LocalDate.of(2026, 1, 1), null, List.of(), UUID.randomUUID(), Instant.now());
         when(transactionRepository.findById(transactionId)).thenReturn(Optional.of(recurring));
 
-        assertThatThrownBy(() -> handler.delete(transactionId, spaceId, membership(SpaceRole.MEMBER)))
-            .isInstanceOf(FinanceException.TransactionLinkedToSeries.class);
+        handler.delete(transactionId, spaceId, membership(SpaceRole.MEMBER));
+
+        verify(transactionRepository).delete(transactionId);
     }
 
     @Test

@@ -6,8 +6,10 @@ import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
 import com.nido.api.finance.domain.model.CreateCategoryCommand;
 import com.nido.api.finance.domain.model.CreateRecurringSeriesCommand;
+import com.nido.api.finance.domain.model.CreateTransactionCommand;
 import com.nido.api.finance.domain.model.RecurrenceInterval;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
+import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceRecurringSeriesJpaRepository;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
@@ -44,6 +46,7 @@ class RecurringTransactionSeriesRepositoryAdapterIT {
     static GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
 
     @Autowired RecurringTransactionSeriesRepositoryAdapter adapter;
+    @Autowired TransactionRepositoryAdapter transactionAdapter;
     @Autowired FinanceRecurringSeriesJpaRepository jpaRepository;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired UserIdentityJpaRepository userJpaRepository;
@@ -133,5 +136,20 @@ class RecurringTransactionSeriesRepositoryAdapterIT {
         adapter.delete(created.id());
 
         assertThat(adapter.findById(created.id())).isEmpty();
+    }
+
+    @Test
+    void delete_detaches_its_past_materialized_transactions_instead_of_deleting_them() {
+        RecurringTransactionSeries created = adapter.create(new CreateRecurringSeriesCommand(
+            spaceId, "Loyer", new BigDecimal("800.00"), TransactionType.EXPENSE, categoryId, aliceId,
+            List.of(), RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null), List.of());
+        Transaction materialized = transactionAdapter.create(new CreateTransactionCommand(
+            spaceId, "Loyer", new BigDecimal("800.00"), TransactionType.EXPENSE, categoryId,
+            LocalDate.of(2026, 1, 1), aliceId, List.of(), created.id()), List.of());
+
+        adapter.delete(created.id());
+
+        Transaction survived = transactionAdapter.findById(materialized.id()).orElseThrow();
+        assertThat(survived.recurringSeriesId()).isNull();
     }
 }

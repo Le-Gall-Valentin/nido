@@ -2,7 +2,7 @@ package com.nido.api.finance.domain.model;
 
 public abstract sealed class FinanceException extends RuntimeException
     permits FinanceException.TransactionNotFound, FinanceException.RecurringSeriesNotFound,
-            FinanceException.TransactionLinkedToSeries, FinanceException.CategoryNotFound, FinanceException.CategoryInUse,
+            FinanceException.CategoryNotFound, FinanceException.CategoryInUse,
             FinanceException.SameSpaceTransfer, FinanceException.InvalidContributionShares, FinanceException.PayerRequired,
             FinanceException.SavingsGoalNotFound, FinanceException.DecryptionFailed {
 
@@ -14,11 +14,6 @@ public abstract sealed class FinanceException extends RuntimeException
 
     public static final class RecurringSeriesNotFound extends FinanceException {
         public RecurringSeriesNotFound() { super("Recurring series not found"); }
-    }
-
-    /** Thrown when deleting a transaction that was materialized by a recurring series directly — delete the series instead. */
-    public static final class TransactionLinkedToSeries extends FinanceException {
-        public TransactionLinkedToSeries() { super("Cannot delete a transaction that belongs to a recurring series; delete the series instead"); }
     }
 
     public static final class CategoryNotFound extends FinanceException {

@@ -28,7 +28,10 @@ public class DeleteRecurringSeriesHandler implements DeleteRecurringSeriesUseCas
         if (!existing.spaceId().equals(spaceId)) {
             throw new FinanceException.RecurringSeriesNotFound();
         }
-        // Cascades to every finance_transactions row this series materialized (fk_finance_transactions_recurring_series, ON DELETE CASCADE).
+        // Detaches (doesn't delete) every finance_transactions row this series already
+        // materialized — fk_finance_transactions_recurring_series is ON DELETE SET NULL, so
+        // past occurrences stay in history as ordinary one-off transactions once the series
+        // that created them is gone; only future occurrences stop.
         seriesRepository.delete(seriesId);
     }
 }
