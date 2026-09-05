@@ -19,7 +19,6 @@ public class FinanceExceptionHandler {
         FinanceErrorResponse response = switch (e) {
             case FinanceException.TransactionNotFound ignored -> new FinanceErrorResponse(404, "Transaction not found.");
             case FinanceException.RecurringSeriesNotFound ignored -> new FinanceErrorResponse(404, "Recurring series not found.");
-            case FinanceException.TransactionLinkedToSeries ignored -> new FinanceErrorResponse(400, "Cannot delete a transaction that belongs to a recurring series; delete the series instead.");
             case FinanceException.CategoryNotFound ignored -> new FinanceErrorResponse(404, "Category not found.");
             case FinanceException.CategoryInUse ignored -> new FinanceErrorResponse(409, "Category is still used by existing transactions.");
             case FinanceException.SameSpaceTransfer ignored -> new FinanceErrorResponse(400, "Cannot transfer a transaction into its own context.");

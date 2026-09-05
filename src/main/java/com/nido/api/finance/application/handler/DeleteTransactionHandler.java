@@ -28,12 +28,6 @@ public class DeleteTransactionHandler implements DeleteTransactionUseCase {
         if (!existing.spaceId().equals(spaceId)) {
             throw new FinanceException.TransactionNotFound();
         }
-        // A transaction materialized by a recurring series is only ever removed by deleting
-        // the series itself (Task 13's DeleteRecurringSeriesHandler), which cascades. See
-        // DeleteTaskHandler for the same one-off-vs-recurring split.
-        if (existing.recurringSeriesId() != null) {
-            throw new FinanceException.TransactionLinkedToSeries();
-        }
         transactionRepository.delete(transactionId);
     }
 }
