@@ -55,6 +55,11 @@
   },
   "balances": {
     "title": "Remboursements entre membres",
+    "subtitle": "Dépenses partagées équitablement · qui doit quoi",
+    "paid_prefix": "a payé {{amount}}",
+    "status_owes": "doit",
+    "status_owed": "à recevoir",
+    "status_settled": "équilibré",
     "settle": "Régler",
     "settle_title": "Régler cette dette",
     "settle_message": "{{from}} doit {{amount}} € à {{to}}.",
