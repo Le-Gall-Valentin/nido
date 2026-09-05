@@ -194,16 +194,16 @@ function FinancePageContent() {
     <div className="mx-auto max-w-[1100px] px-5 py-6 md:px-10 md:py-[34px]">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-fg-0">{t('title')}</h1>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
           <input type="month" value={month} onChange={(e) => setMonth(e.target.value)}
-            className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-2.5 text-sm text-fg-0 outline-none focus:border-accent" />
+            className="w-full rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-2.5 text-sm text-fg-0 outline-none focus:border-accent sm:w-auto" />
           <button type="button" onClick={() => setManagingCategories(true)}
-            className="flex items-center gap-1.5 rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-2.5 text-sm font-semibold text-fg-2 hover:bg-bg-2">
+            className="flex w-full items-center justify-center gap-1.5 rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-2.5 text-sm font-semibold text-fg-2 hover:bg-bg-2 sm:w-auto">
             <Settings2 size={16} /> {t('categories.manage')}
           </button>
           {canWriteHere && (
             <button type="button" onClick={() => setFormState({ mode: 'create' })}
-              className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2.5 text-sm font-semibold text-white">
+              className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-accent px-4 py-2.5 text-sm font-semibold text-white sm:w-auto">
               <Plus size={16} /> {t('new_transaction')}
             </button>
           )}
