@@ -48,6 +48,7 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
   const [recurring, setRecurring] = useState(false)
   const [intervalType, setIntervalType] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'>('MONTHLY')
   const [intervalCount, setIntervalCount] = useState('1')
+  const [endDate, setEndDate] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   function toggleContributor(memberId: string) {
@@ -78,11 +79,15 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
       setError(t('form.shares_invalid'))
       return
     }
+    if (recurring && endDate && endDate < date) {
+      setError(t('recurring_series.end_date_before_start'))
+      return
+    }
     setError(null)
     onSubmit({
       label: label.trim(), amount: numericAmount, type, categoryId, date, payerId: payerId || null,
       contributors: resolved,
-      recurrence: recurring ? { intervalType, intervalCount: Number(intervalCount), anchorDate: date, endDate: null } : null,
+      recurrence: recurring ? { intervalType, intervalCount: Number(intervalCount), anchorDate: date, endDate: endDate || null } : null,
     })
   }
 
@@ -161,19 +166,23 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
               {t('form.recurring_label')}
             </label>
             {recurring && (
-              <div className="flex items-end gap-2 rounded-[10px] bg-bg-2 p-3">
-                <Input label={t('form.recurrence_interval_count_label')} type="number" min={1}
-                  value={intervalCount} className="w-20"
-                  onChange={(e) => setIntervalCount(e.target.value)} />
-                <select
-                  aria-label={t('form.recurrence_interval_type_label')}
-                  value={intervalType} onChange={(e) => setIntervalType(e.target.value as 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY')}
-                  className={SELECT_CLASSNAME}>
-                  <option value="DAILY">{t('form.interval.DAILY')}</option>
-                  <option value="WEEKLY">{t('form.interval.WEEKLY')}</option>
-                  <option value="MONTHLY">{t('form.interval.MONTHLY')}</option>
-                  <option value="YEARLY">{t('form.interval.YEARLY')}</option>
-                </select>
+              <div className="flex flex-col gap-3 rounded-[10px] bg-bg-2 p-3">
+                <div className="flex items-end gap-2">
+                  <Input label={t('form.recurrence_interval_count_label')} type="number" min={1}
+                    value={intervalCount} className="w-20"
+                    onChange={(e) => setIntervalCount(e.target.value)} />
+                  <select
+                    aria-label={t('form.recurrence_interval_type_label')}
+                    value={intervalType} onChange={(e) => setIntervalType(e.target.value as 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY')}
+                    className={SELECT_CLASSNAME}>
+                    <option value="DAILY">{t('form.interval.DAILY')}</option>
+                    <option value="WEEKLY">{t('form.interval.WEEKLY')}</option>
+                    <option value="MONTHLY">{t('form.interval.MONTHLY')}</option>
+                    <option value="YEARLY">{t('form.interval.YEARLY')}</option>
+                  </select>
+                </div>
+                <Input label={t('recurring_series.end_date_label')} type="date" value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)} />
               </div>
             )}
           </>

@@ -29,7 +29,8 @@
     "edit": "Modifier",
     "delete": "Supprimer",
     "edit_title": "Modifier l'opération récurrente",
-    "end_date_label": "Date de fin"
+    "end_date_label": "Date de fin",
+    "end_date_before_start": "La date de fin doit être postérieure à la date de début."
   },
   "categories": {
     "title": "Gérer les catégories",

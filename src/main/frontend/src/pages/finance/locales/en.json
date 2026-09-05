@@ -29,7 +29,8 @@
     "edit": "Edit",
     "delete": "Delete",
     "edit_title": "Edit recurring transaction",
-    "end_date_label": "End date"
+    "end_date_label": "End date",
+    "end_date_before_start": "The end date must be after the start date."
   },
   "categories": {
     "title": "Manage categories",

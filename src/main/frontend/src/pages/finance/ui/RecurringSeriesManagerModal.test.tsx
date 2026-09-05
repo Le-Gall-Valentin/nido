@@ -42,4 +42,17 @@ describe('RecurringSeriesManagerModal', () => {
 
     expect(onDelete).toHaveBeenCalledWith('s1')
   })
+
+  it('shows the end date for a fixed-term series', () => {
+    const loan: RecurringSeries = { ...rent, id: 's2', label: 'Prêt voiture', endDate: '2026-06-01' }
+    render(<RecurringSeriesManagerModal series={[loan]} onEdit={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} />)
+
+    expect(screen.getByText(/2026-06-01/)).toBeDefined()
+  })
+
+  it('does not show an end date for an ongoing series', () => {
+    render(<RecurringSeriesManagerModal series={[rent]} onEdit={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} />)
+
+    expect(screen.queryByText(/recurring_series.end_date_label/)).toBeNull()
+  })
 })

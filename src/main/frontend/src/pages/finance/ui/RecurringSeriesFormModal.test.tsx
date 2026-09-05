@@ -61,4 +61,27 @@ describe('RecurringSeriesFormModal', () => {
     expect(onSubmit).not.toHaveBeenCalled()
     expect(screen.getByText('form.payer_required')).toBeDefined()
   })
+
+  it('submits a fixed-term loan with an end date after the start date', () => {
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit })
+
+    fireEvent.change(screen.getByLabelText('recurring_series.end_date_label'), { target: { value: '2026-06-01' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      recurrence: expect.objectContaining({ endDate: '2026-06-01' }),
+    }))
+  })
+
+  it('rejects an end date that comes before the start date', () => {
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit })
+
+    fireEvent.change(screen.getByLabelText('recurring_series.end_date_label'), { target: { value: '2025-01-01' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText('recurring_series.end_date_before_start')).toBeDefined()
+  })
 })
