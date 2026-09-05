@@ -97,13 +97,17 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
         })}
       </ul>
 
-      <div className="mt-4 flex items-end gap-2 border-t border-border pt-4">
-        <button type="button" aria-label={t('categories.choose_appearance')} onClick={() => setPickerTarget('new')}>
-          <CategoryIconBadge category={{ color: newColor, icon: newIcon }} size={42} />
-        </button>
-        <Input label={t('categories.new_category_label')} srOnlyLabel placeholder={t('categories.new_category_placeholder')}
-          value={newLabel} onChange={(e) => setNewLabel(e.target.value)} className="flex-1" />
-        <Button type="button" onClick={handleCreate}>{t('categories.add')}</Button>
+      <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-end">
+        <div className="flex items-end gap-2 sm:flex-1">
+          <button type="button" aria-label={t('categories.choose_appearance')} onClick={() => setPickerTarget('new')} className="shrink-0">
+            <CategoryIconBadge category={{ color: newColor, icon: newIcon }} size={42} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <Input label={t('categories.new_category_label')} srOnlyLabel placeholder={t('categories.new_category_placeholder')}
+              value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
+          </div>
+        </div>
+        <Button type="button" onClick={handleCreate} className="w-full sm:w-auto">{t('categories.add')}</Button>
       </div>
 
       {pickerTarget && (
