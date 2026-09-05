@@ -164,4 +164,19 @@ describe('FinancePage', () => {
     fireEvent.mouseLeave(screen.getByRole('img', { name: /Alimentation/ }))
     expect(screen.queryByRole('tooltip')).toBeNull()
   })
+
+  it('opens the full transaction detail, including contributors and their share, when clicking a transaction', async () => {
+    renderPage(fakeApi({
+      listTransactions: vi.fn().mockResolvedValue([{
+        id: 't1', label: 'Courses', amount: 100, type: 'EXPENSE', categoryId: 'c1', date: '2026-01-15',
+        payerId: 'u-1', contributors: [{ memberId: 'u-1', shareAmount: 100 }], recurring: false,
+      }]),
+    }))
+
+    await waitFor(() => expect(screen.getByText('Courses')).toBeDefined())
+    fireEvent.click(screen.getByText('Courses'))
+
+    await waitFor(() => expect(screen.getByText('transactions.detail_title')).toBeDefined())
+    expect(screen.getByText('100%')).toBeDefined()
+  })
 })

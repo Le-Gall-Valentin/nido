@@ -20,7 +20,9 @@
     "edit": "Edit",
     "delete": "Delete",
     "move": "Move to…",
-    "recurring": "Recurring"
+    "recurring": "Recurring",
+    "detail_title": "Transaction details",
+    "close": "Close"
   },
   "recurring_series": {
     "manage": "Manage recurring transactions",

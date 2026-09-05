@@ -21,6 +21,7 @@ import {
 import { CategoryIconBadge } from './CategoryIconBadge'
 import { TransactionFormModal, type TransactionFormInput } from './TransactionFormModal'
 import { DeleteTransactionModal } from './DeleteTransactionModal'
+import { TransactionDetailModal } from './TransactionDetailModal'
 import { CategoryManagerModal } from './CategoryManagerModal'
 import { BudgetManagerModal } from './BudgetManagerModal'
 import { RecurringSeriesManagerModal } from './RecurringSeriesManagerModal'
@@ -152,6 +153,7 @@ function FinancePageContent() {
   const [formState, setFormState] = useState<{ mode: 'create' } | { mode: 'edit'; transaction: Transaction } | null>(null)
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
   const [movingTransaction, setMovingTransaction] = useState<Transaction | null>(null)
+  const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null)
   const [managingCategories, setManagingCategories] = useState(false)
   const [managingBudget, setManagingBudget] = useState(false)
   const [managingRecurringSeries, setManagingRecurringSeries] = useState(false)
@@ -352,25 +354,28 @@ function FinancePageContent() {
             const category = categoryById.get(transaction.categoryId)
             const payer = members?.find((m) => m.userId === transaction.payerId)
             return (
-              <li key={transaction.id} className="flex items-center gap-3 py-3">
-                <CategoryIconBadge category={category} />
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1.5 truncate text-sm font-medium text-fg-0">
-                    {transaction.label}
-                    {transaction.recurring && (
-                      <span className="flex items-center gap-0.5 rounded-full bg-bg-2 px-1.5 py-0.5 text-[10.5px] font-semibold text-fg-3">
-                        <Repeat size={10} /> {t('transactions.recurring')}
-                      </span>
-                    )}
-                  </p>
-                  <p className="truncate text-xs text-fg-3">{category?.label} · {transaction.date}</p>
-                </div>
-                {payer && <UserAvatar username={payer.username ?? '?'} role="USER" className="size-6 shrink-0 rounded-full text-[10px]" />}
-                <span className={`shrink-0 text-sm font-semibold ${transaction.type === 'EXPENSE' ? 'text-fg-0' : 'text-status-green'}`}>
-                  {transaction.type === 'EXPENSE' ? '-' : '+'}{formatAmount(transaction.amount)}
-                </span>
+              <li key={transaction.id} className="flex flex-col gap-1.5 py-3 sm:flex-row sm:items-center sm:gap-3">
+                <button type="button" onClick={() => setViewingTransaction(transaction)}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left transition-colors hover:bg-bg-2">
+                  <CategoryIconBadge category={category} />
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1.5 truncate text-sm font-medium text-fg-0">
+                      {transaction.label}
+                      {transaction.recurring && (
+                        <span className="flex items-center gap-0.5 rounded-full bg-bg-2 px-1.5 py-0.5 text-[10.5px] font-semibold text-fg-3">
+                          <Repeat size={10} /> {t('transactions.recurring')}
+                        </span>
+                      )}
+                    </p>
+                    <p className="truncate text-xs text-fg-3">{category?.label} · {transaction.date}</p>
+                  </div>
+                  {payer && <UserAvatar username={payer.username ?? '?'} role="USER" className="size-6 shrink-0 rounded-full text-[10px]" />}
+                  <span className={`shrink-0 text-sm font-semibold ${transaction.type === 'EXPENSE' ? 'text-fg-0' : 'text-status-green'}`}>
+                    {transaction.type === 'EXPENSE' ? '-' : '+'}{formatAmount(transaction.amount)}
+                  </span>
+                </button>
                 {canWriteHere && (
-                  <span className="flex shrink-0 items-center gap-0.5">
+                  <span className="flex shrink-0 items-center justify-end gap-0.5 self-end sm:self-auto">
                     <button type="button" aria-label={t('transactions.edit')} onClick={() => setFormState({ mode: 'edit', transaction })}
                       className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-bg-2 hover:text-fg-1">
                       <Pencil size={15} />
@@ -471,6 +476,15 @@ function FinancePageContent() {
           currentUserId={currentUserId}
           onSubmit={handleFormSubmit}
           onCancel={() => setFormState(null)}
+        />
+      )}
+
+      {viewingTransaction && (
+        <TransactionDetailModal
+          transaction={viewingTransaction}
+          category={categoryById.get(viewingTransaction.categoryId)}
+          members={members ?? []}
+          onClose={() => setViewingTransaction(null)}
         />
       )}
 
