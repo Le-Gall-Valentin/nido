@@ -88,6 +88,17 @@ class CreateTransactionHandlerTest {
     }
 
     @Test
+    void creating_a_split_transaction_with_no_payer_is_rejected() {
+        CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("50.00"),
+            TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), null,
+            List.of(new ContributionInput(aliceId, null), new ContributionInput(bobId, null)), null);
+
+        assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.PayerRequired.class);
+        verify(transactionRepository, never()).create(any(), any());
+    }
+
+    @Test
     void a_viewer_cannot_create_a_transaction() {
         CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("45.30"),
             TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), null, List.of(), null);

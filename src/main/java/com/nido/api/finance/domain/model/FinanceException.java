@@ -3,7 +3,7 @@ package com.nido.api.finance.domain.model;
 public abstract sealed class FinanceException extends RuntimeException
     permits FinanceException.TransactionNotFound, FinanceException.RecurringSeriesNotFound,
             FinanceException.TransactionLinkedToSeries, FinanceException.CategoryNotFound, FinanceException.CategoryInUse,
-            FinanceException.SameSpaceTransfer, FinanceException.InvalidContributionShares,
+            FinanceException.SameSpaceTransfer, FinanceException.InvalidContributionShares, FinanceException.PayerRequired,
             FinanceException.SavingsGoalNotFound, FinanceException.DecryptionFailed {
 
     private FinanceException(String message) { super(message); }
@@ -38,6 +38,11 @@ public abstract sealed class FinanceException extends RuntimeException
     /** Thrown when custom contribution shares don't sum to the transaction's total amount. */
     public static final class InvalidContributionShares extends FinanceException {
         public InvalidContributionShares() { super("Contribution shares must sum to the transaction amount"); }
+    }
+
+    /** Thrown when a transaction or recurring series has contributors (a split) but no payer — someone must have advanced the money being split. */
+    public static final class PayerRequired extends FinanceException {
+        public PayerRequired() { super("A payer is required when the transaction has contributors"); }
     }
 
     public static final class SavingsGoalNotFound extends FinanceException {

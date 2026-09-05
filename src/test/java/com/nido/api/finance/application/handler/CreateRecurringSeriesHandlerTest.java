@@ -93,6 +93,18 @@ class CreateRecurringSeriesHandlerTest {
     }
 
     @Test
+    void creating_a_split_recurring_series_with_no_payer_is_rejected() {
+        CreateRecurringSeriesCommand command = new CreateRecurringSeriesCommand(spaceId, "Loyer", new BigDecimal("800.00"),
+            TransactionType.EXPENSE, UUID.randomUUID(), null,
+            List.of(new ContributionInput(aliceId, null), new ContributionInput(bobId, null)),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null);
+
+        assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.PayerRequired.class);
+        verify(seriesRepository, never()).create(any(), any());
+    }
+
+    @Test
     void a_viewer_cannot_create_a_recurring_series() {
         CreateRecurringSeriesCommand command = new CreateRecurringSeriesCommand(spaceId, "Loyer", new BigDecimal("800.00"),
             TransactionType.EXPENSE, UUID.randomUUID(), null, List.of(), RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null);

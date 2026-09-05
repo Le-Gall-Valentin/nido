@@ -130,6 +130,18 @@ class UpdateRecurringSeriesHandlerTest {
     }
 
     @Test
+    void updating_a_split_recurring_series_with_no_payer_is_rejected() {
+        UpdateRecurringSeriesCommand command = new UpdateRecurringSeriesCommand(UUID.randomUUID(), spaceId, "Loyer modifié",
+            new BigDecimal("850.00"), TransactionType.EXPENSE, UUID.randomUUID(), null,
+            List.of(new ContributionInput(aliceId, null), new ContributionInput(bobId, null)),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null);
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.PayerRequired.class);
+        verify(seriesRepository, never()).update(any(), any());
+    }
+
+    @Test
     void a_viewer_cannot_update_a_recurring_series() {
         UpdateRecurringSeriesCommand command = new UpdateRecurringSeriesCommand(UUID.randomUUID(), spaceId, "Loyer modifié",
             new BigDecimal("850.00"), TransactionType.EXPENSE, UUID.randomUUID(), null, List.of(),

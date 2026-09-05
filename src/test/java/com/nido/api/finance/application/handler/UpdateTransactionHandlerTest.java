@@ -122,6 +122,17 @@ class UpdateTransactionHandlerTest {
     }
 
     @Test
+    void updating_a_split_transaction_with_no_payer_is_rejected() {
+        UpdateTransactionCommand command = new UpdateTransactionCommand(UUID.randomUUID(), spaceId, "T modifié",
+            new BigDecimal("50.00"), TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 2), null,
+            List.of(new ContributionInput(aliceId, null), new ContributionInput(bobId, null)));
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.PayerRequired.class);
+        verify(transactionRepository, never()).update(any(), any());
+    }
+
+    @Test
     void a_viewer_cannot_update_a_transaction() {
         UpdateTransactionCommand command = new UpdateTransactionCommand(UUID.randomUUID(), spaceId, "T modifié",
             new BigDecimal("20.00"), TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 2), null, List.of());

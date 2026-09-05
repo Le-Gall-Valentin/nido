@@ -28,6 +28,9 @@ public class UpdateTransactionHandler implements UpdateTransactionUseCase {
         caller.ensureSameSpace(command.spaceId());
         caller.ensureCanWrite();
         List<Contribution> resolved = ContributionSplitter.resolve(command.amount(), command.contributors());
+        if (!resolved.isEmpty() && command.payerId() == null) {
+            throw new FinanceException.PayerRequired();
+        }
         Transaction existing = transactionRepository.findById(command.transactionId()).orElseThrow(FinanceException.TransactionNotFound::new);
         if (!existing.spaceId().equals(command.spaceId())) {
             throw new FinanceException.TransactionNotFound();

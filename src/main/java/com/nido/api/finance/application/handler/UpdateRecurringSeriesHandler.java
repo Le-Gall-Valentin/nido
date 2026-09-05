@@ -28,6 +28,9 @@ public class UpdateRecurringSeriesHandler implements UpdateRecurringSeriesUseCas
         caller.ensureSameSpace(command.spaceId());
         caller.ensureCanWrite();
         List<Contribution> resolved = ContributionSplitter.resolve(command.amount(), command.contributors());
+        if (!resolved.isEmpty() && command.payerId() == null) {
+            throw new FinanceException.PayerRequired();
+        }
         RecurringTransactionSeries existing = seriesRepository.findById(command.seriesId())
             .orElseThrow(FinanceException.RecurringSeriesNotFound::new);
         if (!existing.spaceId().equals(command.spaceId())) {
