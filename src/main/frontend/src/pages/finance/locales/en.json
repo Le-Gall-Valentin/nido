@@ -22,6 +22,15 @@
     "move": "Move to…",
     "recurring": "Recurring"
   },
+  "recurring_series": {
+    "manage": "Manage recurring transactions",
+    "title": "Manage recurring transactions",
+    "empty": "No recurring transactions.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "edit_title": "Edit recurring transaction",
+    "end_date_label": "End date"
+  },
   "categories": {
     "title": "Manage categories",
     "manage": "Manage categories",
