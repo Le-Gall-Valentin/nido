@@ -63,7 +63,10 @@
     "settle_amount_too_high": "The amount cannot exceed the remaining debt.",
     "settle_date_label": "Settlement date",
     "settle_confirm": "Confirm",
-    "all_settled": "Everyone is settled up."
+    "all_settled": "Everyone is settled up.",
+    "member_payments_empty": "No payments from this member this month.",
+    "history_title": "Settlement history",
+    "history_empty": "No settlements between these two members."
   },
   "savings": {
     "title": "Savings goals",

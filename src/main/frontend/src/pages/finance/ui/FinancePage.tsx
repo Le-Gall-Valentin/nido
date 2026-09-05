@@ -13,7 +13,7 @@ import { UserAvatar } from '@/entities/user'
 import {
   financeApi, FinanceApiProvider, useCategories, useTransactions, useFinanceStats, useProjection,
   useCreateTransaction, useCreateRecurringSeries, useUpdateTransaction, useDeleteTransaction, useMoveTransaction, useSetBudget,
-  useCreateCategory, useUpdateCategory, useDeleteCategory, useBalances, useSettleDebt,
+  useCreateCategory, useUpdateCategory, useDeleteCategory, useBalances, useSettleDebt, useSettlementsBetween,
   useSavingsGoals, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,
   useRecurringSeries, useUpdateRecurringSeries, useDeleteRecurringSeries,
   type IFinanceApi, type Transaction, type SavingsGoal, type Category, type CategoryAmount, type RecurringSeries,
@@ -23,6 +23,8 @@ import { TransactionFormModal, type TransactionFormInput } from './TransactionFo
 import { DeleteTransactionModal } from './DeleteTransactionModal'
 import { TransactionDetailModal } from './TransactionDetailModal'
 import { CategoryTransactionsModal } from './CategoryTransactionsModal'
+import { MemberTransactionsModal } from './MemberTransactionsModal'
+import { SettlementHistoryModal } from './SettlementHistoryModal'
 import { CategoryManagerModal } from './CategoryManagerModal'
 import { BudgetManagerModal } from './BudgetManagerModal'
 import { RecurringSeriesManagerModal } from './RecurringSeriesManagerModal'
@@ -162,8 +164,12 @@ function FinancePageContent() {
   const [deletingSeries, setDeletingSeries] = useState<RecurringSeries | null>(null)
   const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null)
   const [settlingTransfer, setSettlingTransfer] = useState<{ fromMemberId: string; toMemberId: string; amount: number } | null>(null)
+  const [viewingMemberId, setViewingMemberId] = useState<string | null>(null)
+  const [viewingHistoryBetween, setViewingHistoryBetween] = useState<{ memberAId: string; memberBId: string } | null>(null)
   const [goalFormState, setGoalFormState] = useState<{ mode: 'create' } | { mode: 'edit'; goal: SavingsGoal } | null>(null)
   const [contributingGoal, setContributingGoal] = useState<SavingsGoal | null>(null)
+
+  const { data: settlementsBetween } = useSettlementsBetween(spaceId, viewingHistoryBetween?.memberAId, viewingHistoryBetween?.memberBId)
 
   function handleDeleteCategory(categoryId: string) {
     setCategoryDeleteError(null)
@@ -355,12 +361,15 @@ function FinancePageContent() {
           {(balances?.netByMember.length ?? 0) > 0 && (
             <ul className="mb-3 space-y-2">
               {balances?.netByMember.map((row) => (
-                <li key={row.memberId} className="flex items-center gap-2.5 text-sm">
-                  <UserAvatar username={memberLabel(row.memberId)} role="USER" className="size-7 rounded-full text-[11px]" />
-                  <span className="flex-1 text-fg-1">{memberLabel(row.memberId)}</span>
-                  <span className={`font-semibold ${row.net > 0 ? 'text-status-green' : row.net < 0 ? 'text-status-red' : 'text-fg-3'}`}>
-                    {row.net > 0 ? '+' : ''}{formatAmount(row.net)}
-                  </span>
+                <li key={row.memberId}>
+                  <button type="button" onClick={() => setViewingMemberId(row.memberId)}
+                    className="flex w-full items-center gap-2.5 rounded-lg text-left text-sm transition-colors hover:bg-bg-2">
+                    <UserAvatar username={memberLabel(row.memberId)} role="USER" className="size-7 rounded-full text-[11px]" />
+                    <span className="flex-1 text-fg-1">{memberLabel(row.memberId)}</span>
+                    <span className={`font-semibold ${row.net > 0 ? 'text-status-green' : row.net < 0 ? 'text-status-red' : 'text-fg-3'}`}>
+                      {row.net > 0 ? '+' : ''}{formatAmount(row.net)}
+                    </span>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -370,11 +379,15 @@ function FinancePageContent() {
           ) : (
             <ul className="space-y-2">
               {balances?.suggestedTransfers.map((transfer, i) => (
-                <li key={i} className="flex items-center justify-between rounded-[10px] bg-bg-2 px-3 py-2 text-sm">
-                  <span className="text-fg-1">{memberLabel(transfer.fromMemberId)} → {memberLabel(transfer.toMemberId)}: <span className="font-semibold text-fg-0">{formatAmount(transfer.amount)}</span></span>
+                <li key={i} className="flex items-center justify-between gap-2 rounded-[10px] bg-bg-2 px-3 py-2 text-sm">
+                  <button type="button"
+                    onClick={() => setViewingHistoryBetween({ memberAId: transfer.fromMemberId, memberBId: transfer.toMemberId })}
+                    className="min-w-0 flex-1 truncate rounded text-left text-fg-1 hover:underline">
+                    {memberLabel(transfer.fromMemberId)} → {memberLabel(transfer.toMemberId)}: <span className="font-semibold text-fg-0">{formatAmount(transfer.amount)}</span>
+                  </button>
                   {(transfer.fromMemberId === currentUserId || transfer.toMemberId === currentUserId) && (
                     <button type="button" onClick={() => setSettlingTransfer(transfer)}
-                      className="rounded-[8px] bg-accent px-2.5 py-1 text-xs font-semibold text-white">{t('balances.settle')}</button>
+                      className="shrink-0 rounded-[8px] bg-accent px-2.5 py-1 text-xs font-semibold text-white">{t('balances.settle')}</button>
                   )}
                 </li>
               ))}
@@ -586,6 +599,23 @@ function FinancePageContent() {
             { fromMemberId: settlingTransfer.fromMemberId, toMemberId: settlingTransfer.toMemberId, amount, date },
             { onSuccess: () => setSettlingTransfer(null) }
           )}
+        />
+      )}
+
+      {viewingMemberId && (
+        <MemberTransactionsModal
+          memberLabel={memberLabel(viewingMemberId)}
+          transactions={(transactions ?? []).filter((transaction) => transaction.payerId === viewingMemberId)}
+          onSelectTransaction={setViewingTransaction}
+          onClose={() => setViewingMemberId(null)}
+        />
+      )}
+
+      {viewingHistoryBetween && (
+        <SettlementHistoryModal
+          settlements={settlementsBetween ?? []}
+          memberLabel={memberLabel}
+          onClose={() => setViewingHistoryBetween(null)}
         />
       )}
 
