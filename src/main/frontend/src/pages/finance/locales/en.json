@@ -1,0 +1,52 @@
+{
+  "title": "Finances",
+  "new_transaction": "New transaction",
+  "loading": "Loading…",
+  "error": { "load_failed": "Could not load finances." },
+  "type": { "EXPENSE": "Expense", "INCOME": "Income" },
+  "stats": { "balance": "Balance", "spent": "Spent this month", "income": "Income this month", "remaining_budget": "Left to spend" },
+  "breakdown": { "title": "Spending breakdown" },
+  "budget": {
+    "title": "Budget vs actual",
+    "edit": "Edit",
+    "over": "Over by {{amount}}",
+    "remaining": "{{amount}} left"
+  },
+  "transactions": {
+    "title": "Transactions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "move": "Move to…",
+    "recurring": "Recurring"
+  },
+  "form": {
+    "create_title": "New transaction",
+    "edit_title": "Edit transaction",
+    "label_label": "Label",
+    "label_required": "The label is required.",
+    "amount_label": "Amount",
+    "amount_required": "The amount must be greater than zero.",
+    "category_label": "Category",
+    "category_required": "The category is required.",
+    "date_label": "Date",
+    "payer_label": "Paid by",
+    "payer_none": "Nobody",
+    "contributors_label": "Contributors",
+    "customize_shares_label": "Customize shares",
+    "shares_invalid": "Shares must sum to the total amount.",
+    "recurring_label": "Recurring transaction",
+    "recurrence_interval_type_label": "Frequency",
+    "recurrence_interval_count_label": "Every",
+    "recurrence_anchor_date_label": "Starting on",
+    "interval": { "DAILY": "day(s)", "WEEKLY": "week(s)", "MONTHLY": "month(s)" },
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "delete_confirm": {
+    "title": "Delete \"{{label}}\"?",
+    "message": "This action is permanent.",
+    "cancel": "Cancel",
+    "confirm": "Delete",
+    "error": "Something went wrong. Try again."
+  }
+}
