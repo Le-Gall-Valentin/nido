@@ -1,0 +1,52 @@
+{
+  "title": "Finances",
+  "new_transaction": "Nouvelle opération",
+  "loading": "Chargement…",
+  "error": { "load_failed": "Impossible de charger les finances." },
+  "type": { "EXPENSE": "Dépense", "INCOME": "Revenu" },
+  "stats": { "balance": "Solde", "spent": "Dépensé ce mois", "income": "Entrées ce mois", "remaining_budget": "Reste à dépenser" },
+  "breakdown": { "title": "Répartition des dépenses" },
+  "budget": {
+    "title": "Budget vs réel",
+    "edit": "Modifier",
+    "over": "Dépassé de {{amount}}",
+    "remaining": "{{amount}} restants"
+  },
+  "transactions": {
+    "title": "Opérations",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "move": "Déplacer vers…",
+    "recurring": "Récurrente"
+  },
+  "form": {
+    "create_title": "Nouvelle opération",
+    "edit_title": "Modifier l'opération",
+    "label_label": "Libellé",
+    "label_required": "Le libellé est obligatoire.",
+    "amount_label": "Montant",
+    "amount_required": "Le montant doit être supérieur à zéro.",
+    "category_label": "Catégorie",
+    "category_required": "La catégorie est obligatoire.",
+    "date_label": "Date",
+    "payer_label": "Payé par",
+    "payer_none": "Personne",
+    "contributors_label": "Contributeurs",
+    "customize_shares_label": "Personnaliser les parts",
+    "shares_invalid": "La somme des parts doit être égale au montant total.",
+    "recurring_label": "Opération récurrente",
+    "recurrence_interval_type_label": "Fréquence",
+    "recurrence_interval_count_label": "Tous les",
+    "recurrence_anchor_date_label": "À partir du",
+    "interval": { "DAILY": "jour(s)", "WEEKLY": "semaine(s)", "MONTHLY": "mois" },
+    "cancel": "Annuler",
+    "save": "Enregistrer"
+  },
+  "delete_confirm": {
+    "title": "Supprimer « {{label}} » ?",
+    "message": "Cette action est définitive.",
+    "cancel": "Annuler",
+    "confirm": "Supprimer",
+    "error": "Une erreur est survenue. Réessayez."
+  }
+}
