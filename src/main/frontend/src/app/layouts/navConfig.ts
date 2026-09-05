@@ -24,14 +24,16 @@ export interface NavItemConfig {
 // placeholder entries for future modules (Dashboard, Organisation,
 // Documents).
 //
-// Order follows the mockup's NAV_DEFS, filtered down to what actually
-// exists: Organisation, then Cuisine, then Finances, then Membres &
-// groupes, then Administration, then Paramètres. The mockup has exactly
-// one "Membres & groupes" entry, no separate per-space "Membres" item:
-// /spaces already lets you drill into a group to reach its members page
-// (SpaceListSection → SpaceMembersPage), the same "click a group card to
-// open its detail" flow the mockup uses.
+// Order: Finances first (the user's explicit priority — money is the
+// module they want front and center, above everything else), then
+// Organisation, then Cuisine, then Membres & groupes, then Administration,
+// then Paramètres. The mockup has exactly one "Membres & groupes" entry,
+// no separate per-space "Membres" item: /spaces already lets you drill
+// into a group to reach its members page (SpaceListSection →
+// SpaceMembersPage), the same "click a group card to open its detail"
+// flow the mockup uses.
 export const NAV_CONFIG: NavItemConfig[] = [
+  { id: 'nav:finance', to: (spaceId) => (spaceId ? ROUTES.spaceFinance(spaceId) : undefined), icon: Wallet, labelKey: 'nav.finance' },
   {
     id: 'nav:organisation',
     to: (spaceId) => (spaceId ? ROUTES.spaceOrganisationCourses(spaceId) : undefined),
@@ -52,7 +54,6 @@ export const NAV_CONFIG: NavItemConfig[] = [
       { id: 'nav:kitchen:menu', to: (spaceId) => (spaceId ? ROUTES.spaceKitchenMenu(spaceId) : undefined), icon: Calendar, labelKey: 'nav.kitchen_menu' },
     ],
   },
-  { id: 'nav:finance', to: (spaceId) => (spaceId ? ROUTES.spaceFinance(spaceId) : undefined), icon: Wallet, labelKey: 'nav.finance' },
   { id: 'nav:spaces', to: () => ROUTES.SPACES, icon: Users, labelKey: 'nav.groups' },
   { id: 'nav:users', adminOnly: true, to: () => ROUTES.ADMIN_USERS, icon: Shield, labelKey: 'nav.administration' },
   {
