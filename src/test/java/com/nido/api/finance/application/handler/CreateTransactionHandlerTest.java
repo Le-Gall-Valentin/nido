@@ -1,11 +1,13 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
 import com.nido.api.finance.domain.model.CreateTransactionCommand;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
+import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -20,11 +22,13 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,14 +37,17 @@ import static org.mockito.Mockito.when;
 class CreateTransactionHandlerTest {
 
     @Mock TransactionRepository transactionRepository;
+    @Mock CategoryRepository categoryRepository;
     private CreateTransactionHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
     private final UUID bobId = UUID.randomUUID();
+    private final Category category = new Category(UUID.randomUUID(), spaceId, "Alimentation", "#f59e0b", "Utensils", true);
 
     @BeforeEach
     void setUp() {
-        handler = new CreateTransactionHandler(transactionRepository);
+        handler = new CreateTransactionHandler(transactionRepository, categoryRepository);
+        lenient().when(categoryRepository.findById(any())).thenReturn(Optional.of(category));
     }
 
     private SpaceMembership membership(SpaceRole role) {
@@ -105,6 +112,29 @@ class CreateTransactionHandlerTest {
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);
+    }
+
+    @Test
+    void creating_a_transaction_with_a_category_that_does_not_exist_is_rejected() {
+        CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("45.30"),
+            TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), null, List.of(), null);
+        when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.CategoryNotFound.class);
+        verify(transactionRepository, never()).create(any(), any());
+    }
+
+    @Test
+    void creating_a_transaction_with_a_category_from_another_space_is_rejected() {
+        CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("45.30"),
+            TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), null, List.of(), null);
+        Category foreignCategory = new Category(command.categoryId(), UUID.randomUUID(), "Alimentation", "#f59e0b", "Utensils", true);
+        when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(foreignCategory));
+
+        assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.CategoryNotFound.class);
+        verify(transactionRepository, never()).create(any(), any());
     }
 
     @Test

@@ -1,11 +1,13 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
+import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -26,6 +28,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,14 +37,17 @@ import static org.mockito.Mockito.when;
 class UpdateTransactionHandlerTest {
 
     @Mock TransactionRepository transactionRepository;
+    @Mock CategoryRepository categoryRepository;
     private UpdateTransactionHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
     private final UUID bobId = UUID.randomUUID();
+    private final Category category = new Category(UUID.randomUUID(), spaceId, "Alimentation", "#f59e0b", "Utensils", true);
 
     @BeforeEach
     void setUp() {
-        handler = new UpdateTransactionHandler(transactionRepository);
+        handler = new UpdateTransactionHandler(transactionRepository, categoryRepository);
+        lenient().when(categoryRepository.findById(any())).thenReturn(Optional.of(category));
     }
 
     private SpaceMembership membership(SpaceRole role) {
@@ -129,6 +135,29 @@ class UpdateTransactionHandlerTest {
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(FinanceException.PayerRequired.class);
+        verify(transactionRepository, never()).update(any(), any());
+    }
+
+    @Test
+    void updating_a_transaction_with_a_category_that_does_not_exist_is_rejected() {
+        UpdateTransactionCommand command = new UpdateTransactionCommand(UUID.randomUUID(), spaceId, "T modifié",
+            new BigDecimal("20.00"), TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 2), null, List.of());
+        when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.CategoryNotFound.class);
+        verify(transactionRepository, never()).update(any(), any());
+    }
+
+    @Test
+    void updating_a_transaction_with_a_category_from_another_space_is_rejected() {
+        UpdateTransactionCommand command = new UpdateTransactionCommand(UUID.randomUUID(), spaceId, "T modifié",
+            new BigDecimal("20.00"), TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 2), null, List.of());
+        Category foreignCategory = new Category(command.categoryId(), UUID.randomUUID(), "Alimentation", "#f59e0b", "Utensils", true);
+        when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(foreignCategory));
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.CategoryNotFound.class);
         verify(transactionRepository, never()).update(any(), any());
     }
 
