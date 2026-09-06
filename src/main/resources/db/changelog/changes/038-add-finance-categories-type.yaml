@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 038-add-finance-categories-type
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: finance_categories
+                columnName: type
+      changes:
+        - addColumn:
+            tableName: finance_categories
+            columns:
+              - column:
+                  name: type
+                  type: VARCHAR(10)
+        - sql:
+            # Every existing category becomes EXPENSE except the seeded "Revenu" default —
+            # the only one ever created as INCOME. Default categories store their label in
+            # clear text (see FinanceCategoryEntity), so no decryption is needed here.
+            sql: UPDATE finance_categories SET type = 'INCOME' WHERE is_default = true AND label = 'Revenu'
+            splitStatements: false
+        - sql:
+            sql: UPDATE finance_categories SET type = 'EXPENSE' WHERE type IS NULL
+            splitStatements: false
+        - addNotNullConstraint:
+            tableName: finance_categories
+            columnName: type
+            columnDataType: VARCHAR(10)
+        - sql:
+            sql: ALTER TABLE finance_categories ADD CONSTRAINT chk_finance_categories_type CHECK (type IN ('EXPENSE', 'INCOME'))
+            splitStatements: false
+      rollback:
+        - dropColumn:
+            tableName: finance_categories
+            columnName: type
