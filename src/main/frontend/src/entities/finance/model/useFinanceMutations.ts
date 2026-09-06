@@ -1,6 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useFinanceApi } from './financeApiContext'
 import type { ContributionInput, RecurrenceInput, TransactionType } from './types'
+import type { ICategoriesApi } from './ICategoriesApi'
+import type { IBudgetsApi } from './IBudgetsApi'
+import type { ITransactionsApi } from './ITransactionsApi'
+import type { IRecurringSeriesApi } from './IRecurringSeriesApi'
+import type { IBalancesApi } from './IBalancesApi'
+import type { ISavingsGoalsApi } from './ISavingsGoalsApi'
 
 // Every mutation invalidates the whole ['finance', spaceId] branch rather than tracking
 // exact dependent keys one by one — transactions/budgets/stats/projection/balances are
@@ -11,7 +17,7 @@ function invalidateSpace(queryClient: ReturnType<typeof useQueryClient>, spaceId
 }
 
 export function useCreateCategory(spaceId: string) {
-  const api = useFinanceApi()
+  const api: ICategoriesApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { label: string; color: string; icon: string }) => api.createCategory(spaceId, input.label, input.color, input.icon),
@@ -20,7 +26,7 @@ export function useCreateCategory(spaceId: string) {
 }
 
 export function useUpdateCategory(spaceId: string) {
-  const api = useFinanceApi()
+  const api: ICategoriesApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { categoryId: string; label: string; color: string; icon: string }) =>
@@ -30,7 +36,7 @@ export function useUpdateCategory(spaceId: string) {
 }
 
 export function useDeleteCategory(spaceId: string) {
-  const api = useFinanceApi()
+  const api: ICategoriesApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (categoryId: string) => api.deleteCategory(spaceId, categoryId),
@@ -39,7 +45,7 @@ export function useDeleteCategory(spaceId: string) {
 }
 
 export function useSetBudget(spaceId: string) {
-  const api = useFinanceApi()
+  const api: IBudgetsApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { categoryId: string; monthlyLimit: number }) => api.setBudget(spaceId, input.categoryId, input.monthlyLimit),
@@ -48,7 +54,7 @@ export function useSetBudget(spaceId: string) {
 }
 
 export function useCreateTransaction(spaceId: string) {
-  const api = useFinanceApi()
+  const api: ITransactionsApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: {
@@ -60,7 +66,7 @@ export function useCreateTransaction(spaceId: string) {
 }
 
 export function useUpdateTransaction(spaceId: string) {
-  const api = useFinanceApi()
+  const api: ITransactionsApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: {
@@ -73,7 +79,7 @@ export function useUpdateTransaction(spaceId: string) {
 }
 
 export function useDeleteTransaction(spaceId: string) {
-  const api = useFinanceApi()
+  const api: ITransactionsApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (transactionId: string) => api.deleteTransaction(spaceId, transactionId),
@@ -82,7 +88,7 @@ export function useDeleteTransaction(spaceId: string) {
 }
 
 export function useCreateRecurringSeries(spaceId: string) {
-  const api = useFinanceApi()
+  const api: IRecurringSeriesApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: {
@@ -94,7 +100,7 @@ export function useCreateRecurringSeries(spaceId: string) {
 }
 
 export function useUpdateRecurringSeries(spaceId: string) {
-  const api = useFinanceApi()
+  const api: IRecurringSeriesApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: {
@@ -107,7 +113,7 @@ export function useUpdateRecurringSeries(spaceId: string) {
 }
 
 export function useDeleteRecurringSeries(spaceId: string) {
-  const api = useFinanceApi()
+  const api: IRecurringSeriesApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (seriesId: string) => api.deleteRecurringSeries(spaceId, seriesId),
@@ -116,7 +122,7 @@ export function useDeleteRecurringSeries(spaceId: string) {
 }
 
 export function useSettleDebt(spaceId: string) {
-  const api = useFinanceApi()
+  const api: IBalancesApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { fromMemberId: string; toMemberId: string; amount: number; date: string }) =>
@@ -126,7 +132,7 @@ export function useSettleDebt(spaceId: string) {
 }
 
 export function useCreateSavingsGoal(spaceId: string) {
-  const api = useFinanceApi()
+  const api: ISavingsGoalsApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { name: string; targetAmount: number; targetDate: string | null; color: string; glyph: string }) =>
@@ -136,7 +142,7 @@ export function useCreateSavingsGoal(spaceId: string) {
 }
 
 export function useUpdateSavingsGoal(spaceId: string) {
-  const api = useFinanceApi()
+  const api: ISavingsGoalsApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { goalId: string; name: string; targetAmount: number; targetDate: string | null; color: string; glyph: string }) =>
@@ -146,7 +152,7 @@ export function useUpdateSavingsGoal(spaceId: string) {
 }
 
 export function useDeleteSavingsGoal(spaceId: string) {
-  const api = useFinanceApi()
+  const api: ISavingsGoalsApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (goalId: string) => api.deleteSavingsGoal(spaceId, goalId),
@@ -155,7 +161,7 @@ export function useDeleteSavingsGoal(spaceId: string) {
 }
 
 export function useAddSavingsContribution(spaceId: string) {
-  const api = useFinanceApi()
+  const api: ISavingsGoalsApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { goalId: string; memberId: string; amount: number; date: string }) =>

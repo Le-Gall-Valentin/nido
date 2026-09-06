@@ -1,5 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { useFinanceApi } from './financeApiContext'
+import type { ICategoriesApi } from './ICategoriesApi'
+import type { IBudgetsApi } from './IBudgetsApi'
+import type { ITransactionsApi } from './ITransactionsApi'
+import type { IRecurringSeriesApi } from './IRecurringSeriesApi'
+import type { IFinanceStatsApi } from './IFinanceStatsApi'
+import type { IBalancesApi } from './IBalancesApi'
+import type { ISavingsGoalsApi } from './ISavingsGoalsApi'
 
 export function categoriesKey(spaceId: string) {
   return ['finance', spaceId, 'categories'] as const
@@ -30,7 +37,7 @@ export function savingsGoalsKey(spaceId: string) {
 }
 
 export function useCategories(spaceId: string | undefined) {
-  const api = useFinanceApi()
+  const api: ICategoriesApi = useFinanceApi()
   return useQuery({
     queryKey: categoriesKey(spaceId ?? ''),
     queryFn: () => api.listCategories(spaceId as string),
@@ -39,7 +46,7 @@ export function useCategories(spaceId: string | undefined) {
 }
 
 export function useBudgets(spaceId: string | undefined) {
-  const api = useFinanceApi()
+  const api: IBudgetsApi = useFinanceApi()
   return useQuery({
     queryKey: budgetsKey(spaceId ?? ''),
     queryFn: () => api.listBudgets(spaceId as string),
@@ -48,7 +55,7 @@ export function useBudgets(spaceId: string | undefined) {
 }
 
 export function useTransactions(spaceId: string | undefined, month: string) {
-  const api = useFinanceApi()
+  const api: ITransactionsApi = useFinanceApi()
   return useQuery({
     queryKey: transactionsKey(spaceId ?? '', month),
     queryFn: () => api.listTransactions(spaceId as string, month),
@@ -57,7 +64,7 @@ export function useTransactions(spaceId: string | undefined, month: string) {
 }
 
 export function useRecurringSeries(spaceId: string | undefined) {
-  const api = useFinanceApi()
+  const api: IRecurringSeriesApi = useFinanceApi()
   return useQuery({
     queryKey: recurringSeriesKey(spaceId ?? ''),
     queryFn: () => api.listRecurringSeries(spaceId as string),
@@ -66,7 +73,7 @@ export function useRecurringSeries(spaceId: string | undefined) {
 }
 
 export function useFinanceStats(spaceId: string | undefined, month: string) {
-  const api = useFinanceApi()
+  const api: IFinanceStatsApi = useFinanceApi()
   return useQuery({
     queryKey: financeStatsKey(spaceId ?? '', month),
     queryFn: () => api.getStats(spaceId as string, month),
@@ -75,7 +82,7 @@ export function useFinanceStats(spaceId: string | undefined, month: string) {
 }
 
 export function useProjection(spaceId: string | undefined, month: string) {
-  const api = useFinanceApi()
+  const api: IFinanceStatsApi = useFinanceApi()
   return useQuery({
     queryKey: projectionKey(spaceId ?? '', month),
     queryFn: () => api.getProjection(spaceId as string, month),
@@ -84,7 +91,7 @@ export function useProjection(spaceId: string | undefined, month: string) {
 }
 
 export function useBalances(spaceId: string | undefined) {
-  const api = useFinanceApi()
+  const api: IBalancesApi = useFinanceApi()
   return useQuery({
     queryKey: balancesKey(spaceId ?? ''),
     queryFn: () => api.getBalances(spaceId as string),
@@ -93,7 +100,7 @@ export function useBalances(spaceId: string | undefined) {
 }
 
 export function useSettlementsBetween(spaceId: string | undefined, memberAId: string | undefined, memberBId: string | undefined) {
-  const api = useFinanceApi()
+  const api: IBalancesApi = useFinanceApi()
   return useQuery({
     queryKey: settlementsBetweenKey(spaceId ?? '', memberAId ?? '', memberBId ?? ''),
     queryFn: () => api.listSettlements(spaceId as string, memberAId as string, memberBId as string),
@@ -102,7 +109,7 @@ export function useSettlementsBetween(spaceId: string | undefined, memberAId: st
 }
 
 export function useSavingsGoals(spaceId: string | undefined) {
-  const api = useFinanceApi()
+  const api: ISavingsGoalsApi = useFinanceApi()
   return useQuery({
     queryKey: savingsGoalsKey(spaceId ?? ''),
     queryFn: () => api.listSavingsGoals(spaceId as string),
