@@ -10,7 +10,7 @@ describe('financeApi', () => {
   beforeEach(() => vi.resetAllMocks())
 
   it('listCategories fetches the categories for a space', async () => {
-    const categories = [{ id: '1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true }]
+    const categories = [{ id: '1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true, type: 'EXPENSE' }]
     vi.mocked(client.get).mockResolvedValueOnce({ data: categories })
 
     const result = await financeApi.listCategories('space-1')
@@ -19,18 +19,18 @@ describe('financeApi', () => {
     expect(result).toEqual(categories)
   })
 
-  it('createCategory posts label, color and icon', async () => {
-    const category = { id: '1', label: 'Loisirs', color: '#3b82f6', icon: 'Gamepad2', isDefault: false }
+  it('createCategory posts label, color, icon and type', async () => {
+    const category = { id: '1', label: 'Loisirs', color: '#3b82f6', icon: 'Gamepad2', isDefault: false, type: 'EXPENSE' }
     vi.mocked(client.post).mockResolvedValueOnce({ data: category })
 
-    const result = await financeApi.createCategory('space-1', 'Loisirs', '#3b82f6', 'Gamepad2')
+    const result = await financeApi.createCategory('space-1', 'Loisirs', '#3b82f6', 'Gamepad2', 'EXPENSE')
 
-    expect(client.post).toHaveBeenCalledWith('/spaces/space-1/finance/categories', { label: 'Loisirs', color: '#3b82f6', icon: 'Gamepad2' })
+    expect(client.post).toHaveBeenCalledWith('/spaces/space-1/finance/categories', { label: 'Loisirs', color: '#3b82f6', icon: 'Gamepad2', type: 'EXPENSE' })
     expect(result).toEqual(category)
   })
 
   it('updateCategory patches the category with its label, color and icon', async () => {
-    const category = { id: '1', label: 'Loisirs', color: '#3b82f6', icon: 'Gamepad2', isDefault: false }
+    const category = { id: '1', label: 'Loisirs', color: '#3b82f6', icon: 'Gamepad2', isDefault: false, type: 'EXPENSE' }
     vi.mocked(client.patch).mockResolvedValueOnce({ data: category })
 
     const result = await financeApi.updateCategory('space-1', '1', 'Loisirs', '#3b82f6', 'Gamepad2')

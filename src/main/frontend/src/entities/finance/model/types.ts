@@ -7,6 +7,7 @@ export interface Category {
   color: string
   icon: string
   isDefault: boolean
+  type: TransactionType
 }
 
 export interface Budget {
