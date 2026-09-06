@@ -52,7 +52,7 @@ describe('BudgetManagerModal', () => {
     expect(onSave).toHaveBeenCalledWith('c2', 150)
   })
 
-  it('does not save a blank budget value', () => {
+  it('does not save a blank budget value, and shows an error instead of closing silently', () => {
     const onSave = vi.fn()
     render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onClose={vi.fn()} />)
 
@@ -60,5 +60,34 @@ describe('BudgetManagerModal', () => {
     fireEvent.click(screen.getByText('form.save'))
 
     expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByText('form.amount_required')).toBeDefined()
+    expect(screen.getByRole('spinbutton')).toBeDefined()
+  })
+
+  it('does not save a negative budget value, and shows an error instead of closing silently', () => {
+    const onSave = vi.fn()
+    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByText('budget.edit'))
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '-10' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByText('form.amount_required')).toBeDefined()
+  })
+
+  it('clears the error once a valid value is saved', () => {
+    const onSave = vi.fn()
+    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByText('budget.set'))
+    fireEvent.click(screen.getByText('form.save'))
+    expect(screen.getByText('form.amount_required')).toBeDefined()
+
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '150' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSave).toHaveBeenCalledWith('c2', 150)
+    expect(screen.queryByText('form.amount_required')).toBeNull()
   })
 })
