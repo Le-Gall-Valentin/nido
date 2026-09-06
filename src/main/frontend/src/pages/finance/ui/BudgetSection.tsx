@@ -27,7 +27,11 @@ export function BudgetSection({ budgetVsActual, categoryById, canWrite, onManage
       <ul className="space-y-4">
         {budgetVsActual.map((line) => {
           const category = categoryById.get(line.categoryId)
-          const ratio = line.monthlyLimit > 0 ? line.spent / line.monthlyLimit : 0
+          // A budget of exactly 0€ is a deliberate "spend nothing here" cap, not "no budget" —
+          // any spending against it is an immediate, full overrun (a category with truly no
+          // budget never reaches this list at all, since budgetVsActual only ever contains
+          // categories that have one explicitly set).
+          const ratio = line.monthlyLimit > 0 ? line.spent / line.monthlyLimit : (line.spent > 0 ? Infinity : 0)
           const percent = Math.min(100, ratio * 100)
           const over = ratio > 1
           const warning = ratio >= 0.8 && !over
