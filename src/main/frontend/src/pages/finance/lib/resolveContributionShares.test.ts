@@ -36,6 +36,14 @@ describe('resolveContributionShares', () => {
     expect(result).toBeNull()
   })
 
+  it('rejects a half-a-cent-or-more discrepancy, matching the backend\'s exact-to-the-cent comparison', () => {
+    // A looser float epsilon would have silently accepted this; the backend compares
+    // BigDecimal amounts rescaled to 2 decimals exactly, so this must be rejected too.
+    const result = resolveContributionShares(100, ['alice', 'bob'], { alice: 70.005, bob: 30 })
+
+    expect(result).toBeNull()
+  })
+
   it('returns null when a contributor is missing from the custom shares', () => {
     const result = resolveContributionShares(100, ['alice', 'bob'], { alice: 100 })
 
