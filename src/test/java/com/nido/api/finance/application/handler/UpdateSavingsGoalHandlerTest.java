@@ -1,7 +1,9 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.domain.model.FinanceException;
+import com.nido.api.finance.domain.model.SavingsContribution;
 import com.nido.api.finance.domain.model.SavingsGoal;
+import com.nido.api.finance.domain.model.SavingsGoalDetail;
 import com.nido.api.finance.domain.model.UpdateSavingsGoalCommand;
 import com.nido.api.finance.domain.port.out.SavingsGoalRepository;
 import com.nido.api.space.domain.model.SpaceException;
@@ -15,6 +17,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -51,10 +55,25 @@ class UpdateSavingsGoalHandlerTest {
         when(savingsGoalRepository.findById(command.goalId())).thenReturn(Optional.of(existingInSameSpace(command.goalId())));
         SavingsGoal updated = new SavingsGoal(command.goalId(), spaceId, "Nouveau nom", new BigDecimal("2500.00"), null, "#5c7a58", "🎯");
         when(savingsGoalRepository.update(command)).thenReturn(updated);
+        when(savingsGoalRepository.findContributionsByGoalId(command.goalId())).thenReturn(List.of());
 
-        SavingsGoal result = handler.update(command, membership(SpaceRole.MEMBER));
+        SavingsGoalDetail result = handler.update(command, membership(SpaceRole.MEMBER));
 
-        assertThat(result).isEqualTo(updated);
+        assertThat(result.goal()).isEqualTo(updated);
+    }
+
+    @Test
+    void updating_a_savings_goal_returns_its_actual_existing_contributions_instead_of_an_empty_list() {
+        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(UUID.randomUUID(), spaceId, "Nouveau nom", new BigDecimal("2500.00"), null, "#5c7a58", "🎯");
+        when(savingsGoalRepository.findById(command.goalId())).thenReturn(Optional.of(existingInSameSpace(command.goalId())));
+        SavingsGoal updated = new SavingsGoal(command.goalId(), spaceId, "Nouveau nom", new BigDecimal("2500.00"), null, "#5c7a58", "🎯");
+        when(savingsGoalRepository.update(command)).thenReturn(updated);
+        SavingsContribution contribution = new SavingsContribution(UUID.randomUUID(), command.goalId(), UUID.randomUUID(), new BigDecimal("100.00"), LocalDate.of(2026, 1, 5));
+        when(savingsGoalRepository.findContributionsByGoalId(command.goalId())).thenReturn(List.of(contribution));
+
+        SavingsGoalDetail result = handler.update(command, membership(SpaceRole.MEMBER));
+
+        assertThat(result.contributions()).containsExactly(contribution);
     }
 
     @Test
