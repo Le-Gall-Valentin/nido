@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: 035-add-finance-transactions-recurring-series-date-unique
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - indexExists:
+                indexName: uq_finance_transactions_recurring_series_date
+      changes:
+        # Safety net against concurrent materialization of the same recurring occurrence
+        # (e.g. two requests reading the page at once) — recurring_series_id is NULL for
+        # one-off transactions, and Postgres never treats two NULLs as equal, so this only
+        # constrains rows that actually belong to a series.
+        - addUniqueConstraint:
+            tableName: finance_transactions
+            columnNames: recurring_series_id, date
+            constraintName: uq_finance_transactions_recurring_series_date
+      rollback:
+        - dropUniqueConstraint:
+            tableName: finance_transactions
+            constraintName: uq_finance_transactions_recurring_series_date

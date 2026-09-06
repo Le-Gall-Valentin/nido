@@ -68,6 +68,18 @@ class SpaceRepositoryAdapterIT {
     }
 
     @Test
+    void createPersonal_also_generates_a_unique_encryption_salt() {
+        Space aliceSpace = adapter.createPersonal(alice);
+        Space bobSpace = adapter.createPersonal(bob);
+
+        String aliceSalt = spaceJpaRepository.findById(aliceSpace.id()).orElseThrow().getEncryptionSalt();
+        String bobSalt = spaceJpaRepository.findById(bobSpace.id()).orElseThrow().getEncryptionSalt();
+
+        assertThat(aliceSalt).isNotBlank().hasSize(32).matches("[0-9a-f]+");
+        assertThat(bobSalt).isNotBlank().hasSize(32).matches("[0-9a-f]+").isNotEqualTo(aliceSalt);
+    }
+
+    @Test
     void a_user_cannot_have_two_personal_spaces() {
         adapter.createPersonal(alice);
 

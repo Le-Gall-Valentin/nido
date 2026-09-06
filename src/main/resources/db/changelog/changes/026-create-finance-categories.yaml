@@ -1,0 +1,70 @@
+databaseChangeLog:
+  - changeSet:
+      id: 026-create-finance-categories
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: finance_categories
+      changes:
+        - createTable:
+            tableName: finance_categories
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: label
+                  type: VARCHAR(60)
+              - column:
+                  name: label_encrypted
+                  type: TEXT
+              - column:
+                  name: color
+                  type: VARCHAR(7)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: icon
+                  type: VARCHAR(40)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: is_default
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE finance_categories ADD CONSTRAINT chk_finance_categories_label_xor CHECK ((is_default AND label IS NOT NULL AND label_encrypted IS NULL) OR (NOT is_default AND label IS NULL AND label_encrypted IS NOT NULL))
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE finance_categories ADD CONSTRAINT chk_finance_categories_color_format CHECK (color ~ '^#[0-9a-f]{6}$')
+            splitStatements: false
+        - createIndex:
+            tableName: finance_categories
+            indexName: idx_finance_categories_space_id
+            columns:
+              - column:
+                  name: space_id
+        - addForeignKeyConstraint:
+            baseTableName: finance_categories
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_finance_categories_space
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: finance_categories
+            cascadeConstraints: true

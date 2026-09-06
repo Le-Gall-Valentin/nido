@@ -14,6 +14,7 @@
     "organisation": "Organisation",
     "organisation_courses": "Shopping list",
     "organisation_tasks": "Tasks",
+    "finance": "Finances",
     "pending_invitations": "Pending invitations",
     "open_tasks_one": "{{count}} open task",
     "open_tasks_other": "{{count}} open tasks"
