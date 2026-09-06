@@ -34,6 +34,12 @@ public class ShoppingCategoryRepositoryAdapter implements ShoppingCategoryReposi
 
     @Override
     @Transactional
+    public void lockForSeeding(UUID spaceId) {
+        categories.lockForSeeding("shopping-category-seed|" + spaceId);
+    }
+
+    @Override
+    @Transactional
     public ShoppingCategory create(UUID spaceId, String name, boolean fallback) {
         ShoppingCategoryEntity e = new ShoppingCategoryEntity();
         e.setSpaceId(spaceId);

@@ -1,0 +1,76 @@
+databaseChangeLog:
+  - changeSet:
+      id: 032-create-finance-settlement-records
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: finance_settlement_records
+      changes:
+        - createTable:
+            tableName: finance_settlement_records
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: from_user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: to_user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount_encrypted
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: settled_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: finance_settlement_records
+            indexName: idx_finance_settlement_records_space_id
+            columns:
+              - column:
+                  name: space_id
+        - addForeignKeyConstraint:
+            baseTableName: finance_settlement_records
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_finance_settlement_records_space
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: finance_settlement_records
+            baseColumnNames: from_user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_finance_settlement_records_from_user
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: finance_settlement_records
+            baseColumnNames: to_user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_finance_settlement_records_to_user
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: finance_settlement_records
+            cascadeConstraints: true

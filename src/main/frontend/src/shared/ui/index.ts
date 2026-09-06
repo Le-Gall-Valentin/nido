@@ -1,5 +1,6 @@
 export { Alert } from './Alert'
 export { Button } from './Button'
+export { ConfirmDeleteModal } from './ConfirmDeleteModal'
 export { Dialog } from './Dialog'
 export { Input } from './Input'
 export { NidoMark } from './NidoMark'
