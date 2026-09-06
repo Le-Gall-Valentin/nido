@@ -92,7 +92,7 @@ class FinanceControllerIT {
     void a_viewer_cannot_create_a_category() throws Exception {
         mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/categories")
                 .cookie(accessTokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"label\":\"Animaux\",\"color\":\"#a3e635\",\"icon\":\"PawPrint\"}"))
+                .content("{\"label\":\"Animaux\",\"color\":\"#a3e635\",\"icon\":\"PawPrint\",\"type\":\"EXPENSE\"}"))
             .andExpect(status().isForbidden());
     }
 
@@ -100,7 +100,7 @@ class FinanceControllerIT {
     void a_member_can_create_a_transaction_and_set_a_budget_for_its_category() throws Exception {
         String createdCategory = mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/categories")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"label\":\"Animaux\",\"color\":\"#a3e635\",\"icon\":\"PawPrint\"}"))
+                .content("{\"label\":\"Animaux\",\"color\":\"#a3e635\",\"icon\":\"PawPrint\",\"type\":\"EXPENSE\"}"))
             .andExpect(status().isCreated())
             .andReturn().getResponse().getContentAsString();
         String categoryId = objectMapper.readTree(createdCategory).get("id").asText();
