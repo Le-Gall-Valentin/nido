@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { CategoryManagerModal } from './CategoryManagerModal'
 import type { Category } from '@/entities/finance'
 
@@ -34,6 +34,39 @@ describe('CategoryManagerModal', () => {
     fireEvent.click(screen.getByText('categories.add'))
 
     expect(onCreate).toHaveBeenCalledWith('Sport', expect.any(String), expect.any(String))
+  })
+
+  it('clears the new-category field once the create request succeeds', async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined)
+    render(<CategoryManagerModal categories={categories} onCreate={onCreate} onUpdate={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} deleteError={null} />)
+
+    fireEvent.change(screen.getByLabelText('categories.new_category_label'), { target: { value: 'Sport' } })
+    fireEvent.click(screen.getByText('categories.add'))
+
+    await waitFor(() => expect((screen.getByLabelText('categories.new_category_label') as HTMLInputElement).value).toBe(''))
+  })
+
+  it('keeps what the user typed in the new-category field when the create request fails', async () => {
+    const onCreate = vi.fn().mockRejectedValue(new Error('boom'))
+    render(<CategoryManagerModal categories={categories} onCreate={onCreate} onUpdate={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} deleteError={null} />)
+
+    fireEvent.change(screen.getByLabelText('categories.new_category_label'), { target: { value: 'Sport' } })
+    fireEvent.click(screen.getByText('categories.add'))
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalled())
+    expect((screen.getByLabelText('categories.new_category_label') as HTMLInputElement).value).toBe('Sport')
+  })
+
+  it('keeps edit mode open with the user\'s edited value when the update request fails', async () => {
+    const onUpdate = vi.fn().mockRejectedValue(new Error('boom'))
+    render(<CategoryManagerModal categories={categories} onCreate={vi.fn()} onUpdate={onUpdate} onDelete={vi.fn()} onClose={vi.fn()} deleteError={null} />)
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'categories.edit' })[0])
+    fireEvent.click(screen.getByText('form.save'))
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled())
+    // Still in edit mode (not reverted to the read-only row) with the edited value intact.
+    expect(screen.getByDisplayValue('Alimentation')).toBeDefined()
   })
 
   it('requests deletion of a category', () => {

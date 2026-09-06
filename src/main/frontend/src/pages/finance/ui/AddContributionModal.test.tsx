@@ -36,6 +36,19 @@ describe('AddContributionModal', () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ amount: 50 }))
   })
 
+  it('allows a contribution equal to a remaining value with float rounding error, without a false-positive rejection', () => {
+    const onSubmit = vi.fn()
+    // 2000.30 - 1000.10 === 1000.1999999999999 in JS float arithmetic — a raw ">"
+    // comparison would wrongly reject typing exactly "1000.2" here.
+    const remaining = 2000.30 - 1000.10
+    render(<AddContributionModal goalName="Vacances" remaining={remaining} members={members} onSubmit={onSubmit} onCancel={vi.fn()} isPending={false} />)
+
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '1000.2' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ amount: 1000.2 }))
+  })
+
   it('rejects a contribution that would exceed the goal target', () => {
     const onSubmit = vi.fn()
     render(<AddContributionModal goalName="Vacances" remaining={50} members={members} onSubmit={onSubmit} onCancel={vi.fn()} isPending={false} />)

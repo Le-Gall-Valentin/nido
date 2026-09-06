@@ -8,8 +8,8 @@ import { IconPickerModal } from './IconPickerModal'
 
 interface CategoryManagerModalProps {
   categories: Category[]
-  onCreate: (label: string, color: string, icon: string) => void
-  onUpdate: (categoryId: string, label: string, color: string, icon: string) => void
+  onCreate: (label: string, color: string, icon: string) => Promise<unknown>
+  onUpdate: (categoryId: string, label: string, color: string, icon: string) => Promise<unknown>
   onDelete: (categoryId: string) => void
   onClose: () => void
   deleteError: string | null
@@ -38,17 +38,27 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
     setEditIcon(category.icon)
   }
 
-  function saveEdit() {
-    if (editingId) onUpdate(editingId, editLabel, editColor, editIcon)
-    setEditingId(null)
+  async function saveEdit() {
+    if (!editingId) return
+    try {
+      await onUpdate(editingId, editLabel, editColor, editIcon)
+      setEditingId(null)
+    } catch {
+      // Keep edit mode open with what the user typed — the caller's submitError banner
+      // already surfaces the failure, so losing their edit here would compound it.
+    }
   }
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!newLabel.trim()) return
-    onCreate(newLabel.trim(), newColor, newIcon)
-    setNewLabel('')
-    setNewColor(DEFAULT_NEW_COLOR)
-    setNewIcon(DEFAULT_NEW_ICON)
+    try {
+      await onCreate(newLabel.trim(), newColor, newIcon)
+      setNewLabel('')
+      setNewColor(DEFAULT_NEW_COLOR)
+      setNewIcon(DEFAULT_NEW_ICON)
+    } catch {
+      // Keep what the user typed — see saveEdit above for the same reasoning.
+    }
   }
 
   function handleAppearanceConfirm(icon: string, color: string) {
@@ -79,7 +89,7 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
                 </button>
                 <input value={editLabel} onChange={(e) => setEditLabel(e.target.value)}
                   className="flex-1 rounded-[8px] border-[1.5px] border-border bg-bg-1 px-2.5 py-1.5 text-sm text-fg-0 outline-none focus:border-accent" />
-                <button type="button" onClick={saveEdit} className="text-sm font-semibold text-accent">{t('form.save')}</button>
+                <button type="button" onClick={() => { void saveEdit() }} className="text-sm font-semibold text-accent">{t('form.save')}</button>
               </li>
             )
           }
@@ -110,7 +120,7 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
               value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
           </div>
         </div>
-        <Button type="button" onClick={handleCreate} className="w-full sm:w-auto">{t('categories.add')}</Button>
+        <Button type="button" onClick={() => { void handleCreate() }} className="w-full sm:w-auto">{t('categories.add')}</Button>
       </div>
 
       {pickerTarget && (

@@ -281,8 +281,8 @@ function FinancePageContent() {
       {managingCategories && (
         <CategoryManagerModal
           categories={categories ?? []}
-          onCreate={(label, color, icon) => createCategory.mutate({ label, color, icon })}
-          onUpdate={(categoryId, label, color, icon) => updateCategory.mutate({ categoryId, label, color, icon })}
+          onCreate={(label, color, icon) => createCategory.mutateAsync({ label, color, icon })}
+          onUpdate={(categoryId, label, color, icon) => updateCategory.mutateAsync({ categoryId, label, color, icon })}
           onDelete={handleDeleteCategory}
           onClose={() => {
             setManagingCategories(false)
