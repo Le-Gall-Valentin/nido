@@ -33,7 +33,7 @@ describe('SavingsGoalsSection', () => {
         onCreate={vi.fn()} onEdit={vi.fn()} onDelete={vi.fn()} onContribute={vi.fn()} onView={onView} />
     )
 
-    fireEvent.click(screen.getByText('Vacances'))
+    fireEvent.click(screen.getByRole('button', { name: 'savings.view_details:{"name":"Vacances"}' }))
 
     expect(onView).toHaveBeenCalledWith(vacances)
   })
