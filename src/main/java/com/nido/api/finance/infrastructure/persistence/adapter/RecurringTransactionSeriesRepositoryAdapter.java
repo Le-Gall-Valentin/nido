@@ -77,8 +77,8 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
         e.setAnchorDate(command.anchorDate());
         e.setEndDate(command.endDate());
         FinanceRecurringSeriesEntity saved = series.saveAndFlush(e);
-        saveContributors(saved.getId(), encryptor, resolvedContributors);
-        return findById(saved.getId()).orElseThrow(FinanceException.RecurringSeriesNotFound::new);
+        List<FinanceRecurringSeriesContributorEntity> savedContributors = saveContributors(saved.getId(), encryptor, resolvedContributors);
+        return toDomain(saved, savedContributors);
     }
 
     @Override
@@ -95,11 +95,11 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
         e.setIntervalCount(command.intervalCount());
         e.setAnchorDate(command.anchorDate());
         e.setEndDate(command.endDate());
-        series.saveAndFlush(e);
+        FinanceRecurringSeriesEntity saved = series.saveAndFlush(e);
         contributors.deleteBySeriesId(e.getId());
         contributors.flush();
-        saveContributors(e.getId(), encryptor, resolvedContributors);
-        return findById(e.getId()).orElseThrow(FinanceException.RecurringSeriesNotFound::new);
+        List<FinanceRecurringSeriesContributorEntity> savedContributors = saveContributors(e.getId(), encryptor, resolvedContributors);
+        return toDomain(saved, savedContributors);
     }
 
     @Override
@@ -113,8 +113,8 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
     public RecurringTransactionSeries advanceLastMaterializedDate(UUID seriesId, LocalDate newDate) {
         FinanceRecurringSeriesEntity e = series.findById(seriesId).orElseThrow(FinanceException.RecurringSeriesNotFound::new);
         e.setLastMaterializedDate(newDate);
-        series.saveAndFlush(e);
-        return findById(seriesId).orElseThrow(FinanceException.RecurringSeriesNotFound::new);
+        FinanceRecurringSeriesEntity saved = series.saveAndFlush(e);
+        return toDomain(saved, contributors.findBySeriesId(seriesId));
     }
 
     @Override
@@ -123,15 +123,15 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
         series.lockMaterialization("finance-materialize|" + spaceId);
     }
 
-    private void saveContributors(UUID seriesId, TextEncryptor encryptor, List<Contribution> resolved) {
-        for (Contribution c : resolved) {
+    private List<FinanceRecurringSeriesContributorEntity> saveContributors(UUID seriesId, TextEncryptor encryptor, List<Contribution> resolved) {
+        List<FinanceRecurringSeriesContributorEntity> entities = resolved.stream().map(c -> {
             FinanceRecurringSeriesContributorEntity ce = new FinanceRecurringSeriesContributorEntity();
             ce.setSeriesId(seriesId);
             ce.setUserId(c.memberId());
             ce.setShareAmountEncrypted(encryptor.encrypt(c.shareAmount().toPlainString()));
-            contributors.save(ce);
-        }
-        contributors.flush();
+            return ce;
+        }).toList();
+        return contributors.saveAllAndFlush(entities);
     }
 
     private RecurringTransactionSeries toDomain(FinanceRecurringSeriesEntity e, List<FinanceRecurringSeriesContributorEntity> contributorEntities) {
