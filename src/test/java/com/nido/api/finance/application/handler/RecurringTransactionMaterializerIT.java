@@ -73,7 +73,7 @@ class RecurringTransactionMaterializerIT {
         space.setGlyph("🏡");
         spaceId = spaceJpaRepository.saveAndFlush(space).getId();
 
-        Category category = categoryAdapter.create(new CreateCategoryCommand(spaceId, "Abonnements", "#f59e0b", "Repeat"), true);
+        Category category = categoryAdapter.create(new CreateCategoryCommand(spaceId, "Abonnements", "#f59e0b", "Repeat", TransactionType.EXPENSE), true);
         categoryId = category.id();
     }
 
