@@ -6,6 +6,7 @@ import com.nido.api.finance.domain.model.ContributionSplitter;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.model.UpdateRecurringSeriesCommand;
+import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -17,9 +18,11 @@ import java.util.List;
 public class UpdateRecurringSeriesHandler implements UpdateRecurringSeriesUseCase {
 
     private final RecurringTransactionSeriesRepository seriesRepository;
+    private final CategoryRepository categoryRepository;
 
-    public UpdateRecurringSeriesHandler(RecurringTransactionSeriesRepository seriesRepository) {
+    public UpdateRecurringSeriesHandler(RecurringTransactionSeriesRepository seriesRepository, CategoryRepository categoryRepository) {
         this.seriesRepository = seriesRepository;
+        this.categoryRepository = categoryRepository;
     }
 
     @Override
@@ -27,6 +30,9 @@ public class UpdateRecurringSeriesHandler implements UpdateRecurringSeriesUseCas
     public RecurringTransactionSeries update(UpdateRecurringSeriesCommand command, SpaceMembership caller) {
         caller.ensureSameSpace(command.spaceId());
         caller.ensureCanWrite();
+        categoryRepository.findById(command.categoryId())
+            .filter(category -> category.spaceId().equals(command.spaceId()))
+            .orElseThrow(FinanceException.CategoryNotFound::new);
         List<Contribution> resolved = ContributionSplitter.resolve(command.amount(), command.contributors());
         if (!resolved.isEmpty() && command.payerId() == null) {
             throw new FinanceException.PayerRequired();
