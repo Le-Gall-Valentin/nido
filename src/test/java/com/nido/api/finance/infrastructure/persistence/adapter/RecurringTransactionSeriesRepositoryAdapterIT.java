@@ -73,7 +73,7 @@ class RecurringTransactionSeriesRepositoryAdapterIT {
         bobId = saveUser("bob");
         // finance_recurring_transaction_series.category_id has a foreign key onto
         // finance_categories(id) — a real category row is required.
-        Category category = categoryAdapter.create(new CreateCategoryCommand(spaceId, "Logement", "#f59e0b", "Home"), true);
+        Category category = categoryAdapter.create(new CreateCategoryCommand(spaceId, "Logement", "#f59e0b", "Home", TransactionType.EXPENSE), true);
         categoryId = category.id();
     }
 

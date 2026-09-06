@@ -2,6 +2,7 @@ package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.FinanceException;
+import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.model.UpdateCategoryCommand;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.space.domain.model.SpaceException;
@@ -40,8 +41,8 @@ class UpdateCategoryHandlerTest {
     @Test
     void a_member_can_rename_a_category() {
         UpdateCategoryCommand command = new UpdateCategoryCommand(UUID.randomUUID(), spaceId, "Nouveau nom", "#22c55e", "Heart");
-        Category existing = new Category(command.categoryId(), spaceId, "Ancien nom", "#22c55e", "Heart", false);
-        Category updated = new Category(command.categoryId(), spaceId, "Nouveau nom", "#22c55e", "Heart", false);
+        Category existing = new Category(command.categoryId(), spaceId, "Ancien nom", "#22c55e", "Heart", false, TransactionType.EXPENSE);
+        Category updated = new Category(command.categoryId(), spaceId, "Nouveau nom", "#22c55e", "Heart", false, TransactionType.EXPENSE);
         when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(existing));
         when(categoryRepository.update(command)).thenReturn(updated);
 
@@ -63,7 +64,7 @@ class UpdateCategoryHandlerTest {
         UUID categoryId = UUID.randomUUID();
         UUID otherSpaceId = UUID.randomUUID();
         UpdateCategoryCommand command = new UpdateCategoryCommand(categoryId, spaceId, "Nouveau nom", "#22c55e", "Heart");
-        Category existing = new Category(categoryId, otherSpaceId, "Ancien nom", "#22c55e", "Heart", false);
+        Category existing = new Category(categoryId, otherSpaceId, "Ancien nom", "#22c55e", "Heart", false, TransactionType.EXPENSE);
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))

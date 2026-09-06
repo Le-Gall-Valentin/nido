@@ -71,7 +71,7 @@ class TransactionRepositoryAdapterIT {
         bobId = saveUser("bob");
         // finance_transactions.category_id has a foreign key onto finance_categories(id) —
         // a real category row is required.
-        Category category = categoryAdapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils"), true);
+        Category category = categoryAdapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils", TransactionType.EXPENSE), true);
         categoryId = category.id();
     }
 

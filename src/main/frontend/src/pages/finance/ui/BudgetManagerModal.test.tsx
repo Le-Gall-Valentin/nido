@@ -8,8 +8,9 @@ vi.mock('react-i18next', () => ({
 }))
 
 const CATEGORIES: Category[] = [
-  { id: 'c1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true },
-  { id: 'c2', label: 'Loisirs', color: '#3b82f6', icon: 'Gamepad2', isDefault: false },
+  { id: 'c1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true, type: 'EXPENSE' },
+  { id: 'c2', label: 'Loisirs', color: '#3b82f6', icon: 'Gamepad2', isDefault: false, type: 'EXPENSE' },
+  { id: 'c3', label: 'Revenu', color: '#22c55e', icon: 'Wallet', isDefault: true, type: 'INCOME' },
 ]
 
 const BUDGET_LINES: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 300, spent: 120 }]
@@ -29,6 +30,12 @@ describe('BudgetManagerModal', () => {
     expect(screen.getByLabelText('budget.edit')).toBeDefined()
     expect(screen.getByLabelText('budget.remove')).toBeDefined()
     expect(screen.getByText('budget.set')).toBeDefined()
+  })
+
+  it('never lists an income category, even one with a budget line', () => {
+    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} />)
+
+    expect(screen.queryByText('Revenu')).toBeNull()
   })
 
   it('removes the budget of a category that already has one, without asking to confirm', () => {

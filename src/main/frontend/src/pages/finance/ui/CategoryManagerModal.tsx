@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Pencil, Trash2 } from 'lucide-react'
 import { Dialog, Button, Input } from '@/shared/ui'
-import type { Category } from '@/entities/finance'
+import type { Category, TransactionType } from '@/entities/finance'
 import { CategoryIconBadge } from './CategoryIconBadge'
 import { IconPickerModal } from './IconPickerModal'
 
 interface CategoryManagerModalProps {
   categories: Category[]
-  onCreate: (label: string, color: string, icon: string) => Promise<unknown>
+  onCreate: (label: string, color: string, icon: string, type: TransactionType) => Promise<unknown>
   onUpdate: (categoryId: string, label: string, color: string, icon: string) => Promise<unknown>
   onDelete: (categoryId: string) => void
   onClose: () => void
@@ -25,6 +25,7 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
   const [newLabel, setNewLabel] = useState('')
   const [newColor, setNewColor] = useState(DEFAULT_NEW_COLOR)
   const [newIcon, setNewIcon] = useState(DEFAULT_NEW_ICON)
+  const [newType, setNewType] = useState<TransactionType>('EXPENSE')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editLabel, setEditLabel] = useState('')
   const [editColor, setEditColor] = useState('')
@@ -52,10 +53,11 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
   async function handleCreate() {
     if (!newLabel.trim()) return
     try {
-      await onCreate(newLabel.trim(), newColor, newIcon)
+      await onCreate(newLabel.trim(), newColor, newIcon, newType)
       setNewLabel('')
       setNewColor(DEFAULT_NEW_COLOR)
       setNewIcon(DEFAULT_NEW_ICON)
+      setNewType('EXPENSE')
     } catch {
       // Keep what the user typed — see saveEdit above for the same reasoning.
     }
@@ -110,17 +112,29 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
         })}
       </ul>
 
-      <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-end">
-        <div className="flex items-end gap-2 sm:flex-1">
-          <button type="button" aria-label={t('categories.choose_appearance')} onClick={() => setPickerTarget('new')} className="shrink-0">
-            <CategoryIconBadge category={{ color: newColor, icon: newIcon }} size={42} />
+      <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+        <div className="flex gap-1 rounded-[11px] bg-bg-2 p-1">
+          <button type="button" onClick={() => setNewType('EXPENSE')} aria-pressed={newType === 'EXPENSE'}
+            className={`flex-1 rounded-[8px] px-3 py-2 text-sm font-semibold transition-colors ${newType === 'EXPENSE' ? 'bg-bg-1 text-fg-0 shadow-sm' : 'text-fg-3'}`}>
+            {t('type.EXPENSE')}
           </button>
-          <div className="min-w-0 flex-1">
-            <Input label={t('categories.new_category_label')} srOnlyLabel placeholder={t('categories.new_category_placeholder')}
-              value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
-          </div>
+          <button type="button" onClick={() => setNewType('INCOME')} aria-pressed={newType === 'INCOME'}
+            className={`flex-1 rounded-[8px] px-3 py-2 text-sm font-semibold transition-colors ${newType === 'INCOME' ? 'bg-bg-1 text-fg-0 shadow-sm' : 'text-fg-3'}`}>
+            {t('type.INCOME')}
+          </button>
         </div>
-        <Button type="button" onClick={() => { void handleCreate() }} className="w-full sm:w-auto">{t('categories.add')}</Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex items-end gap-2 sm:flex-1">
+            <button type="button" aria-label={t('categories.choose_appearance')} onClick={() => setPickerTarget('new')} className="shrink-0">
+              <CategoryIconBadge category={{ color: newColor, icon: newIcon }} size={42} />
+            </button>
+            <div className="min-w-0 flex-1">
+              <Input label={t('categories.new_category_label')} srOnlyLabel placeholder={t('categories.new_category_placeholder')}
+                value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
+            </div>
+          </div>
+          <Button type="button" onClick={() => { void handleCreate() }} className="w-full sm:w-auto">{t('categories.add')}</Button>
+        </div>
       </div>
 
       {pickerTarget && (

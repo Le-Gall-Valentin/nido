@@ -47,7 +47,7 @@ class UpdateRecurringSeriesHandlerTest {
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
     private final UUID bobId = UUID.randomUUID();
-    private final Category category = new Category(UUID.randomUUID(), spaceId, "Alimentation", "#f59e0b", "Utensils", true);
+    private final Category category = new Category(UUID.randomUUID(), spaceId, "Alimentation", "#f59e0b", "Utensils", true, TransactionType.EXPENSE);
 
     @BeforeEach
     void setUp() {
@@ -179,11 +179,24 @@ class UpdateRecurringSeriesHandlerTest {
         UpdateRecurringSeriesCommand command = new UpdateRecurringSeriesCommand(UUID.randomUUID(), spaceId, "Loyer modifié",
             new BigDecimal("850.00"), TransactionType.EXPENSE, UUID.randomUUID(), null, List.of(),
             RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null);
-        Category foreignCategory = new Category(command.categoryId(), UUID.randomUUID(), "Alimentation", "#f59e0b", "Utensils", true);
+        Category foreignCategory = new Category(command.categoryId(), UUID.randomUUID(), "Alimentation", "#f59e0b", "Utensils", true, TransactionType.EXPENSE);
         when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(foreignCategory));
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(FinanceException.CategoryNotFound.class);
+        verify(seriesRepository, never()).update(any(), any());
+    }
+
+    @Test
+    void updating_a_series_with_a_category_of_the_wrong_type_is_rejected() {
+        UpdateRecurringSeriesCommand command = new UpdateRecurringSeriesCommand(UUID.randomUUID(), spaceId, "Loyer modifié",
+            new BigDecimal("850.00"), TransactionType.EXPENSE, UUID.randomUUID(), null, List.of(),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null);
+        Category incomeCategory = new Category(command.categoryId(), spaceId, "Revenu", "#22c55e", "Wallet", true, TransactionType.INCOME);
+        when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(incomeCategory));
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.CategoryTypeMismatch.class);
         verify(seriesRepository, never()).update(any(), any());
     }
 

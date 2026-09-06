@@ -46,7 +46,7 @@ class CreateTransactionHandlerTest {
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
     private final UUID bobId = UUID.randomUUID();
-    private final Category category = new Category(UUID.randomUUID(), spaceId, "Alimentation", "#f59e0b", "Utensils", true);
+    private final Category category = new Category(UUID.randomUUID(), spaceId, "Alimentation", "#f59e0b", "Utensils", true, TransactionType.EXPENSE);
 
     @BeforeEach
     void setUp() {
@@ -133,11 +133,23 @@ class CreateTransactionHandlerTest {
     void creating_a_transaction_with_a_category_from_another_space_is_rejected() {
         CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("45.30"),
             TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), null, List.of(), null);
-        Category foreignCategory = new Category(command.categoryId(), UUID.randomUUID(), "Alimentation", "#f59e0b", "Utensils", true);
+        Category foreignCategory = new Category(command.categoryId(), UUID.randomUUID(), "Alimentation", "#f59e0b", "Utensils", true, TransactionType.EXPENSE);
         when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(foreignCategory));
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(FinanceException.CategoryNotFound.class);
+        verify(transactionRepository, never()).create(any(), any());
+    }
+
+    @Test
+    void creating_a_transaction_with_a_category_of_the_wrong_type_is_rejected() {
+        CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("45.30"),
+            TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), null, List.of(), null);
+        Category incomeCategory = new Category(command.categoryId(), spaceId, "Revenu", "#22c55e", "Wallet", true, TransactionType.INCOME);
+        when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(incomeCategory));
+
+        assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.CategoryTypeMismatch.class);
         verify(transactionRepository, never()).create(any(), any());
     }
 

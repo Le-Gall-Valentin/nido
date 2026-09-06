@@ -3,6 +3,7 @@ package com.nido.api.finance.infrastructure.persistence.adapter;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.CreateCategoryCommand;
+import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.model.UpdateCategoryCommand;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceCategoryJpaRepository;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
@@ -63,8 +64,18 @@ class CategoryRepositoryAdapterIT {
     }
 
     @Test
+    void a_category_stores_and_returns_its_type() {
+        Category expense = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils", TransactionType.EXPENSE), true);
+        Category income = adapter.create(new CreateCategoryCommand(spaceId, "Revenu", "#22c55e", "Wallet", TransactionType.INCOME), true);
+
+        assertThat(expense.type()).isEqualTo(TransactionType.EXPENSE);
+        assertThat(income.type()).isEqualTo(TransactionType.INCOME);
+        assertThat(adapter.findById(expense.id()).orElseThrow().type()).isEqualTo(TransactionType.EXPENSE);
+    }
+
+    @Test
     void a_default_category_stores_its_label_in_clear_text() {
-        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils"), true);
+        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils", TransactionType.EXPENSE), true);
 
         assertThat(created.label()).isEqualTo("Alimentation");
         assertThat(created.isDefault()).isTrue();
@@ -74,7 +85,7 @@ class CategoryRepositoryAdapterIT {
 
     @Test
     void a_custom_category_stores_its_label_encrypted_at_rest() {
-        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Ma catégorie perso", "#ec4899", "Star"), false);
+        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Ma catégorie perso", "#ec4899", "Star", TransactionType.EXPENSE), false);
 
         assertThat(created.label()).isEqualTo("Ma catégorie perso");
         assertThat(created.isDefault()).isFalse();
@@ -85,7 +96,7 @@ class CategoryRepositoryAdapterIT {
 
     @Test
     void update_re_encrypts_the_new_label_for_a_custom_category() {
-        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Ancien nom", "#ec4899", "Star"), false);
+        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Ancien nom", "#ec4899", "Star", TransactionType.EXPENSE), false);
 
         Category updated = adapter.update(new UpdateCategoryCommand(created.id(), spaceId, "Nouveau nom", "#22c55e", "Heart"));
 
@@ -98,7 +109,7 @@ class CategoryRepositoryAdapterIT {
     void existsBySpaceId_and_findBySpaceId_reflect_what_was_created() {
         assertThat(adapter.existsBySpaceId(spaceId)).isFalse();
 
-        adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils"), true);
+        adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils", TransactionType.EXPENSE), true);
 
         assertThat(adapter.existsBySpaceId(spaceId)).isTrue();
         assertThat(adapter.findBySpaceId(spaceId)).hasSize(1);
@@ -106,14 +117,14 @@ class CategoryRepositoryAdapterIT {
 
     @Test
     void isReferencedByTransactions_is_false_when_nothing_references_the_category() {
-        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils"), true);
+        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils", TransactionType.EXPENSE), true);
 
         assertThat(adapter.isReferencedByTransactions(created.id())).isFalse();
     }
 
     @Test
     void isReferencedByTransactions_is_true_once_a_transaction_uses_the_category() {
-        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils"), true);
+        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils", TransactionType.EXPENSE), true);
         transactionAdapter.create(new com.nido.api.finance.domain.model.CreateTransactionCommand(
             spaceId, "Courses", new java.math.BigDecimal("10.00"), com.nido.api.finance.domain.model.TransactionType.EXPENSE,
             created.id(), java.time.LocalDate.of(2026, 1, 1), null, java.util.List.of(), null), java.util.List.of());
@@ -123,7 +134,7 @@ class CategoryRepositoryAdapterIT {
 
     @Test
     void delete_removes_the_category() {
-        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils"), true);
+        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils", TransactionType.EXPENSE), true);
 
         adapter.delete(created.id());
 
