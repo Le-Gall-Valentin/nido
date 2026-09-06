@@ -7,7 +7,7 @@ public abstract sealed class FinanceException extends RuntimeException
             FinanceException.InvalidEndDate, FinanceException.NotAPartyToSettlement,
             FinanceException.SavingsGoalNotFound, FinanceException.InvalidSavingsGoalAppearance,
             FinanceException.ContributionExceedsGoalTarget, FinanceException.DecryptionFailed,
-            FinanceException.MemberNotInSpace {
+            FinanceException.MemberNotInSpace, FinanceException.SettlementExceedsDebt {
 
     private FinanceException(String message) { super(message); }
 
@@ -70,5 +70,10 @@ public abstract sealed class FinanceException extends RuntimeException
     /** Thrown when a submitted memberId (payer, contributor, settlement party, savings contributor) isn't actually a member of the space. */
     public static final class MemberNotInSpace extends FinanceException {
         public MemberNotInSpace() { super("Member is not part of this space"); }
+    }
+
+    /** Thrown when a settlement amount exceeds what the debtor actually owes the creditor, computed from every shared transaction and settlement so far. */
+    public static final class SettlementExceedsDebt extends FinanceException {
+        public SettlementExceedsDebt() { super("This settlement would exceed the amount actually owed"); }
     }
 }

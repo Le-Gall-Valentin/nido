@@ -2,22 +2,33 @@ package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.SettleDebtUseCase;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
+import com.nido.api.finance.domain.model.BalanceCalculator;
+import com.nido.api.finance.domain.model.Balances;
 import com.nido.api.finance.domain.model.CreateSettlementCommand;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SettlementRecord;
+import com.nido.api.finance.domain.model.SuggestedTransfer;
 import com.nido.api.finance.domain.port.out.SettlementRecordRepository;
+import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.UUID;
 
 @ApplicationService
 public class SettleDebtHandler implements SettleDebtUseCase {
 
     private final SettlementRecordRepository settlementRecordRepository;
+    private final TransactionRepository transactionRepository;
     private final SpaceMemberValidator spaceMemberValidator;
 
-    public SettleDebtHandler(SettlementRecordRepository settlementRecordRepository, SpaceMemberValidator spaceMemberValidator) {
+    public SettleDebtHandler(
+            SettlementRecordRepository settlementRecordRepository, TransactionRepository transactionRepository,
+            SpaceMemberValidator spaceMemberValidator) {
         this.settlementRecordRepository = settlementRecordRepository;
+        this.transactionRepository = transactionRepository;
         this.spaceMemberValidator = spaceMemberValidator;
     }
 
@@ -34,6 +45,23 @@ public class SettleDebtHandler implements SettleDebtUseCase {
         }
         spaceMemberValidator.ensureMember(command.spaceId(), command.fromMemberId());
         spaceMemberValidator.ensureMember(command.spaceId(), command.toMemberId());
+        // The real debt, recomputed server-side rather than trusted from the client — the
+        // frontend already caps this the same way, but only as a UX nicety; this is the
+        // actual guarantee, using the same suggested-transfer amount the balances view offers.
+        BigDecimal owed = realDebt(command.spaceId(), command.fromMemberId(), command.toMemberId());
+        if (command.amount().compareTo(owed) > 0) {
+            throw new FinanceException.SettlementExceedsDebt();
+        }
         return settlementRecordRepository.create(command);
+    }
+
+    private BigDecimal realDebt(UUID spaceId, UUID fromMemberId, UUID toMemberId) {
+        Balances balances = BalanceCalculator.calculate(
+            transactionRepository.findAllBySpaceId(spaceId), settlementRecordRepository.findBySpaceId(spaceId));
+        return balances.suggestedTransfers().stream()
+            .filter(t -> t.fromMemberId().equals(fromMemberId) && t.toMemberId().equals(toMemberId))
+            .map(SuggestedTransfer::amount)
+            .findFirst()
+            .orElse(BigDecimal.ZERO);
     }
 }
