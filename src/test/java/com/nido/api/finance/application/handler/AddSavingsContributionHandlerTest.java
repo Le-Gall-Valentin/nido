@@ -59,6 +59,18 @@ class AddSavingsContributionHandlerTest {
     }
 
     @Test
+    void adding_a_contribution_takes_the_per_goal_lock_to_avoid_racing_a_concurrent_contribution() {
+        AddSavingsContributionCommand command = new AddSavingsContributionCommand(UUID.randomUUID(), spaceId, UUID.randomUUID(), new BigDecimal("100.00"), LocalDate.of(2026, 1, 5));
+        SavingsGoal goal = new SavingsGoal(command.goalId(), spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
+        when(savingsGoalRepository.findById(command.goalId())).thenReturn(Optional.of(goal));
+        when(savingsGoalRepository.findContributionsByGoalId(command.goalId())).thenReturn(List.of());
+
+        handler.add(command, membership(SpaceRole.MEMBER));
+
+        verify(savingsGoalRepository).lockForContribution(command.goalId());
+    }
+
+    @Test
     void a_contribution_exactly_reaching_the_target_is_accepted() {
         AddSavingsContributionCommand command = new AddSavingsContributionCommand(UUID.randomUUID(), spaceId, UUID.randomUUID(), new BigDecimal("500.00"), LocalDate.of(2026, 1, 5));
         SavingsGoal goal = new SavingsGoal(command.goalId(), spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");

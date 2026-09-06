@@ -25,4 +25,12 @@ public interface SavingsGoalRepository {
      */
     Map<UUID, List<SavingsContribution>> findContributionsByGoalIds(UUID spaceId, List<UUID> goalIds);
     SavingsContribution addContribution(AddSavingsContributionCommand command);
+
+    /**
+     * Serializes concurrent contributions to the same goal: held until the caller's
+     * transaction commits or rolls back, so two requests racing to add a contribution
+     * can't both read the same already-contributed total and each push past the target —
+     * see {@code RecurringTransactionSeriesRepository.lockForMaterialization}.
+     */
+    void lockForContribution(UUID goalId);
 }

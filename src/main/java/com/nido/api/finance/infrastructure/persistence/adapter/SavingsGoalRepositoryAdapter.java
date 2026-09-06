@@ -107,6 +107,12 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
 
     @Override
     @Transactional
+    public void lockForContribution(UUID goalId) {
+        goals.lockContribution("finance-savings-contribution|" + goalId);
+    }
+
+    @Override
+    @Transactional
     public SavingsContribution addContribution(AddSavingsContributionCommand command) {
         TextEncryptor encryptor = encryptorFactory.forSpace(command.spaceId());
         FinanceSavingsContributionEntity ce = new FinanceSavingsContributionEntity();
