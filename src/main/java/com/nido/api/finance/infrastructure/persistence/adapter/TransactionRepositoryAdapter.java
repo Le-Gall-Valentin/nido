@@ -70,8 +70,8 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         e.setPayerId(command.payerId());
         e.setRecurringSeriesId(command.recurringSeriesId());
         FinanceTransactionEntity saved = transactions.saveAndFlush(e);
-        saveContributors(saved.getId(), encryptor, resolvedContributors);
-        return findById(saved.getId()).orElseThrow(FinanceException.TransactionNotFound::new);
+        List<FinanceTransactionContributorEntity> savedContributors = saveContributors(saved.getId(), encryptor, resolvedContributors);
+        return toDomain(saved, savedContributors);
     }
 
     @Override
@@ -85,11 +85,11 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         e.setCategoryId(command.categoryId());
         e.setDate(command.date());
         e.setPayerId(command.payerId());
-        transactions.saveAndFlush(e);
+        FinanceTransactionEntity saved = transactions.saveAndFlush(e);
         contributors.deleteByTransactionId(e.getId());
         contributors.flush();
-        saveContributors(e.getId(), encryptor, resolvedContributors);
-        return findById(e.getId()).orElseThrow(FinanceException.TransactionNotFound::new);
+        List<FinanceTransactionContributorEntity> savedContributors = saveContributors(e.getId(), encryptor, resolvedContributors);
+        return toDomain(saved, savedContributors);
     }
 
     @Override
@@ -98,15 +98,15 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         transactions.flush();
     }
 
-    private void saveContributors(UUID transactionId, TextEncryptor encryptor, List<Contribution> resolved) {
-        for (Contribution c : resolved) {
+    private List<FinanceTransactionContributorEntity> saveContributors(UUID transactionId, TextEncryptor encryptor, List<Contribution> resolved) {
+        List<FinanceTransactionContributorEntity> entities = resolved.stream().map(c -> {
             FinanceTransactionContributorEntity ce = new FinanceTransactionContributorEntity();
             ce.setTransactionId(transactionId);
             ce.setUserId(c.memberId());
             ce.setShareAmountEncrypted(encryptor.encrypt(c.shareAmount().toPlainString()));
-            contributors.save(ce);
-        }
-        contributors.flush();
+            return ce;
+        }).toList();
+        return contributors.saveAllAndFlush(entities);
     }
 
     private List<Transaction> toDomainList(List<FinanceTransactionEntity> found) {
