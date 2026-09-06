@@ -192,9 +192,43 @@ class FinanceControllerIT {
     }
 
     @Test
+    void updating_a_savings_goal_still_reports_its_existing_contributions_instead_of_resetting_them_to_zero() throws Exception {
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/savings-goals")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Vacances\",\"targetAmount\":2000.00,\"color\":\"#5c7a58\",\"glyph\":\"🎯\"}"))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+        String goalId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/savings-goals/" + goalId + "/contributions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"memberId\":\"" + aliceId + "\",\"amount\":100.00,\"date\":\"2026-01-05\"}"))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(patch("/api/spaces/" + spaceId + "/finance/savings-goals/" + goalId)
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Vacances d'été\",\"targetAmount\":2500.00,\"color\":\"#5c7a58\",\"glyph\":\"🎯\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalContributed").value(100.00))
+            .andExpect(jsonPath("$.contributions.length()").value(1));
+    }
+
+    @Test
     void an_amount_with_more_than_two_decimal_places_is_rejected_as_a_validation_error() throws Exception {
         String body = "{\"label\":\"Courses\",\"amount\":12.345678,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\",\"date\":\"2026-01-10\","
             + "\"contributors\":[{\"memberId\":\"" + aliceId + "\",\"shareAmount\":null}]}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void a_negative_contributor_share_amount_is_rejected_as_a_validation_error() throws Exception {
+        // Shares still sum to the total (-5.00 + 25.00 = 20.00) so this is rejected by
+        // bean validation on shareAmount itself, not by the shares-sum-mismatch business rule.
+        String body = "{\"label\":\"Courses\",\"amount\":20.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\",\"date\":\"2026-01-10\",\"payerId\":\"" + aliceId + "\","
+            + "\"contributors\":[{\"memberId\":\"" + aliceId + "\",\"shareAmount\":-5.00},{\"memberId\":\"" + bobId + "\",\"shareAmount\":25.00}]}";
 
         mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))

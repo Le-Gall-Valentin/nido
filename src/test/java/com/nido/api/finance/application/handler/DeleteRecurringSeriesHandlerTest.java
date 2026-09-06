@@ -57,6 +57,15 @@ class DeleteRecurringSeriesHandlerTest {
     }
 
     @Test
+    void deleting_a_series_takes_the_materialization_lock_to_avoid_racing_a_concurrent_lazy_materialization() {
+        when(seriesRepository.findById(seriesId)).thenReturn(Optional.of(series(spaceId)));
+
+        handler.delete(seriesId, spaceId, membership(SpaceRole.MEMBER));
+
+        verify(seriesRepository).lockForMaterialization(spaceId);
+    }
+
+    @Test
     void deleting_a_series_belonging_to_another_space_is_rejected() {
         when(seriesRepository.findById(seriesId)).thenReturn(Optional.of(series(UUID.randomUUID())));
 

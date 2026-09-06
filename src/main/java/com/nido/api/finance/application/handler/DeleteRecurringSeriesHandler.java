@@ -24,6 +24,10 @@ public class DeleteRecurringSeriesHandler implements DeleteRecurringSeriesUseCas
     public void delete(UUID seriesId, UUID spaceId, SpaceMembership caller) {
         caller.ensureSameSpace(spaceId);
         caller.ensureCanWrite();
+        // Same lock RecurringTransactionMaterializer takes: without it, a concurrent lazy
+        // materialization could read this series and insert an occurrence for it in the
+        // window between our findById and our delete.
+        seriesRepository.lockForMaterialization(spaceId);
         RecurringTransactionSeries existing = seriesRepository.findById(seriesId).orElseThrow(FinanceException.RecurringSeriesNotFound::new);
         if (!existing.spaceId().equals(spaceId)) {
             throw new FinanceException.RecurringSeriesNotFound();

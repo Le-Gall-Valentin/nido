@@ -78,9 +78,8 @@ public class SavingsGoalController {
     public ResponseEntity<SavingsGoalResponse> update(
             @PathVariable UUID spaceId, @PathVariable UUID goalId, @Valid @RequestBody UpdateSavingsGoalRequest request,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
-        SavingsGoal updated = updateSavingsGoalUseCase.update(
-            new UpdateSavingsGoalCommand(goalId, spaceId, request.name(), request.targetAmount(), request.targetDate(), request.color(), request.glyph()), membership);
-        return ResponseEntity.ok(SavingsGoalResponse.from(new SavingsGoalDetail(updated, List.of())));
+        return ResponseEntity.ok(SavingsGoalResponse.from(updateSavingsGoalUseCase.update(
+            new UpdateSavingsGoalCommand(goalId, spaceId, request.name(), request.targetAmount(), request.targetDate(), request.color(), request.glyph()), membership)));
     }
 
     @DeleteMapping("/{goalId}")
