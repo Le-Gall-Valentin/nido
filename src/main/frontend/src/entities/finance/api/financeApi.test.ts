@@ -67,6 +67,14 @@ describe('financeApi', () => {
     expect(result).toEqual(budget)
   })
 
+  it('deleteBudget deletes the budget for a category', async () => {
+    vi.mocked(client.delete).mockResolvedValueOnce({ data: undefined })
+
+    await financeApi.deleteBudget('space-1', 'c1')
+
+    expect(client.delete).toHaveBeenCalledWith('/spaces/space-1/finance/budgets/c1')
+  })
+
   it('listTransactions fetches transactions for the requested month', async () => {
     const transactions = [{ id: 't1', label: 'Courses', amount: 45.3, type: 'EXPENSE', categoryId: 'c1', date: '2026-01-15', payerId: null, contributors: [], recurring: false }]
     vi.mocked(client.get).mockResolvedValueOnce({ data: transactions })

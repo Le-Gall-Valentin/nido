@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import type { IFinanceApi } from './IFinanceApi'
 import { FinanceApiProvider } from './financeApiContext'
 import {
-  useCreateCategory, useUpdateCategory, useDeleteCategory, useSetBudget,
+  useCreateCategory, useUpdateCategory, useDeleteCategory, useSetBudget, useDeleteBudget,
   useCreateTransaction, useUpdateTransaction, useDeleteTransaction,
   useCreateRecurringSeries, useUpdateRecurringSeries, useDeleteRecurringSeries,
   useSettleDebt, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,
@@ -26,7 +26,7 @@ function wrapper(api: IFinanceApi, queryClient: QueryClient) {
 function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
   return {
     listCategories: vi.fn(), createCategory: vi.fn(), updateCategory: vi.fn(), deleteCategory: vi.fn(),
-    listBudgets: vi.fn(), setBudget: vi.fn(),
+    listBudgets: vi.fn(), setBudget: vi.fn(), deleteBudget: vi.fn(),
     listTransactions: vi.fn(), createTransaction: vi.fn(), updateTransaction: vi.fn(), deleteTransaction: vi.fn(),
     listRecurringSeries: vi.fn(), createRecurringSeries: vi.fn(), updateRecurringSeries: vi.fn(), deleteRecurringSeries: vi.fn(),
     getStats: vi.fn(), getProjection: vi.fn(),
@@ -81,6 +81,18 @@ describe('useSetBudget', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(api.setBudget).toHaveBeenCalledWith('space-1', 'c1', 150)
+  })
+})
+
+describe('useDeleteBudget', () => {
+  it('calls deleteBudget with the category id', async () => {
+    const api = fakeApi({ deleteBudget: vi.fn().mockResolvedValue(undefined) })
+    const { result } = renderHook(() => useDeleteBudget('space-1'), { wrapper: wrapper(api, makeQueryClient()) })
+
+    act(() => result.current.mutate('c1'))
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(api.deleteBudget).toHaveBeenCalledWith('space-1', 'c1')
   })
 })
 

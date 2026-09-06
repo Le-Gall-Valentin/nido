@@ -12,6 +12,7 @@
     "manage_title": "Manage budgets",
     "edit": "Edit",
     "set": "Set a budget",
+    "remove": "Remove",
     "over": "Over by {{amount}}",
     "remaining": "{{amount}} left"
   },

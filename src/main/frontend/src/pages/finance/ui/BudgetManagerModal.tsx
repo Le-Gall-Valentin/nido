@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Pencil, Trash2 } from 'lucide-react'
 import { Dialog } from '@/shared/ui'
 import type { Category, BudgetLine } from '@/entities/finance'
 import { CategoryIconBadge } from './CategoryIconBadge'
@@ -9,12 +10,13 @@ interface BudgetManagerModalProps {
   categories: Category[]
   budgetLines: BudgetLine[]
   onSave: (categoryId: string, monthlyLimit: number) => void
+  onDelete: (categoryId: string) => void
   onClose: () => void
   /** Set by the caller when the backend rejected the last save. */
   submitError?: string | null
 }
 
-export function BudgetManagerModal({ categories, budgetLines, onSave, onClose, submitError = null }: BudgetManagerModalProps) {
+export function BudgetManagerModal({ categories, budgetLines, onSave, onDelete, onClose, submitError = null }: BudgetManagerModalProps) {
   const { t } = useTranslation('finance')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [budgetInput, setBudgetInput] = useState('')
@@ -71,10 +73,16 @@ export function BudgetManagerModal({ categories, budgetLines, onSave, onClose, s
                   {t('budget.set')}
                 </button>
               ) : (
-                <span className="text-sm text-fg-2">
+                <span className="flex items-center gap-1 text-sm text-fg-2">
                   {formatAmount(currentLimit)}
-                  <button type="button" onClick={() => startEdit(category.id, currentLimit)}
-                    className="ml-2 text-xs font-semibold text-fg-3 hover:text-fg-1">{t('budget.edit')}</button>
+                  <button type="button" aria-label={t('budget.edit')} onClick={() => startEdit(category.id, currentLimit)}
+                    className="ml-1 grid size-7 place-items-center rounded-md text-fg-3 hover:bg-bg-3 hover:text-fg-1">
+                    <Pencil size={14} />
+                  </button>
+                  <button type="button" aria-label={t('budget.remove')} onClick={() => onDelete(category.id)}
+                    className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-status-red-dim hover:text-status-red">
+                    <Trash2 size={14} />
+                  </button>
                 </span>
               )}
             </li>

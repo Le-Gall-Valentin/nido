@@ -12,6 +12,7 @@
     "manage_title": "Gérer les budgets",
     "edit": "Modifier",
     "set": "Définir un budget",
+    "remove": "Retirer",
     "over": "Dépassé de {{amount}}",
     "remaining": "{{amount}} restants"
   },

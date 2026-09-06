@@ -7,7 +7,7 @@ import { useMySpaces } from '@/features/space-switcher'
 import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
 import {
   financeApi, FinanceApiProvider, useCategories, useTransactions, useFinanceStats, useProjection,
-  useCreateTransaction, useCreateRecurringSeries, useUpdateTransaction, useDeleteTransaction, useSetBudget,
+  useCreateTransaction, useCreateRecurringSeries, useUpdateTransaction, useDeleteTransaction, useSetBudget, useDeleteBudget,
   useCreateCategory, useUpdateCategory, useDeleteCategory, useBalances, useSettleDebt, useSettlementsBetween,
   useSavingsGoals, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,
   useRecurringSeries, useUpdateRecurringSeries, useDeleteRecurringSeries,
@@ -71,6 +71,7 @@ function FinancePageContent() {
   const updateTransaction = useUpdateTransaction(spaceId)
   const deleteTransaction = useDeleteTransaction(spaceId)
   const setBudget = useSetBudget(spaceId)
+  const deleteBudget = useDeleteBudget(spaceId)
   const createCategory = useCreateCategory(spaceId)
   const updateCategory = useUpdateCategory(spaceId)
   const deleteCategory = useDeleteCategory(spaceId)
@@ -319,6 +320,7 @@ function FinancePageContent() {
           categories={categories ?? []}
           budgetLines={stats?.budgetVsActual ?? []}
           onSave={(categoryId, monthlyLimit) => setBudget.mutate({ categoryId, monthlyLimit })}
+          onDelete={(categoryId) => deleteBudget.mutate(categoryId)}
           onClose={() => {
             setManagingBudget(false)
             setBudget.reset()
