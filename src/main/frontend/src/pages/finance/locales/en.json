@@ -96,6 +96,7 @@
     "contributor_label": "Contributor",
     "contribution_too_high": "The amount cannot exceed what's left to reach the goal.",
     "progress": "{{contributed}} of {{target}}",
+    "view_details": "View details of \"{{name}}\"",
     "empty": "No goals yet. Create your first one.",
     "done": "Reached!",
     "contributions_title": "Contributions",

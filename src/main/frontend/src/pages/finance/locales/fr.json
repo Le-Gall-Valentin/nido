@@ -96,6 +96,7 @@
     "contributor_label": "Contributeur",
     "contribution_too_high": "Le montant ne peut pas dépasser ce qu'il reste pour atteindre l'objectif.",
     "progress": "{{contributed}} sur {{target}}",
+    "view_details": "Voir les détails de « {{name}} »",
     "empty": "Aucun objectif pour l'instant. Créez votre première cagnotte.",
     "done": "Atteint !",
     "contributions_title": "Contributions",
