@@ -20,7 +20,8 @@ export function useCreateCategory(spaceId: string) {
   const api: ICategoriesApi = useFinanceApi()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: { label: string; color: string; icon: string }) => api.createCategory(spaceId, input.label, input.color, input.icon),
+    mutationFn: (input: { label: string; color: string; icon: string; type: TransactionType }) =>
+      api.createCategory(spaceId, input.label, input.color, input.icon, input.type),
     onSuccess: () => invalidateSpace(queryClient, spaceId),
   })
 }

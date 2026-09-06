@@ -23,9 +23,9 @@ export const financeApi: IFinanceApi = {
     } catch (error) { handleError(error) }
   },
 
-  async createCategory(spaceId, label, color, icon) {
+  async createCategory(spaceId, label, color, icon, type) {
     try {
-      const res = await client.post<Category>(`/spaces/${spaceId}/finance/categories`, { label, color, icon })
+      const res = await client.post<Category>(`/spaces/${spaceId}/finance/categories`, { label, color, icon, type })
       return res.data
     } catch (error) { handleError(error) }
   },
