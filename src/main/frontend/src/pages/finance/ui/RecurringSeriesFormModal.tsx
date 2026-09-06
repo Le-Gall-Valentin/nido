@@ -23,11 +23,13 @@ interface RecurringSeriesFormModalProps {
   canPickContributors: boolean
   onSubmit: (input: RecurringSeriesFormInput) => void
   onCancel: () => void
+  /** Set by the caller when the backend rejected the last submission — distinct from the client-side checks below. */
+  submitError?: string | null
 }
 
 const SELECT_CLASSNAME = 'rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent'
 
-export function RecurringSeriesFormModal({ series, categories, members, canPickContributors, onSubmit, onCancel }: RecurringSeriesFormModalProps) {
+export function RecurringSeriesFormModal({ series, categories, members, canPickContributors, onSubmit, onCancel, submitError = null }: RecurringSeriesFormModalProps) {
   const { t } = useTranslation('finance')
   const [label, setLabel] = useState(series.label)
   const [amount, setAmount] = useState(String(series.amount))
@@ -170,7 +172,7 @@ export function RecurringSeriesFormModal({ series, categories, members, canPickC
           <Input label={t('recurring_series.end_date_label')} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
         </div>
 
-        {error && <p className="text-sm font-medium text-status-red">{error}</p>}
+        {(error ?? submitError) && <p className="text-sm font-medium text-status-red">{error ?? submitError}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" onClick={onCancel}>{t('form.cancel')}</Button>

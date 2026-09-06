@@ -17,9 +17,11 @@ interface AddContributionModalProps {
   onSubmit: (input: AddContributionInput) => void
   onCancel: () => void
   isPending: boolean
+  /** Set by the caller when the backend rejected the last submission. */
+  submitError?: string | null
 }
 
-export function AddContributionModal({ goalName, remaining, members, onSubmit, onCancel, isPending }: AddContributionModalProps) {
+export function AddContributionModal({ goalName, remaining, members, onSubmit, onCancel, isPending, submitError = null }: AddContributionModalProps) {
   const { t } = useTranslation('finance')
   const [memberId, setMemberId] = useState(members[0]?.userId ?? '')
   const [amount, setAmount] = useState('')
@@ -55,7 +57,7 @@ export function AddContributionModal({ goalName, remaining, members, onSubmit, o
         <Input label={t('form.amount_label')} type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
         <Input label={t('form.date_label')} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
 
-        {error && <p className="text-sm font-medium text-status-red">{error}</p>}
+        {(error ?? submitError) && <p className="text-sm font-medium text-status-red">{error ?? submitError}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" onClick={onCancel}>{t('form.cancel')}</Button>

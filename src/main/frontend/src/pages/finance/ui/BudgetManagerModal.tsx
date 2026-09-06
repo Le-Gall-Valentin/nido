@@ -10,9 +10,11 @@ interface BudgetManagerModalProps {
   budgetLines: BudgetLine[]
   onSave: (categoryId: string, monthlyLimit: number) => void
   onClose: () => void
+  /** Set by the caller when the backend rejected the last save. */
+  submitError?: string | null
 }
 
-export function BudgetManagerModal({ categories, budgetLines, onSave, onClose }: BudgetManagerModalProps) {
+export function BudgetManagerModal({ categories, budgetLines, onSave, onClose, submitError = null }: BudgetManagerModalProps) {
   const { t } = useTranslation('finance')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [budgetInput, setBudgetInput] = useState('')
@@ -33,6 +35,8 @@ export function BudgetManagerModal({ categories, budgetLines, onSave, onClose }:
   return (
     <Dialog open onClose={onClose} title={t('budget.manage_title')} maxWidth="max-w-lg">
       <h3 className="mb-4 text-[19px] font-semibold text-fg-0">{t('budget.manage_title')}</h3>
+
+      {submitError && <p className="mb-3 text-sm font-medium text-status-red">{submitError}</p>}
 
       <ul className="max-h-96 space-y-1 overflow-y-auto">
         {categories.map((category) => {

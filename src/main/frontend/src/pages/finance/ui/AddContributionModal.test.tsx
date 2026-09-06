@@ -10,6 +10,12 @@ vi.mock('react-i18next', () => ({
 const members: SpaceMember[] = [{ userId: 'alice', username: 'alice', email: 'a@test.com', role: 'MEMBER', joinedAt: '2026-01-01' }]
 
 describe('AddContributionModal', () => {
+  it('shows the submit error handed down by the caller when the backend rejected the request', () => {
+    render(<AddContributionModal goalName="Vacances" remaining={2000} members={members} onSubmit={vi.fn()} onCancel={vi.fn()} isPending={false} submitError="savings.contribution_too_high" />)
+
+    expect(screen.getByText('savings.contribution_too_high')).toBeDefined()
+  })
+
   it('submits the selected member, amount and date', () => {
     const onSubmit = vi.fn()
     render(<AddContributionModal goalName="Vacances" remaining={2000} members={members} onSubmit={onSubmit} onCancel={vi.fn()} isPending={false} />)

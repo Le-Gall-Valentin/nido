@@ -102,6 +102,7 @@ function FinancePageContent() {
   const [goalFormState, setGoalFormState] = useState<{ mode: 'create' } | { mode: 'edit'; goal: SavingsGoal } | null>(null)
   const [contributingGoal, setContributingGoal] = useState<SavingsGoal | null>(null)
   const [viewingGoal, setViewingGoal] = useState<SavingsGoal | null>(null)
+  const [deletingGoal, setDeletingGoal] = useState<SavingsGoal | null>(null)
 
   const { data: settlementsBetween } = useSettlementsBetween(spaceId, viewingHistoryBetween?.memberAId, viewingHistoryBetween?.memberBId)
 
@@ -223,7 +224,7 @@ function FinancePageContent() {
           memberLabel={memberLabel}
           onCreate={() => setGoalFormState({ mode: 'create' })}
           onEdit={(goal) => setGoalFormState({ mode: 'edit', goal })}
-          onDelete={(goalId) => deleteSavingsGoal.mutate(goalId)}
+          onDelete={(goalId) => setDeletingGoal((savingsGoals ?? []).find((g) => g.id === goalId) ?? null)}
           onContribute={setContributingGoal}
           onView={setViewingGoal}
         />
@@ -250,7 +251,13 @@ function FinancePageContent() {
           canPickContributors={!spaceIsPersonal}
           currentUserId={currentUserId}
           onSubmit={handleFormSubmit}
-          onCancel={() => setFormState(null)}
+          onCancel={() => {
+            setFormState(null)
+            createTransaction.reset()
+            updateTransaction.reset()
+            createRecurringSeries.reset()
+          }}
+          submitError={(createTransaction.isError || updateTransaction.isError || createRecurringSeries.isError) ? t('form.submit_error') : null}
         />
       )}
 
@@ -290,8 +297,13 @@ function FinancePageContent() {
           onCreate={(label, color, icon) => createCategory.mutate({ label, color, icon })}
           onUpdate={(categoryId, label, color, icon) => updateCategory.mutate({ categoryId, label, color, icon })}
           onDelete={handleDeleteCategory}
-          onClose={() => setManagingCategories(false)}
+          onClose={() => {
+            setManagingCategories(false)
+            createCategory.reset()
+            updateCategory.reset()
+          }}
           deleteError={categoryDeleteError}
+          submitError={(createCategory.isError || updateCategory.isError) ? t('form.submit_error') : null}
         />
       )}
 
@@ -300,7 +312,11 @@ function FinancePageContent() {
           categories={categories ?? []}
           budgetLines={stats?.budgetVsActual ?? []}
           onSave={(categoryId, monthlyLimit) => setBudget.mutate({ categoryId, monthlyLimit })}
-          onClose={() => setManagingBudget(false)}
+          onClose={() => {
+            setManagingBudget(false)
+            setBudget.reset()
+          }}
+          submitError={setBudget.isError ? t('form.submit_error') : null}
         />
       )}
 
@@ -320,7 +336,11 @@ function FinancePageContent() {
           members={members ?? []}
           canPickContributors={!spaceIsPersonal}
           onSubmit={handleUpdateSeriesSubmit}
-          onCancel={() => setEditingSeries(null)}
+          onCancel={() => {
+            setEditingSeries(null)
+            updateRecurringSeries.reset()
+          }}
+          submitError={updateRecurringSeries.isError ? t('form.submit_error') : null}
         />
       )}
 
@@ -334,17 +354,34 @@ function FinancePageContent() {
         />
       )}
 
+      {deletingGoal && (
+        <DeleteTransactionModal
+          label={deletingGoal.name}
+          isPending={deleteSavingsGoal.isPending}
+          error={deleteSavingsGoal.isError ? 'error' : null}
+          onCancel={() => {
+            setDeletingGoal(null)
+            deleteSavingsGoal.reset()
+          }}
+          onConfirm={() => deleteSavingsGoal.mutate(deletingGoal.id, { onSuccess: () => setDeletingGoal(null) })}
+        />
+      )}
+
       {settlingTransfer && (
         <SettleDebtModal
           fromLabel={memberLabel(settlingTransfer.fromMemberId)}
           toLabel={memberLabel(settlingTransfer.toMemberId)}
           amount={settlingTransfer.amount}
           isPending={settleDebt.isPending}
-          onCancel={() => setSettlingTransfer(null)}
+          onCancel={() => {
+            setSettlingTransfer(null)
+            settleDebt.reset()
+          }}
           onConfirm={(amount, date) => settleDebt.mutate(
             { fromMemberId: settlingTransfer.fromMemberId, toMemberId: settlingTransfer.toMemberId, amount, date },
             { onSuccess: () => setSettlingTransfer(null) }
           )}
+          submitError={settleDebt.isError ? t('form.submit_error') : null}
         />
       )}
 
@@ -370,7 +407,12 @@ function FinancePageContent() {
           mode={goalFormState.mode}
           goal={goalFormState.mode === 'edit' ? goalFormState.goal : undefined}
           onSubmit={handleGoalFormSubmit}
-          onCancel={() => setGoalFormState(null)}
+          onCancel={() => {
+            setGoalFormState(null)
+            createSavingsGoal.reset()
+            updateSavingsGoal.reset()
+          }}
+          submitError={(createSavingsGoal.isError || updateSavingsGoal.isError) ? t('form.submit_error') : null}
         />
       )}
 
@@ -380,11 +422,15 @@ function FinancePageContent() {
           remaining={contributingGoal.targetAmount - contributingGoal.totalContributed}
           members={members ?? []}
           isPending={addSavingsContribution.isPending}
-          onCancel={() => setContributingGoal(null)}
+          onCancel={() => {
+            setContributingGoal(null)
+            addSavingsContribution.reset()
+          }}
           onSubmit={(input) => addSavingsContribution.mutate(
             { goalId: contributingGoal.id, ...input },
             { onSuccess: () => setContributingGoal(null) }
           )}
+          submitError={addSavingsContribution.isError ? t('form.submit_error') : null}
         />
       )}
 

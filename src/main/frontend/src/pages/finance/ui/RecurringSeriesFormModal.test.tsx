@@ -28,6 +28,12 @@ function renderModal(props: Partial<React.ComponentProps<typeof RecurringSeriesF
 }
 
 describe('RecurringSeriesFormModal', () => {
+  it('shows the submit error handed down by the caller when the backend rejected the request', () => {
+    renderModal({ submitError: 'form.submit_error' })
+
+    expect(screen.getByText('form.submit_error')).toBeDefined()
+  })
+
   it('prefills every field from the existing series', () => {
     renderModal()
 

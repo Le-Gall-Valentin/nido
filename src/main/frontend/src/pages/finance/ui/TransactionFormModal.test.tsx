@@ -23,6 +23,12 @@ function renderModal(props: Partial<React.ComponentProps<typeof TransactionFormM
 }
 
 describe('TransactionFormModal', () => {
+  it('shows the submit error handed down by the caller when the backend rejected the request', () => {
+    renderModal({ submitError: 'form.submit_error' })
+
+    expect(screen.getByText('form.submit_error')).toBeDefined()
+  })
+
   it('rejects submitting without a label', () => {
     const onSubmit = vi.fn()
     renderModal({ onSubmit })

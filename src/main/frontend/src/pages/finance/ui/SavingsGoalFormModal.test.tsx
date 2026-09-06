@@ -7,6 +7,12 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('SavingsGoalFormModal', () => {
+  it('shows the submit error handed down by the caller when the backend rejected the request', () => {
+    render(<SavingsGoalFormModal mode="create" onSubmit={vi.fn()} onCancel={vi.fn()} submitError="form.submit_error" />)
+
+    expect(screen.getByText('form.submit_error')).toBeDefined()
+  })
+
   it('rejects submitting without a name', () => {
     const onSubmit = vi.fn()
     render(<SavingsGoalFormModal mode="create" onSubmit={onSubmit} onCancel={vi.fn()} />)

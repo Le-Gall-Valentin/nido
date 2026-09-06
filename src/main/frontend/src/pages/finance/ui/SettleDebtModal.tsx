@@ -10,9 +10,11 @@ interface SettleDebtModalProps {
   onConfirm: (amount: number, date: string) => void
   onCancel: () => void
   isPending: boolean
+  /** Set by the caller when the backend rejected the last confirmation. */
+  submitError?: string | null
 }
 
-export function SettleDebtModal({ fromLabel, toLabel, amount, onConfirm, onCancel, isPending }: SettleDebtModalProps) {
+export function SettleDebtModal({ fromLabel, toLabel, amount, onConfirm, onCancel, isPending, submitError = null }: SettleDebtModalProps) {
   const { t } = useTranslation('finance')
   const [amountInput, setAmountInput] = useState(String(amount))
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
@@ -46,7 +48,7 @@ export function SettleDebtModal({ fromLabel, toLabel, amount, onConfirm, onCance
         <Input label={t('balances.settle_date_label')} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       </div>
 
-      {error && <p className="mt-2 text-sm font-medium text-status-red">{error}</p>}
+      {(error ?? submitError) && <p className="mt-2 text-sm font-medium text-status-red">{error ?? submitError}</p>}
 
       <div className="mt-5 flex justify-end gap-2">
         <Button type="button" onClick={onCancel} disabled={isPending}>{t('form.cancel')}</Button>
