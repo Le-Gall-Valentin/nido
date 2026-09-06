@@ -98,6 +98,18 @@ class SavingsGoalRepositoryAdapterIT {
     }
 
     @Test
+    void findContributionsByGoalId_returns_them_most_recent_first() {
+        SavingsGoal created = adapter.create(new CreateSavingsGoalCommand(spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯"));
+        adapter.addContribution(new AddSavingsContributionCommand(created.id(), spaceId, aliceId, new BigDecimal("50.00"), LocalDate.of(2026, 1, 1)));
+        adapter.addContribution(new AddSavingsContributionCommand(created.id(), spaceId, aliceId, new BigDecimal("75.00"), LocalDate.of(2026, 2, 1)));
+        adapter.addContribution(new AddSavingsContributionCommand(created.id(), spaceId, aliceId, new BigDecimal("25.00"), LocalDate.of(2026, 1, 15)));
+
+        assertThat(adapter.findContributionsByGoalId(created.id()))
+            .extracting(c -> c.date())
+            .containsExactly(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 1, 15), LocalDate.of(2026, 1, 1));
+    }
+
+    @Test
     void findBySpaceId_and_delete_behave_as_expected() {
         SavingsGoal created = adapter.create(new CreateSavingsGoalCommand(spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯"));
 

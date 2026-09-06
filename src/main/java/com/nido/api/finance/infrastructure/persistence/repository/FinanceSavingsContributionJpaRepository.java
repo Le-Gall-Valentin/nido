@@ -7,5 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface FinanceSavingsContributionJpaRepository extends JpaRepository<FinanceSavingsContributionEntity, UUID> {
-    List<FinanceSavingsContributionEntity> findByGoalId(UUID goalId);
+    List<FinanceSavingsContributionEntity> findByGoalIdOrderByContributedDateDesc(UUID goalId);
+    List<FinanceSavingsContributionEntity> findByGoalIdInOrderByContributedDateDesc(List<UUID> goalIds);
 }

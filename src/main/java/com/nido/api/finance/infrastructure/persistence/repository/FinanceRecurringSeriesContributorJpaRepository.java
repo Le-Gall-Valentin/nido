@@ -8,5 +8,6 @@ import java.util.UUID;
 
 public interface FinanceRecurringSeriesContributorJpaRepository extends JpaRepository<FinanceRecurringSeriesContributorEntity, UUID> {
     List<FinanceRecurringSeriesContributorEntity> findBySeriesId(UUID seriesId);
+    List<FinanceRecurringSeriesContributorEntity> findBySeriesIdIn(List<UUID> seriesIds);
     void deleteBySeriesId(UUID seriesId);
 }
