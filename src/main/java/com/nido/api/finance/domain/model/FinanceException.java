@@ -3,7 +3,7 @@ package com.nido.api.finance.domain.model;
 public abstract sealed class FinanceException extends RuntimeException
     permits FinanceException.TransactionNotFound, FinanceException.RecurringSeriesNotFound,
             FinanceException.CategoryNotFound, FinanceException.CategoryInUse,
-            FinanceException.SameSpaceTransfer, FinanceException.InvalidContributionShares, FinanceException.PayerRequired,
+            FinanceException.InvalidContributionShares, FinanceException.PayerRequired,
             FinanceException.InvalidEndDate, FinanceException.NotAPartyToSettlement,
             FinanceException.SavingsGoalNotFound, FinanceException.InvalidSavingsGoalAppearance,
             FinanceException.ContributionExceedsGoalTarget, FinanceException.DecryptionFailed {
@@ -25,11 +25,6 @@ public abstract sealed class FinanceException extends RuntimeException
     /** Thrown when deleting a category still referenced by at least one transaction. */
     public static final class CategoryInUse extends FinanceException {
         public CategoryInUse() { super("Category is still used by existing transactions"); }
-    }
-
-    /** Thrown when a move targets the same context the transaction is already in. */
-    public static final class SameSpaceTransfer extends FinanceException {
-        public SameSpaceTransfer() { super("Cannot transfer a transaction into its own context"); }
     }
 
     /** Thrown when custom contribution shares don't sum to the transaction's total amount. */

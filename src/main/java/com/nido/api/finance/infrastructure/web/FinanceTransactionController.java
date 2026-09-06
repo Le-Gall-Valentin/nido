@@ -3,7 +3,6 @@ package com.nido.api.finance.infrastructure.web;
 import com.nido.api.finance.application.port.in.CreateTransactionUseCase;
 import com.nido.api.finance.application.port.in.DeleteTransactionUseCase;
 import com.nido.api.finance.application.port.in.ListTransactionsUseCase;
-import com.nido.api.finance.application.port.in.MoveTransactionUseCase;
 import com.nido.api.finance.application.port.in.UpdateTransactionUseCase;
 import com.nido.api.finance.domain.model.ContributionInput;
 import com.nido.api.finance.domain.model.CreateTransactionCommand;
@@ -11,7 +10,6 @@ import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
 import com.nido.api.finance.infrastructure.web.dto.ContributionRequest;
 import com.nido.api.finance.infrastructure.web.dto.CreateTransactionRequest;
-import com.nido.api.finance.infrastructure.web.dto.MoveTransactionRequest;
 import com.nido.api.finance.infrastructure.web.dto.TransactionResponse;
 import com.nido.api.finance.infrastructure.web.dto.UpdateTransactionRequest;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
@@ -41,16 +39,13 @@ public class FinanceTransactionController {
     private final CreateTransactionUseCase createTransactionUseCase;
     private final UpdateTransactionUseCase updateTransactionUseCase;
     private final DeleteTransactionUseCase deleteTransactionUseCase;
-    private final MoveTransactionUseCase moveTransactionUseCase;
 
     public FinanceTransactionController(ListTransactionsUseCase listTransactionsUseCase, CreateTransactionUseCase createTransactionUseCase,
-                                         UpdateTransactionUseCase updateTransactionUseCase, DeleteTransactionUseCase deleteTransactionUseCase,
-                                         MoveTransactionUseCase moveTransactionUseCase) {
+                                         UpdateTransactionUseCase updateTransactionUseCase, DeleteTransactionUseCase deleteTransactionUseCase) {
         this.listTransactionsUseCase = listTransactionsUseCase;
         this.createTransactionUseCase = createTransactionUseCase;
         this.updateTransactionUseCase = updateTransactionUseCase;
         this.deleteTransactionUseCase = deleteTransactionUseCase;
-        this.moveTransactionUseCase = moveTransactionUseCase;
     }
 
     @GetMapping
@@ -94,16 +89,6 @@ public class FinanceTransactionController {
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
         deleteTransactionUseCase.delete(transactionId, spaceId, membership);
         return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/{transactionId}/move")
-    @RateLimiting(max = 20)
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<TransactionResponse> move(
-            @PathVariable UUID spaceId, @PathVariable UUID transactionId, @Valid @RequestBody MoveTransactionRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
-        Transaction moved = moveTransactionUseCase.move(transactionId, request.destinationSpaceId(), membership);
-        return ResponseEntity.status(HttpStatus.CREATED).body(TransactionResponse.from(moved));
     }
 
     static List<ContributionInput> toContributionInputs(List<ContributionRequest> requests) {

@@ -81,18 +81,6 @@ export function useDeleteTransaction(spaceId: string) {
   })
 }
 
-export function useMoveTransaction(spaceId: string) {
-  const api = useFinanceApi()
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (input: { transactionId: string; destinationSpaceId: string }) => api.moveTransaction(spaceId, input.transactionId, input.destinationSpaceId),
-    onSuccess: (_data, variables) => {
-      invalidateSpace(queryClient, spaceId)
-      invalidateSpace(queryClient, variables.destinationSpaceId)
-    },
-  })
-}
-
 export function useCreateRecurringSeries(spaceId: string) {
   const api = useFinanceApi()
   const queryClient = useQueryClient()

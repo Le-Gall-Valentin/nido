@@ -21,7 +21,6 @@ public class FinanceExceptionHandler {
             case FinanceException.RecurringSeriesNotFound ignored -> new FinanceErrorResponse(404, "Recurring series not found.");
             case FinanceException.CategoryNotFound ignored -> new FinanceErrorResponse(404, "Category not found.");
             case FinanceException.CategoryInUse ignored -> new FinanceErrorResponse(409, "Category is still used by existing transactions.");
-            case FinanceException.SameSpaceTransfer ignored -> new FinanceErrorResponse(400, "Cannot transfer a transaction into its own context.");
             case FinanceException.InvalidContributionShares ignored -> new FinanceErrorResponse(400, "Contribution shares must sum to the transaction amount.");
             case FinanceException.PayerRequired ignored -> new FinanceErrorResponse(400, "A payer is required when the transaction has contributors.");
             case FinanceException.InvalidEndDate ignored -> new FinanceErrorResponse(400, "The end date must be on or after the anchor date.");
