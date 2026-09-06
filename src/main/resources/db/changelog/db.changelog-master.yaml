@@ -71,3 +71,42 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/024-create-task-subtasks.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/025-add-spaces-encryption-salt.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/026-create-finance-categories.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/027-create-finance-budgets.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/028-create-finance-recurring-transaction-series.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/029-create-finance-recurring-series-contributors.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/030-create-finance-transactions.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/031-create-finance-transaction-contributors.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/032-create-finance-settlement-records.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/033-create-finance-savings-goals.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/034-create-finance-savings-contributions.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/035-add-finance-transactions-recurring-series-date-unique.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/036-finance-transactions-recurring-series-set-null-on-delete.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/037-add-finance-savings-goals-appearance.yaml
+      relativeToChangelogFile: false

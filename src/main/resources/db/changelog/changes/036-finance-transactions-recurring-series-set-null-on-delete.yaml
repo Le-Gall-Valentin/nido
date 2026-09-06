@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 036-finance-transactions-recurring-series-set-null-on-delete
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        # Existence alone can't distinguish "still the original CASCADE rule" from
+        # "already SET NULL" — the constraint is present under this name either way,
+        # only its confdeltype changes — so check that directly against pg_constraint.
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM pg_constraint WHERE conname = 'fk_finance_transactions_recurring_series' AND confdeltype = 'n'
+      changes:
+        # Deleting a recurring series should stop future occurrences without erasing the
+        # months of real spending it already produced — detach past transactions from the
+        # series instead of cascading their deletion.
+        - dropForeignKeyConstraint:
+            baseTableName: finance_transactions
+            constraintName: fk_finance_transactions_recurring_series
+        - addForeignKeyConstraint:
+            baseTableName: finance_transactions
+            baseColumnNames: recurring_series_id
+            constraintName: fk_finance_transactions_recurring_series
+            referencedTableName: finance_recurring_transaction_series
+            referencedColumnNames: id
+            onDelete: SET NULL
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: finance_transactions
+            constraintName: fk_finance_transactions_recurring_series
+        - addForeignKeyConstraint:
+            baseTableName: finance_transactions
+            baseColumnNames: recurring_series_id
+            constraintName: fk_finance_transactions_recurring_series
+            referencedTableName: finance_recurring_transaction_series
+            referencedColumnNames: id
+            onDelete: CASCADE

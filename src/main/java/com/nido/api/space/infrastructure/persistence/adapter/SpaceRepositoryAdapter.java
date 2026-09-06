@@ -89,6 +89,11 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
     }
 
     @Override
+    public String findEncryptionSaltById(UUID spaceId) {
+        return spaces.findById(spaceId).map(SpaceEntity::getEncryptionSalt).orElseThrow(SpaceException.SpaceNotFound::new);
+    }
+
+    @Override
     public PageResult<SpaceAdminView> findAll(int page, int size) {
         Page<SpaceEntity> found = spaces.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size));
         Map<UUID, Long> counts = found.isEmpty()

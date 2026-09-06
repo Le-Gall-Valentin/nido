@@ -23,6 +23,7 @@ final class DefaultShoppingCategorySeeder {
     private DefaultShoppingCategorySeeder() {}
 
     static void seedIfMissing(ShoppingCategoryRepository categoryRepository, UUID spaceId) {
+        categoryRepository.lockForSeeding(spaceId);
         if (!categoryRepository.existsBySpaceId(spaceId)) {
             DEFAULT_CATEGORY_NAMES.forEach(name -> categoryRepository.create(spaceId, name, false));
             categoryRepository.create(spaceId, DEFAULT_FALLBACK_CATEGORY_NAME, true);

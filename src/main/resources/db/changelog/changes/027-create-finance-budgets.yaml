@@ -1,0 +1,57 @@
+databaseChangeLog:
+  - changeSet:
+      id: 027-create-finance-budgets
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: finance_budgets
+      changes:
+        - createTable:
+            tableName: finance_budgets
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: monthly_limit_encrypted
+                  type: TEXT
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: finance_budgets
+            columnNames: space_id, category_id
+            constraintName: uq_finance_budgets_space_category
+        - addForeignKeyConstraint:
+            baseTableName: finance_budgets
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_finance_budgets_space
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: finance_budgets
+            baseColumnNames: category_id
+            referencedTableName: finance_categories
+            referencedColumnNames: id
+            constraintName: fk_finance_budgets_category
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: finance_budgets
+            cascadeConstraints: true
