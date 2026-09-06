@@ -15,4 +15,6 @@ public interface SpaceRepository {
     long countMembers(UUID spaceId);
     /** Lecture par lot, pour enrichir une liste sans lecture par élément. */
     List<Space> findByIds(Collection<UUID> spaceIds);
+    /** The per-space encryption salt used to derive that space's Finance encryption key. */
+    String findEncryptionSaltById(UUID spaceId);
 }
