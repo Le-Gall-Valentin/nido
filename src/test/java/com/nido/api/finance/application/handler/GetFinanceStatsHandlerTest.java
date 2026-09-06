@@ -83,6 +83,22 @@ class GetFinanceStatsHandlerTest {
             new com.nido.api.finance.domain.model.CategoryAmount(transportCategory, new BigDecimal("30.00")));
         assertThat(stats.budgetVsActual()).containsExactly(
             new com.nido.api.finance.domain.model.BudgetLine(foodCategory, new BigDecimal("400.00"), new BigDecimal("50.00")));
-        assertThat(stats.remainingBudget()).isEqualByComparingTo("320.00");
+        // Only foodCategory is budgeted (400.00 limit, 50.00 spent so far): the 30.00 spent in
+        // transportCategory has no budget at all, so it must not eat into this figure — a
+        // category left deliberately unbudgeted has no cap, and therefore no effect here either.
+        assertThat(stats.remainingBudget()).isEqualByComparingTo("350.00");
+    }
+
+    @Test
+    void remaining_budget_ignores_spending_in_categories_that_have_no_budget_at_all() {
+        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of());
+        when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of(
+            transaction(new BigDecimal("500.00"), TransactionType.EXPENSE, transportCategory)));
+        when(budgetRepository.findBySpaceId(spaceId)).thenReturn(List.of(
+            new Budget(UUID.randomUUID(), spaceId, foodCategory, new BigDecimal("400.00"))));
+
+        FinanceStats stats = handler.getStats(YearMonth.of(2026, 1), membership(), LocalDate.of(2026, 1, 20));
+
+        assertThat(stats.remainingBudget()).isEqualByComparingTo("400.00");
     }
 }
