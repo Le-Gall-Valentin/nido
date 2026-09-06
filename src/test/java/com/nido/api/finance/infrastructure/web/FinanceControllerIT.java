@@ -134,11 +134,40 @@ class FinanceControllerIT {
 
     @Test
     void settling_a_debt_between_members_is_recorded() throws Exception {
+        // Alice paid, Bob owes his share back — establishes the real debt this settlement pays off.
+        String body = "{\"label\":\"Courses\",\"amount\":20.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\",\"date\":\"2026-01-01\","
+            + "\"payerId\":\"" + aliceId + "\",\"contributors\":[{\"memberId\":\"" + bobId + "\",\"shareAmount\":20.00}]}";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+
         mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":20.00,\"date\":\"2026-01-02\"}"))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.amount").value(20.00));
+    }
+
+    @Test
+    void settling_a_debt_for_more_than_what_is_actually_owed_is_rejected() throws Exception {
+        String body = "{\"label\":\"Courses\",\"amount\":20.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\",\"date\":\"2026-01-01\","
+            + "\"payerId\":\"" + aliceId + "\",\"contributors\":[{\"memberId\":\"" + bobId + "\",\"shareAmount\":20.00}]}";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":20.01,\"date\":\"2026-01-02\"}"))
+            .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void settling_a_debt_when_nothing_is_actually_owed_is_rejected() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":20.00,\"date\":\"2026-01-02\"}"))
+            .andExpect(status().isUnprocessableEntity());
     }
 
     @Test
@@ -175,6 +204,12 @@ class FinanceControllerIT {
 
     @Test
     void listing_settlements_between_two_members_returns_them_newest_first() throws Exception {
+        String body = "{\"label\":\"Loyer\",\"amount\":35.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\",\"date\":\"2026-01-01\","
+            + "\"payerId\":\"" + aliceId + "\",\"contributors\":[{\"memberId\":\"" + bobId + "\",\"shareAmount\":35.00}]}";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+
         mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":20.00,\"date\":\"2026-01-02\"}"))
