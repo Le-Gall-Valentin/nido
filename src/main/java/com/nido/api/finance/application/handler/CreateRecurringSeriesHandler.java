@@ -2,6 +2,7 @@ package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.CreateRecurringSeriesUseCase;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
+import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionSplitter;
 import com.nido.api.finance.domain.model.CreateRecurringSeriesCommand;
@@ -34,9 +35,12 @@ public class CreateRecurringSeriesHandler implements CreateRecurringSeriesUseCas
     public RecurringTransactionSeries create(CreateRecurringSeriesCommand command, SpaceMembership caller) {
         caller.ensureSameSpace(command.spaceId());
         caller.ensureCanWrite();
-        categoryRepository.findById(command.categoryId())
-            .filter(category -> category.spaceId().equals(command.spaceId()))
+        Category category = categoryRepository.findById(command.categoryId())
+            .filter(c -> c.spaceId().equals(command.spaceId()))
             .orElseThrow(FinanceException.CategoryNotFound::new);
+        if (category.type() != command.type()) {
+            throw new FinanceException.CategoryTypeMismatch();
+        }
         List<Contribution> resolved = ContributionSplitter.resolve(command.amount(), command.contributors());
         if (!resolved.isEmpty() && command.payerId() == null) {
             throw new FinanceException.PayerRequired();
