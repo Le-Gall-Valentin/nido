@@ -4,6 +4,7 @@ import com.nido.api.finance.domain.model.Budget;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SetBudgetCommand;
+import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.BudgetRepository;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.space.domain.model.SpaceException;
@@ -44,7 +45,7 @@ class SetBudgetHandlerTest {
     @Test
     void a_member_can_set_a_budget() {
         SetBudgetCommand command = new SetBudgetCommand(spaceId, UUID.randomUUID(), new BigDecimal("450.00"));
-        Category category = new Category(command.categoryId(), spaceId, "Alimentation", "#f59e0b", "Utensils", true);
+        Category category = new Category(command.categoryId(), spaceId, "Alimentation", "#f59e0b", "Utensils", true, TransactionType.EXPENSE);
         Budget saved = new Budget(UUID.randomUUID(), spaceId, command.categoryId(), command.monthlyLimit());
         when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(category));
         when(budgetRepository.upsert(command)).thenReturn(saved);
@@ -74,7 +75,7 @@ class SetBudgetHandlerTest {
     void setting_a_budget_for_a_category_that_belongs_to_a_different_space_is_rejected() {
         UUID otherSpaceId = UUID.randomUUID();
         SetBudgetCommand command = new SetBudgetCommand(spaceId, UUID.randomUUID(), new BigDecimal("450.00"));
-        Category category = new Category(command.categoryId(), otherSpaceId, "Alimentation", "#f59e0b", "Utensils", true);
+        Category category = new Category(command.categoryId(), otherSpaceId, "Alimentation", "#f59e0b", "Utensils", true, TransactionType.EXPENSE);
         when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(category));
 
         assertThatThrownBy(() -> handler.set(command, membership(SpaceRole.MEMBER)))
@@ -88,5 +89,15 @@ class SetBudgetHandlerTest {
 
         assertThatThrownBy(() -> handler.set(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(FinanceException.CategoryNotFound.class);
+    }
+
+    @Test
+    void setting_a_budget_on_an_income_category_is_rejected() {
+        SetBudgetCommand command = new SetBudgetCommand(spaceId, UUID.randomUUID(), new BigDecimal("450.00"));
+        Category category = new Category(command.categoryId(), spaceId, "Revenu", "#22c55e", "Wallet", true, TransactionType.INCOME);
+        when(categoryRepository.findById(command.categoryId())).thenReturn(Optional.of(category));
+
+        assertThatThrownBy(() -> handler.set(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.BudgetRequiresExpenseCategory.class);
     }
 }

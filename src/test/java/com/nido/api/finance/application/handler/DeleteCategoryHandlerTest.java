@@ -2,6 +2,7 @@ package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.FinanceException;
+import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.BudgetRepository;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.space.domain.model.SpaceException;
@@ -41,7 +42,7 @@ class DeleteCategoryHandlerTest {
 
     @Test
     void a_member_can_delete_an_unused_category_and_its_budget_is_deleted_too() {
-        Category existing = new Category(categoryId, spaceId, "Divers", "#64748b", "MoreHorizontal", false);
+        Category existing = new Category(categoryId, spaceId, "Divers", "#64748b", "MoreHorizontal", false, TransactionType.EXPENSE);
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(existing));
         when(categoryRepository.isReferencedByTransactions(categoryId)).thenReturn(false);
 
@@ -53,7 +54,7 @@ class DeleteCategoryHandlerTest {
 
     @Test
     void deleting_a_category_still_used_by_a_transaction_is_rejected() {
-        Category existing = new Category(categoryId, spaceId, "Divers", "#64748b", "MoreHorizontal", false);
+        Category existing = new Category(categoryId, spaceId, "Divers", "#64748b", "MoreHorizontal", false, TransactionType.EXPENSE);
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(existing));
         when(categoryRepository.isReferencedByTransactions(categoryId)).thenReturn(true);
 
