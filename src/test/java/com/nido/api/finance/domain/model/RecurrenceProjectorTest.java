@@ -6,8 +6,18 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RecurrenceProjectorTest {
+
+    @Test
+    void an_interval_count_of_zero_or_less_is_rejected_instead_of_looping_forever() {
+        LocalDate anchor = LocalDate.of(2026, 1, 1);
+
+        assertThatThrownBy(() -> RecurrenceProjector.occurrencesBetween(
+            anchor, RecurrenceInterval.MONTHLY, 0, null, LocalDate.of(2025, 1, 1), LocalDate.of(2026, 12, 31)))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
 
     @Test
     void occurrence_zero_is_always_the_anchor_date_itself() {

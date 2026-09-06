@@ -19,6 +19,12 @@ public final class RecurrenceProjector {
     private RecurrenceProjector() {}
 
     public static LocalDate occurrenceDate(LocalDate anchorDate, RecurrenceInterval intervalType, int intervalCount, int occurrenceNumber) {
+        // Not reachable through the real API today (RecurrenceRequest.intervalCount has
+        // @Min(1)), but occurrencesBetween's scan below never advances and loops forever
+        // if this is allowed through some other path — fail fast instead.
+        if (intervalCount < 1) {
+            throw new IllegalArgumentException("intervalCount must be at least 1, got " + intervalCount);
+        }
         long steps = (long) intervalCount * occurrenceNumber;
         return switch (intervalType) {
             case DAILY -> anchorDate.plusDays(steps);

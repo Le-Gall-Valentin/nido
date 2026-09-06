@@ -173,6 +173,63 @@ class FinanceControllerIT {
     }
 
     @Test
+    void a_member_can_create_list_update_and_delete_a_recurring_series() throws Exception {
+        String body = "{\"label\":\"Loyer\",\"amount\":800.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":1,\"anchorDate\":\"2026-01-01\"}}";
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/recurring-series")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.label").value("Loyer"))
+            .andReturn().getResponse().getContentAsString();
+        String seriesId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/recurring-series").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1));
+
+        String updateBody = "{\"label\":\"Loyer révisé\",\"amount\":850.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":1,\"anchorDate\":\"2026-01-01\"}}";
+        mockMvc.perform(patch("/api/spaces/" + spaceId + "/finance/recurring-series/" + seriesId)
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(updateBody))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.label").value("Loyer révisé"))
+            .andExpect(jsonPath("$.amount").value(850.00));
+
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/finance/recurring-series/" + seriesId).cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/recurring-series").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void a_viewer_cannot_create_a_recurring_series() throws Exception {
+        String body = "{\"label\":\"Loyer\",\"amount\":800.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":1,\"anchorDate\":\"2026-01-01\"}}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/recurring-series")
+                .cookie(accessTokenFor(bobId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void a_recurring_series_interval_count_of_zero_is_rejected_as_a_validation_error() throws Exception {
+        String body = "{\"label\":\"Loyer\",\"amount\":800.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":0,\"anchorDate\":\"2026-01-01\"}}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/recurring-series")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deleting_a_nonexistent_recurring_series_is_rejected_cleanly_instead_of_crashing() throws Exception {
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/finance/recurring-series/" + UUID.randomUUID()).cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
     void creating_and_contributing_to_a_savings_goal() throws Exception {
         String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/savings-goals")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
