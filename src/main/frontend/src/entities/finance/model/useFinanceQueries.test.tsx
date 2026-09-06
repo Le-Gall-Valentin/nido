@@ -33,7 +33,7 @@ function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
 
 describe('useCategories', () => {
   it('fetches categories for the given space', async () => {
-    const categories = [{ id: '1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true }]
+    const categories = [{ id: '1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true, type: 'EXPENSE' }]
     const api = fakeApi({ listCategories: vi.fn().mockResolvedValue(categories) })
 
     const { result } = renderHook(() => useCategories('space-1'), { wrapper: wrapper(api) })

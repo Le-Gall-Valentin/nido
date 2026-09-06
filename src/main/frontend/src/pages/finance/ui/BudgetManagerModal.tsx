@@ -46,7 +46,7 @@ export function BudgetManagerModal({ categories, budgetLines, onSave, onDelete, 
       {submitError && <p className="mb-3 text-sm font-medium text-status-red">{submitError}</p>}
 
       <ul className="max-h-96 space-y-1 overflow-y-auto">
-        {categories.map((category) => {
+        {categories.filter((category) => category.type === 'EXPENSE').map((category) => {
           const line = budgetLines.find((l) => l.categoryId === category.id)
           const currentLimit = line?.monthlyLimit ?? null
 

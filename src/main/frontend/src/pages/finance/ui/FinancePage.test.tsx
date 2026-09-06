@@ -29,7 +29,7 @@ const CURRENT_SPACE: SpaceSummary = {
 
 function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
   return {
-    listCategories: vi.fn().mockResolvedValue([{ id: 'c1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true }]),
+    listCategories: vi.fn().mockResolvedValue([{ id: 'c1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true, type: 'EXPENSE' }]),
     createCategory: vi.fn(), updateCategory: vi.fn(), deleteCategory: vi.fn(),
     listBudgets: vi.fn().mockResolvedValue([]), setBudget: vi.fn(), deleteBudget: vi.fn(),
     listTransactions: vi.fn().mockResolvedValue([]), createTransaction: vi.fn(), updateTransaction: vi.fn(), deleteTransaction: vi.fn(),

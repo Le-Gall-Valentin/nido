@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.domain.model.Category;
+import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
@@ -37,7 +38,7 @@ class ListCategoriesHandlerTest {
     @Test
     void seeds_defaults_before_listing_when_the_space_has_no_categories_yet() {
         when(categoryRepository.existsBySpaceId(spaceId)).thenReturn(false);
-        Category seeded = new Category(UUID.randomUUID(), spaceId, "Alimentation", "#f59e0b", "Utensils", true);
+        Category seeded = new Category(UUID.randomUUID(), spaceId, "Alimentation", "#f59e0b", "Utensils", true, TransactionType.EXPENSE);
         when(categoryRepository.findBySpaceId(spaceId)).thenReturn(List.of(seeded));
 
         List<Category> result = handler.list(membership());

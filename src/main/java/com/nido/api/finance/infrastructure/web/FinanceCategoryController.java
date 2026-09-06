@@ -59,7 +59,7 @@ public class FinanceCategoryController {
             @PathVariable UUID spaceId, @Valid @RequestBody CreateCategoryRequest request,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
         Category created = createCategoryUseCase.create(
-            new CreateCategoryCommand(spaceId, request.label(), request.color(), request.icon()), membership);
+            new CreateCategoryCommand(spaceId, request.label(), request.color(), request.icon(), request.type()), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(CategoryResponse.from(created));
     }
 

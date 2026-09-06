@@ -8,8 +8,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 const categories: Category[] = [
-  { id: 'c1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true },
-  { id: 'c2', label: 'Animaux', color: '#a3e635', icon: 'PawPrint', isDefault: false },
+  { id: 'c1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true, type: 'EXPENSE' },
+  { id: 'c2', label: 'Animaux', color: '#a3e635', icon: 'PawPrint', isDefault: false, type: 'EXPENSE' },
 ]
 
 describe('CategoryManagerModal', () => {
@@ -33,7 +33,18 @@ describe('CategoryManagerModal', () => {
     fireEvent.change(screen.getByLabelText('categories.new_category_label'), { target: { value: 'Sport' } })
     fireEvent.click(screen.getByText('categories.add'))
 
-    expect(onCreate).toHaveBeenCalledWith('Sport', expect.any(String), expect.any(String))
+    expect(onCreate).toHaveBeenCalledWith('Sport', expect.any(String), expect.any(String), 'EXPENSE')
+  })
+
+  it('creates an income category when Revenu is selected', () => {
+    const onCreate = vi.fn()
+    render(<CategoryManagerModal categories={categories} onCreate={onCreate} onUpdate={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} deleteError={null} />)
+
+    fireEvent.change(screen.getByLabelText('categories.new_category_label'), { target: { value: 'Prime' } })
+    fireEvent.click(screen.getByText('type.INCOME'))
+    fireEvent.click(screen.getByText('categories.add'))
+
+    expect(onCreate).toHaveBeenCalledWith('Prime', expect.any(String), expect.any(String), 'INCOME')
   })
 
   it('clears the new-category field once the create request succeeds', async () => {
@@ -95,7 +106,7 @@ describe('CategoryManagerModal', () => {
     fireEvent.click(screen.getByText('categories.icon_confirm'))
     fireEvent.click(screen.getByText('categories.add'))
 
-    expect(onCreate).toHaveBeenCalledWith('Sport', expect.any(String), 'Circle')
+    expect(onCreate).toHaveBeenCalledWith('Sport', expect.any(String), 'Circle', 'EXPENSE')
   })
 
   it('creates a new category with a color chosen from the appearance picker', () => {
@@ -108,7 +119,7 @@ describe('CategoryManagerModal', () => {
     fireEvent.click(screen.getByText('categories.icon_confirm'))
     fireEvent.click(screen.getByText('categories.add'))
 
-    expect(onCreate).toHaveBeenCalledWith('Sport', '#112233', expect.any(String))
+    expect(onCreate).toHaveBeenCalledWith('Sport', '#112233', expect.any(String), 'EXPENSE')
   })
 
   it('updates an existing category with an icon chosen from the appearance picker', () => {

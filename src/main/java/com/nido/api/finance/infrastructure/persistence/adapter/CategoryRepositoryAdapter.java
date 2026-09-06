@@ -56,6 +56,7 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
         applyLabel(e, command.spaceId(), command.label(), isDefault);
         e.setColor(command.color());
         e.setIcon(command.icon());
+        e.setType(command.type());
         FinanceCategoryEntity saved = categories.saveAndFlush(e);
         return toDomain(saved, command.spaceId());
     }
@@ -94,6 +95,6 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
 
     private Category toDomain(FinanceCategoryEntity e, UUID spaceId) {
         String label = e.isDefault() ? e.getLabel() : encryptorFactory.forSpace(spaceId).decrypt(e.getLabelEncrypted());
-        return new Category(e.getId(), e.getSpaceId(), label, e.getColor(), e.getIcon(), e.isDefault());
+        return new Category(e.getId(), e.getSpaceId(), label, e.getColor(), e.getIcon(), e.isDefault(), e.getType());
     }
 }

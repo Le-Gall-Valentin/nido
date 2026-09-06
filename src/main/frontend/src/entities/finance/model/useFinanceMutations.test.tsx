@@ -41,10 +41,10 @@ describe('useCreateCategory', () => {
     const api = fakeApi({ createCategory: vi.fn().mockResolvedValue({}) })
     const { result } = renderHook(() => useCreateCategory('space-1'), { wrapper: wrapper(api, makeQueryClient()) })
 
-    act(() => result.current.mutate({ label: 'Loisirs', color: '#3b82f6', icon: 'Gamepad2' }))
+    act(() => result.current.mutate({ label: 'Loisirs', color: '#3b82f6', icon: 'Gamepad2', type: 'EXPENSE' }))
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(api.createCategory).toHaveBeenCalledWith('space-1', 'Loisirs', '#3b82f6', 'Gamepad2')
+    expect(api.createCategory).toHaveBeenCalledWith('space-1', 'Loisirs', '#3b82f6', 'Gamepad2', 'EXPENSE')
   })
 })
 

@@ -57,6 +57,14 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
     setContributorIds((ids) => (ids.includes(memberId) ? ids.filter((id) => id !== memberId) : [...ids, memberId]))
   }
 
+  function selectType(next: TransactionType) {
+    setType(next)
+    const stillValid = categories.some((c) => c.id === categoryId && c.type === next)
+    if (!stillValid) {
+      setCategoryId(categories.find((c) => c.type === next)?.id ?? '')
+    }
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!label.trim()) {
@@ -94,11 +102,11 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
     <Dialog open onClose={onCancel} title={mode === 'create' ? t('form.create_title') : t('form.edit_title')} maxWidth="max-w-lg">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex gap-1 rounded-[11px] bg-bg-2 p-1">
-          <button type="button" onClick={() => setType('EXPENSE')} aria-pressed={type === 'EXPENSE'}
+          <button type="button" onClick={() => selectType('EXPENSE')} aria-pressed={type === 'EXPENSE'}
             className={`flex-1 rounded-[8px] px-3 py-2 text-sm font-semibold transition-colors ${type === 'EXPENSE' ? 'bg-bg-1 text-fg-0 shadow-sm' : 'text-fg-3'}`}>
             {t('type.EXPENSE')}
           </button>
-          <button type="button" onClick={() => setType('INCOME')} aria-pressed={type === 'INCOME'}
+          <button type="button" onClick={() => selectType('INCOME')} aria-pressed={type === 'INCOME'}
             className={`flex-1 rounded-[8px] px-3 py-2 text-sm font-semibold transition-colors ${type === 'INCOME' ? 'bg-bg-1 text-fg-0 shadow-sm' : 'text-fg-3'}`}>
             {t('type.INCOME')}
           </button>
@@ -110,7 +118,7 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
         <div className="flex flex-col gap-1.5">
           <label htmlFor="finance-category" className="text-[13px] font-semibold text-fg-1">{t('form.category_label')}</label>
           <select id="finance-category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={SELECT_CLASSNAME}>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+            {categories.filter((c) => c.type === type).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
         </div>
 

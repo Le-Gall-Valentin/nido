@@ -5,6 +5,7 @@ import com.nido.api.finance.domain.model.Budget;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.CreateCategoryCommand;
 import com.nido.api.finance.domain.model.SetBudgetCommand;
+import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceBudgetJpaRepository;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -53,7 +54,7 @@ class BudgetRepositoryAdapterIT {
         spaceId = spaceJpaRepository.saveAndFlush(space).getId();
         // finance_budgets.category_id has a foreign key onto finance_categories(id) — a
         // real category row is required, a bare random UUID violates the constraint.
-        Category category = categoryAdapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils"), true);
+        Category category = categoryAdapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils", TransactionType.EXPENSE), true);
         categoryId = category.id();
     }
 

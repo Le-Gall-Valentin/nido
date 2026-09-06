@@ -8,7 +8,8 @@ public abstract sealed class FinanceException extends RuntimeException
             FinanceException.SavingsGoalNotFound, FinanceException.InvalidSavingsGoalAppearance,
             FinanceException.ContributionExceedsGoalTarget, FinanceException.DecryptionFailed,
             FinanceException.MemberNotInSpace, FinanceException.SettlementExceedsDebt,
-            FinanceException.TargetAmountBelowContributed {
+            FinanceException.TargetAmountBelowContributed, FinanceException.CategoryTypeMismatch,
+            FinanceException.BudgetRequiresExpenseCategory {
 
     private FinanceException(String message) { super(message); }
 
@@ -81,5 +82,15 @@ public abstract sealed class FinanceException extends RuntimeException
     /** Thrown when a savings goal update would lower its targetAmount below what's already been contributed. */
     public static final class TargetAmountBelowContributed extends FinanceException {
         public TargetAmountBelowContributed() { super("The target amount cannot be lowered below what has already been contributed"); }
+    }
+
+    /** Thrown when a transaction or recurring series' category type doesn't match the operation's own type — e.g. an EXPENSE transaction pointing at an INCOME category. */
+    public static final class CategoryTypeMismatch extends FinanceException {
+        public CategoryTypeMismatch() { super("The category's type does not match the operation's type"); }
+    }
+
+    /** Thrown when setting a budget on a category whose type is INCOME — budgeting only ever applies to expense categories. */
+    public static final class BudgetRequiresExpenseCategory extends FinanceException {
+        public BudgetRequiresExpenseCategory() { super("Only expense categories can be budgeted"); }
     }
 }

@@ -2,6 +2,7 @@ package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.FinanceException;
+import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.BudgetRepository;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.space.domain.model.SpaceException;
@@ -40,7 +41,7 @@ class DeleteBudgetHandlerTest {
     }
 
     private Category category(UUID id, UUID inSpaceId) {
-        return new Category(id, inSpaceId, "Alimentation", "#f59e0b", "Utensils", true);
+        return new Category(id, inSpaceId, "Alimentation", "#f59e0b", "Utensils", true, TransactionType.EXPENSE);
     }
 
     @Test

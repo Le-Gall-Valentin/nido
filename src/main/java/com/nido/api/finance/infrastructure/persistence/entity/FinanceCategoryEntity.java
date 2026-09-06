@@ -1,7 +1,10 @@
 package com.nido.api.finance.infrastructure.persistence.entity;
 
+import com.nido.api.finance.domain.model.TransactionType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -41,4 +44,8 @@ public class FinanceCategoryEntity {
 
     @Column(name = "is_default", nullable = false)
     private boolean isDefault;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private TransactionType type;
 }
