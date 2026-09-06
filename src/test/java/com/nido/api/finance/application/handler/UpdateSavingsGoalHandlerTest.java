@@ -77,6 +77,32 @@ class UpdateSavingsGoalHandlerTest {
     }
 
     @Test
+    void lowering_the_target_amount_below_what_has_already_been_contributed_is_rejected() {
+        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(UUID.randomUUID(), spaceId, "Nouveau nom", new BigDecimal("500.00"), null, "#5c7a58", "🎯");
+        when(savingsGoalRepository.findById(command.goalId())).thenReturn(Optional.of(existingInSameSpace(command.goalId())));
+        SavingsContribution contribution = new SavingsContribution(UUID.randomUUID(), command.goalId(), UUID.randomUUID(), new BigDecimal("600.00"), LocalDate.of(2026, 1, 5));
+        when(savingsGoalRepository.findContributionsByGoalId(command.goalId())).thenReturn(List.of(contribution));
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.TargetAmountBelowContributed.class);
+        verify(savingsGoalRepository, never()).update(any());
+    }
+
+    @Test
+    void lowering_the_target_amount_to_exactly_what_has_already_been_contributed_is_accepted() {
+        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(UUID.randomUUID(), spaceId, "Nouveau nom", new BigDecimal("600.00"), null, "#5c7a58", "🎯");
+        when(savingsGoalRepository.findById(command.goalId())).thenReturn(Optional.of(existingInSameSpace(command.goalId())));
+        SavingsContribution contribution = new SavingsContribution(UUID.randomUUID(), command.goalId(), UUID.randomUUID(), new BigDecimal("600.00"), LocalDate.of(2026, 1, 5));
+        when(savingsGoalRepository.findContributionsByGoalId(command.goalId())).thenReturn(List.of(contribution));
+        SavingsGoal updated = new SavingsGoal(command.goalId(), spaceId, "Nouveau nom", new BigDecimal("600.00"), null, "#5c7a58", "🎯");
+        when(savingsGoalRepository.update(command)).thenReturn(updated);
+
+        SavingsGoalDetail result = handler.update(command, membership(SpaceRole.MEMBER));
+
+        assertThat(result.goal()).isEqualTo(updated);
+    }
+
+    @Test
     void updating_a_savings_goal_that_belongs_to_a_different_space_is_rejected() {
         UUID goalId = UUID.randomUUID();
         UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(goalId, spaceId, "Nouveau nom", new BigDecimal("2500.00"), null, "#5c7a58", "🎯");

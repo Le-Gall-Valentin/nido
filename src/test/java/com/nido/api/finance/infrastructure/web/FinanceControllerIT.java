@@ -327,6 +327,26 @@ class FinanceControllerIT {
     }
 
     @Test
+    void lowering_a_savings_goal_target_below_what_has_already_been_contributed_is_rejected() throws Exception {
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/savings-goals")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Vacances\",\"targetAmount\":2000.00,\"color\":\"#5c7a58\",\"glyph\":\"🎯\"}"))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+        String goalId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/savings-goals/" + goalId + "/contributions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"memberId\":\"" + aliceId + "\",\"amount\":500.00,\"date\":\"2026-01-05\"}"))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(patch("/api/spaces/" + spaceId + "/finance/savings-goals/" + goalId)
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Vacances\",\"targetAmount\":400.00,\"color\":\"#5c7a58\",\"glyph\":\"🎯\"}"))
+            .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
     void an_amount_with_more_than_two_decimal_places_is_rejected_as_a_validation_error() throws Exception {
         String body = "{\"label\":\"Courses\",\"amount\":12.345678,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\",\"date\":\"2026-01-10\","
             + "\"contributors\":[{\"memberId\":\"" + aliceId + "\",\"shareAmount\":null}]}";
