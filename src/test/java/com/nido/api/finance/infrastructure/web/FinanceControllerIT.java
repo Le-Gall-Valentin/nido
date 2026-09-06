@@ -213,6 +213,41 @@ class FinanceControllerIT {
             .andExpect(status().isNotFound()); // Alice has no membership at all in bobsSpaceId — SpaceException.NotAMember maps to 404.
     }
 
+    @Test
+    void an_amount_with_more_than_two_decimal_places_is_rejected_as_a_validation_error() throws Exception {
+        String body = "{\"label\":\"Courses\",\"amount\":12.345678,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\",\"date\":\"2026-01-10\","
+            + "\"contributors\":[{\"memberId\":\"" + aliceId + "\",\"shareAmount\":null}]}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void creating_a_transaction_with_a_nonexistent_category_is_rejected_cleanly_instead_of_crashing() throws Exception {
+        String body = "{\"label\":\"Courses\",\"amount\":25.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + UUID.randomUUID() + "\",\"date\":\"2026-01-10\"}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void a_budget_amount_with_more_than_two_decimal_places_is_rejected_as_a_validation_error() throws Exception {
+        mockMvc.perform(put("/api/spaces/" + spaceId + "/finance/budgets/" + firstCategoryId())
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"monthlyLimit\":50.001}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void a_savings_goal_target_amount_with_more_than_two_decimal_places_is_rejected_as_a_validation_error() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/savings-goals")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Vacances\",\"targetAmount\":2000.999,\"color\":\"#5c7a58\",\"glyph\":\"🎯\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
     private String firstCategoryId() throws Exception {
         String categories = mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/categories").cookie(accessTokenFor(aliceId)))
             .andReturn().getResponse().getContentAsString();
