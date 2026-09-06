@@ -8,7 +8,10 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),
 }))
 
-const categories: Category[] = [{ id: 'c1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true }]
+const categories: Category[] = [
+  { id: 'c1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true, type: 'EXPENSE' },
+  { id: 'c2', label: 'Revenu', color: '#22c55e', icon: 'Wallet', isDefault: true, type: 'INCOME' },
+]
 const alice: SpaceMember = { userId: 'alice', username: 'alice', email: 'a@test.com', role: 'MEMBER', joinedAt: '2026-01-01' }
 const bob: SpaceMember = { userId: 'bob', username: 'bob', email: 'b@test.com', role: 'MEMBER', joinedAt: '2026-01-01' }
 
@@ -28,6 +31,18 @@ function renderModal(props: Partial<React.ComponentProps<typeof RecurringSeriesF
 }
 
 describe('RecurringSeriesFormModal', () => {
+  it('only offers categories matching the selected type, and resets the selection when the type changes', () => {
+    renderModal()
+
+    const select = screen.getByLabelText('form.category_label') as HTMLSelectElement
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(['c1'])
+
+    fireEvent.click(screen.getByText('type.INCOME'))
+
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(['c2'])
+    expect(select.value).toBe('c2')
+  })
+
   it('shows the submit error handed down by the caller when the backend rejected the request', () => {
     renderModal({ submitError: 'form.submit_error' })
 
