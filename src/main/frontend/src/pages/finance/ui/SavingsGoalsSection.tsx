@@ -56,7 +56,7 @@ export function SavingsGoalsSection({
                   aria-label={t('savings.view_details', { name: goal.name })}
                   className="absolute inset-0 rounded-[14px]"
                 />
-                <div className="pointer-events-none p-4">
+                <div className="pointer-events-none relative z-10 p-4">
                   <div className="flex items-start gap-3">
                     <div className="grid size-10 shrink-0 place-items-center rounded-[11px] text-xl" style={{ background: safeSavingsGoalColor(goal.color) }}>
                       {safeSavingsGoalGlyph(goal.glyph)}
