@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { ArrowRightLeft, Pencil, Repeat, Trash2 } from 'lucide-react'
+import { Pencil, Repeat, Trash2 } from 'lucide-react'
 import { UserAvatar } from '@/entities/user'
 import type { SpaceMember } from '@/entities/space'
 import type { Category, Transaction } from '@/entities/finance'
@@ -14,12 +14,11 @@ interface TransactionsSectionProps {
   onManageRecurring: () => void
   onSelectTransaction: (transaction: Transaction) => void
   onEdit: (transaction: Transaction) => void
-  onMove: (transaction: Transaction) => void
   onDelete: (transaction: Transaction) => void
 }
 
 export function TransactionsSection({
-  transactions, categoryById, members, canWrite, onManageRecurring, onSelectTransaction, onEdit, onMove, onDelete,
+  transactions, categoryById, members, canWrite, onManageRecurring, onSelectTransaction, onEdit, onDelete,
 }: TransactionsSectionProps) {
   const { t } = useTranslation('finance')
 
@@ -63,10 +62,6 @@ export function TransactionsSection({
                   <button type="button" aria-label={t('transactions.edit')} onClick={() => onEdit(transaction)}
                     className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-bg-2 hover:text-fg-1">
                     <Pencil size={15} />
-                  </button>
-                  <button type="button" aria-label={t('transactions.move')} onClick={() => onMove(transaction)}
-                    className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-bg-2 hover:text-fg-1">
-                    <ArrowRightLeft size={15} />
                   </button>
                   <button type="button" aria-label={t('transactions.delete')} onClick={() => onDelete(transaction)}
                     className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-status-red-dim hover:text-status-red">

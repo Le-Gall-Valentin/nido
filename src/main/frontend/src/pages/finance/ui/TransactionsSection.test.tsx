@@ -23,7 +23,7 @@ describe('TransactionsSection', () => {
     const onSelectTransaction = vi.fn()
     render(
       <TransactionsSection transactions={[courses]} categoryById={categoryById} members={[alice]} canWrite
-        onManageRecurring={onManageRecurring} onSelectTransaction={onSelectTransaction} onEdit={vi.fn()} onMove={vi.fn()} onDelete={vi.fn()} />
+        onManageRecurring={onManageRecurring} onSelectTransaction={onSelectTransaction} onEdit={vi.fn()} onDelete={vi.fn()} />
     )
 
     fireEvent.click(screen.getByText('recurring_series.manage'))
@@ -37,39 +37,35 @@ describe('TransactionsSection', () => {
     const recurring = { ...courses, recurring: true }
     render(
       <TransactionsSection transactions={[recurring]} categoryById={categoryById} members={[alice]} canWrite
-        onManageRecurring={vi.fn()} onSelectTransaction={vi.fn()} onEdit={vi.fn()} onMove={vi.fn()} onDelete={vi.fn()} />
+        onManageRecurring={vi.fn()} onSelectTransaction={vi.fn()} onEdit={vi.fn()} onDelete={vi.fn()} />
     )
 
     expect(screen.getByText('transactions.recurring')).toBeDefined()
   })
 
-  it('edits, moves and deletes a transaction through their respective actions', () => {
+  it('edits and deletes a transaction through their respective actions', () => {
     const onEdit = vi.fn()
-    const onMove = vi.fn()
     const onDelete = vi.fn()
     render(
       <TransactionsSection transactions={[courses]} categoryById={categoryById} members={[alice]} canWrite
-        onManageRecurring={vi.fn()} onSelectTransaction={vi.fn()} onEdit={onEdit} onMove={onMove} onDelete={onDelete} />
+        onManageRecurring={vi.fn()} onSelectTransaction={vi.fn()} onEdit={onEdit} onDelete={onDelete} />
     )
 
     fireEvent.click(screen.getByLabelText('transactions.edit'))
-    fireEvent.click(screen.getByLabelText('transactions.move'))
     fireEvent.click(screen.getByLabelText('transactions.delete'))
 
     expect(onEdit).toHaveBeenCalledWith(courses)
-    expect(onMove).toHaveBeenCalledWith(courses)
     expect(onDelete).toHaveBeenCalledWith(courses)
   })
 
   it('hides the recurring-series manager link and every row action from a read-only viewer', () => {
     render(
       <TransactionsSection transactions={[courses]} categoryById={categoryById} members={[alice]} canWrite={false}
-        onManageRecurring={vi.fn()} onSelectTransaction={vi.fn()} onEdit={vi.fn()} onMove={vi.fn()} onDelete={vi.fn()} />
+        onManageRecurring={vi.fn()} onSelectTransaction={vi.fn()} onEdit={vi.fn()} onDelete={vi.fn()} />
     )
 
     expect(screen.queryByText('recurring_series.manage')).toBeNull()
     expect(screen.queryByLabelText('transactions.edit')).toBeNull()
-    expect(screen.queryByLabelText('transactions.move')).toBeNull()
     expect(screen.queryByLabelText('transactions.delete')).toBeNull()
   })
 })

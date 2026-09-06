@@ -3,11 +3,11 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Alert, Spinner } from '@/shared/ui'
 import { useAuth } from '@/features/auth'
-import { useMySpaces, useWritableSpaces } from '@/features/space-switcher'
-import { canWrite, isPersonal, useSpaceMembers, TransferDialog } from '@/entities/space'
+import { useMySpaces } from '@/features/space-switcher'
+import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
 import {
   financeApi, FinanceApiProvider, useCategories, useTransactions, useFinanceStats, useProjection,
-  useCreateTransaction, useCreateRecurringSeries, useUpdateTransaction, useDeleteTransaction, useMoveTransaction, useSetBudget,
+  useCreateTransaction, useCreateRecurringSeries, useUpdateTransaction, useDeleteTransaction, useSetBudget,
   useCreateCategory, useUpdateCategory, useDeleteCategory, useBalances, useSettleDebt, useSettlementsBetween,
   useSavingsGoals, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,
   useRecurringSeries, useUpdateRecurringSeries, useDeleteRecurringSeries,
@@ -64,7 +64,6 @@ function FinancePageContent() {
   const { data: recurringSeries } = useRecurringSeries(spaceId)
   const { data: members } = useSpaceMembers(spaceId)
   const { data: mySpaces } = useMySpaces()
-  const { data: writableDestinations } = useWritableSpaces(spaceId)
 
   const createTransaction = useCreateTransaction(spaceId)
   const createRecurringSeries = useCreateRecurringSeries(spaceId)
@@ -72,7 +71,6 @@ function FinancePageContent() {
   const deleteRecurringSeries = useDeleteRecurringSeries(spaceId)
   const updateTransaction = useUpdateTransaction(spaceId)
   const deleteTransaction = useDeleteTransaction(spaceId)
-  const moveTransaction = useMoveTransaction(spaceId)
   const setBudget = useSetBudget(spaceId)
   const createCategory = useCreateCategory(spaceId)
   const updateCategory = useUpdateCategory(spaceId)
@@ -87,7 +85,6 @@ function FinancePageContent() {
 
   const [formState, setFormState] = useState<{ mode: 'create' } | { mode: 'edit'; transaction: Transaction } | null>(null)
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
-  const [movingTransaction, setMovingTransaction] = useState<Transaction | null>(null)
   const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null)
   const [viewingCategoryId, setViewingCategoryId] = useState<string | null>(null)
   const [managingCategories, setManagingCategories] = useState(false)
@@ -168,11 +165,6 @@ function FinancePageContent() {
     )
   }
 
-  async function handleMoveConfirm(destinationSpaceId: string): Promise<void> {
-    if (!movingTransaction) return
-    await moveTransaction.mutateAsync({ transactionId: movingTransaction.id, destinationSpaceId })
-  }
-
   if (isPending || categoriesPending) return <Spinner label={t('loading')} fullscreen={false} />
   if (isError || categoriesError) return <Alert variant="error">{t('error.load_failed')}</Alert>
 
@@ -238,7 +230,6 @@ function FinancePageContent() {
         onManageRecurring={() => setManagingRecurringSeries(true)}
         onSelectTransaction={setViewingTransaction}
         onEdit={(transaction) => setFormState({ mode: 'edit', transaction })}
-        onMove={setMovingTransaction}
         onDelete={setDeletingTransaction}
       />
 
@@ -276,18 +267,11 @@ function FinancePageContent() {
           label={deletingTransaction.label}
           isPending={deleteTransaction.isPending}
           error={deleteTransaction.isError ? 'error' : null}
-          onCancel={() => setDeletingTransaction(null)}
+          onCancel={() => {
+            setDeletingTransaction(null)
+            deleteTransaction.reset()
+          }}
           onConfirm={() => deleteTransaction.mutate(deletingTransaction.id, { onSuccess: () => setDeletingTransaction(null) })}
-        />
-      )}
-
-      {movingTransaction && (
-        <TransferDialog
-          itemName={movingTransaction.label}
-          operation="move"
-          destinations={writableDestinations ?? []}
-          onClose={() => setMovingTransaction(null)}
-          onConfirm={handleMoveConfirm}
         />
       )}
 
@@ -349,7 +333,10 @@ function FinancePageContent() {
           label={deletingSeries.label}
           isPending={deleteRecurringSeries.isPending}
           error={deleteRecurringSeries.isError ? 'error' : null}
-          onCancel={() => setDeletingSeries(null)}
+          onCancel={() => {
+            setDeletingSeries(null)
+            deleteRecurringSeries.reset()
+          }}
           onConfirm={() => deleteRecurringSeries.mutate(deletingSeries.id, { onSuccess: () => setDeletingSeries(null) })}
         />
       )}

@@ -13,7 +13,7 @@ export {
 } from './model/useFinanceQueries'
 export {
   useCreateCategory, useUpdateCategory, useDeleteCategory, useSetBudget,
-  useCreateTransaction, useUpdateTransaction, useDeleteTransaction, useMoveTransaction,
+  useCreateTransaction, useUpdateTransaction, useDeleteTransaction,
   useCreateRecurringSeries, useUpdateRecurringSeries, useDeleteRecurringSeries,
   useSettleDebt, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,
 } from './model/useFinanceMutations'

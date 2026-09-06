@@ -86,13 +86,6 @@ export const financeApi: IFinanceApi = {
     } catch (error) { handleError(error) }
   },
 
-  async moveTransaction(spaceId, transactionId, destinationSpaceId) {
-    try {
-      const res = await client.post<Transaction>(`/spaces/${spaceId}/finance/transactions/${transactionId}/move`, { destinationSpaceId })
-      return res.data
-    } catch (error) { handleError(error) }
-  },
-
   async listRecurringSeries(spaceId) {
     try {
       const res = await client.get<RecurringSeries[]>(`/spaces/${spaceId}/finance/recurring-series`)

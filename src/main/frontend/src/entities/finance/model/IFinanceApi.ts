@@ -27,7 +27,6 @@ export interface IFinanceApi {
     date: string, payerId: string | null, contributors: ContributionInput[]
   ): Promise<Transaction>
   deleteTransaction(spaceId: string, transactionId: string): Promise<void>
-  moveTransaction(spaceId: string, transactionId: string, destinationSpaceId: string): Promise<Transaction>
 
   listRecurringSeries(spaceId: string): Promise<RecurringSeries[]>
   createRecurringSeries(

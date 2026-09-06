@@ -63,7 +63,6 @@ class FinanceControllerIT {
     private UUID aliceId;
     private UUID bobId;
     private UUID spaceId;
-    private UUID bobsSpaceId;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -80,8 +79,6 @@ class FinanceControllerIT {
         spaceId = saveSharedSpace("Chez Valentin");
         saveMembership(spaceId, aliceId, SpaceRole.OWNER);
         saveMembership(spaceId, bobId, SpaceRole.VIEWER);
-        bobsSpaceId = saveSharedSpace("Chez Bob");
-        saveMembership(bobsSpaceId, bobId, SpaceRole.OWNER);
     }
 
     @Test
@@ -192,25 +189,6 @@ class FinanceControllerIT {
         mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/savings-goals").cookie(accessTokenFor(aliceId)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].totalContributed").value(100.00));
-    }
-
-    @Test
-    void moving_a_transaction_creates_it_in_the_destination_and_removes_the_source() throws Exception {
-        String body = "{\"label\":\"Courses\",\"amount\":15.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\",\"date\":\"2026-01-10\"}";
-        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
-                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
-            .andReturn().getResponse().getContentAsString();
-        String transactionId = objectMapper.readTree(created).get("id").asText();
-
-        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions/" + transactionId + "/move")
-                .cookie(accessTokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"destinationSpaceId\":\"" + bobsSpaceId + "\"}"))
-            .andExpect(status().isForbidden()); // Bob is only a VIEWER of spaceId — cannot move from it.
-
-        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions/" + transactionId + "/move")
-                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"destinationSpaceId\":\"" + bobsSpaceId + "\"}"))
-            .andExpect(status().isNotFound()); // Alice has no membership at all in bobsSpaceId — SpaceException.NotAMember maps to 404.
     }
 
     @Test
