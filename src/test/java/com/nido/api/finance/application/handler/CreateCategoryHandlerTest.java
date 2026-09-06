@@ -2,6 +2,7 @@ package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.CreateCategoryCommand;
+import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -38,8 +39,8 @@ class CreateCategoryHandlerTest {
 
     @Test
     void a_member_can_create_a_custom_category() {
-        CreateCategoryCommand command = new CreateCategoryCommand(spaceId, "Animaux", "#a3e635", "PawPrint");
-        Category created = new Category(UUID.randomUUID(), spaceId, "Animaux", "#a3e635", "PawPrint", false);
+        CreateCategoryCommand command = new CreateCategoryCommand(spaceId, "Animaux", "#a3e635", "PawPrint", TransactionType.EXPENSE);
+        Category created = new Category(UUID.randomUUID(), spaceId, "Animaux", "#a3e635", "PawPrint", false, TransactionType.EXPENSE);
         when(categoryRepository.existsBySpaceId(spaceId)).thenReturn(true);
         when(categoryRepository.create(eq(command), eq(false))).thenReturn(created);
 
@@ -50,7 +51,7 @@ class CreateCategoryHandlerTest {
 
     @Test
     void a_viewer_cannot_create_a_category() {
-        CreateCategoryCommand command = new CreateCategoryCommand(spaceId, "Animaux", "#a3e635", "PawPrint");
+        CreateCategoryCommand command = new CreateCategoryCommand(spaceId, "Animaux", "#a3e635", "PawPrint", TransactionType.EXPENSE);
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);
@@ -58,7 +59,7 @@ class CreateCategoryHandlerTest {
 
     @Test
     void creating_a_category_for_another_space_than_the_callers_is_rejected() {
-        CreateCategoryCommand command = new CreateCategoryCommand(UUID.randomUUID(), "Animaux", "#a3e635", "PawPrint");
+        CreateCategoryCommand command = new CreateCategoryCommand(UUID.randomUUID(), "Animaux", "#a3e635", "PawPrint", TransactionType.EXPENSE);
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(SpaceException.NotAMember.class);
