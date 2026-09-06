@@ -47,6 +47,16 @@ class ListCategoriesHandlerTest {
     }
 
     @Test
+    void takes_the_seeding_lock_before_checking_whether_defaults_already_exist() {
+        when(categoryRepository.existsBySpaceId(spaceId)).thenReturn(false);
+        when(categoryRepository.findBySpaceId(spaceId)).thenReturn(List.of());
+
+        handler.list(membership());
+
+        verify(categoryRepository).lockForSeeding(spaceId);
+    }
+
+    @Test
     void does_not_reseed_when_the_space_already_has_categories() {
         when(categoryRepository.existsBySpaceId(spaceId)).thenReturn(true);
         when(categoryRepository.findBySpaceId(spaceId)).thenReturn(List.of());

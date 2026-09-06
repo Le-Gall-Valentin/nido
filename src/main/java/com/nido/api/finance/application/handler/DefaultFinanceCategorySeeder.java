@@ -30,6 +30,7 @@ final class DefaultFinanceCategorySeeder {
     private DefaultFinanceCategorySeeder() {}
 
     static void seedIfMissing(CategoryRepository categoryRepository, UUID spaceId) {
+        categoryRepository.lockForSeeding(spaceId);
         if (!categoryRepository.existsBySpaceId(spaceId)) {
             DEFAULTS.forEach(d -> categoryRepository.create(
                 new CreateCategoryCommand(spaceId, d.label(), d.color(), d.icon()), true));
