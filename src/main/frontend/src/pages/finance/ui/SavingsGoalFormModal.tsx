@@ -37,9 +37,17 @@ export function SavingsGoalFormModal({ mode, goal, onSubmit, onCancel, submitErr
       setError(t('savings.name_required'))
       return
     }
+    if (name.trim().length > 100) {
+      setError(t('savings.name_too_long'))
+      return
+    }
     const amount = Number(targetAmount)
     if (!targetAmount || Number.isNaN(amount) || amount <= 0) {
       setError(t('savings.target_amount_required'))
+      return
+    }
+    if (!/^\d+(\.\d{1,2})?$/.test(targetAmount.trim())) {
+      setError(t('savings.target_amount_too_precise'))
       return
     }
     setError(null)

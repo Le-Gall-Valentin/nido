@@ -22,6 +22,41 @@ describe('SavingsGoalFormModal', () => {
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
+  it('rejects a name longer than 100 characters', () => {
+    const onSubmit = vi.fn()
+    render(<SavingsGoalFormModal mode="create" onSubmit={onSubmit} onCancel={vi.fn()} />)
+
+    fireEvent.change(screen.getByLabelText('savings.name_label'), { target: { value: 'a'.repeat(101) } })
+    fireEvent.change(screen.getByLabelText('savings.target_amount_label'), { target: { value: '2000' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText('savings.name_too_long')).toBeDefined()
+  })
+
+  it('accepts a name of exactly 100 characters', () => {
+    const onSubmit = vi.fn()
+    render(<SavingsGoalFormModal mode="create" onSubmit={onSubmit} onCancel={vi.fn()} />)
+
+    fireEvent.change(screen.getByLabelText('savings.name_label'), { target: { value: 'a'.repeat(100) } })
+    fireEvent.change(screen.getByLabelText('savings.target_amount_label'), { target: { value: '2000' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalled()
+  })
+
+  it('rejects a target amount with more than two decimal places', () => {
+    const onSubmit = vi.fn()
+    render(<SavingsGoalFormModal mode="create" onSubmit={onSubmit} onCancel={vi.fn()} />)
+
+    fireEvent.change(screen.getByLabelText('savings.name_label'), { target: { value: 'Vacances' } })
+    fireEvent.change(screen.getByLabelText('savings.target_amount_label'), { target: { value: '2000.999' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText('savings.target_amount_too_precise')).toBeDefined()
+  })
+
   it('submits the entered name and target amount', () => {
     const onSubmit = vi.fn()
     render(<SavingsGoalFormModal mode="create" onSubmit={onSubmit} onCancel={vi.fn()} />)
