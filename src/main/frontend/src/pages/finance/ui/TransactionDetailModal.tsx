@@ -6,6 +6,7 @@ import type { SpaceMember } from '@/entities/space'
 import type { Category, Transaction } from '@/entities/finance'
 import { CategoryIconBadge } from './CategoryIconBadge'
 import { formatAmount } from '../lib/formatAmount'
+import { roundSharePercentages } from '../lib/roundSharePercentages'
 
 interface TransactionDetailModalProps {
   transaction: Transaction
@@ -59,24 +60,24 @@ export function TransactionDetailModal({ transaction, category, members, onClose
         )}
       </dl>
 
-      {transaction.contributors.length > 0 && (
-        <div className="mt-4 border-t border-border pt-4">
-          <h3 className="mb-2 text-[13px] font-semibold text-fg-1">{t('form.contributors_label')}</h3>
-          <ul className="space-y-2">
-            {transaction.contributors.map((contribution) => {
-              const percent = transaction.amount > 0 ? Math.round((contribution.shareAmount / transaction.amount) * 100) : 0
-              return (
+      {transaction.contributors.length > 0 && (() => {
+        const percents = roundSharePercentages(transaction.contributors.map((c) => c.shareAmount), transaction.amount)
+        return (
+          <div className="mt-4 border-t border-border pt-4">
+            <h3 className="mb-2 text-[13px] font-semibold text-fg-1">{t('form.contributors_label')}</h3>
+            <ul className="space-y-2">
+              {transaction.contributors.map((contribution, i) => (
                 <li key={contribution.memberId} className="flex items-center gap-2 text-sm">
                   <UserAvatar username={memberLabel(contribution.memberId)} role="USER" className="size-6 shrink-0 rounded-full text-[10px]" />
                   <span className="flex-1 truncate text-fg-1">{memberLabel(contribution.memberId)}</span>
-                  <span className="text-fg-3">{percent}%</span>
+                  <span className="text-fg-3">{percents[i]}%</span>
                   <span className="w-20 text-right font-medium text-fg-0">{formatAmount(contribution.shareAmount)}</span>
                 </li>
-              )
-            })}
-          </ul>
-        </div>
-      )}
+              ))}
+            </ul>
+          </div>
+        )
+      })()}
 
       <div className="mt-5 flex justify-end">
         <Button type="button" onClick={onClose}>{t('transactions.close')}</Button>
