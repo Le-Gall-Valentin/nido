@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.UpdateTransactionUseCase;
+import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionSplitter;
 import com.nido.api.finance.domain.model.FinanceException;
@@ -19,10 +20,13 @@ public class UpdateTransactionHandler implements UpdateTransactionUseCase {
 
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
+    private final SpaceMemberValidator spaceMemberValidator;
 
-    public UpdateTransactionHandler(TransactionRepository transactionRepository, CategoryRepository categoryRepository) {
+    public UpdateTransactionHandler(
+            TransactionRepository transactionRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator) {
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
+        this.spaceMemberValidator = spaceMemberValidator;
     }
 
     @Override
@@ -37,6 +41,10 @@ public class UpdateTransactionHandler implements UpdateTransactionUseCase {
         if (!resolved.isEmpty() && command.payerId() == null) {
             throw new FinanceException.PayerRequired();
         }
+        if (command.payerId() != null) {
+            spaceMemberValidator.ensureMember(command.spaceId(), command.payerId());
+        }
+        resolved.forEach(c -> spaceMemberValidator.ensureMember(command.spaceId(), c.memberId()));
         Transaction existing = transactionRepository.findById(command.transactionId()).orElseThrow(FinanceException.TransactionNotFound::new);
         if (!existing.spaceId().equals(command.spaceId())) {
             throw new FinanceException.TransactionNotFound();

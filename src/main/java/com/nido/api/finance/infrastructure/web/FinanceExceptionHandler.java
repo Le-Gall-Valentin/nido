@@ -29,6 +29,7 @@ public class FinanceExceptionHandler {
             case FinanceException.InvalidSavingsGoalAppearance ignored -> new FinanceErrorResponse(422, "Color or glyph outside the allowed palette.");
             case FinanceException.ContributionExceedsGoalTarget ignored -> new FinanceErrorResponse(422, "This contribution would exceed the goal's target amount.");
             case FinanceException.DecryptionFailed ignored -> new FinanceErrorResponse(500, "Could not process the requested finance data.");
+            case FinanceException.MemberNotInSpace ignored -> new FinanceErrorResponse(404, "Member is not part of this space.");
         };
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), e.getClass().getSimpleName(), response.detail(),

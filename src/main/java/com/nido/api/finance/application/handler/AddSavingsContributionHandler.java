@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.AddSavingsContributionUseCase;
+import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.AddSavingsContributionCommand;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SavingsContribution;
@@ -16,9 +17,11 @@ import java.math.BigDecimal;
 public class AddSavingsContributionHandler implements AddSavingsContributionUseCase {
 
     private final SavingsGoalRepository savingsGoalRepository;
+    private final SpaceMemberValidator spaceMemberValidator;
 
-    public AddSavingsContributionHandler(SavingsGoalRepository savingsGoalRepository) {
+    public AddSavingsContributionHandler(SavingsGoalRepository savingsGoalRepository, SpaceMemberValidator spaceMemberValidator) {
         this.savingsGoalRepository = savingsGoalRepository;
+        this.spaceMemberValidator = spaceMemberValidator;
     }
 
     @Override
@@ -26,6 +29,7 @@ public class AddSavingsContributionHandler implements AddSavingsContributionUseC
     public SavingsContribution add(AddSavingsContributionCommand command, SpaceMembership caller) {
         caller.ensureSameSpace(command.spaceId());
         caller.ensureCanWrite();
+        spaceMemberValidator.ensureMember(command.spaceId(), command.memberId());
         // Serializes concurrent contributions to this goal — without it, two requests could
         // both read the same already-contributed total and each add one that, together,
         // push past the target. See RecurringTransactionSeriesRepository.lockForMaterialization

@@ -1,5 +1,6 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.AddSavingsContributionCommand;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SavingsContribution;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,12 +34,13 @@ import static org.mockito.Mockito.when;
 class AddSavingsContributionHandlerTest {
 
     @Mock SavingsGoalRepository savingsGoalRepository;
+    @Mock SpaceMemberValidator spaceMemberValidator;
     private AddSavingsContributionHandler handler;
     private final UUID spaceId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        handler = new AddSavingsContributionHandler(savingsGoalRepository);
+        handler = new AddSavingsContributionHandler(savingsGoalRepository, spaceMemberValidator);
     }
 
     private SpaceMembership membership(SpaceRole role) {
@@ -68,6 +71,28 @@ class AddSavingsContributionHandlerTest {
         handler.add(command, membership(SpaceRole.MEMBER));
 
         verify(savingsGoalRepository).lockForContribution(command.goalId());
+    }
+
+    @Test
+    void validates_the_contributing_member_belongs_to_the_space() {
+        AddSavingsContributionCommand command = new AddSavingsContributionCommand(UUID.randomUUID(), spaceId, UUID.randomUUID(), new BigDecimal("100.00"), LocalDate.of(2026, 1, 5));
+        SavingsGoal goal = new SavingsGoal(command.goalId(), spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
+        when(savingsGoalRepository.findById(command.goalId())).thenReturn(Optional.of(goal));
+        when(savingsGoalRepository.findContributionsByGoalId(command.goalId())).thenReturn(List.of());
+
+        handler.add(command, membership(SpaceRole.MEMBER));
+
+        verify(spaceMemberValidator).ensureMember(spaceId, command.memberId());
+    }
+
+    @Test
+    void rejects_a_contribution_from_a_member_id_that_does_not_belong_to_the_space() {
+        AddSavingsContributionCommand command = new AddSavingsContributionCommand(UUID.randomUUID(), spaceId, UUID.randomUUID(), new BigDecimal("100.00"), LocalDate.of(2026, 1, 5));
+        doThrow(new FinanceException.MemberNotInSpace()).when(spaceMemberValidator).ensureMember(spaceId, command.memberId());
+
+        assertThatThrownBy(() -> handler.add(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.MemberNotInSpace.class);
+        verify(savingsGoalRepository, never()).addContribution(any());
     }
 
     @Test

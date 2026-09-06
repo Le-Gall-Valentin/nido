@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.CreateRecurringSeriesUseCase;
+import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionSplitter;
 import com.nido.api.finance.domain.model.CreateRecurringSeriesCommand;
@@ -19,10 +20,13 @@ public class CreateRecurringSeriesHandler implements CreateRecurringSeriesUseCas
 
     private final RecurringTransactionSeriesRepository seriesRepository;
     private final CategoryRepository categoryRepository;
+    private final SpaceMemberValidator spaceMemberValidator;
 
-    public CreateRecurringSeriesHandler(RecurringTransactionSeriesRepository seriesRepository, CategoryRepository categoryRepository) {
+    public CreateRecurringSeriesHandler(
+            RecurringTransactionSeriesRepository seriesRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator) {
         this.seriesRepository = seriesRepository;
         this.categoryRepository = categoryRepository;
+        this.spaceMemberValidator = spaceMemberValidator;
     }
 
     @Override
@@ -40,6 +44,10 @@ public class CreateRecurringSeriesHandler implements CreateRecurringSeriesUseCas
         if (command.endDate() != null && command.endDate().isBefore(command.anchorDate())) {
             throw new FinanceException.InvalidEndDate();
         }
+        if (command.payerId() != null) {
+            spaceMemberValidator.ensureMember(command.spaceId(), command.payerId());
+        }
+        resolved.forEach(c -> spaceMemberValidator.ensureMember(command.spaceId(), c.memberId()));
         return seriesRepository.create(command, resolved);
     }
 }

@@ -1,5 +1,6 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
@@ -28,6 +29,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -38,6 +41,7 @@ class CreateTransactionHandlerTest {
 
     @Mock TransactionRepository transactionRepository;
     @Mock CategoryRepository categoryRepository;
+    @Mock SpaceMemberValidator spaceMemberValidator;
     private CreateTransactionHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
@@ -46,7 +50,7 @@ class CreateTransactionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new CreateTransactionHandler(transactionRepository, categoryRepository);
+        handler = new CreateTransactionHandler(transactionRepository, categoryRepository, spaceMemberValidator);
         lenient().when(categoryRepository.findById(any())).thenReturn(Optional.of(category));
     }
 
@@ -134,6 +138,32 @@ class CreateTransactionHandlerTest {
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(FinanceException.CategoryNotFound.class);
+        verify(transactionRepository, never()).create(any(), any());
+    }
+
+    @Test
+    void validates_the_payer_and_every_contributor_belong_to_the_space() {
+        CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("50.00"),
+            TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), aliceId,
+            List.of(new ContributionInput(aliceId, null), new ContributionInput(bobId, null)), null);
+        when(transactionRepository.create(any(), any())).thenReturn(
+            new Transaction(UUID.randomUUID(), spaceId, "Courses", new BigDecimal("50.00"), TransactionType.EXPENSE,
+                command.categoryId(), command.date(), aliceId, List.of(), null, Instant.now()));
+
+        handler.create(command, membership(SpaceRole.MEMBER));
+
+        verify(spaceMemberValidator, atLeastOnce()).ensureMember(spaceId, aliceId);
+        verify(spaceMemberValidator).ensureMember(spaceId, bobId);
+    }
+
+    @Test
+    void rejects_a_transaction_whose_payer_is_not_actually_a_member_of_the_space() {
+        CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("45.30"),
+            TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), aliceId, List.of(), null);
+        doThrow(new FinanceException.MemberNotInSpace()).when(spaceMemberValidator).ensureMember(spaceId, aliceId);
+
+        assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.MemberNotInSpace.class);
         verify(transactionRepository, never()).create(any(), any());
     }
 

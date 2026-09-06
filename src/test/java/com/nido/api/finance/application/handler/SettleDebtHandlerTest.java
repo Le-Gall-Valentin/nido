@@ -1,5 +1,6 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.CreateSettlementCommand;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SettlementRecord;
@@ -19,12 +20,16 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SettleDebtHandlerTest {
 
     @Mock SettlementRecordRepository settlementRecordRepository;
+    @Mock SpaceMemberValidator spaceMemberValidator;
     private SettleDebtHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID debtorId = UUID.randomUUID();
@@ -32,7 +37,7 @@ class SettleDebtHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new SettleDebtHandler(settlementRecordRepository);
+        handler = new SettleDebtHandler(settlementRecordRepository, spaceMemberValidator);
     }
 
     private SpaceMembership membership(UUID userId, SpaceRole role) {
@@ -71,5 +76,27 @@ class SettleDebtHandlerTest {
 
         assertThatThrownBy(() -> handler.settle(command, membership(UUID.randomUUID(), SpaceRole.ADMIN)))
             .isInstanceOf(FinanceException.NotAPartyToSettlement.class);
+    }
+
+    @Test
+    void validates_both_the_debtor_and_the_creditor_belong_to_the_space() {
+        CreateSettlementCommand command = command();
+        SettlementRecord created = new SettlementRecord(UUID.randomUUID(), spaceId, command.fromMemberId(), command.toMemberId(), command.amount(), command.date());
+        when(settlementRecordRepository.create(command)).thenReturn(created);
+
+        handler.settle(command, membership(debtorId, SpaceRole.VIEWER));
+
+        verify(spaceMemberValidator).ensureMember(spaceId, debtorId);
+        verify(spaceMemberValidator).ensureMember(spaceId, creditorId);
+    }
+
+    @Test
+    void rejects_a_settlement_whose_counterparty_is_not_actually_a_member_of_the_space() {
+        CreateSettlementCommand command = command();
+        lenient().doNothing().when(spaceMemberValidator).ensureMember(spaceId, debtorId);
+        doThrow(new FinanceException.MemberNotInSpace()).when(spaceMemberValidator).ensureMember(spaceId, creditorId);
+
+        assertThatThrownBy(() -> handler.settle(command, membership(debtorId, SpaceRole.VIEWER)))
+            .isInstanceOf(FinanceException.MemberNotInSpace.class);
     }
 }
