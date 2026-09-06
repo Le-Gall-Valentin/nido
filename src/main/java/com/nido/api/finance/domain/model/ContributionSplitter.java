@@ -20,17 +20,22 @@ public final class ContributionSplitter {
         if (inputs.isEmpty()) {
             return List.of();
         }
+        // Defensive against a scale beyond cents reaching here — the web DTO already enforces
+        // @Digits(fraction=2), but the domain shouldn't depend on that alone: the cents math in
+        // splitEqually below throws ArithmeticException on an un-rounded remainder otherwise.
+        BigDecimal roundedAmount = amount.setScale(2, RoundingMode.HALF_UP);
         boolean allAuto = inputs.stream().allMatch(i -> i.shareAmount() == null);
         boolean allManual = inputs.stream().allMatch(i -> i.shareAmount() != null);
         if (allAuto) {
-            return splitEqually(amount, inputs);
+            return splitEqually(roundedAmount, inputs);
         }
         if (!allManual) {
             throw new FinanceException.InvalidContributionShares();
         }
-        List<Contribution> resolved = inputs.stream().map(i -> new Contribution(i.memberId(), i.shareAmount())).toList();
+        List<Contribution> resolved = inputs.stream()
+            .map(i -> new Contribution(i.memberId(), i.shareAmount().setScale(2, RoundingMode.HALF_UP))).toList();
         BigDecimal sum = resolved.stream().map(Contribution::shareAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-        if (sum.compareTo(amount) != 0) {
+        if (sum.compareTo(roundedAmount) != 0) {
             throw new FinanceException.InvalidContributionShares();
         }
         return resolved;
