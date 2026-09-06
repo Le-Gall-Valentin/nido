@@ -68,8 +68,11 @@ public class GetFinanceStatsHandler implements GetFinanceStatsUseCase {
         List<BudgetLine> budgetVsActual = budgets.stream()
             .map(b -> new BudgetLine(b.categoryId(), b.monthlyLimit(), spentByCategory.getOrDefault(b.categoryId(), BigDecimal.ZERO)))
             .toList();
-        BigDecimal totalBudget = budgets.stream().map(Budget::monthlyLimit).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal remainingBudget = totalBudget.subtract(totalExpense);
+        // Spending in a category left deliberately unbudgeted has no cap, so it must not eat
+        // into this figure — only sum what's left on categories that actually have a budget.
+        BigDecimal remainingBudget = budgetVsActual.stream()
+            .map(line -> line.monthlyLimit().subtract(line.spent()))
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return new FinanceStats(balance, totalExpense, totalIncome, remainingBudget, breakdown, budgetVsActual);
     }
