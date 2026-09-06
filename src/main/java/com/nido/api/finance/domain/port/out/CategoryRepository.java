@@ -11,6 +11,12 @@ import java.util.UUID;
 public interface CategoryRepository {
     List<Category> findBySpaceId(UUID spaceId);
     boolean existsBySpaceId(UUID spaceId);
+    /**
+     * Serializes concurrent default-category seeding for a space: held until the caller's
+     * transaction commits or rolls back, so two requests racing to seed the same new space
+     * can't both pass {@code existsBySpaceId} and each insert the 8 defaults.
+     */
+    void lockForSeeding(UUID spaceId);
     Optional<Category> findById(UUID categoryId);
     Category create(CreateCategoryCommand command, boolean isDefault);
     Category update(UpdateCategoryCommand command);

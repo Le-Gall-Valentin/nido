@@ -37,6 +37,12 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
     }
 
     @Override
+    @Transactional
+    public void lockForSeeding(UUID spaceId) {
+        categories.lockForSeeding("finance-category-seed|" + spaceId);
+    }
+
+    @Override
     public Optional<Category> findById(UUID categoryId) {
         return categories.findById(categoryId).map(e -> toDomain(e, e.getSpaceId()));
     }
