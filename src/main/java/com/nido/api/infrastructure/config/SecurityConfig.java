@@ -40,7 +40,7 @@ public class SecurityConfig {
                         "/swagger-ui/**",
                         "/v3/api-docs/**"
                 ).permitAll()
-                .requestMatchers(HttpMethod.GET, "/", "/index.html", "/favicon.ico").permitAll()
+                .requestMatchers(HttpMethod.GET, "/", "/index.html", "/favicon.svg").permitAll()
                 .requestMatchers(HttpMethod.GET, "/assets/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
