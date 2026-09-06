@@ -164,4 +164,15 @@ class SettleDebtHandlerTest {
         assertThatThrownBy(() -> handler.settle(command, membership(debtorId, SpaceRole.VIEWER)))
             .isInstanceOf(FinanceException.SettlementExceedsDebt.class);
     }
+
+    @Test
+    void takes_the_per_pair_settlement_lock_before_recomputing_the_real_debt() {
+        CreateSettlementCommand command = command();
+        SettlementRecord created = new SettlementRecord(UUID.randomUUID(), spaceId, command.fromMemberId(), command.toMemberId(), command.amount(), command.date());
+        when(settlementRecordRepository.create(command)).thenReturn(created);
+
+        handler.settle(command, membership(debtorId, SpaceRole.VIEWER));
+
+        verify(settlementRecordRepository).lockForSettlement(spaceId, debtorId, creditorId);
+    }
 }

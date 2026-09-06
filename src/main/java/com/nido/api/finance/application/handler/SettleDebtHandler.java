@@ -45,6 +45,11 @@ public class SettleDebtHandler implements SettleDebtUseCase {
         }
         spaceMemberValidator.ensureMember(command.spaceId(), command.fromMemberId());
         spaceMemberValidator.ensureMember(command.spaceId(), command.toMemberId());
+        // Serializes concurrent settlements between this pair — without it, two requests could
+        // both recompute the same remaining debt and each record a settlement against it,
+        // together exceeding what's actually owed (confirmed by firing concurrent requests
+        // against a real debt before this lock existed).
+        settlementRecordRepository.lockForSettlement(command.spaceId(), command.fromMemberId(), command.toMemberId());
         // The real debt, recomputed server-side rather than trusted from the client — the
         // frontend already caps this the same way, but only as a UX nicety; this is the
         // actual guarantee, using the same suggested-transfer amount the balances view offers.

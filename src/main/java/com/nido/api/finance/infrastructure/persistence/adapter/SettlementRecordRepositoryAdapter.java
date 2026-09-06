@@ -31,6 +31,15 @@ public class SettlementRecordRepositoryAdapter implements SettlementRecordReposi
 
     @Override
     @Transactional
+    public void lockForSettlement(UUID spaceId, UUID memberAId, UUID memberBId) {
+        // Order-independent: sort the two ids so settling A→B and B→A contend for the same key.
+        UUID first = memberAId.compareTo(memberBId) <= 0 ? memberAId : memberBId;
+        UUID second = memberAId.compareTo(memberBId) <= 0 ? memberBId : memberAId;
+        settlements.lockForSettlement("finance-settle|" + spaceId + "|" + first + "|" + second);
+    }
+
+    @Override
+    @Transactional
     public SettlementRecord create(CreateSettlementCommand command) {
         FinanceSettlementRecordEntity e = new FinanceSettlementRecordEntity();
         e.setSpaceId(command.spaceId());
