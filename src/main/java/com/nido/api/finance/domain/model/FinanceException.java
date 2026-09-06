@@ -6,7 +6,8 @@ public abstract sealed class FinanceException extends RuntimeException
             FinanceException.InvalidContributionShares, FinanceException.PayerRequired,
             FinanceException.InvalidEndDate, FinanceException.NotAPartyToSettlement,
             FinanceException.SavingsGoalNotFound, FinanceException.InvalidSavingsGoalAppearance,
-            FinanceException.ContributionExceedsGoalTarget, FinanceException.DecryptionFailed {
+            FinanceException.ContributionExceedsGoalTarget, FinanceException.DecryptionFailed,
+            FinanceException.MemberNotInSpace {
 
     private FinanceException(String message) { super(message); }
 
@@ -64,5 +65,10 @@ public abstract sealed class FinanceException extends RuntimeException
     /** Thrown when a stored ciphertext cannot be decrypted (wrong/rotated master secret, corruption). */
     public static final class DecryptionFailed extends FinanceException {
         public DecryptionFailed() { super("Could not decrypt stored finance data"); }
+    }
+
+    /** Thrown when a submitted memberId (payer, contributor, settlement party, savings contributor) isn't actually a member of the space. */
+    public static final class MemberNotInSpace extends FinanceException {
+        public MemberNotInSpace() { super("Member is not part of this space"); }
     }
 }

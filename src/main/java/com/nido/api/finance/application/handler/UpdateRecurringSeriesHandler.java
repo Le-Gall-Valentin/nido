@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.UpdateRecurringSeriesUseCase;
+import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionSplitter;
 import com.nido.api.finance.domain.model.FinanceException;
@@ -19,10 +20,13 @@ public class UpdateRecurringSeriesHandler implements UpdateRecurringSeriesUseCas
 
     private final RecurringTransactionSeriesRepository seriesRepository;
     private final CategoryRepository categoryRepository;
+    private final SpaceMemberValidator spaceMemberValidator;
 
-    public UpdateRecurringSeriesHandler(RecurringTransactionSeriesRepository seriesRepository, CategoryRepository categoryRepository) {
+    public UpdateRecurringSeriesHandler(
+            RecurringTransactionSeriesRepository seriesRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator) {
         this.seriesRepository = seriesRepository;
         this.categoryRepository = categoryRepository;
+        this.spaceMemberValidator = spaceMemberValidator;
     }
 
     @Override
@@ -40,6 +44,10 @@ public class UpdateRecurringSeriesHandler implements UpdateRecurringSeriesUseCas
         if (command.endDate() != null && command.endDate().isBefore(command.anchorDate())) {
             throw new FinanceException.InvalidEndDate();
         }
+        if (command.payerId() != null) {
+            spaceMemberValidator.ensureMember(command.spaceId(), command.payerId());
+        }
+        resolved.forEach(c -> spaceMemberValidator.ensureMember(command.spaceId(), c.memberId()));
         RecurringTransactionSeries existing = seriesRepository.findById(command.seriesId())
             .orElseThrow(FinanceException.RecurringSeriesNotFound::new);
         if (!existing.spaceId().equals(command.spaceId())) {

@@ -1,5 +1,6 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
@@ -29,6 +30,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -39,6 +42,7 @@ class UpdateRecurringSeriesHandlerTest {
 
     @Mock RecurringTransactionSeriesRepository seriesRepository;
     @Mock CategoryRepository categoryRepository;
+    @Mock SpaceMemberValidator spaceMemberValidator;
     private UpdateRecurringSeriesHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
@@ -47,7 +51,7 @@ class UpdateRecurringSeriesHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new UpdateRecurringSeriesHandler(seriesRepository, categoryRepository);
+        handler = new UpdateRecurringSeriesHandler(seriesRepository, categoryRepository, spaceMemberValidator);
         lenient().when(categoryRepository.findById(any())).thenReturn(Optional.of(category));
     }
 
@@ -180,6 +184,33 @@ class UpdateRecurringSeriesHandlerTest {
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(FinanceException.CategoryNotFound.class);
+        verify(seriesRepository, never()).update(any(), any());
+    }
+
+    @Test
+    void validates_the_payer_and_every_contributor_belong_to_the_space() {
+        UpdateRecurringSeriesCommand command = new UpdateRecurringSeriesCommand(UUID.randomUUID(), spaceId, "Loyer modifié",
+            new BigDecimal("850.00"), TransactionType.EXPENSE, UUID.randomUUID(), aliceId,
+            List.of(new ContributionInput(aliceId, new BigDecimal("600.00")), new ContributionInput(bobId, new BigDecimal("250.00"))),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null);
+        when(seriesRepository.findById(command.seriesId())).thenReturn(Optional.of(existingInSameSpace(command.seriesId())));
+        when(seriesRepository.update(any(), any())).thenReturn(existingInSameSpace(command.seriesId()));
+
+        handler.update(command, membership(SpaceRole.MEMBER));
+
+        verify(spaceMemberValidator, atLeastOnce()).ensureMember(spaceId, aliceId);
+        verify(spaceMemberValidator).ensureMember(spaceId, bobId);
+    }
+
+    @Test
+    void rejects_an_update_whose_payer_is_not_actually_a_member_of_the_space() {
+        UpdateRecurringSeriesCommand command = new UpdateRecurringSeriesCommand(UUID.randomUUID(), spaceId, "Loyer modifié",
+            new BigDecimal("850.00"), TransactionType.EXPENSE, UUID.randomUUID(), aliceId, List.of(),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null);
+        doThrow(new FinanceException.MemberNotInSpace()).when(spaceMemberValidator).ensureMember(spaceId, aliceId);
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.MemberNotInSpace.class);
         verify(seriesRepository, never()).update(any(), any());
     }
 

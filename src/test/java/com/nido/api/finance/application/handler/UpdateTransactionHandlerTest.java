@@ -1,5 +1,6 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
@@ -28,6 +29,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -38,6 +41,7 @@ class UpdateTransactionHandlerTest {
 
     @Mock TransactionRepository transactionRepository;
     @Mock CategoryRepository categoryRepository;
+    @Mock SpaceMemberValidator spaceMemberValidator;
     private UpdateTransactionHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
@@ -46,7 +50,7 @@ class UpdateTransactionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new UpdateTransactionHandler(transactionRepository, categoryRepository);
+        handler = new UpdateTransactionHandler(transactionRepository, categoryRepository, spaceMemberValidator);
         lenient().when(categoryRepository.findById(any())).thenReturn(Optional.of(category));
     }
 
@@ -158,6 +162,31 @@ class UpdateTransactionHandlerTest {
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(FinanceException.CategoryNotFound.class);
+        verify(transactionRepository, never()).update(any(), any());
+    }
+
+    @Test
+    void validates_the_payer_and_every_contributor_belong_to_the_space() {
+        UpdateTransactionCommand command = new UpdateTransactionCommand(UUID.randomUUID(), spaceId, "T modifié",
+            new BigDecimal("100.00"), TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 2), aliceId,
+            List.of(new ContributionInput(aliceId, new BigDecimal("70.00")), new ContributionInput(bobId, new BigDecimal("30.00"))));
+        when(transactionRepository.findById(command.transactionId())).thenReturn(Optional.of(existingInSameSpace(command.transactionId())));
+        when(transactionRepository.update(any(), any())).thenReturn(existingInSameSpace(command.transactionId()));
+
+        handler.update(command, membership(SpaceRole.MEMBER));
+
+        verify(spaceMemberValidator, atLeastOnce()).ensureMember(spaceId, aliceId);
+        verify(spaceMemberValidator).ensureMember(spaceId, bobId);
+    }
+
+    @Test
+    void rejects_an_update_whose_payer_is_not_actually_a_member_of_the_space() {
+        UpdateTransactionCommand command = new UpdateTransactionCommand(UUID.randomUUID(), spaceId, "T modifié",
+            new BigDecimal("20.00"), TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 2), aliceId, List.of());
+        doThrow(new FinanceException.MemberNotInSpace()).when(spaceMemberValidator).ensureMember(spaceId, aliceId);
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(FinanceException.MemberNotInSpace.class);
         verify(transactionRepository, never()).update(any(), any());
     }
 

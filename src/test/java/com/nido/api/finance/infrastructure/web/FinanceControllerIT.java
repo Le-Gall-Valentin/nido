@@ -153,6 +153,27 @@ class FinanceControllerIT {
     }
 
     @Test
+    void settling_a_debt_with_a_counterparty_who_is_not_a_member_of_the_space_is_rejected() throws Exception {
+        UUID strangerId = saveUser("dave");
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromMemberId\":\"" + strangerId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":20.00,\"date\":\"2026-01-02\"}"))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void creating_a_transaction_with_a_payer_who_is_not_a_member_of_the_space_is_rejected() throws Exception {
+        UUID strangerId = saveUser("dave");
+        String body = "{\"label\":\"Courses\",\"amount\":20.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\",\"date\":\"2026-01-10\","
+            + "\"payerId\":\"" + strangerId + "\",\"contributors\":[{\"memberId\":\"" + aliceId + "\",\"shareAmount\":20.00}]}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
     void listing_settlements_between_two_members_returns_them_newest_first() throws Exception {
         mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
