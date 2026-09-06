@@ -68,4 +68,26 @@ class ContributionSplitterTest {
             List.of(new ContributionInput(ALICE, new BigDecimal("70.00")), new ContributionInput(BOB, null))))
             .isInstanceOf(FinanceException.InvalidContributionShares.class);
     }
+
+    @Test
+    void an_auto_split_amount_with_more_than_two_decimal_places_is_rounded_defensively_instead_of_crashing() {
+        // Not reachable through the real API today (the web DTO already enforces @Digits(fraction=2)),
+        // but the domain shouldn't rely on that alone — a caller passing 10.999 should get a clean
+        // rounded split (10.999 -> 11.00), not an ArithmeticException from the cents math below.
+        List<Contribution> result = ContributionSplitter.resolve(new BigDecimal("10.999"),
+            List.of(new ContributionInput(ALICE, null), new ContributionInput(BOB, null), new ContributionInput(CARL, null)));
+
+        assertThat(result.stream().map(Contribution::shareAmount).reduce(BigDecimal.ZERO, BigDecimal::add))
+            .isEqualByComparingTo("11.00");
+    }
+
+    @Test
+    void manual_shares_summing_to_an_amount_with_more_than_two_decimal_places_are_compared_after_rounding() {
+        List<Contribution> result = ContributionSplitter.resolve(new BigDecimal("100.001"),
+            List.of(new ContributionInput(ALICE, new BigDecimal("70.00")), new ContributionInput(BOB, new BigDecimal("30.00"))));
+
+        assertThat(result).containsExactly(
+            new Contribution(ALICE, new BigDecimal("70.00")),
+            new Contribution(BOB, new BigDecimal("30.00")));
+    }
 }
