@@ -26,6 +26,11 @@ public class AddSavingsContributionHandler implements AddSavingsContributionUseC
     public SavingsContribution add(AddSavingsContributionCommand command, SpaceMembership caller) {
         caller.ensureSameSpace(command.spaceId());
         caller.ensureCanWrite();
+        // Serializes concurrent contributions to this goal — without it, two requests could
+        // both read the same already-contributed total and each add one that, together,
+        // push past the target. See RecurringTransactionSeriesRepository.lockForMaterialization
+        // for the identical pattern.
+        savingsGoalRepository.lockForContribution(command.goalId());
         SavingsGoal goal = savingsGoalRepository.findById(command.goalId()).orElseThrow(FinanceException.SavingsGoalNotFound::new);
         if (!goal.spaceId().equals(command.spaceId())) {
             throw new FinanceException.SavingsGoalNotFound();
