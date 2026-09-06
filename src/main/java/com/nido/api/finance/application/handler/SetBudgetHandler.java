@@ -5,6 +5,7 @@ import com.nido.api.finance.domain.model.Budget;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SetBudgetCommand;
+import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.BudgetRepository;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.shared.annotation.ApplicationService;
@@ -30,6 +31,9 @@ public class SetBudgetHandler implements SetBudgetUseCase {
         Category category = categoryRepository.findById(command.categoryId()).orElseThrow(FinanceException.CategoryNotFound::new);
         if (!category.spaceId().equals(command.spaceId())) {
             throw new FinanceException.CategoryNotFound();
+        }
+        if (category.type() != TransactionType.EXPENSE) {
+            throw new FinanceException.BudgetRequiresExpenseCategory();
         }
         return budgetRepository.upsert(command);
     }
