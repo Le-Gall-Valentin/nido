@@ -13,6 +13,12 @@ const categories: Category[] = [
 ]
 
 describe('CategoryManagerModal', () => {
+  it('shows the submit error handed down by the caller when the backend rejected a create or update', () => {
+    render(<CategoryManagerModal categories={categories} onCreate={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} deleteError={null} submitError="form.submit_error" />)
+
+    expect(screen.getByText('form.submit_error')).toBeDefined()
+  })
+
   it('lists every category', () => {
     render(<CategoryManagerModal categories={categories} onCreate={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} deleteError={null} />)
 

@@ -18,9 +18,11 @@ interface SavingsGoalFormModalProps {
   goal?: SavingsGoal
   onSubmit: (input: SavingsGoalFormInput) => void
   onCancel: () => void
+  /** Set by the caller when the backend rejected the last submission — distinct from the client-side checks below. */
+  submitError?: string | null
 }
 
-export function SavingsGoalFormModal({ mode, goal, onSubmit, onCancel }: SavingsGoalFormModalProps) {
+export function SavingsGoalFormModal({ mode, goal, onSubmit, onCancel, submitError = null }: SavingsGoalFormModalProps) {
   const { t } = useTranslation('finance')
   const [name, setName] = useState(goal?.name ?? '')
   const [targetAmount, setTargetAmount] = useState(goal ? String(goal.targetAmount) : '')
@@ -52,7 +54,7 @@ export function SavingsGoalFormModal({ mode, goal, onSubmit, onCancel }: Savings
         <Input label={t('savings.target_date_label')} type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
         <SavingsGoalAppearancePicker color={color} onColorChange={setColor} glyph={glyph} onGlyphChange={setGlyph} />
 
-        {error && <p className="text-sm font-medium text-status-red">{error}</p>}
+        {(error ?? submitError) && <p className="text-sm font-medium text-status-red">{error ?? submitError}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" onClick={onCancel}>{t('form.cancel')}</Button>

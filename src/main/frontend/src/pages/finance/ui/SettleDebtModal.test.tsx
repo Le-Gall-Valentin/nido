@@ -7,6 +7,12 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('SettleDebtModal', () => {
+  it('shows the submit error handed down by the caller when the backend rejected the settlement', () => {
+    render(<SettleDebtModal fromLabel="Bob" toLabel="Alice" amount={20} onConfirm={vi.fn()} onCancel={vi.fn()} isPending={false} submitError="balances.settle_amount_too_high" />)
+
+    expect(screen.getByText('balances.settle_amount_too_high')).toBeDefined()
+  })
+
   it('confirms the settlement with the prefilled amount and today by default', () => {
     const onConfirm = vi.fn()
     render(<SettleDebtModal fromLabel="Bob" toLabel="Alice" amount={20} onConfirm={onConfirm} onCancel={vi.fn()} isPending={false} />)

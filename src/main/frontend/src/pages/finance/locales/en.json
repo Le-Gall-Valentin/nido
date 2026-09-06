@@ -124,7 +124,8 @@
     "recurrence_interval_count_label": "Every",
     "interval": { "DAILY": "day(s)", "WEEKLY": "week(s)", "MONTHLY": "month(s)", "YEARLY": "year(s)" },
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "submit_error": "Something went wrong. Try again."
   },
   "delete_confirm": {
     "title": "Delete \"{{label}}\"?",

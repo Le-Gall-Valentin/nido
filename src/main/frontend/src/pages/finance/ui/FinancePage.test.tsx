@@ -293,4 +293,37 @@ describe('FinancePage', () => {
     await waitFor(() => expect(screen.getByText('stats.balance')).toBeDefined())
     expect(screen.queryByText('categories.manage')).toBeNull()
   })
+
+  it('asks for confirmation before deleting a savings goal, and only deletes it once confirmed', async () => {
+    const deleteSavingsGoal = vi.fn()
+    renderPage(fakeApi({
+      listSavingsGoals: vi.fn().mockResolvedValue([
+        { id: 'g1', name: 'Vacances', targetAmount: 2000, targetDate: null, color: '#5c7a58', glyph: '🎯', totalContributed: 0, contributions: [] },
+      ]),
+      deleteSavingsGoal,
+    }))
+
+    await waitFor(() => expect(screen.getByText('Vacances')).toBeDefined())
+    fireEvent.click(screen.getByLabelText('savings.delete'))
+
+    expect(deleteSavingsGoal).not.toHaveBeenCalled()
+    expect(screen.getByText('delete_confirm.message')).toBeDefined()
+
+    fireEvent.click(screen.getByText('delete_confirm.confirm'))
+
+    await waitFor(() => expect(deleteSavingsGoal).toHaveBeenCalledWith('space-1', 'g1'))
+  })
+
+  it('shows an error in the budget modal when the backend rejects the save, instead of failing silently', async () => {
+    const setBudget = vi.fn().mockRejectedValue(new Error('boom'))
+    renderPage(fakeApi({ setBudget }))
+
+    await waitFor(() => expect(screen.getByText('budget.manage')).toBeDefined())
+    fireEvent.click(screen.getByText('budget.manage'))
+    fireEvent.click(screen.getByText('budget.set'))
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '150' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    await waitFor(() => expect(screen.getByText('form.submit_error')).toBeDefined())
+  })
 })

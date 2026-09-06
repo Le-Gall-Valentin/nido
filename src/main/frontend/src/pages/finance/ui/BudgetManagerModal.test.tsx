@@ -15,6 +15,12 @@ const CATEGORIES: Category[] = [
 const BUDGET_LINES: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 300, spent: 120 }]
 
 describe('BudgetManagerModal', () => {
+  it('shows the submit error handed down by the caller when the backend rejected a save', () => {
+    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={vi.fn()} onClose={vi.fn()} submitError="form.submit_error" />)
+
+    expect(screen.getByText('form.submit_error')).toBeDefined()
+  })
+
   it('lists every category with its current budget, or the option to set one', () => {
     render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={vi.fn()} onClose={vi.fn()} />)
 

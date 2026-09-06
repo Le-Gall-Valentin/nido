@@ -28,11 +28,13 @@ interface TransactionFormModalProps {
   currentUserId?: string | null
   onSubmit: (input: TransactionFormInput) => void
   onCancel: () => void
+  /** Set by the caller when the backend rejected the last submission (e.g. a validation error) — distinct from the client-side checks below. */
+  submitError?: string | null
 }
 
 const SELECT_CLASSNAME = 'rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent'
 
-export function TransactionFormModal({ mode, transaction, categories, members, canPickContributors, currentUserId = null, onSubmit, onCancel }: TransactionFormModalProps) {
+export function TransactionFormModal({ mode, transaction, categories, members, canPickContributors, currentUserId = null, onSubmit, onCancel, submitError = null }: TransactionFormModalProps) {
   const { t } = useTranslation('finance')
   const [label, setLabel] = useState(transaction?.label ?? '')
   const [amount, setAmount] = useState(transaction ? String(transaction.amount) : '')
@@ -188,7 +190,7 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
           </>
         )}
 
-        {error && <p className="text-sm font-medium text-status-red">{error}</p>}
+        {(error ?? submitError) && <p className="text-sm font-medium text-status-red">{error ?? submitError}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" onClick={onCancel}>{t('form.cancel')}</Button>

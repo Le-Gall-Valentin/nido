@@ -13,12 +13,14 @@ interface CategoryManagerModalProps {
   onDelete: (categoryId: string) => void
   onClose: () => void
   deleteError: string | null
+  /** Set by the caller when the backend rejected the last create/update — distinct from deleteError above. */
+  submitError?: string | null
 }
 
 const DEFAULT_NEW_COLOR = '#64748b'
 const DEFAULT_NEW_ICON = 'Circle'
 
-export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete, onClose, deleteError }: CategoryManagerModalProps) {
+export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete, onClose, deleteError, submitError = null }: CategoryManagerModalProps) {
   const { t } = useTranslation('finance')
   const [newLabel, setNewLabel] = useState('')
   const [newColor, setNewColor] = useState(DEFAULT_NEW_COLOR)
@@ -65,6 +67,7 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
       <h3 className="mb-4 text-[19px] font-semibold text-fg-0">{t('categories.title')}</h3>
 
       {deleteError && <p className="mb-3 text-sm font-medium text-status-red">{t('categories.delete_in_use')}</p>}
+      {submitError && <p className="mb-3 text-sm font-medium text-status-red">{submitError}</p>}
 
       <ul className="max-h-72 space-y-1 overflow-y-auto">
         {categories.map((category) => {
