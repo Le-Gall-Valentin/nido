@@ -57,6 +57,12 @@ export const financeApi: IFinanceApi = {
     } catch (error) { handleError(error) }
   },
 
+  async deleteBudget(spaceId, categoryId) {
+    try {
+      await client.delete(`/spaces/${spaceId}/finance/budgets/${categoryId}`)
+    } catch (error) { handleError(error) }
+  },
+
   async listTransactions(spaceId, month) {
     try {
       const res = await client.get<Transaction[]>(`/spaces/${spaceId}/finance/transactions`, { params: { month } })

@@ -31,7 +31,7 @@ function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
   return {
     listCategories: vi.fn().mockResolvedValue([{ id: 'c1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true }]),
     createCategory: vi.fn(), updateCategory: vi.fn(), deleteCategory: vi.fn(),
-    listBudgets: vi.fn().mockResolvedValue([]), setBudget: vi.fn(),
+    listBudgets: vi.fn().mockResolvedValue([]), setBudget: vi.fn(), deleteBudget: vi.fn(),
     listTransactions: vi.fn().mockResolvedValue([]), createTransaction: vi.fn(), updateTransaction: vi.fn(), deleteTransaction: vi.fn(),
     listRecurringSeries: vi.fn().mockResolvedValue([]), createRecurringSeries: vi.fn(), updateRecurringSeries: vi.fn(), deleteRecurringSeries: vi.fn(),
     getStats: vi.fn().mockResolvedValue({ balance: 0, totalExpense: 0, totalIncome: 0, remainingBudget: 0, breakdown: [], budgetVsActual: [] }),

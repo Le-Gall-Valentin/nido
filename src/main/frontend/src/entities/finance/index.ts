@@ -19,7 +19,7 @@ export {
   useSettlementsBetween, useSavingsGoals,
 } from './model/useFinanceQueries'
 export {
-  useCreateCategory, useUpdateCategory, useDeleteCategory, useSetBudget,
+  useCreateCategory, useUpdateCategory, useDeleteCategory, useSetBudget, useDeleteBudget,
   useCreateTransaction, useUpdateTransaction, useDeleteTransaction,
   useCreateRecurringSeries, useUpdateRecurringSeries, useDeleteRecurringSeries,
   useSettleDebt, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,

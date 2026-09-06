@@ -53,6 +53,15 @@ export function useSetBudget(spaceId: string) {
   })
 }
 
+export function useDeleteBudget(spaceId: string) {
+  const api: IBudgetsApi = useFinanceApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (categoryId: string) => api.deleteBudget(spaceId, categoryId),
+    onSuccess: () => invalidateSpace(queryClient, spaceId),
+  })
+}
+
 export function useCreateTransaction(spaceId: string) {
   const api: ITransactionsApi = useFinanceApi()
   const queryClient = useQueryClient()

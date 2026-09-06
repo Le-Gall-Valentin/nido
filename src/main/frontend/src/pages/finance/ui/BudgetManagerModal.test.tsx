@@ -16,25 +16,35 @@ const BUDGET_LINES: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 300, spent
 
 describe('BudgetManagerModal', () => {
   it('shows the submit error handed down by the caller when the backend rejected a save', () => {
-    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={vi.fn()} onClose={vi.fn()} submitError="form.submit_error" />)
+    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} submitError="form.submit_error" />)
 
     expect(screen.getByText('form.submit_error')).toBeDefined()
   })
 
   it('lists every category with its current budget, or the option to set one', () => {
-    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={vi.fn()} onClose={vi.fn()} />)
+    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={vi.fn()} onDelete={vi.fn()} onClose={vi.fn()} />)
 
     expect(screen.getByText('Alimentation')).toBeDefined()
     expect(screen.getByText('Loisirs')).toBeDefined()
-    expect(screen.getByText('budget.edit')).toBeDefined()
+    expect(screen.getByLabelText('budget.edit')).toBeDefined()
+    expect(screen.getByLabelText('budget.remove')).toBeDefined()
     expect(screen.getByText('budget.set')).toBeDefined()
+  })
+
+  it('removes the budget of a category that already has one, without asking to confirm', () => {
+    const onDelete = vi.fn()
+    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={vi.fn()} onDelete={onDelete} onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByLabelText('budget.remove'))
+
+    expect(onDelete).toHaveBeenCalledWith('c1')
   })
 
   it('edits the budget of a category that already has one', () => {
     const onSave = vi.fn()
-    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onClose={vi.fn()} />)
+    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onDelete={vi.fn()} onClose={vi.fn()} />)
 
-    fireEvent.click(screen.getByText('budget.edit'))
+    fireEvent.click(screen.getByLabelText('budget.edit'))
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '350' } })
     fireEvent.click(screen.getByText('form.save'))
 
@@ -43,7 +53,7 @@ describe('BudgetManagerModal', () => {
 
   it('sets a budget for a category that does not have one yet', () => {
     const onSave = vi.fn()
-    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onClose={vi.fn()} />)
+    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onDelete={vi.fn()} onClose={vi.fn()} />)
 
     fireEvent.click(screen.getByText('budget.set'))
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '150' } })
@@ -54,7 +64,7 @@ describe('BudgetManagerModal', () => {
 
   it('does not save a blank budget value, and shows an error instead of closing silently', () => {
     const onSave = vi.fn()
-    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onClose={vi.fn()} />)
+    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onDelete={vi.fn()} onClose={vi.fn()} />)
 
     fireEvent.click(screen.getByText('budget.set'))
     fireEvent.click(screen.getByText('form.save'))
@@ -66,9 +76,9 @@ describe('BudgetManagerModal', () => {
 
   it('does not save a negative budget value, and shows an error instead of closing silently', () => {
     const onSave = vi.fn()
-    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onClose={vi.fn()} />)
+    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onDelete={vi.fn()} onClose={vi.fn()} />)
 
-    fireEvent.click(screen.getByText('budget.edit'))
+    fireEvent.click(screen.getByLabelText('budget.edit'))
     fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '-10' } })
     fireEvent.click(screen.getByText('form.save'))
 
@@ -78,7 +88,7 @@ describe('BudgetManagerModal', () => {
 
   it('clears the error once a valid value is saved', () => {
     const onSave = vi.fn()
-    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onClose={vi.fn()} />)
+    render(<BudgetManagerModal categories={CATEGORIES} budgetLines={BUDGET_LINES} onSave={onSave} onDelete={vi.fn()} onClose={vi.fn()} />)
 
     fireEvent.click(screen.getByText('budget.set'))
     fireEvent.click(screen.getByText('form.save'))

@@ -1,5 +1,6 @@
 package com.nido.api.finance.infrastructure.web;
 
+import com.nido.api.finance.application.port.in.DeleteBudgetUseCase;
 import com.nido.api.finance.application.port.in.ListBudgetsUseCase;
 import com.nido.api.finance.application.port.in.SetBudgetUseCase;
 import com.nido.api.finance.domain.model.Budget;
@@ -28,10 +29,13 @@ public class FinanceBudgetController {
 
     private final ListBudgetsUseCase listBudgetsUseCase;
     private final SetBudgetUseCase setBudgetUseCase;
+    private final DeleteBudgetUseCase deleteBudgetUseCase;
 
-    public FinanceBudgetController(ListBudgetsUseCase listBudgetsUseCase, SetBudgetUseCase setBudgetUseCase) {
+    public FinanceBudgetController(
+            ListBudgetsUseCase listBudgetsUseCase, SetBudgetUseCase setBudgetUseCase, DeleteBudgetUseCase deleteBudgetUseCase) {
         this.listBudgetsUseCase = listBudgetsUseCase;
         this.setBudgetUseCase = setBudgetUseCase;
+        this.deleteBudgetUseCase = deleteBudgetUseCase;
     }
 
     @GetMapping
@@ -50,5 +54,15 @@ public class FinanceBudgetController {
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
         Budget saved = setBudgetUseCase.set(new SetBudgetCommand(spaceId, categoryId, request.monthlyLimit()), membership);
         return ResponseEntity.ok(BudgetResponse.from(saved));
+    }
+
+    @DeleteMapping("/{categoryId}")
+    @RateLimiting(max = 40)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> delete(
+            @PathVariable UUID spaceId, @PathVariable UUID categoryId,
+            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+        deleteBudgetUseCase.delete(spaceId, categoryId, membership);
+        return ResponseEntity.noContent().build();
     }
 }
