@@ -18,8 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
@@ -85,10 +87,22 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
     public List<SavingsContribution> findContributionsByGoalId(UUID goalId) {
         FinanceSavingsGoalEntity goal = goals.findById(goalId).orElseThrow(FinanceException.SavingsGoalNotFound::new);
         TextEncryptor encryptor = encryptorFactory.forSpace(goal.getSpaceId());
-        return goalContributions.findByGoalId(goalId).stream()
+        return goalContributions.findByGoalIdOrderByContributedDateDesc(goalId).stream()
             .map(ce -> new SavingsContribution(ce.getId(), ce.getGoalId(), ce.getUserId(),
                 new BigDecimal(encryptor.decrypt(ce.getAmountEncrypted())), ce.getContributedDate()))
             .toList();
+    }
+
+    @Override
+    public Map<UUID, List<SavingsContribution>> findContributionsByGoalIds(UUID spaceId, List<UUID> goalIds) {
+        if (goalIds.isEmpty()) {
+            return Map.of();
+        }
+        TextEncryptor encryptor = encryptorFactory.forSpace(spaceId);
+        return goalContributions.findByGoalIdInOrderByContributedDateDesc(goalIds).stream()
+            .map(ce -> new SavingsContribution(ce.getId(), ce.getGoalId(), ce.getUserId(),
+                new BigDecimal(encryptor.decrypt(ce.getAmountEncrypted())), ce.getContributedDate()))
+            .collect(Collectors.groupingBy(SavingsContribution::goalId));
     }
 
     @Override

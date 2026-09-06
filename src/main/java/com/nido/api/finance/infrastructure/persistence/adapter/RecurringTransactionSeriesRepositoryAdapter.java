@@ -18,8 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTransactionSeriesRepository {
@@ -43,12 +45,20 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
 
     @Override
     public List<RecurringTransactionSeries> findBySpaceId(UUID spaceId) {
-        return series.findBySpaceId(spaceId).stream().map(e -> toDomain(e, contributors.findBySeriesId(e.getId()))).toList();
+        return toDomainList(series.findBySpaceId(spaceId));
     }
 
     @Override
     public List<RecurringTransactionSeries> findActiveBySpaceId(UUID spaceId, LocalDate asOf) {
-        return series.findActiveBySpaceId(spaceId, asOf).stream().map(e -> toDomain(e, contributors.findBySeriesId(e.getId()))).toList();
+        return toDomainList(series.findActiveBySpaceId(spaceId, asOf));
+    }
+
+    /** Batches the contributor lookup into one query instead of one per series. */
+    private List<RecurringTransactionSeries> toDomainList(List<FinanceRecurringSeriesEntity> entities) {
+        List<UUID> ids = entities.stream().map(FinanceRecurringSeriesEntity::getId).toList();
+        Map<UUID, List<FinanceRecurringSeriesContributorEntity>> bySeriesId = contributors.findBySeriesIdIn(ids).stream()
+            .collect(Collectors.groupingBy(FinanceRecurringSeriesContributorEntity::getSeriesId));
+        return entities.stream().map(e -> toDomain(e, bySeriesId.getOrDefault(e.getId(), List.of()))).toList();
     }
 
     @Override
