@@ -4,7 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import type { IFinanceApi } from './IFinanceApi'
 import { FinanceApiProvider } from './financeApiContext'
-import { useCategories, useTransactions, useFinanceStats, useBalances, useSettlementsBetween } from './useFinanceQueries'
+import {
+  useCategories, useBudgets, useTransactions, useRecurringSeries, useFinanceStats, useProjection,
+  useBalances, useSettlementsBetween, useSavingsGoals,
+} from './useFinanceQueries'
 
 function wrapper(api: IFinanceApi) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -39,6 +42,18 @@ describe('useCategories', () => {
   })
 })
 
+describe('useBudgets', () => {
+  it('fetches budgets for the given space', async () => {
+    const budgets = [{ categoryId: 'c1', monthlyLimit: 300 }]
+    const api = fakeApi({ listBudgets: vi.fn().mockResolvedValue(budgets) })
+
+    const { result } = renderHook(() => useBudgets('space-1'), { wrapper: wrapper(api) })
+
+    await waitFor(() => expect(result.current.data).toEqual(budgets))
+    expect(api.listBudgets).toHaveBeenCalledWith('space-1')
+  })
+})
+
 describe('useTransactions', () => {
   it('fetches transactions for the given space and month', async () => {
     const transactions = [{ id: 't1', label: 'Courses', amount: 45.3, type: 'EXPENSE', categoryId: 'c1', date: '2026-01-15', payerId: null, contributors: [], recurring: false }]
@@ -51,6 +66,21 @@ describe('useTransactions', () => {
   })
 })
 
+describe('useRecurringSeries', () => {
+  it('fetches recurring series for the given space', async () => {
+    const series = [{
+      id: 's1', label: 'Loyer', amount: 800, type: 'EXPENSE', categoryId: 'c1', payerId: 'alice',
+      contributors: [], intervalType: 'MONTHLY', intervalCount: 1, anchorDate: '2026-01-01', endDate: null,
+    }]
+    const api = fakeApi({ listRecurringSeries: vi.fn().mockResolvedValue(series) })
+
+    const { result } = renderHook(() => useRecurringSeries('space-1'), { wrapper: wrapper(api) })
+
+    await waitFor(() => expect(result.current.data).toEqual(series))
+    expect(api.listRecurringSeries).toHaveBeenCalledWith('space-1')
+  })
+})
+
 describe('useFinanceStats', () => {
   it('fetches stats for the given space and month', async () => {
     const stats = { balance: 100, totalExpense: 50, totalIncome: 150, remainingBudget: 350, breakdown: [], budgetVsActual: [] }
@@ -59,6 +89,18 @@ describe('useFinanceStats', () => {
     const { result } = renderHook(() => useFinanceStats('space-1', '2026-01'), { wrapper: wrapper(api) })
 
     await waitFor(() => expect(result.current.data).toEqual(stats))
+  })
+})
+
+describe('useProjection', () => {
+  it('fetches the projection for the given space and month', async () => {
+    const projection = { actualBalanceSoFar: -50, upcoming: [], projectedEndOfMonthBalance: -850 }
+    const api = fakeApi({ getProjection: vi.fn().mockResolvedValue(projection) })
+
+    const { result } = renderHook(() => useProjection('space-1', '2026-01'), { wrapper: wrapper(api) })
+
+    await waitFor(() => expect(result.current.data).toEqual(projection))
+    expect(api.getProjection).toHaveBeenCalledWith('space-1', '2026-01')
   })
 })
 
@@ -82,5 +124,17 @@ describe('useSettlementsBetween', () => {
 
     await waitFor(() => expect(result.current.data).toEqual(settlements))
     expect(api.listSettlements).toHaveBeenCalledWith('space-1', 'u-1', 'u-2')
+  })
+})
+
+describe('useSavingsGoals', () => {
+  it('fetches savings goals for the given space', async () => {
+    const goals = [{ id: 'g1', name: 'Vacances', targetAmount: 2000, targetDate: null, color: '#5c7a58', glyph: '🎯', totalContributed: 0, contributions: [] }]
+    const api = fakeApi({ listSavingsGoals: vi.fn().mockResolvedValue(goals) })
+
+    const { result } = renderHook(() => useSavingsGoals('space-1'), { wrapper: wrapper(api) })
+
+    await waitFor(() => expect(result.current.data).toEqual(goals))
+    expect(api.listSavingsGoals).toHaveBeenCalledWith('space-1')
   })
 })
