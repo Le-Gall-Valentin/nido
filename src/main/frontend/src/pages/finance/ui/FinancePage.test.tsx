@@ -314,6 +314,22 @@ describe('FinancePage', () => {
     await waitFor(() => expect(deleteSavingsGoal).toHaveBeenCalledWith('space-1', 'g1'))
   })
 
+  it('asks for confirmation before deleting a category, and only deletes it once confirmed', async () => {
+    const deleteCategory = vi.fn()
+    renderPage(fakeApi({ deleteCategory }))
+
+    await waitFor(() => expect(screen.getByText('stats.balance')).toBeDefined())
+    fireEvent.click(screen.getByText('categories.manage'))
+    fireEvent.click(screen.getByRole('button', { name: 'categories.delete' }))
+
+    expect(deleteCategory).not.toHaveBeenCalled()
+    expect(screen.getByText('delete_confirm.message')).toBeDefined()
+
+    fireEvent.click(screen.getByText('delete_confirm.confirm'))
+
+    await waitFor(() => expect(deleteCategory).toHaveBeenCalledWith('space-1', 'c1'))
+  })
+
   it('shows an error in the budget modal when the backend rejects the save, instead of failing silently', async () => {
     const setBudget = vi.fn().mockRejectedValue(new Error('boom'))
     renderPage(fakeApi({ setBudget }))

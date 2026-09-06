@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Alert, Spinner } from '@/shared/ui'
+import { Alert, ConfirmDeleteModal, Spinner } from '@/shared/ui'
 import { useAuth } from '@/features/auth'
 import { useMySpaces } from '@/features/space-switcher'
 import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
@@ -22,7 +22,6 @@ import { BalancesSection } from './BalancesSection'
 import { SavingsGoalsSection } from './SavingsGoalsSection'
 import { TransactionsSection } from './TransactionsSection'
 import { TransactionFormModal, type TransactionFormInput } from './TransactionFormModal'
-import { DeleteTransactionModal } from './DeleteTransactionModal'
 import { TransactionDetailModal } from './TransactionDetailModal'
 import { CategoryTransactionsModal } from './CategoryTransactionsModal'
 import { MemberTransactionsModal } from './MemberTransactionsModal'
@@ -92,6 +91,7 @@ function FinancePageContent() {
   const [managingRecurringSeries, setManagingRecurringSeries] = useState(false)
   const [editingSeries, setEditingSeries] = useState<RecurringSeries | null>(null)
   const [deletingSeries, setDeletingSeries] = useState<RecurringSeries | null>(null)
+  const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null)
   const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null)
   const [settlingTransfer, setSettlingTransfer] = useState<{ fromMemberId: string; toMemberId: string; amount: number } | null>(null)
   const [viewingMemberId, setViewingMemberId] = useState<string | null>(null)
@@ -105,7 +105,7 @@ function FinancePageContent() {
 
   function handleDeleteCategory(categoryId: string) {
     setCategoryDeleteError(null)
-    deleteCategory.mutate(categoryId, { onError: () => setCategoryDeleteError('in_use') })
+    setDeletingCategoryId(categoryId)
   }
 
   function handleUpdateSeriesSubmit(input: RecurringSeriesFormInput) {
@@ -263,10 +263,13 @@ function FinancePageContent() {
       )}
 
       {deletingTransaction && (
-        <DeleteTransactionModal
-          label={deletingTransaction.label}
+        <ConfirmDeleteModal
+          title={t('delete_confirm.title', { label: deletingTransaction.label })}
+          message={t('delete_confirm.message')}
+          confirmLabel={t('delete_confirm.confirm')}
+          cancelLabel={t('delete_confirm.cancel')}
           isPending={deleteTransaction.isPending}
-          error={deleteTransaction.isError ? 'error' : null}
+          error={deleteTransaction.isError ? t('delete_confirm.error') : null}
           onCancel={() => {
             setDeletingTransaction(null)
             deleteTransaction.reset()
@@ -288,6 +291,26 @@ function FinancePageContent() {
           }}
           deleteError={categoryDeleteError}
           submitError={(createCategory.isError || updateCategory.isError) ? t('form.submit_error') : null}
+        />
+      )}
+
+      {deletingCategoryId && (
+        <ConfirmDeleteModal
+          title={t('delete_confirm.title', { label: categoryById.get(deletingCategoryId)?.label ?? '' })}
+          message={t('delete_confirm.message')}
+          confirmLabel={t('delete_confirm.confirm')}
+          cancelLabel={t('delete_confirm.cancel')}
+          isPending={deleteCategory.isPending}
+          error={categoryDeleteError ? t('categories.delete_in_use') : null}
+          onCancel={() => {
+            setDeletingCategoryId(null)
+            setCategoryDeleteError(null)
+            deleteCategory.reset()
+          }}
+          onConfirm={() => deleteCategory.mutate(deletingCategoryId, {
+            onSuccess: () => setDeletingCategoryId(null),
+            onError: () => setCategoryDeleteError('in_use'),
+          })}
         />
       )}
 
@@ -329,10 +352,13 @@ function FinancePageContent() {
       )}
 
       {deletingSeries && (
-        <DeleteTransactionModal
-          label={deletingSeries.label}
+        <ConfirmDeleteModal
+          title={t('delete_confirm.title', { label: deletingSeries.label })}
+          message={t('delete_confirm.message')}
+          confirmLabel={t('delete_confirm.confirm')}
+          cancelLabel={t('delete_confirm.cancel')}
           isPending={deleteRecurringSeries.isPending}
-          error={deleteRecurringSeries.isError ? 'error' : null}
+          error={deleteRecurringSeries.isError ? t('delete_confirm.error') : null}
           onCancel={() => {
             setDeletingSeries(null)
             deleteRecurringSeries.reset()
@@ -342,10 +368,13 @@ function FinancePageContent() {
       )}
 
       {deletingGoal && (
-        <DeleteTransactionModal
-          label={deletingGoal.name}
+        <ConfirmDeleteModal
+          title={t('delete_confirm.title', { label: deletingGoal.name })}
+          message={t('delete_confirm.message')}
+          confirmLabel={t('delete_confirm.confirm')}
+          cancelLabel={t('delete_confirm.cancel')}
           isPending={deleteSavingsGoal.isPending}
-          error={deleteSavingsGoal.isError ? 'error' : null}
+          error={deleteSavingsGoal.isError ? t('delete_confirm.error') : null}
           onCancel={() => {
             setDeletingGoal(null)
             deleteSavingsGoal.reset()
