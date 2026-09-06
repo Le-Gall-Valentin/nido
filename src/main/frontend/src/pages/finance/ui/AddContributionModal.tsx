@@ -3,6 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { SpaceMember } from '@/entities/space'
 
+// Same tolerance as resolveContributionShares.ts — absorbs float rounding so a
+// contribution exactly equal to `remaining` isn't wrongly rejected as "too high".
+const EPSILON = 0.005
+
 export interface AddContributionInput {
   memberId: string
   amount: number
@@ -35,7 +39,7 @@ export function AddContributionModal({ goalName, remaining, members, onSubmit, o
       setError(t('form.amount_required'))
       return
     }
-    if (numericAmount > remaining) {
+    if (numericAmount - remaining > EPSILON) {
       setError(t('savings.contribution_too_high'))
       return
     }

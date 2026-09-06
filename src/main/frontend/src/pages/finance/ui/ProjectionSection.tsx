@@ -20,8 +20,8 @@ export function ProjectionSection({ projection }: ProjectionSectionProps) {
       </p>
       {(projection?.upcoming.length ?? 0) > 0 && (
         <ul className="mt-2 space-y-1 text-sm text-fg-3">
-          {projection?.upcoming.map((occurrence, i) => (
-            <li key={i}>
+          {projection?.upcoming.map((occurrence) => (
+            <li key={`${occurrence.seriesId}-${occurrence.date}`}>
               {occurrence.date} — {occurrence.label} ({occurrence.type === 'EXPENSE' ? '-' : '+'}{formatAmount(occurrence.amount)})
             </li>
           ))}

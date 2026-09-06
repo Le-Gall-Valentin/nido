@@ -57,8 +57,8 @@ export function BalancesSection({
               <CheckCircle2 size={18} className="text-status-green" /> {t('balances.all_settled')}
             </div>
           ) : (
-            balances?.suggestedTransfers.map((transfer, i) => (
-              <div key={i} className="flex flex-col gap-2 rounded-[11px] bg-bg-2 p-2.5 sm:flex-row sm:items-center sm:gap-2.5">
+            balances?.suggestedTransfers.map((transfer) => (
+              <div key={`${transfer.fromMemberId}-${transfer.toMemberId}`} className="flex flex-col gap-2 rounded-[11px] bg-bg-2 p-2.5 sm:flex-row sm:items-center sm:gap-2.5">
                 <div className="flex items-center gap-2.5 sm:contents">
                   <UserAvatar username={memberLabel(transfer.fromMemberId)} role="USER" className="size-7 shrink-0 rounded-full text-[10.5px]" />
                   <ArrowRight size={16} className="shrink-0 text-fg-3" />
