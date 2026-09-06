@@ -32,6 +32,8 @@ public class FinanceExceptionHandler {
             case FinanceException.MemberNotInSpace ignored -> new FinanceErrorResponse(404, "Member is not part of this space.");
             case FinanceException.SettlementExceedsDebt ignored -> new FinanceErrorResponse(422, "This settlement would exceed the amount actually owed.");
             case FinanceException.TargetAmountBelowContributed ignored -> new FinanceErrorResponse(422, "The target amount cannot be lowered below what has already been contributed.");
+            case FinanceException.CategoryTypeMismatch ignored -> new FinanceErrorResponse(422, "The category's type does not match this operation's type.");
+            case FinanceException.BudgetRequiresExpenseCategory ignored -> new FinanceErrorResponse(422, "Only expense categories can be budgeted.");
         };
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), e.getClass().getSimpleName(), response.detail(),
