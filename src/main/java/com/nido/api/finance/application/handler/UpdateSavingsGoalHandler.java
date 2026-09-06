@@ -2,6 +2,7 @@ package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.UpdateSavingsGoalUseCase;
 import com.nido.api.finance.domain.model.FinanceException;
+import com.nido.api.finance.domain.model.SavingsContribution;
 import com.nido.api.finance.domain.model.SavingsGoal;
 import com.nido.api.finance.domain.model.SavingsGoalDetail;
 import com.nido.api.finance.domain.model.UpdateSavingsGoalCommand;
@@ -9,6 +10,9 @@ import com.nido.api.finance.domain.port.out.SavingsGoalRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 @ApplicationService
 public class UpdateSavingsGoalHandler implements UpdateSavingsGoalUseCase {
@@ -27,6 +31,11 @@ public class UpdateSavingsGoalHandler implements UpdateSavingsGoalUseCase {
         SavingsGoal existing = savingsGoalRepository.findById(command.goalId()).orElseThrow(FinanceException.SavingsGoalNotFound::new);
         if (!existing.spaceId().equals(command.spaceId())) {
             throw new FinanceException.SavingsGoalNotFound();
+        }
+        List<SavingsContribution> contributions = savingsGoalRepository.findContributionsByGoalId(command.goalId());
+        BigDecimal alreadyContributed = contributions.stream().map(SavingsContribution::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (command.targetAmount().compareTo(alreadyContributed) < 0) {
+            throw new FinanceException.TargetAmountBelowContributed();
         }
         SavingsGoal updated = savingsGoalRepository.update(command);
         return new SavingsGoalDetail(updated, savingsGoalRepository.findContributionsByGoalId(updated.id()));

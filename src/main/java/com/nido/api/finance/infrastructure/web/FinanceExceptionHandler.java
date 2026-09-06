@@ -31,6 +31,7 @@ public class FinanceExceptionHandler {
             case FinanceException.DecryptionFailed ignored -> new FinanceErrorResponse(500, "Could not process the requested finance data.");
             case FinanceException.MemberNotInSpace ignored -> new FinanceErrorResponse(404, "Member is not part of this space.");
             case FinanceException.SettlementExceedsDebt ignored -> new FinanceErrorResponse(422, "This settlement would exceed the amount actually owed.");
+            case FinanceException.TargetAmountBelowContributed ignored -> new FinanceErrorResponse(422, "The target amount cannot be lowered below what has already been contributed.");
         };
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), e.getClass().getSimpleName(), response.detail(),

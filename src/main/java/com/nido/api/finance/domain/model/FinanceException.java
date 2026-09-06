@@ -7,7 +7,8 @@ public abstract sealed class FinanceException extends RuntimeException
             FinanceException.InvalidEndDate, FinanceException.NotAPartyToSettlement,
             FinanceException.SavingsGoalNotFound, FinanceException.InvalidSavingsGoalAppearance,
             FinanceException.ContributionExceedsGoalTarget, FinanceException.DecryptionFailed,
-            FinanceException.MemberNotInSpace, FinanceException.SettlementExceedsDebt {
+            FinanceException.MemberNotInSpace, FinanceException.SettlementExceedsDebt,
+            FinanceException.TargetAmountBelowContributed {
 
     private FinanceException(String message) { super(message); }
 
@@ -75,5 +76,10 @@ public abstract sealed class FinanceException extends RuntimeException
     /** Thrown when a settlement amount exceeds what the debtor actually owes the creditor, computed from every shared transaction and settlement so far. */
     public static final class SettlementExceedsDebt extends FinanceException {
         public SettlementExceedsDebt() { super("This settlement would exceed the amount actually owed"); }
+    }
+
+    /** Thrown when a savings goal update would lower its targetAmount below what's already been contributed. */
+    public static final class TargetAmountBelowContributed extends FinanceException {
+        public TargetAmountBelowContributed() { super("The target amount cannot be lowered below what has already been contributed"); }
     }
 }
