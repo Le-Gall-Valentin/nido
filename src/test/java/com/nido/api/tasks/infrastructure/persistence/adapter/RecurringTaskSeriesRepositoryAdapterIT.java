@@ -11,6 +11,7 @@ import com.nido.api.tasks.domain.model.CreateRecurringTaskSeriesCommand;
 import com.nido.api.tasks.domain.model.RecurrenceInterval;
 import com.nido.api.tasks.domain.model.RecurringTaskSeries;
 import com.nido.api.tasks.domain.model.TaskPriority;
+import com.nido.api.tasks.domain.model.UpdateRecurringTaskSeriesCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,11 +74,15 @@ class RecurringTaskSeriesRepositoryAdapterIT {
     void create_persists_the_series_with_its_rotation_members_and_subtask_templates_in_order() {
         CreateRecurringTaskSeriesCommand command = new CreateRecurringTaskSeriesCommand(
             spaceId, "Sortir les poubelles", TaskPriority.MED, List.of("Vérifier le tri"),
-            RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 1, 7), List.of(aliceId, bobId));
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 2,
+            LocalDate.of(2026, 1, 7), null, List.of(aliceId, bobId));
 
         RecurringTaskSeries created = adapter.create(command);
 
         assertThat(created.title()).isEqualTo("Sortir les poubelles");
+        assertThat(created.leadIntervalType()).isEqualTo(RecurrenceInterval.DAILY);
+        assertThat(created.leadIntervalCount()).isEqualTo(2);
+        assertThat(created.endDate()).isNull();
         assertThat(created.rotationMemberIds()).containsExactly(aliceId, bobId);
         assertThat(created.subtaskTemplates()).containsExactly("Vérifier le tri");
         assertThat(created.occurrenceCount()).isZero();
@@ -88,7 +93,8 @@ class RecurringTaskSeriesRepositoryAdapterIT {
     void advance_updates_the_rotation_index_and_occurrence_count() {
         RecurringTaskSeries created = adapter.create(new CreateRecurringTaskSeriesCommand(
             spaceId, "Sortir les poubelles", TaskPriority.MED, List.of(),
-            RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 1, 7), List.of(aliceId, bobId)));
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0,
+            LocalDate.of(2026, 1, 7), null, List.of(aliceId, bobId)));
 
         RecurringTaskSeries advanced = adapter.advance(created.id(), 1, 1);
 
@@ -100,10 +106,51 @@ class RecurringTaskSeriesRepositoryAdapterIT {
     void deleteById_removes_the_series() {
         RecurringTaskSeries created = adapter.create(new CreateRecurringTaskSeriesCommand(
             spaceId, "Sortir les poubelles", TaskPriority.MED, List.of(),
-            RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 1, 7), List.of()));
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0,
+            LocalDate.of(2026, 1, 7), null, List.of()));
 
         adapter.deleteById(created.id());
 
         assertThat(adapter.findById(created.id())).isEmpty();
+    }
+
+    @Test
+    void findBySpaceId_returns_every_series_in_the_space() {
+        adapter.create(new CreateRecurringTaskSeriesCommand(spaceId, "A", TaskPriority.MED, List.of(),
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, LocalDate.of(2026, 1, 7), null, List.of()));
+        adapter.create(new CreateRecurringTaskSeriesCommand(spaceId, "B", TaskPriority.LOW, List.of(),
+            RecurrenceInterval.MONTHLY, 1, RecurrenceInterval.DAILY, 0, LocalDate.of(2026, 2, 1), null, List.of()));
+
+        List<RecurringTaskSeries> found = adapter.findBySpaceId(spaceId);
+
+        assertThat(found).extracting(RecurringTaskSeries::title).containsExactlyInAnyOrder("A", "B");
+    }
+
+    @Test
+    void update_replaces_the_series_fields_rotation_and_subtask_templates() {
+        RecurringTaskSeries created = adapter.create(new CreateRecurringTaskSeriesCommand(
+            spaceId, "Sortir les poubelles", TaskPriority.MED, List.of("Vérifier le tri"),
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0,
+            LocalDate.of(2026, 1, 7), null, List.of(aliceId)));
+
+        RecurringTaskSeries updated = adapter.update(new UpdateRecurringTaskSeriesCommand(
+            created.id(), spaceId, "Sortir les poubelles et le compost", TaskPriority.HIGH, List.of("Vérifier le tri", "Sortir les bacs"),
+            RecurrenceInterval.MONTHLY, 2, RecurrenceInterval.WEEKLY, 1,
+            LocalDate.of(2026, 1, 7), LocalDate.of(2027, 1, 1), List.of(bobId, aliceId)));
+
+        assertThat(updated.title()).isEqualTo("Sortir les poubelles et le compost");
+        assertThat(updated.priority()).isEqualTo(TaskPriority.HIGH);
+        assertThat(updated.intervalType()).isEqualTo(RecurrenceInterval.MONTHLY);
+        assertThat(updated.intervalCount()).isEqualTo(2);
+        assertThat(updated.leadIntervalType()).isEqualTo(RecurrenceInterval.WEEKLY);
+        assertThat(updated.leadIntervalCount()).isEqualTo(1);
+        assertThat(updated.endDate()).isEqualTo(LocalDate.of(2027, 1, 1));
+        assertThat(updated.rotationMemberIds()).containsExactly(bobId, aliceId);
+        assertThat(updated.subtaskTemplates()).containsExactly("Vérifier le tri", "Sortir les bacs");
+    }
+
+    @Test
+    void lockForMaterialization_does_not_throw_when_called_outside_any_prior_lock() {
+        adapter.lockForMaterialization(spaceId);
     }
 }

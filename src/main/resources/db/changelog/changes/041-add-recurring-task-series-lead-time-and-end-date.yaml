@@ -1,0 +1,49 @@
+databaseChangeLog:
+  - changeSet:
+      id: 041-add-recurring-task-series-lead-time-and-end-date
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: recurring_task_series
+                columnName: lead_interval_type
+      changes:
+        - addColumn:
+            tableName: recurring_task_series
+            columns:
+              - column:
+                  name: lead_interval_type
+                  type: VARCHAR(10)
+              - column:
+                  name: lead_interval_count
+                  type: INT
+              - column:
+                  name: end_date
+                  type: DATE
+        - sql:
+            # Existing series appear exactly on their due date, with no anticipation —
+            # the closest match to the pre-lead-time behavior.
+            sql: UPDATE recurring_task_series SET lead_interval_type = 'DAILY', lead_interval_count = 0 WHERE lead_interval_type IS NULL
+            splitStatements: false
+        - addNotNullConstraint:
+            tableName: recurring_task_series
+            columnName: lead_interval_type
+            columnDataType: VARCHAR(10)
+        - addNotNullConstraint:
+            tableName: recurring_task_series
+            columnName: lead_interval_count
+            columnDataType: INT
+        - sql:
+            sql: ALTER TABLE recurring_task_series ADD CONSTRAINT chk_recurring_task_series_lead_interval_type CHECK (lead_interval_type IN ('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'))
+            splitStatements: false
+      rollback:
+        - dropColumn:
+            tableName: recurring_task_series
+            columnName: lead_interval_type
+        - dropColumn:
+            tableName: recurring_task_series
+            columnName: lead_interval_count
+        - dropColumn:
+            tableName: recurring_task_series
+            columnName: end_date
