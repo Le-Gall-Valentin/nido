@@ -6,6 +6,7 @@ import { UserAvatar } from '@/entities/user'
 import type { SpaceMember } from '@/entities/space'
 import type { RecurrenceInput, RecurrenceInterval, Task, TaskPriority } from '@/entities/tasks'
 import { TASK_PRIORITY_ORDER, TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
+import { leadTimeExceedsInterval } from './leadTimeExceedsInterval'
 
 const INTERVAL_ORDER: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
 
@@ -36,19 +37,24 @@ interface TaskDraft {
   recurring: boolean
   intervalType: RecurrenceInterval
   intervalCount: string
+  leadIntervalType: RecurrenceInterval
+  leadIntervalCount: string
   anchorDate: string
+  endDate: string
 }
 
 function draftFrom(task: Task | null): TaskDraft {
   if (!task) {
     return {
       title: '', priority: 'MED', dueDate: '', memberIds: [], subtasks: [],
-      recurring: false, intervalType: 'WEEKLY', intervalCount: '1', anchorDate: '',
+      recurring: false, intervalType: 'WEEKLY', intervalCount: '1',
+      leadIntervalType: 'DAILY', leadIntervalCount: '0', anchorDate: '', endDate: '',
     }
   }
   return {
     title: task.title, priority: task.priority, dueDate: task.dueDate ?? '', memberIds: task.assigneeIds, subtasks: [],
-    recurring: false, intervalType: 'WEEKLY', intervalCount: '1', anchorDate: '',
+    recurring: false, intervalType: 'WEEKLY', intervalCount: '1',
+    leadIntervalType: 'DAILY', leadIntervalCount: '0', anchorDate: '', endDate: '',
   }
 }
 
@@ -88,6 +94,11 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
       setError(t('form.recurrence_anchor_date_required'))
       return
     }
+    if (!isEditing && draft.recurring && leadTimeExceedsInterval(
+        draft.anchorDate, draft.intervalType, Number(draft.intervalCount) || 1, draft.leadIntervalType, Number(draft.leadIntervalCount) || 0)) {
+      setError(t('form.lead_time_exceeds_interval'))
+      return
+    }
     setError('')
     if (isEditing) {
       onSubmit({
@@ -101,7 +112,8 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
         title: draft.title.trim(), priority: draft.priority, dueDate: null, assigneeIds: [], subtasks: draft.subtasks,
         recurrence: {
           intervalType: draft.intervalType, intervalCount: Number(draft.intervalCount) || 1,
-          anchorDate: draft.anchorDate, rotationMemberIds: draft.memberIds,
+          leadIntervalType: draft.leadIntervalType, leadIntervalCount: Number(draft.leadIntervalCount) || 0,
+          anchorDate: draft.anchorDate, endDate: draft.endDate || null, rotationMemberIds: draft.memberIds,
         },
       })
       return
@@ -151,8 +163,23 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
                 {INTERVAL_ORDER.map((i) => <option key={i} value={i}>{t(`form.interval.${i}`)}</option>)}
               </select>
             </div>
+            <div className="flex items-end gap-2">
+              <Input label={t('recurring_series.lead_time_count_label')} type="number" min={0}
+                value={draft.leadIntervalCount} className="w-20"
+                onChange={(e) => setDraft((d) => ({ ...d, leadIntervalCount: e.target.value }))} />
+              <select
+                aria-label={t('recurring_series.lead_time_type_label')}
+                value={draft.leadIntervalType}
+                onChange={(e) => setDraft((d) => ({ ...d, leadIntervalType: e.target.value as RecurrenceInterval }))}
+                className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0"
+              >
+                {INTERVAL_ORDER.map((i) => <option key={i} value={i}>{t(`form.interval.${i}`)}</option>)}
+              </select>
+            </div>
             <Input label={t('form.recurrence_anchor_date_label')} type="date" value={draft.anchorDate}
               onChange={(e) => setDraft((d) => ({ ...d, anchorDate: e.target.value }))} />
+            <Input label={t('recurring_series.end_date_label')} type="date" value={draft.endDate}
+              onChange={(e) => setDraft((d) => ({ ...d, endDate: e.target.value }))} />
           </div>
         ) : (
           <Input label={t('form.due_date_label')} type="date" value={draft.dueDate}
