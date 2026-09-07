@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, ArrowRightLeft, GripVertical, Repeat } from 'lucide-react'
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { Alert, ConfirmDeleteModal, Dialog, Spinner } from '@/shared/ui'
+import { usePointerIsFine } from '@/shared/lib'
 import { useSpaceMembers, TransferDialog } from '@/entities/space'
 import { UserAvatar } from '@/entities/user'
 import { tasksApi, TasksApiProvider, type TasksApi, type Task, type TaskStatus } from '@/entities/tasks'
@@ -50,10 +51,16 @@ interface TaskCardProps {
 function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, onEdit, onMove, onDelete, onChangeStatus, onView }: TaskCardProps) {
   const { t } = useTranslation('tasks')
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: task.id })
+  const pointerIsFine = usePointerIsFine()
   const meta = TASK_PRIORITY_META[task.priority]
   const doneSubtasks = task.subtasks.filter((s) => s.done).length
   const changeStatusLabel = t('change_status', { title: task.title })
   const viewDetailsLabel = t('view_details', { title: task.title })
+  // On a mouse (fine pointer), the whole card is the drag surface, mirroring the
+  // pre-mobile-fix behavior. On touch, dragging stays on the small grip handle only —
+  // making the whole card touch-none there broke scrolling a column by touching a card.
+  const canDragCard = canWriteHere && pointerIsFine
+  const canDragHandle = canWriteHere && !pointerIsFine
 
   const priorityRowContent = (
     <>
@@ -75,8 +82,11 @@ function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, 
 
   return (
     <div
+      ref={canDragCard ? setNodeRef : undefined}
+      {...(canDragCard ? listeners : undefined)}
+      {...(canDragCard ? attributes : undefined)}
       style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
-      className="flex flex-col gap-2 rounded-2xl border border-border bg-bg-1 p-3"
+      className={`flex flex-col gap-2 rounded-2xl border border-border bg-bg-1 p-3 ${canDragCard ? 'touch-none cursor-grab active:cursor-grabbing' : ''}`}
     >
       <div className="flex items-start gap-2.5">
         <button type="button" aria-label={t('toggle_done', { title: task.title })} onClick={() => onToggleDone(task)}
@@ -89,9 +99,12 @@ function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, 
         </button>
         {task.recurring && <Repeat className="mt-0.5 size-3.5 shrink-0 text-fg-3" />}
         {canWriteHere && (
-          <button ref={setNodeRef} {...listeners} {...attributes} type="button" onClick={() => onChangeStatus(task)}
-            aria-label={changeStatusLabel}
-            className="grid size-6 shrink-0 touch-none place-items-center rounded-md text-fg-3 hover:text-fg-1 active:cursor-grabbing">
+          <button
+            ref={canDragHandle ? setNodeRef : undefined}
+            {...(canDragHandle ? listeners : undefined)}
+            {...(canDragHandle ? attributes : undefined)}
+            type="button" onClick={() => onChangeStatus(task)} aria-label={changeStatusLabel}
+            className={`grid size-6 shrink-0 place-items-center rounded-md text-fg-3 hover:text-fg-1 active:cursor-grabbing ${canDragHandle ? 'touch-none' : ''}`}>
             <GripVertical className="size-4" />
           </button>
         )}
