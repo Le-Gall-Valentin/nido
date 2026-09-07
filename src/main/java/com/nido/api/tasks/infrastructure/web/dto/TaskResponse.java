@@ -17,12 +17,14 @@ public record TaskResponse(
     // entirely once DONE, so it opts in to NON_NULL individually rather
     // than changing that codebase-wide default.
     @JsonInclude(JsonInclude.Include.NON_NULL) LocalDate dueDate,
-    List<UUID> assigneeIds, List<SubtaskResponse> subtasks, boolean recurring
+    List<UUID> assigneeIds, List<SubtaskResponse> subtasks, boolean recurring,
+    UUID recurringSeriesId, UUID createdBy
 ) {
     public static TaskResponse from(Task t) {
         // A completed task never reports a due date — see Global Constraints.
         LocalDate visibleDueDate = t.status() == TaskStatus.DONE ? null : t.dueDate();
         return new TaskResponse(t.id(), t.title(), t.status(), t.priority(), visibleDueDate,
-            t.assigneeIds(), t.subtasks().stream().map(SubtaskResponse::from).toList(), t.recurringSeriesId() != null);
+            t.assigneeIds(), t.subtasks().stream().map(SubtaskResponse::from).toList(), t.recurringSeriesId() != null,
+            t.recurringSeriesId(), t.createdBy());
     }
 }

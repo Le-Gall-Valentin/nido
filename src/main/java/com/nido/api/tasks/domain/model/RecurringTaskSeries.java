@@ -10,7 +10,7 @@ public record RecurringTaskSeries(
     RecurrenceInterval intervalType, int intervalCount,
     RecurrenceInterval leadIntervalType, int leadIntervalCount,
     LocalDate anchorDate, LocalDate endDate,
-    int occurrenceCount, List<UUID> rotationMemberIds, int currentRotationIndex
+    int occurrenceCount, List<UUID> rotationMemberIds, int currentRotationIndex, UUID createdBy
 ) {
     public RecurringTaskSeries {
         Objects.requireNonNull(id, "id");

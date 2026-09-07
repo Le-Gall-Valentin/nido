@@ -41,6 +41,7 @@ class MoveTaskHandlerTest {
     private final UUID taskId = UUID.randomUUID();
     private final UUID callerUserId = UUID.randomUUID();
     private final UUID seriesId = UUID.randomUUID();
+    private final UUID creatorId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
@@ -57,11 +58,11 @@ class MoveTaskHandlerTest {
 
     private Task task(UUID inSpace, UUID recurringSeriesId, List<Subtask> subtasks, List<UUID> assigneeIds) {
         return new Task(taskId, inSpace, "Sortir les poubelles", TaskStatus.TODO, TaskPriority.MED,
-            LocalDate.of(2026, 1, 7), assigneeIds, subtasks, recurringSeriesId, Instant.now());
+            LocalDate.of(2026, 1, 7), assigneeIds, subtasks, recurringSeriesId, creatorId, Instant.now());
     }
 
     @Test
-    void a_member_can_move_a_task_which_clears_assignees_and_the_recurring_link_and_preserves_subtask_state() {
+    void a_member_can_move_a_task_which_clears_assignees_and_the_recurring_link_and_preserves_subtask_state_and_creator() {
         UUID alice = UUID.randomUUID();
         List<Subtask> subtasks = List.of(new Subtask(UUID.randomUUID(), "Vérifier le tri", true),
             new Subtask(UUID.randomUUID(), "Sortir les bacs", false));
@@ -70,7 +71,7 @@ class MoveTaskHandlerTest {
         Task created = task(destinationSpaceId, null, subtasks, List.of());
         when(taskRepository.create(new CreateTaskCommand(destinationSpaceId, "Sortir les poubelles", TaskPriority.MED,
             LocalDate.of(2026, 1, 7), List.of(), List.of(new SubtaskInput("Vérifier le tri", true),
-                new SubtaskInput("Sortir les bacs", false)), null))).thenReturn(created);
+                new SubtaskInput("Sortir les bacs", false)), null, creatorId))).thenReturn(created);
 
         Task result = handler.move(taskId, destinationSpaceId, membership(SpaceRole.MEMBER));
 

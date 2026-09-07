@@ -29,13 +29,14 @@ class RecurringTaskSeriesMaterializerTest {
     @Mock RecurringTaskSeriesRepository seriesRepository;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID seriesId = UUID.randomUUID();
+    private final UUID creatorId = UUID.randomUUID();
     private final LocalDate anchor = LocalDate.of(2026, 1, 7);
 
     private RecurringTaskSeries series(RecurrenceInterval leadType, int leadCount, LocalDate endDate,
                                         int occurrenceCount, List<UUID> rotationMemberIds, int currentRotationIndex) {
         return new RecurringTaskSeries(seriesId, spaceId, "Sortir les poubelles", TaskPriority.MED, List.of(),
             RecurrenceInterval.WEEKLY, 1, leadType, leadCount, anchor, endDate,
-            occurrenceCount, rotationMemberIds, currentRotationIndex);
+            occurrenceCount, rotationMemberIds, currentRotationIndex, creatorId);
     }
 
     @Test
@@ -57,7 +58,7 @@ class RecurringTaskSeriesMaterializerTest {
         RecurringTaskSeriesMaterializer.materializeDueOccurrences(taskRepository, seriesRepository, spaceId, LocalDate.of(2026, 1, 14));
 
         verify(taskRepository).createAll(List.of(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-            LocalDate.of(2026, 1, 14), List.of(), List.of(), seriesId)));
+            LocalDate.of(2026, 1, 14), List.of(), List.of(), seriesId, creatorId)));
         verify(seriesRepository).advance(seriesId, 0, 1);
     }
 
@@ -70,7 +71,7 @@ class RecurringTaskSeriesMaterializerTest {
         RecurringTaskSeriesMaterializer.materializeDueOccurrences(taskRepository, seriesRepository, spaceId, LocalDate.of(2026, 1, 11));
 
         verify(taskRepository).createAll(List.of(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-            LocalDate.of(2026, 1, 14), List.of(), List.of(), seriesId)));
+            LocalDate.of(2026, 1, 14), List.of(), List.of(), seriesId, creatorId)));
         verify(seriesRepository).advance(seriesId, 0, 1);
     }
 
@@ -88,11 +89,11 @@ class RecurringTaskSeriesMaterializerTest {
         // occurrence — so catching up after a long absence costs one write, not N.
         verify(taskRepository).createAll(List.of(
             new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-                LocalDate.of(2026, 1, 14), List.of(bob), List.of(), seriesId),
+                LocalDate.of(2026, 1, 14), List.of(bob), List.of(), seriesId, creatorId),
             new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-                LocalDate.of(2026, 1, 21), List.of(alice), List.of(), seriesId),
+                LocalDate.of(2026, 1, 21), List.of(alice), List.of(), seriesId, creatorId),
             new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-                LocalDate.of(2026, 1, 28), List.of(bob), List.of(), seriesId)));
+                LocalDate.of(2026, 1, 28), List.of(bob), List.of(), seriesId, creatorId)));
         verify(seriesRepository).advance(seriesId, 1, 3);
     }
 
@@ -112,13 +113,14 @@ class RecurringTaskSeriesMaterializerTest {
         RecurringTaskSeries base = series(RecurrenceInterval.DAILY, 0, null, 0, List.of(), 0);
         RecurringTaskSeries withTemplates = new RecurringTaskSeries(base.id(), base.spaceId(), base.title(), base.priority(),
             List.of("Vérifier le tri"), base.intervalType(), base.intervalCount(), base.leadIntervalType(), base.leadIntervalCount(),
-            base.anchorDate(), base.endDate(), base.occurrenceCount(), base.rotationMemberIds(), base.currentRotationIndex());
+            base.anchorDate(), base.endDate(), base.occurrenceCount(), base.rotationMemberIds(), base.currentRotationIndex(),
+            base.createdBy());
         when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(withTemplates));
 
         RecurringTaskSeriesMaterializer.materializeDueOccurrences(taskRepository, seriesRepository, spaceId, LocalDate.of(2026, 1, 14));
 
         verify(taskRepository).createAll(List.of(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-            LocalDate.of(2026, 1, 14), List.of(), List.of(new SubtaskInput("Vérifier le tri", false)), seriesId)));
+            LocalDate.of(2026, 1, 14), List.of(), List.of(new SubtaskInput("Vérifier le tri", false)), seriesId, creatorId)));
     }
 
     @Test

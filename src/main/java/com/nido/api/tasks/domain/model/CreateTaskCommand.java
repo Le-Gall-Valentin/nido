@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public record CreateTaskCommand(
     UUID spaceId, String title, TaskPriority priority, LocalDate dueDate,
-    List<UUID> assigneeIds, List<SubtaskInput> subtasks, UUID recurringSeriesId
+    List<UUID> assigneeIds, List<SubtaskInput> subtasks, UUID recurringSeriesId, UUID creatorUserId
 ) {
     public CreateTaskCommand {
         Objects.requireNonNull(spaceId, "spaceId");

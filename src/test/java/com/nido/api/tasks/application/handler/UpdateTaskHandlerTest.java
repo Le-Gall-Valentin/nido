@@ -47,14 +47,14 @@ class UpdateTaskHandlerTest {
     }
 
     private Task task(UUID inSpace) {
-        return new Task(taskId, inSpace, "Ancien titre", TaskStatus.TODO, TaskPriority.LOW, null, List.of(), List.of(), null, Instant.now());
+        return new Task(taskId, inSpace, "Ancien titre", TaskStatus.TODO, TaskPriority.LOW, null, List.of(), List.of(), null, null, Instant.now());
     }
 
     @Test
     void a_member_can_update_a_task_in_their_space() {
         UpdateTaskCommand command = new UpdateTaskCommand(taskId, spaceId, "Nouveau titre", TaskPriority.HIGH, null, List.of());
         when(taskRepository.findById(taskId)).thenReturn(Optional.of(task(spaceId)));
-        Task updated = new Task(taskId, spaceId, "Nouveau titre", TaskStatus.TODO, TaskPriority.HIGH, null, List.of(), List.of(), null, Instant.now());
+        Task updated = new Task(taskId, spaceId, "Nouveau titre", TaskStatus.TODO, TaskPriority.HIGH, null, List.of(), List.of(), null, null, Instant.now());
         when(taskRepository.update(command)).thenReturn(updated);
 
         Task result = handler.update(command, membership(SpaceRole.MEMBER));

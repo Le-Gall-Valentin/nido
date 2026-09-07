@@ -95,6 +95,7 @@ class RecurringTaskSeriesControllerIT {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].title").value("Sortir les poubelles"))
+            .andExpect(jsonPath("$[0].createdBy").value(aliceId.toString()))
             .andReturn().getResponse().getContentAsString();
         String seriesId = objectMapper.readTree(seriesListBody).get(0).get("id").asText();
 

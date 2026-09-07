@@ -58,7 +58,7 @@ final class RecurringTaskSeriesMaterializer {
                 }
                 List<SubtaskInput> subtasks = series.subtaskTemplates().stream()
                     .map(text -> new SubtaskInput(text, false)).toList();
-                due.add(new CreateTaskCommand(spaceId, series.title(), series.priority(), dueDate, assignees, subtasks, series.id()));
+                due.add(new CreateTaskCommand(spaceId, series.title(), series.priority(), dueDate, assignees, subtasks, series.id(), series.createdBy()));
                 lastGenerated = occurrence;
                 occurrence++;
             }

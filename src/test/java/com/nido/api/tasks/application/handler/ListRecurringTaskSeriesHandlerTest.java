@@ -36,7 +36,7 @@ class ListRecurringTaskSeriesHandlerTest {
     void lists_the_callers_space_series() {
         SpaceMembership membership = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.MEMBER, Instant.now());
         RecurringTaskSeries series = new RecurringTaskSeries(UUID.randomUUID(), spaceId, "T", TaskPriority.MED, List.of(),
-            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, LocalDate.of(2026, 1, 7), null, 0, List.of(), 0);
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, LocalDate.of(2026, 1, 7), null, 0, List.of(), 0, null);
         when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(series));
 
         List<RecurringTaskSeries> result = handler.list(membership);

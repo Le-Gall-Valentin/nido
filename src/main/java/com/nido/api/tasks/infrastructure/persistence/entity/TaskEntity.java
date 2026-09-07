@@ -52,6 +52,9 @@ public class TaskEntity {
     @Column(name = "recurring_series_id")
     private UUID recurringSeriesId;
 
+    @Column(name = "created_by")
+    private UUID createdBy;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

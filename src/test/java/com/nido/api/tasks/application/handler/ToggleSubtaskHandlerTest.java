@@ -45,7 +45,7 @@ class ToggleSubtaskHandlerTest {
 
     private Task task(UUID inSpace) {
         return new Task(taskId, inSpace, "T", TaskStatus.TODO, TaskPriority.LOW, null, List.of(),
-            List.of(new Subtask(subtaskId, "Vérifier", false)), null, Instant.now());
+            List.of(new Subtask(subtaskId, "Vérifier", false)), null, null, Instant.now());
     }
 
     @Test

@@ -92,6 +92,7 @@ class TaskControllerIT {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.title").value("Prendre RDV"))
             .andExpect(jsonPath("$.status").value("TODO"))
+            .andExpect(jsonPath("$.createdBy").value(aliceId.toString()))
             .andReturn().getResponse().getContentAsString();
         String taskId = objectMapper.readTree(created).get("id").asText();
 
@@ -151,6 +152,8 @@ class TaskControllerIT {
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.recurring").value(true))
+            .andExpect(jsonPath("$.recurringSeriesId").exists())
+            .andExpect(jsonPath("$.createdBy").value(aliceId.toString()))
             .andReturn().getResponse().getContentAsString();
         String firstTaskId = objectMapper.readTree(created).get("id").asText();
 

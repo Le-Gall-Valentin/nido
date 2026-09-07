@@ -43,7 +43,7 @@ class DeleteRecurringTaskSeriesHandlerTest {
 
     private RecurringTaskSeries series(UUID inSpaceId) {
         return new RecurringTaskSeries(seriesId, inSpaceId, "T", TaskPriority.MED, List.of(),
-            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, LocalDate.of(2026, 1, 7), null, 0, List.of(), 0);
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, LocalDate.of(2026, 1, 7), null, 0, List.of(), 0, null);
     }
 
     @Test

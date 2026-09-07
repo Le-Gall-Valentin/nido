@@ -47,8 +47,8 @@ class CreateTaskHandlerTest {
 
     @Test
     void a_member_can_create_a_one_off_task() {
-        CreateTaskCommand command = new CreateTaskCommand(spaceId, "Prendre RDV", TaskPriority.HIGH, null, List.of(), List.of(), null);
-        Task created = new Task(UUID.randomUUID(), spaceId, "Prendre RDV", TaskStatus.TODO, TaskPriority.HIGH, null, List.of(), List.of(), null, Instant.now());
+        CreateTaskCommand command = new CreateTaskCommand(spaceId, "Prendre RDV", TaskPriority.HIGH, null, List.of(), List.of(), null, null);
+        Task created = new Task(UUID.randomUUID(), spaceId, "Prendre RDV", TaskStatus.TODO, TaskPriority.HIGH, null, List.of(), List.of(), null, null, Instant.now());
         when(taskRepository.create(command)).thenReturn(created);
 
         Task result = handler.create(command, membership(SpaceRole.MEMBER));
@@ -58,7 +58,7 @@ class CreateTaskHandlerTest {
 
     @Test
     void a_viewer_cannot_create_a_task() {
-        CreateTaskCommand command = new CreateTaskCommand(spaceId, "Prendre RDV", TaskPriority.HIGH, null, List.of(), List.of(), null);
+        CreateTaskCommand command = new CreateTaskCommand(spaceId, "Prendre RDV", TaskPriority.HIGH, null, List.of(), List.of(), null, null);
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);
@@ -66,7 +66,7 @@ class CreateTaskHandlerTest {
 
     @Test
     void creating_a_task_for_another_space_than_the_callers_is_rejected() {
-        CreateTaskCommand command = new CreateTaskCommand(UUID.randomUUID(), "Prendre RDV", TaskPriority.HIGH, null, List.of(), List.of(), null);
+        CreateTaskCommand command = new CreateTaskCommand(UUID.randomUUID(), "Prendre RDV", TaskPriority.HIGH, null, List.of(), List.of(), null, null);
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(SpaceException.NotAMember.class);
@@ -75,7 +75,7 @@ class CreateTaskHandlerTest {
     @Test
     void an_assignee_who_is_not_in_the_space_is_rejected() {
         UUID stranger = UUID.randomUUID();
-        CreateTaskCommand command = new CreateTaskCommand(spaceId, "Prendre RDV", TaskPriority.HIGH, null, List.of(stranger), List.of(), null);
+        CreateTaskCommand command = new CreateTaskCommand(spaceId, "Prendre RDV", TaskPriority.HIGH, null, List.of(stranger), List.of(), null, null);
         doThrow(new TaskException.MemberNotInSpace()).when(spaceMemberValidator).ensureMember(spaceId, stranger);
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))

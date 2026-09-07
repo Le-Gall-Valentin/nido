@@ -9,7 +9,7 @@ public record CreateRecurringTaskSeriesCommand(
     UUID spaceId, String title, TaskPriority priority, List<String> subtaskTemplates,
     RecurrenceInterval intervalType, int intervalCount,
     RecurrenceInterval leadIntervalType, int leadIntervalCount,
-    LocalDate anchorDate, LocalDate endDate, List<UUID> rotationMemberIds
+    LocalDate anchorDate, LocalDate endDate, List<UUID> rotationMemberIds, UUID creatorUserId
 ) {
     public CreateRecurringTaskSeriesCommand {
         Objects.requireNonNull(spaceId, "spaceId");
@@ -20,6 +20,7 @@ public record CreateRecurringTaskSeriesCommand(
         Objects.requireNonNull(leadIntervalType, "leadIntervalType");
         Objects.requireNonNull(anchorDate, "anchorDate");
         Objects.requireNonNull(rotationMemberIds, "rotationMemberIds");
+        Objects.requireNonNull(creatorUserId, "creatorUserId");
         if (intervalCount < 1) {
             throw new IllegalArgumentException("intervalCount must be >= 1");
         }

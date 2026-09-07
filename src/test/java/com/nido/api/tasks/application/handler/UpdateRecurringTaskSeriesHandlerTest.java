@@ -60,7 +60,7 @@ class UpdateRecurringTaskSeriesHandlerTest {
 
     private RecurringTaskSeries existing() {
         return new RecurringTaskSeries(seriesId, spaceId, "Sortir les poubelles", TaskPriority.MED, List.of(),
-            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, anchor, null, 3, List.of(), 0);
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, anchor, null, 3, List.of(), 0, null);
     }
 
     @Test
@@ -85,7 +85,7 @@ class UpdateRecurringTaskSeriesHandlerTest {
     void updating_a_series_from_another_space_is_not_found() {
         UpdateRecurringTaskSeriesCommand command = command(2, null);
         RecurringTaskSeries otherSpaceSeries = new RecurringTaskSeries(seriesId, UUID.randomUUID(), "T", TaskPriority.MED, List.of(),
-            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, anchor, null, 0, List.of(), 0);
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, anchor, null, 0, List.of(), 0, null);
         when(seriesRepository.findById(seriesId)).thenReturn(Optional.of(otherSpaceSeries));
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))

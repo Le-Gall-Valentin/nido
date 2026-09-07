@@ -44,7 +44,7 @@ class ListTasksHandlerTest {
     }
 
     private Task task(TaskPriority priority) {
-        return new Task(UUID.randomUUID(), spaceId, "T", TaskStatus.TODO, priority, null, List.of(), List.of(), null, Instant.now());
+        return new Task(UUID.randomUUID(), spaceId, "T", TaskStatus.TODO, priority, null, List.of(), List.of(), null, null, Instant.now());
     }
 
     @Test
@@ -64,7 +64,7 @@ class ListTasksHandlerTest {
         LocalDate anchor = LocalDate.of(2026, 1, 7);
         UUID seriesId = UUID.randomUUID();
         RecurringTaskSeries series = new RecurringTaskSeries(seriesId, spaceId, "Sortir les poubelles", TaskPriority.MED, List.of(),
-            RecurrenceInterval.DAILY, 1, RecurrenceInterval.DAILY, 0, anchor, null, 0, List.of(), 0);
+            RecurrenceInterval.DAILY, 1, RecurrenceInterval.DAILY, 0, anchor, null, 0, List.of(), 0, null);
         when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(series));
         Task materialized = task(TaskPriority.MED);
         when(taskRepository.findBySpaceId(spaceId)).thenReturn(List.of(materialized));
@@ -74,7 +74,7 @@ class ListTasksHandlerTest {
         InOrder order = inOrder(seriesRepository, taskRepository);
         order.verify(seriesRepository).lockForMaterialization(spaceId);
         order.verify(taskRepository).createAll(List.of(new CreateTaskCommand(
-            spaceId, "Sortir les poubelles", TaskPriority.MED, LocalDate.of(2026, 1, 8), List.of(), List.of(), seriesId)));
+            spaceId, "Sortir les poubelles", TaskPriority.MED, LocalDate.of(2026, 1, 8), List.of(), List.of(), seriesId, null)));
         order.verify(taskRepository).findBySpaceId(spaceId);
         assertThat(result).containsExactly(materialized);
     }

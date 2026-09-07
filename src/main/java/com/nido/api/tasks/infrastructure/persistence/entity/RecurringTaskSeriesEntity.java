@@ -62,4 +62,7 @@ public class RecurringTaskSeriesEntity {
 
     @Column(name = "current_rotation_index", nullable = false)
     private int currentRotationIndex;
+
+    @Column(name = "created_by")
+    private UUID createdBy;
 }

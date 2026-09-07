@@ -46,6 +46,6 @@ public class CreateRecurringTaskHandler implements CreateRecurringTaskUseCase {
             .map(text -> new SubtaskInput(text, false)).toList();
         return taskRepository.create(new CreateTaskCommand(
             command.spaceId(), command.title(), command.priority(), command.anchorDate(),
-            firstAssignees, subtasks, series.id()));
+            firstAssignees, subtasks, series.id(), series.createdBy()));
     }
 }

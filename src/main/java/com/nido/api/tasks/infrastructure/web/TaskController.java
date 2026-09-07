@@ -94,12 +94,12 @@ public class TaskController {
                 request.recurrence().intervalType(), request.recurrence().intervalCount(),
                 request.recurrence().leadIntervalType(), request.recurrence().leadIntervalCount(),
                 request.recurrence().anchorDate(), request.recurrence().endDate(),
-                request.recurrence().rotationMemberIds()), membership);
+                request.recurrence().rotationMemberIds(), membership.userId()), membership);
         } else {
             List<SubtaskInput> subtasks = request.subtasks().stream().map(text -> new SubtaskInput(text, false)).toList();
             created = createTaskUseCase.create(new CreateTaskCommand(
                 spaceId, request.title(), request.priority(), request.dueDate(),
-                request.assigneeIds(), subtasks, null), membership);
+                request.assigneeIds(), subtasks, null, membership.userId()), membership);
         }
         return ResponseEntity.status(HttpStatus.CREATED).body(TaskResponse.from(created));
     }

@@ -41,7 +41,7 @@ class DeleteTaskHandlerTest {
     }
 
     private Task task(UUID recurringSeriesId) {
-        return new Task(taskId, spaceId, "T", TaskStatus.TODO, TaskPriority.MED, null, List.of(), List.of(), recurringSeriesId, Instant.now());
+        return new Task(taskId, spaceId, "T", TaskStatus.TODO, TaskPriority.MED, null, List.of(), List.of(), recurringSeriesId, null, Instant.now());
     }
 
     @Test
@@ -65,7 +65,7 @@ class DeleteTaskHandlerTest {
 
     @Test
     void a_task_from_another_space_is_not_found() {
-        Task other = new Task(taskId, UUID.randomUUID(), "T", TaskStatus.TODO, TaskPriority.MED, null, List.of(), List.of(), null, Instant.now());
+        Task other = new Task(taskId, UUID.randomUUID(), "T", TaskStatus.TODO, TaskPriority.MED, null, List.of(), List.of(), null, null, Instant.now());
         when(taskRepository.findById(taskId)).thenReturn(Optional.of(other));
 
         assertThatThrownBy(() -> handler.delete(taskId, spaceId, membership(SpaceRole.MEMBER)))
