@@ -58,6 +58,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
         e.setPriority(command.priority());
         e.setDueDate(command.dueDate());
         e.setRecurringSeriesId(command.recurringSeriesId());
+        e.setCreatedBy(command.creatorUserId());
         TaskEntity saved = tasks.saveAndFlush(e);
         saveAssigneesAndSubtasks(saved.getId(), command.assigneeIds(), command.subtasks());
         return findById(saved.getId()).orElseThrow(TaskException.TaskNotFound::new);
@@ -77,6 +78,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
             e.setPriority(command.priority());
             e.setDueDate(command.dueDate());
             e.setRecurringSeriesId(command.recurringSeriesId());
+            e.setCreatedBy(command.creatorUserId());
             return e;
         }).toList();
         // saveAllAndFlush preserves the input order (Spring Data JPA's default JpaRepository
@@ -202,6 +204,6 @@ public class TaskRepositoryAdapter implements TaskRepository {
         return new Task(e.getId(), e.getSpaceId(), e.getTitle(), e.getStatus(), e.getPriority(), e.getDueDate(),
             assigneeEntities.stream().map(TaskAssigneeEntity::getUserId).toList(),
             subtaskEntities.stream().map(s -> new Subtask(s.getId(), s.getText(), s.isDone())).toList(),
-            e.getRecurringSeriesId(), e.getCreatedAt());
+            e.getRecurringSeriesId(), e.getCreatedBy(), e.getCreatedAt());
     }
 }

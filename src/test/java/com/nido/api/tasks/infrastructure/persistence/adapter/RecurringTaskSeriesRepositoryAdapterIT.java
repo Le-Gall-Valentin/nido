@@ -71,11 +71,11 @@ class RecurringTaskSeriesRepositoryAdapterIT {
     }
 
     @Test
-    void create_persists_the_series_with_its_rotation_members_and_subtask_templates_in_order() {
+    void create_persists_the_series_with_its_rotation_members_subtask_templates_and_creator_in_order() {
         CreateRecurringTaskSeriesCommand command = new CreateRecurringTaskSeriesCommand(
             spaceId, "Sortir les poubelles", TaskPriority.MED, List.of("Vérifier le tri"),
             RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 2,
-            LocalDate.of(2026, 1, 7), null, List.of(aliceId, bobId));
+            LocalDate.of(2026, 1, 7), null, List.of(aliceId, bobId), aliceId);
 
         RecurringTaskSeries created = adapter.create(command);
 
@@ -87,6 +87,7 @@ class RecurringTaskSeriesRepositoryAdapterIT {
         assertThat(created.subtaskTemplates()).containsExactly("Vérifier le tri");
         assertThat(created.occurrenceCount()).isZero();
         assertThat(created.currentRotationIndex()).isZero();
+        assertThat(created.createdBy()).isEqualTo(aliceId);
     }
 
     @Test
@@ -94,7 +95,7 @@ class RecurringTaskSeriesRepositoryAdapterIT {
         RecurringTaskSeries created = adapter.create(new CreateRecurringTaskSeriesCommand(
             spaceId, "Sortir les poubelles", TaskPriority.MED, List.of(),
             RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0,
-            LocalDate.of(2026, 1, 7), null, List.of(aliceId, bobId)));
+            LocalDate.of(2026, 1, 7), null, List.of(aliceId, bobId), aliceId));
 
         RecurringTaskSeries advanced = adapter.advance(created.id(), 1, 1);
 
@@ -107,7 +108,7 @@ class RecurringTaskSeriesRepositoryAdapterIT {
         RecurringTaskSeries created = adapter.create(new CreateRecurringTaskSeriesCommand(
             spaceId, "Sortir les poubelles", TaskPriority.MED, List.of(),
             RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0,
-            LocalDate.of(2026, 1, 7), null, List.of()));
+            LocalDate.of(2026, 1, 7), null, List.of(), aliceId));
 
         adapter.deleteById(created.id());
 
@@ -117,9 +118,9 @@ class RecurringTaskSeriesRepositoryAdapterIT {
     @Test
     void findBySpaceId_returns_every_series_in_the_space() {
         adapter.create(new CreateRecurringTaskSeriesCommand(spaceId, "A", TaskPriority.MED, List.of(),
-            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, LocalDate.of(2026, 1, 7), null, List.of()));
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, LocalDate.of(2026, 1, 7), null, List.of(), aliceId));
         adapter.create(new CreateRecurringTaskSeriesCommand(spaceId, "B", TaskPriority.LOW, List.of(),
-            RecurrenceInterval.MONTHLY, 1, RecurrenceInterval.DAILY, 0, LocalDate.of(2026, 2, 1), null, List.of()));
+            RecurrenceInterval.MONTHLY, 1, RecurrenceInterval.DAILY, 0, LocalDate.of(2026, 2, 1), null, List.of(), bobId));
 
         List<RecurringTaskSeries> found = adapter.findBySpaceId(spaceId);
 
@@ -131,7 +132,7 @@ class RecurringTaskSeriesRepositoryAdapterIT {
         RecurringTaskSeries created = adapter.create(new CreateRecurringTaskSeriesCommand(
             spaceId, "Sortir les poubelles", TaskPriority.MED, List.of("Vérifier le tri"),
             RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0,
-            LocalDate.of(2026, 1, 7), null, List.of(aliceId)));
+            LocalDate.of(2026, 1, 7), null, List.of(aliceId), aliceId));
 
         RecurringTaskSeries updated = adapter.update(new UpdateRecurringTaskSeriesCommand(
             created.id(), spaceId, "Sortir les poubelles et le compost", TaskPriority.HIGH, List.of("Vérifier le tri", "Sortir les bacs"),

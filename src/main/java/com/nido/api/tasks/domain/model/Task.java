@@ -9,7 +9,7 @@ import java.util.UUID;
 public record Task(
     UUID id, UUID spaceId, String title, TaskStatus status, TaskPriority priority,
     LocalDate dueDate, List<UUID> assigneeIds, List<Subtask> subtasks,
-    UUID recurringSeriesId, Instant createdAt
+    UUID recurringSeriesId, UUID createdBy, Instant createdAt
 ) {
     public Task {
         Objects.requireNonNull(id, "id");

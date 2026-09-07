@@ -1,0 +1,55 @@
+databaseChangeLog:
+  - changeSet:
+      id: 043-add-created-by-to-tasks
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: tasks
+                columnName: created_by
+      changes:
+        - addColumn:
+            tableName: tasks
+            columns:
+              - column:
+                  name: created_by
+                  type: UUID
+        - addForeignKeyConstraint:
+            baseTableName: tasks
+            baseColumnNames: created_by
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_tasks_created_by
+            onDelete: SET NULL
+      rollback:
+        - dropColumn:
+            tableName: tasks
+            columnName: created_by
+  - changeSet:
+      id: 043-add-created-by-to-recurring-task-series
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: recurring_task_series
+                columnName: created_by
+      changes:
+        - addColumn:
+            tableName: recurring_task_series
+            columns:
+              - column:
+                  name: created_by
+                  type: UUID
+        - addForeignKeyConstraint:
+            baseTableName: recurring_task_series
+            baseColumnNames: created_by
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_recurring_task_series_created_by
+            onDelete: SET NULL
+      rollback:
+        - dropColumn:
+            tableName: recurring_task_series
+            columnName: created_by

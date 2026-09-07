@@ -125,3 +125,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/042-tasks-recurring-series-set-null-on-delete.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/043-add-created-by-to-tasks-and-recurring-series.yaml
+      relativeToChangelogFile: false

@@ -41,7 +41,7 @@ public class MoveTaskHandler implements MoveTaskUseCase {
         List<SubtaskInput> subtasks = source.subtasks().stream()
             .map(s -> new SubtaskInput(s.text(), s.done())).toList();
         Task moved = taskRepository.create(new CreateTaskCommand(
-            destinationSpaceId, source.title(), source.priority(), source.dueDate(), List.of(), subtasks, null));
+            destinationSpaceId, source.title(), source.priority(), source.dueDate(), List.of(), subtasks, null, source.createdBy()));
         taskRepository.delete(taskId);
         return moved;
     }

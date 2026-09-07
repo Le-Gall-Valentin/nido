@@ -13,7 +13,7 @@ class TaskOrderingTest {
 
     private static Task task(TaskPriority priority, LocalDate dueDate, Instant createdAt) {
         return new Task(UUID.randomUUID(), UUID.randomUUID(), "T", TaskStatus.TODO, priority,
-            dueDate, List.of(), List.of(), null, createdAt);
+            dueDate, List.of(), List.of(), null, null, createdAt);
     }
 
     @Test

@@ -43,6 +43,7 @@ class CreateRecurringTaskHandlerTest {
     private CreateRecurringTaskHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID seriesId = UUID.randomUUID();
+    private final UUID creatorId = UUID.randomUUID();
     private final LocalDate anchor = LocalDate.of(2026, 1, 7);
 
     @BeforeEach
@@ -56,12 +57,13 @@ class CreateRecurringTaskHandlerTest {
 
     private CreateRecurringTaskSeriesCommand command(int leadIntervalCount, LocalDate endDate, List<UUID> rotationMemberIds) {
         return new CreateRecurringTaskSeriesCommand(spaceId, "Sortir les poubelles", TaskPriority.MED, List.of("Vérifier le tri"),
-            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, leadIntervalCount, anchor, endDate, rotationMemberIds);
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, leadIntervalCount, anchor, endDate, rotationMemberIds, creatorId);
     }
 
     private RecurringTaskSeries series(List<UUID> rotationMemberIds) {
         return new RecurringTaskSeries(seriesId, spaceId, "Sortir les poubelles", TaskPriority.MED,
-            List.of("Vérifier le tri"), RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 2, anchor, null, 0, rotationMemberIds, 0);
+            List.of("Vérifier le tri"), RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 2, anchor, null, 0, rotationMemberIds, 0,
+            creatorId);
     }
 
     @Test
@@ -71,9 +73,9 @@ class CreateRecurringTaskHandlerTest {
         CreateRecurringTaskSeriesCommand command = command(2, null, List.of(alice, bob));
         when(seriesRepository.create(command)).thenReturn(series(List.of(alice, bob)));
         Task firstOccurrence = new Task(UUID.randomUUID(), spaceId, "Sortir les poubelles", TaskStatus.TODO,
-            TaskPriority.MED, anchor, List.of(alice), List.of(), seriesId, Instant.now());
+            TaskPriority.MED, anchor, List.of(alice), List.of(), seriesId, creatorId, Instant.now());
         when(taskRepository.create(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED, anchor,
-            List.of(alice), List.of(new SubtaskInput("Vérifier le tri", false)), seriesId))).thenReturn(firstOccurrence);
+            List.of(alice), List.of(new SubtaskInput("Vérifier le tri", false)), seriesId, creatorId))).thenReturn(firstOccurrence);
 
         Task result = handler.create(command, membership(SpaceRole.MEMBER));
 
@@ -85,9 +87,9 @@ class CreateRecurringTaskHandlerTest {
         CreateRecurringTaskSeriesCommand command = command(2, null, List.of());
         when(seriesRepository.create(command)).thenReturn(series(List.of()));
         Task firstOccurrence = new Task(UUID.randomUUID(), spaceId, "Sortir les poubelles", TaskStatus.TODO,
-            TaskPriority.MED, anchor, List.of(), List.of(), seriesId, Instant.now());
+            TaskPriority.MED, anchor, List.of(), List.of(), seriesId, creatorId, Instant.now());
         when(taskRepository.create(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED, anchor,
-            List.of(), List.of(new SubtaskInput("Vérifier le tri", false)), seriesId))).thenReturn(firstOccurrence);
+            List.of(), List.of(new SubtaskInput("Vérifier le tri", false)), seriesId, creatorId))).thenReturn(firstOccurrence);
 
         Task result = handler.create(command, membership(SpaceRole.MEMBER));
 

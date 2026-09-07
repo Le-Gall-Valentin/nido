@@ -66,9 +66,9 @@ class TaskRepositoryAdapterIT {
     }
 
     @Test
-    void create_persists_the_task_with_its_assignees_and_subtasks() {
+    void create_persists_the_task_with_its_assignees_subtasks_and_creator() {
         Task created = adapter.create(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-            LocalDate.of(2026, 1, 7), List.of(aliceId), List.of(new SubtaskInput("Vérifier le tri", false)), null));
+            LocalDate.of(2026, 1, 7), List.of(aliceId), List.of(new SubtaskInput("Vérifier le tri", false)), null, aliceId));
 
         assertThat(created.title()).isEqualTo("Sortir les poubelles");
         assertThat(created.status()).isEqualTo(TaskStatus.TODO);
@@ -76,11 +76,12 @@ class TaskRepositoryAdapterIT {
         assertThat(created.subtasks()).hasSize(1);
         assertThat(created.subtasks().get(0).text()).isEqualTo("Vérifier le tri");
         assertThat(created.subtasks().get(0).done()).isFalse();
+        assertThat(created.createdBy()).isEqualTo(aliceId);
     }
 
     @Test
     void update_replaces_the_assignee_list() {
-        Task created = adapter.create(new CreateTaskCommand(spaceId, "T", TaskPriority.LOW, null, List.of(aliceId), List.of(), null));
+        Task created = adapter.create(new CreateTaskCommand(spaceId, "T", TaskPriority.LOW, null, List.of(aliceId), List.of(), null, null));
 
         Task updated = adapter.update(new UpdateTaskCommand(created.id(), spaceId, "T modifié", TaskPriority.HIGH, null, List.of()));
 
@@ -90,7 +91,7 @@ class TaskRepositoryAdapterIT {
 
     @Test
     void updateStatus_changes_only_the_status() {
-        Task created = adapter.create(new CreateTaskCommand(spaceId, "T", TaskPriority.LOW, null, List.of(), List.of(), null));
+        Task created = adapter.create(new CreateTaskCommand(spaceId, "T", TaskPriority.LOW, null, List.of(), List.of(), null, null));
 
         Task updated = adapter.updateStatus(created.id(), TaskStatus.DOING);
 
@@ -100,7 +101,7 @@ class TaskRepositoryAdapterIT {
     @Test
     void toggleSubtask_flips_only_the_targeted_subtask() {
         Task created = adapter.create(new CreateTaskCommand(spaceId, "T", TaskPriority.LOW, null, List.of(),
-            List.of(new SubtaskInput("A", false), new SubtaskInput("B", false)), null));
+            List.of(new SubtaskInput("A", false), new SubtaskInput("B", false)), null, null));
         UUID subtaskAId = created.subtasks().get(0).id();
 
         Task updated = adapter.toggleSubtask(created.id(), subtaskAId);
@@ -111,7 +112,7 @@ class TaskRepositoryAdapterIT {
 
     @Test
     void delete_removes_the_task() {
-        Task created = adapter.create(new CreateTaskCommand(spaceId, "T", TaskPriority.LOW, null, List.of(), List.of(), null));
+        Task created = adapter.create(new CreateTaskCommand(spaceId, "T", TaskPriority.LOW, null, List.of(), List.of(), null, null));
 
         adapter.delete(created.id());
 
@@ -120,18 +121,18 @@ class TaskRepositoryAdapterIT {
 
     @Test
     void findBySpaceId_returns_every_task_in_the_space() {
-        adapter.create(new CreateTaskCommand(spaceId, "T1", TaskPriority.LOW, null, List.of(), List.of(), null));
-        adapter.create(new CreateTaskCommand(spaceId, "T2", TaskPriority.LOW, null, List.of(), List.of(), null));
+        adapter.create(new CreateTaskCommand(spaceId, "T1", TaskPriority.LOW, null, List.of(), List.of(), null, null));
+        adapter.create(new CreateTaskCommand(spaceId, "T2", TaskPriority.LOW, null, List.of(), List.of(), null, null));
 
         assertThat(adapter.findBySpaceId(spaceId)).hasSize(2);
     }
 
     @Test
-    void createAll_persists_every_task_with_its_own_assignees_and_subtasks_in_one_batch() {
+    void createAll_persists_every_task_with_its_own_assignees_subtasks_and_creator_in_one_batch() {
         adapter.createAll(List.of(
             new CreateTaskCommand(spaceId, "T1", TaskPriority.LOW, LocalDate.of(2026, 1, 7),
-                List.of(aliceId), List.of(new SubtaskInput("Vérifier le tri", false)), null),
-            new CreateTaskCommand(spaceId, "T2", TaskPriority.MED, LocalDate.of(2026, 1, 14), List.of(), List.of(), null)));
+                List.of(aliceId), List.of(new SubtaskInput("Vérifier le tri", false)), null, aliceId),
+            new CreateTaskCommand(spaceId, "T2", TaskPriority.MED, LocalDate.of(2026, 1, 14), List.of(), List.of(), null, null)));
 
         List<Task> found = adapter.findBySpaceId(spaceId);
         assertThat(found).hasSize(2);
@@ -139,9 +140,11 @@ class TaskRepositoryAdapterIT {
         assertThat(t1.assigneeIds()).containsExactly(aliceId);
         assertThat(t1.subtasks()).hasSize(1);
         assertThat(t1.subtasks().get(0).text()).isEqualTo("Vérifier le tri");
+        assertThat(t1.createdBy()).isEqualTo(aliceId);
         Task t2 = found.stream().filter(t -> t.title().equals("T2")).findFirst().orElseThrow();
         assertThat(t2.assigneeIds()).isEmpty();
         assertThat(t2.subtasks()).isEmpty();
+        assertThat(t2.createdBy()).isNull();
     }
 
     @Test

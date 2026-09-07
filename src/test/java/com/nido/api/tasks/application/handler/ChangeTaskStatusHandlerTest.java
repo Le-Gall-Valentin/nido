@@ -46,7 +46,7 @@ class ChangeTaskStatusHandlerTest {
     }
 
     private Task oneOffTask(TaskStatus status, List<Subtask> subtasks) {
-        return new Task(taskId, spaceId, "T", status, TaskPriority.MED, null, List.of(), subtasks, null, Instant.now());
+        return new Task(taskId, spaceId, "T", status, TaskPriority.MED, null, List.of(), subtasks, null, null, Instant.now());
     }
 
     @Test
@@ -69,7 +69,7 @@ class ChangeTaskStatusHandlerTest {
     @Test
     void a_task_from_another_space_is_not_found() {
         when(taskRepository.findById(taskId)).thenReturn(Optional.of(
-            new Task(taskId, UUID.randomUUID(), "T", TaskStatus.TODO, TaskPriority.MED, null, List.of(), List.of(), null, Instant.now())));
+            new Task(taskId, UUID.randomUUID(), "T", TaskStatus.TODO, TaskPriority.MED, null, List.of(), List.of(), null, null, Instant.now())));
 
         assertThatThrownBy(() -> handler.changeStatus(taskId, spaceId, TaskStatus.DOING, membership(SpaceRole.MEMBER)))
             .isInstanceOf(TaskException.TaskNotFound.class);
@@ -88,10 +88,10 @@ class ChangeTaskStatusHandlerTest {
     @Test
     void completing_a_recurring_occurrence_does_not_generate_a_next_occurrence() {
         Task recurring = new Task(taskId, spaceId, "T", TaskStatus.DOING, TaskPriority.MED, LocalDate.of(2026, 1, 7), List.of(), List.of(),
-            UUID.randomUUID(), Instant.now());
+            UUID.randomUUID(), null, Instant.now());
         when(taskRepository.findById(taskId)).thenReturn(Optional.of(recurring));
         Task done = new Task(taskId, spaceId, "T", TaskStatus.DONE, TaskPriority.MED, recurring.dueDate(), List.of(), List.of(),
-            recurring.recurringSeriesId(), Instant.now());
+            recurring.recurringSeriesId(), null, Instant.now());
         when(taskRepository.updateStatus(taskId, TaskStatus.DONE)).thenReturn(done);
 
         Task result = handler.changeStatus(taskId, spaceId, TaskStatus.DONE, membership(SpaceRole.MEMBER));

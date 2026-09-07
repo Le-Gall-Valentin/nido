@@ -58,6 +58,7 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
         e.setEndDate(command.endDate());
         e.setOccurrenceCount(0);
         e.setCurrentRotationIndex(0);
+        e.setCreatedBy(command.creatorUserId());
         RecurringTaskSeriesEntity saved = series.saveAndFlush(e);
         saveMembersAndTemplates(saved.getId(), command.rotationMemberIds(), command.subtaskTemplates());
         return findById(saved.getId()).orElseThrow(TaskException.TaskNotFound::new);
@@ -132,6 +133,7 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
             .map(RecurringTaskSeriesSubtaskTemplateEntity::getText).toList();
         return new RecurringTaskSeries(e.getId(), e.getSpaceId(), e.getTitle(), e.getPriority(), templates,
             e.getIntervalType(), e.getIntervalCount(), e.getLeadIntervalType(), e.getLeadIntervalCount(),
-            e.getAnchorDate(), e.getEndDate(), e.getOccurrenceCount(), rotationMemberIds, e.getCurrentRotationIndex());
+            e.getAnchorDate(), e.getEndDate(), e.getOccurrenceCount(), rotationMemberIds, e.getCurrentRotationIndex(),
+            e.getCreatedBy());
     }
 }
