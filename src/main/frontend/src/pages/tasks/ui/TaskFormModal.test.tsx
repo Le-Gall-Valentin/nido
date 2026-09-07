@@ -81,4 +81,19 @@ describe('TaskFormModal', () => {
       recurrence: { intervalType: 'WEEKLY', intervalCount: 1, anchorDate: '2026-01-07', rotationMemberIds: ['u-2', 'u-1'] },
     }))
   })
+
+  it('creating a recurring task supports a yearly frequency', () => {
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={null} members={MEMBERS} isPersonal={false} />)
+
+    fireEvent.change(screen.getByLabelText('form.title_label'), { target: { value: 'Anniversaire' } })
+    fireEvent.click(screen.getByText('form.recurring_label'))
+    fireEvent.change(screen.getByLabelText('form.recurrence_interval_type_label'), { target: { value: 'YEARLY' } })
+    fireEvent.change(screen.getByLabelText('form.recurrence_anchor_date_label'), { target: { value: '2026-01-07' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      recurrence: { intervalType: 'YEARLY', intervalCount: 1, anchorDate: '2026-01-07', rotationMemberIds: [] },
+    }))
+  })
 })

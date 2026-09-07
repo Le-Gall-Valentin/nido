@@ -28,6 +28,7 @@ public final class RecurrenceScheduler {
                 int day = Math.min(anchorDate.getDayOfMonth(), targetMonth.lengthOfMonth());
                 yield targetMonth.atDay(day);
             }
+            case YEARLY -> anchorDate.plusYears(steps);
         };
     }
 }

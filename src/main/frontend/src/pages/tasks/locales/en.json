@@ -31,7 +31,7 @@
     "recurrence_anchor_date_label": "Starting on",
     "recurrence_anchor_date_required": "The start date is required.",
     "recurrence_rotation_label": "Rotate between",
-    "interval": { "DAILY": "day(s)", "WEEKLY": "week(s)", "MONTHLY": "month(s)" },
+    "interval": { "DAILY": "day(s)", "WEEKLY": "week(s)", "MONTHLY": "month(s)", "YEARLY": "year(s)" },
     "cancel": "Cancel",
     "save": "Save"
   },

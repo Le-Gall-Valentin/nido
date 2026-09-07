@@ -31,7 +31,7 @@
     "recurrence_anchor_date_label": "À partir du",
     "recurrence_anchor_date_required": "La date de départ est obligatoire.",
     "recurrence_rotation_label": "Faire tourner entre",
-    "interval": { "DAILY": "jour(s)", "WEEKLY": "semaine(s)", "MONTHLY": "mois" },
+    "interval": { "DAILY": "jour(s)", "WEEKLY": "semaine(s)", "MONTHLY": "mois", "YEARLY": "an(s)" },
     "cancel": "Annuler",
     "save": "Enregistrer"
   },

@@ -1,5 +1,5 @@
 package com.nido.api.tasks.domain.model;
 
 public enum RecurrenceInterval {
-    DAILY, WEEKLY, MONTHLY
+    DAILY, WEEKLY, MONTHLY, YEARLY
 }

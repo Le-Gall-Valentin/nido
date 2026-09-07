@@ -63,4 +63,26 @@ class RecurrenceSchedulerTest {
         assertThat(RecurrenceScheduler.nextDueDate(anchor, RecurrenceInterval.MONTHLY, 3, 1))
             .isEqualTo(LocalDate.of(2026, 4, 15));
     }
+
+    @Test
+    void yearly_every_n_years() {
+        LocalDate anchor = LocalDate.of(2026, 1, 7);
+
+        assertThat(RecurrenceScheduler.nextDueDate(anchor, RecurrenceInterval.YEARLY, 1, 1))
+            .isEqualTo(LocalDate.of(2027, 1, 7));
+        assertThat(RecurrenceScheduler.nextDueDate(anchor, RecurrenceInterval.YEARLY, 2, 1))
+            .isEqualTo(LocalDate.of(2028, 1, 7));
+    }
+
+    @Test
+    void yearly_anchored_on_a_leap_day_clamps_to_feb_28_without_losing_the_anchor_day() {
+        LocalDate anchor = LocalDate.of(2028, 2, 29);
+
+        assertThat(RecurrenceScheduler.nextDueDate(anchor, RecurrenceInterval.YEARLY, 1, 1))
+            .isEqualTo(LocalDate.of(2029, 2, 28));
+        // The next occurrence still targets Feb 29 — computed fresh from the
+        // anchor, not chained from the clamped 2029 date.
+        assertThat(RecurrenceScheduler.nextDueDate(anchor, RecurrenceInterval.YEARLY, 1, 4))
+            .isEqualTo(LocalDate.of(2032, 2, 29));
+    }
 }
