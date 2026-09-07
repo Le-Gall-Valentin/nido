@@ -262,15 +262,16 @@ function TasksPageContent() {
 
   return (
     <div className="mx-auto max-w-[1100px] px-5 py-6 md:px-10 md:py-[34px]">
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-fg-0">{t('title')}</h1>
         {canWriteHere && (
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={() => setManagingRecurringSeries(true)} className="shrink-0 text-sm font-semibold text-accent">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+            <button type="button" onClick={() => setManagingRecurringSeries(true)}
+              className="text-center text-sm font-semibold text-accent sm:text-left">
               {t('recurring_series.manage')}
             </button>
             <button type="button" onClick={() => setFormState({ mode: 'create' })}
-              className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2.5 text-sm font-semibold text-white">
+              className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-accent px-4 py-2.5 text-sm font-semibold text-white sm:w-auto">
               <Plus className="size-4" /> {t('new_task')}
             </button>
           </div>
