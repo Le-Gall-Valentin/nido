@@ -85,4 +85,28 @@ class RecurrenceSchedulerTest {
         assertThat(RecurrenceScheduler.nextDueDate(anchor, RecurrenceInterval.YEARLY, 1, 4))
             .isEqualTo(LocalDate.of(2032, 2, 29));
     }
+
+    @Test
+    void minus_shifts_a_concrete_date_backward_by_the_given_interval() {
+        assertThat(RecurrenceScheduler.minus(LocalDate.of(2026, 3, 15), RecurrenceInterval.DAILY, 8))
+            .isEqualTo(LocalDate.of(2026, 3, 7));
+        assertThat(RecurrenceScheduler.minus(LocalDate.of(2026, 3, 15), RecurrenceInterval.WEEKLY, 2))
+            .isEqualTo(LocalDate.of(2026, 3, 1));
+        assertThat(RecurrenceScheduler.minus(LocalDate.of(2026, 3, 15), RecurrenceInterval.MONTHLY, 1))
+            .isEqualTo(LocalDate.of(2026, 2, 15));
+        assertThat(RecurrenceScheduler.minus(LocalDate.of(2026, 3, 15), RecurrenceInterval.YEARLY, 1))
+            .isEqualTo(LocalDate.of(2025, 3, 15));
+    }
+
+    @Test
+    void minus_by_zero_returns_the_same_date_regardless_of_unit() {
+        LocalDate date = LocalDate.of(2026, 3, 15);
+        assertThat(RecurrenceScheduler.minus(date, RecurrenceInterval.YEARLY, 0)).isEqualTo(date);
+    }
+
+    @Test
+    void minus_a_month_from_the_31st_clamps_to_the_shorter_month() {
+        assertThat(RecurrenceScheduler.minus(LocalDate.of(2026, 3, 31), RecurrenceInterval.MONTHLY, 1))
+            .isEqualTo(LocalDate.of(2026, 2, 28));
+    }
 }
