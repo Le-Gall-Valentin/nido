@@ -92,7 +92,9 @@ public class TaskController {
             created = createRecurringTaskUseCase.create(new CreateRecurringTaskSeriesCommand(
                 spaceId, request.title(), request.priority(), request.subtasks(),
                 request.recurrence().intervalType(), request.recurrence().intervalCount(),
-                request.recurrence().anchorDate(), request.recurrence().rotationMemberIds()), membership);
+                request.recurrence().leadIntervalType(), request.recurrence().leadIntervalCount(),
+                request.recurrence().anchorDate(), request.recurrence().endDate(),
+                request.recurrence().rotationMemberIds()), membership);
         } else {
             List<SubtaskInput> subtasks = request.subtasks().stream().map(text -> new SubtaskInput(text, false)).toList();
             created = createTaskUseCase.create(new CreateTaskCommand(

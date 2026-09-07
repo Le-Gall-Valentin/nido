@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @IntegrationTestConfig
-class TaskControllerIT {
+class RecurringTaskSeriesControllerIT {
 
     private static final String JWT_SECRET = "integration-test-secret-at-least-32-chars!";
 
@@ -63,7 +63,6 @@ class TaskControllerIT {
     private UUID aliceId;
     private UUID bobId;
     private UUID spaceId;
-    private UUID bobsSpaceId;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -80,106 +79,83 @@ class TaskControllerIT {
         spaceId = saveSharedSpace("Chez Valentin");
         saveMembership(spaceId, aliceId, SpaceRole.OWNER);
         saveMembership(spaceId, bobId, SpaceRole.VIEWER);
-        bobsSpaceId = saveSharedSpace("Chez Bob");
-        saveMembership(bobsSpaceId, bobId, SpaceRole.OWNER);
     }
 
     @Test
-    void a_member_can_create_list_and_delete_a_one_off_task() throws Exception {
-        String body = "{\"title\":\"Prendre RDV\",\"priority\":\"HIGH\"}";
+    void a_member_can_create_list_update_and_delete_a_recurring_task_series() throws Exception {
+        String body = "{\"title\":\"Sortir les poubelles\",\"priority\":\"MED\","
+            + "\"recurrence\":{\"intervalType\":\"WEEKLY\",\"intervalCount\":1,"
+            + "\"leadIntervalType\":\"DAILY\",\"leadIntervalCount\":2,\"anchorDate\":\"2026-01-07\"}}";
         String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.title").value("Prendre RDV"))
-            .andExpect(jsonPath("$.status").value("TODO"))
             .andReturn().getResponse().getContentAsString();
         String taskId = objectMapper.readTree(created).get("id").asText();
+        String seriesListBody = mockMvc.perform(get("/api/spaces/" + spaceId + "/recurring-task-series").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].title").value("Sortir les poubelles"))
+            .andReturn().getResponse().getContentAsString();
+        String seriesId = objectMapper.readTree(seriesListBody).get(0).get("id").asText();
 
+        String updateBody = "{\"title\":\"Sortir les poubelles et le compost\",\"priority\":\"HIGH\",\"subtasks\":[],"
+            + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":1,"
+            + "\"leadIntervalType\":\"WEEKLY\",\"leadIntervalCount\":1,\"anchorDate\":\"2026-01-07\"}}";
+        mockMvc.perform(patch("/api/spaces/" + spaceId + "/recurring-task-series/" + seriesId)
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(updateBody))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.title").value("Sortir les poubelles et le compost"))
+            .andExpect(jsonPath("$.priority").value("HIGH"));
+
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/recurring-task-series/" + seriesId).cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/recurring-task-series").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+        // The already-materialized first occurrence survives the series deletion, detached.
         mockMvc.perform(get("/api/spaces/" + spaceId + "/tasks").cookie(accessTokenFor(aliceId)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.length()").value(1));
-
-        mockMvc.perform(delete("/api/spaces/" + spaceId + "/tasks/" + taskId).cookie(accessTokenFor(aliceId)))
-            .andExpect(status().isNoContent());
-        mockMvc.perform(get("/api/spaces/" + spaceId + "/tasks").cookie(accessTokenFor(aliceId)))
-            .andExpect(jsonPath("$.length()").value(0));
+            .andExpect(jsonPath("$[?(@.id == '" + taskId + "')]").exists());
     }
 
     @Test
-    void a_viewer_cannot_create_a_task() throws Exception {
-        String body = "{\"title\":\"Prendre RDV\",\"priority\":\"HIGH\"}";
-        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
-                .cookie(accessTokenFor(bobId)).contentType(MediaType.APPLICATION_JSON).content(body))
+    void a_viewer_cannot_update_or_delete_a_recurring_task_series() throws Exception {
+        String updateBody = "{\"title\":\"X\",\"priority\":\"MED\",\"subtasks\":[],"
+            + "\"recurrence\":{\"intervalType\":\"WEEKLY\",\"intervalCount\":1,"
+            + "\"leadIntervalType\":\"DAILY\",\"leadIntervalCount\":0,\"anchorDate\":\"2026-01-07\"}}";
+        mockMvc.perform(patch("/api/spaces/" + spaceId + "/recurring-task-series/" + UUID.randomUUID())
+                .cookie(accessTokenFor(bobId)).contentType(MediaType.APPLICATION_JSON).content(updateBody))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/recurring-task-series/" + UUID.randomUUID()).cookie(accessTokenFor(bobId)))
             .andExpect(status().isForbidden());
     }
 
     @Test
-    void completing_a_task_with_an_open_subtask_returns_409() throws Exception {
-        String body = "{\"title\":\"Réserver\",\"priority\":\"MED\",\"subtasks\":[\"Comparer les prix\"]}";
-        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
-                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
-            .andReturn().getResponse().getContentAsString();
-        String taskId = objectMapper.readTree(created).get("id").asText();
-
-        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks/" + taskId + "/status")
-                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"DONE\"}"))
-            .andExpect(status().isConflict());
-    }
-
-    @Test
-    void a_completed_task_never_returns_a_due_date() throws Exception {
-        String body = "{\"title\":\"T\",\"priority\":\"MED\",\"dueDate\":\"2026-01-07\"}";
-        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
-                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
-            .andReturn().getResponse().getContentAsString();
-        String taskId = objectMapper.readTree(created).get("id").asText();
-
-        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks/" + taskId + "/status")
-                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"DONE\"}"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.dueDate").doesNotExist());
-    }
-
-    @Test
-    void completing_a_recurring_task_no_longer_creates_the_next_occurrence() throws Exception {
-        // Anchored far in the future: this occurrence's due date, and every later one, is
-        // never within any lead window on any date this test could plausibly run.
+    void a_lead_time_longer_than_the_recurrence_interval_is_rejected_as_a_validation_error() throws Exception {
         String body = "{\"title\":\"Sortir les poubelles\",\"priority\":\"MED\","
             + "\"recurrence\":{\"intervalType\":\"WEEKLY\",\"intervalCount\":1,"
-            + "\"leadIntervalType\":\"DAILY\",\"leadIntervalCount\":0,\"anchorDate\":\"2099-01-07\"}}";
-        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
+            + "\"leadIntervalType\":\"DAILY\",\"leadIntervalCount\":8,\"anchorDate\":\"2026-01-07\"}}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.recurring").value(true))
-            .andReturn().getResponse().getContentAsString();
-        String firstTaskId = objectMapper.readTree(created).get("id").asText();
-
-        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks/" + firstTaskId + "/status")
-                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"DONE\"}"))
-            .andExpect(status().isOk());
-
-        mockMvc.perform(get("/api/spaces/" + spaceId + "/tasks").cookie(accessTokenFor(aliceId)))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.length()").value(1));
+            .andExpect(status().isBadRequest());
     }
 
     @Test
-    void moving_a_task_creates_it_in_the_destination_and_removes_the_source() throws Exception {
-        String body = "{\"title\":\"Sortir les poubelles\",\"priority\":\"MED\"}";
-        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
-                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
-            .andReturn().getResponse().getContentAsString();
-        String taskId = objectMapper.readTree(created).get("id").asText();
+    void updating_a_nonexistent_recurring_task_series_is_rejected_cleanly_instead_of_crashing() throws Exception {
+        String updateBody = "{\"title\":\"X\",\"priority\":\"MED\",\"subtasks\":[],"
+            + "\"recurrence\":{\"intervalType\":\"WEEKLY\",\"intervalCount\":1,"
+            + "\"leadIntervalType\":\"DAILY\",\"leadIntervalCount\":0,\"anchorDate\":\"2026-01-07\"}}";
+        mockMvc.perform(patch("/api/spaces/" + spaceId + "/recurring-task-series/" + UUID.randomUUID())
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(updateBody))
+            .andExpect(status().isNotFound());
+    }
 
-        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks/" + taskId + "/move")
-                .cookie(accessTokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"destinationSpaceId\":\"" + bobsSpaceId + "\"}"))
-            .andExpect(status().isForbidden()); // Bob is only a VIEWER of spaceId — cannot move from it.
-
-        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks/" + taskId + "/move")
-                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"destinationSpaceId\":\"" + bobsSpaceId + "\"}"))
-            .andExpect(status().isNotFound()); // Alice has no membership at all in bobsSpaceId — SpaceException.NotAMember maps to 404.
+    @Test
+    void deleting_a_nonexistent_recurring_task_series_is_rejected_cleanly_instead_of_crashing() throws Exception {
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/recurring-task-series/" + UUID.randomUUID()).cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isNotFound());
     }
 
     private UUID saveUser(String username) {
