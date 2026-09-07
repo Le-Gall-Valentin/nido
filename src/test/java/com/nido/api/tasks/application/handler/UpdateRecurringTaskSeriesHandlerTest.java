@@ -120,6 +120,30 @@ class UpdateRecurringTaskSeriesHandlerTest {
     }
 
     @Test
+    void changing_the_recurrence_frequency_reanchors_the_series_on_the_last_generated_occurrence() {
+        // existing() is WEEKLY/1 anchored 2026-01-07 with 3 occurrences already generated,
+        // so the last generated occurrence is due 2026-01-28 (anchor + 3 weeks).
+        RecurringTaskSeries existing = existing();
+        when(seriesRepository.findById(seriesId)).thenReturn(Optional.of(existing));
+        UpdateRecurringTaskSeriesCommand command = new UpdateRecurringTaskSeriesCommand(seriesId, spaceId,
+            "Sortir les poubelles", TaskPriority.MED, List.of(), RecurrenceInterval.YEARLY, 1,
+            RecurrenceInterval.DAILY, 0, anchor, null, List.of());
+        UpdateRecurringTaskSeriesCommand expectedReanchoredCommand = new UpdateRecurringTaskSeriesCommand(seriesId, spaceId,
+            "Sortir les poubelles", TaskPriority.MED, List.of(), RecurrenceInterval.YEARLY, 1,
+            RecurrenceInterval.DAILY, 0, LocalDate.of(2026, 1, 28), null, List.of());
+        RecurringTaskSeries updated = existing();
+        when(seriesRepository.update(expectedReanchoredCommand)).thenReturn(updated);
+        RecurringTaskSeries advanced = existing();
+        when(seriesRepository.advance(seriesId, 0, 0)).thenReturn(advanced);
+
+        RecurringTaskSeries result = handler.update(command, membership(SpaceRole.MEMBER));
+
+        verify(seriesRepository).update(expectedReanchoredCommand);
+        verify(seriesRepository).advance(seriesId, 0, 0);
+        assertThat(result).isEqualTo(advanced);
+    }
+
+    @Test
     void a_rotation_member_who_is_not_in_the_space_is_rejected() {
         UUID stranger = UUID.randomUUID();
         UpdateRecurringTaskSeriesCommand command = command(0, null, List.of(stranger));

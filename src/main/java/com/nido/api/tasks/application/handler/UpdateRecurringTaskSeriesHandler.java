@@ -43,6 +43,24 @@ public class UpdateRecurringTaskSeriesHandler implements UpdateRecurringTaskSeri
         if (!existing.spaceId().equals(command.spaceId())) {
             throw new TaskException.RecurringSeriesNotFound();
         }
-        return seriesRepository.update(command);
+        boolean frequencyChanged = existing.intervalType() != command.intervalType()
+            || existing.intervalCount() != command.intervalCount();
+        if (!frequencyChanged) {
+            return seriesRepository.update(command);
+        }
+        // Re-anchoring on the last generated occurrence (instead of keeping the original
+        // anchor) means the next occurrence under the new frequency is exactly one new
+        // interval after the last task actually generated - not a jump computed by applying
+        // the new interval occurrenceCount times from the old anchor, which could land
+        // decades away. occurrenceCount resets to 0 since the new anchor already accounts
+        // for every occurrence generated so far.
+        LocalDate lastGeneratedDueDate = RecurrenceScheduler.nextDueDate(
+            existing.anchorDate(), existing.intervalType(), existing.intervalCount(), existing.occurrenceCount());
+        UpdateRecurringTaskSeriesCommand reAnchoredCommand = new UpdateRecurringTaskSeriesCommand(
+            command.seriesId(), command.spaceId(), command.title(), command.priority(), command.subtaskTemplates(),
+            command.intervalType(), command.intervalCount(), command.leadIntervalType(), command.leadIntervalCount(),
+            lastGeneratedDueDate, command.endDate(), command.rotationMemberIds());
+        seriesRepository.update(reAnchoredCommand);
+        return seriesRepository.advance(command.seriesId(), existing.currentRotationIndex(), 0);
     }
 }
