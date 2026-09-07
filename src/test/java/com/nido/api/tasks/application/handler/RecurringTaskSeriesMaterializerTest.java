@@ -4,24 +4,19 @@ import com.nido.api.tasks.domain.model.CreateTaskCommand;
 import com.nido.api.tasks.domain.model.RecurrenceInterval;
 import com.nido.api.tasks.domain.model.RecurringTaskSeries;
 import com.nido.api.tasks.domain.model.SubtaskInput;
-import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskPriority;
-import com.nido.api.tasks.domain.model.TaskStatus;
 import com.nido.api.tasks.domain.port.out.RecurringTaskSeriesRepository;
 import com.nido.api.tasks.domain.port.out.TaskRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -35,15 +30,6 @@ class RecurringTaskSeriesMaterializerTest {
     private final UUID spaceId = UUID.randomUUID();
     private final UUID seriesId = UUID.randomUUID();
     private final LocalDate anchor = LocalDate.of(2026, 1, 7);
-
-    @BeforeEach
-    void setUp() {
-        lenient().when(taskRepository.create(any())).thenAnswer(invocation -> {
-            CreateTaskCommand command = invocation.getArgument(0);
-            return new Task(UUID.randomUUID(), command.spaceId(), command.title(), TaskStatus.TODO, command.priority(),
-                command.dueDate(), command.assigneeIds(), List.of(), command.recurringSeriesId(), Instant.now());
-        });
-    }
 
     private RecurringTaskSeries series(RecurrenceInterval leadType, int leadCount, LocalDate endDate,
                                         int occurrenceCount, List<UUID> rotationMemberIds, int currentRotationIndex) {
@@ -59,7 +45,7 @@ class RecurringTaskSeriesMaterializerTest {
 
         RecurringTaskSeriesMaterializer.materializeDueOccurrences(taskRepository, seriesRepository, spaceId, LocalDate.of(2026, 1, 13));
 
-        verify(taskRepository, never()).create(any());
+        verify(taskRepository, never()).createAll(any());
         verify(seriesRepository, never()).advance(any(), anyInt(), anyInt());
     }
 
@@ -70,8 +56,8 @@ class RecurringTaskSeriesMaterializerTest {
 
         RecurringTaskSeriesMaterializer.materializeDueOccurrences(taskRepository, seriesRepository, spaceId, LocalDate.of(2026, 1, 14));
 
-        verify(taskRepository).create(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-            LocalDate.of(2026, 1, 14), List.of(), List.of(), seriesId));
+        verify(taskRepository).createAll(List.of(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
+            LocalDate.of(2026, 1, 14), List.of(), List.of(), seriesId)));
         verify(seriesRepository).advance(seriesId, 0, 1);
     }
 
@@ -83,13 +69,13 @@ class RecurringTaskSeriesMaterializerTest {
         // Occurrence #1 is due 2026-01-14; with a 3-day lead its window opens 2026-01-11.
         RecurringTaskSeriesMaterializer.materializeDueOccurrences(taskRepository, seriesRepository, spaceId, LocalDate.of(2026, 1, 11));
 
-        verify(taskRepository).create(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-            LocalDate.of(2026, 1, 14), List.of(), List.of(), seriesId));
+        verify(taskRepository).createAll(List.of(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
+            LocalDate.of(2026, 1, 14), List.of(), List.of(), seriesId)));
         verify(seriesRepository).advance(seriesId, 0, 1);
     }
 
     @Test
-    void several_overdue_occurrences_are_materialized_in_one_pass_with_rotation_advancing_each_time() {
+    void several_overdue_occurrences_are_materialized_in_a_single_batch_with_rotation_advancing_each_time() {
         UUID alice = UUID.randomUUID();
         UUID bob = UUID.randomUUID();
         RecurringTaskSeries s = series(RecurrenceInterval.DAILY, 0, null, 0, List.of(alice, bob), 0);
@@ -98,12 +84,15 @@ class RecurringTaskSeriesMaterializerTest {
         // occurrence #1 due 2026-01-14, #2 due 2026-01-21, #3 due 2026-01-28 — all <= today.
         RecurringTaskSeriesMaterializer.materializeDueOccurrences(taskRepository, seriesRepository, spaceId, LocalDate.of(2026, 1, 28));
 
-        verify(taskRepository).create(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-            LocalDate.of(2026, 1, 14), List.of(bob), List.of(), seriesId));
-        verify(taskRepository).create(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-            LocalDate.of(2026, 1, 21), List.of(alice), List.of(), seriesId));
-        verify(taskRepository).create(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-            LocalDate.of(2026, 1, 28), List.of(bob), List.of(), seriesId));
+        // A single batched call for all three overdue occurrences — not one create() per
+        // occurrence — so catching up after a long absence costs one write, not N.
+        verify(taskRepository).createAll(List.of(
+            new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
+                LocalDate.of(2026, 1, 14), List.of(bob), List.of(), seriesId),
+            new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
+                LocalDate.of(2026, 1, 21), List.of(alice), List.of(), seriesId),
+            new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
+                LocalDate.of(2026, 1, 28), List.of(bob), List.of(), seriesId)));
         verify(seriesRepository).advance(seriesId, 1, 3);
     }
 
@@ -114,7 +103,7 @@ class RecurringTaskSeriesMaterializerTest {
 
         RecurringTaskSeriesMaterializer.materializeDueOccurrences(taskRepository, seriesRepository, spaceId, LocalDate.of(2026, 2, 1));
 
-        verify(taskRepository, never()).create(any());
+        verify(taskRepository, never()).createAll(any());
         verify(seriesRepository, never()).advance(any(), anyInt(), anyInt());
     }
 
@@ -128,8 +117,8 @@ class RecurringTaskSeriesMaterializerTest {
 
         RecurringTaskSeriesMaterializer.materializeDueOccurrences(taskRepository, seriesRepository, spaceId, LocalDate.of(2026, 1, 14));
 
-        verify(taskRepository).create(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
-            LocalDate.of(2026, 1, 14), List.of(), List.of(new SubtaskInput("Vérifier le tri", false)), seriesId));
+        verify(taskRepository).createAll(List.of(new CreateTaskCommand(spaceId, "Sortir les poubelles", TaskPriority.MED,
+            LocalDate.of(2026, 1, 14), List.of(), List.of(new SubtaskInput("Vérifier le tri", false)), seriesId)));
     }
 
     @Test
