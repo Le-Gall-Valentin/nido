@@ -105,6 +105,17 @@ class RecurringTransactionSeriesRepositoryAdapterIT {
     }
 
     @Test
+    void create_persists_a_yearly_recurring_series() {
+        // chk_finance_recurring_series_interval_type originally only allowed
+        // DAILY/WEEKLY/MONTHLY even though RecurrenceInterval always had YEARLY too.
+        RecurringTransactionSeries created = adapter.create(new CreateRecurringSeriesCommand(
+            spaceId, "VPS OVH", new BigDecimal("55.01"), TransactionType.EXPENSE, categoryId, aliceId,
+            List.of(), RecurrenceInterval.YEARLY, 1, LocalDate.of(2025, 12, 13), null), List.of());
+
+        assertThat(created.intervalType()).isEqualTo(RecurrenceInterval.YEARLY);
+    }
+
+    @Test
     void advanceLastMaterializedDate_updates_only_that_column() {
         RecurringTransactionSeries created = adapter.create(new CreateRecurringSeriesCommand(
             spaceId, "Loyer", new BigDecimal("800.00"), TransactionType.EXPENSE, categoryId, aliceId,
