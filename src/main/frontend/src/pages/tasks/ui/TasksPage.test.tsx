@@ -144,7 +144,9 @@ describe('TasksPage', () => {
 
     fireEvent.click(screen.getByText('Prendre RDV'))
     const dialog = screen.getByRole('dialog')
-    const buttons = within(dialog).getAllByRole('button')
+    const buttons = within(dialog)
+      .getAllByRole('button')
+      .filter((button) => button.getAttribute('data-testid') !== 'dialog-close-button')
 
     expect((buttons[0] as HTMLButtonElement).disabled).toBe(true) // TODO — current status
     expect((buttons[1] as HTMLButtonElement).disabled).toBe(false) // DOING — selectable

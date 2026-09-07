@@ -49,6 +49,7 @@ export function Dialog({ open, onClose, title, children, maxWidth = 'max-w-md', 
         {showCloseButton && (
           <button
             type="button"
+            data-testid="dialog-close-button"
             aria-label={t('close')}
             onClick={onClose}
             className="absolute right-4 top-4 grid size-8 shrink-0 place-items-center rounded-full text-fg-3 transition-colors hover:bg-bg-2 hover:text-fg-1"
