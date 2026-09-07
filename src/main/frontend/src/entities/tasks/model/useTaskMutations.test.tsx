@@ -9,7 +9,7 @@ import {
   useCreateTask, useCreateRecurringTask, useUpdateTask, useChangeTaskStatus,
   useToggleSubtask, useDeleteTask, useMoveTask, useUpdateRecurringTaskSeries, useDeleteRecurringTaskSeries,
 } from './useTaskMutations'
-import { tasksKey } from './useTasks'
+import { tasksKey, recurringTaskSeriesKey } from './useTasks'
 
 const TASK: Task = { id: 't-1', title: 'T', status: 'TODO', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false }
 
@@ -45,9 +45,10 @@ describe('task mutations', () => {
     await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: tasksKey('space-1') }))
   })
 
-  it('useCreateRecurringTask calls the api with the recurrence block', async () => {
+  it('useCreateRecurringTask calls the api with the recurrence block and invalidates both tasks and series caches', async () => {
     const api = fakeApi()
     const queryClient = new QueryClient()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
     const { result } = renderHook(() => useCreateRecurringTask('space-1'), { wrapper: wrapperFor(api, queryClient) })
     const recurrence = {
       intervalType: 'WEEKLY' as const, intervalCount: 1, leadIntervalType: 'DAILY' as const, leadIntervalCount: 0,
@@ -57,6 +58,8 @@ describe('task mutations', () => {
     result.current.mutate({ title: 'T', priority: 'MED', subtasks: [], recurrence })
 
     await waitFor(() => expect(api.createRecurringTask).toHaveBeenCalledWith('space-1', 'T', 'MED', [], recurrence))
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: tasksKey('space-1') }))
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: recurringTaskSeriesKey('space-1') }))
   })
 
   it('useUpdateTask calls the api', async () => {
