@@ -1,4 +1,4 @@
-import type { RecurrenceInput, Task, TaskPriority, TaskStatus } from './types'
+import type { RecurrenceInput, RecurringTaskSeries, Task, TaskPriority, TaskStatus } from './types'
 
 /**
  * Port for the Tasks page. Consumers (hooks) depend on this contract, never
@@ -14,4 +14,9 @@ export interface ITasksApi {
   toggleSubtask(spaceId: string, taskId: string, subtaskId: string): Promise<void>
   deleteTask(spaceId: string, taskId: string): Promise<void>
   moveTask(spaceId: string, taskId: string, destinationSpaceId: string): Promise<Task>
+  listRecurringTaskSeries(spaceId: string): Promise<RecurringTaskSeries[]>
+  updateRecurringTaskSeries(
+    spaceId: string, seriesId: string, title: string, priority: TaskPriority, subtasks: string[], recurrence: RecurrenceInput
+  ): Promise<RecurringTaskSeries>
+  deleteRecurringTaskSeries(spaceId: string, seriesId: string): Promise<void>
 }

@@ -13,3 +13,16 @@ export function useTasks(spaceId: string | undefined) {
     enabled: !!spaceId,
   })
 }
+
+export function recurringTaskSeriesKey(spaceId: string) {
+  return ['tasks', spaceId, 'recurring-series'] as const
+}
+
+export function useRecurringTaskSeries(spaceId: string | undefined) {
+  const api = useTasksApi()
+  return useQuery({
+    queryKey: recurringTaskSeriesKey(spaceId ?? ''),
+    queryFn: () => api.listRecurringTaskSeries(spaceId as string),
+    enabled: !!spaceId,
+  })
+}

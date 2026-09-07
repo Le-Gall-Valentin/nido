@@ -2,7 +2,7 @@ import { isAxiosError } from 'axios'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
 import type { ITasksApi } from '../model/ITasksApi'
-import type { Task } from '../model/types'
+import type { RecurringTaskSeries, Task } from '../model/types'
 
 function handleError(error: unknown): never {
   if (isAxiosError(error)) {
@@ -67,6 +67,27 @@ export const tasksApi: ITasksApi = {
     try {
       const res = await client.post<Task>(`/spaces/${spaceId}/tasks/${taskId}/move`, { destinationSpaceId })
       return res.data
+    } catch (error) { handleError(error) }
+  },
+
+  async listRecurringTaskSeries(spaceId) {
+    try {
+      const res = await client.get<RecurringTaskSeries[]>(`/spaces/${spaceId}/recurring-task-series`)
+      return res.data
+    } catch (error) { handleError(error) }
+  },
+
+  async updateRecurringTaskSeries(spaceId, seriesId, title, priority, subtasks, recurrence) {
+    try {
+      const res = await client.patch<RecurringTaskSeries>(`/spaces/${spaceId}/recurring-task-series/${seriesId}`,
+        { title, priority, subtasks, recurrence })
+      return res.data
+    } catch (error) { handleError(error) }
+  },
+
+  async deleteRecurringTaskSeries(spaceId, seriesId) {
+    try {
+      await client.delete(`/spaces/${spaceId}/recurring-task-series/${seriesId}`)
     } catch (error) { handleError(error) }
   },
 }

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTasksApi } from './tasksApiContext'
-import { tasksKey } from './useTasks'
+import { tasksKey, recurringTaskSeriesKey } from './useTasks'
 import type { RecurrenceInput, TaskPriority, TaskStatus } from './types'
 
 export function useCreateTask(spaceId: string) {
@@ -68,6 +68,31 @@ export function useMoveTask(spaceId: string) {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) })
       queryClient.invalidateQueries({ queryKey: tasksKey(variables.destinationSpaceId) })
+    },
+  })
+}
+
+export function useUpdateRecurringTaskSeries(spaceId: string) {
+  const api = useTasksApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { seriesId: string; title: string; priority: TaskPriority; subtasks: string[]; recurrence: RecurrenceInput }) =>
+      api.updateRecurringTaskSeries(spaceId, input.seriesId, input.title, input.priority, input.subtasks, input.recurrence),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) })
+      queryClient.invalidateQueries({ queryKey: recurringTaskSeriesKey(spaceId) })
+    },
+  })
+}
+
+export function useDeleteRecurringTaskSeries(spaceId: string) {
+  const api = useTasksApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (seriesId: string) => api.deleteRecurringTaskSeries(spaceId, seriesId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) })
+      queryClient.invalidateQueries({ queryKey: recurringTaskSeriesKey(spaceId) })
     },
   })
 }

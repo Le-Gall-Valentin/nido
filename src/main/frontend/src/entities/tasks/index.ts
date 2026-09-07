@@ -1,9 +1,9 @@
-export type { Task, Subtask, TaskStatus, TaskPriority, RecurrenceInterval, RecurrenceInput } from './model/types'
+export type { Task, Subtask, TaskStatus, TaskPriority, RecurrenceInterval, RecurrenceInput, RecurringTaskSeries } from './model/types'
 export type { ITasksApi } from './model/ITasksApi'
 export { TasksApiProvider, useTasksApi } from './model/tasksApiContext'
-export { tasksKey, useTasks } from './model/useTasks'
+export { tasksKey, useTasks, recurringTaskSeriesKey, useRecurringTaskSeries } from './model/useTasks'
 export {
   useCreateTask, useCreateRecurringTask, useUpdateTask, useChangeTaskStatus,
-  useToggleSubtask, useDeleteTask, useMoveTask,
+  useToggleSubtask, useDeleteTask, useMoveTask, useUpdateRecurringTaskSeries, useDeleteRecurringTaskSeries,
 } from './model/useTaskMutations'
 export { tasksApi } from './api/tasksApi'
