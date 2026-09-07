@@ -45,6 +45,7 @@
     "delete": "Supprimer",
     "edit_title": "Modifier la tâche récurrente",
     "lead_time_label": "Apparaît",
+    "lead_time_before_due_date": "avant l'échéance",
     "lead_time_count_label": "Anticipation",
     "lead_time_type_label": "Unité d'anticipation",
     "end_date_label": "Date de fin (facultatif)",

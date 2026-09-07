@@ -27,7 +27,7 @@ export function RecurringTaskSeriesManagerModal({ series, onEdit, onDelete, onCl
                 <p className="truncate text-sm font-medium text-fg-0">{s.title}</p>
                 <p className="truncate text-xs text-fg-3">
                   {t('form.recurrence_interval_count_label')} {s.intervalCount} {t(`form.interval.${s.intervalType}`)}
-                  {' · '}{t('recurring_series.lead_time_label')} {s.leadIntervalCount} {t(`form.interval.${s.leadIntervalType}`)}
+                  {' · '}{t('recurring_series.lead_time_label')} {s.leadIntervalCount} {t(`form.interval.${s.leadIntervalType}`)} {t('recurring_series.lead_time_before_due_date')}
                   {s.endDate && <> · {t('recurring_series.end_date_label')}: {s.endDate}</>}
                 </p>
               </div>
