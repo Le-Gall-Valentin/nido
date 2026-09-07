@@ -28,6 +28,13 @@ public class ToggleSubtaskHandler implements ToggleSubtaskUseCase {
         if (!existing.spaceId().equals(spaceId)) {
             throw new TaskException.TaskNotFound();
         }
+        // Without this check, subtaskId is trusted on its own: any caller who can write to some
+        // space could toggle an arbitrary subtask elsewhere — including in a space they aren't
+        // even a member of — just by knowing its UUID, since taskRepository.toggleSubtask looks
+        // the subtask up by its own id alone.
+        if (existing.subtasks().stream().noneMatch(s -> s.id().equals(subtaskId))) {
+            throw new TaskException.TaskNotFound();
+        }
         taskRepository.toggleSubtask(taskId, subtaskId);
     }
 }
