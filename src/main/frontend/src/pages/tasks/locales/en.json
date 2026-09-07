@@ -47,7 +47,7 @@
     "lead_time_label": "Appears",
     "lead_time_count_label": "Lead time",
     "lead_time_type_label": "Lead time unit",
-    "end_date_label": "End date",
+    "end_date_label": "End date (optional)",
     "end_date_before_start": "The end date must be after the start date."
   },
   "delete_confirm": {
