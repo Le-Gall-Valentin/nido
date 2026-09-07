@@ -31,4 +31,21 @@ public final class RecurrenceScheduler {
             case YEARLY -> anchorDate.plusYears(steps);
         };
     }
+
+    /**
+     * Shifts a concrete date backward by a single interval — used to find where a
+     * materialized occurrence's lead-time visibility window opens. Unlike
+     * {@link #nextDueDate}, this is a one-off shift of an arbitrary date, not a
+     * repeated re-derivation from a fixed anchor, so the JDK's own end-of-month
+     * clamping (e.g. {@code LocalDate.of(2026,3,31).minusMonths(1)} → 2026-02-28)
+     * is already correct with no extra logic needed.
+     */
+    public static LocalDate minus(LocalDate date, RecurrenceInterval intervalType, int intervalCount) {
+        return switch (intervalType) {
+            case DAILY -> date.minusDays(intervalCount);
+            case WEEKLY -> date.minusWeeks(intervalCount);
+            case MONTHLY -> date.minusMonths(intervalCount);
+            case YEARLY -> date.minusYears(intervalCount);
+        };
+    }
 }
