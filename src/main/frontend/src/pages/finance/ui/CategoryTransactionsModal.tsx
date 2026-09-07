@@ -18,10 +18,10 @@ export function CategoryTransactionsModal({ category, transactions, members, onS
   const { t } = useTranslation('finance')
 
   return (
-    <Dialog open onClose={onClose} title={category?.label ?? t('transactions.title')} maxWidth="max-w-lg">
-      <div className="mb-4 flex items-center gap-3">
+    <Dialog open onClose={onClose} title={category?.label ?? t('transactions.title')} maxWidth="max-w-lg" showCloseButton>
+      <div className="mb-4 flex items-center gap-3 pr-8">
         <CategoryIconBadge category={category} size={38} />
-        <h3 className="text-[17px] font-semibold text-fg-0">{category?.label ?? t('transactions.title')}</h3>
+        <h3 className="min-w-0 truncate text-[17px] font-semibold text-fg-0">{category?.label ?? t('transactions.title')}</h3>
       </div>
 
       {transactions.length === 0 ? (

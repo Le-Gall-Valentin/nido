@@ -268,8 +268,8 @@ function ShoppingListPageContent() {
       )}
 
       {movingItem && (
-        <Dialog open onClose={() => setMovingItem(null)} title={t('move_item_dialog_title', { name: movingItem.name })}>
-          <p className="mb-3 text-sm font-semibold text-fg-1">{t('move_item_dialog_title', { name: movingItem.name })}</p>
+        <Dialog open onClose={() => setMovingItem(null)} title={t('move_item_dialog_title', { name: movingItem.name })} showCloseButton>
+          <p className="mb-3 pr-8 text-sm font-semibold text-fg-1">{t('move_item_dialog_title', { name: movingItem.name })}</p>
           <div className="flex flex-col gap-1">
             {(categories ?? []).map((c) => {
               const isCurrent = c.id === movingItem.categoryId

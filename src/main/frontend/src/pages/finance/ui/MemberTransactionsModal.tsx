@@ -15,10 +15,10 @@ export function MemberTransactionsModal({ memberLabel, transactions, onSelectTra
   const { t } = useTranslation('finance')
 
   return (
-    <Dialog open onClose={onClose} title={memberLabel} maxWidth="max-w-lg">
-      <div className="mb-4 flex items-center gap-3">
+    <Dialog open onClose={onClose} title={memberLabel} maxWidth="max-w-lg" showCloseButton>
+      <div className="mb-4 flex items-center gap-3 pr-8">
         <UserAvatar username={memberLabel} role="USER" className="size-9 shrink-0 rounded-full text-sm" />
-        <h3 className="text-[17px] font-semibold text-fg-0">{memberLabel}</h3>
+        <h3 className="min-w-0 truncate text-[17px] font-semibold text-fg-0">{memberLabel}</h3>
       </div>
 
       {transactions.length === 0 ? (

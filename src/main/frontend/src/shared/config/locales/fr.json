@@ -1,5 +1,6 @@
 {
   "loading": "Chargement...",
+  "close": "Fermer",
   "error": {
     "unexpected": "Une erreur inattendue est survenue.",
     "retry": "Réessayer",
