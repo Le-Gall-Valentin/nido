@@ -28,9 +28,11 @@ function addInterval(anchorDateIso: string, intervalType: RecurrenceInterval, st
       return new Date(Date.UTC(targetYear, targetMonth, day)).toISOString().slice(0, 10)
     }
     case 'YEARLY': {
-      const d = new Date(anchor)
-      d.setUTCFullYear(d.getUTCFullYear() + steps)
-      return d.toISOString().slice(0, 10)
+      const targetYear = anchor.getUTCFullYear() + steps
+      const month = anchor.getUTCMonth()
+      const daysInTargetMonth = new Date(Date.UTC(targetYear, month + 1, 0)).getUTCDate()
+      const day = Math.min(anchorDay, daysInTargetMonth)
+      return new Date(Date.UTC(targetYear, month, day)).toISOString().slice(0, 10)
     }
   }
 }
