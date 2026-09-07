@@ -2,6 +2,7 @@ import { isAxiosError } from 'axios'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
 import type { ITasksApi } from '../model/ITasksApi'
+import type { IRecurringTaskSeriesApi } from '../model/IRecurringTaskSeriesApi'
 import type { RecurringTaskSeries, Task } from '../model/types'
 
 function handleError(error: unknown): never {
@@ -15,7 +16,7 @@ function handleError(error: unknown): never {
   throw new NetworkError()
 }
 
-export const tasksApi: ITasksApi = {
+export const tasksApi: ITasksApi & IRecurringTaskSeriesApi = {
   async listTasks(spaceId) {
     try {
       const res = await client.get<Task[]>(`/spaces/${spaceId}/tasks`)

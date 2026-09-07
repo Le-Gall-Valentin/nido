@@ -1,9 +1,10 @@
-import type { RecurrenceInput, RecurringTaskSeries, Task, TaskPriority, TaskStatus } from './types'
+import type { RecurrenceInput, Task, TaskPriority, TaskStatus } from './types'
 
 /**
- * Port for the Tasks page. Consumers (hooks) depend on this contract, never
+ * Port for task operations. Consumers (hooks) depend on this contract, never
  * on the concrete axios-backed implementation, which is injected through
- * TasksApiProvider.
+ * TasksApiProvider. Recurring series management lives in IRecurringTaskSeriesApi
+ * instead — a hook that only edits series shouldn't need to know this interface exists.
  */
 export interface ITasksApi {
   listTasks(spaceId: string): Promise<Task[]>
@@ -14,9 +15,4 @@ export interface ITasksApi {
   toggleSubtask(spaceId: string, taskId: string, subtaskId: string): Promise<void>
   deleteTask(spaceId: string, taskId: string): Promise<void>
   moveTask(spaceId: string, taskId: string, destinationSpaceId: string): Promise<Task>
-  listRecurringTaskSeries(spaceId: string): Promise<RecurringTaskSeries[]>
-  updateRecurringTaskSeries(
-    spaceId: string, seriesId: string, title: string, priority: TaskPriority, subtasks: string[], recurrence: RecurrenceInput
-  ): Promise<RecurringTaskSeries>
-  deleteRecurringTaskSeries(spaceId: string, seriesId: string): Promise<void>
 }
