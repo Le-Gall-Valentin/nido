@@ -78,7 +78,10 @@ describe('TaskFormModal', () => {
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Sortir les poubelles', assigneeIds: [], subtasks: [],
-      recurrence: { intervalType: 'WEEKLY', intervalCount: 1, anchorDate: '2026-01-07', rotationMemberIds: ['u-2', 'u-1'] },
+      recurrence: {
+        intervalType: 'WEEKLY', intervalCount: 1, leadIntervalType: 'DAILY', leadIntervalCount: 0,
+        anchorDate: '2026-01-07', endDate: null, rotationMemberIds: ['u-2', 'u-1'],
+      },
     }))
   })
 
@@ -93,7 +96,43 @@ describe('TaskFormModal', () => {
     fireEvent.click(screen.getByText('form.save'))
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
-      recurrence: { intervalType: 'YEARLY', intervalCount: 1, anchorDate: '2026-01-07', rotationMemberIds: [] },
+      recurrence: {
+        intervalType: 'YEARLY', intervalCount: 1, leadIntervalType: 'DAILY', leadIntervalCount: 0,
+        anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [],
+      },
+    }))
+  })
+
+  it('rejects a lead time longer than the recurrence interval', () => {
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={null} members={MEMBERS} isPersonal={false} />)
+
+    fireEvent.change(screen.getByLabelText('form.title_label'), { target: { value: 'Sortir les poubelles' } })
+    fireEvent.click(screen.getByText('form.recurring_label'))
+    fireEvent.change(screen.getByLabelText('recurring_series.lead_time_type_label'), { target: { value: 'DAILY' } })
+    fireEvent.change(screen.getByLabelText('recurring_series.lead_time_count_label'), { target: { value: '8' } })
+    fireEvent.change(screen.getByLabelText('form.recurrence_anchor_date_label'), { target: { value: '2026-01-07' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText('form.lead_time_exceeds_interval')).toBeDefined()
+  })
+
+  it('creating a recurring task with an end date sends it through', () => {
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={null} members={MEMBERS} isPersonal={false} />)
+
+    fireEvent.change(screen.getByLabelText('form.title_label'), { target: { value: 'Sortir les poubelles' } })
+    fireEvent.click(screen.getByText('form.recurring_label'))
+    fireEvent.change(screen.getByLabelText('form.recurrence_anchor_date_label'), { target: { value: '2026-01-07' } })
+    fireEvent.change(screen.getByLabelText('recurring_series.end_date_label'), { target: { value: '2027-01-01' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      recurrence: {
+        intervalType: 'WEEKLY', intervalCount: 1, leadIntervalType: 'DAILY', leadIntervalCount: 0,
+        anchorDate: '2026-01-07', endDate: '2027-01-01', rotationMemberIds: [],
+      },
     }))
   })
 })
