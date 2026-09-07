@@ -10,10 +10,10 @@ vi.mock('react-i18next', () => ({
 const SERIES: RecurringTaskSeries[] = [
   { id: 's-1', title: 'Sortir les poubelles', priority: 'MED', subtaskTemplates: [],
     intervalType: 'WEEKLY', intervalCount: 1, leadIntervalType: 'DAILY', leadIntervalCount: 2,
-    anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [] },
+    anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [], createdBy: null },
   { id: 's-2', title: 'Payer le loyer', priority: 'HIGH', subtaskTemplates: [],
     intervalType: 'MONTHLY', intervalCount: 1, leadIntervalType: 'WEEKLY', leadIntervalCount: 1,
-    anchorDate: '2026-01-01', endDate: '2027-01-01', rotationMemberIds: [] },
+    anchorDate: '2026-01-01', endDate: '2027-01-01', rotationMemberIds: [], createdBy: null },
 ]
 
 describe('RecurringTaskSeriesManagerModal', () => {

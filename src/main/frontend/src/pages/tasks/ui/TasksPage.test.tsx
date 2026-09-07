@@ -15,8 +15,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 const TASKS: Task[] = [
-  { id: 't1', title: 'Prendre RDV', status: 'TODO', priority: 'HIGH', dueDate: null, assigneeIds: [], subtasks: [], recurring: false },
-  { id: 't2', title: 'Répondre à Marie', status: 'DOING', priority: 'LOW', dueDate: null, assigneeIds: [], subtasks: [], recurring: false },
+  { id: 't1', title: 'Prendre RDV', status: 'TODO', priority: 'HIGH', dueDate: null, assigneeIds: [], subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null },
+  { id: 't2', title: 'Répondre à Marie', status: 'DOING', priority: 'LOW', dueDate: null, assigneeIds: [], subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null },
 ]
 
 const MEMBERS: SpaceMember[] = [

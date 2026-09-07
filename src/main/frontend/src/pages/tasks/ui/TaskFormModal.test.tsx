@@ -15,7 +15,7 @@ const MEMBERS: SpaceMember[] = [
 
 const TASK: Task = {
   id: 't-1', title: 'Sortir les poubelles', status: 'TODO', priority: 'MED', dueDate: '2026-01-07',
-  assigneeIds: ['u-1'], subtasks: [], recurring: false,
+  assigneeIds: ['u-1'], subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null,
 }
 
 describe('TaskFormModal', () => {

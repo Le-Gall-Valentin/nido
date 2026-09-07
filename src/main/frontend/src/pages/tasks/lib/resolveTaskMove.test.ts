@@ -3,13 +3,13 @@ import { resolveTaskMove } from './resolveTaskMove'
 import type { Task } from '@/entities/tasks'
 
 const TASKS: Task[] = [
-  { id: 't1', title: 'À faire', status: 'TODO', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false },
+  { id: 't1', title: 'À faire', status: 'TODO', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null },
   {
-    id: 't2', title: 'Sous-tâches ouvertes', status: 'DOING', priority: 'MED', dueDate: null, assigneeIds: [], recurring: false,
+    id: 't2', title: 'Sous-tâches ouvertes', status: 'DOING', priority: 'MED', dueDate: null, assigneeIds: [], recurring: false, recurringSeriesId: null, createdBy: null,
     subtasks: [{ id: 's1', text: 'A', done: true }, { id: 's2', text: 'B', done: false }],
   },
   {
-    id: 't3', title: 'Sous-tâches complètes', status: 'DOING', priority: 'MED', dueDate: null, assigneeIds: [], recurring: false,
+    id: 't3', title: 'Sous-tâches complètes', status: 'DOING', priority: 'MED', dueDate: null, assigneeIds: [], recurring: false, recurringSeriesId: null, createdBy: null,
     subtasks: [{ id: 's3', text: 'A', done: true }],
   },
 ]
