@@ -13,7 +13,7 @@ export function SettlementHistoryModal({ settlements, memberLabel, onClose }: Se
   const { t } = useTranslation('finance')
 
   return (
-    <Dialog open onClose={onClose} title={t('balances.history_title')} maxWidth="max-w-lg">
+    <Dialog open onClose={onClose} title={t('balances.history_title')} maxWidth="max-w-lg" showCloseButton>
       <h3 className="mb-4 text-[19px] font-semibold text-fg-0">{t('balances.history_title')}</h3>
 
       {settlements.length === 0 ? (

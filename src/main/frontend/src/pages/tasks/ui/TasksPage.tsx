@@ -296,8 +296,8 @@ function TasksPageContent() {
       )}
 
       {statusPickerTask && (
-        <Dialog open onClose={() => setStatusPickerTask(null)} title={t('change_status_dialog_title', { title: statusPickerTask.title })}>
-          <p className="mb-3 text-sm font-semibold text-fg-1">{t('change_status_dialog_title', { title: statusPickerTask.title })}</p>
+        <Dialog open onClose={() => setStatusPickerTask(null)} title={t('change_status_dialog_title', { title: statusPickerTask.title })} showCloseButton>
+          <p className="mb-3 pr-8 text-sm font-semibold text-fg-1">{t('change_status_dialog_title', { title: statusPickerTask.title })}</p>
           <div className="flex flex-col gap-1">
             {COLUMN_ORDER.map((status) => {
               const isCurrent = status === statusPickerTask.status
