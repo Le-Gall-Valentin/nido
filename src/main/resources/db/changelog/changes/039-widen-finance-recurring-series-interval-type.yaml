@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 039-widen-finance-recurring-series-interval-type
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        # RecurrenceInterval has always included YEARLY, but the check constraint from
+        # migration 028 never did — widen it instead of re-running if already fixed.
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM pg_constraint WHERE conname = 'chk_finance_recurring_series_interval_type' AND pg_get_constraintdef(oid) LIKE '%YEARLY%'
+      changes:
+        - sql:
+            sql: ALTER TABLE finance_recurring_transaction_series DROP CONSTRAINT chk_finance_recurring_series_interval_type
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE finance_recurring_transaction_series ADD CONSTRAINT chk_finance_recurring_series_interval_type CHECK (interval_type IN ('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'))
+            splitStatements: false
+      rollback:
+        - sql:
+            sql: ALTER TABLE finance_recurring_transaction_series DROP CONSTRAINT chk_finance_recurring_series_interval_type
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE finance_recurring_transaction_series ADD CONSTRAINT chk_finance_recurring_series_interval_type CHECK (interval_type IN ('DAILY', 'WEEKLY', 'MONTHLY'))
+            splitStatements: false

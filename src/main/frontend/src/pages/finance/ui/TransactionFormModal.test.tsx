@@ -26,6 +26,23 @@ function renderModal(props: Partial<React.ComponentProps<typeof TransactionFormM
 }
 
 describe('TransactionFormModal', () => {
+  it('defaults to a category matching the initial type even when it is not first in the list', () => {
+    const onSubmit = vi.fn()
+    // Category order isn't guaranteed by the backend — reproduces a real case where an
+    // INCOME category happened to come back before any EXPENSE one.
+    const reordered: Category[] = [categories[1], categories[0]]
+    renderModal({ onSubmit, categories: reordered })
+
+    const select = screen.getByLabelText('form.category_label') as HTMLSelectElement
+    expect(select.value).toBe('c1')
+
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Courses' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '10' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ type: 'EXPENSE', categoryId: 'c1' }))
+  })
+
   it('only offers categories matching the selected type, and resets the selection when the type changes', () => {
     renderModal()
 
