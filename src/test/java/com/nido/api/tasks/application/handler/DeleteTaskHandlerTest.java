@@ -7,7 +7,6 @@ import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskException;
 import com.nido.api.tasks.domain.model.TaskPriority;
 import com.nido.api.tasks.domain.model.TaskStatus;
-import com.nido.api.tasks.domain.port.out.RecurringTaskSeriesRepository;
 import com.nido.api.tasks.domain.port.out.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +20,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -29,15 +27,13 @@ import static org.mockito.Mockito.when;
 class DeleteTaskHandlerTest {
 
     @Mock TaskRepository taskRepository;
-    @Mock RecurringTaskSeriesRepository seriesRepository;
     private DeleteTaskHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID taskId = UUID.randomUUID();
-    private final UUID seriesId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        handler = new DeleteTaskHandler(taskRepository, seriesRepository);
+        handler = new DeleteTaskHandler(taskRepository);
     }
 
     private SpaceMembership membership(SpaceRole role) {
@@ -49,23 +45,22 @@ class DeleteTaskHandlerTest {
     }
 
     @Test
-    void deleting_a_one_off_task_deletes_the_task_row_directly() {
+    void deleting_a_one_off_task_deletes_the_task_row() {
         when(taskRepository.findById(taskId)).thenReturn(Optional.of(task(null)));
 
         handler.delete(taskId, spaceId, membership(SpaceRole.MEMBER));
 
         verify(taskRepository).delete(taskId);
-        verify(seriesRepository, never()).deleteById(any());
     }
 
     @Test
-    void deleting_a_recurring_occurrence_deletes_the_series_instead_of_the_task_row() {
+    void deleting_a_materialized_recurring_occurrence_deletes_only_the_task_row_and_leaves_the_series_untouched() {
+        UUID seriesId = UUID.randomUUID();
         when(taskRepository.findById(taskId)).thenReturn(Optional.of(task(seriesId)));
 
         handler.delete(taskId, spaceId, membership(SpaceRole.MEMBER));
 
-        verify(seriesRepository).deleteById(seriesId);
-        verify(taskRepository, never()).delete(any());
+        verify(taskRepository).delete(taskId);
     }
 
     @Test
@@ -81,9 +76,5 @@ class DeleteTaskHandlerTest {
     void a_viewer_cannot_delete_a_task() {
         assertThatThrownBy(() -> handler.delete(taskId, spaceId, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);
-    }
-
-    private static UUID any() {
-        return org.mockito.ArgumentMatchers.any();
     }
 }
