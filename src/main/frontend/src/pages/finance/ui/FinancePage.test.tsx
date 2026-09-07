@@ -202,6 +202,34 @@ describe('FinancePage', () => {
     await waitFor(() => expect(screen.getByText('transactions.detail_title')).toBeDefined())
   })
 
+  it('opens the income breakdown from the income stat card, then drills into a category', async () => {
+    renderPage(fakeApi({
+      listCategories: vi.fn().mockResolvedValue([
+        { id: 'c1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true, type: 'EXPENSE' },
+        { id: 'c2', label: 'Revenu', color: '#22c55e', icon: 'Wallet', isDefault: true, type: 'INCOME' },
+      ]),
+      getStats: vi.fn().mockResolvedValue({
+        balance: 954.7, totalExpense: 45.3, totalIncome: 1000, remainingBudget: 0,
+        breakdown: [{ categoryId: 'c1', amount: 45.3 }, { categoryId: 'c2', amount: 1000 }], budgetVsActual: [],
+      }),
+      listTransactions: vi.fn().mockResolvedValue([{
+        id: 't1', label: 'Salaire', amount: 1000, type: 'INCOME', categoryId: 'c2', date: '2026-01-01',
+        payerId: null, contributors: [], recurring: false,
+      }]),
+    }))
+
+    await waitFor(() => expect(screen.getByText('stats.income')).toBeDefined())
+    fireEvent.click(screen.getByText('stats.income'))
+
+    const breakdownModal = await waitFor(() => screen.getByRole('dialog', { name: 'breakdown.title_INCOME' }))
+    fireEvent.click(within(breakdownModal).getByText('Revenu'))
+
+    const categoryModal = await waitFor(() => screen.getByRole('dialog', { name: /Revenu/ }))
+    fireEvent.click(within(categoryModal).getByText('Salaire'))
+
+    await waitFor(() => expect(screen.getByText('transactions.detail_title')).toBeDefined())
+  })
+
   it('only offers to settle a debt the current user is a party to', async () => {
     renderPage(fakeApi({
       getBalances: vi.fn().mockResolvedValue({

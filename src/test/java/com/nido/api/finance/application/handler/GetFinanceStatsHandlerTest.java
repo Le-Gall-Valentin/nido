@@ -36,6 +36,7 @@ class GetFinanceStatsHandlerTest {
     private final UUID spaceId = UUID.randomUUID();
     private final UUID foodCategory = UUID.randomUUID();
     private final UUID transportCategory = UUID.randomUUID();
+    private final UUID incomeCategory = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
@@ -69,7 +70,7 @@ class GetFinanceStatsHandlerTest {
         when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of(
             transaction(new BigDecimal("50.00"), TransactionType.EXPENSE, foodCategory),
             transaction(new BigDecimal("30.00"), TransactionType.EXPENSE, transportCategory),
-            transaction(new BigDecimal("2000.00"), TransactionType.INCOME, foodCategory)));
+            transaction(new BigDecimal("2000.00"), TransactionType.INCOME, incomeCategory)));
         when(budgetRepository.findBySpaceId(spaceId)).thenReturn(List.of(
             new Budget(UUID.randomUUID(), spaceId, foodCategory, new BigDecimal("400.00"))));
 
@@ -78,9 +79,12 @@ class GetFinanceStatsHandlerTest {
         assertThat(stats.totalExpense()).isEqualByComparingTo("80.00");
         assertThat(stats.totalIncome()).isEqualByComparingTo("2000.00");
         assertThat(stats.balance()).isEqualByComparingTo("1920.00");
+        // Every category appears here, not just expense ones — the frontend splits this
+        // list by the category's own type for its two breakdown views.
         assertThat(stats.breakdown()).containsExactlyInAnyOrder(
             new com.nido.api.finance.domain.model.CategoryAmount(foodCategory, new BigDecimal("50.00")),
-            new com.nido.api.finance.domain.model.CategoryAmount(transportCategory, new BigDecimal("30.00")));
+            new com.nido.api.finance.domain.model.CategoryAmount(transportCategory, new BigDecimal("30.00")),
+            new com.nido.api.finance.domain.model.CategoryAmount(incomeCategory, new BigDecimal("2000.00")));
         assertThat(stats.budgetVsActual()).containsExactly(
             new com.nido.api.finance.domain.model.BudgetLine(foodCategory, new BigDecimal("400.00"), new BigDecimal("50.00")));
         // Only foodCategory is budgeted (400.00 limit, 50.00 spent so far): the 30.00 spent in

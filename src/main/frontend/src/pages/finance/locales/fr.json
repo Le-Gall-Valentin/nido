@@ -5,7 +5,12 @@
   "error": { "load_failed": "Impossible de charger les finances." },
   "type": { "EXPENSE": "Dépense", "INCOME": "Revenu" },
   "stats": { "balance": "Solde", "spent": "Dépensé ce mois", "income": "Entrées ce mois", "remaining_budget": "Reste à dépenser" },
-  "breakdown": { "title": "Répartition des dépenses", "empty": "Aucune dépense ce mois-ci." },
+  "breakdown": {
+    "title_EXPENSE": "Répartition des dépenses",
+    "title_INCOME": "Répartition des revenus",
+    "empty_EXPENSE": "Aucune dépense ce mois-ci.",
+    "empty_INCOME": "Aucun revenu ce mois-ci."
+  },
   "budget": {
     "title": "Budget vs réel",
     "manage": "Gérer le budget",

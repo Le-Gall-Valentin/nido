@@ -11,11 +11,12 @@ import {
   useCreateCategory, useUpdateCategory, useDeleteCategory, useBalances, useSettleDebt, useSettlementsBetween,
   useSavingsGoals, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,
   useRecurringSeries, useUpdateRecurringSeries, useDeleteRecurringSeries,
-  type IFinanceApi, type Transaction, type SavingsGoal, type RecurringSeries,
+  type IFinanceApi, type Transaction, type SavingsGoal, type RecurringSeries, type TransactionType,
 } from '@/entities/finance'
 import { FinanceHeader } from './FinanceHeader'
 import { StatsSummary } from './StatsSummary'
 import { SpendingBreakdownSection } from './SpendingBreakdownSection'
+import { CategoryBreakdownModal } from './CategoryBreakdownModal'
 import { BudgetSection } from './BudgetSection'
 import { ProjectionSection } from './ProjectionSection'
 import { BalancesSection } from './BalancesSection'
@@ -87,6 +88,7 @@ function FinancePageContent() {
   const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null)
   const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null)
   const [viewingCategoryId, setViewingCategoryId] = useState<string | null>(null)
+  const [breakdownModalType, setBreakdownModalType] = useState<TransactionType | null>(null)
   const [managingCategories, setManagingCategories] = useState(false)
   const [managingBudget, setManagingBudget] = useState(false)
   const [managingRecurringSeries, setManagingRecurringSeries] = useState(false)
@@ -179,7 +181,12 @@ function FinancePageContent() {
         onNewTransaction={() => setFormState({ mode: 'create' })}
       />
 
-      <StatsSummary stats={stats} />
+      <StatsSummary
+        stats={stats}
+        onSelectExpenseBreakdown={() => setBreakdownModalType('EXPENSE')}
+        onSelectIncomeBreakdown={() => setBreakdownModalType('INCOME')}
+        onSelectOperations={() => document.getElementById('finance-operations')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+      />
 
       <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(min(360px,100%),1fr))] gap-4">
         <SpendingBreakdownSection
@@ -223,16 +230,18 @@ function FinancePageContent() {
         />
       )}
 
-      <TransactionsSection
-        transactions={transactions ?? []}
-        categoryById={categoryById}
-        members={members ?? []}
-        canWrite={canWriteHere}
-        onManageRecurring={() => setManagingRecurringSeries(true)}
-        onSelectTransaction={setViewingTransaction}
-        onEdit={(transaction) => setFormState({ mode: 'edit', transaction })}
-        onDelete={setDeletingTransaction}
-      />
+      <div id="finance-operations">
+        <TransactionsSection
+          transactions={transactions ?? []}
+          categoryById={categoryById}
+          members={members ?? []}
+          canWrite={canWriteHere}
+          onManageRecurring={() => setManagingRecurringSeries(true)}
+          onSelectTransaction={setViewingTransaction}
+          onEdit={(transaction) => setFormState({ mode: 'edit', transaction })}
+          onDelete={setDeletingTransaction}
+        />
+      </div>
 
       {formState && (
         <TransactionFormModal
@@ -250,6 +259,19 @@ function FinancePageContent() {
             createRecurringSeries.reset()
           }}
           submitError={(createTransaction.isError || updateTransaction.isError || createRecurringSeries.isError) ? t('form.submit_error') : null}
+        />
+      )}
+
+      {breakdownModalType && (
+        <CategoryBreakdownModal
+          type={breakdownModalType}
+          breakdown={stats?.breakdown ?? []}
+          categoryById={categoryById}
+          onSelectCategory={(categoryId) => {
+            setViewingCategoryId(categoryId)
+            setBreakdownModalType(null)
+          }}
+          onClose={() => setBreakdownModalType(null)}
         />
       )}
 
