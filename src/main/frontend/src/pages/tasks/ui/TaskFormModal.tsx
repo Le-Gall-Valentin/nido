@@ -4,20 +4,14 @@ import { Plus, X } from 'lucide-react'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { UserAvatar } from '@/entities/user'
 import type { SpaceMember } from '@/entities/space'
-import type { RecurrenceInput, RecurrenceInterval, Task, TaskPriority } from '@/entities/tasks'
+import type { RecurrenceInterval, Task, TaskPriority } from '@/entities/tasks'
+import type { TaskFormInput } from '../model/types'
 import { TASK_PRIORITY_ORDER, TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
 import { leadTimeExceedsInterval } from './leadTimeExceedsInterval'
 
 const INTERVAL_ORDER: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
 
-export interface TaskFormInput {
-  title: string
-  priority: TaskPriority
-  dueDate: string | null
-  assigneeIds: string[]
-  subtasks: string[]
-  recurrence: RecurrenceInput | null
-}
+export type { TaskFormInput } from '../model/types'
 
 interface TaskFormModalProps {
   open: boolean
