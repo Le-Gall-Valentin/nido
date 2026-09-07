@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -62,6 +63,19 @@ class ToggleSubtaskHandlerTest {
 
         assertThatThrownBy(() -> handler.toggle(taskId, subtaskId, spaceId, membership(SpaceRole.MEMBER)))
             .isInstanceOf(TaskException.TaskNotFound.class);
+    }
+
+    @Test
+    void a_subtask_id_that_does_not_belong_to_the_given_task_is_not_found() {
+        // Regression test: the subtask must actually belong to taskId — otherwise a caller who
+        // can write to any space could toggle an arbitrary subtask elsewhere (including in a
+        // space they aren't even a member of) just by knowing its UUID.
+        UUID foreignSubtaskId = UUID.randomUUID();
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(task(spaceId)));
+
+        assertThatThrownBy(() -> handler.toggle(taskId, foreignSubtaskId, spaceId, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(TaskException.TaskNotFound.class);
+        verify(taskRepository, org.mockito.Mockito.never()).toggleSubtask(any(), any());
     }
 
     @Test
