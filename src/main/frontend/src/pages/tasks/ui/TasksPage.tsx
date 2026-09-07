@@ -5,18 +5,21 @@ import { Plus, Pencil, ArrowRightLeft, GripVertical, Repeat } from 'lucide-react
 import {
   DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core'
-import { Alert, Dialog, Spinner } from '@/shared/ui'
+import { Alert, ConfirmDeleteModal, Dialog, Spinner } from '@/shared/ui'
 import { useMySpaces, useWritableSpaces } from '@/features/space-switcher'
 import { canWrite, isPersonal, useSpaceMembers, TransferDialog } from '@/entities/space'
 import { UserAvatar } from '@/entities/user'
 import {
   tasksApi, TasksApiProvider, useTasks, useCreateTask, useCreateRecurringTask, useUpdateTask,
   useChangeTaskStatus, useToggleSubtask, useDeleteTask, useMoveTask,
-  type ITasksApi, type Task, type TaskStatus,
+  useRecurringTaskSeries, useUpdateRecurringTaskSeries, useDeleteRecurringTaskSeries,
+  type ITasksApi, type Task, type TaskStatus, type RecurringTaskSeries,
 } from '@/entities/tasks'
 import { TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
 import { TaskFormModal, type TaskFormInput } from './TaskFormModal'
 import { DeleteTaskModal } from './DeleteTaskModal'
+import { RecurringTaskSeriesManagerModal } from './RecurringTaskSeriesManagerModal'
+import { RecurringTaskSeriesFormModal, type RecurringTaskSeriesFormInput } from './RecurringTaskSeriesFormModal'
 import { resolveTaskMove } from './resolveTaskMove'
 
 const COLUMN_ORDER: TaskStatus[] = ['TODO', 'DOING', 'DONE']
@@ -175,11 +178,17 @@ function TasksPageContent() {
   const toggleSubtask = useToggleSubtask(spaceId)
   const deleteTask = useDeleteTask(spaceId)
   const moveTask = useMoveTask(spaceId)
+  const { data: recurringTaskSeries } = useRecurringTaskSeries(spaceId)
+  const updateRecurringTaskSeries = useUpdateRecurringTaskSeries(spaceId)
+  const deleteRecurringTaskSeries = useDeleteRecurringTaskSeries(spaceId)
 
   const [formState, setFormState] = useState<{ mode: 'create' } | { mode: 'edit'; task: Task } | null>(null)
   const [deletingTask, setDeletingTask] = useState<Task | null>(null)
   const [movingTask, setMovingTask] = useState<Task | null>(null)
   const [statusPickerTask, setStatusPickerTask] = useState<Task | null>(null)
+  const [managingRecurringSeries, setManagingRecurringSeries] = useState(false)
+  const [editingSeries, setEditingSeries] = useState<RecurringTaskSeries | null>(null)
+  const [deletingSeries, setDeletingSeries] = useState<RecurringTaskSeries | null>(null)
 
   const currentSpace = mySpaces?.find((s) => s.id === spaceId)
   const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
@@ -206,6 +215,11 @@ function TasksPageContent() {
       { title: input.title, priority: input.priority, dueDate: input.dueDate, assigneeIds: input.assigneeIds, subtasks: input.subtasks },
       { onSuccess: () => setFormState(null) }
     )
+  }
+
+  function handleUpdateSeriesSubmit(input: RecurringTaskSeriesFormInput) {
+    if (!editingSeries) return
+    updateRecurringTaskSeries.mutate({ seriesId: editingSeries.id, ...input }, { onSuccess: () => setEditingSeries(null) })
   }
 
   function handleToggleDone(task: Task) {
@@ -251,10 +265,15 @@ function TasksPageContent() {
       <div className="mb-5 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-fg-0">{t('title')}</h1>
         {canWriteHere && (
-          <button type="button" onClick={() => setFormState({ mode: 'create' })}
-            className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2.5 text-sm font-semibold text-white">
-            <Plus className="size-4" /> {t('new_task')}
-          </button>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => setManagingRecurringSeries(true)} className="shrink-0 text-sm font-semibold text-accent">
+              {t('recurring_series.manage')}
+            </button>
+            <button type="button" onClick={() => setFormState({ mode: 'create' })}
+              className="flex items-center gap-1.5 rounded-[10px] bg-accent px-4 py-2.5 text-sm font-semibold text-white">
+              <Plus className="size-4" /> {t('new_task')}
+            </button>
+          </div>
         )}
       </div>
 
@@ -316,6 +335,45 @@ function TasksPageContent() {
             })}
           </div>
         </Dialog>
+      )}
+
+      {managingRecurringSeries && (
+        <RecurringTaskSeriesManagerModal
+          series={recurringTaskSeries ?? []}
+          onEdit={(series) => setEditingSeries(series)}
+          onDelete={(seriesId) => setDeletingSeries((recurringTaskSeries ?? []).find((s) => s.id === seriesId) ?? null)}
+          onClose={() => setManagingRecurringSeries(false)}
+        />
+      )}
+
+      {editingSeries && (
+        <RecurringTaskSeriesFormModal
+          series={editingSeries}
+          members={members ?? []}
+          isPersonal={spaceIsPersonal}
+          onSubmit={handleUpdateSeriesSubmit}
+          onCancel={() => {
+            setEditingSeries(null)
+            updateRecurringTaskSeries.reset()
+          }}
+          submitError={updateRecurringTaskSeries.isError ? t('form.submit_error') : null}
+        />
+      )}
+
+      {deletingSeries && (
+        <ConfirmDeleteModal
+          title={t('delete_confirm.title', { title: deletingSeries.title })}
+          message={t('delete_confirm.message')}
+          confirmLabel={t('delete_confirm.confirm')}
+          cancelLabel={t('delete_confirm.cancel')}
+          isPending={deleteRecurringTaskSeries.isPending}
+          error={deleteRecurringTaskSeries.isError ? t('delete_confirm.error') : null}
+          onCancel={() => {
+            setDeletingSeries(null)
+            deleteRecurringTaskSeries.reset()
+          }}
+          onConfirm={() => deleteRecurringTaskSeries.mutate(deletingSeries.id, { onSuccess: () => setDeletingSeries(null) })}
+        />
       )}
     </div>
   )
