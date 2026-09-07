@@ -2,6 +2,7 @@ package com.nido.api.tasks.application.handler;
 
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
+import com.nido.api.tasks.application.service.TaskSpaceMemberValidator;
 import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskException;
 import com.nido.api.tasks.domain.model.TaskPriority;
@@ -21,19 +22,24 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UpdateTaskHandlerTest {
 
     @Mock TaskRepository taskRepository;
+    @Mock TaskSpaceMemberValidator spaceMemberValidator;
     private UpdateTaskHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID taskId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        handler = new UpdateTaskHandler(taskRepository);
+        handler = new UpdateTaskHandler(taskRepository, spaceMemberValidator);
     }
 
     private SpaceMembership membership(SpaceRole role) {
@@ -71,5 +77,17 @@ class UpdateTaskHandlerTest {
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(com.nido.api.space.domain.model.SpaceException.InsufficientRole.class);
+    }
+
+    @Test
+    void an_assignee_who_is_not_in_the_space_is_rejected() {
+        UUID stranger = UUID.randomUUID();
+        UpdateTaskCommand command = new UpdateTaskCommand(taskId, spaceId, "Nouveau titre", TaskPriority.HIGH, null, List.of(stranger));
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(task(spaceId)));
+        doThrow(new TaskException.MemberNotInSpace()).when(spaceMemberValidator).ensureMember(spaceId, stranger);
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(TaskException.MemberNotInSpace.class);
+        verify(taskRepository, never()).update(any());
     }
 }

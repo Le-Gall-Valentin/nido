@@ -3,8 +3,10 @@ package com.nido.api.tasks.application.handler;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
+import com.nido.api.tasks.application.service.TaskSpaceMemberValidator;
 import com.nido.api.tasks.domain.model.CreateTaskCommand;
 import com.nido.api.tasks.domain.model.Task;
+import com.nido.api.tasks.domain.model.TaskException;
 import com.nido.api.tasks.domain.model.TaskPriority;
 import com.nido.api.tasks.domain.model.TaskStatus;
 import com.nido.api.tasks.domain.port.out.TaskRepository;
@@ -20,18 +22,23 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CreateTaskHandlerTest {
 
     @Mock TaskRepository taskRepository;
+    @Mock TaskSpaceMemberValidator spaceMemberValidator;
     private CreateTaskHandler handler;
     private final UUID spaceId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        handler = new CreateTaskHandler(taskRepository);
+        handler = new CreateTaskHandler(taskRepository, spaceMemberValidator);
     }
 
     private SpaceMembership membership(SpaceRole role) {
@@ -63,5 +70,16 @@ class CreateTaskHandlerTest {
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(SpaceException.NotAMember.class);
+    }
+
+    @Test
+    void an_assignee_who_is_not_in_the_space_is_rejected() {
+        UUID stranger = UUID.randomUUID();
+        CreateTaskCommand command = new CreateTaskCommand(spaceId, "Prendre RDV", TaskPriority.HIGH, null, List.of(stranger), List.of(), null);
+        doThrow(new TaskException.MemberNotInSpace()).when(spaceMemberValidator).ensureMember(spaceId, stranger);
+
+        assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(TaskException.MemberNotInSpace.class);
+        verify(taskRepository, never()).create(any());
     }
 }

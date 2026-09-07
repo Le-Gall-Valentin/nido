@@ -3,6 +3,7 @@ package com.nido.api.tasks.application.handler;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
+import com.nido.api.tasks.application.service.TaskSpaceMemberValidator;
 import com.nido.api.tasks.domain.model.CreateRecurringTaskSeriesCommand;
 import com.nido.api.tasks.domain.model.CreateTaskCommand;
 import com.nido.api.tasks.domain.model.RecurrenceInterval;
@@ -28,6 +29,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,6 +39,7 @@ class CreateRecurringTaskHandlerTest {
 
     @Mock TaskRepository taskRepository;
     @Mock RecurringTaskSeriesRepository seriesRepository;
+    @Mock TaskSpaceMemberValidator spaceMemberValidator;
     private CreateRecurringTaskHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID seriesId = UUID.randomUUID();
@@ -44,7 +47,7 @@ class CreateRecurringTaskHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new CreateRecurringTaskHandler(taskRepository, seriesRepository);
+        handler = new CreateRecurringTaskHandler(taskRepository, seriesRepository, spaceMemberValidator);
     }
 
     private SpaceMembership membership(SpaceRole role) {
@@ -116,6 +119,17 @@ class CreateRecurringTaskHandlerTest {
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(TaskException.InvalidEndDate.class);
+        verify(seriesRepository, never()).create(any());
+    }
+
+    @Test
+    void a_rotation_member_who_is_not_in_the_space_is_rejected() {
+        UUID stranger = UUID.randomUUID();
+        CreateRecurringTaskSeriesCommand command = command(0, null, List.of(stranger));
+        doThrow(new TaskException.MemberNotInSpace()).when(spaceMemberValidator).ensureMember(spaceId, stranger);
+
+        assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(TaskException.MemberNotInSpace.class);
         verify(seriesRepository, never()).create(any());
     }
 }

@@ -2,7 +2,8 @@ package com.nido.api.tasks.domain.model;
 
 public abstract sealed class TaskException extends RuntimeException
     permits TaskException.TaskNotFound, TaskException.SubtasksIncomplete, TaskException.SameSpaceTransfer,
-            TaskException.RecurringSeriesNotFound, TaskException.LeadTimeExceedsInterval, TaskException.InvalidEndDate {
+            TaskException.RecurringSeriesNotFound, TaskException.LeadTimeExceedsInterval, TaskException.InvalidEndDate,
+            TaskException.MemberNotInSpace {
 
     private TaskException(String message) { super(message); }
 
@@ -32,5 +33,10 @@ public abstract sealed class TaskException extends RuntimeException
     /** Thrown when a recurring series' end date is before its anchor date — it would never produce a single occurrence. */
     public static final class InvalidEndDate extends TaskException {
         public InvalidEndDate() { super("The end date must be on or after the anchor date"); }
+    }
+
+    /** Thrown when a submitted rotationMemberId isn't actually a member of the space. */
+    public static final class MemberNotInSpace extends TaskException {
+        public MemberNotInSpace() { super("Member is not part of this space"); }
     }
 }
