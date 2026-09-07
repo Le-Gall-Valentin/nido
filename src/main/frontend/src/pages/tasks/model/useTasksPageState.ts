@@ -37,9 +37,11 @@ export function useTasksPageState(spaceId: string) {
   const [deletingTask, setDeletingTask] = useState<Task | null>(null)
   const [movingTask, setMovingTask] = useState<Task | null>(null)
   const [statusPickerTask, setStatusPickerTask] = useState<Task | null>(null)
+  const [viewingTask, setViewingTask] = useState<Task | null>(null)
   const [managingRecurringSeries, setManagingRecurringSeries] = useState(false)
   const [editingSeries, setEditingSeries] = useState<RecurringTaskSeries | null>(null)
   const [deletingSeries, setDeletingSeries] = useState<RecurringTaskSeries | null>(null)
+  const [viewingSeries, setViewingSeries] = useState<RecurringTaskSeries | null>(null)
 
   const currentSpace = mySpaces?.find((s) => s.id === spaceId)
   const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
@@ -103,6 +105,13 @@ export function useTasksPageState(spaceId: string) {
     setStatusPickerTask(null)
   }
 
+  /** The series a materialized occurrence belongs to — null for a one-off task,
+   * or a recurring one whose series has since been deleted. */
+  function seriesForTask(task: Task): RecurringTaskSeries | null {
+    if (!task.recurringSeriesId) return null
+    return (recurringTaskSeries ?? []).find((s) => s.id === task.recurringSeriesId) ?? null
+  }
+
   return {
     tasks, isPending, isError, members, writableDestinations, recurringTaskSeries,
     canWriteHere, spaceIsPersonal,
@@ -112,9 +121,12 @@ export function useTasksPageState(spaceId: string) {
     deletingTask, setDeletingTask,
     movingTask, setMovingTask,
     statusPickerTask, setStatusPickerTask,
+    viewingTask, setViewingTask,
     managingRecurringSeries, setManagingRecurringSeries,
     editingSeries, setEditingSeries,
     deletingSeries, setDeletingSeries,
+    viewingSeries, setViewingSeries,
     handleFormSubmit, handleUpdateSeriesSubmit, handleToggleDone, handleDragEnd, handleMoveConfirm, handlePickStatus,
+    seriesForTask,
   }
 }

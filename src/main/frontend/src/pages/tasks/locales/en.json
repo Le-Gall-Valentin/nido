@@ -11,6 +11,7 @@
   "delete": "Delete",
   "move": "Move to…",
   "change_status": "Change status of {{title}} (drag or click)",
+  "view_details": "View details of {{title}}",
   "change_status_dialog_title": "Move \"{{title}}\" to…",
   "change_status_target_current": "{{column}} (current column)",
   "change_status_target_blocked": "{{column}} (subtasks incomplete)",
@@ -37,9 +38,23 @@
     "lead_time_exceeds_interval": "The lead time cannot exceed the recurrence interval.",
     "submit_error": "Something went wrong. Please try again."
   },
+  "detail": {
+    "title": "Task details",
+    "status_label": "Status",
+    "due_date_label": "Due date",
+    "no_due_date": "No due date",
+    "assignees_label": "Assigned to",
+    "no_assignee": "No one",
+    "created_by_label": "Created by",
+    "unknown_creator": "Unknown",
+    "rotation_participants_label": "Rotation participants",
+    "this_occurrence_label": "This time",
+    "close": "Close"
+  },
   "recurring_series": {
     "manage": "Manage recurring tasks",
     "title": "Manage recurring tasks",
+    "detail_title": "Recurring task details",
     "empty": "No recurring tasks.",
     "edit": "Edit",
     "delete": "Delete",

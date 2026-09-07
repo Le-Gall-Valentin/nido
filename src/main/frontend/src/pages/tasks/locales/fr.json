@@ -11,6 +11,7 @@
   "delete": "Supprimer",
   "move": "Déplacer vers…",
   "change_status": "Changer le statut de {{title}} (glisser ou cliquer)",
+  "view_details": "Voir le détail de {{title}}",
   "change_status_dialog_title": "Déplacer « {{title}} » vers…",
   "change_status_target_current": "{{column}} (colonne actuelle)",
   "change_status_target_blocked": "{{column}} (sous-tâches incomplètes)",
@@ -37,9 +38,23 @@
     "lead_time_exceeds_interval": "Le délai ne peut pas dépasser la fréquence de récurrence.",
     "submit_error": "Une erreur est survenue. Réessayez."
   },
+  "detail": {
+    "title": "Détail de la tâche",
+    "status_label": "Statut",
+    "due_date_label": "Échéance",
+    "no_due_date": "Aucune échéance",
+    "assignees_label": "Assigné(e)(s)",
+    "no_assignee": "Personne",
+    "created_by_label": "Créée par",
+    "unknown_creator": "Inconnu",
+    "rotation_participants_label": "Participants à la rotation",
+    "this_occurrence_label": "Cette fois-ci",
+    "close": "Fermer"
+  },
   "recurring_series": {
     "manage": "Gérer les tâches récurrentes",
     "title": "Gérer les tâches récurrentes",
+    "detail_title": "Détail de la tâche récurrente",
     "empty": "Aucune tâche récurrente.",
     "edit": "Modifier",
     "delete": "Supprimer",
