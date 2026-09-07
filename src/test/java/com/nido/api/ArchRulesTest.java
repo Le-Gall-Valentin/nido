@@ -209,6 +209,37 @@ class ArchRulesTest {
     }
 
     // -------------------------------------------------------------------------
+    // finance / tasks isolation
+    //
+    // Neither module belongs in BCS above: both legitimately depend on
+    // space.domain/space.application (SpaceMembership is the caller type
+    // threaded through nearly every handler), which BCS's generic isolation
+    // rule would forbid. These two rules instead check only the one pairwise
+    // isolation that matters: finance and tasks must never depend on each
+    // other, regardless of their shared dependency on space.
+    // -------------------------------------------------------------------------
+
+    @Test
+    void finance_should_not_depend_on_tasks() {
+        noClasses()
+            .that().resideInAPackage(BASE + "finance..")
+            .and(excludeTests())
+            .should().dependOnClassesThat()
+            .resideInAPackage(BASE + "tasks..")
+            .check(classes);
+    }
+
+    @Test
+    void tasks_should_not_depend_on_finance() {
+        noClasses()
+            .that().resideInAPackage(BASE + "tasks..")
+            .and(excludeTests())
+            .should().dependOnClassesThat()
+            .resideInAPackage(BASE + "finance..")
+            .check(classes);
+    }
+
+    // -------------------------------------------------------------------------
     // Global infra isolation
     // -------------------------------------------------------------------------
 
