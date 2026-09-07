@@ -7,9 +7,9 @@ import { TasksApiProvider, type TasksApi, type Task } from '@/entities/tasks'
 import { useOpenTaskCount } from './useOpenTaskCount'
 
 const TASKS: Task[] = [
-  { id: 't1', title: 'A', status: 'TODO', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false },
-  { id: 't2', title: 'B', status: 'DOING', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false },
-  { id: 't3', title: 'C', status: 'DONE', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false },
+  { id: 't1', title: 'A', status: 'TODO', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null },
+  { id: 't2', title: 'B', status: 'DOING', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null },
+  { id: 't3', title: 'C', status: 'DONE', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null },
 ]
 
 function fakeApi(): TasksApi {

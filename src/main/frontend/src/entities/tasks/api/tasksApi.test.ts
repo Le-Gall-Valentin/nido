@@ -5,7 +5,7 @@ import type { Task } from '../model/types'
 
 vi.mock('@/shared/api', () => ({ client: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }))
 
-const TASK: Task = { id: 't-1', title: 'Sortir les poubelles', status: 'TODO', priority: 'MED', dueDate: '2026-01-07', assigneeIds: [], subtasks: [], recurring: false }
+const TASK: Task = { id: 't-1', title: 'Sortir les poubelles', status: 'TODO', priority: 'MED', dueDate: '2026-01-07', assigneeIds: [], subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null }
 
 describe('tasksApi', () => {
   beforeEach(() => vi.clearAllMocks())

@@ -18,6 +18,10 @@ export interface Task {
   assigneeIds: string[]
   subtasks: Subtask[]
   recurring: boolean
+  /** Set only when `recurring` is true — the series this occurrence was materialized from. */
+  recurringSeriesId: string | null
+  /** Null for a task created before creator tracking existed, or whose creator's account was deleted. */
+  createdBy: string | null
 }
 
 export interface RecurrenceInput {
@@ -42,4 +46,6 @@ export interface RecurringTaskSeries {
   anchorDate: string
   endDate: string | null
   rotationMemberIds: string[]
+  /** Null for a series created before creator tracking existed, or whose creator's account was deleted. */
+  createdBy: string | null
 }

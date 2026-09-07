@@ -16,7 +16,7 @@ const MEMBERS: SpaceMember[] = [
 const SERIES: RecurringTaskSeries = {
   id: 's-1', title: 'Sortir les poubelles', priority: 'MED', subtaskTemplates: ['Vérifier le tri'],
   intervalType: 'WEEKLY', intervalCount: 1, leadIntervalType: 'DAILY', leadIntervalCount: 2,
-  anchorDate: '2026-01-07', endDate: null, rotationMemberIds: ['u-1'],
+  anchorDate: '2026-01-07', endDate: null, rotationMemberIds: ['u-1'], createdBy: 'u-1',
 }
 
 describe('RecurringTaskSeriesFormModal', () => {

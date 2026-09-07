@@ -10,7 +10,7 @@ import {
 } from './useTaskMutations'
 import { tasksKey, recurringTaskSeriesKey } from './useTasks'
 
-const TASK: Task = { id: 't-1', title: 'T', status: 'TODO', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false }
+const TASK: Task = { id: 't-1', title: 'T', status: 'TODO', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null }
 
 function fakeApi(overrides: Partial<TasksApi> = {}): TasksApi {
   return {
