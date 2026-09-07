@@ -18,7 +18,7 @@ export function CategoryBreakdownModal({ type, breakdown, categoryById, onSelect
   const total = filtered.reduce((sum, row) => sum + row.amount, 0)
 
   return (
-    <Dialog open onClose={onClose} title={t(`breakdown.title_${type}`)} maxWidth="max-w-lg">
+    <Dialog open onClose={onClose} title={t(`breakdown.title_${type}`)} maxWidth="max-w-lg" showCloseButton>
       <h3 className="mb-4 text-[19px] font-semibold text-fg-0">{t(`breakdown.title_${type}`)}</h3>
 
       {filtered.length === 0 ? (

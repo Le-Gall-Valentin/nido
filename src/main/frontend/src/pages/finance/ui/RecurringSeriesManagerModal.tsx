@@ -15,7 +15,7 @@ export function RecurringSeriesManagerModal({ series, onEdit, onDelete, onClose 
   const { t } = useTranslation('finance')
 
   return (
-    <Dialog open onClose={onClose} title={t('recurring_series.title')} maxWidth="max-w-lg">
+    <Dialog open onClose={onClose} title={t('recurring_series.title')} maxWidth="max-w-lg" showCloseButton>
       <h3 className="mb-4 text-[19px] font-semibold text-fg-0">{t('recurring_series.title')}</h3>
 
       {series.length === 0 ? (

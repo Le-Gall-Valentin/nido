@@ -75,7 +75,7 @@ export function CategoryManagerModal({ categories, onCreate, onUpdate, onDelete,
   }
 
   return (
-    <Dialog open onClose={onClose} title={t('categories.title')} maxWidth="max-w-lg">
+    <Dialog open onClose={onClose} title={t('categories.title')} maxWidth="max-w-lg" showCloseButton>
       <h3 className="mb-4 text-[19px] font-semibold text-fg-0">{t('categories.title')}</h3>
 
       {deleteError && <p className="mb-3 text-sm font-medium text-status-red">{t('categories.delete_in_use')}</p>}

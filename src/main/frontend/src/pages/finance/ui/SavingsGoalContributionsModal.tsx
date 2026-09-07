@@ -18,7 +18,7 @@ export function SavingsGoalContributionsModal({ goalName, color, glyph, contribu
   const { t } = useTranslation('finance')
 
   return (
-    <Dialog open onClose={onClose} title={goalName} maxWidth="max-w-lg">
+    <Dialog open onClose={onClose} title={goalName} maxWidth="max-w-lg" showCloseButton>
       <div className="mb-4 flex items-center gap-3">
         <div className="grid size-9 shrink-0 place-items-center rounded-[10px] text-lg" style={{ background: safeSavingsGoalColor(color) }}>
           {safeSavingsGoalGlyph(glyph)}

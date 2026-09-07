@@ -1,4 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import { X } from 'lucide-react'
 import { useFocusTrap } from '@/shared/lib'
 
 interface DialogProps {
@@ -7,9 +9,12 @@ interface DialogProps {
   title: string
   children: ReactNode
   maxWidth?: string
+  /** Renders a close "X" button in the panel's top-right corner, for dialogs whose content has no other visible way to close (no Cancel/Close button). */
+  showCloseButton?: boolean
 }
 
-export function Dialog({ open, onClose, title, children, maxWidth = 'max-w-md' }: DialogProps) {
+export function Dialog({ open, onClose, title, children, maxWidth = 'max-w-md', showCloseButton = false }: DialogProps) {
+  const { t } = useTranslation()
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   useFocusTrap(panelRef, open)
@@ -41,6 +46,17 @@ export function Dialog({ open, onClose, title, children, maxWidth = 'max-w-md' }
       />
       <div ref={panelRef} className={`relative z-10 flex max-h-[90vh] w-full ${maxWidth} flex-col overflow-y-auto rounded-[18px] bg-bg-1 p-[26px] pt-6 shadow-[0_20px_60px_rgba(44,42,38,0.24)]`}>
         <h2 id={titleId} className="sr-only">{title}</h2>
+        {showCloseButton && (
+          <button
+            type="button"
+            data-testid="dialog-close-button"
+            aria-label={t('close')}
+            onClick={onClose}
+            className="absolute right-4 top-4 grid size-8 shrink-0 place-items-center rounded-full text-fg-3 transition-colors hover:bg-bg-2 hover:text-fg-1"
+          >
+            <X size={18} />
+          </button>
+        )}
         {children}
       </div>
     </div>
