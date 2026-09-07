@@ -23,6 +23,23 @@ export interface Task {
 export interface RecurrenceInput {
   intervalType: RecurrenceInterval
   intervalCount: number
+  leadIntervalType: RecurrenceInterval
+  leadIntervalCount: number
   anchorDate: string
+  endDate: string | null
+  rotationMemberIds: string[]
+}
+
+export interface RecurringTaskSeries {
+  id: string
+  title: string
+  priority: TaskPriority
+  subtaskTemplates: string[]
+  intervalType: RecurrenceInterval
+  intervalCount: number
+  leadIntervalType: RecurrenceInterval
+  leadIntervalCount: number
+  anchorDate: string
+  endDate: string | null
   rotationMemberIds: string[]
 }

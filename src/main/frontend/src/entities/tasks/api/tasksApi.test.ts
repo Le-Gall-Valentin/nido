@@ -28,7 +28,10 @@ describe('tasksApi', () => {
 
   it('creates a recurring task', async () => {
     vi.mocked(client.post).mockResolvedValue({ data: { ...TASK, recurring: true } })
-    const recurrence = { intervalType: 'WEEKLY' as const, intervalCount: 1, anchorDate: '2026-01-07', rotationMemberIds: ['u-1'] }
+    const recurrence = {
+      intervalType: 'WEEKLY' as const, intervalCount: 1, leadIntervalType: 'DAILY' as const, leadIntervalCount: 0,
+      anchorDate: '2026-01-07', endDate: null, rotationMemberIds: ['u-1'],
+    }
     await tasksApi.createRecurringTask('space-1', 'Sortir les poubelles', 'MED', ['Vérifier le tri'], recurrence)
     expect(client.post).toHaveBeenCalledWith('/spaces/space-1/tasks', {
       title: 'Sortir les poubelles', priority: 'MED', subtasks: ['Vérifier le tri'], recurrence,
@@ -65,5 +68,32 @@ describe('tasksApi', () => {
     vi.mocked(client.post).mockResolvedValue({ data: TASK })
     await tasksApi.moveTask('space-1', 't-1', 'space-2')
     expect(client.post).toHaveBeenCalledWith('/spaces/space-1/tasks/t-1/move', { destinationSpaceId: 'space-2' })
+  })
+
+  it('lists recurring task series', async () => {
+    const series = [{ id: 's-1', title: 'Sortir les poubelles', priority: 'MED' as const, subtaskTemplates: [],
+      intervalType: 'WEEKLY' as const, intervalCount: 1, leadIntervalType: 'DAILY' as const, leadIntervalCount: 0,
+      anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [] }]
+    vi.mocked(client.get).mockResolvedValue({ data: series })
+    const result = await tasksApi.listRecurringTaskSeries('space-1')
+    expect(client.get).toHaveBeenCalledWith('/spaces/space-1/recurring-task-series')
+    expect(result).toEqual(series)
+  })
+
+  it('updates a recurring task series', async () => {
+    const recurrence = {
+      intervalType: 'MONTHLY' as const, intervalCount: 1, leadIntervalType: 'WEEKLY' as const, leadIntervalCount: 1,
+      anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [],
+    }
+    vi.mocked(client.patch).mockResolvedValue({ data: { id: 's-1' } })
+    await tasksApi.updateRecurringTaskSeries('space-1', 's-1', 'Sortir les poubelles', 'MED', [], recurrence)
+    expect(client.patch).toHaveBeenCalledWith('/spaces/space-1/recurring-task-series/s-1',
+      { title: 'Sortir les poubelles', priority: 'MED', subtasks: [], recurrence })
+  })
+
+  it('deletes a recurring task series', async () => {
+    vi.mocked(client.delete).mockResolvedValue({ data: undefined })
+    await tasksApi.deleteRecurringTaskSeries('space-1', 's-1')
+    expect(client.delete).toHaveBeenCalledWith('/spaces/space-1/recurring-task-series/s-1')
   })
 })

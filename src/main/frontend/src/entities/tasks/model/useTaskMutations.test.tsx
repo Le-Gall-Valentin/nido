@@ -7,7 +7,7 @@ import type { Task } from './types'
 import { TasksApiProvider } from './tasksApiContext'
 import {
   useCreateTask, useCreateRecurringTask, useUpdateTask, useChangeTaskStatus,
-  useToggleSubtask, useDeleteTask, useMoveTask,
+  useToggleSubtask, useDeleteTask, useMoveTask, useUpdateRecurringTaskSeries, useDeleteRecurringTaskSeries,
 } from './useTaskMutations'
 import { tasksKey } from './useTasks'
 
@@ -18,7 +18,8 @@ function fakeApi(overrides: Partial<ITasksApi> = {}): ITasksApi {
     listTasks: vi.fn(), createTask: vi.fn().mockResolvedValue(TASK), createRecurringTask: vi.fn().mockResolvedValue(TASK),
     updateTask: vi.fn().mockResolvedValue(TASK), changeTaskStatus: vi.fn().mockResolvedValue(TASK),
     toggleSubtask: vi.fn().mockResolvedValue(undefined), deleteTask: vi.fn().mockResolvedValue(undefined),
-    moveTask: vi.fn().mockResolvedValue(TASK),
+    moveTask: vi.fn().mockResolvedValue(TASK), listRecurringTaskSeries: vi.fn().mockResolvedValue([]),
+    updateRecurringTaskSeries: vi.fn().mockResolvedValue(undefined), deleteRecurringTaskSeries: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   }
 }
@@ -48,7 +49,10 @@ describe('task mutations', () => {
     const api = fakeApi()
     const queryClient = new QueryClient()
     const { result } = renderHook(() => useCreateRecurringTask('space-1'), { wrapper: wrapperFor(api, queryClient) })
-    const recurrence = { intervalType: 'WEEKLY' as const, intervalCount: 1, anchorDate: '2026-01-07', rotationMemberIds: [] }
+    const recurrence = {
+      intervalType: 'WEEKLY' as const, intervalCount: 1, leadIntervalType: 'DAILY' as const, leadIntervalCount: 0,
+      anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [],
+    }
 
     result.current.mutate({ title: 'T', priority: 'MED', subtasks: [], recurrence })
 
@@ -106,5 +110,31 @@ describe('task mutations', () => {
     await waitFor(() => expect(api.moveTask).toHaveBeenCalledWith('space-1', 't-1', 'space-2'))
     await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: tasksKey('space-1') }))
     await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: tasksKey('space-2') }))
+  })
+
+  it('useUpdateRecurringTaskSeries calls the api and invalidates both tasks and series caches', async () => {
+    const api = fakeApi()
+    const queryClient = new QueryClient()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+    const { result } = renderHook(() => useUpdateRecurringTaskSeries('space-1'), { wrapper: wrapperFor(api, queryClient) })
+    const recurrence = {
+      intervalType: 'WEEKLY' as const, intervalCount: 1, leadIntervalType: 'DAILY' as const, leadIntervalCount: 0,
+      anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [],
+    }
+
+    result.current.mutate({ seriesId: 's-1', title: 'T', priority: 'MED', subtasks: [], recurrence })
+
+    await waitFor(() => expect(api.updateRecurringTaskSeries).toHaveBeenCalledWith('space-1', 's-1', 'T', 'MED', [], recurrence))
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: tasksKey('space-1') }))
+  })
+
+  it('useDeleteRecurringTaskSeries calls the api', async () => {
+    const api = fakeApi()
+    const queryClient = new QueryClient()
+    const { result } = renderHook(() => useDeleteRecurringTaskSeries('space-1'), { wrapper: wrapperFor(api, queryClient) })
+
+    result.current.mutate('s-1')
+
+    await waitFor(() => expect(api.deleteRecurringTaskSeries).toHaveBeenCalledWith('space-1', 's-1'))
   })
 })
