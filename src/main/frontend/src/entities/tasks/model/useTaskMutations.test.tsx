@@ -2,9 +2,8 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { ITasksApi } from './ITasksApi'
 import type { Task } from './types'
-import { TasksApiProvider } from './tasksApiContext'
+import { TasksApiProvider, type TasksApi } from './tasksApiContext'
 import {
   useCreateTask, useCreateRecurringTask, useUpdateTask, useChangeTaskStatus,
   useToggleSubtask, useDeleteTask, useMoveTask, useUpdateRecurringTaskSeries, useDeleteRecurringTaskSeries,
@@ -13,7 +12,7 @@ import { tasksKey, recurringTaskSeriesKey } from './useTasks'
 
 const TASK: Task = { id: 't-1', title: 'T', status: 'TODO', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false }
 
-function fakeApi(overrides: Partial<ITasksApi> = {}): ITasksApi {
+function fakeApi(overrides: Partial<TasksApi> = {}): TasksApi {
   return {
     listTasks: vi.fn(), createTask: vi.fn().mockResolvedValue(TASK), createRecurringTask: vi.fn().mockResolvedValue(TASK),
     updateTask: vi.fn().mockResolvedValue(TASK), changeTaskStatus: vi.fn().mockResolvedValue(TASK),
@@ -24,7 +23,7 @@ function fakeApi(overrides: Partial<ITasksApi> = {}): ITasksApi {
   }
 }
 
-function wrapperFor(api: ITasksApi, queryClient: QueryClient) {
+function wrapperFor(api: TasksApi, queryClient: QueryClient) {
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <TasksApiProvider api={api}>{children}</TasksApiProvider>

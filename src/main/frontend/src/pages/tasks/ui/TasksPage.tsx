@@ -13,7 +13,7 @@ import {
   tasksApi, TasksApiProvider, useTasks, useCreateTask, useCreateRecurringTask, useUpdateTask,
   useChangeTaskStatus, useToggleSubtask, useDeleteTask, useMoveTask,
   useRecurringTaskSeries, useUpdateRecurringTaskSeries, useDeleteRecurringTaskSeries,
-  type ITasksApi, type Task, type TaskStatus, type RecurringTaskSeries,
+  type TasksApi, type Task, type TaskStatus, type RecurringTaskSeries,
 } from '@/entities/tasks'
 import { TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
 import { TaskFormModal, type TaskFormInput } from './TaskFormModal'
@@ -25,7 +25,7 @@ import { resolveTaskMove } from './resolveTaskMove'
 const COLUMN_ORDER: TaskStatus[] = ['TODO', 'DOING', 'DONE']
 
 interface TasksPageProps {
-  api?: ITasksApi
+  api?: TasksApi
 }
 
 export function TasksPage({ api = tasksApi }: TasksPageProps = {}) {

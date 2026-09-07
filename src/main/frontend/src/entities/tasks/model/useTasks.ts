@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useTasksApi } from './tasksApiContext'
+import { useTasksApi, useRecurringTaskSeriesApi } from './tasksApiContext'
 
 export function tasksKey(spaceId: string) {
   return ['tasks', spaceId, 'list'] as const
@@ -19,7 +19,7 @@ export function recurringTaskSeriesKey(spaceId: string) {
 }
 
 export function useRecurringTaskSeries(spaceId: string | undefined) {
-  const api = useTasksApi()
+  const api = useRecurringTaskSeriesApi()
   return useQuery({
     queryKey: recurringTaskSeriesKey(spaceId ?? ''),
     queryFn: () => api.listRecurringTaskSeries(spaceId as string),

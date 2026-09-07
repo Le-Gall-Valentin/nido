@@ -8,7 +8,7 @@ import type { ISpacesApi } from '@/features/space-switcher'
 import { SpaceMembersApiProvider } from '@/entities/space'
 import type { ISpaceMembersApi, SpaceMember, SpaceSummary } from '@/entities/space'
 import { TasksPage } from './TasksPage'
-import type { ITasksApi, Task } from '@/entities/tasks'
+import type { TasksApi, Task } from '@/entities/tasks'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),
@@ -31,7 +31,7 @@ const RECURRING_SERIES = [{ id: 's-1', title: 'Sortir les poubelles', priority: 
   intervalType: 'WEEKLY' as const, intervalCount: 1, leadIntervalType: 'DAILY' as const, leadIntervalCount: 0,
   anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [] }]
 
-function fakeApi(overrides: Partial<ITasksApi> = {}): ITasksApi {
+function fakeApi(overrides: Partial<TasksApi> = {}): TasksApi {
   return {
     listTasks: vi.fn().mockResolvedValue(TASKS),
     createTask: vi.fn(), createRecurringTask: vi.fn(), updateTask: vi.fn(),
@@ -52,7 +52,7 @@ function fakeSpacesApi(mySpaces: SpaceSummary[] = [CURRENT_SPACE]): ISpacesApi {
   return { listMySpaces: vi.fn().mockResolvedValue(mySpaces), getSpace: vi.fn() }
 }
 
-function setup(api: ITasksApi = fakeApi()) {
+function setup(api: TasksApi = fakeApi()) {
   const queryClient = createTestQueryClient()
   render(
     <QueryClientProvider client={queryClient}>

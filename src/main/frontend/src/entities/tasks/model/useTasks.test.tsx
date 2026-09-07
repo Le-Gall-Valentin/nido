@@ -3,14 +3,13 @@ import { describe, it, expect, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
-import type { ITasksApi } from './ITasksApi'
 import type { Task } from './types'
-import { TasksApiProvider } from './tasksApiContext'
+import { TasksApiProvider, type TasksApi } from './tasksApiContext'
 import { useTasks, tasksKey } from './useTasks'
 
 const TASKS: Task[] = [{ id: 't-1', title: 'T', status: 'TODO', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false }]
 
-function fakeApi(overrides: Partial<ITasksApi> = {}): ITasksApi {
+function fakeApi(overrides: Partial<TasksApi> = {}): TasksApi {
   return {
     listTasks: vi.fn().mockResolvedValue(TASKS),
     createTask: vi.fn(), createRecurringTask: vi.fn(), updateTask: vi.fn(),
@@ -21,7 +20,7 @@ function fakeApi(overrides: Partial<ITasksApi> = {}): ITasksApi {
   }
 }
 
-function wrapperFor(api: ITasksApi) {
+function wrapperFor(api: TasksApi) {
   const queryClient = createTestQueryClient()
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>

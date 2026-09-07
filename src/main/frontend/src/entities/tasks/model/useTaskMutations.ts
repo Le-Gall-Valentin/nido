@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useTasksApi } from './tasksApiContext'
+import { useTasksApi, useRecurringTaskSeriesApi } from './tasksApiContext'
 import { tasksKey, recurringTaskSeriesKey } from './useTasks'
 import type { RecurrenceInput, TaskPriority, TaskStatus } from './types'
 
@@ -76,7 +76,7 @@ export function useMoveTask(spaceId: string) {
 }
 
 export function useUpdateRecurringTaskSeries(spaceId: string) {
-  const api = useTasksApi()
+  const api = useRecurringTaskSeriesApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { seriesId: string; title: string; priority: TaskPriority; subtasks: string[]; recurrence: RecurrenceInput }) =>
@@ -89,7 +89,7 @@ export function useUpdateRecurringTaskSeries(spaceId: string) {
 }
 
 export function useDeleteRecurringTaskSeries(spaceId: string) {
-  const api = useTasksApi()
+  const api = useRecurringTaskSeriesApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (seriesId: string) => api.deleteRecurringTaskSeries(spaceId, seriesId),
