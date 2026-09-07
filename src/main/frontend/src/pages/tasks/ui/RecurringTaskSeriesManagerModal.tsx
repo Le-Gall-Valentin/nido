@@ -5,12 +5,13 @@ import type { RecurringTaskSeries } from '@/entities/tasks'
 
 interface RecurringTaskSeriesManagerModalProps {
   series: RecurringTaskSeries[]
+  onView: (series: RecurringTaskSeries) => void
   onEdit: (series: RecurringTaskSeries) => void
   onDelete: (seriesId: string) => void
   onClose: () => void
 }
 
-export function RecurringTaskSeriesManagerModal({ series, onEdit, onDelete, onClose }: RecurringTaskSeriesManagerModalProps) {
+export function RecurringTaskSeriesManagerModal({ series, onView, onEdit, onDelete, onClose }: RecurringTaskSeriesManagerModalProps) {
   const { t } = useTranslation('tasks')
 
   return (
@@ -23,14 +24,14 @@ export function RecurringTaskSeriesManagerModal({ series, onEdit, onDelete, onCl
         <ul className="max-h-96 space-y-1 overflow-y-auto">
           {series.map((s) => (
             <li key={s.id} className="flex items-center gap-3 rounded-[10px] p-2 hover:bg-bg-2">
-              <div className="min-w-0 flex-1">
+              <button type="button" onClick={() => onView(s)} className="min-w-0 flex-1 text-left">
                 <p className="truncate text-sm font-medium text-fg-0">{s.title}</p>
                 <p className="truncate text-xs text-fg-3">
                   {t('form.recurrence_interval_count_label')} {s.intervalCount} {t(`form.interval.${s.intervalType}`)}
                   {' · '}{t('recurring_series.lead_time_label')} {s.leadIntervalCount} {t(`form.interval.${s.leadIntervalType}`)} {t('recurring_series.lead_time_before_due_date')}
                   {s.endDate && <> · {t('recurring_series.end_date_label')}: {s.endDate}</>}
                 </p>
-              </div>
+              </button>
               <button type="button" aria-label={t('recurring_series.edit')} onClick={() => onEdit(s)}
                 className="grid size-7 shrink-0 place-items-center rounded-md text-fg-3 hover:bg-bg-1 hover:text-fg-1">
                 <Pencil size={15} />

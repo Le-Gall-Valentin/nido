@@ -29,7 +29,7 @@ const CURRENT_SPACE: SpaceSummary = {
 
 const RECURRING_SERIES = [{ id: 's-1', title: 'Sortir les poubelles', priority: 'MED' as const, subtaskTemplates: [],
   intervalType: 'WEEKLY' as const, intervalCount: 1, leadIntervalType: 'DAILY' as const, leadIntervalCount: 0,
-  anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [] }]
+  anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [], createdBy: 'u-1' }]
 
 function fakeApi(overrides: Partial<TasksApi> = {}): TasksApi {
   return {
@@ -121,26 +121,33 @@ describe('TasksPage', () => {
     await waitFor(() => expect(api.toggleSubtask).toHaveBeenCalledWith('space-1', 't1', 's1'))
   })
 
-  it('tapping the task title opens the status picker and changes the status', async () => {
-    const { api } = setup()
+  it('tapping the task title opens the task detail view', async () => {
+    setup()
     await screen.findByText('Prendre RDV')
 
     fireEvent.click(screen.getByText('Prendre RDV'))
+
+    expect(await screen.findByText('detail.status_label')).toBeDefined()
+  })
+
+  it('tapping the priority/due row also opens the task detail view', async () => {
+    setup()
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByText('priority.HIGH'))
+
+    expect(await screen.findByText('detail.status_label')).toBeDefined()
+  })
+
+  it('tapping the drag handle opens the status picker and changes the status', async () => {
+    const { api } = setup()
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByLabelText('change_status:{"title":"Prendre RDV"}'))
     const dialog = screen.getByRole('dialog')
     fireEvent.click(within(dialog).getByText('column.DOING'))
 
     await waitFor(() => expect(api.changeTaskStatus).toHaveBeenCalledWith('space-1', 't1', 'DOING'))
-  })
-
-  it('tapping the priority/due row also opens the status picker', async () => {
-    const { api } = setup()
-    await screen.findByText('Prendre RDV')
-
-    fireEvent.click(screen.getByText('priority.HIGH'))
-    const dialog = screen.getByRole('dialog')
-    fireEvent.click(within(dialog).getByText('column.DONE'))
-
-    await waitFor(() => expect(api.changeTaskStatus).toHaveBeenCalledWith('space-1', 't1', 'DONE'))
   })
 
   it('disables the current column and disables DONE when subtasks are incomplete', async () => {
@@ -149,7 +156,7 @@ describe('TasksPage', () => {
     setup(api)
     await screen.findByText('Prendre RDV')
 
-    fireEvent.click(screen.getByText('Prendre RDV'))
+    fireEvent.click(screen.getByLabelText('change_status:{"title":"Prendre RDV"}'))
     const dialog = screen.getByRole('dialog')
     const buttons = within(dialog)
       .getAllByRole('button')
@@ -160,7 +167,7 @@ describe('TasksPage', () => {
     expect((buttons[2] as HTMLButtonElement).disabled).toBe(true) // DONE — blocked by incomplete subtask
   })
 
-  it('does not show status-change buttons without write access', async () => {
+  it('a viewer can open the task detail view but has no status-change or write controls', async () => {
     const api = fakeApi()
     const readOnlySpace: SpaceSummary = { ...CURRENT_SPACE, myRole: 'VIEWER' }
     const queryClient = createTestQueryClient()
@@ -181,7 +188,8 @@ describe('TasksPage', () => {
 
     fireEvent.click(screen.getByText('Prendre RDV'))
 
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(await screen.findByText('detail.status_label')).toBeDefined()
+    expect(screen.queryByLabelText('change_status:{"title":"Prendre RDV"}')).toBeNull()
   })
 
   it('opens the recurring series manager and edits a series', async () => {
@@ -200,6 +208,18 @@ describe('TasksPage', () => {
         intervalType: 'WEEKLY', intervalCount: 1, leadIntervalType: 'DAILY', leadIntervalCount: 0,
         anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [],
       }))
+  })
+
+  it('opens a recurring series detail view by tapping its row in the manager', async () => {
+    setup()
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByText('recurring_series.manage'))
+    expect(await screen.findByText('Sortir les poubelles')).toBeDefined()
+
+    fireEvent.click(screen.getByText('Sortir les poubelles'))
+
+    expect(await screen.findByText('detail.rotation_participants_label')).toBeDefined()
   })
 
   it('shows a submit error in the task form when creating a task fails', async () => {

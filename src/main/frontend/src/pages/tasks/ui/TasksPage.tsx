@@ -9,9 +9,11 @@ import { tasksApi, TasksApiProvider, type TasksApi, type Task, type TaskStatus }
 import { TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
 import { useTasksPageState } from '../model/useTasksPageState'
 import { TaskFormModal } from './TaskFormModal'
+import { TaskDetailModal } from './TaskDetailModal'
 import { DeleteTaskModal } from './DeleteTaskModal'
 import { RecurringTaskSeriesManagerModal } from './RecurringTaskSeriesManagerModal'
 import { RecurringTaskSeriesFormModal } from './RecurringTaskSeriesFormModal'
+import { RecurringTaskSeriesDetailModal } from './RecurringTaskSeriesDetailModal'
 
 const COLUMN_ORDER: TaskStatus[] = ['TODO', 'DOING', 'DONE']
 
@@ -42,14 +44,16 @@ interface TaskCardProps {
   onMove: (task: Task) => void
   onDelete: (task: Task) => void
   onChangeStatus: (task: Task) => void
+  onView: (task: Task) => void
 }
 
-function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, onEdit, onMove, onDelete, onChangeStatus }: TaskCardProps) {
+function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, onEdit, onMove, onDelete, onChangeStatus, onView }: TaskCardProps) {
   const { t } = useTranslation('tasks')
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: task.id })
   const meta = TASK_PRIORITY_META[task.priority]
   const doneSubtasks = task.subtasks.filter((s) => s.done).length
   const changeStatusLabel = t('change_status', { title: task.title })
+  const viewDetailsLabel = t('view_details', { title: task.title })
 
   const priorityRowContent = (
     <>
@@ -79,14 +83,10 @@ function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, 
           className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-[6px] border-2 ${task.status === 'DONE' ? 'border-status-green bg-status-green' : 'border-border'}`}>
           {task.status === 'DONE' && <span className="text-[10px] font-bold text-white">✓</span>}
         </button>
-        {canWriteHere ? (
-          <button type="button" onClick={() => onChangeStatus(task)} aria-label={changeStatusLabel}
-            className={`flex-1 text-left text-sm ${task.status === 'DONE' ? 'text-fg-3 line-through' : 'text-fg-0'}`}>
-            {task.title}
-          </button>
-        ) : (
-          <span className={`flex-1 text-sm ${task.status === 'DONE' ? 'text-fg-3 line-through' : 'text-fg-0'}`}>{task.title}</span>
-        )}
+        <button type="button" onClick={() => onView(task)} aria-label={viewDetailsLabel}
+          className={`flex-1 text-left text-sm ${task.status === 'DONE' ? 'text-fg-3 line-through' : 'text-fg-0'}`}>
+          {task.title}
+        </button>
         {task.recurring && <Repeat className="mt-0.5 size-3.5 shrink-0 text-fg-3" />}
         {canWriteHere && (
           <button ref={setNodeRef} {...listeners} {...attributes} type="button" onClick={() => onChangeStatus(task)}
@@ -112,14 +112,10 @@ function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, 
         </div>
       )}
 
-      {canWriteHere ? (
-        <button type="button" onClick={() => onChangeStatus(task)} aria-label={changeStatusLabel}
-          className="flex w-full items-center gap-2 pl-[30px] text-left text-[11.5px]">
-          {priorityRowContent}
-        </button>
-      ) : (
-        <div className="flex items-center gap-2 pl-[30px] text-[11.5px]">{priorityRowContent}</div>
-      )}
+      <button type="button" onClick={() => onView(task)} aria-label={viewDetailsLabel}
+        className="flex w-full items-center gap-2 pl-[30px] text-left text-[11.5px]">
+        {priorityRowContent}
+      </button>
 
       {canWriteHere && (
         <div className="flex gap-1 border-t border-border pt-2">
@@ -167,10 +163,13 @@ function TasksPageContent() {
     deletingTask, setDeletingTask,
     movingTask, setMovingTask,
     statusPickerTask, setStatusPickerTask,
+    viewingTask, setViewingTask,
     managingRecurringSeries, setManagingRecurringSeries,
     editingSeries, setEditingSeries,
     deletingSeries, setDeletingSeries,
+    viewingSeries, setViewingSeries,
     handleFormSubmit, handleUpdateSeriesSubmit, handleToggleDone, handleDragEnd, handleMoveConfirm, handlePickStatus,
+    seriesForTask,
   } = useTasksPageState(spaceId)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
@@ -186,6 +185,7 @@ function TasksPageContent() {
     onMove: (task: Task) => setMovingTask(task),
     onDelete: (task: Task) => setDeletingTask(task),
     onChangeStatus: (task: Task) => setStatusPickerTask(task),
+    onView: (task: Task) => setViewingTask(task),
   }
 
   return (
@@ -267,12 +267,30 @@ function TasksPageContent() {
         </Dialog>
       )}
 
+      {viewingTask && (
+        <TaskDetailModal
+          task={viewingTask}
+          series={seriesForTask(viewingTask)}
+          members={members ?? []}
+          onClose={() => setViewingTask(null)}
+        />
+      )}
+
       {managingRecurringSeries && (
         <RecurringTaskSeriesManagerModal
           series={recurringTaskSeries ?? []}
+          onView={(series) => setViewingSeries(series)}
           onEdit={(series) => setEditingSeries(series)}
           onDelete={(seriesId) => setDeletingSeries((recurringTaskSeries ?? []).find((s) => s.id === seriesId) ?? null)}
           onClose={() => setManagingRecurringSeries(false)}
+        />
+      )}
+
+      {viewingSeries && (
+        <RecurringTaskSeriesDetailModal
+          series={viewingSeries}
+          members={members ?? []}
+          onClose={() => setViewingSeries(null)}
         />
       )}
 
