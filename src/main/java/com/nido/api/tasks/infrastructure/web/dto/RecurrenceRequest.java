@@ -10,7 +10,8 @@ import java.util.UUID;
 
 public record RecurrenceRequest(
     @NotNull RecurrenceInterval intervalType, @Min(1) int intervalCount,
-    @NotNull LocalDate anchorDate, List<UUID> rotationMemberIds
+    @NotNull RecurrenceInterval leadIntervalType, @Min(0) int leadIntervalCount,
+    @NotNull LocalDate anchorDate, LocalDate endDate, List<UUID> rotationMemberIds
 ) {
     public List<UUID> rotationMemberIds() {
         return rotationMemberIds == null ? List.of() : rotationMemberIds;
