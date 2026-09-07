@@ -17,6 +17,7 @@ import com.nido.api.tasks.infrastructure.persistence.repository.TaskSubtaskJpaRe
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,56 @@ public class TaskRepositoryAdapter implements TaskRepository {
         TaskEntity saved = tasks.saveAndFlush(e);
         saveAssigneesAndSubtasks(saved.getId(), command.assigneeIds(), command.subtasks());
         return findById(saved.getId()).orElseThrow(TaskException.TaskNotFound::new);
+    }
+
+    @Override
+    @Transactional
+    public void createAll(List<CreateTaskCommand> commands) {
+        if (commands.isEmpty()) {
+            return;
+        }
+        List<TaskEntity> entities = commands.stream().map(command -> {
+            TaskEntity e = new TaskEntity();
+            e.setSpaceId(command.spaceId());
+            e.setTitle(command.title());
+            e.setStatus(TaskStatus.TODO);
+            e.setPriority(command.priority());
+            e.setDueDate(command.dueDate());
+            e.setRecurringSeriesId(command.recurringSeriesId());
+            return e;
+        }).toList();
+        // saveAllAndFlush preserves the input order (Spring Data JPA's default JpaRepository
+        // implementation iterates the given entities and appends each save() result in turn),
+        // so zipping `saved` against `commands` by index below is safe.
+        List<TaskEntity> saved = tasks.saveAllAndFlush(entities);
+        List<TaskAssigneeEntity> assigneeEntities = new ArrayList<>();
+        List<TaskSubtaskEntity> subtaskEntities = new ArrayList<>();
+        for (int i = 0; i < saved.size(); i++) {
+            UUID taskId = saved.get(i).getId();
+            CreateTaskCommand command = commands.get(i);
+            for (UUID userId : command.assigneeIds()) {
+                TaskAssigneeEntity ae = new TaskAssigneeEntity();
+                ae.setTaskId(taskId);
+                ae.setUserId(userId);
+                assigneeEntities.add(ae);
+            }
+            List<SubtaskInput> subtaskInputs = command.subtasks();
+            for (int position = 0; position < subtaskInputs.size(); position++) {
+                SubtaskInput input = subtaskInputs.get(position);
+                TaskSubtaskEntity se = new TaskSubtaskEntity();
+                se.setTaskId(taskId);
+                se.setPosition(position);
+                se.setText(input.text());
+                se.setDone(input.done());
+                subtaskEntities.add(se);
+            }
+        }
+        if (!assigneeEntities.isEmpty()) {
+            assignees.saveAllAndFlush(assigneeEntities);
+        }
+        if (!subtaskEntities.isEmpty()) {
+            subtasks.saveAllAndFlush(subtaskEntities);
+        }
     }
 
     @Override

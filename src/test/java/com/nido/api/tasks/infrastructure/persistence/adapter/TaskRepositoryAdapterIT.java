@@ -125,4 +125,29 @@ class TaskRepositoryAdapterIT {
 
         assertThat(adapter.findBySpaceId(spaceId)).hasSize(2);
     }
+
+    @Test
+    void createAll_persists_every_task_with_its_own_assignees_and_subtasks_in_one_batch() {
+        adapter.createAll(List.of(
+            new CreateTaskCommand(spaceId, "T1", TaskPriority.LOW, LocalDate.of(2026, 1, 7),
+                List.of(aliceId), List.of(new SubtaskInput("Vérifier le tri", false)), null),
+            new CreateTaskCommand(spaceId, "T2", TaskPriority.MED, LocalDate.of(2026, 1, 14), List.of(), List.of(), null)));
+
+        List<Task> found = adapter.findBySpaceId(spaceId);
+        assertThat(found).hasSize(2);
+        Task t1 = found.stream().filter(t -> t.title().equals("T1")).findFirst().orElseThrow();
+        assertThat(t1.assigneeIds()).containsExactly(aliceId);
+        assertThat(t1.subtasks()).hasSize(1);
+        assertThat(t1.subtasks().get(0).text()).isEqualTo("Vérifier le tri");
+        Task t2 = found.stream().filter(t -> t.title().equals("T2")).findFirst().orElseThrow();
+        assertThat(t2.assigneeIds()).isEmpty();
+        assertThat(t2.subtasks()).isEmpty();
+    }
+
+    @Test
+    void createAll_does_nothing_for_an_empty_list() {
+        adapter.createAll(List.of());
+
+        assertThat(adapter.findBySpaceId(spaceId)).isEmpty();
+    }
 }
