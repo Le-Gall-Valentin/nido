@@ -119,3 +119,9 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/040-widen-recurring-task-series-interval-type.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/041-add-recurring-task-series-lead-time-and-end-date.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/042-tasks-recurring-series-set-null-on-delete.yaml
+      relativeToChangelogFile: false

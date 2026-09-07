@@ -47,6 +47,16 @@ public class RecurringTaskSeriesEntity {
     @Column(name = "anchor_date", nullable = false)
     private LocalDate anchorDate;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lead_interval_type", nullable = false, length = 10)
+    private RecurrenceInterval leadIntervalType;
+
+    @Column(name = "lead_interval_count", nullable = false)
+    private int leadIntervalCount;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
     @Column(name = "occurrence_count", nullable = false)
     private int occurrenceCount;
 

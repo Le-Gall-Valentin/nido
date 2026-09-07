@@ -3,6 +3,7 @@ package com.nido.api.tasks.infrastructure.persistence.adapter;
 import com.nido.api.tasks.domain.model.CreateRecurringTaskSeriesCommand;
 import com.nido.api.tasks.domain.model.RecurringTaskSeries;
 import com.nido.api.tasks.domain.model.TaskException;
+import com.nido.api.tasks.domain.model.UpdateRecurringTaskSeriesCommand;
 import com.nido.api.tasks.domain.port.out.RecurringTaskSeriesRepository;
 import com.nido.api.tasks.infrastructure.persistence.entity.RecurringTaskSeriesEntity;
 import com.nido.api.tasks.infrastructure.persistence.entity.RecurringTaskSeriesMemberEntity;
@@ -38,6 +39,11 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
     }
 
     @Override
+    public List<RecurringTaskSeries> findBySpaceId(UUID spaceId) {
+        return series.findBySpaceId(spaceId).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     @Transactional
     public RecurringTaskSeries create(CreateRecurringTaskSeriesCommand command) {
         RecurringTaskSeriesEntity e = new RecurringTaskSeriesEntity();
@@ -46,10 +52,34 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
         e.setPriority(command.priority());
         e.setIntervalType(command.intervalType());
         e.setIntervalCount(command.intervalCount());
+        e.setLeadIntervalType(command.leadIntervalType());
+        e.setLeadIntervalCount(command.leadIntervalCount());
         e.setAnchorDate(command.anchorDate());
+        e.setEndDate(command.endDate());
         e.setOccurrenceCount(0);
         e.setCurrentRotationIndex(0);
         RecurringTaskSeriesEntity saved = series.saveAndFlush(e);
+        saveMembersAndTemplates(saved.getId(), command.rotationMemberIds(), command.subtaskTemplates());
+        return findById(saved.getId()).orElseThrow(TaskException.TaskNotFound::new);
+    }
+
+    @Override
+    @Transactional
+    public RecurringTaskSeries update(UpdateRecurringTaskSeriesCommand command) {
+        RecurringTaskSeriesEntity e = series.findById(command.seriesId()).orElseThrow(TaskException.RecurringSeriesNotFound::new);
+        e.setTitle(command.title());
+        e.setPriority(command.priority());
+        e.setIntervalType(command.intervalType());
+        e.setIntervalCount(command.intervalCount());
+        e.setLeadIntervalType(command.leadIntervalType());
+        e.setLeadIntervalCount(command.leadIntervalCount());
+        e.setAnchorDate(command.anchorDate());
+        e.setEndDate(command.endDate());
+        RecurringTaskSeriesEntity saved = series.saveAndFlush(e);
+        members.deleteBySeriesId(saved.getId());
+        members.flush();
+        subtaskTemplates.deleteBySeriesId(saved.getId());
+        subtaskTemplates.flush();
         saveMembersAndTemplates(saved.getId(), command.rotationMemberIds(), command.subtaskTemplates());
         return findById(saved.getId()).orElseThrow(TaskException.TaskNotFound::new);
     }
@@ -68,6 +98,12 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
     public void deleteById(UUID seriesId) {
         series.deleteById(seriesId);
         series.flush();
+    }
+
+    @Override
+    @Transactional
+    public void lockForMaterialization(UUID spaceId) {
+        series.lockMaterialization("tasks-materialize|" + spaceId);
     }
 
     private void saveMembersAndTemplates(UUID seriesId, List<UUID> rotationMemberIds, List<String> subtaskTemplateTexts) {
@@ -95,7 +131,7 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
         List<String> templates = subtaskTemplates.findBySeriesIdOrderByPositionAsc(e.getId()).stream()
             .map(RecurringTaskSeriesSubtaskTemplateEntity::getText).toList();
         return new RecurringTaskSeries(e.getId(), e.getSpaceId(), e.getTitle(), e.getPriority(), templates,
-            e.getIntervalType(), e.getIntervalCount(), e.getAnchorDate(), e.getOccurrenceCount(),
-            rotationMemberIds, e.getCurrentRotationIndex());
+            e.getIntervalType(), e.getIntervalCount(), e.getLeadIntervalType(), e.getLeadIntervalCount(),
+            e.getAnchorDate(), e.getEndDate(), e.getOccurrenceCount(), rotationMemberIds, e.getCurrentRotationIndex());
     }
 }

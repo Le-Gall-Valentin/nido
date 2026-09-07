@@ -22,6 +22,10 @@ public class TaskExceptionHandler {
                 new TaskErrorResponse(409, "All subtasks must be done before completing this task.");
             case TaskException.SameSpaceTransfer ignored ->
                 new TaskErrorResponse(400, "Cannot transfer a task into its own context.");
+            case TaskException.RecurringSeriesNotFound ignored -> new TaskErrorResponse(404, "Recurring series not found.");
+            case TaskException.LeadTimeExceedsInterval ignored ->
+                new TaskErrorResponse(400, "The lead time cannot exceed the recurrence interval.");
+            case TaskException.InvalidEndDate ignored -> new TaskErrorResponse(400, "The end date must be on or after the anchor date.");
         };
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), e.getClass().getSimpleName(), response.detail(),
