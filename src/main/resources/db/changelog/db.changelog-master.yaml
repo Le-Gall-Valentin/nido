@@ -116,3 +116,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/039-widen-finance-recurring-series-interval-type.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/040-widen-recurring-task-series-interval-type.yaml
+      relativeToChangelogFile: false

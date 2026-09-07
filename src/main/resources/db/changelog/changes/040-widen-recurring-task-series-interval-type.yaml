@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 040-widen-recurring-task-series-interval-type
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM pg_constraint WHERE conname = 'chk_recurring_task_series_interval_type' AND pg_get_constraintdef(oid) LIKE '%YEARLY%'
+      changes:
+        - sql:
+            sql: ALTER TABLE recurring_task_series DROP CONSTRAINT chk_recurring_task_series_interval_type
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE recurring_task_series ADD CONSTRAINT chk_recurring_task_series_interval_type CHECK (interval_type IN ('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'))
+            splitStatements: false
+      rollback:
+        - sql:
+            sql: ALTER TABLE recurring_task_series DROP CONSTRAINT chk_recurring_task_series_interval_type
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE recurring_task_series ADD CONSTRAINT chk_recurring_task_series_interval_type CHECK (interval_type IN ('DAILY', 'WEEKLY', 'MONTHLY'))
+            splitStatements: false

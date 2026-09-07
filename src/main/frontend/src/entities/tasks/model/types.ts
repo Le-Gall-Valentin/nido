@@ -1,6 +1,6 @@
 export type TaskStatus = 'TODO' | 'DOING' | 'DONE'
 export type TaskPriority = 'HIGH' | 'MED' | 'LOW'
-export type RecurrenceInterval = 'DAILY' | 'WEEKLY' | 'MONTHLY'
+export type RecurrenceInterval = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
 
 export interface Subtask {
   id: string

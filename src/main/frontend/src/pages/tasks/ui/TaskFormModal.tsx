@@ -7,7 +7,7 @@ import type { SpaceMember } from '@/entities/space'
 import type { RecurrenceInput, RecurrenceInterval, Task, TaskPriority } from '@/entities/tasks'
 import { TASK_PRIORITY_ORDER, TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
 
-const INTERVAL_ORDER: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY']
+const INTERVAL_ORDER: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
 
 export interface TaskFormInput {
   title: string
