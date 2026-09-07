@@ -26,6 +26,8 @@ interface TaskFormModalProps {
   initialTask: Task | null
   members: SpaceMember[]
   isPersonal: boolean
+  /** Set by the caller when the backend rejected the last submission — distinct from the client-side checks below. */
+  submitError?: string | null
 }
 
 interface TaskDraft {
@@ -58,7 +60,7 @@ function draftFrom(task: Task | null): TaskDraft {
   }
 }
 
-export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, isPersonal }: TaskFormModalProps) {
+export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, isPersonal, submitError = null }: TaskFormModalProps) {
   const { t } = useTranslation('tasks')
   const [draft, setDraft] = useState(() => draftFrom(initialTask))
   const [newSubtask, setNewSubtask] = useState('')
@@ -228,7 +230,7 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
           </div>
         )}
 
-        {error && <p className="text-sm font-medium text-status-red">{error}</p>}
+        {(error || submitError) && <p className="text-sm font-medium text-status-red">{error || submitError}</p>}
 
         <div className="flex gap-2 pt-2">
           <Button type="button" onClick={onClose} className="flex-1">{t('form.cancel')}</Button>
