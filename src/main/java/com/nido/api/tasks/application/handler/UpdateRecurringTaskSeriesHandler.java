@@ -3,6 +3,7 @@ package com.nido.api.tasks.application.handler;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.tasks.application.port.in.UpdateRecurringTaskSeriesUseCase;
+import com.nido.api.tasks.application.service.TaskSpaceMemberValidator;
 import com.nido.api.tasks.domain.model.RecurrenceScheduler;
 import com.nido.api.tasks.domain.model.RecurringTaskSeries;
 import com.nido.api.tasks.domain.model.TaskException;
@@ -16,9 +17,11 @@ import java.time.LocalDate;
 public class UpdateRecurringTaskSeriesHandler implements UpdateRecurringTaskSeriesUseCase {
 
     private final RecurringTaskSeriesRepository seriesRepository;
+    private final TaskSpaceMemberValidator spaceMemberValidator;
 
-    public UpdateRecurringTaskSeriesHandler(RecurringTaskSeriesRepository seriesRepository) {
+    public UpdateRecurringTaskSeriesHandler(RecurringTaskSeriesRepository seriesRepository, TaskSpaceMemberValidator spaceMemberValidator) {
         this.seriesRepository = seriesRepository;
+        this.spaceMemberValidator = spaceMemberValidator;
     }
 
     @Override
@@ -34,6 +37,7 @@ public class UpdateRecurringTaskSeriesHandler implements UpdateRecurringTaskSeri
         if (command.endDate() != null && command.endDate().isBefore(command.anchorDate())) {
             throw new TaskException.InvalidEndDate();
         }
+        command.rotationMemberIds().forEach(memberId -> spaceMemberValidator.ensureMember(command.spaceId(), memberId));
         RecurringTaskSeries existing = seriesRepository.findById(command.seriesId())
             .orElseThrow(TaskException.RecurringSeriesNotFound::new);
         if (!existing.spaceId().equals(command.spaceId())) {

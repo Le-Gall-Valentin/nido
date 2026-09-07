@@ -26,6 +26,7 @@ public class TaskExceptionHandler {
             case TaskException.LeadTimeExceedsInterval ignored ->
                 new TaskErrorResponse(400, "The lead time cannot exceed the recurrence interval.");
             case TaskException.InvalidEndDate ignored -> new TaskErrorResponse(400, "The end date must be on or after the anchor date.");
+            case TaskException.MemberNotInSpace ignored -> new TaskErrorResponse(404, "Member is not part of this space.");
         };
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), e.getClass().getSimpleName(), response.detail(),

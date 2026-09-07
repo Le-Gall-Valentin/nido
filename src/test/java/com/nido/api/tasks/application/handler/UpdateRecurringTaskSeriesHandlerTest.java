@@ -3,6 +3,7 @@ package com.nido.api.tasks.application.handler;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
+import com.nido.api.tasks.application.service.TaskSpaceMemberValidator;
 import com.nido.api.tasks.domain.model.RecurrenceInterval;
 import com.nido.api.tasks.domain.model.RecurringTaskSeries;
 import com.nido.api.tasks.domain.model.TaskException;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,6 +34,7 @@ import static org.mockito.Mockito.when;
 class UpdateRecurringTaskSeriesHandlerTest {
 
     @Mock RecurringTaskSeriesRepository seriesRepository;
+    @Mock TaskSpaceMemberValidator spaceMemberValidator;
     private UpdateRecurringTaskSeriesHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID seriesId = UUID.randomUUID();
@@ -39,7 +42,7 @@ class UpdateRecurringTaskSeriesHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new UpdateRecurringTaskSeriesHandler(seriesRepository);
+        handler = new UpdateRecurringTaskSeriesHandler(seriesRepository, spaceMemberValidator);
     }
 
     private SpaceMembership membership(SpaceRole role) {
@@ -47,8 +50,12 @@ class UpdateRecurringTaskSeriesHandlerTest {
     }
 
     private UpdateRecurringTaskSeriesCommand command(int leadIntervalCount, LocalDate endDate) {
+        return command(leadIntervalCount, endDate, List.of());
+    }
+
+    private UpdateRecurringTaskSeriesCommand command(int leadIntervalCount, LocalDate endDate, List<UUID> rotationMemberIds) {
         return new UpdateRecurringTaskSeriesCommand(seriesId, spaceId, "Sortir les poubelles", TaskPriority.MED, List.of(),
-            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, leadIntervalCount, anchor, endDate, List.of());
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, leadIntervalCount, anchor, endDate, rotationMemberIds);
     }
 
     private RecurringTaskSeries existing() {
@@ -109,6 +116,17 @@ class UpdateRecurringTaskSeriesHandlerTest {
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(TaskException.InvalidEndDate.class);
+        verify(seriesRepository, never()).update(any());
+    }
+
+    @Test
+    void a_rotation_member_who_is_not_in_the_space_is_rejected() {
+        UUID stranger = UUID.randomUUID();
+        UpdateRecurringTaskSeriesCommand command = command(0, null, List.of(stranger));
+        doThrow(new TaskException.MemberNotInSpace()).when(spaceMemberValidator).ensureMember(spaceId, stranger);
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.MEMBER)))
+            .isInstanceOf(TaskException.MemberNotInSpace.class);
         verify(seriesRepository, never()).update(any());
     }
 }

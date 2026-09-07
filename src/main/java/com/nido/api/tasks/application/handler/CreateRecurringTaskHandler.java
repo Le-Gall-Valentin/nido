@@ -3,6 +3,7 @@ package com.nido.api.tasks.application.handler;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.tasks.application.port.in.CreateRecurringTaskUseCase;
+import com.nido.api.tasks.application.service.TaskSpaceMemberValidator;
 import com.nido.api.tasks.domain.model.CreateRecurringTaskSeriesCommand;
 import com.nido.api.tasks.domain.model.CreateTaskCommand;
 import com.nido.api.tasks.domain.model.RecurrenceScheduler;
@@ -23,10 +24,13 @@ public class CreateRecurringTaskHandler implements CreateRecurringTaskUseCase {
 
     private final TaskRepository taskRepository;
     private final RecurringTaskSeriesRepository seriesRepository;
+    private final TaskSpaceMemberValidator spaceMemberValidator;
 
-    public CreateRecurringTaskHandler(TaskRepository taskRepository, RecurringTaskSeriesRepository seriesRepository) {
+    public CreateRecurringTaskHandler(TaskRepository taskRepository, RecurringTaskSeriesRepository seriesRepository,
+                                       TaskSpaceMemberValidator spaceMemberValidator) {
         this.taskRepository = taskRepository;
         this.seriesRepository = seriesRepository;
+        this.spaceMemberValidator = spaceMemberValidator;
     }
 
     @Override
@@ -42,6 +46,7 @@ public class CreateRecurringTaskHandler implements CreateRecurringTaskUseCase {
         if (command.endDate() != null && command.endDate().isBefore(command.anchorDate())) {
             throw new TaskException.InvalidEndDate();
         }
+        command.rotationMemberIds().forEach(memberId -> spaceMemberValidator.ensureMember(command.spaceId(), memberId));
         RecurringTaskSeries series = seriesRepository.create(command);
         List<UUID> firstAssignees = series.rotationMemberIds().isEmpty()
             ? List.of() : List.of(series.rotationMemberIds().get(0));
