@@ -39,7 +39,9 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
   const [label, setLabel] = useState(transaction?.label ?? '')
   const [amount, setAmount] = useState(transaction ? String(transaction.amount) : '')
   const [type, setType] = useState<TransactionType>(transaction?.type ?? 'EXPENSE')
-  const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? categories[0]?.id ?? '')
+  const [categoryId, setCategoryId] = useState(
+    transaction?.categoryId ?? categories.find((c) => c.type === (transaction?.type ?? 'EXPENSE'))?.id ?? ''
+  )
   const [date, setDate] = useState(transaction?.date ?? new Date().toISOString().slice(0, 10))
   const [payerId, setPayerId] = useState<string>(transaction?.payerId ?? currentUserId ?? '')
   const [contributorIds, setContributorIds] = useState<string[]>(
