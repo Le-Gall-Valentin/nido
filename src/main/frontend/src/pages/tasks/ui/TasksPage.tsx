@@ -1,26 +1,17 @@
-import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, ArrowRightLeft, GripVertical, Repeat } from 'lucide-react'
-import {
-  DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, type DragEndEvent,
-} from '@dnd-kit/core'
+import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { Alert, ConfirmDeleteModal, Dialog, Spinner } from '@/shared/ui'
-import { useMySpaces, useWritableSpaces } from '@/features/space-switcher'
-import { canWrite, isPersonal, useSpaceMembers, TransferDialog } from '@/entities/space'
+import { useSpaceMembers, TransferDialog } from '@/entities/space'
 import { UserAvatar } from '@/entities/user'
-import {
-  tasksApi, TasksApiProvider, useTasks, useCreateTask, useCreateRecurringTask, useUpdateTask,
-  useChangeTaskStatus, useToggleSubtask, useDeleteTask, useMoveTask,
-  useRecurringTaskSeries, useUpdateRecurringTaskSeries, useDeleteRecurringTaskSeries,
-  type TasksApi, type Task, type TaskStatus, type RecurringTaskSeries,
-} from '@/entities/tasks'
+import { tasksApi, TasksApiProvider, type TasksApi, type Task, type TaskStatus } from '@/entities/tasks'
 import { TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
-import { TaskFormModal, type TaskFormInput } from './TaskFormModal'
+import { useTasksPageState } from '../model/useTasksPageState'
+import { TaskFormModal } from './TaskFormModal'
 import { DeleteTaskModal } from './DeleteTaskModal'
 import { RecurringTaskSeriesManagerModal } from './RecurringTaskSeriesManagerModal'
-import { RecurringTaskSeriesFormModal, type RecurringTaskSeriesFormInput } from './RecurringTaskSeriesFormModal'
-import { resolveTaskMove } from './resolveTaskMove'
+import { RecurringTaskSeriesFormModal } from './RecurringTaskSeriesFormModal'
 
 const COLUMN_ORDER: TaskStatus[] = ['TODO', 'DOING', 'DONE']
 
@@ -166,86 +157,23 @@ function TaskColumn({ status, tasks, ...cardProps }: { status: TaskStatus; tasks
 function TasksPageContent() {
   const { t } = useTranslation('tasks')
   const { spaceId = '' } = useParams<{ spaceId: string }>()
-  const { data: tasks, isPending, isError } = useTasks(spaceId)
   const { data: members } = useSpaceMembers(spaceId)
-  const { data: mySpaces } = useMySpaces()
-  const { data: writableDestinations } = useWritableSpaces(spaceId)
-
-  const createTask = useCreateTask(spaceId)
-  const createRecurringTask = useCreateRecurringTask(spaceId)
-  const updateTask = useUpdateTask(spaceId)
-  const changeTaskStatus = useChangeTaskStatus(spaceId)
-  const toggleSubtask = useToggleSubtask(spaceId)
-  const deleteTask = useDeleteTask(spaceId)
-  const moveTask = useMoveTask(spaceId)
-  const { data: recurringTaskSeries } = useRecurringTaskSeries(spaceId)
-  const updateRecurringTaskSeries = useUpdateRecurringTaskSeries(spaceId)
-  const deleteRecurringTaskSeries = useDeleteRecurringTaskSeries(spaceId)
-
-  const [formState, setFormState] = useState<{ mode: 'create' } | { mode: 'edit'; task: Task } | null>(null)
-  const [deletingTask, setDeletingTask] = useState<Task | null>(null)
-  const [movingTask, setMovingTask] = useState<Task | null>(null)
-  const [statusPickerTask, setStatusPickerTask] = useState<Task | null>(null)
-  const [managingRecurringSeries, setManagingRecurringSeries] = useState(false)
-  const [editingSeries, setEditingSeries] = useState<RecurringTaskSeries | null>(null)
-  const [deletingSeries, setDeletingSeries] = useState<RecurringTaskSeries | null>(null)
-
-  const currentSpace = mySpaces?.find((s) => s.id === spaceId)
-  const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
-  const spaceIsPersonal = currentSpace ? isPersonal(currentSpace) : false
+  const {
+    tasks, isPending, isError, writableDestinations, recurringTaskSeries,
+    canWriteHere, spaceIsPersonal,
+    createTask, createRecurringTask, updateTask, toggleSubtask, deleteTask,
+    updateRecurringTaskSeries, deleteRecurringTaskSeries,
+    formState, setFormState, closeForm,
+    deletingTask, setDeletingTask,
+    movingTask, setMovingTask,
+    statusPickerTask, setStatusPickerTask,
+    managingRecurringSeries, setManagingRecurringSeries,
+    editingSeries, setEditingSeries,
+    deletingSeries, setDeletingSeries,
+    handleFormSubmit, handleUpdateSeriesSubmit, handleToggleDone, handleDragEnd, handleMoveConfirm, handlePickStatus,
+  } = useTasksPageState(spaceId)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
-
-  function handleFormSubmit(input: TaskFormInput) {
-    if (formState?.mode === 'edit') {
-      updateTask.mutate(
-        { taskId: formState.task.id, title: input.title, priority: input.priority, dueDate: input.dueDate, assigneeIds: input.assigneeIds },
-        { onSuccess: () => setFormState(null) }
-      )
-      return
-    }
-    if (input.recurrence) {
-      createRecurringTask.mutate(
-        { title: input.title, priority: input.priority, subtasks: input.subtasks, recurrence: input.recurrence },
-        { onSuccess: () => setFormState(null) }
-      )
-      return
-    }
-    createTask.mutate(
-      { title: input.title, priority: input.priority, dueDate: input.dueDate, assigneeIds: input.assigneeIds, subtasks: input.subtasks },
-      { onSuccess: () => setFormState(null) }
-    )
-  }
-
-  function handleUpdateSeriesSubmit(input: RecurringTaskSeriesFormInput) {
-    if (!editingSeries) return
-    updateRecurringTaskSeries.mutate({ seriesId: editingSeries.id, ...input }, { onSuccess: () => setEditingSeries(null) })
-  }
-
-  function handleToggleDone(task: Task) {
-    const target = task.status === 'DONE' ? 'TODO' : 'DONE'
-    const resolved = resolveTaskMove(tasks ?? [], task.id, target)
-    if (resolved) changeTaskStatus.mutate({ taskId: task.id, status: target })
-  }
-
-  function handleDragEnd(event: DragEndEvent) {
-    if (!event.over) return
-    const targetStatus = event.over.id as TaskStatus
-    const resolved = resolveTaskMove(tasks ?? [], String(event.active.id), targetStatus)
-    if (resolved) changeTaskStatus.mutate({ taskId: resolved.id, status: targetStatus })
-  }
-
-  async function handleMoveConfirm(destinationSpaceId: string): Promise<void> {
-    if (!movingTask) return
-    await moveTask.mutateAsync({ taskId: movingTask.id, destinationSpaceId })
-  }
-
-  function handlePickStatus(status: TaskStatus) {
-    if (!statusPickerTask) return
-    const resolved = resolveTaskMove(tasks ?? [], statusPickerTask.id, status)
-    if (resolved) changeTaskStatus.mutate({ taskId: statusPickerTask.id, status })
-    setStatusPickerTask(null)
-  }
 
   if (isPending) return <Spinner label={t('loading')} fullscreen={false} />
   if (isError) return <Alert variant="error">{t('error.load_failed')}</Alert>
@@ -289,12 +217,7 @@ function TasksPageContent() {
       {formState && (
         <TaskFormModal
           open
-          onClose={() => {
-            setFormState(null)
-            createTask.reset()
-            createRecurringTask.reset()
-            updateTask.reset()
-          }}
+          onClose={closeForm}
           onSubmit={handleFormSubmit}
           initialTask={formState.mode === 'edit' ? formState.task : null}
           members={members ?? []}
