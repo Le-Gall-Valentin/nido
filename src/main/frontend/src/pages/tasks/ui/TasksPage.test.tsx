@@ -27,12 +27,19 @@ const CURRENT_SPACE: SpaceSummary = {
   id: 'space-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 2,
 }
 
+const RECURRING_SERIES = [{ id: 's-1', title: 'Sortir les poubelles', priority: 'MED' as const, subtaskTemplates: [],
+  intervalType: 'WEEKLY' as const, intervalCount: 1, leadIntervalType: 'DAILY' as const, leadIntervalCount: 0,
+  anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [] }]
+
 function fakeApi(overrides: Partial<ITasksApi> = {}): ITasksApi {
   return {
     listTasks: vi.fn().mockResolvedValue(TASKS),
     createTask: vi.fn(), createRecurringTask: vi.fn(), updateTask: vi.fn(),
     changeTaskStatus: vi.fn().mockResolvedValue(TASKS[0]), toggleSubtask: vi.fn(),
     deleteTask: vi.fn().mockResolvedValue(undefined), moveTask: vi.fn(),
+    listRecurringTaskSeries: vi.fn().mockResolvedValue(RECURRING_SERIES),
+    updateRecurringTaskSeries: vi.fn().mockResolvedValue(RECURRING_SERIES[0]),
+    deleteRecurringTaskSeries: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   }
 }
@@ -175,5 +182,35 @@ describe('TasksPage', () => {
     fireEvent.click(screen.getByText('Prendre RDV'))
 
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('opens the recurring series manager and edits a series', async () => {
+    const { api } = setup()
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByText('recurring_series.manage'))
+    expect(await screen.findByText('Sortir les poubelles')).toBeDefined()
+
+    fireEvent.click(screen.getByLabelText('recurring_series.edit'))
+    fireEvent.change(screen.getByLabelText('form.title_label'), { target: { value: 'Sortir les poubelles et le compost' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    await waitFor(() => expect(api.updateRecurringTaskSeries).toHaveBeenCalledWith(
+      'space-1', 's-1', 'Sortir les poubelles et le compost', 'MED', [], {
+        intervalType: 'WEEKLY', intervalCount: 1, leadIntervalType: 'DAILY', leadIntervalCount: 0,
+        anchorDate: '2026-01-07', endDate: null, rotationMemberIds: [],
+      }))
+  })
+
+  it('deletes a recurring series through the confirmation modal', async () => {
+    const { api } = setup()
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByText('recurring_series.manage'))
+    await screen.findByText('Sortir les poubelles')
+    fireEvent.click(screen.getByLabelText('recurring_series.delete'))
+    fireEvent.click(screen.getByText('delete_confirm.confirm'))
+
+    await waitFor(() => expect(api.deleteRecurringTaskSeries).toHaveBeenCalledWith('space-1', 's-1'))
   })
 })
