@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
 
@@ -68,15 +67,14 @@ class ListTasksHandlerTest {
             RecurrenceInterval.DAILY, 1, RecurrenceInterval.DAILY, 0, anchor, null, 0, List.of(), 0);
         when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(series));
         Task materialized = task(TaskPriority.MED);
-        when(taskRepository.create(any())).thenReturn(materialized);
         when(taskRepository.findBySpaceId(spaceId)).thenReturn(List.of(materialized));
 
         List<Task> result = handler.list(membership(), LocalDate.of(2026, 1, 8));
 
         InOrder order = inOrder(seriesRepository, taskRepository);
         order.verify(seriesRepository).lockForMaterialization(spaceId);
-        order.verify(taskRepository).create(new CreateTaskCommand(
-            spaceId, "Sortir les poubelles", TaskPriority.MED, LocalDate.of(2026, 1, 8), List.of(), List.of(), seriesId));
+        order.verify(taskRepository).createAll(List.of(new CreateTaskCommand(
+            spaceId, "Sortir les poubelles", TaskPriority.MED, LocalDate.of(2026, 1, 8), List.of(), List.of(), seriesId)));
         order.verify(taskRepository).findBySpaceId(spaceId);
         assertThat(result).containsExactly(materialized);
     }

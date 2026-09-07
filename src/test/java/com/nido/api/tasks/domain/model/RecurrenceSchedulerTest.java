@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 class RecurrenceSchedulerTest {
 
@@ -108,5 +110,39 @@ class RecurrenceSchedulerTest {
     void minus_a_month_from_the_31st_clamps_to_the_shorter_month() {
         assertThat(RecurrenceScheduler.minus(LocalDate.of(2026, 3, 31), RecurrenceInterval.MONTHLY, 1))
             .isEqualTo(LocalDate.of(2026, 2, 28));
+    }
+
+    @Test
+    void validateSchedule_accepts_a_lead_time_within_the_recurrence_interval() {
+        LocalDate anchor = LocalDate.of(2026, 1, 7);
+
+        assertThatNoException().isThrownBy(() ->
+            RecurrenceScheduler.validateSchedule(anchor, RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 3, null));
+    }
+
+    @Test
+    void validateSchedule_rejects_a_lead_time_longer_than_the_recurrence_interval() {
+        LocalDate anchor = LocalDate.of(2026, 1, 7);
+
+        assertThatThrownBy(() ->
+            RecurrenceScheduler.validateSchedule(anchor, RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 8, null))
+            .isInstanceOf(TaskException.LeadTimeExceedsInterval.class);
+    }
+
+    @Test
+    void validateSchedule_rejects_an_end_date_before_the_anchor_date() {
+        LocalDate anchor = LocalDate.of(2026, 1, 7);
+
+        assertThatThrownBy(() ->
+            RecurrenceScheduler.validateSchedule(anchor, RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, anchor.minusDays(1)))
+            .isInstanceOf(TaskException.InvalidEndDate.class);
+    }
+
+    @Test
+    void validateSchedule_accepts_a_null_end_date() {
+        LocalDate anchor = LocalDate.of(2026, 1, 7);
+
+        assertThatNoException().isThrownBy(() ->
+            RecurrenceScheduler.validateSchedule(anchor, RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, null));
     }
 }
