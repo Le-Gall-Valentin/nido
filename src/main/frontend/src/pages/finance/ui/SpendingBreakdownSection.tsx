@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Category, CategoryAmount } from '@/entities/finance'
+import type { Category, CategoryAmount, TransactionType } from '@/entities/finance'
 import { formatAmount } from '../lib/formatAmount'
 
 /** A hand-drawn SVG donut (no charting library in this app) with a colored ring segment per category. */
@@ -8,7 +8,7 @@ function BreakdownDonut({ breakdown, categoryById }: { breakdown: CategoryAmount
   const containerRef = useRef<HTMLDivElement>(null)
   const [hovered, setHovered] = useState<{ categoryId: string; x: number; y: number } | null>(null)
   const total = breakdown.reduce((sum, row) => sum + row.amount, 0)
-  const radius = 52
+  const radius = 78
   const circumference = 2 * Math.PI * radius
   let offset = 0
 
@@ -24,8 +24,8 @@ function BreakdownDonut({ breakdown, categoryById }: { breakdown: CategoryAmount
 
   return (
     <div ref={containerRef} className="relative shrink-0">
-      <svg width={128} height={128} viewBox="0 0 128 128" className="-rotate-90">
-        <circle cx={64} cy={64} r={radius} fill="none" stroke="var(--color-bg-3)" strokeWidth={20} />
+      <svg width={192} height={192} viewBox="0 0 192 192" className="-rotate-90">
+        <circle cx={96} cy={96} r={radius} fill="none" stroke="var(--color-bg-3)" strokeWidth={30} />
         {total > 0 && breakdown.map((row) => {
           const category = categoryById.get(row.categoryId)
           const dash = (row.amount / total) * circumference
@@ -33,8 +33,8 @@ function BreakdownDonut({ breakdown, categoryById }: { breakdown: CategoryAmount
           offset += dash
           const percent = Math.round((row.amount / total) * 100)
           return (
-            <circle key={row.categoryId} cx={64} cy={64} r={radius} fill="none"
-              stroke={category?.color ?? 'var(--color-fg-3)'} strokeWidth={20}
+            <circle key={row.categoryId} cx={96} cy={96} r={radius} fill="none"
+              stroke={category?.color ?? 'var(--color-fg-3)'} strokeWidth={30}
               strokeDasharray={`${dash} ${circumference - dash}`} strokeDashoffset={-segmentOffset}
               role="img" aria-label={`${category?.label ?? row.categoryId}: ${percent}%, ${formatAmount(row.amount)}`}
               onMouseEnter={(e) => handlePointerMove(row.categoryId, e)}
@@ -66,19 +66,33 @@ interface SpendingBreakdownSectionProps {
 
 export function SpendingBreakdownSection({ breakdown, categoryById, onSelectCategory }: SpendingBreakdownSectionProps) {
   const { t } = useTranslation('finance')
-  const total = breakdown.reduce((sum, row) => sum + row.amount, 0)
+  const [type, setType] = useState<TransactionType>('EXPENSE')
+  const filtered = breakdown.filter((row) => categoryById.get(row.categoryId)?.type === type)
+  const total = filtered.reduce((sum, row) => sum + row.amount, 0)
 
   return (
     <section className="flex flex-col rounded-2xl border border-border bg-bg-1 p-4">
-      <h2 className="mb-3 text-[15px] font-semibold text-fg-0">{t('breakdown.title')}</h2>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-[15px] font-semibold text-fg-0">{t(`breakdown.title_${type}`)}</h2>
+        <div className="flex shrink-0 gap-1 rounded-[11px] bg-bg-2 p-1">
+          <button type="button" onClick={() => setType('EXPENSE')} aria-pressed={type === 'EXPENSE'}
+            className={`rounded-[8px] px-2.5 py-1 text-xs font-semibold transition-colors ${type === 'EXPENSE' ? 'bg-bg-1 text-fg-0 shadow-sm' : 'text-fg-3'}`}>
+            {t('type.EXPENSE')}
+          </button>
+          <button type="button" onClick={() => setType('INCOME')} aria-pressed={type === 'INCOME'}
+            className={`rounded-[8px] px-2.5 py-1 text-xs font-semibold transition-colors ${type === 'INCOME' ? 'bg-bg-1 text-fg-0 shadow-sm' : 'text-fg-3'}`}>
+            {t('type.INCOME')}
+          </button>
+        </div>
+      </div>
       <div className="flex flex-1 items-center justify-center">
-        {breakdown.length === 0 ? (
-          <p className="text-sm text-fg-3">{t('breakdown.empty')}</p>
+        {filtered.length === 0 ? (
+          <p className="text-sm text-fg-3">{t(`breakdown.empty_${type}`)}</p>
         ) : (
-          <div className="flex w-full flex-col items-center gap-4 sm:flex-row sm:gap-6">
-            <BreakdownDonut breakdown={breakdown} categoryById={categoryById} />
-            <ul className="w-full space-y-2 sm:w-auto sm:flex-1">
-              {breakdown.map((row) => {
+          <div className="flex w-full flex-col items-center gap-4">
+            <BreakdownDonut breakdown={filtered} categoryById={categoryById} />
+            <ul className="w-full space-y-2">
+              {filtered.map((row) => {
                 const category = categoryById.get(row.categoryId)
                 const percent = total > 0 ? Math.round((row.amount / total) * 100) : 0
                 return (

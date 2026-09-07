@@ -61,7 +61,11 @@ public class GetFinanceStatsHandler implements GetFinanceStatsUseCase {
         Map<UUID, BigDecimal> spentByCategory = transactions.stream()
             .filter(t -> t.type() == TransactionType.EXPENSE)
             .collect(Collectors.groupingBy(Transaction::categoryId, Collectors.reducing(BigDecimal.ZERO, Transaction::amount, BigDecimal::add)));
-        List<CategoryAmount> breakdown = spentByCategory.entrySet().stream()
+        // Every category, not just expense ones — the frontend now splits this by the
+        // category's own (fixed) type for its two breakdown views (spending vs income).
+        Map<UUID, BigDecimal> amountByCategory = transactions.stream()
+            .collect(Collectors.groupingBy(Transaction::categoryId, Collectors.reducing(BigDecimal.ZERO, Transaction::amount, BigDecimal::add)));
+        List<CategoryAmount> breakdown = amountByCategory.entrySet().stream()
             .map(e -> new CategoryAmount(e.getKey(), e.getValue())).toList();
 
         List<Budget> budgets = budgetRepository.findBySpaceId(caller.spaceId());

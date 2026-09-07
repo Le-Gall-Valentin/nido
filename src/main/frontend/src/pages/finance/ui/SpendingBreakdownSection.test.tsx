@@ -8,13 +8,29 @@ vi.mock('react-i18next', () => ({
 }))
 
 const alimentation: Category = { id: 'c1', label: 'Alimentation', color: '#f59e0b', icon: 'Utensils', isDefault: true, type: 'EXPENSE' }
-const categoryById = new Map([['c1', alimentation]])
+const revenu: Category = { id: 'c2', label: 'Revenu', color: '#22c55e', icon: 'Wallet', isDefault: true, type: 'INCOME' }
+const categoryById = new Map([['c1', alimentation], ['c2', revenu]])
 
 describe('SpendingBreakdownSection', () => {
   it('shows an empty state when there is no spending', () => {
     render(<SpendingBreakdownSection breakdown={[]} categoryById={categoryById} onSelectCategory={vi.fn()} />)
 
-    expect(screen.getByText('breakdown.empty')).toBeDefined()
+    expect(screen.getByText('breakdown.empty_EXPENSE')).toBeDefined()
+  })
+
+  it('switches to the income breakdown, filtering out expense categories', () => {
+    const breakdown: CategoryAmount[] = [{ categoryId: 'c1', amount: 195.3 }, { categoryId: 'c2', amount: 1000 }]
+    render(<SpendingBreakdownSection breakdown={breakdown} categoryById={categoryById} onSelectCategory={vi.fn()} />)
+
+    expect(screen.getByText('breakdown.title_EXPENSE')).toBeDefined()
+    expect(screen.getByText('Alimentation')).toBeDefined()
+    expect(screen.queryByText('Revenu')).toBeNull()
+
+    fireEvent.click(screen.getByText('type.INCOME'))
+
+    expect(screen.getByText('breakdown.title_INCOME')).toBeDefined()
+    expect(screen.getByText('Revenu')).toBeDefined()
+    expect(screen.queryByText('Alimentation')).toBeNull()
   })
 
   it('lists each category with its share of the total, and requests its transactions on click', () => {
