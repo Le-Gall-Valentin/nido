@@ -158,7 +158,7 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
                 aria-label={t('form.recurrence_interval_type_label')}
                 value={draft.intervalType}
                 onChange={(e) => setDraft((d) => ({ ...d, intervalType: e.target.value as RecurrenceInterval }))}
-                className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0"
+                className="flex-1 rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0"
               >
                 {INTERVAL_ORDER.map((i) => <option key={i} value={i}>{t(`form.interval.${i}`)}</option>)}
               </select>
@@ -171,7 +171,7 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
                 aria-label={t('recurring_series.lead_time_type_label')}
                 value={draft.leadIntervalType}
                 onChange={(e) => setDraft((d) => ({ ...d, leadIntervalType: e.target.value as RecurrenceInterval }))}
-                className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0"
+                className="flex-1 rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0"
               >
                 {INTERVAL_ORDER.map((i) => <option key={i} value={i}>{t(`form.interval.${i}`)}</option>)}
               </select>
@@ -218,9 +218,11 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
               </div>
             ))}
             <div className="flex items-center gap-2">
-              <Input label={t('form.subtask_placeholder')} srOnlyLabel placeholder={t('form.subtask_placeholder')}
-                value={newSubtask} onChange={(e) => setNewSubtask(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }} />
+              <div className="flex-1">
+                <Input label={t('form.subtask_placeholder')} srOnlyLabel placeholder={t('form.subtask_placeholder')}
+                  value={newSubtask} onChange={(e) => setNewSubtask(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }} />
+              </div>
               <Button type="button" onClick={addSubtask}><Plus className="size-4" /></Button>
             </div>
           </div>
@@ -228,9 +230,9 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
 
         {error && <p className="text-sm font-medium text-status-red">{error}</p>}
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" onClick={onClose}>{t('form.cancel')}</Button>
-          <Button type="button" onClick={handleSave} style={CTA_BUTTON_STYLE}>{t('form.save')}</Button>
+        <div className="flex gap-2 pt-2">
+          <Button type="button" onClick={onClose} className="flex-1">{t('form.cancel')}</Button>
+          <Button type="button" onClick={handleSave} style={CTA_BUTTON_STYLE} className="flex-1">{t('form.save')}</Button>
         </div>
       </div>
     </Dialog>
