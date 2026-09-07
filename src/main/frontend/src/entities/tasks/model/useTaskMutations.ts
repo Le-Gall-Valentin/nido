@@ -19,7 +19,10 @@ export function useCreateRecurringTask(spaceId: string) {
   return useMutation({
     mutationFn: (input: { title: string; priority: TaskPriority; subtasks: string[]; recurrence: RecurrenceInput }) =>
       api.createRecurringTask(spaceId, input.title, input.priority, input.subtasks, input.recurrence),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) })
+      queryClient.invalidateQueries({ queryKey: recurringTaskSeriesKey(spaceId) })
+    },
   })
 }
 
