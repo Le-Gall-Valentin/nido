@@ -29,14 +29,8 @@ public class UpdateRecurringTaskSeriesHandler implements UpdateRecurringTaskSeri
     public RecurringTaskSeries update(UpdateRecurringTaskSeriesCommand command, SpaceMembership caller) {
         caller.ensureSameSpace(command.spaceId());
         caller.ensureCanWrite();
-        LocalDate leadDate = RecurrenceScheduler.nextDueDate(command.anchorDate(), command.leadIntervalType(), command.leadIntervalCount(), 1);
-        LocalDate mainDate = RecurrenceScheduler.nextDueDate(command.anchorDate(), command.intervalType(), command.intervalCount(), 1);
-        if (leadDate.isAfter(mainDate)) {
-            throw new TaskException.LeadTimeExceedsInterval();
-        }
-        if (command.endDate() != null && command.endDate().isBefore(command.anchorDate())) {
-            throw new TaskException.InvalidEndDate();
-        }
+        RecurrenceScheduler.validateSchedule(command.anchorDate(), command.intervalType(), command.intervalCount(),
+            command.leadIntervalType(), command.leadIntervalCount(), command.endDate());
         command.rotationMemberIds().forEach(memberId -> spaceMemberValidator.ensureMember(command.spaceId(), memberId));
         RecurringTaskSeries existing = seriesRepository.findById(command.seriesId())
             .orElseThrow(TaskException.RecurringSeriesNotFound::new);

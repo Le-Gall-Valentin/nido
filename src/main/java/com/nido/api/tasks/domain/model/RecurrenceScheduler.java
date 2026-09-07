@@ -48,4 +48,22 @@ public final class RecurrenceScheduler {
             case YEARLY -> date.minusYears(intervalCount);
         };
     }
+
+    /**
+     * Validates the two schedule invariants shared by every recurring series' create/update
+     * command: the lead time never opens an occurrence's window before the previous one's due
+     * date, and an end date is never before the anchor date (which would never produce a single
+     * occurrence).
+     */
+    public static void validateSchedule(LocalDate anchorDate, RecurrenceInterval intervalType, int intervalCount,
+                                         RecurrenceInterval leadIntervalType, int leadIntervalCount, LocalDate endDate) {
+        LocalDate leadDate = nextDueDate(anchorDate, leadIntervalType, leadIntervalCount, 1);
+        LocalDate mainDate = nextDueDate(anchorDate, intervalType, intervalCount, 1);
+        if (leadDate.isAfter(mainDate)) {
+            throw new TaskException.LeadTimeExceedsInterval();
+        }
+        if (endDate != null && endDate.isBefore(anchorDate)) {
+            throw new TaskException.InvalidEndDate();
+        }
+    }
 }
