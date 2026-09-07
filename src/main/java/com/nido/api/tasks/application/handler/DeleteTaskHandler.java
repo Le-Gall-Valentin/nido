@@ -5,7 +5,6 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.tasks.application.port.in.DeleteTaskUseCase;
 import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskException;
-import com.nido.api.tasks.domain.port.out.RecurringTaskSeriesRepository;
 import com.nido.api.tasks.domain.port.out.TaskRepository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,11 +14,9 @@ import java.util.UUID;
 public class DeleteTaskHandler implements DeleteTaskUseCase {
 
     private final TaskRepository taskRepository;
-    private final RecurringTaskSeriesRepository seriesRepository;
 
-    public DeleteTaskHandler(TaskRepository taskRepository, RecurringTaskSeriesRepository seriesRepository) {
+    public DeleteTaskHandler(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
-        this.seriesRepository = seriesRepository;
     }
 
     @Override
@@ -31,12 +28,6 @@ public class DeleteTaskHandler implements DeleteTaskUseCase {
         if (!existing.spaceId().equals(spaceId)) {
             throw new TaskException.TaskNotFound();
         }
-        if (existing.recurringSeriesId() != null) {
-            // The tasks.recurring_series_id foreign key is ON DELETE CASCADE
-            // (see Task 9), so deleting the series also removes this task row.
-            seriesRepository.deleteById(existing.recurringSeriesId());
-        } else {
-            taskRepository.delete(taskId);
-        }
+        taskRepository.delete(taskId);
     }
 }
