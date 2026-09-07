@@ -9,7 +9,8 @@ import { TASK_PRIORITY_ORDER, TASK_PRIORITY_META } from '../lib/taskPriorityMeta
 import { leadTimeExceedsInterval } from './leadTimeExceedsInterval'
 
 const INTERVAL_ORDER: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
-const SELECT_CLASSNAME = 'rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none'
+const SELECT_CLASSNAME = 'flex-1 rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none'
+const PRIORITY_SELECT_CLASSNAME = 'rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none'
 
 export interface RecurringTaskSeriesFormInput {
   title: string
@@ -94,7 +95,7 @@ export function RecurringTaskSeriesFormModal({ series, members, isPersonal, onSu
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="series-priority" className="text-[13px] font-semibold text-fg-1">{t('form.priority_label')}</label>
-          <select id="series-priority" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} className={SELECT_CLASSNAME}>
+          <select id="series-priority" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} className={PRIORITY_SELECT_CLASSNAME}>
             {TASK_PRIORITY_ORDER.map((p) => <option key={p} value={p}>{t(TASK_PRIORITY_META[p].labelKey)}</option>)}
           </select>
         </div>
@@ -149,18 +150,20 @@ export function RecurringTaskSeriesFormModal({ series, members, isPersonal, onSu
             </div>
           ))}
           <div className="flex items-center gap-2">
-            <Input label={t('form.subtask_placeholder')} srOnlyLabel placeholder={t('form.subtask_placeholder')}
-              value={newSubtask} onChange={(e) => setNewSubtask(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }} />
+            <div className="flex-1">
+              <Input label={t('form.subtask_placeholder')} srOnlyLabel placeholder={t('form.subtask_placeholder')}
+                value={newSubtask} onChange={(e) => setNewSubtask(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }} />
+            </div>
             <Button type="button" onClick={addSubtask}><Plus className="size-4" /></Button>
           </div>
         </div>
 
         {(error ?? submitError) && <p className="text-sm font-medium text-status-red">{error ?? submitError}</p>}
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" onClick={onCancel}>{t('form.cancel')}</Button>
-          <Button type="submit" style={CTA_BUTTON_STYLE}>{t('form.save')}</Button>
+        <div className="flex gap-2 pt-2">
+          <Button type="button" onClick={onCancel} className="flex-1">{t('form.cancel')}</Button>
+          <Button type="submit" style={CTA_BUTTON_STYLE} className="flex-1">{t('form.save')}</Button>
         </div>
       </form>
     </Dialog>
