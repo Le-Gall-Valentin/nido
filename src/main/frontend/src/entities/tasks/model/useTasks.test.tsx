@@ -15,6 +15,8 @@ function fakeApi(overrides: Partial<ITasksApi> = {}): ITasksApi {
     listTasks: vi.fn().mockResolvedValue(TASKS),
     createTask: vi.fn(), createRecurringTask: vi.fn(), updateTask: vi.fn(),
     changeTaskStatus: vi.fn(), toggleSubtask: vi.fn(), deleteTask: vi.fn(), moveTask: vi.fn(),
+    listRecurringTaskSeries: vi.fn().mockResolvedValue([]),
+    updateRecurringTaskSeries: vi.fn(), deleteRecurringTaskSeries: vi.fn(),
     ...overrides,
   }
 }
