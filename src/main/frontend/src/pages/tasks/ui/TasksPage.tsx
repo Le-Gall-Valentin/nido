@@ -289,11 +289,17 @@ function TasksPageContent() {
       {formState && (
         <TaskFormModal
           open
-          onClose={() => setFormState(null)}
+          onClose={() => {
+            setFormState(null)
+            createTask.reset()
+            createRecurringTask.reset()
+            updateTask.reset()
+          }}
           onSubmit={handleFormSubmit}
           initialTask={formState.mode === 'edit' ? formState.task : null}
           members={members ?? []}
           isPersonal={spaceIsPersonal}
+          submitError={(createTask.isError || createRecurringTask.isError || updateTask.isError) ? t('form.submit_error') : null}
         />
       )}
 

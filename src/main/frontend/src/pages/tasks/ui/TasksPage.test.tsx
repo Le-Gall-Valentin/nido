@@ -202,6 +202,18 @@ describe('TasksPage', () => {
       }))
   })
 
+  it('shows a submit error in the task form when creating a task fails', async () => {
+    const api = fakeApi({ createTask: vi.fn().mockRejectedValue(new Error('boom')) })
+    setup(api)
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByText('new_task'))
+    fireEvent.change(screen.getByLabelText('form.title_label'), { target: { value: 'Nouvelle tâche' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(await screen.findByText('form.submit_error')).toBeDefined()
+  })
+
   it('deletes a recurring series through the confirmation modal', async () => {
     const { api } = setup()
     await screen.findByText('Prendre RDV')
