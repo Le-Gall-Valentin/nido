@@ -27,7 +27,6 @@ class ListSettlementsBetweenMembersHandlerTest {
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
     private final UUID bobId = UUID.randomUUID();
-    private final UUID carolId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
@@ -39,23 +38,18 @@ class ListSettlementsBetweenMembersHandlerTest {
     }
 
     @Test
-    void returns_settlements_between_the_two_members_in_either_direction_newest_first() {
-        SettlementRecord aliceToBob = new SettlementRecord(UUID.randomUUID(), spaceId, aliceId, bobId, new BigDecimal("100.00"), LocalDate.of(2026, 1, 5));
-        SettlementRecord bobToAlice = new SettlementRecord(UUID.randomUUID(), spaceId, bobId, aliceId, new BigDecimal("30.00"), LocalDate.of(2026, 2, 1));
-        SettlementRecord aliceToCarol = new SettlementRecord(UUID.randomUUID(), spaceId, aliceId, carolId, new BigDecimal("50.00"), LocalDate.of(2026, 1, 10));
-        when(settlementRecordRepository.findBySpaceId(spaceId)).thenReturn(List.of(aliceToBob, bobToAlice, aliceToCarol));
+    void asks_the_repository_for_the_pair_in_the_caller_s_own_space() {
+        // Filtering by pair, either direction, newest first is now the database's job — verified
+        // against real SQL in SettlementRecordRepositoryAdapterIT, where a mock could not lie
+        // about it. What is left to check here is that the handler scopes the question to the
+        // space the caller proved membership of, and passes the result through untouched.
+        SettlementRecord aliceToBob = new SettlementRecord(UUID.randomUUID(), spaceId, aliceId, bobId,
+            new BigDecimal("100.00"), LocalDate.of(2026, 1, 5));
+        when(settlementRecordRepository.findBetweenMembers(spaceId, aliceId, bobId)).thenReturn(List.of(aliceToBob));
 
         List<SettlementRecord> result = handler.list(aliceId, bobId, membership());
 
-        assertThat(result).containsExactly(bobToAlice, aliceToBob);
+        assertThat(result).containsExactly(aliceToBob);
     }
 
-    @Test
-    void returns_an_empty_list_when_the_two_members_never_settled_anything() {
-        when(settlementRecordRepository.findBySpaceId(spaceId)).thenReturn(List.of());
-
-        List<SettlementRecord> result = handler.list(aliceId, bobId, membership());
-
-        assertThat(result).isEmpty();
-    }
 }

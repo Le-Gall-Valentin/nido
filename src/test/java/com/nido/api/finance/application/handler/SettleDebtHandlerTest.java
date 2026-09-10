@@ -2,6 +2,7 @@ package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Contribution;
+import com.nido.api.finance.domain.model.SplitTransaction;
 import com.nido.api.finance.domain.model.CreateSettlementCommand;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SettlementRecord;
@@ -46,7 +47,7 @@ class SettleDebtHandlerTest {
         handler = new SettleDebtHandler(settlementRecordRepository, transactionRepository, spaceMemberValidator);
         // A debt of 1000.00 from debtorId to creditorId — large enough that tests not
         // concerned with the debt cap itself (amount 20.00) never trip over it.
-        lenient().when(transactionRepository.findAllBySpaceId(spaceId)).thenReturn(List.of(sharedExpense(creditorId, debtorId, new BigDecimal("1000.00"))));
+        lenient().when(transactionRepository.findSplitsBySpaceId(spaceId)).thenReturn(List.of(sharedExpense(creditorId, debtorId, new BigDecimal("1000.00"))));
         lenient().when(settlementRecordRepository.findBySpaceId(spaceId)).thenReturn(List.of());
     }
 
@@ -63,9 +64,8 @@ class SettleDebtHandlerTest {
     }
 
     /** A transaction {@code payerId} paid in full, with {@code contributorId} owing the whole {@code amount} back. */
-    private Transaction sharedExpense(UUID payerId, UUID contributorId, BigDecimal amount) {
-        return new Transaction(UUID.randomUUID(), spaceId, "T", amount, TransactionType.EXPENSE, UUID.randomUUID(),
-            LocalDate.of(2026, 1, 1), payerId, List.of(new Contribution(contributorId, amount)), null, Instant.now());
+    private SplitTransaction sharedExpense(UUID payerId, UUID contributorId, BigDecimal amount) {
+        return new SplitTransaction(payerId, amount, List.of(new Contribution(contributorId, amount)));
     }
 
     @Test
@@ -122,7 +122,7 @@ class SettleDebtHandlerTest {
 
     @Test
     void allows_a_settlement_amount_up_to_exactly_the_real_debt() {
-        when(transactionRepository.findAllBySpaceId(spaceId)).thenReturn(List.of(sharedExpense(creditorId, debtorId, new BigDecimal("100.00"))));
+        when(transactionRepository.findSplitsBySpaceId(spaceId)).thenReturn(List.of(sharedExpense(creditorId, debtorId, new BigDecimal("100.00"))));
         CreateSettlementCommand command = command(new BigDecimal("100.00"));
         SettlementRecord created = new SettlementRecord(UUID.randomUUID(), spaceId, debtorId, creditorId, command.amount(), command.date());
         when(settlementRecordRepository.create(command)).thenReturn(created);
@@ -134,7 +134,7 @@ class SettleDebtHandlerTest {
 
     @Test
     void rejects_a_settlement_amount_exceeding_the_real_debt_between_the_two_members() {
-        when(transactionRepository.findAllBySpaceId(spaceId)).thenReturn(List.of(sharedExpense(creditorId, debtorId, new BigDecimal("100.00"))));
+        when(transactionRepository.findSplitsBySpaceId(spaceId)).thenReturn(List.of(sharedExpense(creditorId, debtorId, new BigDecimal("100.00"))));
         CreateSettlementCommand command = command(new BigDecimal("100.01"));
 
         assertThatThrownBy(() -> handler.settle(command, membership(debtorId, SpaceRole.VIEWER)))
@@ -144,7 +144,7 @@ class SettleDebtHandlerTest {
 
     @Test
     void a_settlement_already_recorded_reduces_how_much_more_can_be_settled() {
-        when(transactionRepository.findAllBySpaceId(spaceId)).thenReturn(List.of(sharedExpense(creditorId, debtorId, new BigDecimal("100.00"))));
+        when(transactionRepository.findSplitsBySpaceId(spaceId)).thenReturn(List.of(sharedExpense(creditorId, debtorId, new BigDecimal("100.00"))));
         when(settlementRecordRepository.findBySpaceId(spaceId)).thenReturn(List.of(
             new SettlementRecord(UUID.randomUUID(), spaceId, debtorId, creditorId, new BigDecimal("60.00"), LocalDate.of(2026, 1, 1))));
         CreateSettlementCommand command = command(new BigDecimal("40.00"));
@@ -158,7 +158,7 @@ class SettleDebtHandlerTest {
 
     @Test
     void rejects_a_settlement_when_there_is_no_debt_at_all_between_the_two_members() {
-        when(transactionRepository.findAllBySpaceId(spaceId)).thenReturn(List.of());
+        when(transactionRepository.findSplitsBySpaceId(spaceId)).thenReturn(List.of());
         CreateSettlementCommand command = command(new BigDecimal("0.01"));
 
         assertThatThrownBy(() -> handler.settle(command, membership(debtorId, SpaceRole.VIEWER)))

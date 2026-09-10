@@ -3,6 +3,7 @@ package com.nido.api.finance.infrastructure.persistence.adapter;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.CreateTransactionCommand;
 import com.nido.api.finance.domain.model.FinanceException;
+import com.nido.api.finance.domain.model.SplitTransaction;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
@@ -10,7 +11,9 @@ import com.nido.api.finance.infrastructure.config.FinanceEncryptorFactory;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionContributorEntity;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransactionContributorJpaRepository;
+import com.nido.api.finance.infrastructure.persistence.repository.ContributorShareRow;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransactionJpaRepository;
+import com.nido.api.finance.infrastructure.persistence.repository.SplitTransactionRow;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +52,30 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         List<FinanceTransactionEntity> found = transactions.findBySpaceIdAndDateBetween(
             spaceId, month.atDay(1), month.atEndOfMonth());
         return toDomainList(found);
+    }
+
+    @Override
+    public List<SplitTransaction> findSplitsBySpaceId(UUID spaceId) {
+        List<SplitTransactionRow> rows = transactions.findSplitRowsBySpaceId(spaceId);
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+        // One encryptor for the space, and only the amounts pass through it: the labels stay
+        // ciphertext in the database, unread.
+        TextEncryptor encryptor = encryptorFactory.forSpace(spaceId);
+        Map<UUID, List<ContributorShareRow>> sharesByTransaction = contributors
+            .findShareRowsByTransactionIdIn(rows.stream().map(SplitTransactionRow::transactionId).toList())
+            .stream()
+            .collect(Collectors.groupingBy(ContributorShareRow::transactionId));
+        return rows.stream()
+            .map(row -> new SplitTransaction(
+                row.payerId(),
+                new BigDecimal(encryptor.decrypt(row.amountEncrypted())),
+                sharesByTransaction.getOrDefault(row.transactionId(), List.of()).stream()
+                    .map(share -> new Contribution(
+                        share.userId(), new BigDecimal(encryptor.decrypt(share.shareAmountEncrypted()))))
+                    .toList()))
+            .toList();
     }
 
     @Override

@@ -62,7 +62,7 @@ public class SettleDebtHandler implements SettleDebtUseCase {
 
     private BigDecimal realDebt(UUID spaceId, UUID fromMemberId, UUID toMemberId) {
         Balances balances = BalanceCalculator.calculate(
-            transactionRepository.findAllBySpaceId(spaceId), settlementRecordRepository.findBySpaceId(spaceId));
+            transactionRepository.findSplitsBySpaceId(spaceId), settlementRecordRepository.findBySpaceId(spaceId));
         return balances.suggestedTransfers().stream()
             .filter(t -> t.fromMemberId().equals(fromMemberId) && t.toMemberId().equals(toMemberId))
             .map(SuggestedTransfer::amount)
