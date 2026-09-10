@@ -74,6 +74,10 @@ export function RecurringTaskSeriesFormModal({ series, members, isPersonal, onSu
       setError(t('recurring_series.end_date_before_start'))
       return
     }
+    // No backlog check here, unlike the creation form: the server measures what a series
+    // still owes from its materialization cursor, which this payload does not carry. Deriving
+    // it from the anchor instead would refuse edits the server accepts — on an established
+    // series the cursor has long moved past the anchor. Left to the server on purpose.
     setError(null)
     onSubmit({
       title: title.trim(), priority, subtasks,

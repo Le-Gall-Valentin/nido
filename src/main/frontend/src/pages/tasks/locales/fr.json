@@ -36,6 +36,7 @@
     "cancel": "Annuler",
     "save": "Enregistrer",
     "lead_time_exceeds_interval": "Le délai ne peut pas dépasser la fréquence de récurrence.",
+    "too_many_past_occurrences": "Cette série créerait {{occurrences}} occurrences passées d'un coup (maximum {{maximum}}). Rapprochez la date de départ, ou espacez la fréquence.",
     "submit_error": "Une erreur est survenue. Réessayez."
   },
   "detail": {

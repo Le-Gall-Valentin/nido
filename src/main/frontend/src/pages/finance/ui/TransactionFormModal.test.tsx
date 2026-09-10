@@ -25,6 +25,13 @@ function renderModal(props: Partial<React.ComponentProps<typeof TransactionFormM
   )
 }
 
+/** A local civil date N days back, so these cases stay true whenever the suite runs. */
+function isoDaysAgo(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 describe('TransactionFormModal', () => {
   it('defaults to a category matching the initial type even when it is not first in the list', () => {
     const onSubmit = vi.fn()
@@ -196,5 +203,40 @@ describe('TransactionFormModal', () => {
 
     expect(onSubmit).not.toHaveBeenCalled()
     expect(screen.getByText('recurring_series.end_date_before_start')).toBeDefined()
+  })
+
+  it('refuses a recurring series whose start date would backfill thousands of occurrences', () => {
+    // Daily since 2000: the server refuses this, and before the mirror the form came back
+    // with the generic "something went wrong" that invites a retry producing the same
+    // refusal. A fixed date rather than a relative one — it is past the ceiling for good.
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit })
+
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Café' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '2.50' } })
+    fireEvent.change(screen.getByLabelText('form.category_label'), { target: { value: 'c1' } })
+    fireEvent.change(screen.getByLabelText('form.date_label'), { target: { value: '2000-01-01' } })
+    fireEvent.click(screen.getByLabelText('form.recurring_label'))
+    fireEvent.change(screen.getByLabelText('form.recurrence_interval_type_label'), { target: { value: 'DAILY' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText((c) => c.startsWith('form.too_many_past_occurrences'))).toBeDefined()
+  })
+
+  it('still accepts a recurring series back-dated by a few weeks', () => {
+    // The legitimate case the mirror must never catch.
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit })
+
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Café' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '2.50' } })
+    fireEvent.change(screen.getByLabelText('form.category_label'), { target: { value: 'c1' } })
+    fireEvent.change(screen.getByLabelText('form.date_label'), { target: { value: isoDaysAgo(21) } })
+    fireEvent.click(screen.getByLabelText('form.recurring_label'))
+    fireEvent.change(screen.getByLabelText('form.recurrence_interval_type_label'), { target: { value: 'DAILY' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalled()
   })
 })

@@ -7,6 +7,7 @@ import type { SpaceMember } from '@/entities/space'
 import type { RecurrenceInterval, Task, TaskPriority } from '@/entities/tasks'
 import type { TaskFormInput } from '../model/types'
 import { TASK_PRIORITY_ORDER, TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
+import { MAX_PAST_OCCURRENCES, pastOccurrenceCount, todayIso } from '@/shared/lib'
 import { leadTimeExceedsInterval } from './leadTimeExceedsInterval'
 
 const INTERVAL_ORDER: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
@@ -94,6 +95,18 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
         draft.anchorDate, draft.intervalType, Number(draft.intervalCount) || 1, draft.leadIntervalType, Number(draft.leadIntervalCount) || 0)) {
       setError(t('form.lead_time_exceeds_interval'))
       return
+    }
+    if (!isEditing && draft.recurring) {
+      // Mirrors the server's backlog ceiling so a start date set too far back says so here,
+      // instead of coming back as the generic "something went wrong" that invites a retry
+      // producing the same refusal. The anchor occurrence is created directly alongside the
+      // series, so only the ones after it count — same arithmetic as the server's.
+      const pastOccurrences = Math.max(0, pastOccurrenceCount(
+        draft.anchorDate, draft.intervalType, Number(draft.intervalCount) || 1, draft.endDate || null, todayIso()) - 1)
+      if (pastOccurrences > MAX_PAST_OCCURRENCES) {
+        setError(t('form.too_many_past_occurrences', { occurrences: pastOccurrences, maximum: MAX_PAST_OCCURRENCES }))
+        return
+      }
     }
     setError('')
     if (isEditing) {

@@ -36,6 +36,7 @@
     "cancel": "Cancel",
     "save": "Save",
     "lead_time_exceeds_interval": "The lead time cannot exceed the recurrence interval.",
+    "too_many_past_occurrences": "This series would create {{occurrences}} past occurrences at once (maximum {{maximum}}). Move its start date closer, or use a longer interval.",
     "submit_error": "Something went wrong. Please try again."
   },
   "detail": {

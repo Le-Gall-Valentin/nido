@@ -133,6 +133,7 @@
     "interval": { "DAILY": "day(s)", "WEEKLY": "week(s)", "MONTHLY": "month(s)", "YEARLY": "year(s)" },
     "cancel": "Cancel",
     "save": "Save",
+    "too_many_past_occurrences": "This series would create {{occurrences}} past occurrences at once (maximum {{maximum}}). Move its start date closer, or use a longer interval.",
     "submit_error": "Something went wrong. Try again."
   },
   "delete_confirm": {
