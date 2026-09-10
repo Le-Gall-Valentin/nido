@@ -1,0 +1,102 @@
+# Four tables carried a space_id column with no index whose leading column was space_id,
+# so every space-scoped read of them scanned the whole table — across every space.
+#
+# Plain CREATE INDEX rather than CONCURRENTLY: these tables hold a handful of rows per
+# space by construction (recurring series, savings goals and invitations are all things a
+# household defines a few of), so the brief write lock is measured in milliseconds, and
+# CONCURRENTLY cannot run inside Liquibase's transaction without runInTransaction:false —
+# which trades that lock for the risk of leaving an INVALID index behind on failure.
+#
+# One changeSet per index so each carries its own precondition: a single changeSet guarded
+# on one index name would be marked as run — silently skipping the other three — the moment
+# that one already existed.
+databaseChangeLog:
+  - changeSet:
+      id: 044-index-recurring-task-series-space-id
+      author: nido
+      comment: RecurringTaskSeriesMaterializer reads findBySpaceId on every task list
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - indexExists:
+                indexName: idx_recurring_task_series_space_id
+      changes:
+        - createIndex:
+            tableName: recurring_task_series
+            indexName: idx_recurring_task_series_space_id
+            columns:
+              - column:
+                  name: space_id
+      rollback:
+        - dropIndex:
+            tableName: recurring_task_series
+            indexName: idx_recurring_task_series_space_id
+
+  - changeSet:
+      id: 044-index-finance-recurring-series-space-id
+      author: nido
+      comment: RecurringTransactionMaterializer reads findBySpaceId on every finance read
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - indexExists:
+                indexName: idx_finance_recurring_series_space_id
+      changes:
+        # space_id alone, not (space_id, end_date): findActiveBySpaceId also filters on
+        # end_date, but once the space is narrowed down there are only a few rows left to
+        # filter, and the extra column would cost every write for nothing.
+        - createIndex:
+            tableName: finance_recurring_transaction_series
+            indexName: idx_finance_recurring_series_space_id
+            columns:
+              - column:
+                  name: space_id
+      rollback:
+        - dropIndex:
+            tableName: finance_recurring_transaction_series
+            indexName: idx_finance_recurring_series_space_id
+
+  - changeSet:
+      id: 044-index-finance-savings-goals-space-id
+      author: nido
+      comment: SavingsGoalRepositoryAdapter reads findBySpaceId to list a space's goals
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - indexExists:
+                indexName: idx_finance_savings_goals_space_id
+      changes:
+        - createIndex:
+            tableName: finance_savings_goals
+            indexName: idx_finance_savings_goals_space_id
+            columns:
+              - column:
+                  name: space_id
+      rollback:
+        - dropIndex:
+            tableName: finance_savings_goals
+            indexName: idx_finance_savings_goals_space_id
+
+  - changeSet:
+      id: 044-index-space-invitations-space-id
+      author: nido
+      comment: findBySpaceIdOrderByCreatedAtDesc lists every invitation, which the PENDING-only partial index cannot serve
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - indexExists:
+                indexName: idx_space_invitations_space_id
+      changes:
+        # uq_space_invitations_pending already leads with space_id, but it is partial
+        # (WHERE status = 'PENDING'), so a listing that wants accepted and revoked
+        # invitations too cannot use it.
+        - createIndex:
+            tableName: space_invitations
+            indexName: idx_space_invitations_space_id
+            columns:
+              - column:
+                  name: space_id
+      rollback:
+        - dropIndex:
+            tableName: space_invitations
+            indexName: idx_space_invitations_space_id
