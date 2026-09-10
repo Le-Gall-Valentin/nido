@@ -96,7 +96,7 @@ class VerifyTotpChallengeHandlerTest {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
         when(mfaVerifier.verifyAndConsume(userId, "000000")).thenReturn(TotpVerificationResult.INVALID);
-        when(challengeStore.incrementFailedAttempts("challenge-id")).thenReturn(1);
+        when(challengeStore.recordFailedAttempt(userId)).thenReturn(1);
 
         assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "000000")))
             .isInstanceOf(AuthenticationException.TotpCodeInvalid.class);
@@ -123,16 +123,16 @@ class VerifyTotpChallengeHandlerTest {
     }
 
     @Test
-    void verify_invalidCode_incrementsAttempts() {
+    void verify_invalidCode_recordsTheAttemptAgainstTheAccount() {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
         when(mfaVerifier.verifyAndConsume(userId, "000000")).thenReturn(TotpVerificationResult.INVALID);
-        when(challengeStore.incrementFailedAttempts("challenge-id")).thenReturn(1);
+        when(challengeStore.recordFailedAttempt(userId)).thenReturn(1);
 
         assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "000000")))
             .isInstanceOf(AuthenticationException.TotpCodeInvalid.class);
 
-        verify(challengeStore).incrementFailedAttempts("challenge-id");
+        verify(challengeStore).recordFailedAttempt(userId);
     }
 
     @Test
@@ -140,7 +140,7 @@ class VerifyTotpChallengeHandlerTest {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
         when(mfaVerifier.verifyAndConsume(userId, "000000")).thenReturn(TotpVerificationResult.INVALID);
-        when(challengeStore.incrementFailedAttempts("challenge-id")).thenReturn(5);
+        when(challengeStore.recordFailedAttempt(userId)).thenReturn(5);
 
         assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "000000")))
             .isInstanceOf(AuthenticationException.TotpMaxAttemptsExceeded.class);
@@ -169,7 +169,7 @@ class VerifyTotpChallengeHandlerTest {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
         when(mfaVerifier.verifyAndConsume(userId, "000000")).thenReturn(TotpVerificationResult.INVALID);
-        when(challengeStore.incrementFailedAttempts("challenge-id")).thenReturn(4);
+        when(challengeStore.recordFailedAttempt(userId)).thenReturn(4);
 
         assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "000000")))
             .isInstanceOf(AuthenticationException.TotpCodeInvalid.class);
@@ -186,7 +186,7 @@ class VerifyTotpChallengeHandlerTest {
         assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "123456")))
             .isInstanceOf(AuthenticationException.TotpCodeInvalid.class);
 
-        verify(challengeStore, never()).incrementFailedAttempts(any());
+        verify(challengeStore, never()).recordFailedAttempt(any());
     }
 
     @Test
@@ -199,5 +199,78 @@ class VerifyTotpChallengeHandlerTest {
             .isInstanceOf(AuthenticationException.TotpCodeInvalid.class);
 
         verify(challengeStore, never()).invalidateChallenge(any());
+    }
+    // ─── B4 : le compteur suit le compte, pas le challenge ────────────────
+
+    @Test
+    void verify_whenTheAccountIsAlreadyLockedOut_refusesWithoutEvenCheckingTheCode() {
+        // The bypass this closes: a caller who has used up their attempts obtained a clean
+        // counter simply by logging in again, because the counter hung off the challenge id
+        // and every login mints a new one. Keyed on the account, a fresh challenge changes
+        // nothing — and the code is not even looked at.
+        when(challengeStore.resolveChallenge("fresh-challenge")).thenReturn(Optional.of(userId));
+        when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
+        when(challengeStore.failedAttempts(userId)).thenReturn(5);
+
+        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("fresh-challenge", "123456")))
+            .isInstanceOf(AuthenticationException.TotpMaxAttemptsExceeded.class);
+
+        verifyNoInteractions(mfaVerifier);
+    }
+
+    @Test
+    void verify_whenAlreadyLockedOut_doesNotRenewTheWindow() {
+        // Otherwise hammering a locked account would keep pushing the TTL out, and a
+        // brute-force guard would double as a way to deny the owner service indefinitely.
+        when(challengeStore.resolveChallenge("fresh-challenge")).thenReturn(Optional.of(userId));
+        when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
+        when(challengeStore.failedAttempts(userId)).thenReturn(7);
+
+        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("fresh-challenge", "000000")))
+            .isInstanceOf(AuthenticationException.TotpMaxAttemptsExceeded.class);
+
+        verify(challengeStore, never()).recordFailedAttempt(any());
+    }
+
+    @Test
+    void verify_belowTheLimit_stillLetsTheCodeThrough() {
+        when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
+        when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
+        when(challengeStore.failedAttempts(userId)).thenReturn(4);
+        when(mfaVerifier.verifyAndConsume(userId, "123456")).thenReturn(TotpVerificationResult.SUCCESS);
+        when(accessTokenPort.generate(creds)).thenReturn("jwt");
+        when(refreshTokenPort.generate(eq(creds), anyInt())).thenReturn("refresh");
+
+        LoginResult.Success result = handler.verify(new VerifyTotpChallengeCommand("challenge-id", "123456"));
+
+        assertThat(result.credentials()).isEqualTo(creds);
+    }
+
+    @Test
+    void verify_validCode_clearsTheAccountCounter() {
+        // Someone who mistyped three codes before getting it right must not carry those
+        // failures into their next login.
+        when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
+        when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
+        when(mfaVerifier.verifyAndConsume(userId, "123456")).thenReturn(TotpVerificationResult.SUCCESS);
+        when(accessTokenPort.generate(creds)).thenReturn("jwt");
+        when(refreshTokenPort.generate(eq(creds), anyInt())).thenReturn("refresh");
+
+        handler.verify(new VerifyTotpChallengeCommand("challenge-id", "123456"));
+
+        verify(challengeStore).clearFailedAttempts(userId);
+    }
+
+    @Test
+    void verify_invalidCode_doesNotClearTheAccountCounter() {
+        when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
+        when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
+        when(mfaVerifier.verifyAndConsume(userId, "000000")).thenReturn(TotpVerificationResult.INVALID);
+        when(challengeStore.recordFailedAttempt(userId)).thenReturn(2);
+
+        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "000000")))
+            .isInstanceOf(AuthenticationException.TotpCodeInvalid.class);
+
+        verify(challengeStore, never()).clearFailedAttempts(any());
     }
 }

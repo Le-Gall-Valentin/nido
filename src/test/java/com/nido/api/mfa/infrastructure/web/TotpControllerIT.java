@@ -214,7 +214,7 @@ class TotpControllerIT {
     }
 
     @Test
-    void verify_challengeLocksAfter5FailedAttempts() throws Exception {
+    void verify_locksTheAccountAfter5FailedAttempts() throws Exception {
         Cookie challenge = loginAndGetChallengeCookie("totpuser", "totppass");
 
         // First 4 attempts should return 401 (TotpCodeInvalid → "Authentication required")
@@ -227,6 +227,7 @@ class TotpControllerIT {
         }
 
         // 5th attempt exhausts the counter, invalidates the challenge, and returns TotpMaxAttemptsExceeded (429)
+        // The title distinguishes this from the rate limiter, which answers 429 as well.
         mockMvc.perform(post("/api/auth/2fa/verify")
                 .cookie(challenge)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -399,5 +400,71 @@ class TotpControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"000000\"}"))
             .andExpect(status().isUnprocessableEntity());
+    }
+    // ─── B4 : le compteur d'échecs suit le compte, pas le challenge ────────
+
+    @Test
+    void verify_theLockoutSurvivesLoggingInAgainForAFreshChallenge() throws Exception {
+        // The bypass: the attempt counter used to hang off the challenge id, and every login
+        // mints a new one — so using up five attempts and logging back in handed the caller a
+        // clean slate, five guesses at a time, without limit. Rate limits capped that at five
+        // guesses a minute per IP, which a distributed caller sidesteps entirely.
+        Cookie firstChallenge = loginAndGetChallengeCookie("totpuser", "totppass");
+        for (int i = 0; i < 4; i++) {
+            mockMvc.perform(post("/api/auth/2fa/verify").cookie(firstChallenge)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"code\":\"00000" + i + "\"}"))
+                .andExpect(status().isUnauthorized());
+        }
+        mockMvc.perform(post("/api/auth/2fa/verify").cookie(firstChallenge)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"000005\"}"))
+            .andExpect(status().isTooManyRequests());
+
+        // Cleared so the assertion below cannot pass on the rate limiter's own 429 — the point
+        // is the account lockout, and the two are otherwise indistinguishable by status alone.
+        rateLimitBucketStore.clearAll();
+        Cookie secondChallenge = loginAndGetChallengeCookie("totpuser", "totppass");
+        assertThat(secondChallenge).isNotNull();
+        assertThat(secondChallenge.getValue()).isNotEqualTo(firstChallenge.getValue());
+
+        mockMvc.perform(post("/api/auth/2fa/verify").cookie(secondChallenge)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"000006\"}"))
+            .andExpect(status().isTooManyRequests())
+            .andExpect(jsonPath("$.title").value("AuthenticationError"));
+    }
+
+    @Test
+    void verify_aSuccessfulCodeClearsTheAccountCounter() throws Exception {
+        // Someone who fumbles a few codes before getting one right must not carry those
+        // failures forward — otherwise the lockout would creep up on ordinary use.
+        Cookie firstChallenge = loginAndGetChallengeCookie("totpuser", "totppass");
+        for (int i = 0; i < 3; i++) {
+            mockMvc.perform(post("/api/auth/2fa/verify").cookie(firstChallenge)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"code\":\"00000" + i + "\"}"))
+                .andExpect(status().isUnauthorized());
+        }
+
+        rateLimitBucketStore.clearAll();
+        Cookie secondChallenge = loginAndGetChallengeCookie("totpuser", "totppass");
+        DefaultCodeGenerator generator = new DefaultCodeGenerator(HashingAlgorithm.SHA256, 6);
+        long counter = Math.floorDiv(System.currentTimeMillis() / 1000L, 30);
+        mockMvc.perform(post("/api/auth/2fa/verify").cookie(secondChallenge)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"" + generator.generate(KNOWN_TOTP_SECRET, counter) + "\"}"))
+            .andExpect(status().isOk());
+
+        rateLimitBucketStore.clearAll();
+        Cookie thirdChallenge = loginAndGetChallengeCookie("totpuser", "totppass");
+        // Four failures in a row must all read as a wrong code. Had the three earlier ones
+        // survived, the second of these would have been the fifth and answered 429.
+        for (int i = 0; i < 4; i++) {
+            mockMvc.perform(post("/api/auth/2fa/verify").cookie(thirdChallenge)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"code\":\"10000" + i + "\"}"))
+                .andExpect(status().isUnauthorized());
+        }
     }
 }

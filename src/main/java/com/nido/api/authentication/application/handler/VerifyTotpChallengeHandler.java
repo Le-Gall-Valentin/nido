@@ -56,10 +56,19 @@ public class VerifyTotpChallengeHandler implements VerifyTotpChallengeUseCase {
 
         if (!creds.isActive()) throw new AuthenticationException.UserNotActive();
 
+        // Refused before the code is even looked at, and without recording anything. The
+        // counter belongs to the account, so an attempt made while already locked out must not
+        // touch it: renewing the window on a refused attempt would let a caller hold the
+        // account locked indefinitely at no cost, turning a brute-force guard into a way to
+        // deny its owner service.
+        if (challengeStore.failedAttempts(userId) >= TotpPolicy.MAX_ATTEMPTS) {
+            throw new AuthenticationException.TotpMaxAttemptsExceeded();
+        }
+
         switch (mfaVerifier.verifyAndConsume(userId, command.code())) {
             case REPLAYED -> throw new AuthenticationException.TotpCodeInvalid();
             case INVALID -> {
-                int attempts = challengeStore.incrementFailedAttempts(command.challengeId());
+                int attempts = challengeStore.recordFailedAttempt(userId);
                 if (attempts >= TotpPolicy.MAX_ATTEMPTS) {
                     challengeStore.invalidateChallenge(command.challengeId());
                     throw new AuthenticationException.TotpMaxAttemptsExceeded();
@@ -70,6 +79,9 @@ public class VerifyTotpChallengeHandler implements VerifyTotpChallengeUseCase {
         }
 
         challengeStore.invalidateChallenge(command.challengeId());
+        // Proving possession of the authenticator clears the slate: someone who mistyped three
+        // codes before getting it right must not carry those failures into their next login.
+        challengeStore.clearFailedAttempts(userId);
 
         AuthTokens tokens = new AuthTokens(
             accessTokenPort.generate(creds),
