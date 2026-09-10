@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { MAX_PAST_OCCURRENCES, pastOccurrenceCount, todayIso } from '@/shared/lib'
 import type { SpaceMember } from '@/entities/space'
 import type { Category, ContributionInput, RecurrenceInput, Transaction, TransactionType } from '@/entities/finance'
 import { resolveContributorsOrError } from '../lib/resolveContributorsOrError'
@@ -91,6 +92,17 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
     if (recurring && endDate && endDate < date) {
       setError(t('recurring_series.end_date_before_start'))
       return
+    }
+    if (recurring) {
+      // Mirrors the server's backlog ceiling so a start date set too far back says so here,
+      // instead of coming back as the generic "something went wrong" that invites a retry
+      // producing the same refusal. Exact on creation, where nothing has been materialized
+      // yet — the server stays authoritative and re-validates on submit.
+      const pastOccurrences = pastOccurrenceCount(date, intervalType, Number(intervalCount) || 1, endDate || null, todayIso())
+      if (pastOccurrences > MAX_PAST_OCCURRENCES) {
+        setError(t('form.too_many_past_occurrences', { occurrences: pastOccurrences, maximum: MAX_PAST_OCCURRENCES }))
+        return
+      }
     }
     setError(null)
     onSubmit({

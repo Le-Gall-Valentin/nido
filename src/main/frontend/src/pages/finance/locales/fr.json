@@ -133,6 +133,7 @@
     "interval": { "DAILY": "jour(s)", "WEEKLY": "semaine(s)", "MONTHLY": "mois", "YEARLY": "an(s)" },
     "cancel": "Annuler",
     "save": "Enregistrer",
+    "too_many_past_occurrences": "Cette série créerait {{occurrences}} occurrences passées d'un coup (maximum {{maximum}}). Rapprochez la date de début, ou espacez la fréquence.",
     "submit_error": "Une erreur est survenue. Réessayez."
   },
   "delete_confirm": {

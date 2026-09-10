@@ -18,6 +18,13 @@ const TASK: Task = {
   assigneeIds: ['u-1'], subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null,
 }
 
+/** A local civil date N days back, so these cases stay true whenever the suite runs. */
+function isoDaysAgo(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 describe('TaskFormModal', () => {
   it('rejects an empty title', () => {
     const onSubmit = vi.fn()
@@ -134,5 +141,34 @@ describe('TaskFormModal', () => {
         anchorDate: '2026-01-07', endDate: '2027-01-01', rotationMemberIds: [],
       },
     }))
+  })
+
+  it('refuses a recurring task whose start date would backfill hundreds of occurrences', () => {
+    // Weekly since 2000: the server refuses this, and before the mirror the form came back
+    // with the generic "something went wrong" that invites a retry producing the same
+    // refusal. A fixed date rather than a relative one — it is past the ceiling for good.
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={null} members={MEMBERS} isPersonal={false} />)
+
+    fireEvent.change(screen.getByLabelText('form.title_label'), { target: { value: 'Sortir les poubelles' } })
+    fireEvent.click(screen.getByText('form.recurring_label'))
+    fireEvent.change(screen.getByLabelText('form.recurrence_anchor_date_label'), { target: { value: '2000-01-01' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText((c) => c.startsWith('form.too_many_past_occurrences'))).toBeDefined()
+  })
+
+  it('still accepts a recurring task back-dated by a few weeks', () => {
+    // The legitimate case the mirror must never catch.
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={null} members={MEMBERS} isPersonal={false} />)
+
+    fireEvent.change(screen.getByLabelText('form.title_label'), { target: { value: 'Sortir les poubelles' } })
+    fireEvent.click(screen.getByText('form.recurring_label'))
+    fireEvent.change(screen.getByLabelText('form.recurrence_anchor_date_label'), { target: { value: isoDaysAgo(21) } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalled()
   })
 })
