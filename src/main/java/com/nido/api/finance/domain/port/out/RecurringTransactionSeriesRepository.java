@@ -2,6 +2,7 @@ package com.nido.api.finance.domain.port.out;
 
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.CreateRecurringSeriesCommand;
+import com.nido.api.finance.domain.model.RecurringSeriesSchedule;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.model.UpdateRecurringSeriesCommand;
 
@@ -13,6 +14,13 @@ import java.util.UUID;
 public interface RecurringTransactionSeriesRepository {
     Optional<RecurringTransactionSeries> findById(UUID seriesId);
     List<RecurringTransactionSeries> findBySpaceId(UUID spaceId);
+
+    /**
+     * Scheduling fields only, for deciding whether a space owes anything before committing to
+     * the work of materializing it. Cheap, and safe to call before
+     * {@link #lockForMaterialization(UUID)} — see {@link RecurringSeriesSchedule}.
+     */
+    List<RecurringSeriesSchedule> findSchedulesBySpaceId(UUID spaceId);
     /** Series whose {@code endDate} is null or on/after {@code asOf} — candidates for lazy materialization or projection. */
     List<RecurringTransactionSeries> findActiveBySpaceId(UUID spaceId, LocalDate asOf);
     /**

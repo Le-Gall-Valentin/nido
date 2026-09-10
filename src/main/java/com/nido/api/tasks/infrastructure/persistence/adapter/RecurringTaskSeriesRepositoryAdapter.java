@@ -2,6 +2,7 @@ package com.nido.api.tasks.infrastructure.persistence.adapter;
 
 import com.nido.api.tasks.domain.model.CreateRecurringTaskSeriesCommand;
 import com.nido.api.tasks.domain.model.RecurringTaskSeries;
+import com.nido.api.tasks.domain.model.RecurringTaskSeriesSchedule;
 import com.nido.api.tasks.domain.model.TaskException;
 import com.nido.api.tasks.domain.model.UpdateRecurringTaskSeriesCommand;
 import com.nido.api.tasks.domain.port.out.RecurringTaskSeriesRepository;
@@ -41,6 +42,11 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
     @Override
     public List<RecurringTaskSeries> findBySpaceId(UUID spaceId) {
         return series.findBySpaceId(spaceId).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<RecurringTaskSeriesSchedule> findSchedulesBySpaceId(UUID spaceId) {
+        return series.findSchedulesBySpaceId(spaceId);
     }
 
     @Override

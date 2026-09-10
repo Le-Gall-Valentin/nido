@@ -1,8 +1,10 @@
 package com.nido.api.tasks.application.handler;
 
 import com.nido.api.tasks.domain.model.CreateTaskCommand;
+import com.nido.api.tasks.domain.model.RecurrenceInterval;
 import com.nido.api.tasks.domain.model.RecurrenceScheduler;
 import com.nido.api.tasks.domain.model.RecurringTaskSeries;
+import com.nido.api.tasks.domain.model.RecurringTaskSeriesSchedule;
 import com.nido.api.tasks.domain.model.SubtaskInput;
 import com.nido.api.tasks.domain.port.out.RecurringTaskSeriesRepository;
 import com.nido.api.tasks.domain.port.out.TaskRepository;
@@ -53,6 +55,19 @@ final class RecurringTaskSeriesMaterializer {
 
     static void materializeDueOccurrences(
             TaskRepository taskRepository, RecurringTaskSeriesRepository seriesRepository, UUID spaceId, LocalDate today) {
+        // Nothing due is the overwhelmingly common case: a chore comes due once a week, and its
+        // space gets read many times a day. Deciding that from the schedules alone — no lock, no
+        // entity hydration, neither child collection loaded — is what keeps an ordinary task list
+        // from opening a write-intent transaction and serializing every other reader of the same
+        // space behind an advisory lock it had no work to justify.
+        if (seriesRepository.findSchedulesBySpaceId(spaceId).stream()
+                .noneMatch(schedule -> hasDueOccurrence(schedule, today))) {
+            return;
+        }
+
+        // The check above is deliberately not trusted past this point: it ran unlocked, so by now
+        // another request may have materialized everything it saw as due. Everything below
+        // re-reads under the lock, and finding nothing left to do is a normal outcome.
         seriesRepository.lockForMaterialization(spaceId);
         for (RecurringTaskSeries series : seriesRepository.findBySpaceId(spaceId)) {
             int occurrence = series.occurrenceCount() + 1;
@@ -65,13 +80,10 @@ final class RecurringTaskSeriesMaterializer {
                     capped = true;
                     break;
                 }
-                LocalDate dueDate = RecurrenceScheduler.nextDueDate(
-                    series.anchorDate(), series.intervalType(), series.intervalCount(), occurrence);
-                if (series.endDate() != null && dueDate.isAfter(series.endDate())) {
-                    break;
-                }
-                LocalDate windowOpensOn = RecurrenceScheduler.minus(dueDate, series.leadIntervalType(), series.leadIntervalCount());
-                if (windowOpensOn.isAfter(today)) {
+                LocalDate dueDate = dueDateIfWindowOpen(
+                    series.anchorDate(), series.intervalType(), series.intervalCount(),
+                    series.leadIntervalType(), series.leadIntervalCount(), series.endDate(), occurrence, today);
+                if (dueDate == null) {
                     break;
                 }
                 List<UUID> assignees = List.of();
@@ -97,5 +109,38 @@ final class RecurringTaskSeriesMaterializer {
                 }
             }
         }
+    }
+    /**
+     * Whether this series owes at least one occurrence whose lead-time window has opened.
+     *
+     * <p>Must never answer "no" where the loop above would have found something: an occurrence
+     * missed here is not materialized at all until the next read that happens to see it. Both
+     * ask {@link #dueDateIfWindowOpen} the same question about the same occurrence — the one
+     * after the last generated — so they cannot drift apart.
+     */
+    private static boolean hasDueOccurrence(RecurringTaskSeriesSchedule schedule, LocalDate today) {
+        return dueDateIfWindowOpen(
+            schedule.anchorDate(), schedule.intervalType(), schedule.intervalCount(),
+            schedule.leadIntervalType(), schedule.leadIntervalCount(), schedule.endDate(),
+            schedule.occurrenceCount() + 1, today) != null;
+    }
+
+    /**
+     * The occurrence's due date once its lead-time window has opened on or before {@code today},
+     * or null when it has not — or when the occurrence falls past the series' end date.
+     *
+     * <p>The single definition of "due" for this module: unlike finance, an occurrence becomes
+     * visible a lead time <em>before</em> its due date, which is the whole point of the feature.
+     */
+    private static LocalDate dueDateIfWindowOpen(
+            LocalDate anchorDate, RecurrenceInterval intervalType, int intervalCount,
+            RecurrenceInterval leadIntervalType, int leadIntervalCount, LocalDate endDate,
+            int occurrence, LocalDate today) {
+        LocalDate dueDate = RecurrenceScheduler.nextDueDate(anchorDate, intervalType, intervalCount, occurrence);
+        if (endDate != null && dueDate.isAfter(endDate)) {
+            return null;
+        }
+        LocalDate windowOpensOn = RecurrenceScheduler.minus(dueDate, leadIntervalType, leadIntervalCount);
+        return windowOpensOn.isAfter(today) ? null : dueDate;
     }
 }
