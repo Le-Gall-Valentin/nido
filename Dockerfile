@@ -13,4 +13,8 @@ RUN addgroup --system nido && adduser --system --ingroup nido nido
 COPY --from=build /app/target/*.jar app.jar
 USER nido
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# MaxRAMPercentage, not -Xmx: the JVM defaults to a quarter of the container limit, which
+# wastes most of a small container and silently shrinks if the limit is lowered. A percentage
+# tracks whatever the orchestrator grants, leaving room for the metaspace, thread stacks and
+# direct buffers the heap figure does not cover.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]
