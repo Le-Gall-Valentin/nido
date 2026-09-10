@@ -90,4 +90,45 @@ class SettlementRecordRepositoryAdapterIT {
 
         assertThat(found).hasSize(2);
     }
+    // ─── B7 : le filtre par paire est passé du Java au SQL ─────────────────
+
+    @Test
+    void findBetweenMembers_returns_both_directions_newest_first_and_nothing_else() {
+        // The handler used to load every settlement in the space — decrypting each amount — and
+        // filter in Java. Moving that to SQL moved the behaviour with it, so it is verified here
+        // against real SQL rather than against a mock that would agree with anything.
+        UUID carolId = saveUser("carol");
+        adapter.create(new CreateSettlementCommand(spaceId, bobId, aliceId, new BigDecimal("20.00"), LocalDate.of(2026, 1, 5)));
+        adapter.create(new CreateSettlementCommand(spaceId, aliceId, bobId, new BigDecimal("30.00"), LocalDate.of(2026, 2, 1)));
+        adapter.create(new CreateSettlementCommand(spaceId, aliceId, carolId, new BigDecimal("50.00"), LocalDate.of(2026, 3, 1)));
+
+        List<SettlementRecord> between = adapter.findBetweenMembers(spaceId, aliceId, bobId);
+
+        assertThat(between)
+            .as("both directions, newest first, and the settlement with a third member left out")
+            .extracting(SettlementRecord::amount)
+            .containsExactly(new BigDecimal("30.00"), new BigDecimal("20.00"));
+    }
+
+    @Test
+    void findBetweenMembers_does_not_care_which_way_round_the_pair_is_given() {
+        adapter.create(new CreateSettlementCommand(spaceId, bobId, aliceId, new BigDecimal("20.00"), LocalDate.of(2026, 1, 5)));
+
+        assertThat(adapter.findBetweenMembers(spaceId, aliceId, bobId))
+            .hasSameSizeAs(adapter.findBetweenMembers(spaceId, bobId, aliceId))
+            .hasSize(1);
+    }
+
+    @Test
+    void findBetweenMembers_ignores_an_identical_pair_in_another_space() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        other.setName("Ailleurs");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏠");
+        UUID otherSpaceId = spaceJpaRepository.saveAndFlush(other).getId();
+        adapter.create(new CreateSettlementCommand(otherSpaceId, bobId, aliceId, new BigDecimal("99.00"), LocalDate.of(2026, 1, 5)));
+
+        assertThat(adapter.findBetweenMembers(spaceId, aliceId, bobId)).isEmpty();
+    }
 }

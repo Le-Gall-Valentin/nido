@@ -10,7 +10,8 @@ import java.util.UUID;
 /**
  * Computes each member's net balance for a space (positive = is owed money,
  * negative = owes money) from every shared transaction and every recorded
- * settlement, then proposes the smallest set of transfers that would bring
+ * settlement — folded from the ledger on every call, never stored; see
+ * {@link SplitTransaction} for why, then proposes the smallest set of transfers that would bring
  * every member back to zero — a classic greedy largest-creditor /
  * largest-debtor match, repeated until every net is settled.
  */
@@ -18,9 +19,11 @@ public final class BalanceCalculator {
 
     private BalanceCalculator() {}
 
-    public static Balances calculate(List<Transaction> transactions, List<SettlementRecord> settlements) {
+    public static Balances calculate(List<SplitTransaction> transactions, List<SettlementRecord> settlements) {
         Map<UUID, BigDecimal> net = new LinkedHashMap<>();
-        for (Transaction t : transactions) {
+        for (SplitTransaction t : transactions) {
+            // The repository already filters these out, so this is belt and braces — but a
+            // wrong filter would otherwise fold nonsense into a figure nobody can eyeball.
             if (t.contributors().isEmpty() || t.payerId() == null) {
                 continue;
             }

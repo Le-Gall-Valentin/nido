@@ -30,6 +30,13 @@ public class SettlementRecordRepositoryAdapter implements SettlementRecordReposi
     }
 
     @Override
+    public List<SettlementRecord> findBetweenMembers(UUID spaceId, UUID memberAId, UUID memberBId) {
+        return settlements.findBetweenMembers(spaceId, memberAId, memberBId).stream()
+            .map(e -> toDomain(e, spaceId))
+            .toList();
+    }
+
+    @Override
     @Transactional
     public void lockForSettlement(UUID spaceId, UUID memberAId, UUID memberBId) {
         // Order-independent: sort the two ids so settling A→B and B→A contend for the same key.

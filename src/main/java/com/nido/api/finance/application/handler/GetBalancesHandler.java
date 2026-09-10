@@ -22,7 +22,7 @@ public class GetBalancesHandler implements GetBalancesUseCase {
     @Override
     public Balances getBalances(SpaceMembership caller) {
         return BalanceCalculator.calculate(
-            transactionRepository.findAllBySpaceId(caller.spaceId()),
+            transactionRepository.findSplitsBySpaceId(caller.spaceId()),
             settlementRecordRepository.findBySpaceId(caller.spaceId()));
     }
 }
