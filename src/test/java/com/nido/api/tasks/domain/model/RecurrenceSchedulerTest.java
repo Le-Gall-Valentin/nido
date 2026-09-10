@@ -3,6 +3,7 @@ package com.nido.api.tasks.domain.model;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -226,5 +227,50 @@ class RecurrenceSchedulerTest {
 
         assertThatNoException().isThrownBy(() -> RecurrenceScheduler.validateBacklog(
             LocalDate.of(2027, 1, 1), RecurrenceInterval.DAILY, 1, null, today, 0));
+    }
+    // ── non-régression : le comptage arithmétique doit rendre ce que rend un
+    //    décompte naïf occurrence par occurrence ────────────────────────────
+
+    /** Counts occurrences one at a time. Slow, but unquestionably right. */
+    private static long byCountingOneByOne(LocalDate anchorDate, RecurrenceInterval intervalType, int intervalCount,
+                                           LocalDate endDate, LocalDate today, int alreadyGeneratedCount) {
+        long due = 0;
+        for (int n = 1; n <= 20_000; n++) {
+            LocalDate dueDate = RecurrenceScheduler.nextDueDate(anchorDate, intervalType, intervalCount, n);
+            if (endDate != null && dueDate.isAfter(endDate)) break;
+            if (dueDate.isAfter(today)) break;
+            due++;
+        }
+        return Math.max(0L, due - alreadyGeneratedCount);
+    }
+
+    @Test
+    void the_arithmetic_pending_count_agrees_with_counting_one_by_one() {
+        List<LocalDate> anchors = List.of(
+            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), LocalDate.of(2028, 2, 29),
+            LocalDate.of(2025, 12, 31), LocalDate.of(2024, 6, 15), LocalDate.of(2027, 3, 10));
+        List<LocalDate> todays = List.of(
+            LocalDate.of(2024, 1, 1), LocalDate.of(2026, 2, 28), LocalDate.of(2026, 9, 9),
+            LocalDate.of(2027, 1, 1), LocalDate.of(2029, 5, 20));
+        List<LocalDate> endDates = new java.util.ArrayList<>();
+        endDates.add(null);
+        endDates.add(LocalDate.of(2026, 6, 30));
+
+        for (LocalDate anchor : anchors) {
+            for (RecurrenceInterval interval : RecurrenceInterval.values()) {
+                for (int count = 1; count <= 4; count++) {
+                    for (LocalDate today : todays) {
+                        for (LocalDate endDate : endDates) {
+                            for (int generated : new int[]{0, 3, 50}) {
+                                assertThat(RecurrenceScheduler.pendingOccurrenceCount(anchor, interval, count, endDate, today, generated))
+                                    .as("anchor=%s interval=%s x%d today=%s endDate=%s generated=%d",
+                                        anchor, interval, count, today, endDate, generated)
+                                    .isEqualTo(byCountingOneByOne(anchor, interval, count, endDate, today, generated));
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -211,4 +211,68 @@ class RecurrenceProjectorTest {
             LocalDate.of(2027, 1, 1), RecurrenceInterval.DAILY, 1, null, today, null))
             .doesNotThrowAnyException();
     }
+    // ── non-régression : le calcul arithmétique doit rendre exactement ce que
+    //    rendait le balayage linéaire qu'il remplace ───────────────────────
+
+    /**
+     * The implementation this class replaced, kept verbatim as a reference: it walked from
+     * occurrence 0 one step at a time to find where to start. Slow, but unquestionably right —
+     * which is what makes it worth diffing the fast path against, here and on any future change.
+     */
+    private static List<LocalDate> byWalkingFromTheAnchor(
+            LocalDate anchorDate, RecurrenceInterval intervalType, int intervalCount, LocalDate endDate,
+            LocalDate from, LocalDate to) {
+        List<LocalDate> result = new java.util.ArrayList<>();
+        int n = 0;
+        LocalDate date = RecurrenceProjector.occurrenceDate(anchorDate, intervalType, intervalCount, n);
+        while (date.isBefore(from)) {
+            n++;
+            date = RecurrenceProjector.occurrenceDate(anchorDate, intervalType, intervalCount, n);
+        }
+        while (!date.isAfter(to) && (endDate == null || !date.isAfter(endDate))) {
+            result.add(date);
+            n++;
+            date = RecurrenceProjector.occurrenceDate(anchorDate, intervalType, intervalCount, n);
+        }
+        return result;
+    }
+
+    @Test
+    void the_arithmetic_start_index_returns_what_walking_from_the_anchor_returned() {
+        List<LocalDate> anchors = List.of(
+            LocalDate.of(2026, 1, 1),    // début de mois
+            LocalDate.of(2026, 1, 31),   // fin de mois, clampé en février
+            LocalDate.of(2026, 2, 28),
+            LocalDate.of(2028, 2, 29),   // 29 février d'une année bissextile
+            LocalDate.of(2025, 12, 31),
+            LocalDate.of(2024, 6, 15));
+        List<LocalDate> windowStarts = List.of(
+            LocalDate.of(2024, 1, 1), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 2, 28),
+            LocalDate.of(2026, 3, 1), LocalDate.of(2027, 7, 17), LocalDate.of(2030, 12, 31));
+        List<LocalDate> endDates = new java.util.ArrayList<>();
+        endDates.add(null);
+        endDates.add(LocalDate.of(2026, 6, 30));
+        endDates.add(LocalDate.of(2029, 1, 1));
+
+        int compared = 0;
+        for (LocalDate anchor : anchors) {
+            for (RecurrenceInterval interval : RecurrenceInterval.values()) {
+                for (int count = 1; count <= 4; count++) {
+                    for (LocalDate from : windowStarts) {
+                        for (int windowDays : new int[]{0, 1, 45, 400}) {
+                            for (LocalDate endDate : endDates) {
+                                LocalDate to = from.plusDays(windowDays);
+                                assertThat(RecurrenceProjector.occurrencesBetween(anchor, interval, count, endDate, from, to, 10_000))
+                                    .as("anchor=%s interval=%s x%d from=%s to=%s endDate=%s",
+                                        anchor, interval, count, from, to, endDate)
+                                    .isEqualTo(byWalkingFromTheAnchor(anchor, interval, count, endDate, from, to));
+                                compared++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assertThat(compared).isEqualTo(6 * 4 * 4 * 6 * 4 * 3);
+    }
 }
