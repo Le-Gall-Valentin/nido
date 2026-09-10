@@ -10,6 +10,8 @@ import com.nido.api.mfa.infrastructure.persistence.entity.UserTotpEntity;
 import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
@@ -53,7 +55,14 @@ public class UserTotpRepositoryAdapter
         return jpa.saveTotpSecretIfAbsent(userId, encryptorFactory.forUser(userId).encrypt(secret)) > 0;
     }
 
+    // REQUIRES_NEW: ConfirmTotpHandler discards the pending secret and then throws
+    // TotpConfirmMaxAttemptsExceeded, which rolls its transaction back. Joining that
+    // transaction would undo this very write while the Redis attempt counter — reset in
+    // the same breath, and not transactional — stayed at zero, handing the caller a fresh
+    // batch of five guesses against a secret that was supposed to be gone. Committing
+    // independently is what makes the lockout actually take effect.
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void clearPendingSecret(UUID userId) {
         jpa.clearPendingSecretById(userId);
     }

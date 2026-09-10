@@ -14,8 +14,8 @@ interface AccountSecurityPageProps {
 
 export function AccountSecurityPage({ api = accountApi }: AccountSecurityPageProps = {}) {
   const { t } = useTranslation('account')
-  const { user, patchUser } = useAuth(
-    useShallow(s => ({ user: s.user, patchUser: s.patchUser }))
+  const { user, patchUser, logout } = useAuth(
+    useShallow(s => ({ user: s.user, patchUser: s.patchUser, logout: s.logout }))
   )
 
   if (!user) return null
@@ -38,6 +38,10 @@ export function AccountSecurityPage({ api = accountApi }: AccountSecurityPagePro
 
       <ChangePasswordSection
         onChangePassword={api.changePassword}
+        // The store clears the local session in its own finally block, so a failing
+        // logout call still signs this device out — the catch only keeps the rejection
+        // from surfacing as an unhandled one.
+        onChanged={() => { logout().catch(() => {}) }}
       />
     </div>
   )

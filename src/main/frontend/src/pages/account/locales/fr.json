@@ -45,7 +45,7 @@
     "new": "Nouveau mot de passe",
     "confirm": "Confirmer",
     "submit": "Mettre à jour le mot de passe",
-    "success": "Mot de passe mis à jour.",
+    "success": "Mot de passe mis à jour. Toutes vos sessions ont été déconnectées — reconnectez-vous.",
     "error": {
       "mismatch": "Les deux mots de passe ne correspondent pas.",
       "too_short": "Trop court (8 caractères minimum).",
