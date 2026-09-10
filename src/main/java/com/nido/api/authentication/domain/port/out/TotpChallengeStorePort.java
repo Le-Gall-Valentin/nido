@@ -9,9 +9,21 @@ public interface TotpChallengeStorePort {
     void invalidateChallenge(String challengeId);
 
     /**
-     * Increments the failed-attempt counter for a challenge and returns the new count.
-     * TTL is set only on the first increment (matches challenge TTL).
-     * Callers must invalidate the challenge when the count reaches the configured maximum.
+     * Failed verification attempts recorded against this account in the current window, 0 when
+     * there are none.
+     *
+     * <p>Keyed on the account, not on the challenge: a challenge id is minted afresh by every
+     * login, so a counter tied to one resets the moment the caller logs in again — which made
+     * the five-attempt limit a limit on nothing. Callers check this before verifying a code.
      */
-    int incrementFailedAttempts(String challengeId);
+    int failedAttempts(UUID userId);
+
+    /**
+     * Records one failed attempt against the account and returns the new count, arming the
+     * lockout window if this is the first.
+     */
+    int recordFailedAttempt(UUID userId);
+
+    /** Wipes the counter. A successful verification clears the slate. */
+    void clearFailedAttempts(UUID userId);
 }

@@ -58,6 +58,13 @@ public record NidoProperties(
     ) {}
 
     public record SecurityProperties(
-        @Positive @DefaultValue("15") int challengeTtlMinutes
+        @Positive @DefaultValue("15") int challengeTtlMinutes,
+        /**
+         * How long an account stays locked out of TOTP verification once it has used up its
+         * attempts. Deliberately its own knob rather than reusing challengeTtlMinutes: one
+         * governs how long a login may be left half-finished, the other how long brute-force
+         * guessing is held off, and a future change to either must not silently move the other.
+         */
+        @Positive @DefaultValue("15") int totpLockoutMinutes
     ) {}
 }
