@@ -1,5 +1,7 @@
 package com.nido.api.mfa.infrastructure.config;
 
+import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.nido.api.infrastructure.config.EncryptorCache;
 import com.nido.api.infrastructure.config.NidoProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -7,7 +9,6 @@ import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Configuration
 public class TotpEncryptionConfig {
@@ -23,8 +24,9 @@ public class TotpEncryptionConfig {
     // There is no in-place re-encryption path because the old ciphertext requires the old key.
     @Bean
     TotpEncryptorFactory totpEncryptorFactory(NidoProperties properties) {
-        ConcurrentHashMap<UUID, TextEncryptor> cache = new ConcurrentHashMap<>();
-        return userId -> cache.computeIfAbsent(userId, id ->
+        // Bounded and expiring — see EncryptorCache for why a derived key must not live forever.
+        LoadingCache<UUID, TextEncryptor> cache = EncryptorCache.build(id ->
             Encryptors.delux(properties.encryption().secret(), id.toString().replace("-", "")));
+        return cache::get;
     }
 }

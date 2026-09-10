@@ -69,6 +69,12 @@
             <artifactId>totp</artifactId>
             <version>1.7.1</version>
         </dependency>
+        <!-- Bounds the per-user / per-space encryptor caches. No <version>: the Spring Boot BOM
+             already manages Caffeine, so it moves with the Boot upgrade rather than on its own. -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
