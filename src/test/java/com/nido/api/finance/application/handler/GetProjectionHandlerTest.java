@@ -3,6 +3,7 @@ package com.nido.api.finance.application.handler;
 import com.nido.api.finance.domain.model.ProjectedOccurrence;
 import com.nido.api.finance.domain.model.Projection;
 import com.nido.api.finance.domain.model.RecurrenceInterval;
+import com.nido.api.finance.domain.model.RecurringSeriesSchedule;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,7 +52,7 @@ class GetProjectionHandlerTest {
         LocalDate today = LocalDate.of(2026, 1, 10);
         Transaction soFar = new Transaction(UUID.randomUUID(), spaceId, "Courses", new BigDecimal("50.00"),
             TransactionType.EXPENSE, categoryId, LocalDate.of(2026, 1, 5), null, List.of(), null, Instant.now());
-        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of());
+        when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
         when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of(soFar));
         RecurringTransactionSeries rent = new RecurringTransactionSeries(UUID.randomUUID(), spaceId, "Loyer",
             new BigDecimal("800.00"), TransactionType.EXPENSE, categoryId, null, List.of(),
@@ -63,6 +65,17 @@ class GetProjectionHandlerTest {
         assertThat(projection.upcoming()).containsExactly(
             new ProjectedOccurrence(rent.id(), "Loyer", new BigDecimal("800.00"), TransactionType.EXPENSE, LocalDate.of(2026, 1, 28)));
         assertThat(projection.projectedEndOfMonthBalance()).isEqualByComparingTo("-850.00");
-        verify(seriesRepository).lockForMaterialization(spaceId);
+        // No series owes anything, so the pre-check spares the lock — the projection itself
+        // reads future occurrences in memory and never needed it.
+        verify(seriesRepository, never()).lockForMaterialization(spaceId);
+    }
+    /**
+     * Derives the schedule projection from the full series, so a test cannot stub the two reads
+     * with values that disagree — the pre-check and the materialization loop must see the same
+     * series.
+     */
+    private static RecurringSeriesSchedule scheduleOf(RecurringTransactionSeries s) {
+        return new RecurringSeriesSchedule(s.id(), s.intervalType(), s.intervalCount(),
+            s.anchorDate(), s.endDate(), s.lastMaterializedDate());
     }
 }
