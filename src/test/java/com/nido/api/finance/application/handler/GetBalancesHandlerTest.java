@@ -46,7 +46,7 @@ class GetBalancesHandlerTest {
         // repository no longer decrypts one for it.
         SplitTransaction dinner = new SplitTransaction(aliceId, new BigDecimal("40.00"),
             List.of(new Contribution(aliceId, new BigDecimal("20.00")),
-                    new Contribution(bobId, new BigDecimal("20.00"))));
+                    new Contribution(bobId, new BigDecimal("20.00"))), TransactionType.EXPENSE);
         when(transactionRepository.findSplitsBySpaceId(spaceId)).thenReturn(List.of(dinner));
         when(settlementRecordRepository.findBySpaceId(spaceId)).thenReturn(List.of());
         SpaceMembership membership = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.MEMBER, Instant.now());

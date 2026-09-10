@@ -230,6 +230,43 @@ class FinanceControllerIT {
     }
 
     @Test
+    void a_shared_income_makes_its_receiver_the_debtor_end_to_end() throws Exception {
+        // Alice receives a 300 refund that belongs to the household, split evenly: she is holding
+        // 150 that is Bob's. The whole chain has to agree on the direction — the projection that
+        // carries the type, the calculator that folds it, and the settlement guard that only
+        // accepts a payment matching a real debt.
+        String body = "{\"label\":\"Remboursement CAF\",\"amount\":300.00,\"type\":\"INCOME\",\"categoryId\":\"" + incomeCategoryId() + "\","
+            + "\"date\":\"2026-01-01\",\"payerId\":\"" + aliceId + "\",\"contributors\":["
+            + "{\"memberId\":\"" + aliceId + "\",\"shareAmount\":150.00},"
+            + "{\"memberId\":\"" + bobId + "\",\"shareAmount\":150.00}]}";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/balances").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.suggestedTransfers.length()").value(1))
+            .andExpect(jsonPath("$.suggestedTransfers[0].fromMemberId").value(aliceId.toString()))
+            .andExpect(jsonPath("$.suggestedTransfers[0].toMemberId").value(bobId.toString()))
+            .andExpect(jsonPath("$.suggestedTransfers[0].amount").value(150.00));
+
+        // The mirror check: the debt runs the other way, so the expense-shaped settlement is
+        // refused and only Alice paying Bob is accepted.
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":150.00,\"date\":\"2026-01-02\"}"))
+            .andExpect(status().isUnprocessableEntity());
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromMemberId\":\"" + aliceId + "\",\"toMemberId\":\"" + bobId + "\",\"amount\":150.00,\"date\":\"2026-01-02\"}"))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/balances").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.suggestedTransfers.length()").value(0));
+    }
+
+    @Test
     void a_member_can_create_list_update_and_delete_a_recurring_series() throws Exception {
         String body = "{\"label\":\"Loyer\",\"amount\":800.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
             + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":1,\"anchorDate\":\"2026-01-01\"}}";
@@ -392,6 +429,18 @@ class FinanceControllerIT {
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Vacances\",\"targetAmount\":2000.999,\"color\":\"#5c7a58\",\"glyph\":\"🎯\"}"))
             .andExpect(status().isBadRequest());
+    }
+
+    /** The seeded set has exactly one INCOME category ("Revenu"); the rest are expenses. */
+    private String incomeCategoryId() throws Exception {
+        String categories = mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/categories").cookie(accessTokenFor(aliceId)))
+            .andReturn().getResponse().getContentAsString();
+        for (com.fasterxml.jackson.databind.JsonNode category : objectMapper.readTree(categories)) {
+            if ("INCOME".equals(category.get("type").asText())) {
+                return category.get("id").asText();
+            }
+        }
+        throw new AssertionError("no INCOME category was seeded");
     }
 
     private String firstCategoryId() throws Exception {

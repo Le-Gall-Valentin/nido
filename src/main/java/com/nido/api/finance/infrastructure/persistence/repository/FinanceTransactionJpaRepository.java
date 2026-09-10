@@ -26,7 +26,7 @@ public interface FinanceTransactionJpaRepository extends JpaRepository<FinanceTr
      */
     @Query("""
         select new com.nido.api.finance.infrastructure.persistence.repository.SplitTransactionRow(
-            t.id, t.payerId, t.amountEncrypted)
+            t.id, t.payerId, t.amountEncrypted, t.type)
         from FinanceTransactionEntity t
         where t.spaceId = :spaceId
           and t.payerId is not null

@@ -74,7 +74,8 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
                 sharesByTransaction.getOrDefault(row.transactionId(), List.of()).stream()
                     .map(share -> new Contribution(
                         share.userId(), new BigDecimal(encryptor.decrypt(share.shareAmountEncrypted()))))
-                    .toList()))
+                    .toList(),
+                row.type()))
             .toList();
     }
 

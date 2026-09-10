@@ -60,7 +60,7 @@
   },
   "balances": {
     "title": "Balances between members",
-    "subtitle": "Shared expenses split evenly · who owes what",
+    "subtitle": "Shared expenses and income · who owes what",
     "paid_prefix": "paid {{amount}}",
     "status_owes": "owes",
     "status_owed": "is owed",
@@ -74,7 +74,7 @@
     "settle_date_label": "Settlement date",
     "settle_confirm": "Confirm",
     "all_settled": "Everyone is settled up.",
-    "member_payments_empty": "No payments from this member this month.",
+    "member_payments_empty": "No shared transaction from this member this month.",
     "history_title": "Settlement history",
     "history_empty": "No settlements between these two members."
   },
@@ -124,7 +124,10 @@
     "date_label": "Date",
     "payer_label": "Paid by",
     "payer_required": "You must specify who paid.",
+    "receiver_label": "Received by",
+    "receiver_required": "You must specify who received it.",
     "contributors_label": "Contributors",
+    "beneficiaries_label": "Beneficiaries",
     "customize_shares_label": "Customize shares",
     "shares_invalid": "Shares must sum to the total amount.",
     "recurring_label": "Recurring transaction",

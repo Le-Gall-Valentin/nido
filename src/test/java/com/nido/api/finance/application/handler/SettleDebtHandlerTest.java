@@ -65,7 +65,8 @@ class SettleDebtHandlerTest {
 
     /** A transaction {@code payerId} paid in full, with {@code contributorId} owing the whole {@code amount} back. */
     private SplitTransaction sharedExpense(UUID payerId, UUID contributorId, BigDecimal amount) {
-        return new SplitTransaction(payerId, amount, List.of(new Contribution(contributorId, amount)));
+        return new SplitTransaction(payerId, amount, List.of(new Contribution(contributorId, amount)),
+            TransactionType.EXPENSE);
     }
 
     @Test
