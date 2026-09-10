@@ -13,6 +13,12 @@ spring:
     username: ${NIDO_DB_USER}
     password: ${NIDO_DB_PASSWORD}
   jpa:
+    # Off deliberately. Left on, the Hibernate session stays open through response rendering,
+    # holding a connection from the pool for the whole write-out. Nothing here needs it: there
+    # is not a single JPA relation in the codebase, so no lazy proxy can escape its transaction —
+    # every aggregate is assembled by explicit queries inside a @Transactional handler and mapped
+    # to domain records before it leaves.
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
