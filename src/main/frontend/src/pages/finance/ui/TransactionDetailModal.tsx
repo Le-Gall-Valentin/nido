@@ -7,6 +7,7 @@ import type { Category, Transaction } from '@/entities/finance'
 import { CategoryIconBadge } from './CategoryIconBadge'
 import { formatAmount } from '../lib/formatAmount'
 import { roundSharePercentages } from '../lib/roundSharePercentages'
+import { contributionLabelKeys } from '../lib/contributionLabelKeys'
 
 interface TransactionDetailModalProps {
   transaction: Transaction
@@ -18,6 +19,7 @@ interface TransactionDetailModalProps {
 export function TransactionDetailModal({ transaction, category, members, onClose }: TransactionDetailModalProps) {
   const { t } = useTranslation('finance')
   const payer = members.find((m) => m.userId === transaction.payerId)
+  const labels = contributionLabelKeys(transaction.type)
 
   function memberLabel(memberId: string): string {
     const member = members.find((m) => m.userId === memberId)
@@ -51,7 +53,7 @@ export function TransactionDetailModal({ transaction, category, members, onClose
         </div>
         {payer && (
           <div className="flex items-center justify-between">
-            <dt className="text-fg-3">{t('form.payer_label')}</dt>
+            <dt className="text-fg-3">{t(labels.holder)}</dt>
             <dd className="flex items-center gap-1.5 font-medium text-fg-0">
               <UserAvatar username={payer.username ?? '?'} role="USER" className="size-5 rounded-full text-[9px]" />
               {payer.username ?? payer.email}
@@ -64,7 +66,7 @@ export function TransactionDetailModal({ transaction, category, members, onClose
         const percents = roundSharePercentages(transaction.contributors.map((c) => c.shareAmount), transaction.amount)
         return (
           <div className="mt-4 border-t border-border pt-4">
-            <h3 className="mb-2 text-[13px] font-semibold text-fg-1">{t('form.contributors_label')}</h3>
+            <h3 className="mb-2 text-[13px] font-semibold text-fg-1">{t(labels.parties)}</h3>
             <ul className="space-y-2">
               {transaction.contributors.map((contribution, i) => (
                 <li key={contribution.memberId} className="flex items-center gap-2 text-sm">

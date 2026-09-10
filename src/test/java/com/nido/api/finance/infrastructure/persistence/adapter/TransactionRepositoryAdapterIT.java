@@ -155,7 +155,12 @@ class TransactionRepositoryAdapterIT {
     // ─── B7 : le filtre du repli de solde, en SQL réel ─────────────────────
 
     private Transaction save(String label, BigDecimal amount, UUID payerId, List<Contribution> contributors) {
-        return adapter.create(new CreateTransactionCommand(spaceId, label, amount, TransactionType.EXPENSE, categoryId,
+        return save(label, amount, TransactionType.EXPENSE, payerId, contributors);
+    }
+
+    private Transaction save(String label, BigDecimal amount, TransactionType type, UUID payerId,
+            List<Contribution> contributors) {
+        return adapter.create(new CreateTransactionCommand(spaceId, label, amount, type, categoryId,
             LocalDate.of(2026, 1, 15), payerId,
             contributors.stream().map(c -> new ContributionInput(c.memberId(), c.shareAmount())).toList(), null),
             contributors);
@@ -217,6 +222,25 @@ class TransactionRepositoryAdapterIT {
 
         assertThat(adapter.findSplitsBySpaceId(spaceId)).isEmpty();
     }
+    @Test
+    void findSplitsBySpaceId_carries_the_direction_of_each_transaction() {
+        // The direction is what tells BalanceCalculator whether the payer fronted the money or
+        // received it. It is not in the encrypted payload, it is a projected column — so a wrong
+        // constructor expression here would reverse every shared income without failing anything.
+        save("Courses partagées", new BigDecimal("40.00"), TransactionType.EXPENSE, aliceId,
+            List.of(new Contribution(aliceId, new BigDecimal("20.00")), new Contribution(bobId, new BigDecimal("20.00"))));
+        save("Remboursement partagé", new BigDecimal("300.00"), TransactionType.INCOME, aliceId,
+            List.of(new Contribution(aliceId, new BigDecimal("150.00")), new Contribution(bobId, new BigDecimal("150.00"))));
+
+        List<SplitTransaction> splits = adapter.findSplitsBySpaceId(spaceId);
+
+        assertThat(splits).hasSize(2);
+        assertThat(splits).filteredOn(split -> split.type() == TransactionType.EXPENSE)
+            .singleElement().satisfies(split -> assertThat(split.amount()).isEqualByComparingTo("40.00"));
+        assertThat(splits).filteredOn(split -> split.type() == TransactionType.INCOME)
+            .singleElement().satisfies(split -> assertThat(split.amount()).isEqualByComparingTo("300.00"));
+    }
+
     @Test
     void findSplitsBySpaceId_never_touches_the_label_ciphertext() {
         // The point of the projection, proved rather than asserted. Corrupt the stored label so

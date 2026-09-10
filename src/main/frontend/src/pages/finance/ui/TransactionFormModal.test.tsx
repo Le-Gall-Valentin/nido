@@ -94,6 +94,42 @@ describe('TransactionFormModal', () => {
     }))
   })
 
+  it('shares nothing by default once the type is switched to income', () => {
+    // An expense is shared by default; an income is not. Carrying the expense default over would
+    // make a salary claim its receiver owes the others half of it — the server now folds a shared
+    // income in the opposite direction, so this default is what decides whether a debt appears.
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit, canPickContributors: true, members: [alice, bob], currentUserId: 'alice' })
+
+    fireEvent.click(screen.getByText('type.INCOME'))
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Salaire' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '2000.00' } })
+    fireEvent.change(screen.getByLabelText('form.date_label'), { target: { value: '2026-01-15' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'INCOME', payerId: 'alice', contributors: [],
+    }))
+  })
+
+  it('lets an income be shared explicitly, receiver included', () => {
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit, canPickContributors: true, members: [alice, bob], currentUserId: 'alice' })
+
+    fireEvent.click(screen.getByText('type.INCOME'))
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Remboursement' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '300.00' } })
+    fireEvent.change(screen.getByLabelText('form.date_label'), { target: { value: '2026-01-15' } })
+    fireEvent.click(screen.getByRole('button', { name: 'alice' }))
+    fireEvent.click(screen.getByRole('button', { name: 'bob' }))
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'INCOME', payerId: 'alice',
+      contributors: [{ memberId: 'alice', shareAmount: null }, { memberId: 'bob', shareAmount: null }],
+    }))
+  })
+
   it('does not render the payer/contributor pickers when canPickContributors is false', () => {
     renderModal({ canPickContributors: false })
 

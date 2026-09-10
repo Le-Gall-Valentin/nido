@@ -46,7 +46,7 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
   const [date, setDate] = useState(transaction?.date ?? new Date().toISOString().slice(0, 10))
   const [payerId, setPayerId] = useState<string>(transaction?.payerId ?? currentUserId ?? '')
   const [contributorIds, setContributorIds] = useState<string[]>(
-    transaction?.contributors.map((c) => c.memberId) ?? (canPickContributors ? members.map((m) => m.userId) : [])
+    transaction?.contributors.map((c) => c.memberId) ?? defaultContributorIds(transaction?.type ?? 'EXPENSE')
   )
   const [customizeShares, setCustomizeShares] = useState(false)
   const [customShares, setCustomShares] = useState<Record<string, number>>({})
@@ -60,8 +60,20 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
     setContributorIds((ids) => (ids.includes(memberId) ? ids.filter((id) => id !== memberId) : [...ids, memberId]))
   }
 
+  /**
+   * An expense is shared by default — that is what a household expense usually is. An income is
+   * not: a salary belongs to whoever received it, and listing everyone would make the app claim
+   * its receiver owes the others half of it. Sharing an income stays deliberate.
+   */
+  function defaultContributorIds(forType: TransactionType): string[] {
+    return canPickContributors && forType === 'EXPENSE' ? members.map((m) => m.userId) : []
+  }
+
   function selectType(next: TransactionType) {
     setType(next)
+    setContributorIds(defaultContributorIds(next))
+    setCustomizeShares(false)
+    setCustomShares({})
     const stillValid = categories.some((c) => c.id === categoryId && c.type === next)
     if (!stillValid) {
       setCategoryId(categories.find((c) => c.type === next)?.id ?? '')
@@ -84,7 +96,7 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
       return
     }
     const resolution = resolveContributorsOrError(
-      numericAmount, canPickContributors, payerId, contributorIds, customizeShares, customShares, t)
+      numericAmount, type, canPickContributors, payerId, contributorIds, customizeShares, customShares, t)
     if (resolution.error !== null) {
       setError(resolution.error)
       return
@@ -140,7 +152,7 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
 
         {canPickContributors && (
           <ContributorsPicker
-            members={members} payerId={payerId} onPayerChange={setPayerId}
+            members={members} type={type} payerId={payerId} onPayerChange={setPayerId}
             contributorIds={contributorIds} onToggleContributor={toggleContributor}
             customizeShares={customizeShares} onCustomizeSharesChange={setCustomizeShares}
             customShares={customShares}

@@ -1,11 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import { UserAvatar } from '@/entities/user'
 import type { SpaceMember } from '@/entities/space'
+import type { TransactionType } from '@/entities/finance'
+import { contributionLabelKeys } from '../lib/contributionLabelKeys'
 
 const SELECT_CLASSNAME = 'rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent'
 
 interface ContributorsPickerProps {
   members: SpaceMember[]
+  /** Decides the wording: an expense has a payer and contributors, an income a receiver and beneficiaries. */
+  type: TransactionType
   payerId: string
   onPayerChange: (memberId: string) => void
   contributorIds: string[]
@@ -16,24 +20,25 @@ interface ContributorsPickerProps {
   onCustomShareChange: (memberId: string, value: number) => void
 }
 
-/** Payer select + contributor toggles + optional custom-share amounts, shared by TransactionFormModal and RecurringSeriesFormModal. */
+/** Holder select + share toggles + optional custom-share amounts, shared by TransactionFormModal and RecurringSeriesFormModal. */
 export function ContributorsPicker({
-  members, payerId, onPayerChange, contributorIds, onToggleContributor,
+  members, type, payerId, onPayerChange, contributorIds, onToggleContributor,
   customizeShares, onCustomizeSharesChange, customShares, onCustomShareChange,
 }: ContributorsPickerProps) {
   const { t } = useTranslation('finance')
+  const labels = contributionLabelKeys(type)
 
   return (
     <>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="finance-payer" className="text-[13px] font-semibold text-fg-1">{t('form.payer_label')}</label>
+        <label htmlFor="finance-payer" className="text-[13px] font-semibold text-fg-1">{t(labels.holder)}</label>
         <select id="finance-payer" value={payerId} onChange={(e) => onPayerChange(e.target.value)} className={SELECT_CLASSNAME}>
           {members.map((m) => <option key={m.userId} value={m.userId}>{m.username ?? m.email}</option>)}
         </select>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-[13px] font-semibold text-fg-1">{t('form.contributors_label')}</span>
+        <span className="text-[13px] font-semibold text-fg-1">{t(labels.parties)}</span>
         <div className="flex flex-col gap-1">
           {members.map((member) => (
             <button key={member.userId} type="button" onClick={() => onToggleContributor(member.userId)}

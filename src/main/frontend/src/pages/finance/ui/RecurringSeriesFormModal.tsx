@@ -75,7 +75,7 @@ export function RecurringSeriesFormModal({ series, categories, members, canPickC
       return
     }
     const resolution = resolveContributorsOrError(
-      numericAmount, canPickContributors, payerId, contributorIds, customizeShares, customShares, t)
+      numericAmount, type, canPickContributors, payerId, contributorIds, customizeShares, customShares, t)
     if (resolution.error !== null) {
       setError(resolution.error)
       return
@@ -122,7 +122,7 @@ export function RecurringSeriesFormModal({ series, categories, members, canPickC
 
         {canPickContributors && (
           <ContributorsPicker
-            members={members} payerId={payerId} onPayerChange={setPayerId}
+            members={members} type={type} payerId={payerId} onPayerChange={setPayerId}
             contributorIds={contributorIds} onToggleContributor={toggleContributor}
             customizeShares={customizeShares} onCustomizeSharesChange={setCustomizeShares}
             customShares={customShares}
