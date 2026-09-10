@@ -9,6 +9,7 @@ import com.nido.api.tasks.domain.port.out.RecurringTaskSeriesRepository;
 import com.nido.api.tasks.domain.port.out.TaskRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -16,6 +17,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -134,5 +136,38 @@ class RecurringTaskSeriesMaterializerTest {
 
     private static int anyInt() {
         return org.mockito.ArgumentMatchers.anyInt();
+    }
+    @Test
+    void a_backlog_beyond_the_ceiling_is_capped_and_the_series_advances_only_that_far() {
+        // Anchored far enough back that the uncapped while(true) would fill the pending list
+        // until the heap gave out — before a single row was written.
+        RecurringTaskSeries s = new RecurringTaskSeries(seriesId, spaceId, "Sortir les poubelles", TaskPriority.MED,
+            List.of(), RecurrenceInterval.DAILY, 1, RecurrenceInterval.DAILY, 0, LocalDate.of(2000, 1, 1), null,
+            0, List.of(), 0, creatorId);
+        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(s));
+
+        RecurringTaskSeriesMaterializer.materializeDueOccurrences(
+            taskRepository, seriesRepository, spaceId, LocalDate.of(2026, 9, 9));
+
+        ArgumentCaptor<List<CreateTaskCommand>> batchCaptor = ArgumentCaptor.captor();
+        verify(taskRepository).createAll(batchCaptor.capture());
+        assertThat(batchCaptor.getValue()).hasSize(RecurringTaskSeriesMaterializer.MAX_OCCURRENCES_PER_RUN);
+        // advance() records the last occurrence generated, so the next read resumes there.
+        verify(seriesRepository).advance(seriesId, 0, RecurringTaskSeriesMaterializer.MAX_OCCURRENCES_PER_RUN);
+    }
+
+    @Test
+    void successive_passes_keep_catching_up_from_where_the_previous_one_left_off() {
+        int alreadyGenerated = RecurringTaskSeriesMaterializer.MAX_OCCURRENCES_PER_RUN;
+        RecurringTaskSeries s = new RecurringTaskSeries(seriesId, spaceId, "Sortir les poubelles", TaskPriority.MED,
+            List.of(), RecurrenceInterval.DAILY, 1, RecurrenceInterval.DAILY, 0, LocalDate.of(2000, 1, 1), null,
+            alreadyGenerated, List.of(), 0, creatorId);
+        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(s));
+
+        RecurringTaskSeriesMaterializer.materializeDueOccurrences(
+            taskRepository, seriesRepository, spaceId, LocalDate.of(2026, 9, 9));
+
+        verify(seriesRepository).advance(seriesId, 0,
+            alreadyGenerated + RecurringTaskSeriesMaterializer.MAX_OCCURRENCES_PER_RUN);
     }
 }

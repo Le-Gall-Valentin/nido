@@ -34,6 +34,10 @@ public class FinanceExceptionHandler {
             case FinanceException.TargetAmountBelowContributed ignored -> new FinanceErrorResponse(422, "The target amount cannot be lowered below what has already been contributed.");
             case FinanceException.CategoryTypeMismatch ignored -> new FinanceErrorResponse(422, "The category's type does not match this operation's type.");
             case FinanceException.BudgetRequiresExpenseCategory ignored -> new FinanceErrorResponse(422, "Only expense categories can be budgeted.");
+            case FinanceException.RecurrenceBacklogTooLarge ex -> new FinanceErrorResponse(400,
+                "This recurring series would generate " + ex.pendingOccurrences()
+                    + " past occurrences at once (maximum " + ex.maximum()
+                    + "). Move its start date closer, or use a longer interval.");
         };
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), e.getClass().getSimpleName(), response.detail(),

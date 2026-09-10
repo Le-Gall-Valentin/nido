@@ -6,6 +6,8 @@ import com.nido.api.tasks.domain.model.RecurringTaskSeries;
 import com.nido.api.tasks.domain.model.SubtaskInput;
 import com.nido.api.tasks.domain.port.out.RecurringTaskSeriesRepository;
 import com.nido.api.tasks.domain.port.out.TaskRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -28,8 +30,24 @@ import java.util.UUID;
  * writes rolls back every occurrence — since {@code advance} is only ever called
  * once the whole batch already succeeded, a retry never repeats already-persisted
  * work.
+ *
+ * <p>That batch is capped at {@link #MAX_OCCURRENCES_PER_RUN} occurrences per series.
+ * Without the cap the loop below runs once per missed occurrence with no ceiling, so a
+ * series anchored far enough in the past fills the pending list until the heap gives out —
+ * before a single row is written. {@code RecurrenceScheduler.validateBacklog} refuses such
+ * a series at creation; this cap is what protects series that predate that rule, or that
+ * fell far behind while nobody opened the space.
  */
 final class RecurringTaskSeriesMaterializer {
+
+    private static final Logger log = LoggerFactory.getLogger(RecurringTaskSeriesMaterializer.class);
+
+    /**
+     * Occurrences a single pass may materialize per series. Generous enough that any
+     * realistic catch-up completes in one pass, low enough that a pathological series
+     * costs a bounded amount of memory and a bounded batch insert per request.
+     */
+    static final int MAX_OCCURRENCES_PER_RUN = 500;
 
     private RecurringTaskSeriesMaterializer() {}
 
@@ -41,7 +59,12 @@ final class RecurringTaskSeriesMaterializer {
             int rotationIndex = series.currentRotationIndex();
             int lastGenerated = series.occurrenceCount();
             List<CreateTaskCommand> due = new ArrayList<>();
+            boolean capped = false;
             while (true) {
+                if (due.size() >= MAX_OCCURRENCES_PER_RUN) {
+                    capped = true;
+                    break;
+                }
                 LocalDate dueDate = RecurrenceScheduler.nextDueDate(
                     series.anchorDate(), series.intervalType(), series.intervalCount(), occurrence);
                 if (series.endDate() != null && dueDate.isAfter(series.endDate())) {
@@ -65,6 +88,13 @@ final class RecurringTaskSeriesMaterializer {
             if (!due.isEmpty()) {
                 taskRepository.createAll(due);
                 seriesRepository.advance(series.id(), rotationIndex, lastGenerated);
+                if (capped) {
+                    // Not an error: advance() recorded the last occurrence generated along with
+                    // the rotation position, so the next read picks up exactly where this stopped.
+                    log.warn("Recurring series {} hit the {}-occurrence materialization ceiling in space {}; "
+                            + "caught up to occurrence {}, remainder deferred to the next read",
+                        series.id(), MAX_OCCURRENCES_PER_RUN, spaceId, lastGenerated);
+                }
             }
         }
     }

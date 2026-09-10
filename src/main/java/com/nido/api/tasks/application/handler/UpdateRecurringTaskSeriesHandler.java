@@ -27,6 +27,15 @@ public class UpdateRecurringTaskSeriesHandler implements UpdateRecurringTaskSeri
     @Override
     @Transactional
     public RecurringTaskSeries update(UpdateRecurringTaskSeriesCommand command, SpaceMembership caller) {
+        return update(command, caller, LocalDate.now());
+    }
+
+    /**
+     * Package-visible overload with an explicit "today" — lets tests exercise the backlog
+     * ceiling against fixed dates instead of whenever the suite happens to run.
+     */
+    @Transactional
+    RecurringTaskSeries update(UpdateRecurringTaskSeriesCommand command, SpaceMembership caller, LocalDate today) {
         caller.ensureSameSpace(command.spaceId());
         caller.ensureCanWrite();
         RecurrenceScheduler.validateSchedule(command.anchorDate(), command.intervalType(), command.intervalCount(),
@@ -40,6 +49,11 @@ public class UpdateRecurringTaskSeriesHandler implements UpdateRecurringTaskSeri
         boolean frequencyChanged = existing.intervalType() != command.intervalType()
             || existing.intervalCount() != command.intervalCount();
         if (!frequencyChanged) {
+            // Anchor and occurrence count both survive this branch, so the backlog is measured
+            // against what the series has already generated — renaming a long-running series
+            // owes nothing, moving its anchor into the distant past owes everything.
+            RecurrenceScheduler.validateBacklog(command.anchorDate(), command.intervalType(),
+                command.intervalCount(), command.endDate(), today, existing.occurrenceCount());
             return seriesRepository.update(command);
         }
         // Re-anchoring on the last generated occurrence (instead of keeping the original
@@ -54,6 +68,10 @@ public class UpdateRecurringTaskSeriesHandler implements UpdateRecurringTaskSeri
             command.seriesId(), command.spaceId(), command.title(), command.priority(), command.subtaskTemplates(),
             command.intervalType(), command.intervalCount(), command.leadIntervalType(), command.leadIntervalCount(),
             lastGeneratedDueDate, command.endDate(), command.rotationMemberIds());
+        // Validated against the re-anchored command, not the submitted one: this branch discards
+        // command.anchorDate() entirely, and resets the occurrence count to 0 along with it.
+        RecurrenceScheduler.validateBacklog(lastGeneratedDueDate, command.intervalType(),
+            command.intervalCount(), command.endDate(), today, 0);
         seriesRepository.update(reAnchoredCommand);
         return seriesRepository.advance(command.seriesId(), existing.currentRotationIndex(), 0);
     }
