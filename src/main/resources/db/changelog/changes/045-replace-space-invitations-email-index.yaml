@@ -1,0 +1,44 @@
+# idx_space_invitations_email indexed the raw email column, while every query that looks an
+# invitation up by address wraps it: findPendingForEmail and deleteAllForEmail both compare
+# lower(i.email) = lower(:email). Postgres cannot use a plain-column index for an expression,
+# so the index was never once usable — it only cost writes.
+#
+# Replaced by the matching functional index rather than simply dropped: deleteAllForEmail runs
+# in the GDPR deletion pipeline and findPendingForEmail on every load of the invitations page.
+databaseChangeLog:
+  - changeSet:
+      id: 045-index-space-invitations-lower-email
+      author: nido
+      comment: Functional index matching the lower(email) comparison every email query uses
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - indexExists:
+                indexName: idx_space_invitations_lower_email
+      changes:
+        - sql:
+            sql: CREATE INDEX idx_space_invitations_lower_email ON space_invitations (lower(email))
+            splitStatements: false
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_space_invitations_lower_email
+
+  - changeSet:
+      id: 045-drop-space-invitations-raw-email-index
+      author: nido
+      comment: The raw-column index no query could use
+      preConditions:
+        - onFail: MARK_RAN
+        - indexExists:
+            indexName: idx_space_invitations_email
+      changes:
+        - dropIndex:
+            tableName: space_invitations
+            indexName: idx_space_invitations_email
+      rollback:
+        - createIndex:
+            tableName: space_invitations
+            indexName: idx_space_invitations_email
+            columns:
+              - column:
+                  name: email
