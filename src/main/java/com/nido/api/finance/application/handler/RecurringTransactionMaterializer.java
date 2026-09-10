@@ -5,6 +5,8 @@ import com.nido.api.finance.domain.model.RecurrenceProjector;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -19,8 +21,25 @@ import java.util.UUID;
  * Never materializes anything after {@code today} — see
  * {@code GetProjectionHandler} (Task 14) for future occurrences, which are
  * only ever computed in memory.
+ *
+ * <p>Each pass writes at most {@link #MAX_OCCURRENCES_PER_RUN} occurrences per series.
+ * Without that ceiling the amount of work a single read performs is dictated by how far
+ * back a series was anchored, which is caller-supplied — a series anchored decades ago
+ * would generate hundreds of thousands of rows inside one transaction, holding the
+ * space's advisory lock throughout. {@code RecurrenceProjector.validateBacklog} already
+ * refuses such a series at creation; this ceiling is what protects series that predate
+ * that rule, or that fell far behind while nobody opened the space.
  */
 final class RecurringTransactionMaterializer {
+
+    private static final Logger log = LoggerFactory.getLogger(RecurringTransactionMaterializer.class);
+
+    /**
+     * Occurrences a single pass may materialize per series. Generous enough that any
+     * realistic catch-up — well over a year of daily occurrences — completes in one pass,
+     * low enough that a pathological series costs a bounded number of inserts per request.
+     */
+    static final int MAX_OCCURRENCES_PER_RUN = 500;
 
     private RecurringTransactionMaterializer() {}
 
@@ -39,12 +58,15 @@ final class RecurringTransactionMaterializer {
         // it ended). occurrencesBetween already stops at series.endDate() on its own, so
         // considering every series here is safe and still correct.
         for (RecurringTransactionSeries series : seriesRepository.findBySpaceId(spaceId)) {
-            LocalDate from = series.lastMaterializedDate() == null ? series.anchorDate() : series.lastMaterializedDate().plusDays(1);
+            LocalDate from = series.lastMaterializedDate() == null
+                ? series.anchorDate()
+                : series.lastMaterializedDate().plusDays(1);
             if (from.isAfter(today)) {
                 continue;
             }
             List<LocalDate> due = RecurrenceProjector.occurrencesBetween(
-                series.anchorDate(), series.intervalType(), series.intervalCount(), series.endDate(), from, today);
+                series.anchorDate(), series.intervalType(), series.intervalCount(), series.endDate(), from, today,
+                MAX_OCCURRENCES_PER_RUN);
             if (due.isEmpty()) {
                 continue;
             }
@@ -61,7 +83,16 @@ final class RecurringTransactionMaterializer {
             // this update regardless — but it cuts what used to be 2 reads + 1 write per
             // overdue occurrence (hundreds of round trips for a long-neglected daily series)
             // down to a single write per series.
-            seriesRepository.advanceLastMaterializedDate(series.id(), due.get(due.size() - 1));
+            LocalDate lastMaterialized = due.get(due.size() - 1);
+            seriesRepository.advanceLastMaterializedDate(series.id(), lastMaterialized);
+            if (due.size() == MAX_OCCURRENCES_PER_RUN) {
+                // Not an error: the cursor stopped on the last occurrence written, so the next
+                // read resumes from there. Worth a warning all the same — a series that keeps
+                // hitting the ceiling was anchored further back than anyone intended.
+                log.warn("Recurring series {} hit the {}-occurrence materialization ceiling in space {}; "
+                        + "caught up to {}, remainder deferred to the next read",
+                    series.id(), MAX_OCCURRENCES_PER_RUN, spaceId, lastMaterialized);
+            }
         }
     }
 }

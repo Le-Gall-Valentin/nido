@@ -27,6 +27,10 @@ public class TaskExceptionHandler {
                 new TaskErrorResponse(400, "The lead time cannot exceed the recurrence interval.");
             case TaskException.InvalidEndDate ignored -> new TaskErrorResponse(400, "The end date must be on or after the anchor date.");
             case TaskException.MemberNotInSpace ignored -> new TaskErrorResponse(404, "Member is not part of this space.");
+            case TaskException.RecurrenceBacklogTooLarge ex -> new TaskErrorResponse(400,
+                "This recurring series would generate " + ex.pendingOccurrences()
+                    + " past occurrences at once (maximum " + ex.maximum()
+                    + "). Move its start date closer, or use a longer interval.");
         };
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), e.getClass().getSimpleName(), response.detail(),

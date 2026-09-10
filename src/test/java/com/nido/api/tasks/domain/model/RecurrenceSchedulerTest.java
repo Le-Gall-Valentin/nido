@@ -145,4 +145,86 @@ class RecurrenceSchedulerTest {
         assertThatNoException().isThrownBy(() ->
             RecurrenceScheduler.validateSchedule(anchor, RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0, null));
     }
+    // ── borne du rattrapage (B1) ───────────────────────────────────────────
+
+    @Test
+    void the_starting_index_is_exact_when_month_end_clamping_is_in_play() {
+        LocalDate anchor = LocalDate.of(2026, 1, 31);
+
+        assertThat(RecurrenceScheduler.firstOccurrenceIndexOnOrAfter(anchor, RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 2, 15))).isEqualTo(1L);
+        assertThat(RecurrenceScheduler.firstOccurrenceIndexOnOrAfter(anchor, RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 3, 1))).isEqualTo(2L);
+        assertThat(RecurrenceScheduler.firstOccurrenceIndexOnOrAfter(anchor, RecurrenceInterval.MONTHLY, 1, anchor)).isZero();
+    }
+
+    @Test
+    void the_pending_count_ignores_what_the_series_has_already_generated() {
+        LocalDate anchor = LocalDate.of(2026, 1, 1);
+        LocalDate today = LocalDate.of(2026, 1, 11);
+
+        // Occurrences 1..10 are due by today; occurrence 0 is the anchor task the handler
+        // creates directly, which is why the count starts at 1.
+        assertThat(RecurrenceScheduler.pendingOccurrenceCount(anchor, RecurrenceInterval.DAILY, 1, null, today, 0)).isEqualTo(10L);
+        assertThat(RecurrenceScheduler.pendingOccurrenceCount(anchor, RecurrenceInterval.DAILY, 1, null, today, 7)).isEqualTo(3L);
+        assertThat(RecurrenceScheduler.pendingOccurrenceCount(anchor, RecurrenceInterval.DAILY, 1, null, today, 10)).isZero();
+    }
+
+    @Test
+    void the_pending_count_stops_at_the_end_date() {
+        LocalDate anchor = LocalDate.of(2026, 1, 1);
+
+        assertThat(RecurrenceScheduler.pendingOccurrenceCount(
+            anchor, RecurrenceInterval.DAILY, 1, LocalDate.of(2026, 1, 4), LocalDate.of(2026, 6, 1), 0)).isEqualTo(3L);
+    }
+
+    // ── refus a la saisie (B1) ─────────────────────────────────────────────
+
+    @Test
+    void a_daily_series_anchored_years_back_is_refused_outright() {
+        LocalDate today = LocalDate.of(2026, 9, 9);
+
+        assertThatThrownBy(() -> RecurrenceScheduler.validateBacklog(
+            LocalDate.of(2001, 1, 1), RecurrenceInterval.DAILY, 1, null, today, 0))
+            .isInstanceOf(TaskException.RecurrenceBacklogTooLarge.class);
+    }
+
+    @Test
+    void back_dating_a_weekly_series_to_the_start_of_the_year_stays_allowed() {
+        LocalDate today = LocalDate.of(2026, 9, 9);
+
+        assertThatNoException().isThrownBy(() -> RecurrenceScheduler.validateBacklog(
+            LocalDate.of(2026, 1, 1), RecurrenceInterval.WEEKLY, 1, null, today, 0));
+    }
+
+    @Test
+    void a_daily_series_is_allowed_right_up_to_the_ceiling_and_refused_one_past_it() {
+        LocalDate today = LocalDate.of(2026, 9, 9);
+        LocalDate exactlyAtCeiling = today.minusDays(RecurrenceScheduler.MAX_BACKLOG_OCCURRENCES);
+
+        assertThatNoException().isThrownBy(() -> RecurrenceScheduler.validateBacklog(
+            exactlyAtCeiling, RecurrenceInterval.DAILY, 1, null, today, 0));
+        assertThatThrownBy(() -> RecurrenceScheduler.validateBacklog(
+            exactlyAtCeiling.minusDays(1), RecurrenceInterval.DAILY, 1, null, today, 0))
+            .isInstanceOf(TaskException.RecurrenceBacklogTooLarge.class);
+    }
+
+    @Test
+    void a_long_running_series_that_kept_up_carries_no_backlog_and_can_still_be_edited() {
+        // The case that would break every long-running series if the ceiling were measured
+        // from the anchor: a daily series started in 2001 that has generated every occurrence
+        // since owes nothing, so renaming it must stay possible.
+        LocalDate anchor = LocalDate.of(2001, 1, 1);
+        LocalDate today = LocalDate.of(2026, 9, 9);
+        int generatedSoFar = (int) java.time.temporal.ChronoUnit.DAYS.between(anchor, today);
+
+        assertThatNoException().isThrownBy(() -> RecurrenceScheduler.validateBacklog(
+            anchor, RecurrenceInterval.DAILY, 1, null, today, generatedSoFar));
+    }
+
+    @Test
+    void a_series_anchored_in_the_future_carries_no_backlog() {
+        LocalDate today = LocalDate.of(2026, 9, 9);
+
+        assertThatNoException().isThrownBy(() -> RecurrenceScheduler.validateBacklog(
+            LocalDate.of(2027, 1, 1), RecurrenceInterval.DAILY, 1, null, today, 0));
+    }
 }

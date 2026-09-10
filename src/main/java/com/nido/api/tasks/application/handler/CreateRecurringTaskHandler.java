@@ -14,6 +14,7 @@ import com.nido.api.tasks.domain.port.out.RecurringTaskSeriesRepository;
 import com.nido.api.tasks.domain.port.out.TaskRepository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,10 +35,22 @@ public class CreateRecurringTaskHandler implements CreateRecurringTaskUseCase {
     @Override
     @Transactional
     public Task create(CreateRecurringTaskSeriesCommand command, SpaceMembership caller) {
+        return create(command, caller, LocalDate.now());
+    }
+
+    /**
+     * Package-visible overload with an explicit "today" — lets tests exercise the backlog
+     * ceiling against fixed dates instead of whenever the suite happens to run.
+     */
+    @Transactional
+    Task create(CreateRecurringTaskSeriesCommand command, SpaceMembership caller, LocalDate today) {
         caller.ensureSameSpace(command.spaceId());
         caller.ensureCanWrite();
         RecurrenceScheduler.validateSchedule(command.anchorDate(), command.intervalType(), command.intervalCount(),
             command.leadIntervalType(), command.leadIntervalCount(), command.endDate());
+        // A brand-new series has generated nothing yet, so its whole past is backlog.
+        RecurrenceScheduler.validateBacklog(command.anchorDate(), command.intervalType(),
+            command.intervalCount(), command.endDate(), today, 0);
         command.rotationMemberIds().forEach(memberId -> spaceMemberValidator.ensureMember(command.spaceId(), memberId));
         RecurringTaskSeries series = seriesRepository.create(command);
         List<UUID> firstAssignees = series.rotationMemberIds().isEmpty()

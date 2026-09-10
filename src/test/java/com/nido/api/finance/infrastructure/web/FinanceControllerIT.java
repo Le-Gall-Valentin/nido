@@ -30,6 +30,7 @@ import org.testcontainers.junit.jupiter.Container;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.UUID;
 
@@ -436,5 +437,55 @@ class FinanceControllerIT {
             .signWith(Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
             .compact();
         return new Cookie("access_token", token);
+    }
+    @Test
+    void a_recurring_series_with_an_unreasonable_backlog_is_refused_instead_of_flooding_the_space() throws Exception {
+        // Three years of daily occurrences. Before this guard, the series was accepted and the
+        // next read of this space turned it into ~1100 inserts inside one transaction, holding
+        // the space's advisory lock throughout. Anchored relative to now so the test states a
+        // property ("far too far back"), not a date that quietly stops meaning that.
+        String ancientAnchor = LocalDate.now().minusYears(3).toString();
+        String body = "{\"label\":\"Café\",\"amount\":2.50,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"DAILY\",\"intervalCount\":1,\"anchorDate\":\"" + ancientAnchor + "\"}}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/recurring-series")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("RecurrenceBacklogTooLarge"));
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/recurring-series").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void back_dating_a_monthly_series_by_a_few_months_stays_allowed() throws Exception {
+        // The legitimate case the ceiling must not catch: a rent that started earlier this year.
+        String recentAnchor = LocalDate.now().minusMonths(4).toString();
+        String body = "{\"label\":\"Loyer\",\"amount\":800.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":1,\"anchorDate\":\"" + recentAnchor + "\"}}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/recurring-series")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+    }
+
+    @Test
+    void moving_an_existing_series_anchor_into_the_distant_past_is_refused_too() throws Exception {
+        String body = "{\"label\":\"Loyer\",\"amount\":800.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":1,\"anchorDate\":\"" + LocalDate.now().toString() + "\"}}";
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/recurring-series")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+        String seriesId = objectMapper.readTree(created).get("id").asText();
+
+        String updateBody = "{\"label\":\"Loyer\",\"amount\":800.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"DAILY\",\"intervalCount\":1,\"anchorDate\":\""
+            + LocalDate.now().minusYears(3) + "\"}}";
+        mockMvc.perform(patch("/api/spaces/" + spaceId + "/finance/recurring-series/" + seriesId)
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(updateBody))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("RecurrenceBacklogTooLarge"));
     }
 }
