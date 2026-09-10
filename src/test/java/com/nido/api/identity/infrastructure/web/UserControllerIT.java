@@ -938,4 +938,71 @@ class UserControllerIT {
             .andReturn();
         return result.getResponse().getCookie("access_token");
     }
+    // ─── B2 : un changement de mot de passe coupe toutes les sessions ──────
+
+    @Test
+    void changing_a_password_revokes_every_refresh_token_including_the_caller_s() throws Exception {
+        // The point of changing a password is to react to a compromise. A refresh token
+        // stolen beforehand outlives the change by up to 30 days unless it is revoked here,
+        // which made the change useless against the very case it exists for.
+        MvcResult login = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest("testuser", "password"))))
+            .andExpect(status().isOk())
+            .andReturn();
+        Cookie access = login.getResponse().getCookie("access_token");
+        Cookie refresh = login.getResponse().getCookie("refresh_token");
+        UUID userId = userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId();
+        assertThat(refreshTokenJpaRepository.findAll())
+            .filteredOn(token -> token.getUserId().equals(userId))
+            .isNotEmpty()
+            .allSatisfy(token -> assertThat(token.isRevoked()).isFalse());
+
+        mockMvc.perform(patch("/api/users/me/password").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"password\",\"newPassword\":\"N3wS3cr3t!\"}"))
+            .andExpect(status().isNoContent());
+
+        assertThat(refreshTokenJpaRepository.findAll())
+            .filteredOn(token -> token.getUserId().equals(userId))
+            .isNotEmpty()
+            .allSatisfy(token -> assertThat(token.isRevoked()).isTrue());
+        // And refused on the wire, not merely flagged in a column.
+        mockMvc.perform(post("/api/auth/refresh").cookie(refresh))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void a_failed_password_change_leaves_every_session_alone() throws Exception {
+        // Otherwise mistyping the current password — or someone else doing it on a machine
+        // left unlocked — would become a way to sign the account out everywhere.
+        Cookie access = loginAs("testuser", "password");
+        UUID userId = userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId();
+
+        mockMvc.perform(patch("/api/users/me/password").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"wrong-password\",\"newPassword\":\"N3wS3cr3t!\"}"))
+            .andExpect(status().isUnprocessableEntity());
+
+        assertThat(refreshTokenJpaRepository.findAll())
+            .filteredOn(token -> token.getUserId().equals(userId))
+            .isNotEmpty()
+            .allSatisfy(token -> assertThat(token.isRevoked()).isFalse());
+    }
+
+    @Test
+    void the_new_password_is_the_one_that_works_afterwards() throws Exception {
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me/password").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"password\",\"newPassword\":\"N3wS3cr3t!\"}"))
+            .andExpect(status().isNoContent());
+
+        // Revoking every token must not have rolled the password change back with it.
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest("testuser", "N3wS3cr3t!"))))
+            .andExpect(status().isOk());
+    }
 }

@@ -2,6 +2,7 @@ package com.nido.api.mfa.infrastructure.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TotpPolicy;
 import com.nido.api.authentication.infrastructure.persistence.entity.UserCredentialEntity;
 import com.nido.api.authentication.infrastructure.persistence.repository.RefreshTokenJpaRepository;
 import com.nido.api.authentication.infrastructure.persistence.repository.UserCredentialJpaRepository;
@@ -362,5 +363,41 @@ class TotpControllerIT {
                 .content(objectMapper.writeValueAsString(new LoginRequest(username, password))))
             .andReturn();
         return result.getResponse().getCookie("totp_challenge");
+    }
+    // ─── B3 : le verrou anti-brute-force doit survivre au rollback ─────────
+
+    @Test
+    void the_pending_secret_is_really_gone_after_the_confirmation_attempts_run_out() throws Exception {
+        // ConfirmTotpHandler discards the pending secret and then throws, which rolls its
+        // transaction back — so the discard was undone while the Redis attempt counter, reset
+        // in the same breath and not transactional, stayed at zero. The lockout announced by
+        // the 429 never happened: the caller got five fresh guesses, then five more, without
+        // limit. Only a real database can show that, which is why the mock-based unit test
+        // verifying clearPendingSecret() was called passed throughout.
+        Cookie access = loginAs("testuser", "password");
+        java.util.UUID userId = userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId();
+
+        mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+            .andExpect(status().isOk());
+        assertThat(userTotpJpaRepository.findById(userId).orElseThrow().getTotpSecret()).isNotNull();
+
+        for (int attempt = 1; attempt < TotpPolicy.MAX_ATTEMPTS; attempt++) {
+            mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"code\":\"000000\"}"))
+                .andExpect(status().isUnauthorized());
+        }
+        mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"000000\"}"))
+            .andExpect(status().isTooManyRequests());
+
+        assertThat(userTotpJpaRepository.findById(userId).orElseThrow().getTotpSecret()).isNull();
+        // With no pending secret left, confirming is no longer a guessing game at all:
+        // restarting the setup is the only way forward.
+        mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"000000\"}"))
+            .andExpect(status().isUnprocessableEntity());
     }
 }
