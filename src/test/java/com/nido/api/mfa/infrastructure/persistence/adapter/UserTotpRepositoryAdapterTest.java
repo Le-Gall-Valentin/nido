@@ -76,35 +76,10 @@ class UserTotpRepositoryAdapterTest {
     }
 
     @Test
-    void saveTotpSecretIfAbsent_rowsUpdated_returnsTrue() {
-        when(encryptorFactory.forUser(userId)).thenReturn(encryptor);
-        when(encryptor.encrypt("plain-secret")).thenReturn("encrypted-secret");
-        when(jpa.saveTotpSecretIfAbsent(userId, "encrypted-secret")).thenReturn(1);
-
-        assertThat(adapter.saveTotpSecretIfAbsent(userId, "plain-secret")).isTrue();
-    }
-
-    @Test
-    void saveTotpSecretIfAbsent_noRowsUpdated_returnsFalse() {
-        when(encryptorFactory.forUser(userId)).thenReturn(encryptor);
-        when(encryptor.encrypt("plain-secret")).thenReturn("encrypted-secret");
-        when(jpa.saveTotpSecretIfAbsent(userId, "encrypted-secret")).thenReturn(0);
-
-        assertThat(adapter.saveTotpSecretIfAbsent(userId, "plain-secret")).isFalse();
-    }
-
-    @Test
     void createDefaultRecord_savesEntityWithUserId() {
         adapter.createDefaultRecord(userId);
 
         verify(jpa).save(argThat(e -> userId.equals(e.getUserId())));
-    }
-
-    @Test
-    void clearPendingSecret_delegatesToJpa() {
-        adapter.clearPendingSecret(userId);
-
-        verify(jpa).clearPendingSecretById(userId);
     }
 
     @Test
@@ -116,10 +91,16 @@ class UserTotpRepositoryAdapterTest {
     }
 
     @Test
-    void enableTotp_delegatesToJpa() {
-        adapter.enableTotp(userId);
+    void enableTotp_writesTheProvenSecretAndFlipsTheFlagTogether() {
+        // One statement, not two: until the enrolment is proven the secret only existed for the
+        // length of it, so this write is what makes it the account's authenticator. Encrypted on
+        // the way in, like every other secret this adapter stores.
+        when(encryptorFactory.forUser(userId)).thenReturn(encryptor);
+        when(encryptor.encrypt("proven-secret")).thenReturn("encrypted-secret");
 
-        verify(jpa).enableTotpById(userId);
+        adapter.enableTotp(userId, "proven-secret");
+
+        verify(jpa).enableTotpById(userId, "encrypted-secret");
     }
 
     @Test

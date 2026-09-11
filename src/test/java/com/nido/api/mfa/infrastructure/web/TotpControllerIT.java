@@ -10,6 +10,7 @@ import com.nido.api.authentication.infrastructure.security.CustomUserDetails;
 import com.nido.api.authentication.infrastructure.web.dto.LoginRequest;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import com.nido.api.mfa.infrastructure.persistence.entity.UserTotpEntity;
 import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
@@ -62,6 +63,7 @@ class TotpControllerIT {
     @Autowired RefreshTokenJpaRepository refreshTokenJpaRepository;
     @Autowired UserCredentialJpaRepository userCredentialJpaRepository;
     @Autowired UserTotpJpaRepository userTotpJpaRepository;
+    @Autowired PendingTotpEnrolmentPort pendingEnrolment;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired TotpEncryptorFactory encryptorFactory;
 
@@ -191,12 +193,11 @@ class TotpControllerIT {
     }
 
     @Test
-    void adminReset_doesNotClearAPendingEnrolment_soItIsNoWayOutEither() throws Exception {
-        // Measured, not assumed: the reset answers 204 and changes nothing. AdminTotpDisableService
-        // only acts `if (profile.totpEnabled())`, and a pending enrolment is by definition not
-        // enabled — so the one recourse a stuck user could be pointed at does not exist, and the
-        // admin is told it worked. Pinned here because the endpoint's own description used to
-        // claim otherwise.
+    void adminReset_nowClearsAPendingEnrolment_soAStuckUserHasAWayOut() throws Exception {
+        // This used to answer 204 and change nothing: AdminTotpDisableService only acted
+        // `if (profile.totpEnabled())`, and a pending enrolment is by definition not enabled, so
+        // the one recourse a stuck user could be pointed at did nothing while telling the admin it
+        // had worked. Somebody who loses their phone mid-enrolment can now be unblocked.
         Cookie access = loginAs("testuser", "password");
         String before = objectMapper.readTree(
             mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
@@ -210,8 +211,34 @@ class TotpControllerIT {
             mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
                 .andReturn().getResponse().getContentAsString()).get("secret").asText();
         assertThat(after)
-            .as("the pending secret survives an admin reset")
-            .isEqualTo(before);
+            .as("the pending enrolment is cleared, so setup starts over")
+            .isNotEqualTo(before);
+    }
+
+    @Test
+    void confirming_promotes_the_enrolment_from_redis_into_the_account() throws Exception {
+        // The moment the whole refactor turns on: the secret only existed for the length of the
+        // enrolment, and confirming is what writes it where it will survive. If that write were
+        // missed, the account would report 2FA enabled with no secret to check codes against.
+        Cookie access = loginAs("testuser", "password");
+        String secret = objectMapper.readTree(
+            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+                .andReturn().getResponse().getContentAsString()).get("secret").asText();
+
+        mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"" + currentCodeFor(secret) + "\"}"))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/auth/2fa/status").cookie(access))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totpEnabled").value(true));
+
+        UserTotpEntity stored = userTotpJpaRepository.findById(
+            userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId()).orElseThrow();
+        assertThat(stored.getTotpSecret())
+            .as("the proven secret is persisted, encrypted, by the confirmation")
+            .isNotNull().isNotEqualTo(secret);
     }
 
     @Test
@@ -417,6 +444,12 @@ class TotpControllerIT {
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
+    /** The code the user's authenticator app would be showing right now for this secret. */
+    private static String currentCodeFor(String secret) throws Exception {
+        DefaultCodeGenerator generator = new DefaultCodeGenerator(HashingAlgorithm.SHA256, 6);
+        return generator.generate(secret, Math.floorDiv(System.currentTimeMillis() / 1000L, 30));
+    }
+
     private Cookie loginAs(String username, String password) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -436,18 +469,20 @@ class TotpControllerIT {
 
     @Test
     void the_pending_secret_is_really_gone_after_the_confirmation_attempts_run_out() throws Exception {
-        // ConfirmTotpHandler discards the pending secret and then throws, which rolls its
-        // transaction back — so the discard was undone while the Redis attempt counter, reset
-        // in the same breath and not transactional, stayed at zero. The lockout announced by
-        // the 429 never happened: the caller got five fresh guesses, then five more, without
-        // limit. Only a real database can show that, which is why the mock-based unit test
-        // verifying clearPendingSecret() was called passed throughout.
+        // ConfirmTotpHandler discards the pending secret and then throws, which used to roll its
+        // transaction back — the discard was undone while the Redis attempt counter, reset in the
+        // same breath and not transactional, stayed at zero. The lockout announced by the 429 never
+        // happened: the caller got five fresh guesses, then five more, without limit.
+        //
+        // The enrolment now lives in Redis alongside that counter, so the two can no longer come
+        // apart and the REQUIRES_NEW that used to paper over it is gone. The property is unchanged
+        // and still worth holding — it is only read somewhere else.
         Cookie access = loginAs("testuser", "password");
         java.util.UUID userId = userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId();
 
         mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
             .andExpect(status().isOk());
-        assertThat(userTotpJpaRepository.findById(userId).orElseThrow().getTotpSecret()).isNotNull();
+        assertThat(pendingEnrolment.find(userId)).isPresent();
 
         for (int attempt = 1; attempt < TotpPolicy.MAX_ATTEMPTS; attempt++) {
             mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
@@ -460,7 +495,7 @@ class TotpControllerIT {
                 .content("{\"code\":\"000000\"}"))
             .andExpect(status().isTooManyRequests());
 
-        assertThat(userTotpJpaRepository.findById(userId).orElseThrow().getTotpSecret()).isNull();
+        assertThat(pendingEnrolment.find(userId)).isEmpty();
         // With no pending secret left, confirming is no longer a guessing game at all:
         // restarting the setup is the only way forward.
         mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)

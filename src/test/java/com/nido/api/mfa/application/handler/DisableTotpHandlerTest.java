@@ -5,6 +5,7 @@ import com.nido.api.mfa.domain.model.MfaException;
 import com.nido.api.mfa.domain.model.UserTotpProfile;
 import com.nido.api.mfa.domain.port.out.TotpCodeReplayPort;
 import com.nido.api.mfa.domain.port.out.TotpCodeValidatorPort;
+import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import com.nido.api.mfa.domain.port.out.UserTotpLifecyclePort;
 import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +25,8 @@ import static org.mockito.Mockito.*;
 class DisableTotpHandlerTest {
 
     @Mock UserTotpQueryPort userTotpQuery;
+
+    @Mock PendingTotpEnrolmentPort pendingEnrolment;
     @Mock UserTotpLifecyclePort userTotpLifecyclePort;
     @Mock TotpCodeValidatorPort codeValidator;
     @Mock TotpCodeReplayPort codeReplay;
@@ -35,7 +38,7 @@ class DisableTotpHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new DisableTotpHandler(userTotpQuery, userTotpLifecyclePort, codeValidator, codeReplay);
+        handler = new DisableTotpHandler(userTotpQuery, userTotpLifecyclePort, codeValidator, codeReplay, pendingEnrolment);
     }
 
     @Test

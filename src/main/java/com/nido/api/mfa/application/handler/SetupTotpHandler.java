@@ -8,7 +8,7 @@ import com.nido.api.mfa.domain.model.UserTotpProfile;
 import com.nido.api.mfa.domain.port.out.TotpSecretGeneratorPort;
 import com.nido.api.mfa.domain.port.out.TotpUriBuilderPort;
 import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
-import com.nido.api.mfa.domain.port.out.UserTotpSetupPort;
+import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import com.nido.api.shared.annotation.ApplicationService;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,16 +18,16 @@ public class SetupTotpHandler implements SetupTotpUseCase {
     private final UserTotpQueryPort userTotpQuery;
     private final TotpSecretGeneratorPort secretGenerator;
     private final TotpUriBuilderPort uriBuilder;
-    private final UserTotpSetupPort userTotpSetupPort;
+    private final PendingTotpEnrolmentPort pendingEnrolment;
 
     public SetupTotpHandler(UserTotpQueryPort userTotpQuery,
                             TotpSecretGeneratorPort secretGenerator,
                             TotpUriBuilderPort uriBuilder,
-                            UserTotpSetupPort userTotpSetupPort) {
+                            PendingTotpEnrolmentPort pendingEnrolment) {
         this.userTotpQuery = userTotpQuery;
         this.secretGenerator = secretGenerator;
         this.uriBuilder = uriBuilder;
-        this.userTotpSetupPort = userTotpSetupPort;
+        this.pendingEnrolment = pendingEnrolment;
     }
 
     @Override
@@ -39,16 +39,15 @@ public class SetupTotpHandler implements SetupTotpUseCase {
         if (user.totpEnabled()) throw new MfaException.TotpAlreadyEnabled();
 
         String candidate = secretGenerator.generateSecret();
-        boolean saved = userTotpSetupPort.saveTotpSecretIfAbsent(command.userId(), candidate);
-
-        if (!saved) {
-            UserTotpProfile refreshed = userTotpQuery.findById(command.userId())
-                .orElseThrow(MfaException.UserNotFound::new);
-            if (refreshed.totpEnabled()) throw new MfaException.TotpAlreadyEnabled();
-            String existing = refreshed.totpSecret().orElseThrow(MfaException.TotpSetupNotStarted::new);
-            return new TotpSetupResult(existing, uriBuilder.buildOtpauthUri(existing, command.email()));
+        if (pendingEnrolment.startIfAbsent(command.userId(), candidate)) {
+            return new TotpSetupResult(candidate, uriBuilder.buildOtpauthUri(candidate, command.email()));
         }
 
-        return new TotpSetupResult(candidate, uriBuilder.buildOtpauthUri(candidate, command.email()));
+        // An enrolment was already under way: hand back the one being shown rather than a second
+        // QR code. It can still have expired between the two calls, in which case there is nothing
+        // to hand back and the caller starts over.
+        String existing = pendingEnrolment.find(command.userId())
+            .orElseThrow(MfaException.TotpSetupNotStarted::new);
+        return new TotpSetupResult(existing, uriBuilder.buildOtpauthUri(existing, command.email()));
     }
 }
