@@ -17,6 +17,12 @@ public @interface CurrentMembership {
     /**
      * Rôle minimal exigé dans le contexte. VIEWER par défaut, soit aucune exigence :
      * une route qui écrit doit déclarer explicitement MEMBER ou davantage.
+     *
+     * <p>Cette règle n'est pas qu'une convention : {@code WebAuthorizationConventionsTest} fait
+     * échouer le build pour toute route d'écriture qui ne déclare pas son plancher, et
+     * {@code SpaceMembershipArgumentResolverTest} couvre le fait que le plancher est réellement
+     * appliqué. Le plancher filtre au bord et ne remplace pas les gardes du handler : il ne connaît
+     * que le rôle de l'appelant, là où un handler vérifie aussi le contexte et la ressource.
      */
     SpaceRole min() default SpaceRole.VIEWER;
 }

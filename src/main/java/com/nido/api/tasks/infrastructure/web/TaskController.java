@@ -3,6 +3,7 @@ package com.nido.api.tasks.infrastructure.web;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import com.nido.api.infrastructure.web.CurrentMembership;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.tasks.application.port.in.ChangeTaskStatusUseCase;
 import com.nido.api.tasks.application.port.in.CreateRecurringTaskUseCase;
 import com.nido.api.tasks.application.port.in.CreateTaskUseCase;
@@ -86,7 +87,7 @@ public class TaskController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TaskResponse> create(
             @PathVariable UUID spaceId, @Valid @RequestBody CreateTaskRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         Task created;
         if (request.recurrence() != null) {
             created = createRecurringTaskUseCase.create(new CreateRecurringTaskSeriesCommand(
@@ -109,7 +110,7 @@ public class TaskController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TaskResponse> update(
             @PathVariable UUID spaceId, @PathVariable UUID taskId, @Valid @RequestBody UpdateTaskRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         Task updated = updateTaskUseCase.update(new UpdateTaskCommand(
             taskId, spaceId, request.title(), request.priority(), request.dueDate(), request.assigneeIds()), membership);
         return ResponseEntity.ok(TaskResponse.from(updated));
@@ -120,7 +121,7 @@ public class TaskController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TaskResponse> changeStatus(
             @PathVariable UUID spaceId, @PathVariable UUID taskId, @Valid @RequestBody ChangeTaskStatusRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         Task updated = changeTaskStatusUseCase.changeStatus(taskId, spaceId, request.status(), membership);
         return ResponseEntity.ok(TaskResponse.from(updated));
     }
@@ -130,7 +131,7 @@ public class TaskController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> toggleSubtask(
             @PathVariable UUID spaceId, @PathVariable UUID taskId, @PathVariable UUID subtaskId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         toggleSubtaskUseCase.toggle(taskId, subtaskId, spaceId, membership);
         return ResponseEntity.noContent().build();
     }
@@ -140,7 +141,7 @@ public class TaskController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
             @PathVariable UUID spaceId, @PathVariable UUID taskId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         deleteTaskUseCase.delete(taskId, spaceId, membership);
         return ResponseEntity.noContent().build();
     }
@@ -150,7 +151,7 @@ public class TaskController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TaskResponse> move(
             @PathVariable UUID spaceId, @PathVariable UUID taskId, @Valid @RequestBody MoveTaskRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         Task moved = moveTaskUseCase.move(taskId, request.destinationSpaceId(), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(TaskResponse.from(moved));
     }

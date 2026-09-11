@@ -15,6 +15,7 @@ import com.nido.api.kitchen.infrastructure.web.dto.MenuEntryResponse;
 import com.nido.api.kitchen.infrastructure.web.dto.ShoppingListLineResponse;
 import com.nido.api.kitchen.infrastructure.web.dto.UpdateMenuEntryPortionsRequest;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -79,7 +80,7 @@ public class MenuController {
     public ResponseEntity<MenuEntryResponse> add(
             @PathVariable UUID spaceId,
             @Valid @RequestBody AddMenuEntryRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         MenuEntryView created = addMenuEntryUseCase.add(
             new AddMenuEntryCommand(spaceId, request.date(), request.recipeId(), request.portions()), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(MenuEntryResponse.from(created));
@@ -91,7 +92,7 @@ public class MenuController {
     public ResponseEntity<Void> updatePortions(
             @PathVariable UUID spaceId, @PathVariable UUID entryId,
             @Valid @RequestBody UpdateMenuEntryPortionsRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         updateMenuEntryPortionsUseCase.updatePortions(
             new UpdateMenuEntryPortionsCommand(entryId, spaceId, request.portions()), membership);
         return ResponseEntity.noContent().build();
@@ -102,7 +103,7 @@ public class MenuController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> remove(
             @PathVariable UUID spaceId, @PathVariable UUID entryId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         removeMenuEntryUseCase.remove(entryId, membership);
         return ResponseEntity.noContent().build();
     }

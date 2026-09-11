@@ -11,6 +11,7 @@ import com.nido.api.finance.infrastructure.web.dto.SettlementRecordResponse;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import com.nido.api.infrastructure.web.CurrentMembership;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -70,7 +71,7 @@ public class FinanceBalanceController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SettlementRecordResponse> settle(
             @PathVariable UUID spaceId, @Valid @RequestBody SettleDebtRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         SettlementRecord created = settleDebtUseCase.settle(
             new CreateSettlementCommand(spaceId, request.fromMemberId(), request.toMemberId(), request.amount(), request.date()), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(SettlementRecordResponse.from(created));
