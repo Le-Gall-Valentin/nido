@@ -63,10 +63,12 @@ public class TotpController {
             la page d'enrôlement afficheraient sinon deux QR codes différents, et l'utilisateur
             scannerait l'un pour confirmer contre l'autre.
 
-            Conséquence à connaître : un utilisateur qui perd son téléphone entre `/setup` et
-            `/confirm` ne peut pas repartir de zéro seul — `DELETE /api/auth/2fa` exige un code
-            valide, qu'il n'a plus. Il faut alors un reset administrateur
-            (`POST /api/users/{id}/2fa/reset`).
+            ⚠️ Conséquence à connaître : un utilisateur qui perd son téléphone entre `/setup` et
+            `/confirm` **n'a aujourd'hui aucun moyen de repartir de zéro**. `DELETE /api/auth/2fa`
+            exige un code valide qu'il n'a plus, et le reset administrateur
+            (`POST /api/users/{id}/2fa/reset`) répond `204` **sans rien effacer** : il ne traite que
+            les TOTP déjà activés. Le seul contournement est de rater volontairement cinq
+            confirmations, ce qui efface le secret en attente.
 
             Si le TOTP est déjà activé et confirmé, retourne `409`.
 
