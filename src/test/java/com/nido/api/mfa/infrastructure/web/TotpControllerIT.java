@@ -191,6 +191,30 @@ class TotpControllerIT {
     }
 
     @Test
+    void adminReset_doesNotClearAPendingEnrolment_soItIsNoWayOutEither() throws Exception {
+        // Measured, not assumed: the reset answers 204 and changes nothing. AdminTotpDisableService
+        // only acts `if (profile.totpEnabled())`, and a pending enrolment is by definition not
+        // enabled — so the one recourse a stuck user could be pointed at does not exist, and the
+        // admin is told it worked. Pinned here because the endpoint's own description used to
+        // claim otherwise.
+        Cookie access = loginAs("testuser", "password");
+        String before = objectMapper.readTree(
+            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+                .andReturn().getResponse().getContentAsString()).get("secret").asText();
+        String targetId = userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId().toString();
+
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(loginAs("superadmin", "adminpass")))
+            .andExpect(status().isNoContent());
+
+        String after = objectMapper.readTree(
+            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+                .andReturn().getResponse().getContentAsString()).get("secret").asText();
+        assertThat(after)
+            .as("the pending secret survives an admin reset")
+            .isEqualTo(before);
+    }
+
+    @Test
     void setup_unauthenticated_returns401() throws Exception {
         mockMvc.perform(post("/api/auth/2fa/setup"))
             .andExpect(status().isUnauthorized());
