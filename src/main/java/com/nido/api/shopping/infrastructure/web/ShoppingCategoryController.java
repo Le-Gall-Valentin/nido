@@ -12,6 +12,7 @@ import com.nido.api.shopping.infrastructure.web.dto.CreateShoppingCategoryReques
 import com.nido.api.shopping.infrastructure.web.dto.RenameShoppingCategoryRequest;
 import com.nido.api.shopping.infrastructure.web.dto.ShoppingCategoryResponse;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -66,7 +67,7 @@ public class ShoppingCategoryController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ShoppingCategoryResponse> create(
             @PathVariable UUID spaceId, @Valid @RequestBody CreateShoppingCategoryRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         ShoppingCategory created = createShoppingCategoryUseCase.create(spaceId, request.name(), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(ShoppingCategoryResponse.from(created));
     }
@@ -76,7 +77,7 @@ public class ShoppingCategoryController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ShoppingCategoryResponse> rename(
             @PathVariable UUID spaceId, @PathVariable UUID categoryId, @Valid @RequestBody RenameShoppingCategoryRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         ShoppingCategory renamed = renameShoppingCategoryUseCase.rename(
             new RenameShoppingCategoryCommand(categoryId, spaceId, request.name()), membership);
         return ResponseEntity.ok(ShoppingCategoryResponse.from(renamed));
@@ -87,7 +88,7 @@ public class ShoppingCategoryController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
             @PathVariable UUID spaceId, @PathVariable UUID categoryId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         deleteShoppingCategoryUseCase.delete(categoryId, spaceId, membership);
         return ResponseEntity.noContent().build();
     }

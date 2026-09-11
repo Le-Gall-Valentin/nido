@@ -101,7 +101,7 @@ public class SpaceController {
     public ResponseEntity<Void> update(
             @PathVariable UUID spaceId,
             @Valid @RequestBody UpdateSpaceRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.ADMIN) SpaceMembership membership) {
         updateSpaceUseCase.update(new UpdateSpaceCommand(
             spaceId, request.name(), request.description(), request.accent(), request.glyph()), membership);
         return ResponseEntity.noContent().build();
@@ -112,11 +112,17 @@ public class SpaceController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
             @PathVariable UUID spaceId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.OWNER) SpaceMembership membership) {
         deleteSpaceUseCase.delete(membership);
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * The one write with no role floor, deliberately: a read-only member who wants out should not
+     * have to ask an admin to remove them. {@code LeaveSpaceHandler} still refuses the owner, who
+     * would leave the space without one. Listed as such in WebAuthorizationConventionsTest — do not
+     * "fix" it by adding a min.
+     */
     @DeleteMapping("/{spaceId}/membership")
     @RateLimiting(max = 20)
     @PreAuthorize("isAuthenticated()")

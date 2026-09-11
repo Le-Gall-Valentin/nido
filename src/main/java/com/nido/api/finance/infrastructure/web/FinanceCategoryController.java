@@ -13,6 +13,7 @@ import com.nido.api.finance.infrastructure.web.dto.UpdateCategoryRequest;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import com.nido.api.infrastructure.web.CurrentMembership;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -57,7 +58,7 @@ public class FinanceCategoryController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CategoryResponse> create(
             @PathVariable UUID spaceId, @Valid @RequestBody CreateCategoryRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         Category created = createCategoryUseCase.create(
             new CreateCategoryCommand(spaceId, request.label(), request.color(), request.icon(), request.type()), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(CategoryResponse.from(created));
@@ -68,7 +69,7 @@ public class FinanceCategoryController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CategoryResponse> update(
             @PathVariable UUID spaceId, @PathVariable UUID categoryId, @Valid @RequestBody UpdateCategoryRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         Category updated = updateCategoryUseCase.update(
             new UpdateCategoryCommand(categoryId, spaceId, request.label(), request.color(), request.icon()), membership);
         return ResponseEntity.ok(CategoryResponse.from(updated));
@@ -79,7 +80,7 @@ public class FinanceCategoryController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
             @PathVariable UUID spaceId, @PathVariable UUID categoryId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         deleteCategoryUseCase.delete(categoryId, spaceId, membership);
         return ResponseEntity.noContent().build();
     }

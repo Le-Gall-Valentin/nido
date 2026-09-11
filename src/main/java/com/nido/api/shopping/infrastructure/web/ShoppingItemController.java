@@ -20,6 +20,7 @@ import com.nido.api.shopping.infrastructure.web.dto.ImportShoppingItemsRequest;
 import com.nido.api.shopping.infrastructure.web.dto.ShoppingItemResponse;
 import com.nido.api.shopping.infrastructure.web.dto.UpdateShoppingItemRequest;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -85,7 +86,7 @@ public class ShoppingItemController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ShoppingItemResponse> add(
             @PathVariable UUID spaceId, @Valid @RequestBody AddShoppingItemRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         ShoppingItem created = addShoppingItemUseCase.add(
             new AddShoppingItemCommand(spaceId, request.categoryId(), request.name(), request.quantity(), request.unit()), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(ShoppingItemResponse.from(created));
@@ -96,7 +97,7 @@ public class ShoppingItemController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ShoppingItemResponse> update(
             @PathVariable UUID spaceId, @PathVariable UUID itemId, @Valid @RequestBody UpdateShoppingItemRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         ShoppingItem updated = updateShoppingItemUseCase.update(
             new UpdateShoppingItemCommand(itemId, spaceId, request.categoryId(), request.name(), request.quantity(), request.unit()), membership);
         return ResponseEntity.ok(ShoppingItemResponse.from(updated));
@@ -107,7 +108,7 @@ public class ShoppingItemController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> toggleDone(
             @PathVariable UUID spaceId, @PathVariable UUID itemId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         toggleShoppingItemDoneUseCase.toggle(itemId, spaceId, membership);
         return ResponseEntity.noContent().build();
     }
@@ -117,7 +118,7 @@ public class ShoppingItemController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
             @PathVariable UUID spaceId, @PathVariable UUID itemId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         deleteShoppingItemUseCase.delete(itemId, spaceId, membership);
         return ResponseEntity.noContent().build();
     }
@@ -126,7 +127,7 @@ public class ShoppingItemController {
     @RateLimiting(max = 20)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> clearDone(
-            @PathVariable UUID spaceId, @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @PathVariable UUID spaceId, @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         clearDoneShoppingItemsUseCase.clearDone(spaceId, membership);
         return ResponseEntity.noContent().build();
     }
@@ -135,7 +136,7 @@ public class ShoppingItemController {
     @RateLimiting(max = 20)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> clearAll(
-            @PathVariable UUID spaceId, @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @PathVariable UUID spaceId, @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         clearAllShoppingItemsUseCase.clearAll(spaceId, membership);
         return ResponseEntity.noContent().build();
     }
@@ -145,7 +146,7 @@ public class ShoppingItemController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<ShoppingItemResponse>> importFromMenu(
             @PathVariable UUID spaceId, @Valid @RequestBody ImportShoppingItemsRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         List<ShoppingImportLine> lines = request.lines().stream()
             .map(l -> new ShoppingImportLine(l.name(), l.quantity(), l.unit(), l.categoryId())).toList();
         List<ShoppingItem> imported = importShoppingItemsFromMenuUseCase.importItems(

@@ -8,6 +8,7 @@ import com.nido.api.space.application.port.in.RevokeInvitationUseCase;
 import com.nido.api.space.domain.model.InviteMemberCommand;
 import com.nido.api.space.domain.model.SpaceInvitationView;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.infrastructure.web.dto.InviteMemberRequest;
 import com.nido.api.space.infrastructure.web.dto.SpaceInvitationResponse;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -52,7 +53,7 @@ public class SpaceInvitationController {
     public ResponseEntity<SpaceInvitationResponse> invite(
             @PathVariable UUID spaceId,
             @Valid @RequestBody InviteMemberRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.ADMIN) SpaceMembership membership) {
         SpaceInvitationView view = inviteMemberUseCase.invite(
             new InviteMemberCommand(spaceId, request.email(), request.role(), membership.userId()), membership);
         SpaceInvitationResponse body = SpaceInvitationResponse.from(view);
@@ -76,7 +77,7 @@ public class SpaceInvitationController {
     public ResponseEntity<Void> revoke(
             @PathVariable UUID spaceId,
             @PathVariable UUID invitationId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.ADMIN) SpaceMembership membership) {
         revokeInvitationUseCase.revoke(spaceId, invitationId, membership);
         return ResponseEntity.noContent().build();
     }

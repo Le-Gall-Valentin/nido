@@ -19,6 +19,7 @@ import com.nido.api.finance.infrastructure.web.dto.UpdateSavingsGoalRequest;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import com.nido.api.infrastructure.web.CurrentMembership;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -66,7 +67,7 @@ public class SavingsGoalController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SavingsGoalResponse> create(
             @PathVariable UUID spaceId, @Valid @RequestBody CreateSavingsGoalRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         SavingsGoal created = createSavingsGoalUseCase.create(
             new CreateSavingsGoalCommand(spaceId, request.name(), request.targetAmount(), request.targetDate(), request.color(), request.glyph()), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(SavingsGoalResponse.from(new SavingsGoalDetail(created, List.of())));
@@ -77,7 +78,7 @@ public class SavingsGoalController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SavingsGoalResponse> update(
             @PathVariable UUID spaceId, @PathVariable UUID goalId, @Valid @RequestBody UpdateSavingsGoalRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         return ResponseEntity.ok(SavingsGoalResponse.from(updateSavingsGoalUseCase.update(
             new UpdateSavingsGoalCommand(goalId, spaceId, request.name(), request.targetAmount(), request.targetDate(), request.color(), request.glyph()), membership)));
     }
@@ -87,7 +88,7 @@ public class SavingsGoalController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
             @PathVariable UUID spaceId, @PathVariable UUID goalId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         deleteSavingsGoalUseCase.delete(goalId, spaceId, membership);
         return ResponseEntity.noContent().build();
     }
@@ -97,7 +98,7 @@ public class SavingsGoalController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<SavingsContributionResponse> addContribution(
             @PathVariable UUID spaceId, @PathVariable UUID goalId, @Valid @RequestBody AddSavingsContributionRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         SavingsContribution created = addSavingsContributionUseCase.add(
             new AddSavingsContributionCommand(goalId, spaceId, request.memberId(), request.amount(), request.date()), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(SavingsContributionResponse.from(created));
