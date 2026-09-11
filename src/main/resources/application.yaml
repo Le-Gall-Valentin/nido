@@ -28,6 +28,11 @@ spring:
 springdoc:
   api-docs:
     enabled: ${SWAGGER_ENABLED:false}
+    # Under /api deliberately. The session cookie is scoped to /api (see CookieService), so a
+    # document served anywhere else can never be read by a logged-in browser — requiring
+    # authentication on /v3/api-docs made Swagger unusable rather than private. Here the existing
+    # /api/** rule authenticates it and the cookie actually arrives.
+    path: /api/docs
   swagger-ui:
     enabled: ${SWAGGER_ENABLED:false}
 
