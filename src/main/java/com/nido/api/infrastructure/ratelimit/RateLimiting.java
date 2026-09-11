@@ -18,15 +18,17 @@ import java.lang.annotation.Target;
  * public ResponseEntity<?> login(...) { ... }
  * }</pre>
  *
- * USER mode requires an authenticated Spring Security principal.
- * On unauthenticated endpoints the USER rule is silently skipped.
+ * <p>The default is {@link RateLimitMode#USER_ELSE_IP}: count per account where there is one, per
+ * IP where there is not. Reach for another mode only with a reason — {@link RateLimitMode#IP} on an
+ * authenticated endpoint charges everybody behind one NAT as a single caller, and
+ * {@link RateLimitMode#USER} on a public one is silently no limit at all.
  */
 @Repeatable(RateLimitingList.class)
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface RateLimiting {
-    RateLimitMode mode()   default RateLimitMode.IP;
+    RateLimitMode mode()   default RateLimitMode.USER_ELSE_IP;
     int max()              default 10;
     int windowSeconds()    default 60;
 }
