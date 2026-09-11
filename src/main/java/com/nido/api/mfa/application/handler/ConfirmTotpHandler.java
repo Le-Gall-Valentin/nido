@@ -9,7 +9,7 @@ import com.nido.api.mfa.domain.port.out.TotpCodeValidatorPort;
 import com.nido.api.mfa.domain.port.out.TotpConfirmAttemptPort;
 import com.nido.api.mfa.domain.port.out.UserTotpLifecyclePort;
 import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
-import com.nido.api.mfa.domain.port.out.UserTotpSetupPort;
+import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.shared.model.TotpPolicy;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,20 +22,20 @@ public class ConfirmTotpHandler implements ConfirmTotpUseCase {
     private final UserTotpLifecyclePort userTotpLifecyclePort;
     private final TotpCodeReplayPort codeReplay;
     private final TotpConfirmAttemptPort confirmAttemptPort;
-    private final UserTotpSetupPort userTotpSetupPort;
+    private final PendingTotpEnrolmentPort pendingEnrolment;
 
     public ConfirmTotpHandler(UserTotpQueryPort userTotpQuery,
                               TotpCodeValidatorPort codeValidator,
                               UserTotpLifecyclePort userTotpLifecyclePort,
                               TotpCodeReplayPort codeReplay,
                               TotpConfirmAttemptPort confirmAttemptPort,
-                              UserTotpSetupPort userTotpSetupPort) {
+                              PendingTotpEnrolmentPort pendingEnrolment) {
         this.userTotpQuery = userTotpQuery;
         this.codeValidator = codeValidator;
         this.userTotpLifecyclePort = userTotpLifecyclePort;
         this.codeReplay = codeReplay;
         this.confirmAttemptPort = confirmAttemptPort;
-        this.userTotpSetupPort = userTotpSetupPort;
+        this.pendingEnrolment = pendingEnrolment;
     }
 
     @Override
@@ -45,12 +45,16 @@ public class ConfirmTotpHandler implements ConfirmTotpUseCase {
             .orElseThrow(MfaException.UserNotFound::new);
 
         if (user.totpEnabled()) throw new MfaException.TotpAlreadyEnabled();
-        String secret = user.totpSecret().orElseThrow(MfaException.TotpSetupNotStarted::new);
+        // Absent means the enrolment was never started, or has expired since the QR code was shown.
+        // The two are one case on purpose: in both there is nothing to confirm, and saying which
+        // would tell an attacker whether an enrolment is in flight.
+        String secret = pendingEnrolment.find(command.userId())
+            .orElseThrow(MfaException.TotpSetupNotStarted::new);
 
         if (!codeValidator.isValid(secret, command.code())) {
             int attempts = confirmAttemptPort.incrementAndGetAttempts(command.userId());
             if (attempts >= TotpPolicy.MAX_ATTEMPTS) {
-                userTotpSetupPort.clearPendingSecret(command.userId());
+                pendingEnrolment.discard(command.userId());
                 confirmAttemptPort.clearAttempts(command.userId());
                 throw new MfaException.TotpConfirmMaxAttemptsExceeded();
             }
@@ -62,6 +66,9 @@ public class ConfirmTotpHandler implements ConfirmTotpUseCase {
         }
 
         confirmAttemptPort.clearAttempts(command.userId());
-        userTotpLifecyclePort.enableTotp(command.userId());
+        // The moment the enrolment stops being a conversation and becomes the thing that protects
+        // the account: the secret is written where it will survive, and the in-flight copy goes.
+        userTotpLifecyclePort.enableTotp(command.userId(), secret);
+        pendingEnrolment.discard(command.userId());
     }
 }

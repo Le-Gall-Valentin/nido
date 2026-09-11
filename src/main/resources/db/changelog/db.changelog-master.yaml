@@ -134,3 +134,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/045-replace-space-invitations-email-index.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/046-clear-orphan-pending-totp-secrets.yaml
+      relativeToChangelogFile: false

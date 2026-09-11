@@ -1,5 +1,6 @@
 package com.nido.api.mfa.application.service;
 
+import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import com.nido.api.mfa.domain.port.out.UserTotpLifecyclePort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,13 +17,15 @@ class TotpDataDeleteServiceTest {
 
     @Mock UserTotpLifecyclePort userTotpLifecyclePort;
 
+    @Mock PendingTotpEnrolmentPort pendingEnrolment;
+
     private TotpDataDeleteService service;
 
     private final UUID userId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        service = new TotpDataDeleteService(userTotpLifecyclePort);
+        service = new TotpDataDeleteService(userTotpLifecyclePort, pendingEnrolment);
     }
 
     @Test
