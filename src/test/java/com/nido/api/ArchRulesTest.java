@@ -294,7 +294,8 @@ class ArchRulesTest {
         // identity.infra → authentication.application (port.in + dto)
         new CrossBcAppDep("identity",
             new String[]{BASE + "authentication.application.port.in..", BASE + "authentication.application.dto.."},
-            Set.of("CredentialSetupAdapter", "CredentialChangeAdapter", "CredentialDeletionAdapter")),
+            Set.of("CredentialSetupAdapter", "CredentialChangeAdapter", "CredentialDeletionAdapter",
+                   "TokenInvalidationAdapter")),
 
         // identity.infra → mfa.application.port.in
         new CrossBcAppDep("identity",

@@ -7,6 +7,7 @@ import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.CredentialDeletionPort;
 import com.nido.api.identity.domain.port.out.SpaceDataDeletionPort;
 import com.nido.api.identity.domain.port.out.TotpDeletionPort;
+import com.nido.api.identity.domain.port.out.TokenInvalidationPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.annotation.ApplicationService;
@@ -24,17 +25,20 @@ public class DeleteUserHandler implements DeleteUserUseCase {
     private final CredentialDeletionPort credentialDeletionPort;
     private final TotpDeletionPort totpDeletionPort;
     private final SpaceDataDeletionPort spaceDataDeletionPort;
+    private final TokenInvalidationPort tokenInvalidationPort;
 
     public DeleteUserHandler(UserRepository userRepository,
                              UserCommandPort userCommandPort,
                              CredentialDeletionPort credentialDeletionPort,
                              TotpDeletionPort totpDeletionPort,
-                             SpaceDataDeletionPort spaceDataDeletionPort) {
+                             SpaceDataDeletionPort spaceDataDeletionPort,
+                             TokenInvalidationPort tokenInvalidationPort) {
         this.userRepository = userRepository;
         this.userCommandPort = userCommandPort;
         this.credentialDeletionPort = credentialDeletionPort;
         this.totpDeletionPort = totpDeletionPort;
         this.spaceDataDeletionPort = spaceDataDeletionPort;
+        this.tokenInvalidationPort = tokenInvalidationPort;
     }
 
     @Override
@@ -50,6 +54,9 @@ public class DeleteUserHandler implements DeleteUserUseCase {
         credentialDeletionPort.deleteCredentials(command.targetUserId());
         totpDeletionPort.deleteTotpData(command.targetUserId());
         spaceDataDeletionPort.deleteSpaceData(command.targetUserId(), target.email());
+        // Everything about the user is gone, except the access token in their browser — nothing in
+        // it consults the database, so it would keep authenticating a user who no longer exists.
+        tokenInvalidationPort.invalidateIssuedTokens(command.targetUserId());
         log.info("GDPR delete performed by caller {} with role {}",
             command.callerId(), command.callerRole());
     }
