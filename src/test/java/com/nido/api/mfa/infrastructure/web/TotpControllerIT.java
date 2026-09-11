@@ -148,6 +148,49 @@ class TotpControllerIT {
     }
 
     @Test
+    void setup_calledTwice_handsBackTheSameSecretInsteadOfANewOne() throws Exception {
+        // The enrolment secret is sticky until it is confirmed or deleted: saveTotpSecretIfAbsent
+        // is an UPDATE ... WHERE totp_secret IS NULL, so a second call writes nothing and the
+        // handler returns what is already stored. Deliberate — two tabs on the enrolment page must
+        // not show two different QR codes, or the user scans one and confirms against the other.
+        //
+        // Pinned here because the OpenAPI description used to promise the opposite ("un nouveau
+        // secret est généré et remplace l'ancien"), which left anyone who lost their phone mid
+        // enrolment stuck with a secret they could no longer use and no documented way out.
+        Cookie access = loginAs("testuser", "password");
+
+        String first = objectMapper.readTree(
+            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString()).get("secret").asText();
+        String second = objectMapper.readTree(
+            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString()).get("secret").asText();
+
+        assertThat(second).isEqualTo(first);
+    }
+
+    @Test
+    void setup_pendingEnrolment_cannotBeCancelledByItsOwner() throws Exception {
+        // The consequence of the stickiness above, pinned because it is a dead end rather than a
+        // design: DELETE /api/auth/2fa requires a valid code, and a pending enrolment has no
+        // enabled TOTP to produce one from. Somebody who loses their phone between /setup and
+        // /confirm therefore cannot start over on their own — only an admin reset
+        // (POST /api/users/{id}/2fa/reset) or five deliberately wrong confirmations clear it.
+        // The answer is 409 TotpNotEnabled: from the API's point of view there is nothing to
+        // disable, even though a secret is sitting in the database blocking any fresh enrolment.
+        // Documented in the endpoint description; see the audit note before "fixing" this test.
+        Cookie access = loginAs("testuser", "password");
+        mockMvc.perform(post("/api/auth/2fa/setup").cookie(access)).andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/auth/2fa").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"123456\"}"))
+            .andExpect(status().isConflict());
+    }
+
+    @Test
     void setup_unauthenticated_returns401() throws Exception {
         mockMvc.perform(post("/api/auth/2fa/setup"))
             .andExpect(status().isUnauthorized());
