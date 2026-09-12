@@ -19,6 +19,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -60,6 +62,7 @@ class RecurringTransactionMaterializerIT {
     @Autowired RecurringTransactionSeriesRepository seriesRepository;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired CategoryRepositoryAdapter categoryAdapter;
+    @Autowired JdbcTemplate jdbcTemplate;
 
     private UUID spaceId;
     private UUID categoryId;
@@ -135,5 +138,58 @@ class RecurringTransactionMaterializerIT {
             throw new RuntimeException(e);
         }
         statsHandler.getStats(YearMonth.of(2026, 1), caller, today);
+    }
+    // ─── B8 : une lecture sans rien à matérialiser n'ouvre pas le verrou ───
+
+    /**
+     * Advisory locks taken with {@code pg_advisory_xact_lock} are held until the transaction
+     * ends, so counting them from inside the same transaction shows exactly what the read took.
+     */
+    private int advisoryLocksHeldByThisTransaction() {
+        Integer held = jdbcTemplate.queryForObject(
+            "select count(*) from pg_locks where locktype = 'advisory' and pid = pg_backend_pid()",
+            Integer.class);
+        return held == null ? 0 : held;
+    }
+
+    @Test
+    @Transactional
+    void a_read_with_nothing_due_takes_no_advisory_lock() {
+        // The point of B8. Every finance read used to take the space's advisory lock before it
+        // knew whether it had anything to do, so three readers of the same space queued behind
+        // each other for work that did not exist — and each opened a write-intent transaction
+        // to do nothing.
+        LocalDate anchor = LocalDate.of(2026, 3, 1);
+        seriesRepository.create(new CreateRecurringSeriesCommand(
+            spaceId, "Abonnement", new BigDecimal("19.99"), TransactionType.EXPENSE, categoryId, null,
+            List.of(), RecurrenceInterval.MONTHLY, 1, anchor, null), List.of());
+        SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.MEMBER, Instant.now());
+
+        // A month before the anchor: the series exists but owes nothing yet.
+        statsHandler.getStats(YearMonth.of(2026, 2), caller, LocalDate.of(2026, 2, 10));
+
+        assertThat(advisoryLocksHeldByThisTransaction())
+            .as("a read that has nothing to materialize must not serialize every other reader "
+                + "of the same space behind an advisory lock")
+            .isZero();
+        assertThat(transactionRepository.findAllBySpaceId(spaceId)).isEmpty();
+    }
+
+    @Test
+    @Transactional
+    void a_read_with_something_due_does_take_the_advisory_lock() {
+        // The other half: the pre-check must not have quietly disabled serialization for the
+        // case it exists to protect.
+        LocalDate anchor = LocalDate.of(2026, 1, 5);
+        seriesRepository.create(new CreateRecurringSeriesCommand(
+            spaceId, "Abonnement", new BigDecimal("19.99"), TransactionType.EXPENSE, categoryId, null,
+            List.of(), RecurrenceInterval.MONTHLY, 1, anchor, null), List.of());
+        SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.MEMBER, Instant.now());
+
+        statsHandler.getStats(YearMonth.of(2026, 1), caller, LocalDate.of(2026, 1, 10));
+
+        assertThat(advisoryLocksHeldByThisTransaction()).isEqualTo(1);
+        assertThat(transactionRepository.findAllBySpaceId(spaceId))
+            .extracting(Transaction::date).containsExactly(anchor);
     }
 }

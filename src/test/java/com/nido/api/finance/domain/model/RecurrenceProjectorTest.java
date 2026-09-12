@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RecurrenceProjectorTest {
@@ -15,7 +16,7 @@ class RecurrenceProjectorTest {
         LocalDate anchor = LocalDate.of(2026, 1, 1);
 
         assertThatThrownBy(() -> RecurrenceProjector.occurrencesBetween(
-            anchor, RecurrenceInterval.MONTHLY, 0, null, LocalDate.of(2025, 1, 1), LocalDate.of(2026, 12, 31)))
+            anchor, RecurrenceInterval.MONTHLY, 0, null, LocalDate.of(2025, 1, 1), LocalDate.of(2026, 12, 31), 100))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -39,7 +40,7 @@ class RecurrenceProjectorTest {
         LocalDate anchor = LocalDate.of(2026, 1, 7);
 
         List<LocalDate> occurrences = RecurrenceProjector.occurrencesBetween(
-            anchor, RecurrenceInterval.WEEKLY, 1, null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
+            anchor, RecurrenceInterval.WEEKLY, 1, null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), 100);
 
         assertThat(occurrences).containsExactly(
             LocalDate.of(2026, 1, 7), LocalDate.of(2026, 1, 14), LocalDate.of(2026, 1, 21), LocalDate.of(2026, 1, 28));
@@ -50,7 +51,7 @@ class RecurrenceProjectorTest {
         LocalDate anchor = LocalDate.of(2026, 1, 15);
 
         List<LocalDate> occurrences = RecurrenceProjector.occurrencesBetween(
-            anchor, RecurrenceInterval.MONTHLY, 1, null, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30));
+            anchor, RecurrenceInterval.MONTHLY, 1, null, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30), 100);
 
         assertThat(occurrences).containsExactly(LocalDate.of(2026, 6, 15));
     }
@@ -60,7 +61,7 @@ class RecurrenceProjectorTest {
         LocalDate anchor = LocalDate.of(2026, 1, 1);
 
         List<LocalDate> occurrences = RecurrenceProjector.occurrencesBetween(
-            anchor, RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31));
+            anchor, RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), 100);
 
         assertThat(occurrences).containsExactly(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 2, 1), LocalDate.of(2026, 3, 1));
     }
@@ -85,8 +86,193 @@ class RecurrenceProjectorTest {
         LocalDate anchor = LocalDate.of(2026, 6, 1);
 
         List<LocalDate> occurrences = RecurrenceProjector.occurrencesBetween(
-            anchor, RecurrenceInterval.MONTHLY, 1, null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 5, 31));
+            anchor, RecurrenceInterval.MONTHLY, 1, null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 5, 31), 100);
 
         assertThat(occurrences).isEmpty();
+    }
+    // ── borne du rattrapage (B1) ───────────────────────────────────────────
+
+    @Test
+    void occurrences_between_stops_at_the_requested_limit() {
+        LocalDate anchor = LocalDate.of(2026, 1, 1);
+
+        List<LocalDate> occurrences = RecurrenceProjector.occurrencesBetween(
+            anchor, RecurrenceInterval.DAILY, 1, null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), 3);
+
+        assertThat(occurrences).containsExactly(
+            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 2), LocalDate.of(2026, 1, 3));
+    }
+
+    @Test
+    void occurrences_between_lands_on_the_right_dates_however_old_the_anchor_is() {
+        // The whole point of computing the starting index arithmetically: an anchor a century
+        // back must cost the same as a recent one, and must still land on the exact dates.
+        LocalDate anchor = LocalDate.of(1926, 3, 4);
+
+        List<LocalDate> occurrences = RecurrenceProjector.occurrencesBetween(
+            anchor, RecurrenceInterval.DAILY, 1, null, LocalDate.of(2026, 9, 9), LocalDate.of(2026, 9, 11), 100);
+
+        assertThat(occurrences).containsExactly(
+            LocalDate.of(2026, 9, 9), LocalDate.of(2026, 9, 10), LocalDate.of(2026, 9, 11));
+    }
+
+    @Test
+    void the_starting_index_is_exact_when_month_end_clamping_is_in_play() {
+        // A Jan-31 anchor produces Feb 28 then Mar 31, so the arithmetic estimate (which only
+        // knows calendar months) has to be corrected by the two guard steps.
+        LocalDate anchor = LocalDate.of(2026, 1, 31);
+
+        assertThat(RecurrenceProjector.firstOccurrenceIndexOnOrAfter(anchor, RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 2, 15))).isEqualTo(1L);
+        assertThat(RecurrenceProjector.firstOccurrenceIndexOnOrAfter(anchor, RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 2, 28))).isEqualTo(1L);
+        assertThat(RecurrenceProjector.firstOccurrenceIndexOnOrAfter(anchor, RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 3, 1))).isEqualTo(2L);
+        assertThat(RecurrenceProjector.firstOccurrenceIndexOnOrAfter(anchor, RecurrenceInterval.MONTHLY, 1, anchor)).isZero();
+    }
+
+    @Test
+    void the_starting_index_is_exact_for_every_interval_and_step() {
+        LocalDate anchor = LocalDate.of(2026, 1, 1);
+
+        assertThat(RecurrenceProjector.firstOccurrenceIndexOnOrAfter(anchor, RecurrenceInterval.DAILY, 3, LocalDate.of(2026, 1, 10))).isEqualTo(3L);
+        assertThat(RecurrenceProjector.firstOccurrenceIndexOnOrAfter(anchor, RecurrenceInterval.DAILY, 3, LocalDate.of(2026, 1, 9))).isEqualTo(3L);
+        assertThat(RecurrenceProjector.firstOccurrenceIndexOnOrAfter(anchor, RecurrenceInterval.WEEKLY, 2, LocalDate.of(2026, 1, 20))).isEqualTo(2L);
+        assertThat(RecurrenceProjector.firstOccurrenceIndexOnOrAfter(anchor, RecurrenceInterval.YEARLY, 1, LocalDate.of(2029, 6, 1))).isEqualTo(4L);
+    }
+
+    @Test
+    void occurrence_count_between_agrees_with_the_dates_actually_produced() {
+        LocalDate anchor = LocalDate.of(2026, 1, 1);
+        LocalDate from = LocalDate.of(2026, 1, 1);
+        LocalDate to = LocalDate.of(2026, 3, 31);
+
+        long counted = RecurrenceProjector.occurrenceCountBetween(anchor, RecurrenceInterval.WEEKLY, 1, null, from, to);
+
+        assertThat(counted).isEqualTo(
+            RecurrenceProjector.occurrencesBetween(anchor, RecurrenceInterval.WEEKLY, 1, null, from, to, 1000).size());
+    }
+
+    @Test
+    void occurrence_count_between_stops_at_the_end_date() {
+        LocalDate anchor = LocalDate.of(2026, 1, 1);
+
+        assertThat(RecurrenceProjector.occurrenceCountBetween(anchor, RecurrenceInterval.MONTHLY, 1,
+            LocalDate.of(2026, 3, 1), anchor, LocalDate.of(2026, 12, 31))).isEqualTo(3L);
+    }
+
+    // ── refus a la saisie (B1) ─────────────────────────────────────────────
+
+    @Test
+    void a_daily_series_anchored_years_back_is_refused_outright() {
+        LocalDate today = LocalDate.of(2026, 9, 9);
+
+        assertThatThrownBy(() -> RecurrenceProjector.validateBacklog(
+            LocalDate.of(2001, 1, 1), RecurrenceInterval.DAILY, 1, null, today, null))
+            .isInstanceOf(FinanceException.RecurrenceBacklogTooLarge.class);
+    }
+
+    @Test
+    void back_dating_a_monthly_series_to_the_start_of_the_year_stays_allowed() {
+        LocalDate today = LocalDate.of(2026, 9, 9);
+
+        assertThatCode(() -> RecurrenceProjector.validateBacklog(
+            LocalDate.of(2026, 1, 1), RecurrenceInterval.MONTHLY, 1, null, today, null))
+            .doesNotThrowAnyException();
+    }
+
+    @Test
+    void a_daily_series_is_allowed_right_up_to_the_ceiling_and_refused_one_past_it() {
+        LocalDate today = LocalDate.of(2026, 9, 9);
+        LocalDate exactlyAtCeiling = today.minusDays(RecurrenceProjector.MAX_BACKLOG_OCCURRENCES - 1L);
+
+        assertThatCode(() -> RecurrenceProjector.validateBacklog(
+            exactlyAtCeiling, RecurrenceInterval.DAILY, 1, null, today, null))
+            .doesNotThrowAnyException();
+        assertThatThrownBy(() -> RecurrenceProjector.validateBacklog(
+            exactlyAtCeiling.minusDays(1), RecurrenceInterval.DAILY, 1, null, today, null))
+            .isInstanceOf(FinanceException.RecurrenceBacklogTooLarge.class);
+    }
+
+    @Test
+    void an_old_series_already_caught_up_carries_no_backlog_and_can_still_be_edited() {
+        // The case that would break every long-running series if the ceiling were measured
+        // from the anchor: a daily series started in 2001 but materialized up to yesterday
+        // owes exactly one occurrence, not nine thousand.
+        LocalDate today = LocalDate.of(2026, 9, 9);
+
+        assertThatCode(() -> RecurrenceProjector.validateBacklog(
+            LocalDate.of(2001, 1, 1), RecurrenceInterval.DAILY, 1, null, today, today.minusDays(1)))
+            .doesNotThrowAnyException();
+    }
+
+    @Test
+    void a_series_anchored_in_the_future_carries_no_backlog() {
+        LocalDate today = LocalDate.of(2026, 9, 9);
+
+        assertThatCode(() -> RecurrenceProjector.validateBacklog(
+            LocalDate.of(2027, 1, 1), RecurrenceInterval.DAILY, 1, null, today, null))
+            .doesNotThrowAnyException();
+    }
+    // ── non-régression : le calcul arithmétique doit rendre exactement ce que
+    //    rendait le balayage linéaire qu'il remplace ───────────────────────
+
+    /**
+     * The implementation this class replaced, kept verbatim as a reference: it walked from
+     * occurrence 0 one step at a time to find where to start. Slow, but unquestionably right —
+     * which is what makes it worth diffing the fast path against, here and on any future change.
+     */
+    private static List<LocalDate> byWalkingFromTheAnchor(
+            LocalDate anchorDate, RecurrenceInterval intervalType, int intervalCount, LocalDate endDate,
+            LocalDate from, LocalDate to) {
+        List<LocalDate> result = new java.util.ArrayList<>();
+        int n = 0;
+        LocalDate date = RecurrenceProjector.occurrenceDate(anchorDate, intervalType, intervalCount, n);
+        while (date.isBefore(from)) {
+            n++;
+            date = RecurrenceProjector.occurrenceDate(anchorDate, intervalType, intervalCount, n);
+        }
+        while (!date.isAfter(to) && (endDate == null || !date.isAfter(endDate))) {
+            result.add(date);
+            n++;
+            date = RecurrenceProjector.occurrenceDate(anchorDate, intervalType, intervalCount, n);
+        }
+        return result;
+    }
+
+    @Test
+    void the_arithmetic_start_index_returns_what_walking_from_the_anchor_returned() {
+        List<LocalDate> anchors = List.of(
+            LocalDate.of(2026, 1, 1),    // début de mois
+            LocalDate.of(2026, 1, 31),   // fin de mois, clampé en février
+            LocalDate.of(2026, 2, 28),
+            LocalDate.of(2028, 2, 29),   // 29 février d'une année bissextile
+            LocalDate.of(2025, 12, 31),
+            LocalDate.of(2024, 6, 15));
+        List<LocalDate> windowStarts = List.of(
+            LocalDate.of(2024, 1, 1), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 2, 28),
+            LocalDate.of(2026, 3, 1), LocalDate.of(2027, 7, 17), LocalDate.of(2030, 12, 31));
+        List<LocalDate> endDates = new java.util.ArrayList<>();
+        endDates.add(null);
+        endDates.add(LocalDate.of(2026, 6, 30));
+        endDates.add(LocalDate.of(2029, 1, 1));
+
+        int compared = 0;
+        for (LocalDate anchor : anchors) {
+            for (RecurrenceInterval interval : RecurrenceInterval.values()) {
+                for (int count = 1; count <= 4; count++) {
+                    for (LocalDate from : windowStarts) {
+                        for (int windowDays : new int[]{0, 1, 45, 400}) {
+                            for (LocalDate endDate : endDates) {
+                                LocalDate to = from.plusDays(windowDays);
+                                assertThat(RecurrenceProjector.occurrencesBetween(anchor, interval, count, endDate, from, to, 10_000))
+                                    .as("anchor=%s interval=%s x%d from=%s to=%s endDate=%s",
+                                        anchor, interval, count, from, to, endDate)
+                                    .isEqualTo(byWalkingFromTheAnchor(anchor, interval, count, endDate, from, to));
+                                compared++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assertThat(compared).isEqualTo(6 * 4 * 4 * 6 * 4 * 3);
     }
 }

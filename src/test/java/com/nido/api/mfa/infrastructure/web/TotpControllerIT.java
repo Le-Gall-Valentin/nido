@@ -2,6 +2,7 @@ package com.nido.api.mfa.infrastructure.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TotpPolicy;
 import com.nido.api.authentication.infrastructure.persistence.entity.UserCredentialEntity;
 import com.nido.api.authentication.infrastructure.persistence.repository.RefreshTokenJpaRepository;
 import com.nido.api.authentication.infrastructure.persistence.repository.UserCredentialJpaRepository;
@@ -9,6 +10,7 @@ import com.nido.api.authentication.infrastructure.security.CustomUserDetails;
 import com.nido.api.authentication.infrastructure.web.dto.LoginRequest;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import com.nido.api.mfa.infrastructure.persistence.entity.UserTotpEntity;
 import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
@@ -61,6 +63,7 @@ class TotpControllerIT {
     @Autowired RefreshTokenJpaRepository refreshTokenJpaRepository;
     @Autowired UserCredentialJpaRepository userCredentialJpaRepository;
     @Autowired UserTotpJpaRepository userTotpJpaRepository;
+    @Autowired PendingTotpEnrolmentPort pendingEnrolment;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired TotpEncryptorFactory encryptorFactory;
 
@@ -147,6 +150,98 @@ class TotpControllerIT {
     }
 
     @Test
+    void setup_calledTwice_handsBackTheSameSecretInsteadOfANewOne() throws Exception {
+        // The enrolment secret is sticky until it is confirmed or deleted: saveTotpSecretIfAbsent
+        // is an UPDATE ... WHERE totp_secret IS NULL, so a second call writes nothing and the
+        // handler returns what is already stored. Deliberate — two tabs on the enrolment page must
+        // not show two different QR codes, or the user scans one and confirms against the other.
+        //
+        // Pinned here because the OpenAPI description used to promise the opposite ("un nouveau
+        // secret est généré et remplace l'ancien"), which left anyone who lost their phone mid
+        // enrolment stuck with a secret they could no longer use and no documented way out.
+        Cookie access = loginAs("testuser", "password");
+
+        String first = objectMapper.readTree(
+            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString()).get("secret").asText();
+        String second = objectMapper.readTree(
+            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString()).get("secret").asText();
+
+        assertThat(second).isEqualTo(first);
+    }
+
+    @Test
+    void setup_pendingEnrolment_cannotBeCancelledByItsOwner() throws Exception {
+        // The consequence of the stickiness above, pinned because it is a dead end rather than a
+        // design: DELETE /api/auth/2fa requires a valid code, and a pending enrolment has no
+        // enabled TOTP to produce one from. Somebody who loses their phone between /setup and
+        // /confirm therefore cannot start over on their own — only an admin reset
+        // (POST /api/users/{id}/2fa/reset) or five deliberately wrong confirmations clear it.
+        // The answer is 409 TotpNotEnabled: from the API's point of view there is nothing to
+        // disable, even though a secret is sitting in the database blocking any fresh enrolment.
+        // Documented in the endpoint description; see the audit note before "fixing" this test.
+        Cookie access = loginAs("testuser", "password");
+        mockMvc.perform(post("/api/auth/2fa/setup").cookie(access)).andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/auth/2fa").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"123456\"}"))
+            .andExpect(status().isConflict());
+    }
+
+    @Test
+    void adminReset_nowClearsAPendingEnrolment_soAStuckUserHasAWayOut() throws Exception {
+        // This used to answer 204 and change nothing: AdminTotpDisableService only acted
+        // `if (profile.totpEnabled())`, and a pending enrolment is by definition not enabled, so
+        // the one recourse a stuck user could be pointed at did nothing while telling the admin it
+        // had worked. Somebody who loses their phone mid-enrolment can now be unblocked.
+        Cookie access = loginAs("testuser", "password");
+        String before = objectMapper.readTree(
+            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+                .andReturn().getResponse().getContentAsString()).get("secret").asText();
+        String targetId = userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId().toString();
+
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(loginAs("superadmin", "adminpass")))
+            .andExpect(status().isNoContent());
+
+        String after = objectMapper.readTree(
+            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+                .andReturn().getResponse().getContentAsString()).get("secret").asText();
+        assertThat(after)
+            .as("the pending enrolment is cleared, so setup starts over")
+            .isNotEqualTo(before);
+    }
+
+    @Test
+    void confirming_promotes_the_enrolment_from_redis_into_the_account() throws Exception {
+        // The moment the whole refactor turns on: the secret only existed for the length of the
+        // enrolment, and confirming is what writes it where it will survive. If that write were
+        // missed, the account would report 2FA enabled with no secret to check codes against.
+        Cookie access = loginAs("testuser", "password");
+        String secret = objectMapper.readTree(
+            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+                .andReturn().getResponse().getContentAsString()).get("secret").asText();
+
+        mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"" + currentCodeFor(secret) + "\"}"))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/auth/2fa/status").cookie(access))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totpEnabled").value(true));
+
+        UserTotpEntity stored = userTotpJpaRepository.findById(
+            userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId()).orElseThrow();
+        assertThat(stored.getTotpSecret())
+            .as("the proven secret is persisted, encrypted, by the confirmation")
+            .isNotNull().isNotEqualTo(secret);
+    }
+
+    @Test
     void setup_unauthenticated_returns401() throws Exception {
         mockMvc.perform(post("/api/auth/2fa/setup"))
             .andExpect(status().isUnauthorized());
@@ -213,7 +308,7 @@ class TotpControllerIT {
     }
 
     @Test
-    void verify_challengeLocksAfter5FailedAttempts() throws Exception {
+    void verify_locksTheAccountAfter5FailedAttempts() throws Exception {
         Cookie challenge = loginAndGetChallengeCookie("totpuser", "totppass");
 
         // First 4 attempts should return 401 (TotpCodeInvalid → "Authentication required")
@@ -226,6 +321,7 @@ class TotpControllerIT {
         }
 
         // 5th attempt exhausts the counter, invalidates the challenge, and returns TotpMaxAttemptsExceeded (429)
+        // The title distinguishes this from the rate limiter, which answers 429 as well.
         mockMvc.perform(post("/api/auth/2fa/verify")
                 .cookie(challenge)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -348,6 +444,12 @@ class TotpControllerIT {
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
+    /** The code the user's authenticator app would be showing right now for this secret. */
+    private static String currentCodeFor(String secret) throws Exception {
+        DefaultCodeGenerator generator = new DefaultCodeGenerator(HashingAlgorithm.SHA256, 6);
+        return generator.generate(secret, Math.floorDiv(System.currentTimeMillis() / 1000L, 30));
+    }
+
     private Cookie loginAs(String username, String password) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -362,5 +464,109 @@ class TotpControllerIT {
                 .content(objectMapper.writeValueAsString(new LoginRequest(username, password))))
             .andReturn();
         return result.getResponse().getCookie("totp_challenge");
+    }
+    // ─── B3 : le verrou anti-brute-force doit survivre au rollback ─────────
+
+    @Test
+    void the_pending_secret_is_really_gone_after_the_confirmation_attempts_run_out() throws Exception {
+        // ConfirmTotpHandler discards the pending secret and then throws, which used to roll its
+        // transaction back — the discard was undone while the Redis attempt counter, reset in the
+        // same breath and not transactional, stayed at zero. The lockout announced by the 429 never
+        // happened: the caller got five fresh guesses, then five more, without limit.
+        //
+        // The enrolment now lives in Redis alongside that counter, so the two can no longer come
+        // apart and the REQUIRES_NEW that used to paper over it is gone. The property is unchanged
+        // and still worth holding — it is only read somewhere else.
+        Cookie access = loginAs("testuser", "password");
+        java.util.UUID userId = userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId();
+
+        mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+            .andExpect(status().isOk());
+        assertThat(pendingEnrolment.find(userId)).isPresent();
+
+        for (int attempt = 1; attempt < TotpPolicy.MAX_ATTEMPTS; attempt++) {
+            mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"code\":\"000000\"}"))
+                .andExpect(status().isUnauthorized());
+        }
+        mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"000000\"}"))
+            .andExpect(status().isTooManyRequests());
+
+        assertThat(pendingEnrolment.find(userId)).isEmpty();
+        // With no pending secret left, confirming is no longer a guessing game at all:
+        // restarting the setup is the only way forward.
+        mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"000000\"}"))
+            .andExpect(status().isUnprocessableEntity());
+    }
+    // ─── B4 : le compteur d'échecs suit le compte, pas le challenge ────────
+
+    @Test
+    void verify_theLockoutSurvivesLoggingInAgainForAFreshChallenge() throws Exception {
+        // The bypass: the attempt counter used to hang off the challenge id, and every login
+        // mints a new one — so using up five attempts and logging back in handed the caller a
+        // clean slate, five guesses at a time, without limit. Rate limits capped that at five
+        // guesses a minute per IP, which a distributed caller sidesteps entirely.
+        Cookie firstChallenge = loginAndGetChallengeCookie("totpuser", "totppass");
+        for (int i = 0; i < 4; i++) {
+            mockMvc.perform(post("/api/auth/2fa/verify").cookie(firstChallenge)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"code\":\"00000" + i + "\"}"))
+                .andExpect(status().isUnauthorized());
+        }
+        mockMvc.perform(post("/api/auth/2fa/verify").cookie(firstChallenge)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"000005\"}"))
+            .andExpect(status().isTooManyRequests());
+
+        // Cleared so the assertion below cannot pass on the rate limiter's own 429 — the point
+        // is the account lockout, and the two are otherwise indistinguishable by status alone.
+        rateLimitBucketStore.clearAll();
+        Cookie secondChallenge = loginAndGetChallengeCookie("totpuser", "totppass");
+        assertThat(secondChallenge).isNotNull();
+        assertThat(secondChallenge.getValue()).isNotEqualTo(firstChallenge.getValue());
+
+        mockMvc.perform(post("/api/auth/2fa/verify").cookie(secondChallenge)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"000006\"}"))
+            .andExpect(status().isTooManyRequests())
+            .andExpect(jsonPath("$.title").value("AuthenticationError"));
+    }
+
+    @Test
+    void verify_aSuccessfulCodeClearsTheAccountCounter() throws Exception {
+        // Someone who fumbles a few codes before getting one right must not carry those
+        // failures forward — otherwise the lockout would creep up on ordinary use.
+        Cookie firstChallenge = loginAndGetChallengeCookie("totpuser", "totppass");
+        for (int i = 0; i < 3; i++) {
+            mockMvc.perform(post("/api/auth/2fa/verify").cookie(firstChallenge)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"code\":\"00000" + i + "\"}"))
+                .andExpect(status().isUnauthorized());
+        }
+
+        rateLimitBucketStore.clearAll();
+        Cookie secondChallenge = loginAndGetChallengeCookie("totpuser", "totppass");
+        DefaultCodeGenerator generator = new DefaultCodeGenerator(HashingAlgorithm.SHA256, 6);
+        long counter = Math.floorDiv(System.currentTimeMillis() / 1000L, 30);
+        mockMvc.perform(post("/api/auth/2fa/verify").cookie(secondChallenge)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"" + generator.generate(KNOWN_TOTP_SECRET, counter) + "\"}"))
+            .andExpect(status().isOk());
+
+        rateLimitBucketStore.clearAll();
+        Cookie thirdChallenge = loginAndGetChallengeCookie("totpuser", "totppass");
+        // Four failures in a row must all read as a wrong code. Had the three earlier ones
+        // survived, the second of these would have been the fifth and answered 429.
+        for (int i = 0; i < 4; i++) {
+            mockMvc.perform(post("/api/auth/2fa/verify").cookie(thirdChallenge)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"code\":\"10000" + i + "\"}"))
+                .andExpect(status().isUnauthorized());
+        }
     }
 }

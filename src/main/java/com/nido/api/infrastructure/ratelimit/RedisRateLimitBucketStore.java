@@ -5,10 +5,14 @@ import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.ConsumptionProbe;
 import io.github.bucket4j.EstimationProbe;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class RedisRateLimitBucketStore implements RateLimitBucketStore {
@@ -39,10 +43,29 @@ public class RedisRateLimitBucketStore implements RateLimitBucketStore {
         return new BucketResult(probe.canBeConsumed(), probe.getRemainingTokens(), probe.getNanosToWaitForRefill());
     }
 
+    /**
+     * Deletes every rate-limit bucket. Used to give tests a clean slate; nothing in production
+     * calls it, and nothing should — but it is reachable, so it scans rather than blocking.
+     *
+     * <p>KEYS walks the entire keyspace in one go and blocks the single-threaded server for the
+     * duration, so on a Redis shared with the challenge store and the anti-replay set it stalls
+     * every login too. SCAN returns in bounded batches instead, at the cost of being approximate
+     * under concurrent writes — which is exactly the right trade for a bulk cleanup.
+     */
     public void clearAll() {
-        var keys = redisTemplate.keys(KEY_PREFIX + "*");
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
+        ScanOptions options = ScanOptions.scanOptions().match(KEY_PREFIX + "*").count(500).build();
+        try (Cursor<String> cursor = redisTemplate.scan(options)) {
+            List<String> batch = new ArrayList<>();
+            while (cursor.hasNext()) {
+                batch.add(cursor.next());
+                if (batch.size() >= 500) {
+                    redisTemplate.delete(batch);
+                    batch.clear();
+                }
+            }
+            if (!batch.isEmpty()) {
+                redisTemplate.delete(batch);
+            }
         }
     }
 

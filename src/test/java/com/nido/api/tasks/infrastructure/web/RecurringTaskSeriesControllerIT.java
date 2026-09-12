@@ -30,6 +30,7 @@ import org.testcontainers.junit.jupiter.Container;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.UUID;
 
@@ -196,5 +197,65 @@ class RecurringTaskSeriesControllerIT {
             .signWith(Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
             .compact();
         return new Cookie("access_token", token);
+    }
+    @Test
+    void a_recurring_series_with_an_unreasonable_backlog_is_refused_instead_of_flooding_the_space() throws Exception {
+        // Three years of daily occurrences. Before this guard, the series was accepted and the
+        // next read of this space built ~1100 pending tasks in memory before writing anything —
+        // the loop had no ceiling at all, so a far enough anchor exhausted the heap outright.
+        String ancientAnchor = LocalDate.now().minusYears(3).toString();
+        String body = "{\"title\":\"Sortir les poubelles\",\"priority\":\"MED\","
+            + "\"recurrence\":{\"intervalType\":\"DAILY\",\"intervalCount\":1,"
+            + "\"leadIntervalType\":\"DAILY\",\"leadIntervalCount\":0,\"anchorDate\":\"" + ancientAnchor + "\"}}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("RecurrenceBacklogTooLarge"));
+
+        // Nothing was written: neither the series nor the anchor occurrence the handler
+        // creates directly alongside it.
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/recurring-task-series").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/tasks").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void back_dating_a_weekly_series_by_a_couple_of_months_stays_allowed() throws Exception {
+        // The legitimate case the ceiling must not catch.
+        String recentAnchor = LocalDate.now().minusMonths(2).toString();
+        String body = "{\"title\":\"Sortir les poubelles\",\"priority\":\"MED\","
+            + "\"recurrence\":{\"intervalType\":\"WEEKLY\",\"intervalCount\":1,"
+            + "\"leadIntervalType\":\"DAILY\",\"leadIntervalCount\":0,\"anchorDate\":\"" + recentAnchor + "\"}}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+    }
+
+    @Test
+    void moving_an_existing_series_anchor_into_the_distant_past_is_refused_too() throws Exception {
+        String body = "{\"title\":\"Sortir les poubelles\",\"priority\":\"MED\","
+            + "\"recurrence\":{\"intervalType\":\"WEEKLY\",\"intervalCount\":1,"
+            + "\"leadIntervalType\":\"DAILY\",\"leadIntervalCount\":0,\"anchorDate\":\"" + LocalDate.now() + "\"}}";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+        String seriesListBody = mockMvc.perform(get("/api/spaces/" + spaceId + "/recurring-task-series").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        String seriesId = objectMapper.readTree(seriesListBody).get(0).get("id").asText();
+
+        String updateBody = "{\"title\":\"Sortir les poubelles\",\"priority\":\"MED\",\"subtasks\":[],"
+            + "\"recurrence\":{\"intervalType\":\"WEEKLY\",\"intervalCount\":1,"
+            + "\"leadIntervalType\":\"DAILY\",\"leadIntervalCount\":0,\"anchorDate\":\""
+            + LocalDate.now().minusYears(20) + "\"}}";
+        mockMvc.perform(patch("/api/spaces/" + spaceId + "/recurring-task-series/" + seriesId)
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(updateBody))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("RecurrenceBacklogTooLarge"));
     }
 }

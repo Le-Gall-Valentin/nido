@@ -8,6 +8,8 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
@@ -15,6 +17,9 @@ import java.net.URI;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+// Ahead of GlobalExceptionHandler's last resort, which matches Exception and would otherwise be
+// picked first on an order tie — turning a declared domain error into a 500.
+@Order(Ordered.LOWEST_PRECEDENCE - 100)
 @RestControllerAdvice
 public class GlobalValidationExceptionHandler {
 

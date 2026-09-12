@@ -6,6 +6,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -201,6 +202,53 @@ class RateLimitMethodInterceptorTest {
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
+    @Test
+    void defaultMode_authenticated_countsPerAccountAndNotPerIp() throws Throwable {
+        // The point of B14. Counting an authenticated caller by IP charges a household, an office
+        // or a phone network as one caller: everyone behind the NAT shares a bucket and locks each
+        // other out, while an attacker with an account just changes IP. Before this, the key
+        // carried the IP.
+        UUID userId = UUID.randomUUID();
+        setAuthenticatedUser(userId);
+        when(invocation.getMethod()).thenReturn(method("defaultMode"));
+        when(ipResolver.resolve(any())).thenReturn("1.2.3.4");
+
+        interceptor.invoke(invocation);
+
+        ArgumentCaptor<String> key = ArgumentCaptor.forClass(String.class);
+        verify(store).tryConsume(key.capture(), anyInt(), anyInt());
+        assertThat(key.getValue()).contains(":USER:" + userId).doesNotContain(":IP:");
+    }
+
+    @Test
+    void defaultMode_authenticated_doesNotAlsoChargeTheIp() throws Throwable {
+        // Why not IP_AND_USER, which the original finding recommended: a single exceeded bucket
+        // rejects the request, so keeping an IP bucket alongside would leave the whole NAT blocked.
+        // Exactly one bucket is consulted.
+        setAuthenticatedUser(UUID.randomUUID());
+        when(invocation.getMethod()).thenReturn(method("defaultMode"));
+        when(ipResolver.resolve(any())).thenReturn("1.2.3.4");
+
+        interceptor.invoke(invocation);
+
+        verify(store, times(1)).tryConsume(anyString(), anyInt(), anyInt());
+    }
+
+    @Test
+    void defaultMode_anonymous_stillCountsPerIpAndIsNotUnlimited() throws Throwable {
+        // The trap that rules out simply defaulting to USER: with no account to count, USER
+        // produces no key at all, which is no rate limit — on login, of all places.
+        SecurityContextHolder.clearContext();
+        when(invocation.getMethod()).thenReturn(method("defaultMode"));
+        when(ipResolver.resolve(any())).thenReturn("1.2.3.4");
+
+        interceptor.invoke(invocation);
+
+        ArgumentCaptor<String> key = ArgumentCaptor.forClass(String.class);
+        verify(store).tryConsume(key.capture(), anyInt(), anyInt());
+        assertThat(key.getValue()).contains(":IP:").doesNotContain(":USER:");
+    }
+
     private void setAuthenticatedUser(UUID userId) {
         CustomUserDetails details = mock(CustomUserDetails.class);
         when(details.getUserId()).thenReturn(userId);
@@ -226,5 +274,8 @@ class RateLimitMethodInterceptorTest {
         @RateLimiting(mode = RateLimitMode.IP, max = 10, windowSeconds = 60)
         @RateLimiting(mode = RateLimitMode.USER, max = 5, windowSeconds = 300)
         public void multipleRules() {}
+
+        @RateLimiting(max = 10, windowSeconds = 60)
+        public void defaultMode() {}
     }
 }

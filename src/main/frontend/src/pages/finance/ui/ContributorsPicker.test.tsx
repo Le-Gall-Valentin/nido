@@ -13,7 +13,7 @@ const bob: SpaceMember = { userId: 'bob', username: 'bob', email: 'b@test.com', 
 function renderPicker(overrides: Partial<React.ComponentProps<typeof ContributorsPicker>> = {}) {
   return render(
     <ContributorsPicker
-      members={[alice, bob]} payerId="alice" onPayerChange={vi.fn()}
+      members={[alice, bob]} type="EXPENSE" payerId="alice" onPayerChange={vi.fn()}
       contributorIds={['alice', 'bob']} onToggleContributor={vi.fn()}
       customizeShares={false} onCustomizeSharesChange={vi.fn()}
       customShares={{}} onCustomShareChange={vi.fn()}
@@ -29,6 +29,16 @@ describe('ContributorsPicker', () => {
     expect(screen.getByLabelText('form.payer_label')).toBeDefined()
     expect(screen.getByRole('button', { name: 'alice' })).toBeDefined()
     expect(screen.getByRole('button', { name: 'bob' })).toBeDefined()
+  })
+
+  it('asks who received an income instead of who paid it', () => {
+    // A shared income is the mirror of a shared expense — its receiver owes the others their
+    // share. Reusing the expense wording would tell the user the opposite of what is recorded.
+    renderPicker({ type: 'INCOME' })
+
+    expect(screen.getByLabelText('form.receiver_label')).toBeDefined()
+    expect(screen.getByText('form.beneficiaries_label')).toBeDefined()
+    expect(screen.queryByLabelText('form.payer_label')).toBeNull()
   })
 
   it('reports a payer change', () => {

@@ -6,6 +6,8 @@ import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
 import com.nido.api.finance.domain.model.CreateCategoryCommand;
 import com.nido.api.finance.domain.model.CreateTransactionCommand;
+import com.nido.api.finance.domain.model.SplitTransaction;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionEntity;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
@@ -31,6 +33,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTestConfig
 class TransactionRepositoryAdapterIT {
@@ -148,5 +151,114 @@ class TransactionRepositoryAdapterIT {
         adapter.delete(created.id());
 
         assertThat(adapter.findById(created.id())).isEmpty();
+    }
+    // ─── B7 : le filtre du repli de solde, en SQL réel ─────────────────────
+
+    private Transaction save(String label, BigDecimal amount, UUID payerId, List<Contribution> contributors) {
+        return save(label, amount, TransactionType.EXPENSE, payerId, contributors);
+    }
+
+    private Transaction save(String label, BigDecimal amount, TransactionType type, UUID payerId,
+            List<Contribution> contributors) {
+        return adapter.create(new CreateTransactionCommand(spaceId, label, amount, type, categoryId,
+            LocalDate.of(2026, 1, 15), payerId,
+            contributors.stream().map(c -> new ContributionInput(c.memberId(), c.shareAmount())).toList(), null),
+            contributors);
+    }
+
+    @Test
+    void findSplitsBySpaceId_keeps_only_what_moves_a_balance() {
+        // The two conditions mirror BalanceCalculator's own guard. Getting this filter wrong does
+        // not throw — it silently changes who owes whom, which is why it is verified against SQL
+        // rather than reasoned about.
+        save("Partagé", new BigDecimal("40.00"), aliceId,
+            List.of(new Contribution(aliceId, new BigDecimal("20.00")), new Contribution(bobId, new BigDecimal("20.00"))));
+        save("Solo sans contributeurs", new BigDecimal("15.00"), aliceId, List.of());
+        save("Sans payeur", new BigDecimal("25.00"), null,
+            List.of(new Contribution(bobId, new BigDecimal("25.00"))));
+
+        List<SplitTransaction> splits = adapter.findSplitsBySpaceId(spaceId);
+
+        assertThat(splits)
+            .as("a transaction with no contributors or no payer moves no balance")
+            .hasSize(1);
+        assertThat(splits.get(0).payerId()).isEqualTo(aliceId);
+        assertThat(splits.get(0).amount()).isEqualByComparingTo("40.00");
+        assertThat(splits.get(0).contributors())
+            .extracting(Contribution::memberId).containsExactlyInAnyOrder(aliceId, bobId);
+    }
+
+    @Test
+    void findSplitsBySpaceId_decrypts_the_amounts_and_the_shares() {
+        // The projection reads ciphertext straight from the columns; the adapter is what turns it
+        // back into numbers. An uneven split so a swapped share would show up.
+        save("Partagé", new BigDecimal("30.00"), aliceId,
+            List.of(new Contribution(aliceId, new BigDecimal("10.00")), new Contribution(bobId, new BigDecimal("20.00"))));
+
+        SplitTransaction split = adapter.findSplitsBySpaceId(spaceId).get(0);
+
+        assertThat(split.amount()).isEqualByComparingTo("30.00");
+        assertThat(split.contributors())
+            .extracting(Contribution::memberId, Contribution::shareAmount)
+            .containsExactlyInAnyOrder(
+                org.assertj.core.groups.Tuple.tuple(aliceId, new BigDecimal("10.00")),
+                org.assertj.core.groups.Tuple.tuple(bobId, new BigDecimal("20.00")));
+    }
+
+    @Test
+    void findSplitsBySpaceId_stays_inside_its_own_space() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        other.setName("Ailleurs");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏠");
+        UUID otherSpaceId = spaceJpaRepository.saveAndFlush(other).getId();
+        Category otherCategory = categoryAdapter.create(
+            new CreateCategoryCommand(otherSpaceId, "Alimentation", "#f59e0b", "Utensils", TransactionType.EXPENSE), true);
+        adapter.create(new CreateTransactionCommand(otherSpaceId, "Ailleurs", new BigDecimal("99.00"),
+            TransactionType.EXPENSE, otherCategory.id(), LocalDate.of(2026, 1, 15), aliceId,
+            List.of(new ContributionInput(bobId, new BigDecimal("99.00"))), null),
+            List.of(new Contribution(bobId, new BigDecimal("99.00"))));
+
+        assertThat(adapter.findSplitsBySpaceId(spaceId)).isEmpty();
+    }
+    @Test
+    void findSplitsBySpaceId_carries_the_direction_of_each_transaction() {
+        // The direction is what tells BalanceCalculator whether the payer fronted the money or
+        // received it. It is not in the encrypted payload, it is a projected column — so a wrong
+        // constructor expression here would reverse every shared income without failing anything.
+        save("Courses partagées", new BigDecimal("40.00"), TransactionType.EXPENSE, aliceId,
+            List.of(new Contribution(aliceId, new BigDecimal("20.00")), new Contribution(bobId, new BigDecimal("20.00"))));
+        save("Remboursement partagé", new BigDecimal("300.00"), TransactionType.INCOME, aliceId,
+            List.of(new Contribution(aliceId, new BigDecimal("150.00")), new Contribution(bobId, new BigDecimal("150.00"))));
+
+        List<SplitTransaction> splits = adapter.findSplitsBySpaceId(spaceId);
+
+        assertThat(splits).hasSize(2);
+        assertThat(splits).filteredOn(split -> split.type() == TransactionType.EXPENSE)
+            .singleElement().satisfies(split -> assertThat(split.amount()).isEqualByComparingTo("40.00"));
+        assertThat(splits).filteredOn(split -> split.type() == TransactionType.INCOME)
+            .singleElement().satisfies(split -> assertThat(split.amount()).isEqualByComparingTo("300.00"));
+    }
+
+    @Test
+    void findSplitsBySpaceId_never_touches_the_label_ciphertext() {
+        // The point of the projection, proved rather than asserted. Corrupt the stored label so
+        // that decrypting it would fail, then fold a balance: if the label were still being read,
+        // this throws. findAllBySpaceId on the same row does throw, which is what makes the
+        // difference observable instead of a claim about generated SQL.
+        Transaction saved = save("Partagé", new BigDecimal("40.00"), aliceId,
+            List.of(new Contribution(aliceId, new BigDecimal("20.00")), new Contribution(bobId, new BigDecimal("20.00"))));
+        FinanceTransactionEntity stored = jpaRepository.findById(saved.id()).orElseThrow();
+        stored.setLabelEncrypted("deadbeefdeadbeefdeadbeefdeadbeef");
+        jpaRepository.saveAndFlush(stored);
+
+        List<SplitTransaction> splits = adapter.findSplitsBySpaceId(spaceId);
+
+        assertThat(splits).hasSize(1);
+        assertThat(splits.get(0).amount()).isEqualByComparingTo("40.00");
+        assertThatThrownBy(() -> adapter.findAllBySpaceId(spaceId))
+            .as("the full read does decrypt the label — otherwise this test proves nothing")
+            .isInstanceOf(RuntimeException.class);
     }
 }

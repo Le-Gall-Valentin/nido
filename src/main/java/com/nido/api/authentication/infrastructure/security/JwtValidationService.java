@@ -8,6 +8,7 @@ import io.jsonwebtoken.Jwts;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.time.Instant;
 import java.util.UUID;
 
 @Component
@@ -45,7 +46,8 @@ public class JwtValidationService {
             if (roleStr == null) throw new JwtException("Missing role claim");
             Role role = Role.valueOf(roleStr);
             String email = claims.get("email", String.class);
-            return new UserClaims(userId, role, email);
+            if (claims.getIssuedAt() == null) throw new JwtException("Missing iat claim");
+            return new UserClaims(userId, role, email, claims.getIssuedAt().toInstant());
         } catch (JwtException | IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid JWT token", e);
         }

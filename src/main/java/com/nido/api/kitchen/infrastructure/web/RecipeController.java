@@ -21,6 +21,7 @@ import com.nido.api.kitchen.infrastructure.web.dto.RecipeSummaryResponse;
 import com.nido.api.kitchen.infrastructure.web.dto.TransferRecipeRequest;
 import com.nido.api.kitchen.infrastructure.web.dto.UpdateRecipeRequest;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -98,7 +99,7 @@ public class RecipeController {
     public ResponseEntity<RecipeResponse> create(
             @PathVariable UUID spaceId,
             @Valid @RequestBody CreateRecipeRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         CreateRecipeCommand command = new CreateRecipeCommand(spaceId, request.name(), request.description(), request.category(),
             request.minutes(), request.referencePortions(), toDomainIngredients(request.ingredients()), request.steps(), request.note());
         Recipe created = createRecipeUseCase.create(command, membership);
@@ -111,7 +112,7 @@ public class RecipeController {
     public ResponseEntity<RecipeResponse> update(
             @PathVariable UUID spaceId, @PathVariable UUID recipeId,
             @Valid @RequestBody UpdateRecipeRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         UpdateRecipeCommand command = new UpdateRecipeCommand(recipeId, spaceId, request.name(), request.description(), request.category(),
             request.minutes(), request.referencePortions(), toDomainIngredients(request.ingredients()), request.steps(), request.note());
         return ResponseEntity.ok(RecipeResponse.from(updateRecipeUseCase.update(command, membership)));
@@ -122,7 +123,7 @@ public class RecipeController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
             @PathVariable UUID spaceId, @PathVariable UUID recipeId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         deleteRecipeUseCase.delete(recipeId, membership);
         return ResponseEntity.noContent().build();
     }
@@ -132,7 +133,7 @@ public class RecipeController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RecipeResponse> toggleFavorite(
             @PathVariable UUID spaceId, @PathVariable UUID recipeId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         return ResponseEntity.ok(RecipeResponse.from(toggleRecipeFavoriteUseCase.toggleFavorite(recipeId, membership)));
     }
 
@@ -153,7 +154,7 @@ public class RecipeController {
     public ResponseEntity<RecipeResponse> move(
             @PathVariable UUID spaceId, @PathVariable UUID recipeId,
             @Valid @RequestBody TransferRecipeRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         Recipe moved = moveRecipeUseCase.move(recipeId, request.destinationSpaceId(), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(RecipeResponse.from(moved));
     }

@@ -7,10 +7,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
 
+// Ahead of GlobalExceptionHandler's last resort, which matches Exception and would otherwise be
+// picked first on an order tie — turning a declared domain error into a 500.
+@Order(Ordered.LOWEST_PRECEDENCE - 100)
 @RestControllerAdvice
 public class FinanceExceptionHandler {
 
@@ -34,6 +39,10 @@ public class FinanceExceptionHandler {
             case FinanceException.TargetAmountBelowContributed ignored -> new FinanceErrorResponse(422, "The target amount cannot be lowered below what has already been contributed.");
             case FinanceException.CategoryTypeMismatch ignored -> new FinanceErrorResponse(422, "The category's type does not match this operation's type.");
             case FinanceException.BudgetRequiresExpenseCategory ignored -> new FinanceErrorResponse(422, "Only expense categories can be budgeted.");
+            case FinanceException.RecurrenceBacklogTooLarge ex -> new FinanceErrorResponse(400,
+                "This recurring series would generate " + ex.pendingOccurrences()
+                    + " past occurrences at once (maximum " + ex.maximum()
+                    + "). Move its start date closer, or use a longer interval.");
         };
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), e.getClass().getSimpleName(), response.detail(),

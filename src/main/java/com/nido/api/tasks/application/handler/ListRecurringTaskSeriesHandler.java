@@ -5,6 +5,7 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.tasks.application.port.in.ListRecurringTaskSeriesUseCase;
 import com.nido.api.tasks.domain.model.RecurringTaskSeries;
 import com.nido.api.tasks.domain.port.out.RecurringTaskSeriesRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ public class ListRecurringTaskSeriesHandler implements ListRecurringTaskSeriesUs
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<RecurringTaskSeries> list(SpaceMembership caller) {
         return seriesRepository.findBySpaceId(caller.spaceId());
     }

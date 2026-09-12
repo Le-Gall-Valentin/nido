@@ -2,6 +2,7 @@ package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.domain.model.Balances;
 import com.nido.api.finance.domain.model.Contribution;
+import com.nido.api.finance.domain.model.SplitTransaction;
 import com.nido.api.finance.domain.model.MemberBalance;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
@@ -41,11 +42,12 @@ class GetBalancesHandlerTest {
 
     @Test
     void delegates_to_BalanceCalculator_over_every_transaction_and_settlement_in_the_space() {
-        Transaction dinner = new Transaction(UUID.randomUUID(), spaceId, "Dîner", new BigDecimal("40.00"), TransactionType.EXPENSE,
-            UUID.randomUUID(), LocalDate.of(2026, 1, 1), aliceId,
-            List.of(new Contribution(aliceId, new BigDecimal("20.00")), new Contribution(bobId, new BigDecimal("20.00"))),
-            null, Instant.now());
-        when(transactionRepository.findAllBySpaceId(spaceId)).thenReturn(List.of(dinner));
+        // Only payer, amount and shares: the balance fold never reads a label, and the
+        // repository no longer decrypts one for it.
+        SplitTransaction dinner = new SplitTransaction(aliceId, new BigDecimal("40.00"),
+            List.of(new Contribution(aliceId, new BigDecimal("20.00")),
+                    new Contribution(bobId, new BigDecimal("20.00"))), TransactionType.EXPENSE);
+        when(transactionRepository.findSplitsBySpaceId(spaceId)).thenReturn(List.of(dinner));
         when(settlementRecordRepository.findBySpaceId(spaceId)).thenReturn(List.of());
         SpaceMembership membership = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.MEMBER, Instant.now());
 

@@ -3,6 +3,7 @@ package com.nido.api.identity.application.handler;
 import com.nido.api.identity.domain.model.DeactivateUserCommand;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
+import com.nido.api.identity.domain.port.out.TokenInvalidationPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.model.Role;
@@ -25,6 +26,7 @@ class DeactivateUserHandlerTest {
 
     @Mock UserRepository userRepository;
     @Mock UserCommandPort userCommandPort;
+    @Mock TokenInvalidationPort tokenInvalidationPort;
 
     private DeactivateUserHandler handler;
 
@@ -33,7 +35,7 @@ class DeactivateUserHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new DeactivateUserHandler(userRepository, userCommandPort);
+        handler = new DeactivateUserHandler(userRepository, userCommandPort, tokenInvalidationPort);
     }
 
     @Test

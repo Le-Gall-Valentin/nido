@@ -33,7 +33,6 @@ class JwtServiceTest {
             new NidoProperties.CookieProperties(false),
             null,
             new NidoProperties.CorsProperties(java.util.List.of()),
-            new NidoProperties.RateLimitProperties(java.util.List.of()),
             new NidoProperties.EncryptionProperties("test-enc-secret"),
             null
         );
@@ -142,7 +141,6 @@ class JwtServiceTest {
             new NidoProperties.CookieProperties(false),
             null,
             new NidoProperties.CorsProperties(java.util.List.of()),
-            new NidoProperties.RateLimitProperties(java.util.List.of()),
             new NidoProperties.EncryptionProperties("test-enc-secret"),
             null
         );
@@ -166,7 +164,6 @@ class JwtServiceTest {
             new NidoProperties.CookieProperties(false),
             null,
             new NidoProperties.CorsProperties(java.util.List.of()),
-            new NidoProperties.RateLimitProperties(java.util.List.of()),
             new NidoProperties.EncryptionProperties("test-enc-secret"),
             null
         );

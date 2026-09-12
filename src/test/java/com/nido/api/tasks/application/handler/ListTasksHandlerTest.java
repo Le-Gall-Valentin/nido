@@ -5,6 +5,7 @@ import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.tasks.domain.model.CreateTaskCommand;
 import com.nido.api.tasks.domain.model.RecurrenceInterval;
 import com.nido.api.tasks.domain.model.RecurringTaskSeries;
+import com.nido.api.tasks.domain.model.RecurringTaskSeriesSchedule;
 import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskPriority;
 import com.nido.api.tasks.domain.model.TaskStatus;
@@ -49,7 +50,7 @@ class ListTasksHandlerTest {
 
     @Test
     void lists_the_callers_space_tasks_ordered_by_priority() {
-        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of());
+        when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
         Task low = task(TaskPriority.LOW);
         Task high = task(TaskPriority.HIGH);
         when(taskRepository.findBySpaceId(spaceId)).thenReturn(List.of(low, high));
@@ -65,6 +66,8 @@ class ListTasksHandlerTest {
         UUID seriesId = UUID.randomUUID();
         RecurringTaskSeries series = new RecurringTaskSeries(seriesId, spaceId, "Sortir les poubelles", TaskPriority.MED, List.of(),
             RecurrenceInterval.DAILY, 1, RecurrenceInterval.DAILY, 0, anchor, null, 0, List.of(), 0, null);
+        when(seriesRepository.findSchedulesBySpaceId(spaceId))
+            .thenReturn(List.of(scheduleOf(series)));
         when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(series));
         Task materialized = task(TaskPriority.MED);
         when(taskRepository.findBySpaceId(spaceId)).thenReturn(List.of(materialized));
@@ -77,5 +80,14 @@ class ListTasksHandlerTest {
             spaceId, "Sortir les poubelles", TaskPriority.MED, LocalDate.of(2026, 1, 8), List.of(), List.of(), seriesId, null)));
         order.verify(taskRepository).findBySpaceId(spaceId);
         assertThat(result).containsExactly(materialized);
+    }
+    /**
+     * Derives the schedule projection from the full series, so a test cannot stub the two reads
+     * with values that disagree — the pre-check and the materialization loop must see the same
+     * series.
+     */
+    private static RecurringTaskSeriesSchedule scheduleOf(RecurringTaskSeries s) {
+        return new RecurringTaskSeriesSchedule(s.id(), s.intervalType(), s.intervalCount(),
+            s.leadIntervalType(), s.leadIntervalCount(), s.anchorDate(), s.endDate(), s.occurrenceCount());
     }
 }

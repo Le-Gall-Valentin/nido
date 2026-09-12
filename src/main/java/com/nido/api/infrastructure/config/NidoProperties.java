@@ -18,7 +18,6 @@ public record NidoProperties(
     CookieProperties cookie,
     @Valid SeedProperties seed,
     CorsProperties cors,
-    RateLimitProperties rateLimit,
     @Valid EncryptionProperties encryption,
     SecurityProperties security
 ) {
@@ -49,15 +48,25 @@ public record NidoProperties(
         @DefaultValue("") List<String> allowedOrigins
     ) {}
 
-    public record RateLimitProperties(
-        @DefaultValue("") List<String> trustedProxies
-    ) {}
-
     public record EncryptionProperties(
         @NotBlank @Size(min = 32, message = "Encryption secret must be at least 32 characters for sufficient entropy") String secret
     ) {}
 
     public record SecurityProperties(
-        @Positive @DefaultValue("15") int challengeTtlMinutes
+        @Positive @DefaultValue("15") int challengeTtlMinutes,
+        /**
+         * How long an account stays locked out of TOTP verification once it has used up its
+         * attempts. Deliberately its own knob rather than reusing challengeTtlMinutes: one
+         * governs how long a login may be left half-finished, the other how long brute-force
+         * guessing is held off, and a future change to either must not silently move the other.
+         */
+        @Positive @DefaultValue("15") int totpLockoutMinutes,
+        /**
+         * How long an enrolment that has been started but never confirmed stays usable. Its own
+         * knob again: this one bounds how long a QR code someone photographed over a shoulder
+         * remains worth anything, which has nothing to do with how long a half-finished login may
+         * be left open or how long guessing is held off.
+         */
+        @Positive @DefaultValue("15") int totpSetupTtlMinutes
     ) {}
 }

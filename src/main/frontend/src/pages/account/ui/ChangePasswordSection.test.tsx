@@ -88,4 +88,68 @@ describe('ChangePasswordSection', () => {
     const alert = await findByRole('alert')
     expect(alert.textContent).toContain('password.error.rate_limit')
   })
+
+  it('hands over to the caller shortly after a successful change, not before', async () => {
+    // The server revokes every refresh token on a password change, this device included,
+    // so the page signs out here. It waits first: dropping straight to the login screen
+    // the instant the button is clicked reads like a crash rather than a confirmation.
+    vi.useFakeTimers()
+    try {
+      const onChanged = vi.fn()
+      const onChangePassword = vi.fn().mockResolvedValue(undefined)
+      const { container, getByRole } = render(
+        <ChangePasswordSection onChangePassword={onChangePassword} onChanged={onChanged} />
+      )
+      fillForm(container, 'oldpass', 'Newpass1!', 'Newpass1!')
+      fireEvent.click(getByRole('button', { name: 'password.submit' }))
+      await vi.waitFor(() => expect(onChangePassword).toHaveBeenCalled())
+
+      expect(onChanged).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(3000)
+      expect(onChanged).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not hand over when the change failed', async () => {
+    vi.useFakeTimers()
+    try {
+      const onChanged = vi.fn()
+      const onChangePassword = vi.fn().mockRejectedValue(new InvalidCurrentPasswordError())
+      const { container, getByRole } = render(
+        <ChangePasswordSection onChangePassword={onChangePassword} onChanged={onChanged} />
+      )
+      fillForm(container, 'wrong', 'Newpass1!', 'Newpass1!')
+      fireEvent.click(getByRole('button', { name: 'password.submit' }))
+      await vi.waitFor(() => expect(onChangePassword).toHaveBeenCalled())
+
+      await vi.advanceTimersByTimeAsync(3000)
+      expect(onChanged).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('cancels a pending hand-over when the section unmounts first', async () => {
+    // Navigating away between the confirmation and the hand-over must not fire a logout
+    // into an unmounted tree.
+    vi.useFakeTimers()
+    try {
+      const onChanged = vi.fn()
+      const onChangePassword = vi.fn().mockResolvedValue(undefined)
+      const { container, getByRole, unmount } = render(
+        <ChangePasswordSection onChangePassword={onChangePassword} onChanged={onChanged} />
+      )
+      fillForm(container, 'oldpass', 'Newpass1!', 'Newpass1!')
+      fireEvent.click(getByRole('button', { name: 'password.submit' }))
+      await vi.waitFor(() => expect(onChangePassword).toHaveBeenCalled())
+
+      unmount()
+      await vi.advanceTimersByTimeAsync(3000)
+      expect(onChanged).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

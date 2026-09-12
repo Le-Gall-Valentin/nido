@@ -1,3 +1,12 @@
+server:
+  # Behind a reverse proxy the application otherwise takes the proxy for the client. Measured on a
+  # live deployment: every caller in the world, on any continent, charged to a single 172.18.0.1 —
+  # which turns every per-IP rate limit into a limit on the whole application at once, and lets five
+  # requests a minute keep everybody from logging in. NATIVE has Tomcat rewrite the remote address
+  # from X-Forwarded-For before any of our code runs, and only for a peer inside the private ranges,
+  # so a request that reaches the application directly cannot forge one.
+  forward-headers-strategy: NATIVE
+
 spring:
   application:
     name: nido
@@ -13,15 +22,52 @@ spring:
     username: ${NIDO_DB_USER}
     password: ${NIDO_DB_PASSWORD}
   jpa:
+    # Off deliberately. Left on, the Hibernate session stays open through response rendering,
+    # holding a connection from the pool for the whole write-out. Nothing here needs it: there
+    # is not a single JPA relation in the codebase, so no lazy proxy can escape its transaction —
+    # every aggregate is assembled by explicit queries inside a @Transactional handler and mapped
+    # to domain records before it leaves.
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+# Exists so the container can answer "is this process still serving?" and nothing else.
+#
+# On its own port, which the Dockerfile does not EXPOSE and the deployment does not publish: the
+# probe runs inside the container and reaches it over loopback, while the reverse proxy — which
+# forwards the application port and only that — has no route to it at all. Serving it on 8080 would
+# have put an unauthenticated endpoint on the public host for no benefit, since nothing outside the
+# container ever needs to ask.
+#
+# health alone, and without details: the breakdown names every backing service and its state, which
+# is a map of the deployment. Up or down is the entire question a probe has.
+management:
+  server:
+    port: ${NIDO_MANAGEMENT_PORT:8081}
+  endpoints:
+    web:
+      exposure:
+        include: health
+      # /actuator itself lists what is available. With one endpoint exposed it lists one, which is
+      # not a secret — but it is surface added for nobody: a probe asks for a known URL.
+      discovery:
+        enabled: false
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+
 springdoc:
   api-docs:
     enabled: ${SWAGGER_ENABLED:false}
+    # Under /api deliberately. The session cookie is scoped to /api (see CookieService), so a
+    # document served anywhere else can never be read by a logged-in browser — requiring
+    # authentication on /v3/api-docs made Swagger unusable rather than private. Here the existing
+    # /api/** rule authenticates it and the cookie actually arrives.
+    path: /api/docs
   swagger-ui:
     enabled: ${SWAGGER_ENABLED:false}
 

@@ -1,5 +1,6 @@
 package com.nido.api.finance.infrastructure.persistence.repository;
 
+import com.nido.api.finance.domain.model.RecurringSeriesSchedule;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceRecurringSeriesEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +12,17 @@ import java.util.UUID;
 
 public interface FinanceRecurringSeriesJpaRepository extends JpaRepository<FinanceRecurringSeriesEntity, UUID> {
     List<FinanceRecurringSeriesEntity> findBySpaceId(UUID spaceId);
+
+    // A constructor expression straight onto the domain record: infrastructure may depend on
+    // domain, and an identical projection record here would only add a mapping step. The point
+    // of the shape is that nothing lands in the persistence context — see RecurringSeriesSchedule.
+    @Query("""
+        select new com.nido.api.finance.domain.model.RecurringSeriesSchedule(
+            s.id, s.intervalType, s.intervalCount, s.anchorDate, s.endDate, s.lastMaterializedDate)
+        from FinanceRecurringSeriesEntity s
+        where s.spaceId = :spaceId
+        """)
+    List<RecurringSeriesSchedule> findSchedulesBySpaceId(@Param("spaceId") UUID spaceId);
 
     // Written as JPQL rather than a derived query name: a name like
     // "findBySpaceIdAndEndDateIsNullOrEndDateGreaterThanEqual" would parenthesize as

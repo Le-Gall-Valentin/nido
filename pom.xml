@@ -50,14 +50,24 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
 
+        <!-- Only for the container's health probe. Everything but /actuator/health stays
+             unexposed, and the whole thing listens on its own port that is never published. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- Annotations only, not a second JSON runtime. Jackson 3 reads this same package, so
+             @JsonInclude and friends work with the serialiser Boot 4 configures; it is declared
+             because our own DTOs compile against it, rather than arriving by accident under a
+             runtime-scoped dependency of JJWT. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
         </dependency>
         <dependency>
             <groupId>com.bucket4j</groupId>
@@ -68,6 +78,12 @@
             <groupId>dev.samstevens.totp</groupId>
             <artifactId>totp</artifactId>
             <version>1.7.1</version>
+        </dependency>
+        <!-- Bounds the per-user / per-space encryptor caches. No <version>: the Spring Boot BOM
+             already manages Caffeine, so it moves with the Boot upgrade rather than on its own. -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
         </dependency>
 
         <dependency>

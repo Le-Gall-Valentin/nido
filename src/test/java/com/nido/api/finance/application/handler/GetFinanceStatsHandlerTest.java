@@ -4,6 +4,8 @@ import com.nido.api.finance.domain.model.Budget;
 import com.nido.api.finance.domain.model.FinanceStats;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
+import com.nido.api.finance.domain.model.RecurringSeriesSchedule;
+import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.port.out.BudgetRepository;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,19 +57,22 @@ class GetFinanceStatsHandlerTest {
 
     @Test
     void materializes_due_occurrences_before_computing_stats() {
-        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of());
+        when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
         when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of());
         when(budgetRepository.findBySpaceId(spaceId)).thenReturn(List.of());
 
         handler.getStats(YearMonth.of(2026, 1), membership(), LocalDate.of(2026, 1, 20));
 
-        verify(seriesRepository).findBySpaceId(spaceId);
-        verify(seriesRepository).lockForMaterialization(spaceId);
+        // Nothing is due, so the schedule check is the only read and neither the lock nor the
+        // full series load is reached — that is the whole point of the pre-check.
+        verify(seriesRepository).findSchedulesBySpaceId(spaceId);
+        verify(seriesRepository, never()).findBySpaceId(spaceId);
+        verify(seriesRepository, never()).lockForMaterialization(spaceId);
     }
 
     @Test
     void computes_balance_category_breakdown_and_budget_vs_actual() {
-        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of());
+        when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
         when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of(
             transaction(new BigDecimal("50.00"), TransactionType.EXPENSE, foodCategory),
             transaction(new BigDecimal("30.00"), TransactionType.EXPENSE, transportCategory),
@@ -95,7 +101,7 @@ class GetFinanceStatsHandlerTest {
 
     @Test
     void remaining_budget_ignores_spending_in_categories_that_have_no_budget_at_all() {
-        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of());
+        when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
         when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of(
             transaction(new BigDecimal("500.00"), TransactionType.EXPENSE, transportCategory)));
         when(budgetRepository.findBySpaceId(spaceId)).thenReturn(List.of(
@@ -104,5 +110,14 @@ class GetFinanceStatsHandlerTest {
         FinanceStats stats = handler.getStats(YearMonth.of(2026, 1), membership(), LocalDate.of(2026, 1, 20));
 
         assertThat(stats.remainingBudget()).isEqualByComparingTo("400.00");
+    }
+    /**
+     * Derives the schedule projection from the full series, so a test cannot stub the two reads
+     * with values that disagree — the pre-check and the materialization loop must see the same
+     * series.
+     */
+    private static RecurringSeriesSchedule scheduleOf(RecurringTransactionSeries s) {
+        return new RecurringSeriesSchedule(s.id(), s.intervalType(), s.intervalCount(),
+            s.anchorDate(), s.endDate(), s.lastMaterializedDate());
     }
 }

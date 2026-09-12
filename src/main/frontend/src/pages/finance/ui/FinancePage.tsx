@@ -137,6 +137,9 @@ function FinancePageContent() {
 
   const categoryById = new Map((categories ?? []).map((c) => [c.id, c]))
 
+  // Expenses only, on purpose: this is the "paid X" line next to each net balance, and money
+  // received is not money paid. A shared income still moves the net figure — the server folds it —
+  // it just does not belong in this figure.
   const paidByMember = new Map<string, number>()
   for (const transaction of transactions ?? []) {
     if (transaction.type === 'EXPENSE' && transaction.payerId) {

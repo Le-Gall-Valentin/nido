@@ -35,10 +35,14 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource(properties)))
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // The Swagger UI bundle only: stock HTML and JavaScript, identical in every
+                // project that uses springdoc, describing nothing about this one. The document it
+                // fetches is what had to be protected, and that now lives at /api/docs, covered by
+                // the /api/** rule below — so an anonymous caller gets the empty shell and a 401
+                // where the content would be.
                 .requestMatchers(
                         "/swagger-ui.html",
-                        "/swagger-ui/**",
-                        "/v3/api-docs/**"
+                        "/swagger-ui/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/", "/index.html", "/favicon.svg").permitAll()
                 .requestMatchers(HttpMethod.GET, "/assets/**").permitAll()

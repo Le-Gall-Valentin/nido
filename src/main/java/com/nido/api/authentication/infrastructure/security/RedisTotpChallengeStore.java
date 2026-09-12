@@ -13,14 +13,22 @@ import java.util.UUID;
 public class RedisTotpChallengeStore implements TotpChallengeStorePort {
 
     private static final String CHALLENGE_PREFIX = "totp:challenge:";
+    private static final String ATTEMPTS_PREFIX = "totp:attempts:user:";
+
+    private static final int DEFAULT_CHALLENGE_TTL_MINUTES = 15;
+    private static final int DEFAULT_LOCKOUT_MINUTES = 15;
 
     private final StringRedisTemplate redisTemplate;
     private final Duration challengeTtl;
+    private final Duration lockoutWindow;
 
     public RedisTotpChallengeStore(StringRedisTemplate redisTemplate, NidoProperties properties) {
         this.redisTemplate = redisTemplate;
-        int ttlMinutes = properties.security() != null ? properties.security().challengeTtlMinutes() : 15;
-        this.challengeTtl = Duration.ofMinutes(ttlMinutes);
+        NidoProperties.SecurityProperties security = properties.security();
+        this.challengeTtl = Duration.ofMinutes(
+            security != null ? security.challengeTtlMinutes() : DEFAULT_CHALLENGE_TTL_MINUTES);
+        this.lockoutWindow = Duration.ofMinutes(
+            security != null ? security.totpLockoutMinutes() : DEFAULT_LOCKOUT_MINUTES);
     }
 
     @Override
@@ -39,18 +47,47 @@ public class RedisTotpChallengeStore implements TotpChallengeStorePort {
 
     @Override
     public void invalidateChallenge(String challengeId) {
+        // Only the challenge: the attempt counter outlives it on purpose, since a fresh
+        // challenge is exactly what a caller obtains by logging in again.
         redisTemplate.delete(CHALLENGE_PREFIX + challengeId);
-        redisTemplate.delete("totp:attempts:" + challengeId);
     }
 
     @Override
-    public int incrementFailedAttempts(String challengeId) {
-        String key = "totp:attempts:" + challengeId;
+    public int failedAttempts(UUID userId) {
+        String value = redisTemplate.opsForValue().get(ATTEMPTS_PREFIX + userId);
+        if (value == null) return 0;
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            // A key holding something other than a number can only be corruption or a
+            // collision with another writer. Reading it as "locked out" would deny the account
+            // its own logins, so the safe reading is "no attempts recorded" — the counter then
+            // rebuilds itself from the next failure.
+            return 0;
+        }
+    }
+
+    @Override
+    public int recordFailedAttempt(UUID userId) {
+        String key = ATTEMPTS_PREFIX + userId;
         Long count = redisTemplate.opsForValue().increment(key);
         long attempts = count != null ? count : 1L;
-        // expire() is called unconditionally to avoid the non-atomic increment+expire window:
-        // if the process crashes after increment but before expire, the key would leak forever.
-        redisTemplate.expire(key, challengeTtl);
+        // expire() is called unconditionally, as it was when this counter hung off the
+        // challenge: INCR creates the key without a TTL, so a crash between the two would
+        // leave it there forever — and now that the key is the account's, forever would mean
+        // a permanently unusable account rather than a stale challenge.
+        //
+        // The window therefore slides while attempts are still being recorded, and stops
+        // sliding the moment the account is locked out: callers refuse a locked-out attempt
+        // before reaching this method, so nothing renews the TTL. The lockout runs for the
+        // configured span from the attempt that exhausted it, and no longer — a caller who
+        // keeps hammering cannot extend it.
+        redisTemplate.expire(key, lockoutWindow);
         return (int) attempts;
+    }
+
+    @Override
+    public void clearFailedAttempts(UUID userId) {
+        redisTemplate.delete(ATTEMPTS_PREFIX + userId);
     }
 }

@@ -15,6 +15,7 @@ import com.nido.api.finance.infrastructure.web.dto.UpdateTransactionRequest;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import com.nido.api.infrastructure.web.CurrentMembership;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -62,7 +63,7 @@ public class FinanceTransactionController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TransactionResponse> create(
             @PathVariable UUID spaceId, @Valid @RequestBody CreateTransactionRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         Transaction created = createTransactionUseCase.create(new CreateTransactionCommand(
             spaceId, request.label(), request.amount(), request.type(), request.categoryId(), request.date(),
             request.payerId(), toContributionInputs(request.contributors()), null), membership);
@@ -74,7 +75,7 @@ public class FinanceTransactionController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TransactionResponse> update(
             @PathVariable UUID spaceId, @PathVariable UUID transactionId, @Valid @RequestBody UpdateTransactionRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         Transaction updated = updateTransactionUseCase.update(new UpdateTransactionCommand(
             transactionId, spaceId, request.label(), request.amount(), request.type(), request.categoryId(),
             request.date(), request.payerId(), toContributionInputs(request.contributors())), membership);
@@ -86,7 +87,7 @@ public class FinanceTransactionController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
             @PathVariable UUID spaceId, @PathVariable UUID transactionId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         deleteTransactionUseCase.delete(transactionId, spaceId, membership);
         return ResponseEntity.noContent().build();
     }

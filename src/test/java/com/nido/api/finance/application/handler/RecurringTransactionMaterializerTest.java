@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.domain.model.RecurrenceInterval;
+import com.nido.api.finance.domain.model.RecurringSeriesSchedule;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
@@ -38,6 +39,8 @@ class RecurringTransactionMaterializerTest {
         RecurringTransactionSeries series = new RecurringTransactionSeries(seriesId, spaceId, "Abonnement",
             new BigDecimal("9.99"), TransactionType.EXPENSE, categoryId, null, List.of(),
             RecurrenceInterval.DAILY, 1, LocalDate.of(2026, 1, 1), null, null);
+        when(seriesRepository.findSchedulesBySpaceId(spaceId))
+            .thenReturn(List.of(scheduleOf(series)));
         when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(series));
         LocalDate today = LocalDate.of(2026, 1, 10);
 
@@ -59,10 +62,66 @@ class RecurringTransactionMaterializerTest {
         RecurringTransactionSeries series = new RecurringTransactionSeries(seriesId, spaceId, "Abonnement",
             new BigDecimal("9.99"), TransactionType.EXPENSE, categoryId, null, List.of(),
             RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1));
-        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(series));
+        when(seriesRepository.findSchedulesBySpaceId(spaceId))
+            .thenReturn(List.of(scheduleOf(series)));
 
         RecurringTransactionMaterializer.materializeDueOccurrences(transactionRepository, seriesRepository, spaceId, LocalDate.of(2026, 6, 1));
 
         verify(seriesRepository, never()).advanceLastMaterializedDate(any(), any());
+        // The schedule check settles it: neither the lock nor the full series load is reached.
+        verify(seriesRepository, never()).lockForMaterialization(spaceId);
+        verify(seriesRepository, never()).findBySpaceId(spaceId);
+    }
+    @Test
+    void a_backlog_beyond_the_ceiling_is_capped_and_the_cursor_stops_where_it_stopped() {
+        // Anchored far enough back that the uncapped loop would generate tens of thousands of
+        // rows in one transaction — the failure mode this ceiling exists to prevent.
+        LocalDate anchor = LocalDate.of(2000, 1, 1);
+        RecurringTransactionSeries series = new RecurringTransactionSeries(seriesId, spaceId, "Abonnement",
+            new BigDecimal("9.99"), TransactionType.EXPENSE, categoryId, null, List.of(),
+            RecurrenceInterval.DAILY, 1, anchor, null, null);
+        when(seriesRepository.findSchedulesBySpaceId(spaceId))
+            .thenReturn(List.of(scheduleOf(series)));
+        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(series));
+
+        RecurringTransactionMaterializer.materializeDueOccurrences(
+            transactionRepository, seriesRepository, spaceId, LocalDate.of(2026, 9, 9));
+
+        verify(transactionRepository, times(RecurringTransactionMaterializer.MAX_OCCURRENCES_PER_RUN)).create(any(), any());
+        ArgumentCaptor<LocalDate> dateCaptor = ArgumentCaptor.forClass(LocalDate.class);
+        verify(seriesRepository, times(1)).advanceLastMaterializedDate(eq(seriesId), dateCaptor.capture());
+        // The cursor sits on the last occurrence actually written, so the next read resumes
+        // from there rather than replaying or skipping any of them.
+        assertThat(dateCaptor.getValue())
+            .isEqualTo(anchor.plusDays(RecurringTransactionMaterializer.MAX_OCCURRENCES_PER_RUN - 1L));
+    }
+
+    @Test
+    void successive_passes_keep_catching_up_from_where_the_previous_one_left_off() {
+        LocalDate anchor = LocalDate.of(2000, 1, 1);
+        LocalDate cursorAfterFirstPass = anchor.plusDays(RecurringTransactionMaterializer.MAX_OCCURRENCES_PER_RUN - 1L);
+        RecurringTransactionSeries series = new RecurringTransactionSeries(seriesId, spaceId, "Abonnement",
+            new BigDecimal("9.99"), TransactionType.EXPENSE, categoryId, null, List.of(),
+            RecurrenceInterval.DAILY, 1, anchor, null, cursorAfterFirstPass);
+        when(seriesRepository.findSchedulesBySpaceId(spaceId))
+            .thenReturn(List.of(scheduleOf(series)));
+        when(seriesRepository.findBySpaceId(spaceId)).thenReturn(List.of(series));
+
+        RecurringTransactionMaterializer.materializeDueOccurrences(
+            transactionRepository, seriesRepository, spaceId, LocalDate.of(2026, 9, 9));
+
+        ArgumentCaptor<LocalDate> dateCaptor = ArgumentCaptor.forClass(LocalDate.class);
+        verify(seriesRepository, times(1)).advanceLastMaterializedDate(eq(seriesId), dateCaptor.capture());
+        assertThat(dateCaptor.getValue())
+            .isEqualTo(cursorAfterFirstPass.plusDays(RecurringTransactionMaterializer.MAX_OCCURRENCES_PER_RUN));
+    }
+    /**
+     * Derives the schedule projection from the full series, so a test cannot stub the two reads
+     * with values that disagree — the pre-check and the materialization loop must see the same
+     * series.
+     */
+    private static RecurringSeriesSchedule scheduleOf(RecurringTransactionSeries s) {
+        return new RecurringSeriesSchedule(s.id(), s.intervalType(), s.intervalCount(),
+            s.anchorDate(), s.endDate(), s.lastMaterializedDate());
     }
 }

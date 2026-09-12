@@ -6,6 +6,7 @@ import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionSplitter;
 import com.nido.api.finance.domain.model.FinanceException;
+import com.nido.api.finance.domain.model.RecurrenceProjector;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.model.UpdateRecurringSeriesCommand;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
@@ -14,6 +15,7 @@ import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @ApplicationService
@@ -33,6 +35,15 @@ public class UpdateRecurringSeriesHandler implements UpdateRecurringSeriesUseCas
     @Override
     @Transactional
     public RecurringTransactionSeries update(UpdateRecurringSeriesCommand command, SpaceMembership caller) {
+        return update(command, caller, LocalDate.now());
+    }
+
+    /**
+     * Package-visible overload with an explicit "today" — lets tests exercise the backlog
+     * ceiling against fixed dates instead of whenever the suite happens to run.
+     */
+    @Transactional
+    RecurringTransactionSeries update(UpdateRecurringSeriesCommand command, SpaceMembership caller, LocalDate today) {
         caller.ensureSameSpace(command.spaceId());
         caller.ensureCanWrite();
         Category category = categoryRepository.findById(command.categoryId())
@@ -57,6 +68,11 @@ public class UpdateRecurringSeriesHandler implements UpdateRecurringSeriesUseCas
         if (!existing.spaceId().equals(command.spaceId())) {
             throw new FinanceException.RecurringSeriesNotFound();
         }
+        // Measured from the cursor, not from the anchor: a long-running series that is already
+        // caught up owes nothing, so renaming it stays possible however far back it started.
+        // Moving its anchor into the distant past, on the other hand, is exactly what this refuses.
+        RecurrenceProjector.validateBacklog(command.anchorDate(), command.intervalType(),
+            command.intervalCount(), command.endDate(), today, existing.lastMaterializedDate());
         return seriesRepository.update(command, resolved);
     }
 }

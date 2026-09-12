@@ -22,6 +22,13 @@ import java.util.List;
 @ApplicationService
 public class GetProjectionHandler implements GetProjectionUseCase {
 
+    /**
+     * Ceiling on the occurrences a single series may contribute to one month's projection.
+     * A calendar month holds at most 31 daily occurrences, so this never binds in practice —
+     * it is here so no call site of occurrencesBetween can ask for an unbounded range.
+     */
+    private static final int MAX_PROJECTED_OCCURRENCES_PER_SERIES = 100;
+
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionSeriesRepository seriesRepository;
 
@@ -56,7 +63,8 @@ public class GetProjectionHandler implements GetProjectionUseCase {
         if (!rangeStart.isAfter(monthEnd)) {
             for (RecurringTransactionSeries series : seriesRepository.findActiveBySpaceId(caller.spaceId(), rangeStart)) {
                 List<LocalDate> dates = RecurrenceProjector.occurrencesBetween(
-                    series.anchorDate(), series.intervalType(), series.intervalCount(), series.endDate(), rangeStart, monthEnd);
+                    series.anchorDate(), series.intervalType(), series.intervalCount(), series.endDate(), rangeStart, monthEnd,
+                    MAX_PROJECTED_OCCURRENCES_PER_SERIES);
                 for (LocalDate date : dates) {
                     upcoming.add(new ProjectedOccurrence(series.id(), series.label(), series.amount(), series.type(), date));
                 }

@@ -45,7 +45,7 @@
     "new": "New password",
     "confirm": "Confirm",
     "submit": "Update password",
-    "success": "Password updated.",
+    "success": "Password updated. Every session has been signed out — please sign in again.",
     "error": {
       "mismatch": "The two passwords do not match.",
       "too_short": "Too short (minimum 8 characters).",

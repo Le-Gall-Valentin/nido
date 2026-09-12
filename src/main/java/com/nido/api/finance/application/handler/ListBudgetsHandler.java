@@ -5,6 +5,7 @@ import com.nido.api.finance.domain.model.Budget;
 import com.nido.api.finance.domain.port.out.BudgetRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ public class ListBudgetsHandler implements ListBudgetsUseCase {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Budget> list(SpaceMembership caller) {
         return budgetRepository.findBySpaceId(caller.spaceId());
     }

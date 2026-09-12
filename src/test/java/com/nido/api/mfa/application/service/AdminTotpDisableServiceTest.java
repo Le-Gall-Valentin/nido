@@ -1,6 +1,7 @@
 package com.nido.api.mfa.application.service;
 
 import com.nido.api.mfa.domain.model.UserTotpProfile;
+import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import com.nido.api.mfa.domain.port.out.UserTotpLifecyclePort;
 import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,8 @@ import static org.mockito.Mockito.*;
 class AdminTotpDisableServiceTest {
 
     @Mock UserTotpQueryPort userTotpQuery;
+
+    @Mock PendingTotpEnrolmentPort pendingEnrolment;
     @Mock UserTotpLifecyclePort userTotpLifecyclePort;
 
     private AdminTotpDisableService service;
@@ -26,7 +29,7 @@ class AdminTotpDisableServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AdminTotpDisableService(userTotpQuery, userTotpLifecyclePort);
+        service = new AdminTotpDisableService(userTotpQuery, userTotpLifecyclePort, pendingEnrolment);
     }
 
     @Test

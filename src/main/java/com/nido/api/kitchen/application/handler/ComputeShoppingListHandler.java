@@ -10,6 +10,7 @@ import com.nido.api.kitchen.domain.port.out.MenuRepository;
 import com.nido.api.kitchen.domain.port.out.RecipeRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,6 +31,7 @@ public class ComputeShoppingListHandler implements ComputeShoppingListUseCase {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ShoppingListLine> compute(SpaceMembership caller, LocalDate from, LocalDate to) {
         // findBySpaceIdAndDateRange already orders by (date, position), which is exactly the
         // chronological order the aggregator needs to pick a deterministic display name.

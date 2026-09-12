@@ -25,6 +25,13 @@ function renderModal(props: Partial<React.ComponentProps<typeof TransactionFormM
   )
 }
 
+/** A local civil date N days back, so these cases stay true whenever the suite runs. */
+function isoDaysAgo(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 describe('TransactionFormModal', () => {
   it('defaults to a category matching the initial type even when it is not first in the list', () => {
     const onSubmit = vi.fn()
@@ -84,6 +91,42 @@ describe('TransactionFormModal', () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
       label: 'Courses', amount: 45.3, type: 'EXPENSE', categoryId: 'c1', date: '2026-01-15',
       payerId: null, contributors: [], recurrence: null,
+    }))
+  })
+
+  it('shares nothing by default once the type is switched to income', () => {
+    // An expense is shared by default; an income is not. Carrying the expense default over would
+    // make a salary claim its receiver owes the others half of it — the server now folds a shared
+    // income in the opposite direction, so this default is what decides whether a debt appears.
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit, canPickContributors: true, members: [alice, bob], currentUserId: 'alice' })
+
+    fireEvent.click(screen.getByText('type.INCOME'))
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Salaire' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '2000.00' } })
+    fireEvent.change(screen.getByLabelText('form.date_label'), { target: { value: '2026-01-15' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'INCOME', payerId: 'alice', contributors: [],
+    }))
+  })
+
+  it('lets an income be shared explicitly, receiver included', () => {
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit, canPickContributors: true, members: [alice, bob], currentUserId: 'alice' })
+
+    fireEvent.click(screen.getByText('type.INCOME'))
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Remboursement' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '300.00' } })
+    fireEvent.change(screen.getByLabelText('form.date_label'), { target: { value: '2026-01-15' } })
+    fireEvent.click(screen.getByRole('button', { name: 'alice' }))
+    fireEvent.click(screen.getByRole('button', { name: 'bob' }))
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'INCOME', payerId: 'alice',
+      contributors: [{ memberId: 'alice', shareAmount: null }, { memberId: 'bob', shareAmount: null }],
     }))
   })
 
@@ -196,5 +239,40 @@ describe('TransactionFormModal', () => {
 
     expect(onSubmit).not.toHaveBeenCalled()
     expect(screen.getByText('recurring_series.end_date_before_start')).toBeDefined()
+  })
+
+  it('refuses a recurring series whose start date would backfill thousands of occurrences', () => {
+    // Daily since 2000: the server refuses this, and before the mirror the form came back
+    // with the generic "something went wrong" that invites a retry producing the same
+    // refusal. A fixed date rather than a relative one — it is past the ceiling for good.
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit })
+
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Café' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '2.50' } })
+    fireEvent.change(screen.getByLabelText('form.category_label'), { target: { value: 'c1' } })
+    fireEvent.change(screen.getByLabelText('form.date_label'), { target: { value: '2000-01-01' } })
+    fireEvent.click(screen.getByLabelText('form.recurring_label'))
+    fireEvent.change(screen.getByLabelText('form.recurrence_interval_type_label'), { target: { value: 'DAILY' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText((c) => c.startsWith('form.too_many_past_occurrences'))).toBeDefined()
+  })
+
+  it('still accepts a recurring series back-dated by a few weeks', () => {
+    // The legitimate case the mirror must never catch.
+    const onSubmit = vi.fn()
+    renderModal({ onSubmit })
+
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Café' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '2.50' } })
+    fireEvent.change(screen.getByLabelText('form.category_label'), { target: { value: 'c1' } })
+    fireEvent.change(screen.getByLabelText('form.date_label'), { target: { value: isoDaysAgo(21) } })
+    fireEvent.click(screen.getByLabelText('form.recurring_label'))
+    fireEvent.change(screen.getByLabelText('form.recurrence_interval_type_label'), { target: { value: 'DAILY' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalled()
   })
 })

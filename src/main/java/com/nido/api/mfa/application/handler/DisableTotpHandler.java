@@ -6,6 +6,7 @@ import com.nido.api.mfa.domain.model.MfaException;
 import com.nido.api.mfa.domain.model.UserTotpProfile;
 import com.nido.api.mfa.domain.port.out.TotpCodeReplayPort;
 import com.nido.api.mfa.domain.port.out.TotpCodeValidatorPort;
+import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import com.nido.api.mfa.domain.port.out.UserTotpLifecyclePort;
 import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
 import com.nido.api.shared.annotation.ApplicationService;
@@ -16,15 +17,18 @@ public class DisableTotpHandler implements DisableTotpUseCase {
 
     private final UserTotpQueryPort userTotpQuery;
     private final UserTotpLifecyclePort userTotpLifecyclePort;
+    private final PendingTotpEnrolmentPort pendingEnrolment;
     private final TotpCodeValidatorPort codeValidator;
     private final TotpCodeReplayPort codeReplay;
 
     public DisableTotpHandler(UserTotpQueryPort userTotpQuery,
                               UserTotpLifecyclePort userTotpLifecyclePort,
                               TotpCodeValidatorPort codeValidator,
-                              TotpCodeReplayPort codeReplay) {
+                              TotpCodeReplayPort codeReplay,
+                               PendingTotpEnrolmentPort pendingEnrolment) {
         this.userTotpQuery = userTotpQuery;
         this.userTotpLifecyclePort = userTotpLifecyclePort;
+        this.pendingEnrolment = pendingEnrolment;
         this.codeValidator = codeValidator;
         this.codeReplay = codeReplay;
     }
@@ -40,6 +44,8 @@ public class DisableTotpHandler implements DisableTotpUseCase {
         if (!codeValidator.isValid(secret, command.code())) throw new MfaException.TotpCodeInvalid();
         if (!codeReplay.markCodeUsedIfAbsent(command.userId(), command.code())) throw new MfaException.TotpCodeInvalid();
 
+        // Turning 2FA off should not leave a half-started replacement behind.
+        pendingEnrolment.discard(command.userId());
         userTotpLifecyclePort.disableTotp(command.userId());
     }
 }

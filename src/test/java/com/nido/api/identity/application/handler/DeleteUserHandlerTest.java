@@ -6,6 +6,7 @@ import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.CredentialDeletionPort;
 import com.nido.api.identity.domain.port.out.SpaceDataDeletionPort;
 import com.nido.api.identity.domain.port.out.TotpDeletionPort;
+import com.nido.api.identity.domain.port.out.TokenInvalidationPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.model.Role;
@@ -29,6 +30,7 @@ class DeleteUserHandlerTest {
 
     @Mock UserRepository userRepository;
     @Mock UserCommandPort userCommandPort;
+    @Mock TokenInvalidationPort tokenInvalidationPort;
     @Mock CredentialDeletionPort credentialDeletionPort;
     @Mock TotpDeletionPort totpDeletionPort;
     @Mock SpaceDataDeletionPort spaceDataDeletionPort;
@@ -40,7 +42,7 @@ class DeleteUserHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new DeleteUserHandler(userRepository, userCommandPort, credentialDeletionPort, totpDeletionPort, spaceDataDeletionPort);
+        handler = new DeleteUserHandler(userRepository, userCommandPort, credentialDeletionPort, totpDeletionPort, spaceDataDeletionPort, tokenInvalidationPort);
     }
 
     @Test
