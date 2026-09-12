@@ -10,7 +10,7 @@ import { useSpaceDetail, spaceDetailKey } from './useSpaceDetail'
 
 const DETAIL: SpaceDetail = {
   id: 's-1', type: 'SHARED', name: 'Chez nous', description: null,
-  accent: '#c17a5c', glyph: '🏡', myRole: 'OWNER', memberCount: 1,
+  accent: '#c17a5c', glyph: '🏡', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris',
 }
 
 function fakeApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {

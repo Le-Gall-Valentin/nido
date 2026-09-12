@@ -26,11 +26,11 @@ function withRole(role: SpaceDetail['myRole']) {
 
 const SHARED_DETAIL: SpaceDetail = {
   id: 's-1', type: 'SHARED', name: 'Chez nous', description: 'Notre appartement',
-  accent: '#c17a5c', glyph: '🏡', myRole: 'OWNER', memberCount: 2,
+  accent: '#c17a5c', glyph: '🏡', myRole: 'OWNER', memberCount: 2, timezone: 'Europe/Paris',
 }
 const PERSONAL_DETAIL: SpaceDetail = {
   id: 'p-1', type: 'PERSONAL', name: 'Alice', description: null,
-  accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1,
+  accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris',
 }
 const MEMBERS: SpaceMember[] = [
   { userId: 'me-1', username: 'alice', email: 'alice@test.com', role: 'OWNER', joinedAt: '2024-01-01T00:00:00Z' },

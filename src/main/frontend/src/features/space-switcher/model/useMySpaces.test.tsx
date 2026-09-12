@@ -9,7 +9,7 @@ import { createTestQueryClient } from '@/shared/test'
 import { QueryClientProvider } from '@tanstack/react-query'
 
 const PERSONAL: SpaceSummary = {
-  id: 'personal-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1,
+  id: 'personal-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris',
 }
 
 function fakeApi(overrides: Partial<ISpacesApi> = {}): ISpacesApi {

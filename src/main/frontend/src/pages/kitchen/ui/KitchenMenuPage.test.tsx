@@ -37,7 +37,7 @@ const ENTRIES: MenuEntry[] = [
 const SHOPPING_LIST: ShoppingListLine[] = [{ name: 'Pâtes', quantity: 500, unit: 'GRAM' }]
 
 const CURRENT_SPACE: SpaceSummary = {
-  id: 'space-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 2,
+  id: 'space-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 2, timezone: 'Europe/Paris',
 }
 
 function fakeApi(overrides: Partial<IKitchenApi> = {}): IKitchenApi {

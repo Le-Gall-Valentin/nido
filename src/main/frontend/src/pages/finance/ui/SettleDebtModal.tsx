@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { todayIso } from '@/shared/lib'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { HandCoins } from 'lucide-react'
 
 interface SettleDebtModalProps {
+  /** The household's calendar — the default date has to be its today, not the browser's. */
+  spaceTimezone?: string
   fromLabel: string
   toLabel: string
   amount: number
@@ -14,10 +17,10 @@ interface SettleDebtModalProps {
   submitError?: string | null
 }
 
-export function SettleDebtModal({ fromLabel, toLabel, amount, onConfirm, onCancel, isPending, submitError = null }: SettleDebtModalProps) {
+export function SettleDebtModal({ spaceTimezone, fromLabel, toLabel, amount, onConfirm, onCancel, isPending, submitError = null }: SettleDebtModalProps) {
   const { t } = useTranslation('finance')
   const [amountInput, setAmountInput] = useState(String(amount))
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(todayIso(new Date(), spaceTimezone))
   const [error, setError] = useState<string | null>(null)
 
   function handleConfirm() {

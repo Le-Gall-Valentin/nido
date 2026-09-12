@@ -18,8 +18,8 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return { ...actual, useNavigate: () => mockNavigate }
 })
 
-const PERSONAL: SpaceSummary = { id: 'p-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1 }
-const SHARED: SpaceSummary = { id: 's-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'ADMIN', memberCount: 2 }
+const PERSONAL: SpaceSummary = { id: 'p-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris' }
+const SHARED: SpaceSummary = { id: 's-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'ADMIN', memberCount: 2, timezone: 'Europe/Paris' }
 
 function fakeSpacesApi(spaces: SpaceSummary[] = [PERSONAL, SHARED]): ISpacesApi {
   return { listMySpaces: vi.fn().mockResolvedValue(spaces), getSpace: vi.fn() }
@@ -68,7 +68,7 @@ describe('SpacesPage', () => {
   })
 
   it('creates a group and navigates to its members page', async () => {
-    const created: SpaceDetail = { id: 's-2', type: 'SHARED', name: 'New group', description: null, accent: '#4a7fa0', glyph: '🌿', myRole: 'OWNER', memberCount: 1 }
+    const created: SpaceDetail = { id: 's-2', type: 'SHARED', name: 'New group', description: null, accent: '#4a7fa0', glyph: '🌿', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris' }
     const pageApi = fakePageApi({ createSpace: vi.fn().mockResolvedValue(created) })
     renderPage(fakeSpacesApi(), pageApi)
 

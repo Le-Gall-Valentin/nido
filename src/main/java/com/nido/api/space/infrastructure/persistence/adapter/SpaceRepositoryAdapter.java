@@ -70,6 +70,7 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
             .collect(Collectors.toMap(MemberCount::spaceId, MemberCount::total));
         return spaces.findAllById(roleBySpace.keySet()).stream()
             .map(e -> new SpaceSummaryView(e.getId(), e.getType(), e.getName(), e.getAccent(), e.getGlyph(),
+                ZoneId.of(e.getTimezone()),
                 roleBySpace.get(e.getId()), counts.getOrDefault(e.getId(), 0L)))
             // l'espace perso d'abord, puis les groupes par nom
             .sorted(Comparator.comparing((SpaceSummaryView v) -> v.type() != SpaceType.PERSONAL)

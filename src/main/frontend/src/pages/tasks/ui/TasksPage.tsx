@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, ArrowRightLeft, GripVertical, Repeat } from 'lucide-react'
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { Alert, ConfirmDeleteModal, Dialog, Spinner } from '@/shared/ui'
-import { usePointerIsFine } from '@/shared/lib'
+import { todayIso, usePointerIsFine } from '@/shared/lib'
 import { useSpaceMembers, TransferDialog } from '@/entities/space'
+import { useSpaceTimezone } from '@/features/space-switcher'
+import { isOverdue } from '../lib/isOverdue'
 import { UserAvatar } from '@/entities/user'
 import { tasksApi, TasksApiProvider, type TasksApi, type Task, type TaskStatus } from '@/entities/tasks'
 import { TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
@@ -30,13 +32,10 @@ export function TasksPage({ api = tasksApi }: TasksPageProps = {}) {
   )
 }
 
-function isOverdue(dueDate: string | null): boolean {
-  if (!dueDate) return false
-  return dueDate < new Date().toISOString().slice(0, 10)
-}
-
 interface TaskCardProps {
   task: Task
+  /** The household's date — lateness is decided on its calendar, not the viewer's. */
+  today: string
   members: ReturnType<typeof useSpaceMembers>['data']
   canWriteHere: boolean
   onToggleDone: (task: Task) => void
@@ -48,7 +47,7 @@ interface TaskCardProps {
   onView: (task: Task) => void
 }
 
-function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, onEdit, onMove, onDelete, onChangeStatus, onView }: TaskCardProps) {
+function TaskCard({ task, today, members, canWriteHere, onToggleDone, onToggleSubtask, onEdit, onMove, onDelete, onChangeStatus, onView }: TaskCardProps) {
   const { t } = useTranslation('tasks')
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: task.id })
   const pointerIsFine = usePointerIsFine()
@@ -68,7 +67,7 @@ function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, 
         <span className={`size-1.5 rounded-full ${meta.dotClassName}`} />
         {t(meta.labelKey)}
       </span>
-      {task.dueDate && <span className={isOverdue(task.dueDate) ? 'text-status-red' : 'text-fg-4'}>{task.dueDate}</span>}
+      {task.dueDate && <span className={isOverdue(task.dueDate, today) ? 'text-status-red' : 'text-fg-4'}>{task.dueDate}</span>}
       {task.assigneeIds.length > 0 && (
         <div className="ml-auto flex -space-x-1.5">
           {task.assigneeIds.map((userId) => {
@@ -167,6 +166,9 @@ function TasksPageContent() {
   const { t } = useTranslation('tasks')
   const { spaceId = '' } = useParams<{ spaceId: string }>()
   const { data: members } = useSpaceMembers(spaceId)
+  // The space's calendar, not the browser's: a member reading from another continent
+  // must see the same tasks struck through as everyone else in the household.
+  const today = todayIso(new Date(), useSpaceTimezone(spaceId))
   const {
     tasks, isPending, isError, writableDestinations, recurringTaskSeries,
     canWriteHere, spaceIsPersonal,
@@ -191,7 +193,7 @@ function TasksPageContent() {
   if (isError) return <Alert variant="error">{t('error.load_failed')}</Alert>
 
   const cardProps = {
-    members, canWriteHere,
+    members, canWriteHere, today,
     onToggleDone: handleToggleDone,
     onToggleSubtask: (taskId: string, subtaskId: string) => toggleSubtask.mutate({ taskId, subtaskId }),
     onEdit: (task: Task) => setFormState({ mode: 'edit', task }),

@@ -32,7 +32,7 @@ vi.mock('@/shared/ui', () => ({
 
 const CREATED: SpaceDetail = {
   id: 's-1', type: 'SHARED', name: 'Chez nous', description: null,
-  accent: '#4a7fa0', glyph: '🌿', myRole: 'OWNER', memberCount: 1,
+  accent: '#4a7fa0', glyph: '🌿', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris',
 }
 
 function setup(overrides: { onCreate?: Mock<(input: CreateSpaceInput) => Promise<SpaceDetail>> } = {}) {
