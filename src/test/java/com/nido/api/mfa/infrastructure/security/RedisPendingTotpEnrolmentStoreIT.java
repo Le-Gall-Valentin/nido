@@ -3,11 +3,7 @@ package com.nido.api.mfa.infrastructure.security;
 import com.nido.api.IntegrationTestConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -23,15 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RedisPendingTotpEnrolmentStoreIT {
 
     private static final String SECRET = "JBSWY3DPEHPK3PXP";
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
-
-    @Container
-    @ServiceConnection
-    @SuppressWarnings("resource")
-    static GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
 
     @Autowired RedisPendingTotpEnrolmentStore store;
     @Autowired StringRedisTemplate redisTemplate;

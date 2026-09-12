@@ -15,10 +15,6 @@ import com.nido.api.tasks.domain.model.UpdateRecurringTaskSeriesCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -28,15 +24,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @IntegrationTestConfig
 class RecurringTaskSeriesRepositoryAdapterIT {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
-
-    @Container
-    @ServiceConnection
-    @SuppressWarnings("resource")
-    static GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
 
     @Autowired RecurringTaskSeriesRepositoryAdapter adapter;
     @Autowired SpaceJpaRepository spaceJpaRepository;
