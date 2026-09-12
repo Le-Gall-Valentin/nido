@@ -34,6 +34,32 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+# Exists so the container can answer "is this process still serving?" and nothing else.
+#
+# On its own port, which the Dockerfile does not EXPOSE and the deployment does not publish: the
+# probe runs inside the container and reaches it over loopback, while the reverse proxy — which
+# forwards the application port and only that — has no route to it at all. Serving it on 8080 would
+# have put an unauthenticated endpoint on the public host for no benefit, since nothing outside the
+# container ever needs to ask.
+#
+# health alone, and without details: the breakdown names every backing service and its state, which
+# is a map of the deployment. Up or down is the entire question a probe has.
+management:
+  server:
+    port: ${NIDO_MANAGEMENT_PORT:8081}
+  endpoints:
+    web:
+      exposure:
+        include: health
+      # /actuator itself lists what is available. With one endpoint exposed it lists one, which is
+      # not a secret — but it is surface added for nobody: a probe asks for a known URL.
+      discovery:
+        enabled: false
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+
 springdoc:
   api-docs:
     enabled: ${SWAGGER_ENABLED:false}
