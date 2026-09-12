@@ -5,6 +5,7 @@ import { safeAccent, safeGlyph, type SpaceDetail } from '@/entities/space'
 import type { UpdateSpaceInput } from '../model/ISpacesPageApi'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 import { AppearancePicker, NAME_MAX, DESCRIPTION_MAX } from './AppearancePicker'
+import { timezoneChoices } from '../lib/timezoneChoices'
 
 interface EditSpaceModalProps {
   space: SpaceDetail
@@ -24,6 +25,7 @@ export function EditSpaceModal({ space, onClose, onUpdate, onSuccess }: EditSpac
   const [description, setDescription] = useState(originalDescription)
   const [accent, setAccent] = useState<string>(originalAccent)
   const [glyph, setGlyph] = useState<string>(originalGlyph)
+  const [timezone, setTimezone] = useState<string>(space.timezone)
   const [isLoading, setIsLoading] = useState(false)
   const [errorKey, setErrorKey] = useState<string[] | null>(null)
   const pendingRef = useRef(false)
@@ -40,6 +42,7 @@ export function EditSpaceModal({ space, onClose, onUpdate, onSuccess }: EditSpac
     if (trimmedDescription !== originalDescription) patch.description = trimmedDescription
     if (accent !== originalAccent) patch.accent = accent
     if (glyph !== originalGlyph) patch.glyph = glyph
+    if (timezone !== space.timezone) patch.timezone = timezone
     return patch
   }
 
@@ -111,6 +114,19 @@ export function EditSpaceModal({ space, onClose, onUpdate, onSuccess }: EditSpac
           onGlyphChange={setGlyph}
           disabled={isLoading}
         />
+
+        <div className="mt-4 flex flex-col gap-1.5">
+          <label htmlFor="timezone" className="text-[13px] font-semibold text-fg-1">{t('edit.timezone')}</label>
+          <select
+            id="timezone" name="timezone" value={timezone} disabled={isLoading}
+            onChange={(e) => setTimezone(e.target.value)}
+            className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent">
+            {timezoneChoices(space.timezone).map((zone) => (
+              <option key={zone} value={zone}>{zone.replace(/_/g, ' ')}</option>
+            ))}
+          </select>
+          <p className="text-xs text-fg-3">{t('edit.timezone_hint')}</p>
+        </div>
 
         {errorKey && (
           <Alert variant="error" className="mt-4">{t(errorKey)}</Alert>

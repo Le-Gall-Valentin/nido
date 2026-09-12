@@ -215,6 +215,7 @@ export const spacesPageApi: ISpacesPageApi = {
       if (patch.description !== undefined) body.description = patch.description
       if (patch.accent !== undefined) body.accent = patch.accent
       if (patch.glyph !== undefined) body.glyph = patch.glyph
+      if (patch.timezone !== undefined) body.timezone = patch.timezone
       await client.patch(`/spaces/${spaceId}`, body)
     } catch (error) {
       handleError(error)
