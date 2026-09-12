@@ -50,14 +50,18 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- Annotations only, not a second JSON runtime. Jackson 3 reads this same package, so
+             @JsonInclude and friends work with the serialiser Boot 4 configures; it is declared
+             because our own DTOs compile against it, rather than arriving by accident under a
+             runtime-scoped dependency of JJWT. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
         </dependency>
         <dependency>
             <groupId>com.bucket4j</groupId>
