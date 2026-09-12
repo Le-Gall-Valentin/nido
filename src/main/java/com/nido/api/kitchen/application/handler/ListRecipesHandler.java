@@ -7,6 +7,7 @@ import com.nido.api.kitchen.domain.port.out.MenuRepository;
 import com.nido.api.kitchen.domain.port.out.RecipeRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,6 +26,7 @@ public class ListRecipesHandler implements ListRecipesUseCase {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<RecipeSummaryView> list(SpaceMembership caller) {
         List<Recipe> recipes = recipeRepository.findBySpaceId(caller.spaceId());
         Map<UUID, LocalDate> lastPlanned = menuRepository.lastPlannedOnBySpace(caller.spaceId());

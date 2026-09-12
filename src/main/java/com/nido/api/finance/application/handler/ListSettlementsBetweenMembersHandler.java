@@ -5,6 +5,7 @@ import com.nido.api.finance.domain.model.SettlementRecord;
 import com.nido.api.finance.domain.port.out.SettlementRecordRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +20,7 @@ public class ListSettlementsBetweenMembersHandler implements ListSettlementsBetw
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SettlementRecord> list(UUID memberAId, UUID memberBId, SpaceMembership caller) {
         // Filtered and ordered by the database. This used to load every settlement in the space
         // — decrypting each amount — to keep the handful concerning one pair.

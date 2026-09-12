@@ -77,6 +77,45 @@ class SchemaConventionsIT {
 
     /** Guards the query above: if it stopped seeing space-scoped tables at all, it would pass vacuously. */
     @Test
+    void every_foreign_key_has_an_index_that_can_serve_it() {
+        // Postgres indexes the referenced side of a foreign key and not the referencing one, so a
+        // DELETE on the parent scans the whole child table looking for orphans. The parents here
+        // are deleted by ordinary use — a category removed, an account erased under GDPR, a recipe
+        // dropped — and the scan grows with the child table while the delete looks unchanged.
+        //
+        // Partial indexes are excluded for the same reason as in the rule below: one that only
+        // covers some rows cannot answer "does anything still reference this".
+        List<String> unindexed = jdbcTemplate.queryForList("""
+            SELECT c.conrelid::regclass || '.' || a.attname
+            FROM pg_constraint c
+            JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+            WHERE c.contype = 'f'
+              AND array_length(c.conkey, 1) = 1
+              AND NOT EXISTS (
+                    SELECT 1 FROM pg_index i
+                    WHERE i.indrelid = c.conrelid
+                      AND i.indkey[0] = c.conkey[1]
+                      AND i.indpred IS NULL)
+            ORDER BY 1
+            """, String.class);
+
+        assertThat(unindexed)
+            .as("each of these makes its parent's DELETE scan a whole table")
+            .isEmpty();
+    }
+
+    @Test
+    void the_foreign_key_rule_is_actually_looking_at_something() {
+        // Without this the rule above passes on an empty result the day the query stops matching.
+        Integer singleColumnForeignKeys = jdbcTemplate.queryForObject("""
+            SELECT count(*)::int FROM pg_constraint
+            WHERE contype = 'f' AND array_length(conkey, 1) = 1
+            """, Integer.class);
+
+        assertThat(singleColumnForeignKeys).isNotNull().isGreaterThan(15);
+    }
+
+    @Test
     void the_space_id_rule_is_actually_looking_at_something() {
         Integer spaceScopedTables = jdbcTemplate.queryForObject("""
             SELECT count(*) FROM information_schema.columns

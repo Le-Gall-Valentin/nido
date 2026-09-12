@@ -6,6 +6,7 @@ import com.nido.api.kitchen.domain.model.Recipe;
 import com.nido.api.kitchen.domain.port.out.RecipeRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -19,6 +20,7 @@ public class GetRecipeHandler implements GetRecipeUseCase {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Recipe get(UUID recipeId, SpaceMembership caller) {
         Recipe recipe = recipeRepository.findById(recipeId).orElseThrow(KitchenException.RecipeNotFound::new);
         if (!recipe.spaceId().equals(caller.spaceId())) {
