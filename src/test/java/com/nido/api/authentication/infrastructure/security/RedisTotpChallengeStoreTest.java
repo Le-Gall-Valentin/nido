@@ -29,7 +29,7 @@ class RedisTotpChallengeStoreTest {
     @BeforeEach
     void setUp() {
         lenient().when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        var properties = new NidoProperties(null, null, null, null, null, null, null,
+        var properties = new NidoProperties(null, null, null, null, null, null,
             new NidoProperties.SecurityProperties(20, 30, 15));
         store = new RedisTotpChallengeStore(redisTemplate, properties);
     }
