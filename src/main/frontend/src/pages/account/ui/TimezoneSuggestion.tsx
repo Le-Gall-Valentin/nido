@@ -34,6 +34,10 @@ export function TimezoneSuggestion({ space, browserTimezone, onAccept }: Timezon
     return null
   }
 
+  // Named once and used by both strings below: the button label carries the same variable as the
+  // sentence, and asking for it without passing the variable leaves "{{detected}}" on screen.
+  const detected = formatTimezone(browserTimezone)
+
   function dismiss() {
     setDismissedFor(browserTimezone)
     try {
@@ -60,13 +64,13 @@ export function TimezoneSuggestion({ space, browserTimezone, onAccept }: Timezon
         <div className="min-w-0 flex-1">
           <p className="text-sm text-fg-1">
             {t('timezone_suggestion.body', {
-              detected: formatTimezone(browserTimezone),
+              detected,
               current: formatTimezone(space?.timezone ?? ''),
             })}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button type="button" style={CTA_BUTTON_STYLE} onClick={accept} disabled={isSaving}>
-              {t('timezone_suggestion.accept')}
+              {t('timezone_suggestion.accept', { detected })}
             </Button>
             <Button type="button" onClick={dismiss} disabled={isSaving}>
               {t('timezone_suggestion.dismiss')}

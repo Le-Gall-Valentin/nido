@@ -33,13 +33,24 @@ describe('TimezoneSuggestion', () => {
   it('offers the move, naming both places', () => {
     setup()
 
-    expect(screen.getByText(/timezone_suggestion\.body/)).toBeTruthy()
+    expect(screen.getByText(/timezone_suggestion\.body.*Toronto.*Paris|timezone_suggestion\.body.*Paris.*Toronto/))
+      .toBeTruthy()
+  })
+
+  it('names the destination on the button itself', () => {
+    // The label reads "Switch to {{detected}}", so it needs the variable the body was given. Asked
+    // for without it, i18next leaves the placeholder on screen — which is what shipped: the button
+    // said "Passer à {{detected}}" in the running app. The mock echoes the options it receives, so
+    // this fails when they are not passed.
+    setup()
+
+    expect(screen.getByText(/timezone_suggestion\.accept.*Toronto/)).toBeTruthy()
   })
 
   it('applies the browser zone when accepted', async () => {
     const { onAccept } = setup()
 
-    fireEvent.click(screen.getByText('timezone_suggestion.accept'))
+    fireEvent.click(screen.getByText(/timezone_suggestion\.accept/))
 
     await waitFor(() => expect(onAccept).toHaveBeenCalledWith('America/Toronto'))
   })
@@ -48,11 +59,11 @@ describe('TimezoneSuggestion', () => {
     const { unmount } = setup()
 
     fireEvent.click(screen.getByText('timezone_suggestion.dismiss'))
-    expect(screen.queryByText('timezone_suggestion.accept')).toBeNull()
+    expect(screen.queryByText(/timezone_suggestion\.accept/)).toBeNull()
 
     unmount()
     setup()
-    expect(screen.queryByText('timezone_suggestion.accept')).toBeNull()
+    expect(screen.queryByText(/timezone_suggestion\.accept/)).toBeNull()
   })
 
   it('asks again once the traveller is somewhere new', () => {
@@ -62,18 +73,18 @@ describe('TimezoneSuggestion', () => {
 
     setup({ browser: 'Asia/Tokyo' })
 
-    expect(screen.getByText('timezone_suggestion.accept')).toBeTruthy()
+    expect(screen.getByText(/timezone_suggestion\.accept/)).toBeTruthy()
   })
 
   it('says nothing when the space already keeps the browser calendar', () => {
     setup({ browser: 'Europe/Paris' })
 
-    expect(screen.queryByText('timezone_suggestion.accept')).toBeNull()
+    expect(screen.queryByText(/timezone_suggestion\.accept/)).toBeNull()
   })
 
   it('says nothing about a shared space', () => {
     setup({ space: { ...PERSONAL, type: 'SHARED' } })
 
-    expect(screen.queryByText('timezone_suggestion.accept')).toBeNull()
+    expect(screen.queryByText(/timezone_suggestion\.accept/)).toBeNull()
   })
 })
