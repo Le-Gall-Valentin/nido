@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { timezoneChoices } from '@/shared/lib'
 import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { safeAccent, safeGlyph, type SpaceDetail } from '@/entities/space'
 import type { UpdateSpaceInput } from '../model/ISpacesPageApi'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 import { AppearancePicker, NAME_MAX, DESCRIPTION_MAX } from './AppearancePicker'
-import { timezoneChoices } from '../lib/timezoneChoices'
 
 interface EditSpaceModalProps {
   space: SpaceDetail

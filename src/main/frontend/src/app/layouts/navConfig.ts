@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Calendar, CheckSquare, ClipboardList, CookingPot, Lock, Settings, Shield, ShoppingCart, SlidersHorizontal, User, Users, Wallet } from 'lucide-react'
+import { Calendar, CheckSquare, ClipboardList, CookingPot, Lock, Settings, Shield, ShoppingCart, SlidersHorizontal, User, Users, Wallet , UserCircle} from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 
 export interface NavItemConfig {
@@ -65,6 +65,7 @@ export const NAV_CONFIG: NavItemConfig[] = [
       { id: 'nav:account:profile', to: () => ROUTES.ACCOUNT_PROFILE, icon: User, labelKey: 'nav.settings_profile' },
       { id: 'nav:account:security', to: () => ROUTES.ACCOUNT_SECURITY, icon: Lock, labelKey: 'nav.settings_security' },
       { id: 'nav:account:preferences', to: () => ROUTES.ACCOUNT_PREFERENCES, icon: SlidersHorizontal, labelKey: 'nav.settings_preferences' },
+      { id: 'nav:account:personal-space', to: () => ROUTES.ACCOUNT_PERSONAL_SPACE, icon: UserCircle, labelKey: 'nav.settings_personal_space' },
     ],
   },
 ]

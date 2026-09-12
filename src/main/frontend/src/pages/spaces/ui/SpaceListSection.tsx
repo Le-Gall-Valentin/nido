@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { formatTimezone } from '@/shared/lib'
 import { ChevronRight, Plus } from 'lucide-react'
 import { SpaceAvatar, isPersonal, type SpaceSummary } from '@/entities/space'
 import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
@@ -35,7 +36,9 @@ export function SpaceListSection({ spaces, onSelect, onCreateClick }: SpaceListS
             <SpaceAvatar space={personal} size="md" />
             <div className="min-w-0 flex-1">
               <div className="text-[14.5px] font-semibold text-fg-0 truncate">{personal.name}</div>
-              <div className="text-[12.5px] text-fg-3">{t('list.personal_subtitle')}</div>
+              <div className="text-[12.5px] text-fg-3">
+                {t('list.personal_subtitle')} · {formatTimezone(personal.timezone)}
+              </div>
             </div>
           </li>
         )}
@@ -52,6 +55,7 @@ export function SpaceListSection({ spaces, onSelect, onCreateClick }: SpaceListS
                 <div className="text-[14.5px] font-semibold text-fg-0 truncate">{space.name}</div>
                 <div className="text-[12.5px] text-fg-3 truncate">
                   {t('list.member_count', { count: space.memberCount })} · {t(`space:role.${space.myRole}`)}
+                  {' · '}{formatTimezone(space.timezone)}
                 </div>
               </div>
               <ChevronRight className="size-4 shrink-0 text-fg-3" aria-hidden="true" />

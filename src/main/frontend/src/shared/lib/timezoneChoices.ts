@@ -7,6 +7,10 @@
  *
  * The space's current zone is always included, whatever it is, so opening the form never silently
  * proposes moving a household that is somewhere this list forgot.
+ *
+ * In shared rather than beside the spaces page: three pages pick a zone now — creating a space,
+ * editing one, and the personal space's own settings under account — and a page may not import
+ * from another page.
  */
 const COMMON_TIMEZONES = [
   'Europe/Paris',
