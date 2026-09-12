@@ -15,10 +15,14 @@ public record SpaceSummaryResponse(
     @Schema(description = "Couleur d'accent") String accent,
     @Schema(description = "Glyphe") String glyph,
     @Schema(description = "Rôle de l'utilisateur dans ce contexte") SpaceRole myRole,
-    @Schema(description = "Nombre de membres") long memberCount
+    @Schema(description = "Nombre de membres") long memberCount,
+
+    /** IANA identifier — what "today" means inside this space. */
+    String timezone
 ) {
     public static SpaceSummaryResponse from(SpaceSummaryView view) {
         return new SpaceSummaryResponse(view.id(), view.type(), view.name(),
-            view.accent(), view.glyph(), view.myRole(), view.memberCount());
+            view.accent(), view.glyph(), view.myRole(), view.memberCount(),
+            view.timezone().getId());
     }
 }

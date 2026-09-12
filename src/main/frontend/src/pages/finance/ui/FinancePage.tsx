@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Alert, ConfirmDeleteModal, Spinner } from '@/shared/ui'
 import { useAuth } from '@/features/auth'
-import { useMySpaces } from '@/features/space-switcher'
+import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
+import { monthIso } from '@/shared/lib'
 import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
 import {
   financeApi, FinanceApiProvider, useCategories, useTransactions, useFinanceStats, useProjection,
@@ -48,15 +49,21 @@ export function FinancePage({ api = financeApi }: FinancePageProps = {}) {
   )
 }
 
-function currentMonth(): string {
-  return new Date().toISOString().slice(0, 7)
+/**
+ * The month the page opens on, on the household's calendar. On the last day of a month at half past
+ * eight in the evening in Toronto, Paris is already the first of the next one — and the household's
+ * figures are the new month's.
+ */
+function currentMonth(timezone?: string): string {
+  return monthIso(new Date(), timezone)
 }
 
 function FinancePageContent() {
   const { t } = useTranslation('finance')
   const { spaceId = '' } = useParams<{ spaceId: string }>()
   const currentUserId = useAuth((s) => s.user)?.id ?? null
-  const [month, setMonth] = useState(currentMonth())
+  const spaceTimezone = useSpaceTimezone(spaceId)
+  const [month, setMonth] = useState(() => currentMonth(spaceTimezone))
   const { data: categories, isPending: categoriesPending, isError: categoriesError } = useCategories(spaceId)
   const { data: transactions, isPending, isError } = useTransactions(spaceId, month)
   const { data: stats } = useFinanceStats(spaceId, month)
@@ -247,7 +254,7 @@ function FinancePageContent() {
       </div>
 
       {formState && (
-        <TransactionFormModal
+        <TransactionFormModal spaceTimezone={spaceTimezone}
           mode={formState.mode}
           transaction={formState.mode === 'edit' ? formState.transaction : undefined}
           categories={categories ?? []}
@@ -411,7 +418,7 @@ function FinancePageContent() {
       )}
 
       {settlingTransfer && (
-        <SettleDebtModal
+        <SettleDebtModal spaceTimezone={spaceTimezone}
           fromLabel={memberLabel(settlingTransfer.fromMemberId)}
           toLabel={memberLabel(settlingTransfer.toMemberId)}
           amount={settlingTransfer.amount}
@@ -460,7 +467,7 @@ function FinancePageContent() {
       )}
 
       {contributingGoal && (
-        <AddContributionModal
+        <AddContributionModal spaceTimezone={spaceTimezone}
           goalName={contributingGoal.name}
           remaining={contributingGoal.targetAmount - contributingGoal.totalContributed}
           members={members ?? []}

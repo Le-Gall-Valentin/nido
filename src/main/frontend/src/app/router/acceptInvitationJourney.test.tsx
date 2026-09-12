@@ -22,10 +22,10 @@ vi.mock('react-i18next', () => ({
 }))
 
 const PERSONAL: SpaceSummary = {
-  id: 'personal-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1,
+  id: 'personal-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris',
 }
 const GROUP: SpaceSummary = {
-  id: 'group-9', type: 'SHARED', name: 'La Famille', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 3,
+  id: 'group-9', type: 'SHARED', name: 'La Famille', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 3, timezone: 'Europe/Paris',
 }
 const INVITATION: ReceivedInvitation = {
   invitationId: 'i-1', spaceId: 'group-9', spaceName: 'La Famille', spaceAccent: '#c17a5c', spaceGlyph: '🏡',

@@ -20,10 +20,10 @@ const RECIPES: Recipe[] = [
 ]
 
 const CURRENT_SPACE: SpaceSummary = {
-  id: 'space-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 2,
+  id: 'space-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 2, timezone: 'Europe/Paris',
 }
 const OTHER_SPACE: SpaceSummary = {
-  id: 'space-2', type: 'PERSONAL', name: 'Perso', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1,
+  id: 'space-2', type: 'PERSONAL', name: 'Perso', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris',
 }
 
 function fakeApi(overrides: Partial<IKitchenApi> = {}): IKitchenApi {

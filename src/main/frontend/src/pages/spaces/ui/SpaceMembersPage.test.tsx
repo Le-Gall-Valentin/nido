@@ -21,7 +21,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return { ...actual, useNavigate: () => mockNavigate }
 })
 
-const SHARED: SpaceSummary = { id: 's-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'OWNER', memberCount: 1 }
+const SHARED: SpaceSummary = { id: 's-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris' }
 
 function fakeSpacesApi(): ISpacesApi {
   return { listMySpaces: vi.fn().mockResolvedValue([SHARED]), getSpace: vi.fn() }

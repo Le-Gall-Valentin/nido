@@ -32,7 +32,7 @@ vi.mock('@/shared/ui', () => ({
 
 const SPACE: SpaceDetail = {
   id: 's-1', type: 'SHARED', name: 'Chez nous', description: 'Notre appartement',
-  accent: '#4a7fa0', glyph: '🌿', myRole: 'OWNER', memberCount: 2,
+  accent: '#4a7fa0', glyph: '🌿', myRole: 'OWNER', memberCount: 2, timezone: 'Europe/Paris',
 }
 
 function setup(overrides: { space?: SpaceDetail; onUpdate?: Mock<(patch: UpdateSpaceInput) => Promise<void>> } = {}) {
