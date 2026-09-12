@@ -5,6 +5,7 @@ import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ public class ListRecurringSeriesHandler implements ListRecurringSeriesUseCase {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<RecurringTransactionSeries> list(SpaceMembership caller) {
         return seriesRepository.findBySpaceId(caller.spaceId());
     }

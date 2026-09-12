@@ -49,7 +49,7 @@ class HandleUserDeletionHandlerTest {
     void the_personal_space_is_deleted() {
         SpaceMembership membership = membership(personalSpaceId, SpaceRole.OWNER);
         when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of(membership));
-        when(spaceRepository.findById(personalSpaceId)).thenReturn(Optional.of(personal()));
+        when(spaceRepository.findByIds(List.of(personalSpaceId))).thenReturn(List.of(personal()));
 
         handler.handleUserDeletion(userId, userEmail);
 
@@ -60,7 +60,7 @@ class HandleUserDeletionHandlerTest {
     void a_plain_membership_is_simply_removed() {
         SpaceMembership membership = membership(sharedSpaceId, SpaceRole.MEMBER);
         when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of(membership));
-        when(spaceRepository.findById(sharedSpaceId)).thenReturn(Optional.of(shared()));
+        when(spaceRepository.findByIds(List.of(sharedSpaceId))).thenReturn(List.of(shared()));
 
         handler.handleUserDeletion(userId, userEmail);
 
@@ -74,7 +74,7 @@ class HandleUserDeletionHandlerTest {
         SpaceMembership successor = new SpaceMembership(
             UUID.randomUUID(), sharedSpaceId, UUID.randomUUID(), SpaceRole.ADMIN, Instant.now());
         when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of(membership));
-        when(spaceRepository.findById(sharedSpaceId)).thenReturn(Optional.of(shared()));
+        when(spaceRepository.findByIds(List.of(sharedSpaceId))).thenReturn(List.of(shared()));
         when(spaceMembershipPort.findSuccessor(sharedSpaceId, userId)).thenReturn(Optional.of(successor));
 
         handler.handleUserDeletion(userId, userEmail);
@@ -88,7 +88,7 @@ class HandleUserDeletionHandlerTest {
     void a_space_with_no_successor_is_deleted() {
         SpaceMembership membership = membership(sharedSpaceId, SpaceRole.OWNER);
         when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of(membership));
-        when(spaceRepository.findById(sharedSpaceId)).thenReturn(Optional.of(shared()));
+        when(spaceRepository.findByIds(List.of(sharedSpaceId))).thenReturn(List.of(shared()));
         when(spaceMembershipPort.findSuccessor(sharedSpaceId, userId)).thenReturn(Optional.empty());
 
         handler.handleUserDeletion(userId, userEmail);

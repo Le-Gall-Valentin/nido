@@ -3,6 +3,7 @@ package com.nido.api.space.application.handler;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.application.port.in.GetSpaceEncryptionSaltUseCase;
 import com.nido.api.space.domain.port.out.SpaceRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -16,6 +17,7 @@ public class GetSpaceEncryptionSaltHandler implements GetSpaceEncryptionSaltUseC
     }
 
     @Override
+    @Transactional(readOnly = true)
     public String getEncryptionSalt(UUID spaceId) {
         return spaceRepository.findEncryptionSaltById(spaceId);
     }
