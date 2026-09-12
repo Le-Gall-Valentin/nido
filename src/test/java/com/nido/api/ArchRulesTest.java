@@ -209,34 +209,46 @@ class ArchRulesTest {
     }
 
     // -------------------------------------------------------------------------
-    // finance / tasks isolation
+    // Scoped module isolation
     //
-    // Neither module belongs in BCS above: both legitimately depend on
-    // space.domain/space.application (SpaceMembership is the caller type
-    // threaded through nearly every handler), which BCS's generic isolation
-    // rule would forbid. These two rules instead check only the one pairwise
-    // isolation that matters: finance and tasks must never depend on each
-    // other, regardless of their shared dependency on space.
+    // None of these belong in BCS above: every one of them legitimately depends on
+    // space.domain / space.application, because SpaceMembership is the caller type
+    // threaded through nearly all of their handlers, and the generic rule would
+    // forbid it. What still has to hold is that they do not reach for each other.
+    //
+    // They do not today, including where it would have been the easy thing to do:
+    // a shopping list is computed from the menu by ComputeShoppingListHandler, which
+    // lives in kitchen and uses kitchen's own repositories, and the resulting lines
+    // are handed to shopping as a command. Neither module names the other. This rule
+    // is what keeps that true — kitchen and shopping had no rule at all until now,
+    // so nothing but habit was stopping the shortcut.
     // -------------------------------------------------------------------------
 
-    @Test
-    void finance_should_not_depend_on_tasks() {
+    private static final List<String> SCOPED_MODULES = List.of("finance", "tasks", "kitchen", "shopping");
+
+    @ParameterizedTest(name = "{0}: must not depend on another scoped module")
+    @MethodSource("scopedModuleIsolationSource")
+    void each_scoped_module_should_not_depend_on_another_scoped_module(
+            String module, String[] otherModulePackages) {
         noClasses()
-            .that().resideInAPackage(BASE + "finance..")
+            .that().resideInAPackage(BASE + module + "..")
             .and(excludeTests())
             .should().dependOnClassesThat()
-            .resideInAPackage(BASE + "tasks..")
+            .resideInAnyPackage(otherModulePackages)
+            // Fails if the module matched nothing, so a renamed or misspelt package cannot
+            // turn this into a rule that passes by looking at an empty set.
+            .allowEmptyShould(false)
             .check(classes);
     }
 
-    @Test
-    void tasks_should_not_depend_on_finance() {
-        noClasses()
-            .that().resideInAPackage(BASE + "tasks..")
-            .and(excludeTests())
-            .should().dependOnClassesThat()
-            .resideInAPackage(BASE + "finance..")
-            .check(classes);
+    static Stream<Arguments> scopedModuleIsolationSource() {
+        return SCOPED_MODULES.stream().map(module -> {
+            String[] others = SCOPED_MODULES.stream()
+                .filter(other -> !other.equals(module))
+                .map(other -> BASE + other + "..")
+                .toArray(String[]::new);
+            return Arguments.of(module, others);
+        });
     }
 
     // -------------------------------------------------------------------------
