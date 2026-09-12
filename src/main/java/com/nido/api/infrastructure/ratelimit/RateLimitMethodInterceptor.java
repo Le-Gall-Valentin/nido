@@ -113,6 +113,11 @@ class RateLimitMethodInterceptor implements MethodInterceptor {
         switch (mode) {
             case IP -> keys.add(endpoint + ":IP:" + ip);
             case USER -> { if (userId != null) keys.add(endpoint + ":USER:" + userId); }
+            // Never both: an IP bucket alongside the user one would still block the whole NAT,
+            // since a single exceeded bucket rejects the request.
+            case USER_ELSE_IP -> keys.add(userId != null
+                ? endpoint + ":USER:" + userId
+                : endpoint + ":IP:" + ip);
             case IP_AND_USER -> {
                 keys.add(endpoint + ":IP:" + ip);
                 if (userId != null) keys.add(endpoint + ":USER:" + userId);

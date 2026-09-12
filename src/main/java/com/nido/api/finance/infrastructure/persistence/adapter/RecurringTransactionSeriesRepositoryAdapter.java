@@ -3,6 +3,7 @@ package com.nido.api.finance.infrastructure.persistence.adapter;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.CreateRecurringSeriesCommand;
 import com.nido.api.finance.domain.model.FinanceException;
+import com.nido.api.finance.domain.model.RecurringSeriesSchedule;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.model.UpdateRecurringSeriesCommand;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
@@ -46,6 +47,11 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
     @Override
     public List<RecurringTransactionSeries> findBySpaceId(UUID spaceId) {
         return toDomainList(series.findBySpaceId(spaceId));
+    }
+
+    @Override
+    public List<RecurringSeriesSchedule> findSchedulesBySpaceId(UUID spaceId) {
+        return series.findSchedulesBySpaceId(spaceId);
     }
 
     @Override

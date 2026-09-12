@@ -4,6 +4,7 @@ import com.nido.api.authentication.application.dto.ChangePasswordResult;
 import com.nido.api.authentication.domain.model.UserCredentials;
 import com.nido.api.authentication.domain.port.out.PasswordHasherPort;
 import com.nido.api.authentication.domain.port.out.PasswordVerifierPort;
+import com.nido.api.authentication.domain.port.out.RefreshTokenRevocationPort;
 import com.nido.api.authentication.domain.port.out.UserCredentialPort;
 import com.nido.api.authentication.domain.port.out.UserCredentialsPort;
 import com.nido.api.shared.model.Role;
@@ -27,6 +28,7 @@ class ChangePasswordHandlerTest {
     @Mock PasswordVerifierPort passwordVerifier;
     @Mock PasswordHasherPort passwordHasher;
     @Mock UserCredentialPort userCredentialPort;
+    @Mock RefreshTokenRevocationPort refreshTokenRevocationPort;
 
     private ChangePasswordHandler handler;
 
@@ -34,7 +36,8 @@ class ChangePasswordHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new ChangePasswordHandler(userCredentialsPort, passwordVerifier, passwordHasher, userCredentialPort);
+        handler = new ChangePasswordHandler(userCredentialsPort, passwordVerifier, passwordHasher, userCredentialPort,
+            refreshTokenRevocationPort);
     }
 
     @Test
@@ -48,6 +51,7 @@ class ChangePasswordHandlerTest {
 
         assertThat(result).isInstanceOf(ChangePasswordResult.Success.class);
         verify(userCredentialPort).updatePasswordHash(userId, "$newHashed");
+        verify(refreshTokenRevocationPort).revokeAllForUser(userId);
     }
 
     @Test
@@ -60,6 +64,9 @@ class ChangePasswordHandlerTest {
 
         assertThat(result).isInstanceOf(ChangePasswordResult.InvalidCurrentPassword.class);
         verify(userCredentialPort, never()).updatePasswordHash(any(), any());
+        // A failed attempt must not sign anyone out: otherwise mistyping the current
+        // password would be a way to drop someone else's sessions.
+        verify(refreshTokenRevocationPort, never()).revokeAllForUser(any());
     }
 
     @Test
@@ -70,5 +77,6 @@ class ChangePasswordHandlerTest {
 
         assertThat(result).isInstanceOf(ChangePasswordResult.DataIntegrityError.class);
         verify(userCredentialPort, never()).updatePasswordHash(any(), any());
+        verify(refreshTokenRevocationPort, never()).revokeAllForUser(any());
     }
 }

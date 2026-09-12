@@ -9,6 +9,7 @@ import com.nido.api.space.application.port.in.TransferOwnershipUseCase;
 import com.nido.api.space.domain.model.ChangeMemberRoleCommand;
 import com.nido.api.space.domain.model.RemoveMemberCommand;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.TransferOwnershipCommand;
 import com.nido.api.space.infrastructure.web.dto.ChangeMemberRoleRequest;
 import com.nido.api.space.infrastructure.web.dto.SpaceMemberResponse;
@@ -69,7 +70,7 @@ public class SpaceMemberController {
             @PathVariable UUID spaceId,
             @PathVariable UUID userId,
             @Valid @RequestBody ChangeMemberRoleRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.ADMIN) SpaceMembership membership) {
         changeMemberRoleUseCase.change(new ChangeMemberRoleCommand(spaceId, userId, request.role()), membership);
         return ResponseEntity.noContent().build();
     }
@@ -80,7 +81,7 @@ public class SpaceMemberController {
     public ResponseEntity<Void> removeMember(
             @PathVariable UUID spaceId,
             @PathVariable UUID userId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.ADMIN) SpaceMembership membership) {
         removeMemberUseCase.remove(new RemoveMemberCommand(spaceId, userId), membership);
         return ResponseEntity.noContent().build();
     }
@@ -91,7 +92,7 @@ public class SpaceMemberController {
     public ResponseEntity<Void> transferOwnership(
             @PathVariable UUID spaceId,
             @PathVariable UUID userId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.OWNER) SpaceMembership membership) {
         transferOwnershipUseCase.transfer(new TransferOwnershipCommand(spaceId, userId), membership);
         return ResponseEntity.noContent().build();
     }

@@ -3,6 +3,7 @@ package com.nido.api.tasks.infrastructure.web;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import com.nido.api.infrastructure.web.CurrentMembership;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.tasks.application.port.in.DeleteRecurringTaskSeriesUseCase;
 import com.nido.api.tasks.application.port.in.ListRecurringTaskSeriesUseCase;
 import com.nido.api.tasks.application.port.in.UpdateRecurringTaskSeriesUseCase;
@@ -58,7 +59,7 @@ public class RecurringTaskSeriesController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RecurringTaskSeriesResponse> update(
             @PathVariable UUID spaceId, @PathVariable UUID seriesId, @Valid @RequestBody UpdateRecurringTaskSeriesRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         RecurringTaskSeries updated = updateRecurringTaskSeriesUseCase.update(new UpdateRecurringTaskSeriesCommand(
             seriesId, spaceId, request.title(), request.priority(), request.subtasks(),
             request.recurrence().intervalType(), request.recurrence().intervalCount(),
@@ -73,7 +74,7 @@ public class RecurringTaskSeriesController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
             @PathVariable UUID spaceId, @PathVariable UUID seriesId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         deleteRecurringTaskSeriesUseCase.delete(seriesId, spaceId, membership);
         return ResponseEntity.noContent().build();
     }

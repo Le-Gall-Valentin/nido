@@ -6,11 +6,23 @@ import { NetworkError, RateLimitError, PASSWORD_REGEX, PASSWORD_MIN_LENGTH, PASS
 
 type Flash = { kind: 'success' | 'error'; key: string } | null
 
+/**
+ * How long the confirmation stays on screen before onChanged hands over. Long enough to
+ * read a sentence, short enough that nobody starts typing again first.
+ */
+const HANDOVER_DELAY_MS = 2500
+
 interface ChangePasswordSectionProps {
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>
+  /**
+   * Called shortly after a successful change. The server revokes every refresh token on a
+   * password change, this device's included, so the caller signs out here rather than
+   * leaving the session to die on its next refresh as a generic "session expired".
+   */
+  onChanged?: () => void
 }
 
-export function ChangePasswordSection({ onChangePassword }: ChangePasswordSectionProps) {
+export function ChangePasswordSection({ onChangePassword, onChanged }: ChangePasswordSectionProps) {
   const { t } = useTranslation('account')
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
@@ -18,6 +30,7 @@ export function ChangePasswordSection({ onChangePassword }: ChangePasswordSectio
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [flash, setFlash] = useState<Flash>(null)
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const mismatch = next.length > 0 && confirm.length > 0 && next !== confirm
   const tooShort = next.length > 0 && next.length < PASSWORD_MIN_LENGTH
@@ -25,7 +38,10 @@ export function ChangePasswordSection({ onChangePassword }: ChangePasswordSectio
   const canSubmit = current.length > 0 && isValidPassword(next) && next === confirm
 
   useEffect(() => {
-    return () => { if (flashTimer.current) clearTimeout(flashTimer.current) }
+    return () => {
+      if (flashTimer.current) clearTimeout(flashTimer.current)
+      if (handoverTimer.current) clearTimeout(handoverTimer.current)
+    }
   }, [])
 
   function showFlash(kind: 'success' | 'error', key: string) {
@@ -44,6 +60,9 @@ export function ChangePasswordSection({ onChangePassword }: ChangePasswordSectio
       setNext('')
       setConfirm('')
       showFlash('success', 'password.success')
+      if (onChanged) {
+        handoverTimer.current = setTimeout(onChanged, HANDOVER_DELAY_MS)
+      }
     } catch (error) {
       if (error instanceof InvalidCurrentPasswordError) {
         showFlash('error', 'password.error.wrong_current')

@@ -13,6 +13,7 @@ import com.nido.api.finance.infrastructure.web.dto.UpdateRecurringSeriesRequest;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import com.nido.api.infrastructure.web.CurrentMembership;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -61,7 +62,7 @@ public class RecurringTransactionSeriesController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RecurringSeriesResponse> create(
             @PathVariable UUID spaceId, @Valid @RequestBody CreateRecurringSeriesRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         RecurringTransactionSeries created = createRecurringSeriesUseCase.create(new CreateRecurringSeriesCommand(
             spaceId, request.label(), request.amount(), request.type(), request.categoryId(), request.payerId(),
             toContributionInputs(request.contributors()), request.recurrence().intervalType(), request.recurrence().intervalCount(),
@@ -74,7 +75,7 @@ public class RecurringTransactionSeriesController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RecurringSeriesResponse> update(
             @PathVariable UUID spaceId, @PathVariable UUID seriesId, @Valid @RequestBody UpdateRecurringSeriesRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         RecurringTransactionSeries updated = updateRecurringSeriesUseCase.update(new UpdateRecurringSeriesCommand(
             seriesId, spaceId, request.label(), request.amount(), request.type(), request.categoryId(), request.payerId(),
             toContributionInputs(request.contributors()), request.recurrence().intervalType(), request.recurrence().intervalCount(),
@@ -87,7 +88,7 @@ public class RecurringTransactionSeriesController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> delete(
             @PathVariable UUID spaceId, @PathVariable UUID seriesId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         deleteRecurringSeriesUseCase.delete(seriesId, spaceId, membership);
         return ResponseEntity.noContent().build();
     }

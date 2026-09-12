@@ -8,7 +8,7 @@ import com.nido.api.mfa.domain.port.out.TotpCodeValidatorPort;
 import com.nido.api.mfa.domain.port.out.TotpConfirmAttemptPort;
 import com.nido.api.mfa.domain.port.out.UserTotpLifecyclePort;
 import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
-import com.nido.api.mfa.domain.port.out.UserTotpSetupPort;
+import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +30,7 @@ class ConfirmTotpHandlerTest {
     @Mock UserTotpLifecyclePort userTotpLifecyclePort;
     @Mock TotpCodeReplayPort codeReplay;
     @Mock TotpConfirmAttemptPort confirmAttemptPort;
-    @Mock UserTotpSetupPort userTotpSetupPort;
+    @Mock PendingTotpEnrolmentPort pendingEnrolment;
 
     private ConfirmTotpHandler handler;
 
@@ -40,26 +40,29 @@ class ConfirmTotpHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new ConfirmTotpHandler(userTotpQuery, codeValidator, userTotpLifecyclePort,
-                                         codeReplay, confirmAttemptPort, userTotpSetupPort);
+                                         codeReplay, confirmAttemptPort, pendingEnrolment);
     }
 
     @Test
     void confirm_validCode_enablesTotp() {
         UserTotpProfile profile = new UserTotpProfile(userId,false, Optional.of(secret));
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
+        when(pendingEnrolment.find(userId)).thenReturn(Optional.of(secret));
         when(codeValidator.isValid(secret, "123456")).thenReturn(true);
         when(codeReplay.markCodeUsedIfAbsent(userId, "123456")).thenReturn(true);
 
         assertThatCode(() -> handler.confirm(new ConfirmTotpCommand(userId, "123456")))
             .doesNotThrowAnyException();
 
-        verify(userTotpLifecyclePort).enableTotp(userId);
+        verify(userTotpLifecyclePort).enableTotp(userId, secret);
     }
 
     @Test
-    void confirm_secretNull_throwsTotpSetupNotStarted() {
+    void confirm_noEnrolmentUnderWay_throwsTotpSetupNotStarted() {
+        // Never started, or started and expired — one answer for both, on purpose.
         UserTotpProfile profile = new UserTotpProfile(userId,false, Optional.empty());
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
+        when(pendingEnrolment.find(userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "123456")))
             .isInstanceOf(MfaException.TotpSetupNotStarted.class);
@@ -69,6 +72,7 @@ class ConfirmTotpHandlerTest {
     void confirm_wrongCode_throwsTotpCodeInvalid() {
         UserTotpProfile profile = new UserTotpProfile(userId,false, Optional.of(secret));
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
+        when(pendingEnrolment.find(userId)).thenReturn(Optional.of(secret));
         when(codeValidator.isValid(secret, "000000")).thenReturn(false);
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "000000")))
@@ -91,13 +95,15 @@ class ConfirmTotpHandlerTest {
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "123456")))
             .isInstanceOf(MfaException.TotpAlreadyEnabled.class);
-        verifyNoInteractions(codeValidator, codeReplay, userTotpLifecyclePort);
+        // Not even looked up: an account that already has TOTP is refused before anything else.
+        verifyNoInteractions(codeValidator, codeReplay, userTotpLifecyclePort, pendingEnrolment);
     }
 
     @Test
     void confirm_wrongCode_incrementsAttemptCounter() {
         UserTotpProfile profile = new UserTotpProfile(userId, false, Optional.of(secret));
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
+        when(pendingEnrolment.find(userId)).thenReturn(Optional.of(secret));
         when(codeValidator.isValid(secret, "000000")).thenReturn(false);
         when(confirmAttemptPort.incrementAndGetAttempts(userId)).thenReturn(1);
 
@@ -105,20 +111,23 @@ class ConfirmTotpHandlerTest {
             .isInstanceOf(MfaException.TotpCodeInvalid.class);
 
         verify(confirmAttemptPort).incrementAndGetAttempts(userId);
-        verifyNoInteractions(userTotpSetupPort);
+        // The enrolment is read to get the secret to check against, but a single wrong code must
+        // not throw it away — only running out of attempts does that.
+        verify(pendingEnrolment, never()).discard(userId);
     }
 
     @Test
     void confirm_maxAttemptsReached_clearsPendingSecretAndThrows() {
         UserTotpProfile profile = new UserTotpProfile(userId, false, Optional.of(secret));
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
+        when(pendingEnrolment.find(userId)).thenReturn(Optional.of(secret));
         when(codeValidator.isValid(secret, "000000")).thenReturn(false);
         when(confirmAttemptPort.incrementAndGetAttempts(userId)).thenReturn(5);
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "000000")))
             .isInstanceOf(MfaException.TotpConfirmMaxAttemptsExceeded.class);
 
-        verify(userTotpSetupPort).clearPendingSecret(userId);
+        verify(pendingEnrolment).discard(userId);
         verify(confirmAttemptPort).clearAttempts(userId);
         verifyNoInteractions(userTotpLifecyclePort);
     }
@@ -127,6 +136,7 @@ class ConfirmTotpHandlerTest {
     void confirm_success_clearsAttemptCounter() {
         UserTotpProfile profile = new UserTotpProfile(userId, false, Optional.of(secret));
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
+        when(pendingEnrolment.find(userId)).thenReturn(Optional.of(secret));
         when(codeValidator.isValid(secret, "123456")).thenReturn(true);
         when(codeReplay.markCodeUsedIfAbsent(userId, "123456")).thenReturn(true);
 
@@ -134,26 +144,28 @@ class ConfirmTotpHandlerTest {
             .doesNotThrowAnyException();
 
         verify(confirmAttemptPort).clearAttempts(userId);
-        verify(userTotpLifecyclePort).enableTotp(userId);
+        verify(userTotpLifecyclePort).enableTotp(userId, secret);
     }
 
     @Test
     void confirm_replayedCode_doesNotIncrementAttempts() {
         UserTotpProfile profile = new UserTotpProfile(userId, false, Optional.of(secret));
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
+        when(pendingEnrolment.find(userId)).thenReturn(Optional.of(secret));
         when(codeValidator.isValid(secret, "123456")).thenReturn(true);
         when(codeReplay.markCodeUsedIfAbsent(userId, "123456")).thenReturn(false);
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "123456")))
             .isInstanceOf(MfaException.TotpCodeInvalid.class);
 
-        verifyNoInteractions(confirmAttemptPort, userTotpSetupPort, userTotpLifecyclePort);
+        verifyNoInteractions(confirmAttemptPort, userTotpLifecyclePort);
     }
 
     @Test
     void confirm_replayedCode_throwsTotpCodeInvalid() {
         UserTotpProfile profile = new UserTotpProfile(userId,false, Optional.of(secret));
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
+        when(pendingEnrolment.find(userId)).thenReturn(Optional.of(secret));
         when(codeValidator.isValid(secret, "123456")).thenReturn(true);
         when(codeReplay.markCodeUsedIfAbsent(userId, "123456")).thenReturn(false);
 

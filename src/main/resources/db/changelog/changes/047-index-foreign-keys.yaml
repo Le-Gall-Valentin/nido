@@ -1,0 +1,218 @@
+databaseChangeLog:
+  # Postgres indexes the referencing side of a foreign key for nobody: declaring one buys the
+  # integrity check and none of the lookups it needs. Every DELETE on a parent row therefore scans
+  # the whole child table to find out whether anything still points at it — and the parents here
+  # are deleted by ordinary use: a category the user removes, an account erased under GDPR, a
+  # recipe dropped from the book. Nineteen of them had no usable index.
+  #
+  # One changeSet per index, on purpose. A single changeSet guarded on one index name marks itself
+  # executed the moment that one exists and silently skips the rest — the trap this project already
+  # walked into once, in migration 044.
+  - changeSet:
+      id: 047-index-finance_budgets-category_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: finance_budgets
+            indexName: idx_finance_budgets_category_id
+            columns:
+              - column:
+                  name: category_id
+
+  - changeSet:
+      id: 047-index-finance_recurring_series_contributors-user_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: finance_recurring_series_contributors
+            indexName: idx_finance_recurring_series_contributors_user_id
+            columns:
+              - column:
+                  name: user_id
+
+  - changeSet:
+      id: 047-index-finance_recurring_transaction_series-category_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: finance_recurring_transaction_series
+            indexName: idx_finance_recurring_transaction_series_category_id
+            columns:
+              - column:
+                  name: category_id
+
+  - changeSet:
+      id: 047-index-finance_recurring_transaction_series-payer_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: finance_recurring_transaction_series
+            indexName: idx_finance_recurring_transaction_series_payer_id
+            columns:
+              - column:
+                  name: payer_id
+
+  - changeSet:
+      id: 047-index-finance_savings_contributions-user_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: finance_savings_contributions
+            indexName: idx_finance_savings_contributions_user_id
+            columns:
+              - column:
+                  name: user_id
+
+  - changeSet:
+      id: 047-index-finance_settlement_records-from_user_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: finance_settlement_records
+            indexName: idx_finance_settlement_records_from_user_id
+            columns:
+              - column:
+                  name: from_user_id
+
+  - changeSet:
+      id: 047-index-finance_settlement_records-to_user_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: finance_settlement_records
+            indexName: idx_finance_settlement_records_to_user_id
+            columns:
+              - column:
+                  name: to_user_id
+
+  - changeSet:
+      id: 047-index-finance_transaction_contributors-user_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: finance_transaction_contributors
+            indexName: idx_finance_transaction_contributors_user_id
+            columns:
+              - column:
+                  name: user_id
+
+  - changeSet:
+      id: 047-index-finance_transactions-category_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: finance_transactions
+            indexName: idx_finance_transactions_category_id
+            columns:
+              - column:
+                  name: category_id
+
+  - changeSet:
+      id: 047-index-finance_transactions-payer_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: finance_transactions
+            indexName: idx_finance_transactions_payer_id
+            columns:
+              - column:
+                  name: payer_id
+
+  - changeSet:
+      id: 047-index-kitchen_menu_entries-recipe_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: kitchen_menu_entries
+            indexName: idx_kitchen_menu_entries_recipe_id
+            columns:
+              - column:
+                  name: recipe_id
+
+  - changeSet:
+      id: 047-index-recurring_task_series-created_by
+      author: nido
+      changes:
+        - createIndex:
+            tableName: recurring_task_series
+            indexName: idx_recurring_task_series_created_by
+            columns:
+              - column:
+                  name: created_by
+
+  - changeSet:
+      id: 047-index-recurring_task_series_members-user_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: recurring_task_series_members
+            indexName: idx_recurring_task_series_members_user_id
+            columns:
+              - column:
+                  name: user_id
+
+  - changeSet:
+      id: 047-index-shopping_items-category_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: shopping_items
+            indexName: idx_shopping_items_category_id
+            columns:
+              - column:
+                  name: category_id
+
+  - changeSet:
+      id: 047-index-space_invitations-created_by
+      author: nido
+      changes:
+        - createIndex:
+            tableName: space_invitations
+            indexName: idx_space_invitations_created_by
+            columns:
+              - column:
+                  name: created_by
+
+  - changeSet:
+      id: 047-index-spaces-created_by
+      author: nido
+      changes:
+        - createIndex:
+            tableName: spaces
+            indexName: idx_spaces_created_by
+            columns:
+              - column:
+                  name: created_by
+
+  - changeSet:
+      id: 047-index-task_assignees-user_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: task_assignees
+            indexName: idx_task_assignees_user_id
+            columns:
+              - column:
+                  name: user_id
+
+  - changeSet:
+      id: 047-index-tasks-created_by
+      author: nido
+      changes:
+        - createIndex:
+            tableName: tasks
+            indexName: idx_tasks_created_by
+            columns:
+              - column:
+                  name: created_by
+
+  - changeSet:
+      id: 047-index-tasks-recurring_series_id
+      author: nido
+      changes:
+        - createIndex:
+            tableName: tasks
+            indexName: idx_tasks_recurring_series_id
+            columns:
+              - column:
+                  name: recurring_series_id

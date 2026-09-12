@@ -58,8 +58,19 @@ public class TotpController {
             **La configuration n'est pas encore active** — l'utilisateur doit ensuite appeler
             `POST /api/auth/2fa/confirm` avec un code valide pour activer le TOTP.
 
-            Si un setup est déjà en cours (non confirmé), un nouveau secret est généré
-            et remplace l'ancien. Si le TOTP est déjà activé et confirmé, retourne `409`.
+            Si un setup est déjà en cours (non confirmé), **le secret existant est renvoyé
+            à l'identique** — il n'est pas régénéré. C'est volontaire : deux onglets ouverts sur
+            la page d'enrôlement afficheraient sinon deux QR codes différents, et l'utilisateur
+            scannerait l'un pour confirmer contre l'autre.
+
+            ⚠️ Conséquence à connaître : un utilisateur qui perd son téléphone entre `/setup` et
+            `/confirm` **n'a aujourd'hui aucun moyen de repartir de zéro**. `DELETE /api/auth/2fa`
+            exige un code valide qu'il n'a plus, et le reset administrateur
+            (`POST /api/users/{id}/2fa/reset`) répond `204` **sans rien effacer** : il ne traite que
+            les TOTP déjà activés. Le seul contournement est de rater volontairement cinq
+            confirmations, ce qui efface le secret en attente.
+
+            Si le TOTP est déjà activé et confirmé, retourne `409`.
 
             Rate limit : 5 requêtes par fenêtre.
             """

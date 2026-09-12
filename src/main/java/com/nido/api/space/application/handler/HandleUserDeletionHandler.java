@@ -14,6 +14,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.UUID;
 
 @ApplicationService
@@ -39,12 +42,20 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
     @Override
     @Transactional
     public void handleUserDeletion(UUID userId, String email) {
-        for (SpaceMembership membership : spaceMembershipPort.findByUser(userId)) {
-            Optional<Space> maybeSpace = spaceRepository.findById(membership.spaceId());
-            if (maybeSpace.isEmpty()) {
+        List<SpaceMembership> memberships = spaceMembershipPort.findByUser(userId);
+        // One query for every space rather than one per membership. Somebody belongs to a handful
+        // of spaces, so this saves very little today — it is here because the loop below deletes
+        // and reassigns as it goes, and a per-iteration read is the shape that quietly becomes a
+        // problem when the collection it walks is no longer small.
+        Map<UUID, Space> spacesById = spaceRepository.findByIds(
+                memberships.stream().map(SpaceMembership::spaceId).toList())
+            .stream().collect(Collectors.toMap(Space::id, space -> space));
+
+        for (SpaceMembership membership : memberships) {
+            Space space = spacesById.get(membership.spaceId());
+            if (space == null) {
                 continue;
             }
-            Space space = maybeSpace.get();
             if (space.isPersonal()) {
                 // la suppression de l'espace emporte ses adhésions (ON DELETE CASCADE)
                 spaceCommandPort.delete(space.id());

@@ -8,6 +8,7 @@ import com.nido.api.kitchen.domain.port.out.MenuRepository;
 import com.nido.api.kitchen.domain.port.out.RecipeRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -27,6 +28,7 @@ public class ListMenuEntriesHandler implements ListMenuEntriesUseCase {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<MenuEntryView> list(SpaceMembership caller, LocalDate from, LocalDate to) {
         List<MenuEntry> entries = menuRepository.findBySpaceIdAndDateRange(caller.spaceId(), from, to);
         if (entries.isEmpty()) {

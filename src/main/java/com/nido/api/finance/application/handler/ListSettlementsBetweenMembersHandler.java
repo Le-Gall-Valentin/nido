@@ -5,8 +5,8 @@ import com.nido.api.finance.domain.model.SettlementRecord;
 import com.nido.api.finance.domain.port.out.SettlementRecordRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,15 +20,10 @@ public class ListSettlementsBetweenMembersHandler implements ListSettlementsBetw
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SettlementRecord> list(UUID memberAId, UUID memberBId, SpaceMembership caller) {
-        return settlementRecordRepository.findBySpaceId(caller.spaceId()).stream()
-            .filter(s -> isBetween(s, memberAId, memberBId))
-            .sorted(Comparator.comparing(SettlementRecord::date).reversed())
-            .toList();
-    }
-
-    private boolean isBetween(SettlementRecord settlement, UUID memberAId, UUID memberBId) {
-        return (settlement.fromMemberId().equals(memberAId) && settlement.toMemberId().equals(memberBId))
-            || (settlement.fromMemberId().equals(memberBId) && settlement.toMemberId().equals(memberAId));
+        // Filtered and ordered by the database. This used to load every settlement in the space
+        // — decrypting each amount — to keep the handful concerning one pair.
+        return settlementRecordRepository.findBetweenMembers(caller.spaceId(), memberAId, memberBId);
     }
 }

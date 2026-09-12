@@ -3,7 +3,7 @@ package com.nido.api.tasks.domain.model;
 public abstract sealed class TaskException extends RuntimeException
     permits TaskException.TaskNotFound, TaskException.SubtasksIncomplete, TaskException.SameSpaceTransfer,
             TaskException.RecurringSeriesNotFound, TaskException.LeadTimeExceedsInterval, TaskException.InvalidEndDate,
-            TaskException.MemberNotInSpace {
+            TaskException.MemberNotInSpace, TaskException.RecurrenceBacklogTooLarge {
 
     private TaskException(String message) { super(message); }
 
@@ -38,5 +38,27 @@ public abstract sealed class TaskException extends RuntimeException
     /** Thrown when a submitted rotationMemberId isn't actually a member of the space. */
     public static final class MemberNotInSpace extends TaskException {
         public MemberNotInSpace() { super("Member is not part of this space"); }
+    }
+
+    /**
+     * Thrown when a recurring series would have to catch up more past occurrences at once
+     * than {@link com.nido.api.tasks.domain.model.RecurrenceScheduler#MAX_BACKLOG_OCCURRENCES}
+     * allows — an anchor date far enough in the past that materializing it would flood the
+     * space with tasks nobody asked for.
+     */
+    public static final class RecurrenceBacklogTooLarge extends TaskException {
+        private final long pendingOccurrences;
+        private final int maximum;
+
+        public RecurrenceBacklogTooLarge(long pendingOccurrences, int maximum) {
+            super("This recurring series would generate " + pendingOccurrences
+                + " past occurrences at once, which is more than the " + maximum + " allowed");
+            this.pendingOccurrences = pendingOccurrences;
+            this.maximum = maximum;
+        }
+
+        public long pendingOccurrences() { return pendingOccurrences; }
+
+        public int maximum() { return maximum; }
     }
 }

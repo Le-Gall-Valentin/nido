@@ -1,4 +1,5 @@
-import type { ContributionInput } from '@/entities/finance'
+import type { ContributionInput, TransactionType } from '@/entities/finance'
+import { contributionLabelKeys } from './contributionLabelKeys'
 import { resolveContributionShares } from './resolveContributionShares'
 
 export type ContributorsResolution = { contributors: ContributionInput[]; error: null } | { contributors: null; error: string }
@@ -8,12 +9,12 @@ export type ContributorsResolution = { contributors: ContributionInput[]; error:
  * shared by TransactionFormModal and RecurringSeriesFormModal since both need exactly this.
  */
 export function resolveContributorsOrError(
-  amount: number, canPickContributors: boolean, payerId: string, contributorIds: string[],
+  amount: number, type: TransactionType, canPickContributors: boolean, payerId: string, contributorIds: string[],
   customizeShares: boolean, customShares: Record<string, number>,
   t: (key: string) => string
 ): ContributorsResolution {
   if (canPickContributors && !payerId) {
-    return { contributors: null, error: t('form.payer_required') }
+    return { contributors: null, error: t(contributionLabelKeys(type).holderRequired) }
   }
   const resolved = resolveContributionShares(amount, contributorIds, customizeShares ? customShares : null)
   if (resolved === null) {

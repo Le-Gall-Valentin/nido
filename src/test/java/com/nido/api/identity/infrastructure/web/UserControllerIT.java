@@ -938,4 +938,192 @@ class UserControllerIT {
             .andReturn();
         return result.getResponse().getCookie("access_token");
     }
+    // ─── B13 : une perte de droits atteint les tokens déjà émis ───────────
+
+    /** A token minted a minute ago — a live session, not one created in the same instant as the change. */
+    private Cookie tokenIssuedAMinuteAgoFor(UUID userId, Role role) {
+        Instant issuedAt = Instant.now().minusSeconds(60);
+        String token = Jwts.builder()
+            .issuer("nido").audience().add("nido").and()
+            .subject(userId.toString())
+            .claim("role", role.name())
+            .claim("email", userId + "@test.com")
+            .issuedAt(Date.from(issuedAt))
+            .expiration(Date.from(issuedAt.plusSeconds(15 * 60L)))
+            .signWith(Keys.hmacShaKeyFor("integration-test-secret-at-least-32-chars!".getBytes(StandardCharsets.UTF_8)))
+            .compact();
+        return new Cookie("access_token", token);
+    }
+
+    @Test
+    void demoting_an_admin_stops_the_token_they_are_already_holding() throws Exception {
+        // The database says USER a millisecond after the change, but the token in the demoted
+        // user's browser keeps saying ADMIN, and nothing in it can ever say otherwise. Before this,
+        // it stayed usable on admin routes for the rest of its lifetime — up to fifteen minutes.
+        UserIdentityEntity target = new UserIdentityEntity();
+        target.setUsername("soon-demoted");
+        target.setEmail("soon-demoted@test.com");
+        target.setRole(Role.ADMIN);
+        userIdentityJpaRepository.saveAndFlush(target);
+        Cookie theirToken = tokenIssuedAMinuteAgoFor(target.getId(), Role.ADMIN);
+
+        mockMvc.perform(get("/api/users").cookie(theirToken))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(patch("/api/users/" + target.getId())
+                .cookie(loginAs("superadmin", "adminpass"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"USER\"}"))
+            .andExpect(status().isNoContent());
+
+        // 401 and not 403, deliberately: the frontend refreshes on 401, and refreshing re-reads the
+        // user, so the demoted admin carries on as a plain user instead of being thrown out.
+        mockMvc.perform(get("/api/users").cookie(theirToken))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void deactivating_an_account_stops_its_current_session_and_not_only_the_next_refresh() throws Exception {
+        // Refreshing was already refused for an inactive account, so the account died at the next
+        // rotation. What it kept was the token in hand — which is the whole point of deactivating
+        // an account you believe is compromised.
+        //
+        // Checked on /api/spaces and not /api/users/me on purpose: that route re-reads the user and
+        // so already refused a deactivated one. A route that does not read the user is where the
+        // live token actually bought access — before this, the call below answered 200.
+        UserIdentityEntity target = new UserIdentityEntity();
+        target.setUsername("soon-disabled");
+        target.setEmail("soon-disabled@test.com");
+        target.setRole(Role.USER);
+        userIdentityJpaRepository.saveAndFlush(target);
+        Cookie theirToken = tokenIssuedAMinuteAgoFor(target.getId(), Role.USER);
+
+        mockMvc.perform(get("/api/spaces").cookie(theirToken))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/users/" + target.getId() + "/deactivate")
+                .cookie(loginAs("superadmin", "adminpass")))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/spaces").cookie(theirToken))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void deleting_an_account_stops_the_token_of_a_user_who_no_longer_exists() throws Exception {
+        // The most extreme of the three: everything about the user is erased, yet the token in
+        // their browser authenticates fine, because nothing on the request path reads the database.
+        // Checked on /api/spaces for the same reason as above — /api/users/me answered 404 anyway,
+        // which hides the fact that the token itself was still being accepted.
+        UserIdentityEntity target = new UserIdentityEntity();
+        target.setUsername("soon-deleted");
+        target.setEmail("soon-deleted@test.com");
+        target.setRole(Role.USER);
+        userIdentityJpaRepository.saveAndFlush(target);
+        Cookie theirToken = tokenIssuedAMinuteAgoFor(target.getId(), Role.USER);
+
+        mockMvc.perform(get("/api/spaces").cookie(theirToken))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/users/" + target.getId())
+                .cookie(loginAs("superadmin", "adminpass")))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/spaces").cookie(theirToken))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void a_user_whose_rights_did_not_change_keeps_their_session() throws Exception {
+        // The other half: this must cost nothing to everybody else. Demoting one user must not
+        // disturb another's live session.
+        UserIdentityEntity bystander = new UserIdentityEntity();
+        bystander.setUsername("bystander");
+        bystander.setEmail("bystander@test.com");
+        bystander.setRole(Role.USER);
+        userIdentityJpaRepository.saveAndFlush(bystander);
+        Cookie theirToken = tokenIssuedAMinuteAgoFor(bystander.getId(), Role.USER);
+
+        UserIdentityEntity target = new UserIdentityEntity();
+        target.setUsername("other-demoted");
+        target.setEmail("other-demoted@test.com");
+        target.setRole(Role.ADMIN);
+        userIdentityJpaRepository.saveAndFlush(target);
+        mockMvc.perform(patch("/api/users/" + target.getId())
+                .cookie(loginAs("superadmin", "adminpass"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"USER\"}"))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/spaces").cookie(theirToken))
+            .andExpect(status().isOk());
+    }
+
+    // ─── B2 : un changement de mot de passe coupe toutes les sessions ──────
+
+    @Test
+    void changing_a_password_revokes_every_refresh_token_including_the_caller_s() throws Exception {
+        // The point of changing a password is to react to a compromise. A refresh token
+        // stolen beforehand outlives the change by up to 30 days unless it is revoked here,
+        // which made the change useless against the very case it exists for.
+        MvcResult login = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest("testuser", "password"))))
+            .andExpect(status().isOk())
+            .andReturn();
+        Cookie access = login.getResponse().getCookie("access_token");
+        Cookie refresh = login.getResponse().getCookie("refresh_token");
+        UUID userId = userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId();
+        assertThat(refreshTokenJpaRepository.findAll())
+            .filteredOn(token -> token.getUserId().equals(userId))
+            .isNotEmpty()
+            .allSatisfy(token -> assertThat(token.isRevoked()).isFalse());
+
+        mockMvc.perform(patch("/api/users/me/password").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"password\",\"newPassword\":\"N3wS3cr3t!\"}"))
+            .andExpect(status().isNoContent());
+
+        assertThat(refreshTokenJpaRepository.findAll())
+            .filteredOn(token -> token.getUserId().equals(userId))
+            .isNotEmpty()
+            .allSatisfy(token -> assertThat(token.isRevoked()).isTrue());
+        // And refused on the wire, not merely flagged in a column.
+        mockMvc.perform(post("/api/auth/refresh").cookie(refresh))
+            .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void a_failed_password_change_leaves_every_session_alone() throws Exception {
+        // Otherwise mistyping the current password — or someone else doing it on a machine
+        // left unlocked — would become a way to sign the account out everywhere.
+        Cookie access = loginAs("testuser", "password");
+        UUID userId = userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId();
+
+        mockMvc.perform(patch("/api/users/me/password").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"wrong-password\",\"newPassword\":\"N3wS3cr3t!\"}"))
+            .andExpect(status().isUnprocessableEntity());
+
+        assertThat(refreshTokenJpaRepository.findAll())
+            .filteredOn(token -> token.getUserId().equals(userId))
+            .isNotEmpty()
+            .allSatisfy(token -> assertThat(token.isRevoked()).isFalse());
+    }
+
+    @Test
+    void the_new_password_is_the_one_that_works_afterwards() throws Exception {
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me/password").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"password\",\"newPassword\":\"N3wS3cr3t!\"}"))
+            .andExpect(status().isNoContent());
+
+        // Revoking every token must not have rolled the password change back with it.
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest("testuser", "N3wS3cr3t!"))))
+            .andExpect(status().isOk());
+    }
 }

@@ -75,7 +75,7 @@ export function RecurringSeriesFormModal({ series, categories, members, canPickC
       return
     }
     const resolution = resolveContributorsOrError(
-      numericAmount, canPickContributors, payerId, contributorIds, customizeShares, customShares, t)
+      numericAmount, type, canPickContributors, payerId, contributorIds, customizeShares, customShares, t)
     if (resolution.error !== null) {
       setError(resolution.error)
       return
@@ -84,6 +84,10 @@ export function RecurringSeriesFormModal({ series, categories, members, canPickC
       setError(t('recurring_series.end_date_before_start'))
       return
     }
+    // No backlog check here, unlike the creation form: the server measures what a series
+    // still owes from its materialization cursor, which this payload does not carry. Deriving
+    // it from the anchor instead would refuse edits the server accepts — on an established
+    // series the cursor has long moved past the anchor. Left to the server on purpose.
     setError(null)
     onSubmit({
       label: label.trim(), amount: numericAmount, type, categoryId, payerId: payerId || null,
@@ -118,7 +122,7 @@ export function RecurringSeriesFormModal({ series, categories, members, canPickC
 
         {canPickContributors && (
           <ContributorsPicker
-            members={members} payerId={payerId} onPayerChange={setPayerId}
+            members={members} type={type} payerId={payerId} onPayerChange={setPayerId}
             contributorIds={contributorIds} onToggleContributor={toggleContributor}
             customizeShares={customizeShares} onCustomizeSharesChange={setCustomizeShares}
             customShares={customShares}

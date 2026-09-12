@@ -4,7 +4,6 @@ import com.nido.api.mfa.domain.model.UserTotpProfile;
 import com.nido.api.mfa.domain.port.out.UserTotpInitPort;
 import com.nido.api.mfa.domain.port.out.UserTotpLifecyclePort;
 import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
-import com.nido.api.mfa.domain.port.out.UserTotpSetupPort;
 import com.nido.api.mfa.infrastructure.config.TotpEncryptorFactory;
 import com.nido.api.mfa.infrastructure.persistence.entity.UserTotpEntity;
 import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
@@ -17,7 +16,7 @@ import java.util.UUID;
 
 @Component
 public class UserTotpRepositoryAdapter
-        implements UserTotpInitPort, UserTotpSetupPort, UserTotpLifecyclePort, UserTotpQueryPort {
+        implements UserTotpInitPort, UserTotpLifecyclePort, UserTotpQueryPort {
 
     private final UserTotpJpaRepository jpa;
     private final TotpEncryptorFactory encryptorFactory;
@@ -49,17 +48,9 @@ public class UserTotpRepositoryAdapter
     }
 
     @Override
-    public boolean saveTotpSecretIfAbsent(UUID userId, String secret) {
-        return jpa.saveTotpSecretIfAbsent(userId, encryptorFactory.forUser(userId).encrypt(secret)) > 0;
+    public void enableTotp(UUID userId, String secret) {
+        jpa.enableTotpById(userId, encryptorFactory.forUser(userId).encrypt(secret));
     }
-
-    @Override
-    public void clearPendingSecret(UUID userId) {
-        jpa.clearPendingSecretById(userId);
-    }
-
-    @Override
-    public void enableTotp(UUID userId) { jpa.enableTotpById(userId); }
 
     @Override
     public void disableTotp(UUID userId) { jpa.disableTotpById(userId); }

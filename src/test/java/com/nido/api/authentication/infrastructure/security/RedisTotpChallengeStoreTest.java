@@ -29,8 +29,8 @@ class RedisTotpChallengeStoreTest {
     @BeforeEach
     void setUp() {
         lenient().when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        var properties = new NidoProperties(null, null, null, null, null, null, null,
-            new NidoProperties.SecurityProperties(20));
+        var properties = new NidoProperties(null, null, null, null, null, null,
+            new NidoProperties.SecurityProperties(20, 30, 15));
         store = new RedisTotpChallengeStore(redisTemplate, properties);
     }
 
@@ -68,39 +68,67 @@ class RedisTotpChallengeStoreTest {
     }
 
     @Test
-    void invalidateChallenge_deletesChallengeAndAttemptsKeys() {
+    void invalidateChallenge_deletesTheChallengeButLeavesTheAccountCounterStanding() {
+        // The counter has to outlive the challenge: obtaining a fresh challenge is precisely
+        // what logging in again does, and that must not hand back a clean slate.
         String challengeId = UUID.randomUUID().toString();
 
         store.invalidateChallenge(challengeId);
 
         verify(redisTemplate).delete("totp:challenge:" + challengeId);
-        verify(redisTemplate).delete("totp:attempts:" + challengeId);
+        verify(redisTemplate, never()).delete(startsWith("totp:attempts:"));
     }
 
     @Test
-    void incrementFailedAttempts_firstAttempt_returns1_andSetsTtl() {
-        String challengeId = UUID.randomUUID().toString();
-        when(valueOps.increment("totp:attempts:" + challengeId)).thenReturn(1L);
+    void recordFailedAttempt_isKeyedOnTheAccount_andArmsTheLockoutWindow() {
+        when(valueOps.increment("totp:attempts:user:" + userId)).thenReturn(1L);
 
-        int count = store.incrementFailedAttempts(challengeId);
+        int count = store.recordFailedAttempt(userId);
 
         assertThat(count).isEqualTo(1);
-        verify(redisTemplate).expire(
-            eq("totp:attempts:" + challengeId),
-            eq(Duration.ofMinutes(20))
-        );
+        // The lockout window, not the challenge TTL — two different spans, 30 and 20 here.
+        verify(redisTemplate).expire(eq("totp:attempts:user:" + userId), eq(Duration.ofMinutes(30)));
     }
 
     @Test
-    void incrementFailedAttempts_subsequentAttempts_alsoSetsTtl() {
-        // expire() is called unconditionally to avoid the non-atomic window where
-        // a crash between increment and expire would leave a key without TTL.
-        String challengeId = UUID.randomUUID().toString();
-        when(valueOps.increment("totp:attempts:" + challengeId)).thenReturn(3L);
+    void recordFailedAttempt_setsTheTtlOnEveryAttempt() {
+        // INCR creates the key without a TTL, so a crash between increment and expire would
+        // leave the account permanently locked. Cheaper to re-set it every time than to risk that.
+        when(valueOps.increment("totp:attempts:user:" + userId)).thenReturn(3L);
 
-        int count = store.incrementFailedAttempts(challengeId);
+        int count = store.recordFailedAttempt(userId);
 
         assertThat(count).isEqualTo(3);
-        verify(redisTemplate).expire(eq("totp:attempts:" + challengeId), eq(Duration.ofMinutes(20)));
+        verify(redisTemplate).expire(eq("totp:attempts:user:" + userId), eq(Duration.ofMinutes(30)));
+    }
+
+    @Test
+    void failedAttempts_readsTheAccountCounter() {
+        when(valueOps.get("totp:attempts:user:" + userId)).thenReturn("4");
+
+        assertThat(store.failedAttempts(userId)).isEqualTo(4);
+    }
+
+    @Test
+    void failedAttempts_isZeroWhenNothingWasRecorded() {
+        when(valueOps.get("totp:attempts:user:" + userId)).thenReturn(null);
+
+        assertThat(store.failedAttempts(userId)).isZero();
+    }
+
+    @Test
+    void failedAttempts_readsAnUnparseableValueAsZeroRatherThanLockingTheAccountOut() {
+        // Corruption or a key collision must not be read as "locked out": that would deny the
+        // account its own logins with no way back until the key expires.
+        when(valueOps.get("totp:attempts:user:" + userId)).thenReturn("not-a-number");
+
+        assertThat(store.failedAttempts(userId)).isZero();
+    }
+
+    @Test
+    void clearFailedAttempts_removesTheAccountCounter() {
+        store.clearFailedAttempts(userId);
+
+        verify(redisTemplate).delete("totp:attempts:user:" + userId);
     }
 }

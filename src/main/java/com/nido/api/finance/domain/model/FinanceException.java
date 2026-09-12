@@ -9,7 +9,8 @@ public abstract sealed class FinanceException extends RuntimeException
             FinanceException.ContributionExceedsGoalTarget, FinanceException.DecryptionFailed,
             FinanceException.MemberNotInSpace, FinanceException.SettlementExceedsDebt,
             FinanceException.TargetAmountBelowContributed, FinanceException.CategoryTypeMismatch,
-            FinanceException.BudgetRequiresExpenseCategory {
+            FinanceException.BudgetRequiresExpenseCategory,
+            FinanceException.RecurrenceBacklogTooLarge {
 
     private FinanceException(String message) { super(message); }
 
@@ -92,5 +93,27 @@ public abstract sealed class FinanceException extends RuntimeException
     /** Thrown when setting a budget on a category whose type is INCOME — budgeting only ever applies to expense categories. */
     public static final class BudgetRequiresExpenseCategory extends FinanceException {
         public BudgetRequiresExpenseCategory() { super("Only expense categories can be budgeted"); }
+    }
+
+    /**
+     * Thrown when a recurring series would have to catch up more past occurrences at once
+     * than {@link com.nido.api.finance.domain.model.RecurrenceProjector#MAX_BACKLOG_OCCURRENCES}
+     * allows — an anchor date far enough in the past that materializing it would flood the
+     * space with transactions nobody asked for.
+     */
+    public static final class RecurrenceBacklogTooLarge extends FinanceException {
+        private final long pendingOccurrences;
+        private final int maximum;
+
+        public RecurrenceBacklogTooLarge(long pendingOccurrences, int maximum) {
+            super("This recurring series would generate " + pendingOccurrences
+                + " past occurrences at once, which is more than the " + maximum + " allowed");
+            this.pendingOccurrences = pendingOccurrences;
+            this.maximum = maximum;
+        }
+
+        public long pendingOccurrences() { return pendingOccurrences; }
+
+        public int maximum() { return maximum; }
     }
 }

@@ -6,7 +6,7 @@ import com.nido.api.mfa.domain.model.TotpSetupResult;
 import com.nido.api.mfa.domain.model.UserTotpProfile;
 import com.nido.api.mfa.domain.port.out.TotpSecretGeneratorPort;
 import com.nido.api.mfa.domain.port.out.TotpUriBuilderPort;
-import com.nido.api.mfa.domain.port.out.UserTotpSetupPort;
+import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +27,7 @@ class SetupTotpHandlerTest {
     @Mock UserTotpQueryPort userTotpQuery;
     @Mock TotpSecretGeneratorPort secretGenerator;
     @Mock TotpUriBuilderPort uriBuilder;
-    @Mock UserTotpSetupPort userTotpSetupPort;
+    @Mock PendingTotpEnrolmentPort pendingEnrolment;
 
     private SetupTotpHandler handler;
 
@@ -36,7 +36,7 @@ class SetupTotpHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new SetupTotpHandler(userTotpQuery, secretGenerator, uriBuilder, userTotpSetupPort);
+        handler = new SetupTotpHandler(userTotpQuery, secretGenerator, uriBuilder, pendingEnrolment);
     }
 
     @Test
@@ -45,7 +45,7 @@ class SetupTotpHandlerTest {
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
         when(secretGenerator.generateSecret()).thenReturn("NEWSECRET");
         when(uriBuilder.buildOtpauthUri("NEWSECRET", email)).thenReturn("otpauth://totp/...");
-        when(userTotpSetupPort.saveTotpSecretIfAbsent(userId, "NEWSECRET")).thenReturn(true);
+        when(pendingEnrolment.startIfAbsent(userId, "NEWSECRET")).thenReturn(true);
 
         TotpSetupResult result = handler.setup(new SetupTotpCommand(userId, email));
 
@@ -71,28 +71,28 @@ class SetupTotpHandlerTest {
     }
 
     @Test
-    void setup_concurrent_saveFails_refreshedTotpEnabled_throwsTotpAlreadyEnabled() {
+    void setup_enrolmentVanishedBetweenTheTwoCalls_saysSetupHasNotStarted() {
+        // startIfAbsent said someone got there first, but the enrolment expired before it could be
+        // read back. Rare, and the honest answer is that there is nothing in progress: the caller
+        // retries and gets a fresh one.
         UserTotpProfile profile = new UserTotpProfile(userId, false, Optional.empty());
-        UserTotpProfile refreshed = new UserTotpProfile(userId, true, Optional.of("EXISTING"));
-        when(userTotpQuery.findById(userId))
-            .thenReturn(Optional.of(profile))
-            .thenReturn(Optional.of(refreshed));
+        when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
         when(secretGenerator.generateSecret()).thenReturn("CANDIDATE");
-        when(userTotpSetupPort.saveTotpSecretIfAbsent(userId, "CANDIDATE")).thenReturn(false);
+        when(pendingEnrolment.startIfAbsent(userId, "CANDIDATE")).thenReturn(false);
+        when(pendingEnrolment.find(userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> handler.setup(new SetupTotpCommand(userId, email)))
-            .isInstanceOf(MfaException.TotpAlreadyEnabled.class);
+            .isInstanceOf(MfaException.TotpSetupNotStarted.class);
     }
 
     @Test
-    void setup_concurrent_saveFails_returnsExistingSecret() {
+    void setup_enrolmentAlreadyUnderWay_returnsTheOneBeingShown() {
+        // Two tabs: the second must show the same QR code as the first, not a rival one.
         UserTotpProfile profile = new UserTotpProfile(userId,false, Optional.empty());
-        UserTotpProfile refreshed = new UserTotpProfile(userId,false, Optional.of("EXISTING"));
-        when(userTotpQuery.findById(userId))
-            .thenReturn(Optional.of(profile))
-            .thenReturn(Optional.of(refreshed));
+        when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
+        when(pendingEnrolment.find(userId)).thenReturn(Optional.of("EXISTING"));
         when(secretGenerator.generateSecret()).thenReturn("CANDIDATE");
-        when(userTotpSetupPort.saveTotpSecretIfAbsent(userId, "CANDIDATE")).thenReturn(false);
+        when(pendingEnrolment.startIfAbsent(userId, "CANDIDATE")).thenReturn(false);
         when(uriBuilder.buildOtpauthUri("EXISTING", email)).thenReturn("otpauth://totp/existing");
 
         TotpSetupResult result = handler.setup(new SetupTotpCommand(userId, email));

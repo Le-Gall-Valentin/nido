@@ -21,7 +21,6 @@ class FinanceEncryptionConfigTest {
             new NidoProperties.CookieProperties(false),
             null,
             new NidoProperties.CorsProperties(List.of()),
-            new NidoProperties.RateLimitProperties(List.of()),
             new NidoProperties.EncryptionProperties(encSecret),
             null
         );

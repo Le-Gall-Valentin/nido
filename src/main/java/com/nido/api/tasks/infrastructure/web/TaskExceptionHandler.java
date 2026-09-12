@@ -7,10 +7,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
 
+// Ahead of GlobalExceptionHandler's last resort, which matches Exception and would otherwise be
+// picked first on an order tie — turning a declared domain error into a 500.
+@Order(Ordered.LOWEST_PRECEDENCE - 100)
 @RestControllerAdvice
 public class TaskExceptionHandler {
 
@@ -27,6 +32,10 @@ public class TaskExceptionHandler {
                 new TaskErrorResponse(400, "The lead time cannot exceed the recurrence interval.");
             case TaskException.InvalidEndDate ignored -> new TaskErrorResponse(400, "The end date must be on or after the anchor date.");
             case TaskException.MemberNotInSpace ignored -> new TaskErrorResponse(404, "Member is not part of this space.");
+            case TaskException.RecurrenceBacklogTooLarge ex -> new TaskErrorResponse(400,
+                "This recurring series would generate " + ex.pendingOccurrences()
+                    + " past occurrences at once (maximum " + ex.maximum()
+                    + "). Move its start date closer, or use a longer interval.");
         };
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), e.getClass().getSimpleName(), response.detail(),

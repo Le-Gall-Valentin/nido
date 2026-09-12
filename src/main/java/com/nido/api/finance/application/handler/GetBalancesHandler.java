@@ -7,6 +7,7 @@ import com.nido.api.finance.domain.port.out.SettlementRecordRepository;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import org.springframework.transaction.annotation.Transactional;
 
 @ApplicationService
 public class GetBalancesHandler implements GetBalancesUseCase {
@@ -20,9 +21,10 @@ public class GetBalancesHandler implements GetBalancesUseCase {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Balances getBalances(SpaceMembership caller) {
         return BalanceCalculator.calculate(
-            transactionRepository.findAllBySpaceId(caller.spaceId()),
+            transactionRepository.findSplitsBySpaceId(caller.spaceId()),
             settlementRecordRepository.findBySpaceId(caller.spaceId()));
     }
 }

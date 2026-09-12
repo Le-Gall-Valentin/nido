@@ -7,6 +7,7 @@ import com.nido.api.finance.domain.model.SavingsGoalDetail;
 import com.nido.api.finance.domain.port.out.SavingsGoalRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ public class ListSavingsGoalsHandler implements ListSavingsGoalsUseCase {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SavingsGoalDetail> list(SpaceMembership caller) {
         List<SavingsGoal> goals = savingsGoalRepository.findBySpaceId(caller.spaceId());
         Map<UUID, List<SavingsContribution>> contributionsByGoalId = savingsGoalRepository.findContributionsByGoalIds(

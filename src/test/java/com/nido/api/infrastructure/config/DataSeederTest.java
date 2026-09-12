@@ -73,7 +73,6 @@ class DataSeederTest {
             new NidoProperties.CookieProperties(false),
             new NidoProperties.SeedProperties("user", "user@test.com", password),
             new NidoProperties.CorsProperties(List.of()),
-            new NidoProperties.RateLimitProperties(List.of()),
             new NidoProperties.EncryptionProperties("test-enc-secret"),
             null
         );

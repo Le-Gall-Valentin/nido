@@ -9,8 +9,10 @@ import java.util.UUID;
 
 /**
  * Computes each member's net balance for a space (positive = is owed money,
- * negative = owes money) from every shared transaction and every recorded
- * settlement, then proposes the smallest set of transfers that would bring
+ * negative = owes money) from every shared transaction — expense or income,
+ * folded in opposite directions — and every recorded
+ * settlement — folded from the ledger on every call, never stored; see
+ * {@link SplitTransaction} for why, then proposes the smallest set of transfers that would bring
  * every member back to zero — a classic greedy largest-creditor /
  * largest-debtor match, repeated until every net is settled.
  */
@@ -18,15 +20,23 @@ public final class BalanceCalculator {
 
     private BalanceCalculator() {}
 
-    public static Balances calculate(List<Transaction> transactions, List<SettlementRecord> settlements) {
+    public static Balances calculate(List<SplitTransaction> transactions, List<SettlementRecord> settlements) {
         Map<UUID, BigDecimal> net = new LinkedHashMap<>();
-        for (Transaction t : transactions) {
+        for (SplitTransaction t : transactions) {
+            // The repository already filters these out, so this is belt and braces — but a
+            // wrong filter would otherwise fold nonsense into a figure nobody can eyeball.
             if (t.contributors().isEmpty() || t.payerId() == null) {
                 continue;
             }
-            net.merge(t.payerId(), t.amount(), BigDecimal::add);
+            // An expense and an income of the same shape are mirror images, so one direction
+            // covers both. Alice fronting 40 of a bill leaves the others owing her their share;
+            // Alice receiving 300 of a refund leaves her owing them theirs. Folding an income as
+            // though it were an expense does not merely get the amount wrong — it names the wrong
+            // person as the one who should pay.
+            BigDecimal direction = t.type() == TransactionType.INCOME ? BigDecimal.ONE.negate() : BigDecimal.ONE;
+            net.merge(t.payerId(), t.amount().multiply(direction), BigDecimal::add);
             for (Contribution c : t.contributors()) {
-                net.merge(c.memberId(), c.shareAmount().negate(), BigDecimal::add);
+                net.merge(c.memberId(), c.shareAmount().multiply(direction).negate(), BigDecimal::add);
             }
         }
         for (SettlementRecord s : settlements) {

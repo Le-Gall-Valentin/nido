@@ -30,6 +30,7 @@ import org.testcontainers.junit.jupiter.Container;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.UUID;
 
@@ -229,6 +230,43 @@ class FinanceControllerIT {
     }
 
     @Test
+    void a_shared_income_makes_its_receiver_the_debtor_end_to_end() throws Exception {
+        // Alice receives a 300 refund that belongs to the household, split evenly: she is holding
+        // 150 that is Bob's. The whole chain has to agree on the direction — the projection that
+        // carries the type, the calculator that folds it, and the settlement guard that only
+        // accepts a payment matching a real debt.
+        String body = "{\"label\":\"Remboursement CAF\",\"amount\":300.00,\"type\":\"INCOME\",\"categoryId\":\"" + incomeCategoryId() + "\","
+            + "\"date\":\"2026-01-01\",\"payerId\":\"" + aliceId + "\",\"contributors\":["
+            + "{\"memberId\":\"" + aliceId + "\",\"shareAmount\":150.00},"
+            + "{\"memberId\":\"" + bobId + "\",\"shareAmount\":150.00}]}";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/balances").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.suggestedTransfers.length()").value(1))
+            .andExpect(jsonPath("$.suggestedTransfers[0].fromMemberId").value(aliceId.toString()))
+            .andExpect(jsonPath("$.suggestedTransfers[0].toMemberId").value(bobId.toString()))
+            .andExpect(jsonPath("$.suggestedTransfers[0].amount").value(150.00));
+
+        // The mirror check: the debt runs the other way, so the expense-shaped settlement is
+        // refused and only Alice paying Bob is accepted.
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":150.00,\"date\":\"2026-01-02\"}"))
+            .andExpect(status().isUnprocessableEntity());
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromMemberId\":\"" + aliceId + "\",\"toMemberId\":\"" + bobId + "\",\"amount\":150.00,\"date\":\"2026-01-02\"}"))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/balances").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.suggestedTransfers.length()").value(0));
+    }
+
+    @Test
     void a_member_can_create_list_update_and_delete_a_recurring_series() throws Exception {
         String body = "{\"label\":\"Loyer\",\"amount\":800.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
             + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":1,\"anchorDate\":\"2026-01-01\"}}";
@@ -393,6 +431,18 @@ class FinanceControllerIT {
             .andExpect(status().isBadRequest());
     }
 
+    /** The seeded set has exactly one INCOME category ("Revenu"); the rest are expenses. */
+    private String incomeCategoryId() throws Exception {
+        String categories = mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/categories").cookie(accessTokenFor(aliceId)))
+            .andReturn().getResponse().getContentAsString();
+        for (com.fasterxml.jackson.databind.JsonNode category : objectMapper.readTree(categories)) {
+            if ("INCOME".equals(category.get("type").asText())) {
+                return category.get("id").asText();
+            }
+        }
+        throw new AssertionError("no INCOME category was seeded");
+    }
+
     private String firstCategoryId() throws Exception {
         String categories = mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/categories").cookie(accessTokenFor(aliceId)))
             .andReturn().getResponse().getContentAsString();
@@ -436,5 +486,55 @@ class FinanceControllerIT {
             .signWith(Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
             .compact();
         return new Cookie("access_token", token);
+    }
+    @Test
+    void a_recurring_series_with_an_unreasonable_backlog_is_refused_instead_of_flooding_the_space() throws Exception {
+        // Three years of daily occurrences. Before this guard, the series was accepted and the
+        // next read of this space turned it into ~1100 inserts inside one transaction, holding
+        // the space's advisory lock throughout. Anchored relative to now so the test states a
+        // property ("far too far back"), not a date that quietly stops meaning that.
+        String ancientAnchor = LocalDate.now().minusYears(3).toString();
+        String body = "{\"label\":\"Café\",\"amount\":2.50,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"DAILY\",\"intervalCount\":1,\"anchorDate\":\"" + ancientAnchor + "\"}}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/recurring-series")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("RecurrenceBacklogTooLarge"));
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/recurring-series").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void back_dating_a_monthly_series_by_a_few_months_stays_allowed() throws Exception {
+        // The legitimate case the ceiling must not catch: a rent that started earlier this year.
+        String recentAnchor = LocalDate.now().minusMonths(4).toString();
+        String body = "{\"label\":\"Loyer\",\"amount\":800.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":1,\"anchorDate\":\"" + recentAnchor + "\"}}";
+
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/recurring-series")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+    }
+
+    @Test
+    void moving_an_existing_series_anchor_into_the_distant_past_is_refused_too() throws Exception {
+        String body = "{\"label\":\"Loyer\",\"amount\":800.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":1,\"anchorDate\":\"" + LocalDate.now().toString() + "\"}}";
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/recurring-series")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+        String seriesId = objectMapper.readTree(created).get("id").asText();
+
+        String updateBody = "{\"label\":\"Loyer\",\"amount\":800.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"DAILY\",\"intervalCount\":1,\"anchorDate\":\""
+            + LocalDate.now().minusYears(3) + "\"}}";
+        mockMvc.perform(patch("/api/spaces/" + spaceId + "/finance/recurring-series/" + seriesId)
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(updateBody))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("RecurrenceBacklogTooLarge"));
     }
 }

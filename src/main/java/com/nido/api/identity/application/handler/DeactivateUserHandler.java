@@ -4,6 +4,7 @@ import com.nido.api.identity.application.port.in.DeactivateUserUseCase;
 import com.nido.api.identity.domain.model.DeactivateUserCommand;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
+import com.nido.api.identity.domain.port.out.TokenInvalidationPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.annotation.ApplicationService;
@@ -18,10 +19,13 @@ public class DeactivateUserHandler implements DeactivateUserUseCase {
 
     private final UserRepository userRepository;
     private final UserCommandPort userCommandPort;
+    private final TokenInvalidationPort tokenInvalidationPort;
 
-    public DeactivateUserHandler(UserRepository userRepository, UserCommandPort userCommandPort) {
+    public DeactivateUserHandler(UserRepository userRepository, UserCommandPort userCommandPort,
+                                 TokenInvalidationPort tokenInvalidationPort) {
         this.userRepository = userRepository;
         this.userCommandPort = userCommandPort;
+        this.tokenInvalidationPort = tokenInvalidationPort;
     }
 
     @Override
@@ -35,6 +39,9 @@ public class DeactivateUserHandler implements DeactivateUserUseCase {
         target.ensureActive();
         target.ensureCanBeDeactivatedBy(command.callerRole());
         userCommandPort.deactivate(command.targetUserId());
+        // Refreshing is already refused for an inactive account; this is what stops the access
+        // token the user is holding right now, which is the whole point of deactivating.
+        tokenInvalidationPort.invalidateIssuedTokens(command.targetUserId());
         log.info("User {} deactivated by caller {} with role {}",
             command.targetUserId(), command.callerId(), command.callerRole());
     }
