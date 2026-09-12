@@ -148,7 +148,7 @@ class SpaceControllerIT {
     @Test
     void create_makes_the_caller_the_owner() throws Exception {
         String payload = objectMapper.writeValueAsString(
-            new CreateSpaceRequest("Chez papa & maman", "La maison familiale", "#4a7fa0", "🏠"));
+            new CreateSpaceRequest("Chez papa & maman", "La maison familiale", "#4a7fa0", "🏠", null));
 
         mockMvc.perform(post("/api/spaces")
                 .cookie(accessTokenFor(bobId, Role.USER))
@@ -166,7 +166,7 @@ class SpaceControllerIT {
     @Test
     void create_rejects_an_accent_outside_the_palette() throws Exception {
         String payload = objectMapper.writeValueAsString(
-            new CreateSpaceRequest("Chez moi", null, "#123456", "🏠"));
+            new CreateSpaceRequest("Chez moi", null, "#123456", "🏠", null));
 
         mockMvc.perform(post("/api/spaces")
                 .cookie(accessTokenFor(bobId, Role.USER))
@@ -179,7 +179,7 @@ class SpaceControllerIT {
     void update_is_forbidden_for_a_plain_member() throws Exception {
         saveMembership(sharedSpaceId, bobId, SpaceRole.MEMBER);
         String payload = objectMapper.writeValueAsString(
-            new UpdateSpaceRequest("Renommé", null, "#4a7fa0", "🏠"));
+            new UpdateSpaceRequest("Renommé", null, "#4a7fa0", "🏠", null));
 
         mockMvc.perform(patch("/api/spaces/" + sharedSpaceId)
                 .cookie(accessTokenFor(bobId, Role.USER))
@@ -194,7 +194,7 @@ class SpaceControllerIT {
                 .cookie(accessTokenFor(bobId, Role.USER))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(
-                    new CreateSpaceRequest("Chez papa & maman", "La maison familiale", "#4a7fa0", "🏠"))))
+                    new CreateSpaceRequest("Chez papa & maman", "La maison familiale", "#4a7fa0", "🏠", null))))
             .andExpect(status().isCreated())
             .andReturn().getResponse().getContentAsString();
         UUID spaceId = UUID.fromString(objectMapper.readTree(created).get("id").asText());
@@ -227,6 +227,43 @@ class SpaceControllerIT {
     }
 
     @Test
+    void update_changes_the_calendar_the_space_keeps() throws Exception {
+        // What the whole change is for: an admin moves the household's clock, and every later
+        // answer about what is due or late is computed in the new zone. Checked through the API
+        // because the value arrives from a browser and is validated on the way in.
+        mockMvc.perform(patch("/api/spaces/" + sharedSpaceId)
+                .cookie(accessTokenFor(aliceId, Role.USER)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"timezone\":\"America/Toronto\"}"))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/spaces/" + sharedSpaceId).cookie(accessTokenFor(aliceId, Role.USER)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.timezone").value("America/Toronto"));
+    }
+
+    @Test
+    void update_refuses_a_timezone_that_names_nowhere() throws Exception {
+        // It arrives from Intl.DateTimeFormat, so nobody typed it — and stored unchecked it breaks
+        // every later read of this space rather than this one request.
+        mockMvc.perform(patch("/api/spaces/" + sharedSpaceId)
+                .cookie(accessTokenFor(aliceId, Role.USER)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"timezone\":\"Europe/Atlantis\"}"))
+            .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void update_refuses_a_fixed_offset_even_though_java_would_parse_it() {
+        // +02:00 is valid ZoneId and wrong here: it does not follow daylight saving, so the
+        // household would be an hour out for half the year with nothing to point at.
+        org.assertj.core.api.Assertions.assertThatCode(() ->
+            mockMvc.perform(patch("/api/spaces/" + sharedSpaceId)
+                    .cookie(accessTokenFor(aliceId, Role.USER)).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"timezone\":\"+02:00\"}"))
+                .andExpect(status().isUnprocessableEntity()))
+            .doesNotThrowAnyException();
+    }
+
+    @Test
     void update_rejects_a_blank_name() throws Exception {
         // Un nom présent mais vide n'est pas un no-op silencieux ni une 400 de Bean Validation :
         // c'est un refus du domaine (InvalidSpaceName), donc un 422.
@@ -241,7 +278,7 @@ class SpaceControllerIT {
     void the_personal_space_cannot_be_renamed_nor_deleted() throws Exception {
         UUID personalId = spaces.findByPersonalOwnerId(aliceId).orElseThrow().getId();
         String payload = objectMapper.writeValueAsString(
-            new UpdateSpaceRequest("Mon perso", null, "#4a7fa0", "🏠"));
+            new UpdateSpaceRequest("Mon perso", null, "#4a7fa0", "🏠", null));
 
         mockMvc.perform(patch("/api/spaces/" + personalId)
                 .cookie(accessTokenFor(aliceId, Role.USER))

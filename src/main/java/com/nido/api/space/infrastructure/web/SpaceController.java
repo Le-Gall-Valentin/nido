@@ -14,6 +14,7 @@ import com.nido.api.space.domain.model.CreateSharedSpaceCommand;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
+import com.nido.api.space.domain.model.SpaceTimezones;
 import com.nido.api.space.domain.model.UpdateSpaceCommand;
 import com.nido.api.space.infrastructure.web.dto.CreateSpaceRequest;
 import com.nido.api.space.infrastructure.web.dto.SpaceDetailResponse;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -89,9 +91,13 @@ public class SpaceController {
             @Valid @RequestBody CreateSpaceRequest request,
             @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
         Space space = createSharedSpaceUseCase.create(new CreateSharedSpaceCommand(
-            request.name(), request.description(), request.accent(), request.glyph(), caller.userId()));
+            request.name(), request.description(), request.accent(), request.glyph(), caller.userId(),
+            // Absent means the client did not say; Europe/Paris rather than the server's UTC, which
+            // is nobody's household. See SpaceEntity#applyDefaults for the same choice one layer down.
+            request.timezone() == null ? ZoneId.of("Europe/Paris") : SpaceTimezones.parseOrThrow(request.timezone())));
         SpaceDetailResponse body = new SpaceDetailResponse(space.id(), space.type(), space.name(),
-            space.description(), space.accent(), space.glyph(), SpaceRole.OWNER, 1);
+            space.description(), space.accent(), space.glyph(), space.timezone().getId(),
+            SpaceRole.OWNER, 1);
         return ResponseEntity.created(URI.create("/api/spaces/" + space.id())).body(body);
     }
 
@@ -103,7 +109,8 @@ public class SpaceController {
             @Valid @RequestBody UpdateSpaceRequest request,
             @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.ADMIN) SpaceMembership membership) {
         updateSpaceUseCase.update(new UpdateSpaceCommand(
-            spaceId, request.name(), request.description(), request.accent(), request.glyph()), membership);
+            spaceId, request.name(), request.description(), request.accent(), request.glyph(),
+            request.timezone() == null ? null : SpaceTimezones.parseOrThrow(request.timezone())), membership);
         return ResponseEntity.noContent().build();
     }
 

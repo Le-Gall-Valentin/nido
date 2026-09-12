@@ -67,8 +67,7 @@ class UpdateSpaceHandlerTest {
 
     @Test
     void a_command_targeting_another_space_than_the_authorized_one_is_refused() {
-        UpdateSpaceCommand elsewhere = new UpdateSpaceCommand(
-            UUID.randomUUID(), "Nouveau nom", null, "#4a7fa0", "🏠");
+        UpdateSpaceCommand elsewhere = new UpdateSpaceCommand(UUID.randomUUID(), "Nouveau nom", null, "#4a7fa0", "🏠", null);
 
         assertThatThrownBy(() -> handler.update(elsewhere, membership(SpaceRole.OWNER)))
             .isInstanceOf(SpaceException.NotAMember.class);
@@ -76,7 +75,7 @@ class UpdateSpaceHandlerTest {
     }
 
     private UpdateSpaceCommand command() {
-        return new UpdateSpaceCommand(spaceId, "Nouveau nom", "Nouvelle description", "#4a7fa0", "🏠");
+        return new UpdateSpaceCommand(spaceId, "Nouveau nom", "Nouvelle description", "#4a7fa0", "🏠", null);
     }
 
     private SpaceMembership membership(SpaceRole role) {
