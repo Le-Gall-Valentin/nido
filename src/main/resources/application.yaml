@@ -1,3 +1,12 @@
+server:
+  # Behind a reverse proxy the application otherwise takes the proxy for the client. Measured on a
+  # live deployment: every caller in the world, on any continent, charged to a single 172.18.0.1 —
+  # which turns every per-IP rate limit into a limit on the whole application at once, and lets five
+  # requests a minute keep everybody from logging in. NATIVE has Tomcat rewrite the remote address
+  # from X-Forwarded-For before any of our code runs, and only for a peer inside the private ranges,
+  # so a request that reaches the application directly cannot forge one.
+  forward-headers-strategy: NATIVE
+
 spring:
   application:
     name: nido

@@ -18,7 +18,6 @@ public record NidoProperties(
     CookieProperties cookie,
     @Valid SeedProperties seed,
     CorsProperties cors,
-    RateLimitProperties rateLimit,
     @Valid EncryptionProperties encryption,
     SecurityProperties security
 ) {
@@ -47,10 +46,6 @@ public record NidoProperties(
 
     public record CorsProperties(
         @DefaultValue("") List<String> allowedOrigins
-    ) {}
-
-    public record RateLimitProperties(
-        @DefaultValue("") List<String> trustedProxies
     ) {}
 
     public record EncryptionProperties(
