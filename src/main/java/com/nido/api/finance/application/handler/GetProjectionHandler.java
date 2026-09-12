@@ -11,6 +11,7 @@ import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository
 import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -29,18 +30,21 @@ public class GetProjectionHandler implements GetProjectionUseCase {
      */
     private static final int MAX_PROJECTED_OCCURRENCES_PER_SERIES = 100;
 
+    private final GetSpaceTodayUseCase spaceToday;
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionSeriesRepository seriesRepository;
 
-    public GetProjectionHandler(TransactionRepository transactionRepository, RecurringTransactionSeriesRepository seriesRepository) {
+    public GetProjectionHandler(TransactionRepository transactionRepository, RecurringTransactionSeriesRepository seriesRepository,
+                            GetSpaceTodayUseCase spaceToday) {
         this.transactionRepository = transactionRepository;
         this.seriesRepository = seriesRepository;
+        this.spaceToday = spaceToday;
     }
 
     @Override
     @Transactional
     public Projection getProjection(YearMonth month, SpaceMembership caller) {
-        return getProjection(month, caller, LocalDate.now());
+        return getProjection(month, caller, spaceToday.today(caller.spaceId()));
     }
 
     /**

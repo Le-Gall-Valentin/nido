@@ -3,6 +3,7 @@ package com.nido.api.space.domain.model;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,12 +64,10 @@ class SpaceTest {
     }
 
     private static Space personal() {
-        return new Space(UUID.randomUUID(), SpaceType.PERSONAL, "Perso", null,
-            SpaceAppearance.PERSONAL_ACCENT, SpaceAppearance.PERSONAL_GLYPH, UUID.randomUUID(), Instant.now());
+        return new Space(UUID.randomUUID(), SpaceType.PERSONAL, "Perso", null, SpaceAppearance.PERSONAL_ACCENT, SpaceAppearance.PERSONAL_GLYPH, UUID.randomUUID(), ZoneId.of("Europe/Paris"), Instant.now());
     }
 
     private static Space shared() {
-        return new Space(UUID.randomUUID(), SpaceType.SHARED, "Chez Valentin", "Notre appartement à trois",
-            "#c17a5c", "🏡", null, Instant.now());
+        return new Space(UUID.randomUUID(), SpaceType.SHARED, "Chez Valentin", "Notre appartement à trois", "#c17a5c", "🏡", null, ZoneId.of("Europe/Paris"), Instant.now());
     }
 }

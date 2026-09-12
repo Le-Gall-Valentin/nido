@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.service.SpaceMemberValidator;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
@@ -41,6 +42,8 @@ import static org.mockito.Mockito.when;
 class UpdateRecurringSeriesHandlerTest {
 
     @Mock RecurringTransactionSeriesRepository seriesRepository;
+
+    @Mock GetSpaceTodayUseCase spaceToday;
     @Mock CategoryRepository categoryRepository;
     @Mock SpaceMemberValidator spaceMemberValidator;
     private UpdateRecurringSeriesHandler handler;
@@ -51,7 +54,10 @@ class UpdateRecurringSeriesHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new UpdateRecurringSeriesHandler(seriesRepository, categoryRepository, spaceMemberValidator);
+        // The space's date, not the server's: these handlers validate a backlog against
+        // "today" and the space is what decides which day that is.
+        lenient().when(spaceToday.today(any())).thenReturn(LocalDate.of(2026, 9, 12));
+        handler = new UpdateRecurringSeriesHandler(seriesRepository, categoryRepository, spaceMemberValidator, spaceToday);
         lenient().when(categoryRepository.findById(any())).thenReturn(Optional.of(category));
     }
 

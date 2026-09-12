@@ -12,6 +12,7 @@ import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository
 import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -25,22 +26,25 @@ import java.util.stream.Collectors;
 @ApplicationService
 public class GetFinanceStatsHandler implements GetFinanceStatsUseCase {
 
+    private final GetSpaceTodayUseCase spaceToday;
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionSeriesRepository seriesRepository;
     private final BudgetRepository budgetRepository;
 
     public GetFinanceStatsHandler(
             TransactionRepository transactionRepository, RecurringTransactionSeriesRepository seriesRepository,
-            BudgetRepository budgetRepository) {
+            BudgetRepository budgetRepository,
+                            GetSpaceTodayUseCase spaceToday) {
         this.transactionRepository = transactionRepository;
         this.seriesRepository = seriesRepository;
         this.budgetRepository = budgetRepository;
+        this.spaceToday = spaceToday;
     }
 
     @Override
     @Transactional
     public FinanceStats getStats(YearMonth month, SpaceMembership caller) {
-        return getStats(month, caller, LocalDate.now());
+        return getStats(month, caller, spaceToday.today(caller.spaceId()));
     }
 
     /**

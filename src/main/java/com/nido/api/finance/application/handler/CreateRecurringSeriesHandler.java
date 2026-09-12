@@ -13,6 +13,7 @@ import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -21,21 +22,24 @@ import java.util.List;
 @ApplicationService
 public class CreateRecurringSeriesHandler implements CreateRecurringSeriesUseCase {
 
+    private final GetSpaceTodayUseCase spaceToday;
     private final RecurringTransactionSeriesRepository seriesRepository;
     private final CategoryRepository categoryRepository;
     private final SpaceMemberValidator spaceMemberValidator;
 
     public CreateRecurringSeriesHandler(
-            RecurringTransactionSeriesRepository seriesRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator) {
+            RecurringTransactionSeriesRepository seriesRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator,
+                            GetSpaceTodayUseCase spaceToday) {
         this.seriesRepository = seriesRepository;
         this.categoryRepository = categoryRepository;
         this.spaceMemberValidator = spaceMemberValidator;
+        this.spaceToday = spaceToday;
     }
 
     @Override
     @Transactional
     public RecurringTransactionSeries create(CreateRecurringSeriesCommand command, SpaceMembership caller) {
-        return create(command, caller, LocalDate.now());
+        return create(command, caller, spaceToday.today(caller.spaceId()));
     }
 
     /**

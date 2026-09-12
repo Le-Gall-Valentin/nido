@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.domain.model.CreateTransactionCommand;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.finance.domain.model.RecurrenceInterval;
 import com.nido.api.finance.domain.model.RecurringSeriesSchedule;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
@@ -33,6 +34,8 @@ import static org.mockito.Mockito.when;
 class ListTransactionsHandlerTest {
 
     @Mock TransactionRepository transactionRepository;
+
+    @Mock GetSpaceTodayUseCase spaceToday;
     @Mock RecurringTransactionSeriesRepository seriesRepository;
     private ListTransactionsHandler handler;
     private final UUID spaceId = UUID.randomUUID();
@@ -40,7 +43,7 @@ class ListTransactionsHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new ListTransactionsHandler(transactionRepository, seriesRepository);
+        handler = new ListTransactionsHandler(transactionRepository, seriesRepository, spaceToday);
     }
 
     private SpaceMembership membership() {

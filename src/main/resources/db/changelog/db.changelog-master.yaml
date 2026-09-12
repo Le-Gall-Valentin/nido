@@ -140,3 +140,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/047-index-foreign-keys.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/048-add-space-timezone.yaml
+      relativeToChangelogFile: false

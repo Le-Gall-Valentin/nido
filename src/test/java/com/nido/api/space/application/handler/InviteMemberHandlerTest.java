@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -166,10 +167,10 @@ class InviteMemberHandlerTest {
     }
 
     private Space sharedSpace() {
-        return new Space(spaceId, SpaceType.SHARED, "Chez Valentin", null, "#4a7fa0", "🏠", null, Instant.now());
+        return new Space(spaceId, SpaceType.SHARED, "Chez Valentin", null, "#4a7fa0", "🏠", null, ZoneId.of("Europe/Paris"), Instant.now());
     }
 
     private Space personalSpace() {
-        return new Space(spaceId, SpaceType.PERSONAL, "Perso", null, "#8a7d6b", "👤", callerId, Instant.now());
+        return new Space(spaceId, SpaceType.PERSONAL, "Perso", null, "#8a7d6b", "👤", callerId, ZoneId.of("Europe/Paris"), Instant.now());
     }
 }

@@ -2,6 +2,7 @@ package com.nido.api.tasks.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.tasks.application.port.in.UpdateRecurringTaskSeriesUseCase;
 import com.nido.api.tasks.application.service.TaskSpaceMemberValidator;
 import com.nido.api.tasks.domain.model.RecurrenceScheduler;
@@ -16,18 +17,21 @@ import java.time.LocalDate;
 @ApplicationService
 public class UpdateRecurringTaskSeriesHandler implements UpdateRecurringTaskSeriesUseCase {
 
+    private final GetSpaceTodayUseCase spaceToday;
     private final RecurringTaskSeriesRepository seriesRepository;
     private final TaskSpaceMemberValidator spaceMemberValidator;
 
-    public UpdateRecurringTaskSeriesHandler(RecurringTaskSeriesRepository seriesRepository, TaskSpaceMemberValidator spaceMemberValidator) {
+    public UpdateRecurringTaskSeriesHandler(RecurringTaskSeriesRepository seriesRepository, TaskSpaceMemberValidator spaceMemberValidator,
+                            GetSpaceTodayUseCase spaceToday) {
         this.seriesRepository = seriesRepository;
         this.spaceMemberValidator = spaceMemberValidator;
+        this.spaceToday = spaceToday;
     }
 
     @Override
     @Transactional
     public RecurringTaskSeries update(UpdateRecurringTaskSeriesCommand command, SpaceMembership caller) {
-        return update(command, caller, LocalDate.now());
+        return update(command, caller, spaceToday.today(caller.spaceId()));
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.nido.api.tasks.application.handler;
 
 import com.nido.api.space.domain.model.SpaceException;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.tasks.application.service.TaskSpaceMemberValidator;
@@ -25,6 +26,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -34,6 +36,8 @@ import static org.mockito.Mockito.when;
 class UpdateRecurringTaskSeriesHandlerTest {
 
     @Mock RecurringTaskSeriesRepository seriesRepository;
+
+    @Mock GetSpaceTodayUseCase spaceToday;
     @Mock TaskSpaceMemberValidator spaceMemberValidator;
     private UpdateRecurringTaskSeriesHandler handler;
     private final UUID spaceId = UUID.randomUUID();
@@ -42,7 +46,10 @@ class UpdateRecurringTaskSeriesHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new UpdateRecurringTaskSeriesHandler(seriesRepository, spaceMemberValidator);
+        // The space's date, not the server's: these handlers validate a backlog against
+        // "today" and the space is what decides which day that is.
+        lenient().when(spaceToday.today(any())).thenReturn(LocalDate.of(2026, 9, 12));
+        handler = new UpdateRecurringTaskSeriesHandler(seriesRepository, spaceMemberValidator, spaceToday);
     }
 
     private SpaceMembership membership(SpaceRole role) {

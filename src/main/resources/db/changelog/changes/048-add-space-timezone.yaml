@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 048-add-space-timezone
+      author: nido
+      comment: >
+        The clock a space keeps. Until now "today" was the server's date, and the server runs in
+        UTC: a household in Paris spent the first two hours of every morning being told it was
+        still yesterday, and a member west of Greenwich spent every evening being told it was
+        already tomorrow. That decides what is due, what is late, and which month the finance page
+        opens on, so it belongs to the space rather than to whichever machine answered.
+
+        Europe/Paris as the default for rows that already exist: they carry no information about
+        where they are, so this is a choice and not a deduction — the right one for this
+        deployment, and changeable per space from the settings. New spaces are seeded with the
+        zone their creator's browser reports instead of inheriting it.
+
+        An IANA identifier, stored as text: it is what the browser reports and what ZoneId parses,
+        and unlike a fixed offset it keeps following daylight saving on its own.
+      changes:
+        - addColumn:
+            tableName: spaces
+            columns:
+              - column:
+                  name: timezone
+                  type: varchar(64)
+                  defaultValue: Europe/Paris
+                  constraints:
+                    nullable: false

@@ -31,6 +31,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.time.ZoneId;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -231,7 +232,8 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
 
     private static Space toDomain(SpaceEntity e) {
         return new Space(e.getId(), e.getType(), e.getName(), e.getDescription(),
-            e.getAccent(), e.getGlyph(), e.getPersonalOwnerId(), e.getCreatedAt());
+            e.getAccent(), e.getGlyph(), e.getPersonalOwnerId(),
+            ZoneId.of(e.getTimezone()), e.getCreatedAt());
     }
 
     private static SpaceMembership toDomain(SpaceMemberEntity e) {
