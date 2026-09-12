@@ -163,3 +163,36 @@ describe('EditSpaceModal — errors', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 })
+
+describe('EditSpaceModal — timezone', () => {
+  it('preselects the calendar the space keeps', () => {
+    const { getByLabelText } = setup()
+
+    expect((getByLabelText('edit.timezone') as HTMLSelectElement).value).toBe('Europe/Paris')
+  })
+
+  it('sends only the changed timezone', async () => {
+    // The move this exists for: somebody who created their space from one country and now lives in
+    // another. Nothing else on the form changed, so nothing else may be sent.
+    const { getByLabelText, getByText, onUpdate } = setup()
+
+    fireEvent.change(getByLabelText('edit.timezone'), { target: { value: 'America/Toronto' } })
+    fireEvent.click(getByText('edit.submit'))
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith({ timezone: 'America/Toronto' }))
+  })
+
+  it('submit stays disabled while the timezone is untouched', () => {
+    const { getByText } = setup()
+
+    expect((getByText('edit.submit') as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('keeps offering the zone a space already has, even one the short list forgot', () => {
+    // A household somewhere the list does not name must not have its zone silently replaced by
+    // the first option the moment the form opens.
+    const { getByLabelText } = setup({ space: { ...SPACE, timezone: 'Pacific/Noumea' } })
+
+    expect((getByLabelText('edit.timezone') as HTMLSelectElement).value).toBe('Pacific/Noumea')
+  })
+})

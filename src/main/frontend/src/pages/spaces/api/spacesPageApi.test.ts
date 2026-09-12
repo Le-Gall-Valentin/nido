@@ -110,8 +110,9 @@ describe('listReceivedInvitations', () => {
 describe('createSpace', () => {
   it('POST /spaces with body', async () => {
     mock.post.mockResolvedValue({ data: SPACE_DETAIL })
-    await spacesPageApi.createSpace({ name: 'Chez nous', description: 'x', accent: '#c17a5c', glyph: '🏡' })
-    expect(mock.post).toHaveBeenCalledWith('/spaces', { name: 'Chez nous', description: 'x', accent: '#c17a5c', glyph: '🏡' })
+    await spacesPageApi.createSpace({ name: 'Chez nous', description: 'x', accent: '#c17a5c', glyph: '🏡', timezone: 'Europe/Paris' })
+    expect(mock.post).toHaveBeenCalledWith('/spaces',
+      { name: 'Chez nous', description: 'x', accent: '#c17a5c', glyph: '🏡', timezone: 'Europe/Paris' })
   })
 })
 
@@ -127,6 +128,14 @@ describe('updateSpace', () => {
     await spacesPageApi.updateSpace('s-1', { name: 'New name', description: '' })
     // accent and glyph are absent from the input and must not appear in the body at all.
     expect(mock.patch).toHaveBeenCalledWith('/spaces/s-1', { name: 'New name', description: '' })
+  })
+
+  it('sends the timezone when it is the only thing that changed', async () => {
+    // This body is assembled field by field rather than forwarded whole, so a new field is dropped
+    // in silence unless it is named here. The settings form was sending it and nothing arrived.
+    mock.patch.mockResolvedValue({ status: 204 })
+    await spacesPageApi.updateSpace('s-1', { timezone: 'America/Toronto' })
+    expect(mock.patch).toHaveBeenCalledWith('/spaces/s-1', { timezone: 'America/Toronto' })
   })
 
   it('throws PersonalSpaceImmutableError on 422', async () => {

@@ -8,10 +8,14 @@ export interface CreateSpaceInput {
   description?: string
   accent: string
   glyph: string
+  /** IANA identifier. The creator's own zone by default, so a household starts on its calendar. */
+  timezone: string
 }
 
 /** Partial update: a field absent from this object is left unchanged by the backend. */
 export interface UpdateSpaceInput {
+  /** IANA identifier. Omitted leaves the space's calendar alone. */
+  timezone?: string
   name?: string
   description?: string
   accent?: string

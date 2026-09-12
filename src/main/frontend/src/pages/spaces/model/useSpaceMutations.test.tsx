@@ -61,10 +61,11 @@ describe('useCreateSpace', () => {
     const invalidate = spy(queryClient)
     const { result } = renderHook(() => useCreateSpace(), { wrapper })
 
-    result.current.mutate({ name: 'Chez nous', accent: '#c17a5c', glyph: '🏡' })
+    result.current.mutate({ name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', timezone: 'Europe/Paris' })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(api.createSpace).toHaveBeenCalledWith({ name: 'Chez nous', accent: '#c17a5c', glyph: '🏡' })
+    expect(api.createSpace).toHaveBeenCalledWith(
+      { name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', timezone: 'Europe/Paris' })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: [SPACES_QUERY_KEY] })
   })
 })
