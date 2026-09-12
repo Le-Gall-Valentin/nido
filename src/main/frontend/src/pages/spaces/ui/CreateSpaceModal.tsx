@@ -1,11 +1,10 @@
 import { useRef, useState } from 'react'
-import { browserTimezone } from '@/shared/lib'
+import { browserTimezone , timezoneChoices} from '@/shared/lib'
 import { useTranslation } from 'react-i18next'
 import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { SPACE_ACCENTS, SPACE_GLYPHS, type SpaceDetail } from '@/entities/space'
 import type { CreateSpaceInput } from '../model/ISpacesPageApi'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
-import { timezoneChoices } from '../lib/timezoneChoices'
 import { AppearancePicker, NAME_MAX, DESCRIPTION_MAX } from './AppearancePicker'
 
 interface CreateSpaceModalProps {

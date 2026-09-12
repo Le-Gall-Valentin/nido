@@ -29,4 +29,16 @@ public record UpdateSpaceCommand(
             SpaceAppearance.ensureValidGlyph(glyph);
         }
     }
+
+    /**
+     * Whether this update touches what the space <em>is</em>, as opposed to how it behaves.
+     *
+     * <p>The personal space has no identity to change — one member, a fixed name, a fixed
+     * appearance — and that is deliberate. It still keeps a calendar like any other space, and its
+     * owner is the only person that calendar concerns, so refusing every update was the coarse
+     * version of the rule rather than the rule.
+     */
+    public boolean changesIdentity() {
+        return name != null || description != null || accent != null || glyph != null;
+    }
 }

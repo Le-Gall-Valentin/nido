@@ -17,6 +17,7 @@ const AdminUsersPage = lazy(() => import('@/pages/admin-users'))
 const AccountProfilePage = lazy(() => import('@/pages/account'))
 const AccountSecurityPage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountSecurityPage })))
 const AccountPreferencesPage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountPreferencesPage })))
+const AccountPersonalSpacePage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountPersonalSpacePage })))
 const SpacesPage = lazy(() => import('@/pages/spaces'))
 const SpaceMembersPage = lazy(() => import('@/pages/spaces').then((m) => ({ default: m.SpaceMembersPage })))
 const KitchenRecipesPage = lazy(() => import('@/pages/kitchen'))
@@ -70,6 +71,7 @@ export function AppRouter() {
             <Route path="profile" element={<AccountProfilePage />} />
             <Route path="security" element={<AccountSecurityPage />} />
             <Route path="preferences" element={<AccountPreferencesPage />} />
+            <Route path="personal-space" element={<AccountPersonalSpacePage />} />
           </Route>
 
           <Route path={ROUTES.SPACES} element={<SpacesPage />} />

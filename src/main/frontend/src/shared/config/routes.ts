@@ -12,6 +12,7 @@ export const ROUTES = {
   ACCOUNT_PROFILE: '/account/profile',
   ACCOUNT_SECURITY: '/account/security',
   ACCOUNT_PREFERENCES: '/account/preferences',
+  ACCOUNT_PERSONAL_SPACE: '/account/personal-space',
 
   // Spaces (contexts)
   SPACES: '/spaces',

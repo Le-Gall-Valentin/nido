@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { formatTimezone } from '@/shared/lib'
 import { useQueryClient } from '@tanstack/react-query'
-import { LogOut, Pencil, Trash2, UserPlus } from 'lucide-react'
+import { Clock, LogOut, Pencil, Trash2, UserPlus } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { Alert, Button, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { SpaceAvatar, SpaceRolePill, canManageSpace, isOwner, isPersonal, useSpaceMembers, type SpaceMember } from '@/entities/space'
@@ -115,11 +116,13 @@ export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSe
           <div>
             <h1 className="text-[26px] font-semibold tracking-tight text-fg-0">{space.name}</h1>
             {space.description && <p className="mt-0.5 text-sm text-fg-2">{space.description}</p>}
-            {myRole && (
-              <div className="mt-1.5">
-                <SpaceRolePill role={myRole} label={t(`space:role.${myRole}`)} />
-              </div>
-            )}
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              {myRole && <SpaceRolePill role={myRole} label={t(`space:role.${myRole}`)} />}
+              <span className="inline-flex items-center gap-1 text-[12.5px] text-fg-3" title={space.timezone}>
+                <Clock className="size-3.5" aria-hidden="true" />
+                {formatTimezone(space.timezone)}
+              </span>
+            </div>
           </div>
         </div>
 

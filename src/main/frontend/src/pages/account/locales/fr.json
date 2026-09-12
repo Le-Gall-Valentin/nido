@@ -4,9 +4,22 @@
   "subtitle": "Gérez vos informations personnelles et votre mot de passe.",
   "member_since": "Membre depuis le {{date}}",
   "pages": {
-    "profile": { "title": "Profil", "subtitle": "Vos informations personnelles et votre présence dans l'organisation." },
-    "security": { "title": "Sécurité", "subtitle": "Double authentification et mot de passe." },
-    "preferences": { "title": "Préférences", "subtitle": "Apparence et langue de l'interface." }
+    "profile": {
+      "title": "Profil",
+      "subtitle": "Vos informations personnelles et votre présence dans l'organisation."
+    },
+    "security": {
+      "title": "Sécurité",
+      "subtitle": "Double authentification et mot de passe."
+    },
+    "preferences": {
+      "title": "Préférences",
+      "subtitle": "Apparence et langue de l'interface."
+    },
+    "personal_space": {
+      "title": "Espace personnel",
+      "subtitle": "Les réglages de votre espace personnel, celui que vous ne partagez avec personne."
+    }
   },
   "profile": {
     "title": "Informations personnelles",
@@ -64,5 +77,17 @@
     "theme_dark": "Sombre",
     "theme_system": "Système",
     "language_label": "Langue"
+  },
+  "personal_space": {
+    "title": "Fuseau horaire",
+    "subtitle": "Décide de ce qu'« aujourd'hui » veut dire dans votre espace personnel : ce qui est dû, ce qui est en retard, quel mois s'affiche.",
+    "timezone": "Fuseau horaire",
+    "timezone_hint": "Ne concerne que votre espace personnel. Les contextes partagés gardent le leur, réglable dans leurs propres paramètres.",
+    "submit": "Enregistrer"
+  },
+  "timezone_suggestion": {
+    "body": "Votre navigateur indique {{detected}}, mais votre espace personnel est réglé sur {{current}}. Voulez-vous le déplacer ?",
+    "accept": "Passer à {{detected}}",
+    "dismiss": "Non merci"
   }
 }

@@ -47,3 +47,23 @@ describe('SpaceListSection — create action', () => {
     expect(onCreateClick).toHaveBeenCalledOnce()
   })
 })
+
+describe('SpaceListSection — timezone', () => {
+  it('shows which calendar each space keeps', () => {
+    // Without this there is nowhere in the application that says it, so nobody can notice a space
+    // is on the wrong one — which is exactly how a household ends up reading yesterday's tasks.
+    render(<SpaceListSection spaces={[PERSONAL, { ...SHARED, timezone: 'America/Toronto' }]}
+      onSelect={vi.fn()} onCreateClick={vi.fn()} />)
+
+    expect(screen.getByText(/Paris/)).toBeTruthy()
+    expect(screen.getByText(/Toronto/)).toBeTruthy()
+  })
+
+  it('shows the place rather than the database path', () => {
+    render(<SpaceListSection spaces={[{ ...PERSONAL, timezone: 'America/Los_Angeles' }]}
+      onSelect={vi.fn()} onCreateClick={vi.fn()} />)
+
+    expect(screen.getByText(/Los Angeles/)).toBeTruthy()
+    expect(screen.queryByText(/America\//)).toBeNull()
+  })
+})

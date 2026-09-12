@@ -223,3 +223,16 @@ describe('SpaceDetailSection — member actions', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toBeDefined())
   })
 })
+
+describe('SpaceDetailSection — timezone', () => {
+  it('says which calendar the space keeps', async () => {
+    // The detail is where somebody goes to check a space's settings, so it is where they should see
+    // that the calendar is wrong before opening the form to fix it.
+    const api = fakeApi({
+      getSpaceDetail: vi.fn().mockResolvedValue({ ...SHARED_DETAIL, timezone: 'America/Toronto' }),
+    })
+    renderSection(api)
+
+    expect(await screen.findByText(/Toronto/)).toBeTruthy()
+  })
+})

@@ -4,9 +4,22 @@
   "subtitle": "Manage your personal information and password.",
   "member_since": "Member since {{date}}",
   "pages": {
-    "profile": { "title": "Profile", "subtitle": "Your personal information and presence in the organisation." },
-    "security": { "title": "Security", "subtitle": "Two-factor authentication and password." },
-    "preferences": { "title": "Preferences", "subtitle": "Interface appearance and language." }
+    "profile": {
+      "title": "Profile",
+      "subtitle": "Your personal information and presence in the organisation."
+    },
+    "security": {
+      "title": "Security",
+      "subtitle": "Two-factor authentication and password."
+    },
+    "preferences": {
+      "title": "Preferences",
+      "subtitle": "Interface appearance and language."
+    },
+    "personal_space": {
+      "title": "Personal space",
+      "subtitle": "Settings for the space you share with nobody."
+    }
   },
   "profile": {
     "title": "Personal information",
@@ -64,5 +77,17 @@
     "theme_dark": "Dark",
     "theme_system": "System",
     "language_label": "Language"
+  },
+  "personal_space": {
+    "title": "Time zone",
+    "subtitle": "Decides what \"today\" means in your personal space: what is due, what is late, which month is shown.",
+    "timezone": "Time zone",
+    "timezone_hint": "Applies to your personal space only. Shared spaces keep their own, set in their own settings.",
+    "submit": "Save"
+  },
+  "timezone_suggestion": {
+    "body": "Your browser says {{detected}}, but your personal space keeps {{current}}. Move it?",
+    "accept": "Switch to {{detected}}",
+    "dismiss": "No thanks"
   }
 }

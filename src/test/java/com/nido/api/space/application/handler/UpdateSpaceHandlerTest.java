@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -72,6 +73,41 @@ class UpdateSpaceHandlerTest {
         assertThatThrownBy(() -> handler.update(elsewhere, membership(SpaceRole.OWNER)))
             .isInstanceOf(SpaceException.NotAMember.class);
         verify(spaceCommandPort, never()).update(elsewhere);
+    }
+
+    @Test
+    void a_personal_space_accepts_a_change_of_calendar() {
+        // It has no name, colour or glyph to change — that is deliberate and stays so — but it keeps
+        // a calendar like any other space, and its owner is the only person that calendar concerns.
+        // Refusing every update was the coarse version of "its identity is fixed".
+        when(spaceRepository.findById(spaceId)).thenReturn(Optional.of(personal()));
+        UpdateSpaceCommand zoneOnly = new UpdateSpaceCommand(
+            spaceId, null, null, null, null, ZoneId.of("America/Toronto"));
+
+        handler.update(zoneOnly, membership(SpaceRole.OWNER));
+
+        verify(spaceCommandPort).update(zoneOnly);
+    }
+
+    @Test
+    void a_personal_space_still_refuses_a_change_of_identity() {
+        when(spaceRepository.findById(spaceId)).thenReturn(Optional.of(personal()));
+
+        assertThatThrownBy(() -> handler.update(command(), membership(SpaceRole.OWNER)))
+            .isInstanceOf(SpaceException.PersonalSpaceImmutable.class);
+        verify(spaceCommandPort, never()).update(any());
+    }
+
+    @Test
+    void a_personal_space_refuses_a_rename_hidden_behind_a_zone_change() {
+        // The one that matters: allowing the zone must not open a door for the rest of the payload.
+        when(spaceRepository.findById(spaceId)).thenReturn(Optional.of(personal()));
+        UpdateSpaceCommand smuggled = new UpdateSpaceCommand(
+            spaceId, "Renamed", null, null, null, ZoneId.of("America/Toronto"));
+
+        assertThatThrownBy(() -> handler.update(smuggled, membership(SpaceRole.OWNER)))
+            .isInstanceOf(SpaceException.PersonalSpaceImmutable.class);
+        verify(spaceCommandPort, never()).update(any());
     }
 
     private UpdateSpaceCommand command() {
