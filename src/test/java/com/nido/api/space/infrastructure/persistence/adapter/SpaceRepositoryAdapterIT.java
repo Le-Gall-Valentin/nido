@@ -21,6 +21,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 
 import java.util.List;
+import java.time.ZoneId;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -90,7 +91,7 @@ class SpaceRepositoryAdapterIT {
     @Test
     void a_shared_space_cannot_have_two_owners() {
         Space shared = adapter.createShared(
-            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice));
+            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
         adapter.add(shared.id(), alice, SpaceRole.OWNER);
 
         assertThatThrownBy(() -> adapter.add(shared.id(), bob, SpaceRole.OWNER))
@@ -100,7 +101,7 @@ class SpaceRepositoryAdapterIT {
     @Test
     void the_same_user_cannot_join_twice() {
         Space shared = adapter.createShared(
-            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice));
+            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
         adapter.add(shared.id(), alice, SpaceRole.OWNER);
 
         assertThatThrownBy(() -> adapter.add(shared.id(), alice, SpaceRole.MEMBER))
@@ -112,7 +113,7 @@ class SpaceRepositoryAdapterIT {
         Space personal = adapter.createPersonal(alice);
         adapter.add(personal.id(), alice, SpaceRole.OWNER);
         Space shared = adapter.createShared(
-            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice));
+            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
         adapter.add(shared.id(), alice, SpaceRole.OWNER);
         adapter.add(shared.id(), bob, SpaceRole.MEMBER);
 
@@ -130,7 +131,7 @@ class SpaceRepositoryAdapterIT {
     @Test
     void deleting_a_space_cascades_to_its_members() {
         Space shared = adapter.createShared(
-            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice));
+            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
         adapter.add(shared.id(), alice, SpaceRole.OWNER);
 
         adapter.delete(shared.id());
@@ -142,7 +143,7 @@ class SpaceRepositoryAdapterIT {
     @Test
     void findSuccessor_prefers_the_oldest_admin_then_member_then_viewer() {
         Space shared = adapter.createShared(
-            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice));
+            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
         adapter.add(shared.id(), alice, SpaceRole.OWNER);
         UUID viewer = saveUser("viewer");
         UUID member = saveUser("member");
@@ -167,7 +168,7 @@ class SpaceRepositoryAdapterIT {
     @Test
     void findSuccessor_falls_back_to_a_lone_viewer_rather_than_leaving_nobody() {
         Space shared = adapter.createShared(
-            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice));
+            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
         adapter.add(shared.id(), alice, SpaceRole.OWNER);
         UUID viewer = saveUser("viewer");
         adapter.add(shared.id(), viewer, SpaceRole.VIEWER);

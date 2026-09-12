@@ -42,7 +42,7 @@ class CreateSharedSpaceHandlerTest {
         when(spaceCommandPort.createShared(any(CreateSharedSpaceCommand.class))).thenReturn(created);
 
         Space result = handler.create(
-            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", creator));
+            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", creator, ZoneId.of("Europe/Paris")));
 
         assertThat(result).isEqualTo(created);
         verify(spaceMembershipPort).add(created.id(), creator, SpaceRole.OWNER);

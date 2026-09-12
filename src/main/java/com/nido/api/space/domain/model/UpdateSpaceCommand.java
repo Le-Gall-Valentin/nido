@@ -1,5 +1,6 @@
 package com.nido.api.space.domain.model;
 
+import java.time.ZoneId;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -13,7 +14,9 @@ public record UpdateSpaceCommand(
     String name,
     String description,
     String accent,
-    String glyph
+    String glyph,
+    /** Absent leaves the space's calendar alone — see the class comment on partial updates. */
+    ZoneId timezone
 ) {
     public UpdateSpaceCommand {
         Objects.requireNonNull(spaceId, "spaceId");

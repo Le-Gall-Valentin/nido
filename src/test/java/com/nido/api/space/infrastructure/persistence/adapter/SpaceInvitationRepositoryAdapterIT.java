@@ -24,6 +24,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 
 import java.time.Duration;
+import java.time.ZoneId;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -174,7 +175,7 @@ class SpaceInvitationRepositoryAdapterIT {
 
     private Space createSpace(UUID owner) {
         Space created = spaceAdapter.createShared(
-            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", owner));
+            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", owner, ZoneId.of("Europe/Paris")));
         spaceAdapter.add(created.id(), owner, SpaceRole.OWNER);
         return created;
     }

@@ -54,6 +54,9 @@ public class SpaceExceptionHandler {
 
             case SpaceException.PersonalSpaceImmutable ex -> response(422, ex, "The personal space cannot be renamed, shared or deleted.");
             case SpaceException.InvalidAppearance ex -> response(422, ex, "Accent or glyph outside the allowed palette.");
+            // 422 like the one above it: the syntax is fine, the value simply names nowhere.
+            case SpaceException.InvalidTimezone ex -> response(422, ex,
+                "Timezone must be an IANA region identifier such as Europe/Paris.");
             case SpaceException.InvalidSpaceName ex -> response(422, ex, "Space name must be between 1 and 80 characters.");
             case SpaceException.InvalidSpaceDescription ex -> response(422, ex, "Space description must not exceed 280 characters.");
             case SpaceException.OwnerRoleNotAssignable ex -> response(422, ex, "The owner role is only reachable through an ownership transfer.");

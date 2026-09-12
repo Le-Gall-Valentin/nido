@@ -129,6 +129,7 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
         e.setAccent(command.accent());
         e.setGlyph(command.glyph());
         e.setCreatedBy(command.creatorUserId());
+        e.setTimezone(command.timezone().getId());
         return save(e);
     }
 
@@ -142,6 +143,7 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
         if (command.description() != null) e.setDescription(command.description().isEmpty() ? null : command.description());
         if (command.accent() != null) e.setAccent(command.accent());
         if (command.glyph() != null) e.setGlyph(command.glyph());
+        if (command.timezone() != null) e.setTimezone(command.timezone().getId());
         save(e);
     }
 
