@@ -9,11 +9,15 @@ import importPlugin from 'eslint-plugin-import'
 export default tseslint.config(
   { ignores: ['dist'] },
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked],
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+      // Type-aware linting: this is what makes no-floating-promises and no-misused-promises work at
+      // all, and those two are the reason the preset was switched on — a mutation whose rejection
+      // nobody handles fails in silence, which is a bug class this project has already shipped twice.
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
     plugins: {
       'react-hooks': reactHooks,
@@ -22,6 +26,29 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+    },
+  },
+  {
+    // Test files, and only test files. Every rule switched off here fires on a vitest idiom rather
+    // than on a defect: `expect(api.listMembers)` passes a method around on purpose (unbound-method),
+    // `vi.fn()` is typed `any` at its edges so anything read off a mock is "unsafe", and a stub is
+    // often `async` with nothing to await. The two rules the preset was turned on for —
+    // no-floating-promises and no-misused-promises — stay on everywhere, and they report nothing here.
+    files: ['**/*.test.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/restrict-template-expressions': 'off',
+      // Off for a different reason, and the reason matters: here this rule and `tsc` disagree.
+      // ESLint's program types Testing Library's getByLabelText as the asserted element, so it calls
+      // `as HTMLSelectElement` redundant and its autofix removes it — after which `tsc -b` fails on
+      // `.value does not exist on type HTMLElement`. Trusting the compiler over the linter.
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
     },
   },
   {
