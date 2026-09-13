@@ -10,9 +10,14 @@
  */
 export function formatTimezone(timezone: string): string {
   const segments = timezone.split('/')
-  const place = segments[segments.length - 1].replace(/_/g, ' ')
-  if (segments.length < 3) {
+  // split never returns an empty array, and the three-segment branch below is the only reader of
+  // the middle one — both facts the compiler cannot see through an index, so they are read as
+  // values here rather than asserted away at the point of use.
+  const [, region, city] = segments
+  const last = city ?? region ?? timezone
+  const place = last.replace(/_/g, ' ')
+  if (segments.length < 3 || region === undefined) {
     return place
   }
-  return `${place} (${segments[1].replace(/_/g, ' ')})`
+  return `${place} (${region.replace(/_/g, ' ')})`
 }
