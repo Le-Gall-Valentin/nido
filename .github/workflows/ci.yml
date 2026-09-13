@@ -50,3 +50,15 @@ jobs:
 
       - name: Run tests
         run: npx vitest run
+
+      # Two audits, because they answer different questions and deserve different verdicts.
+      # What ships is the one that can fail the build: a vulnerability in a runtime dependency
+      # reaches users. Everything flagged today is build tooling — vitest, browserslist — which
+      # never leaves the machine, so it is reported as a warning instead of blocking delivery for
+      # something nobody can exploit. Both are at zero as of this commit.
+      - name: Audit shipped dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit build tooling (informational)
+        run: npm audit --audit-level=high
+        continue-on-error: true
