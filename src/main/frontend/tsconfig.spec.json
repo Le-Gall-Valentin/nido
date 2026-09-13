@@ -1,0 +1,23 @@
+{
+  "//": [
+    "The tests, typechecked with the same settings as the application except one.",
+    "",
+    "noUncheckedIndexedAccess is off here. In shipped code an index that might be missing is a",
+    "defect waiting to happen, which is why it is on next door — it found a rounding loop writing",
+    "past the end of its array. In a test the same read is an assertion: getAllByText(...)[0] on an",
+    "empty result, or mock.calls[0] when nothing was called, fails the test loudly and immediately,",
+    "which is the outcome the flag exists to force. Turning it on here would have meant 175 guards",
+    "across 26 files, each one narrowing something the test had just asserted.",
+    "",
+    "This is a judgement, not a technical limit. A typed helper for the two patterns would let the",
+    "flag cover tests too; it was not worth 175 edits today."
+  ],
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.spec.tsbuildinfo",
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["src"],
+  "//exclude": "Overridden to empty on purpose: extends inherits the parent's exclude, and inheriting it here would leave the test files in no project at all — typechecked by nothing, which is worse than typechecked leniently.",
+  "exclude": []
+}

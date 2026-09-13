@@ -13,7 +13,9 @@ const EXCLUDED_EXPORTS = new Set(['createLucideIcon', 'icons', 'default'])
  * human-recognizable entry per icon.
  */
 export const ALL_ICON_NAMES: string[] = (() => {
-  const groups = new Map<unknown, string[]>()
+  // A non-empty tuple, because that is what a group is: it is created with one alias and only ever
+  // grows. Stated in the type, the first element needs no check at the point of use.
+  const groups = new Map<unknown, [string, ...string[]]>()
   for (const [name, value] of Object.entries(LucideIcons)) {
     if (!/^[A-Z]/.test(name) || EXCLUDED_EXPORTS.has(name)) continue
     if (typeof value !== 'object' && typeof value !== 'function') continue
@@ -23,7 +25,10 @@ export const ALL_ICON_NAMES: string[] = (() => {
   }
   const names = Array.from(groups.values(), (aliases) => {
     const canonical = aliases.find((n) => !n.startsWith('Lucide') && !n.endsWith('Icon'))
-    return canonical ?? [...aliases].sort((a, b) => a.length - b.length)[0]
+    if (canonical) return canonical
+    // Reduce rather than sort-and-take-first: it starts from an element that exists, so the result
+    // is a string without the compiler having to trust an index.
+    return aliases.reduce((shortest, n) => (n.length < shortest.length ? n : shortest))
   })
   return names.sort()
 })()

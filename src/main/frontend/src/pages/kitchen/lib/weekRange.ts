@@ -22,6 +22,14 @@ export function toISODate(date: Date): string {
 }
 
 /** The seven consecutive days starting at `monday`. */
-export function weekDates(monday: Date): Date[] {
-  return Array.from({ length: 7 }, (_, i) => addDays(monday, i))
+/** A week, as the seven days it is — so the first and the last need no checking. */
+export type WeekDates = readonly [Date, Date, Date, Date, Date, Date, Date]
+
+export function weekDates(monday: Date): WeekDates {
+  // Written out rather than generated: Array.from cannot produce a tuple, and the length is the
+  // whole point — callers read days[0] and days[6] to bound the query.
+  return [
+    addDays(monday, 0), addDays(monday, 1), addDays(monday, 2), addDays(monday, 3),
+    addDays(monday, 4), addDays(monday, 5), addDays(monday, 6),
+  ]
 }

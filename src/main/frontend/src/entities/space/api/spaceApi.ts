@@ -153,13 +153,13 @@ function handleError(error: unknown): never {
       throw new SpaceNotAccessibleError()
     }
     if (status === 409) {
-      const title = titleOf(error)
-      if (title && title in CONFLICT_TITLES) CONFLICT_TITLES[title]()
+      const raise = CONFLICT_TITLES[titleOf(error) ?? '']
+      if (raise) raise()
       throw new ServerError()
     }
     if (status === 422) {
-      const title = titleOf(error)
-      if (title && title in UNPROCESSABLE_TITLES) UNPROCESSABLE_TITLES[title]()
+      const raise = UNPROCESSABLE_TITLES[titleOf(error) ?? '']
+      if (raise) raise()
       throw new ServerError()
     }
     if (status !== undefined) throw new ServerError()

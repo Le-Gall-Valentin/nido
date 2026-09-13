@@ -27,13 +27,21 @@ export function resolveContributionShares(
   if (customShares === null) {
     return contributorIds.map((memberId) => ({ memberId, shareAmount: null }))
   }
-  const shares = contributorIds.map((memberId) => customShares[memberId])
-  if (shares.some((share) => share === undefined)) {
-    return null
+  // Built once and narrowed here rather than checked with .some() and read again: a missing share
+  // and the sum are two questions about the same list, and looking it up twice is what let the
+  // second read be typed as possibly undefined while the first had already ruled that out.
+  const contributions: ContributionInput[] = []
+  let sum = 0
+  for (const memberId of contributorIds) {
+    const shareAmount = customShares[memberId]
+    if (shareAmount === undefined) {
+      return null
+    }
+    sum += shareAmount
+    contributions.push({ memberId, shareAmount })
   }
-  const sum = shares.reduce((total, share) => total + share, 0)
   if (toCents(sum) !== toCents(amount)) {
     return null
   }
-  return contributorIds.map((memberId) => ({ memberId, shareAmount: customShares[memberId] }))
+  return contributions
 }
