@@ -5,6 +5,8 @@
     "unexpected": "Une erreur inattendue est survenue.",
     "retry": "Réessayer",
     "reload": "Recharger la page",
+    "details": "Détails techniques",
+    "copy_details": "Copier le détail",
     "spaces_unavailable": "Impossible de charger vos contextes. Vérifiez votre connexion et réessayez."
   },
   "transfer": {

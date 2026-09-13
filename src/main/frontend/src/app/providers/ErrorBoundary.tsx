@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next'
 
 const MAX_RETRIES = 2
 
-function ErrorFallback({ canRetry, onReset }: { canRetry: boolean; onReset: () => void }) {
+function ErrorFallback({ canRetry, onReset, error }: { canRetry: boolean; onReset: () => void; error: Error | null }) {
   const { t } = useTranslation('common')
   const btnRef = useRef<HTMLButtonElement>(null)
+  const reason = error ? `${error.name}: ${error.message}` : null
 
   useEffect(() => {
     btnRef.current?.focus()
@@ -33,6 +34,26 @@ function ErrorFallback({ canRetry, onReset }: { canRetry: boolean; onReset: () =
           {t('error.reload')}
         </button>
       )}
+
+      {/*
+        Collapsed on purpose: whoever is looking at this screen is told what to do first, and the
+        reason is one click away for whoever ends up debugging it. It is here at all because a user
+        cannot be asked to open devtools — with the name and the message on screen, a screenshot is
+        enough to classify a crash that nothing else records.
+      */}
+      {reason && (
+        <details className="mt-6 w-full max-w-md text-center">
+          <summary className="cursor-pointer text-[11px] text-fg-3">{t('error.details')}</summary>
+          <p className="mt-2 break-words font-mono text-[11px] text-fg-3">{reason}</p>
+          <button
+            type="button"
+            className="mt-2 text-[11px] text-accent underline"
+            onClick={() => void navigator.clipboard?.writeText(reason)}
+          >
+            {t('error.copy_details')}
+          </button>
+        </details>
+      )}
     </main>
   )
 }
@@ -44,19 +65,23 @@ interface Props {
 interface State {
   hasError: boolean
   retryCount: number
+  error: Error | null
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false, retryCount: 0 }
+  state: State = { hasError: false, retryCount: 0, error: null }
 
-  static getDerivedStateFromError(): Partial<State> {
-    return { hasError: true }
+  static getDerivedStateFromError(error: Error): Partial<State> {
+    return { hasError: true, error }
   }
 
+  /**
+   * Logged in every build, not only in a dev one. A crash on a user's machine used to leave nothing
+   * behind — no name, no message, nothing to ask them for — which is how one stayed undiagnosed long
+   * enough for the people hitting it to settle on using the application in a private window instead.
+   */
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    if (import.meta.env.DEV) {
-      console.error('[ErrorBoundary]', error, info.componentStack)
-    }
+    console.error('[ErrorBoundary]', error, info.componentStack)
   }
 
   render() {
@@ -64,7 +89,8 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <ErrorFallback
           canRetry={this.state.retryCount < MAX_RETRIES}
-          onReset={() => this.setState(s => ({ hasError: false, retryCount: s.retryCount + 1 }))}
+          error={this.state.error}
+          onReset={() => this.setState(s => ({ hasError: false, retryCount: s.retryCount + 1, error: null }))}
         />
       )
     }
