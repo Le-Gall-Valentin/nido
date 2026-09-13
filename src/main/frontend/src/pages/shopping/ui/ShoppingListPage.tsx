@@ -1,13 +1,13 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Plus, Trash2, X, Check, GripVertical } from 'lucide-react'
+import { Plus, Trash2, X, Check } from 'lucide-react'
 import {
-  DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors,
+  DndContext, DragOverlay, useDroppable, PointerSensor, useSensor, useSensors,
   type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { Alert, Spinner, Input, Dialog } from '@/shared/ui'
-import { MEASUREMENT_UNITS, MEASUREMENT_UNIT_LABEL_KEY, type MeasurementUnit } from '@/shared/lib'
+import { MEASUREMENT_UNIT_LABEL_KEY } from '@/shared/lib'
 import { useMySpaces } from '@/features/space-switcher'
 import { canWrite } from '@/entities/space'
 import {
@@ -16,6 +16,8 @@ import {
   useAddItem, useUpdateItem, useToggleItemDone, useDeleteItem, useClearDoneItems, useClearAllItems,
   type IShoppingApi, type ShoppingItem,
 } from '@/entities/shopping-list'
+import { ShoppingItemRow } from './ShoppingItemRow'
+import { AddItemForm, type NewItemInput } from './AddItemForm'
 import { resolveItemMove } from './resolveItemMove'
 
 interface ShoppingListPageProps {
@@ -53,10 +55,6 @@ function ShoppingListPageContent() {
 
   const [actionError, setActionError] = useState(false)
   const [quantityError, setQuantityError] = useState(false)
-  const [newItemName, setNewItemName] = useState('')
-  const [newItemQuantity, setNewItemQuantity] = useState('')
-  const [newItemUnit, setNewItemUnit] = useState<MeasurementUnit | ''>('')
-  const [newItemCategoryId, setNewItemCategoryId] = useState('')
   const [newCategoryName, setNewCategoryName] = useState('')
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
@@ -65,6 +63,8 @@ function ShoppingListPageContent() {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
+  // Stable on purpose: a memoised row compares its props, and a fresh arrow per render would make
+  // that comparison fail every time. See ShoppingItemRow for the measurement.
   function formatQuantity(item: ShoppingItem): string | null {
     const parts = [
       item.quantity != null ? String(item.quantity) : null,
@@ -81,28 +81,29 @@ function ShoppingListPageContent() {
     return map
   }, [items])
 
-  const effectiveCategoryId = newItemCategoryId || categories?.[0]?.id || ''
-
-  function runMutation<T>(promise: Promise<T>) {
+  // Stable: the row handlers below are memoised on it, and a fresh function here would undo that.
+  // setActionError is a state setter, so there is nothing else to depend on.
+  const runMutation = useCallback(<T,>(promise: Promise<T>) => {
     setActionError(false)
-    return promise.catch((error) => { setActionError(true); throw error })
-  }
+    return promise.catch((error: unknown) => { setActionError(true); throw error })
+  }, [])
 
-  function handleAddItem() {
-    const name = newItemName.trim()
-    if (!name || !effectiveCategoryId) return
-    const trimmedQuantity = newItemQuantity.trim()
-    const quantity = trimmedQuantity === '' ? null : Number(trimmedQuantity)
-    if (quantity != null && (!Number.isFinite(quantity) || quantity <= 0)) {
-      setQuantityError(true)
-      return
-    }
-    setQuantityError(false)
-    const unit = newItemUnit === '' ? null : newItemUnit
-    runMutation(addItem.mutateAsync({ categoryId: effectiveCategoryId, name, quantity, unit }))
-      .then(() => { setNewItemName(''); setNewItemQuantity(''); setNewItemUnit(''); setNewItemCategoryId(effectiveCategoryId) })
-      .catch(() => {})
-  }
+  // mutateAsync keeps its identity across renders (the mutation object it hangs off does not), so
+  // depending on the function rather than the object is what keeps these two stable.
+  const { mutateAsync: toggleItemDoneAsync } = toggleItemDone
+  const { mutateAsync: deleteItemAsync } = deleteItem
+
+  const handleToggleItem = useCallback((itemId: string) => {
+    runMutation(toggleItemDoneAsync(itemId)).catch(() => {})
+  }, [runMutation, toggleItemDoneAsync])
+
+  const handleDeleteItem = useCallback((itemId: string) => {
+    runMutation(deleteItemAsync(itemId)).catch(() => {})
+  }, [runMutation, deleteItemAsync])
+
+  const { mutateAsync: addItemAsync } = addItem
+  const handleAdd = useCallback((input: NewItemInput) => runMutation(addItemAsync(input)),
+    [runMutation, addItemAsync])
 
   function handleCreateCategory() {
     const name = newCategoryName.trim()
@@ -166,35 +167,11 @@ function ShoppingListPageContent() {
       <p className="mb-4 text-xs text-fg-3">{t('remaining_count', { count: remaining })}</p>
 
       {canWriteHere && (
-        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Input
-            label={t('add_item_placeholder')} srOnlyLabel
-            value={newItemName} onChange={(e) => setNewItemName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleAddItem() }}
-            placeholder={t('add_item_placeholder')} aria-label={t('add_item_placeholder')} className="w-full sm:flex-1"
-          />
-          <div className="flex gap-2">
-            <Input
-              label={t('quantity_label')} srOnlyLabel type="number" min={0}
-              value={newItemQuantity} onChange={(e) => setNewItemQuantity(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAddItem() }}
-              placeholder={t('quantity_placeholder')} aria-label={t('quantity_label')} className="w-20"
-            />
-            <select value={newItemUnit} onChange={(e) => setNewItemUnit(e.target.value as MeasurementUnit | '')}
-              aria-label={t('unit_label')} className="flex-1 rounded-[9px] border border-border bg-bg-1 px-2 py-2 text-xs sm:flex-none">
-              <option value="">{t('unit_none')}</option>
-              {MEASUREMENT_UNITS.map((u) => <option key={u} value={u}>{tCommon(MEASUREMENT_UNIT_LABEL_KEY[u])}</option>)}
-            </select>
-          </div>
-          <select value={effectiveCategoryId} onChange={(e) => setNewItemCategoryId(e.target.value)}
-            aria-label={t('category_label')} className="w-full rounded-[9px] border border-border bg-bg-1 px-2 py-2 text-xs sm:w-auto">
-            {(categories ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <button type="button" onClick={handleAddItem} aria-label={t('add_item')}
-            className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-accent px-3 py-2 text-xs font-semibold text-bg-0 sm:size-9 sm:w-9 sm:shrink-0 sm:p-0">
-            <Plus className="size-4" /> <span className="sm:hidden">{t('add_item')}</span>
-          </button>
-        </div>
+        <AddItemForm
+          categories={categories ?? []}
+          onAdd={handleAdd}
+          onQuantityError={setQuantityError}
+        />
       )}
 
       {(items ?? []).length === 0 ? (
@@ -243,12 +220,9 @@ function ShoppingListPageContent() {
                       {categoryItems.map((item) => (
                         <ShoppingItemRow
                           key={item.id} item={item} canWrite={canWriteHere} quantityLabel={formatQuantity(item)}
-                          onToggleDone={() => { runMutation(toggleItemDone.mutateAsync(item.id)).catch(() => {}) }}
-                          onDelete={() => { runMutation(deleteItem.mutateAsync(item.id)).catch(() => {}) }}
-                          onRequestMove={() => setMovingItem(item)}
-                          moveLabel={t('move_item', { name: item.name })}
-                          toggleLabel={t('toggle_done', { name: item.name })}
-                          deleteLabel={t('delete_item', { name: item.name })}
+                          onToggleDone={handleToggleItem}
+                          onDelete={handleDeleteItem}
+                          onRequestMove={setMovingItem}
                         />
                       ))}
                     </div>
@@ -312,44 +286,6 @@ function CategoryDropZone({ categoryId, children }: CategoryDropZoneProps) {
   return (
     <div ref={setNodeRef} className={`transition-colors ${isOver ? 'bg-accent/10' : ''}`}>
       {children}
-    </div>
-  )
-}
-
-interface ShoppingItemRowProps {
-  item: ShoppingItem
-  canWrite: boolean
-  quantityLabel: string | null
-  onToggleDone: () => void
-  onDelete: () => void
-  onRequestMove: () => void
-  moveLabel: string
-  toggleLabel: string
-  deleteLabel: string
-}
-
-function ShoppingItemRow({
-  item, canWrite, quantityLabel, onToggleDone, onDelete, onRequestMove, moveLabel, toggleLabel, deleteLabel,
-}: ShoppingItemRowProps) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
-  return (
-    <div className={`flex items-center gap-2 border-b border-border px-4 py-2.5 last:border-b-0 ${isDragging ? 'opacity-40' : ''}`}>
-      <button type="button" onClick={onToggleDone} aria-label={toggleLabel} className="grid size-5 place-items-center rounded-md border border-border">
-        {item.done && <Check className="size-3.5 text-accent" />}
-      </button>
-      <span className={`flex-1 text-sm ${item.done ? 'text-fg-4 line-through' : 'text-fg-1'}`}>{item.name}</span>
-      {quantityLabel && <span className="text-xs text-fg-3">{quantityLabel}</span>}
-      {canWrite && (
-        <button ref={setNodeRef} {...listeners} {...attributes} type="button" onClick={onRequestMove}
-          aria-label={moveLabel} className="grid size-6 shrink-0 touch-none place-items-center rounded-md text-fg-3 hover:text-fg-1 active:cursor-grabbing">
-          <GripVertical className="size-4" />
-        </button>
-      )}
-      {canWrite && (
-        <button type="button" onClick={onDelete} aria-label={deleteLabel} className="p-1 text-fg-3 hover:text-status-red">
-          <Trash2 className="size-3.5" />
-        </button>
-      )}
     </div>
   )
 }
