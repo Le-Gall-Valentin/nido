@@ -54,15 +54,20 @@ function fakeMembersApi(): ISpaceMembersApi {
   return { listMembers: vi.fn().mockResolvedValue(MEMBERS) }
 }
 
+const OTHER_SPACE: SpaceSummary = {
+  id: 'space-2', type: 'SHARED', name: 'Colocation', accent: '#5c8ac1', glyph: '🏠',
+  myRole: 'MEMBER', memberCount: 3, timezone: 'Europe/Paris',
+}
+
 function fakeSpacesApi(mySpaces: SpaceSummary[] = [CURRENT_SPACE]): ISpacesApi {
   return { listMySpaces: vi.fn().mockResolvedValue(mySpaces), getSpace: vi.fn() }
 }
 
-function setup(api: TasksApi = fakeApi()) {
+function setup(api: TasksApi = fakeApi(), spaces: SpaceSummary[] = [CURRENT_SPACE]) {
   const queryClient = createTestQueryClient()
   render(
     <QueryClientProvider client={queryClient}>
-      <SpacesApiProvider api={fakeSpacesApi()}>
+      <SpacesApiProvider api={fakeSpacesApi(spaces)}>
         <SpaceMembersApiProvider api={fakeMembersApi()}>
           <MemoryRouter initialEntries={['/s/space-1/organisation/tasks']}>
             <Routes>
@@ -161,6 +166,20 @@ describe('TasksPage', () => {
 
     await waitFor(() => expect(api.changeTaskStatus).toHaveBeenCalledWith('space-1', 't1', 'DONE'))
     expect(screen.queryByText(/blocked_by_subtasks\.message/)).toBeNull()
+  })
+
+  it('moves a task to another context the caller can write to', async () => {
+    // Never covered: the panel that offers the destinations and makes the call was at zero. It also
+    // fetches the writable spaces itself, so this is the only test that exercises that path.
+    const api = fakeApi()
+    setup(api, [CURRENT_SPACE, OTHER_SPACE])
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getAllByText('move')[0])
+    fireEvent.click(await screen.findByText('Colocation'))
+    fireEvent.click(screen.getByText('move_submit'))
+
+    await waitFor(() => expect(api.moveTask).toHaveBeenCalledWith('space-1', 't1', 'space-2'))
   })
 
   it('deletes a task through the confirmation modal', async () => {
