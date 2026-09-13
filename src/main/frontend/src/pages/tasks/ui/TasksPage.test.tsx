@@ -97,15 +97,70 @@ describe('TasksPage', () => {
     await waitFor(() => expect(api.createTask).toHaveBeenCalledWith('space-1', 'Nouvelle tâche', 'MED', null, [], []))
   })
 
-  it('marking a task done with an open subtask is a no-op', async () => {
-    const withSubtask: Task = { ...TASKS[0], subtasks: [{ id: 's1', text: 'A', done: false }] }
-    const api = fakeApi({ listTasks: vi.fn().mockResolvedValue([withSubtask]) })
+  it('marking a task done with open subtasks says so instead of doing nothing', async () => {
+    // The checkbox used to be the mute path: no request, no message, no visible reason. The server
+    // refuses this with a 409, so there is something to say and the card's checkbox is where the
+    // user asks for it.
+    const withSubtasks: Task = {
+      ...TASKS[0],
+      subtasks: [{ id: 's1', text: 'A', done: true }, { id: 's2', text: 'B', done: false }, { id: 's3', text: 'C', done: false }],
+    }
+    const api = fakeApi({ listTasks: vi.fn().mockResolvedValue([withSubtasks]) })
     setup(api)
     await screen.findByText('Prendre RDV')
 
     fireEvent.click(screen.getByLabelText('toggle_done:{"title":"Prendre RDV"}'))
 
+    // Queried by text rather than by role: dnd-kit keeps a role="status" live region of its own on
+    // this page, so the role alone does not name the warning.
+    const warning = await screen.findByText(/blocked_by_subtasks\.message/)
+    expect(warning.textContent).toContain('"title":"Prendre RDV"')
+    expect(warning.textContent).toContain('"count":2')
     expect(api.changeTaskStatus).not.toHaveBeenCalled()
+  })
+
+  it('takes the warning back down once the subtasks are done', async () => {
+    // Read from the tasks themselves rather than frozen when the click happened: a warning that
+    // outlives its reason is the next thing to confuse the user.
+    const withOpenSubtask: Task = { ...TASKS[0], subtasks: [{ id: 's1', text: 'Comparer', done: false }] }
+    const withSubtaskDone: Task = { ...TASKS[0], subtasks: [{ id: 's1', text: 'Comparer', done: true }] }
+    const api = fakeApi({
+      listTasks: vi.fn().mockResolvedValueOnce([withOpenSubtask]).mockResolvedValue([withSubtaskDone]),
+      toggleSubtask: vi.fn().mockResolvedValue(withSubtaskDone),
+    })
+    setup(api)
+    await screen.findByText('Prendre RDV')
+    fireEvent.click(screen.getByLabelText('toggle_done:{"title":"Prendre RDV"}'))
+    await screen.findByText(/blocked_by_subtasks\.message/)
+
+    fireEvent.click(screen.getByText('Comparer'))
+
+    await waitFor(() => expect(screen.queryByText(/blocked_by_subtasks\.message/)).toBeNull())
+  })
+
+  it('lets the warning be dismissed', async () => {
+    const withSubtask: Task = { ...TASKS[0], subtasks: [{ id: 's1', text: 'A', done: false }] }
+    const api = fakeApi({ listTasks: vi.fn().mockResolvedValue([withSubtask]) })
+    setup(api)
+    await screen.findByText('Prendre RDV')
+    fireEvent.click(screen.getByLabelText('toggle_done:{"title":"Prendre RDV"}'))
+    await screen.findByText(/blocked_by_subtasks\.message/)
+
+    fireEvent.click(screen.getByLabelText('blocked_by_subtasks.dismiss'))
+
+    expect(screen.queryByText(/blocked_by_subtasks\.message/)).toBeNull()
+  })
+
+  it('completes a task whose subtasks are all done, and warns about nothing', async () => {
+    const ready: Task = { ...TASKS[0], subtasks: [{ id: 's1', text: 'A', done: true }] }
+    const api = fakeApi({ listTasks: vi.fn().mockResolvedValue([ready]) })
+    setup(api)
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByLabelText('toggle_done:{"title":"Prendre RDV"}'))
+
+    await waitFor(() => expect(api.changeTaskStatus).toHaveBeenCalledWith('space-1', 't1', 'DONE'))
+    expect(screen.queryByText(/blocked_by_subtasks\.message/)).toBeNull()
   })
 
   it('deletes a task through the confirmation modal', async () => {

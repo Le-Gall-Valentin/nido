@@ -15,6 +15,11 @@
   "change_status_dialog_title": "Déplacer « {{title}} » vers…",
   "change_status_target_current": "{{column}} (colonne actuelle)",
   "change_status_target_blocked": "{{column}} (sous-tâches incomplètes)",
+  "blocked_by_subtasks": {
+    "message_one": "Il reste {{count}} sous-tâche à terminer avant de cocher « {{title}} ».",
+    "message_other": "Il reste {{count}} sous-tâches à terminer avant de cocher « {{title}} ».",
+    "dismiss": "Masquer l'avertissement"
+  },
   "form": {
     "create_title": "Nouvelle tâche",
     "edit_title": "Modifier la tâche",
