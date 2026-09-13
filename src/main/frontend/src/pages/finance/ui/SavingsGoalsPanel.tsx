@@ -108,9 +108,6 @@ export function SavingsGoalsPanel({ spaceId, spaceTimezone, members, canWrite, m
       {deleting && (
         <ConfirmDeleteModal
           title={t('delete_confirm.title', { label: deleting.name })}
-          message={t('delete_confirm.message')}
-          confirmLabel={t('delete_confirm.confirm')}
-          cancelLabel={t('delete_confirm.cancel')}
           isPending={deleteGoal.isPending}
           error={deleteGoal.isError ? t('delete_confirm.error') : null}
           onCancel={() => {

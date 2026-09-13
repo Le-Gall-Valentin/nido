@@ -91,7 +91,7 @@ describe('KitchenRecipesPage', () => {
 
     fireEvent.click(screen.getAllByText('delete')[0])
     expect(api.deleteRecipe).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByText('delete_confirm.submit'))
+    fireEvent.click(screen.getByText('delete_confirm.confirm'))
 
     await waitFor(() => expect(api.deleteRecipe).toHaveBeenCalledWith('space-1', 'r1'))
   })
@@ -104,7 +104,7 @@ describe('KitchenRecipesPage', () => {
     fireEvent.click(screen.getByText('delete_confirm.cancel'))
 
     expect(api.deleteRecipe).not.toHaveBeenCalled()
-    expect(screen.queryByText('delete_confirm.submit')).toBeNull()
+    expect(screen.queryByText('delete_confirm.confirm')).toBeNull()
   })
 
   it('edits a recipe', async () => {

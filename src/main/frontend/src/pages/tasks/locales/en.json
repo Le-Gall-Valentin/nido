@@ -74,9 +74,6 @@
   },
   "delete_confirm": {
     "title": "Delete \"{{title}}\"?",
-    "message": "This action is permanent.",
-    "cancel": "Cancel",
-    "confirm": "Delete",
     "error": "Something went wrong. Please try again."
   }
 }

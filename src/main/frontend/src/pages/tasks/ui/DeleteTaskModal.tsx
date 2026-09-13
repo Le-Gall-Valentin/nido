@@ -33,9 +33,6 @@ export function DeleteTaskModal({ taskTitle, onClose, onDelete }: DeleteTaskModa
   return (
     <ConfirmDeleteModal
       title={t('delete_confirm.title', { title: taskTitle })}
-      message={t('delete_confirm.message')}
-      confirmLabel={t('delete_confirm.confirm')}
-      cancelLabel={t('delete_confirm.cancel')}
       isPending={isLoading}
       error={hasError ? t('delete_confirm.error') : null}
       onCancel={onClose}

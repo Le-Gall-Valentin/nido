@@ -13,5 +13,11 @@
     "GRAM": "g", "KILOGRAM": "kg", "MILLILITER": "ml", "CENTILITER": "cl", "LITER": "l",
     "PIECE": "pièce(s)", "SLICE": "tranche(s)", "TABLESPOON": "c. à s.", "TEASPOON": "c. à c.",
     "PINCH": "pincée(s)", "SACHET": "sachet(s)"
+  },
+  "delete_confirm": {
+    "message": "Cette action est définitive.",
+    "cancel": "Annuler",
+    "confirm": "Supprimer",
+    "error": "Une erreur est survenue. Réessayez."
   }
 }

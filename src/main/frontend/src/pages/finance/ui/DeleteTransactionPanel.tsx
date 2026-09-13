@@ -16,9 +16,6 @@ export function DeleteTransactionPanel({ spaceId, transaction, onClose }: Delete
   return (
     <ConfirmDeleteModal
       title={t('delete_confirm.title', { label: transaction.label })}
-      message={t('delete_confirm.message')}
-      confirmLabel={t('delete_confirm.confirm')}
-      cancelLabel={t('delete_confirm.cancel')}
       isPending={deleteTransaction.isPending}
       error={deleteTransaction.isError ? t('delete_confirm.error') : null}
       onCancel={onClose}

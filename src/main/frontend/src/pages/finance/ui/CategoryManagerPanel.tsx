@@ -47,9 +47,6 @@ export function CategoryManagerPanel({ spaceId, categories, onClose }: CategoryM
       {deletingId && (
         <ConfirmDeleteModal
           title={t('delete_confirm.title', { label: categoryById.get(deletingId)?.label ?? '' })}
-          message={t('delete_confirm.message')}
-          confirmLabel={t('delete_confirm.confirm')}
-          cancelLabel={t('delete_confirm.cancel')}
           isPending={deleteCategory.isPending}
           error={inUse ? t('categories.delete_in_use') : null}
           onCancel={() => {
