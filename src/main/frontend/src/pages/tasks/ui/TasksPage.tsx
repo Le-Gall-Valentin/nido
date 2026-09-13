@@ -2,22 +2,20 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, ArrowRightLeft, GripVertical, Repeat } from 'lucide-react'
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { Alert, ConfirmDeleteModal, Dialog, Spinner } from '@/shared/ui'
+import { Alert, Dialog, Spinner } from '@/shared/ui'
 import { todayIso, usePointerIsFine } from '@/shared/lib'
 import { useSpaceMembers } from '@/entities/space'
-import { TransferDialog } from '@/features/transfer-to-space'
 import { useSpaceTimezone } from '@/features/space-switcher'
 import { isOverdue } from '../lib/isOverdue'
 import { UserAvatar } from '@/entities/user'
 import { tasksApi, TasksApiProvider, type TasksApi, type Task, type TaskStatus } from '@/entities/tasks'
 import { TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
 import { useTasksPageState } from '../model/useTasksPageState'
-import { TaskFormModal } from './TaskFormModal'
 import { TaskDetailModal } from './TaskDetailModal'
-import { DeleteTaskModal } from './DeleteTaskModal'
-import { RecurringTaskSeriesManagerModal } from './RecurringTaskSeriesManagerModal'
-import { RecurringTaskSeriesFormModal } from './RecurringTaskSeriesFormModal'
-import { RecurringTaskSeriesDetailModal } from './RecurringTaskSeriesDetailModal'
+import { TaskFormPanel } from './TaskFormPanel'
+import { DeleteTaskPanel } from './DeleteTaskPanel'
+import { MoveTaskPanel } from './MoveTaskPanel'
+import { RecurringSeriesPanel } from './RecurringSeriesPanel'
 
 const COLUMN_ORDER: TaskStatus[] = ['TODO', 'DOING', 'DONE']
 
@@ -171,21 +169,17 @@ function TasksPageContent() {
   // must see the same tasks struck through as everyone else in the household.
   const today = todayIso(new Date(), useSpaceTimezone(spaceId))
   const {
-    tasks, isPending, isError, writableDestinations, recurringTaskSeries,
+    tasks, isPending, isError,
     canWriteHere, spaceIsPersonal,
-    createTask, createRecurringTask, updateTask, toggleSubtask, deleteTask,
-    updateRecurringTaskSeries, deleteRecurringTaskSeries,
-    formState, setFormState, closeForm,
+    toggleSubtask,
+    formState, setFormState,
     deletingTask, setDeletingTask,
     movingTask, setMovingTask,
     statusPickerTask, setStatusPickerTask,
     viewingTask, setViewingTask,
     managingRecurringSeries, setManagingRecurringSeries,
-    editingSeries, setEditingSeries,
-    deletingSeries, setDeletingSeries,
-    viewingSeries, setViewingSeries,
     blockedBySubtasks, dismissBlockedBySubtasks,
-    handleFormSubmit, handleUpdateSeriesSubmit, handleToggleDone, handleDragEnd, handleMoveConfirm, handlePickStatus,
+    handleToggleDone, handleDragEnd, handlePickStatus,
     seriesForTask,
   } = useTasksPageState(spaceId)
 
@@ -243,33 +237,21 @@ function TasksPageContent() {
       </DndContext>
 
       {formState && (
-        <TaskFormModal
-          open
-          onClose={closeForm}
-          onSubmit={handleFormSubmit}
-          initialTask={formState.mode === 'edit' ? formState.task : null}
+        <TaskFormPanel
+          spaceId={spaceId}
+          task={formState.mode === 'edit' ? formState.task : null}
           members={members ?? []}
           isPersonal={spaceIsPersonal}
-          submitError={(createTask.isError || createRecurringTask.isError || updateTask.isError) ? t('form.submit_error') : null}
+          onClose={() => setFormState(null)}
         />
       )}
 
       {deletingTask && (
-        <DeleteTaskModal
-          taskTitle={deletingTask.title}
-          onClose={() => setDeletingTask(null)}
-          onDelete={() => deleteTask.mutateAsync(deletingTask.id)}
-        />
+        <DeleteTaskPanel spaceId={spaceId} task={deletingTask} onClose={() => setDeletingTask(null)} />
       )}
 
       {movingTask && (
-        <TransferDialog
-          itemName={movingTask.title}
-          operation="move"
-          destinations={writableDestinations ?? []}
-          onClose={() => setMovingTask(null)}
-          onConfirm={handleMoveConfirm}
-        />
+        <MoveTaskPanel spaceId={spaceId} task={movingTask} onClose={() => setMovingTask(null)} />
       )}
 
       {statusPickerTask && (
@@ -305,50 +287,11 @@ function TasksPageContent() {
       )}
 
       {managingRecurringSeries && (
-        <RecurringTaskSeriesManagerModal
-          series={recurringTaskSeries ?? []}
-          onView={(series) => setViewingSeries(series)}
-          onEdit={(series) => setEditingSeries(series)}
-          onDelete={(seriesId) => setDeletingSeries((recurringTaskSeries ?? []).find((s) => s.id === seriesId) ?? null)}
-          onClose={() => setManagingRecurringSeries(false)}
-        />
-      )}
-
-      {viewingSeries && (
-        <RecurringTaskSeriesDetailModal
-          series={viewingSeries}
-          members={members ?? []}
-          onClose={() => setViewingSeries(null)}
-        />
-      )}
-
-      {editingSeries && (
-        <RecurringTaskSeriesFormModal
-          series={editingSeries}
+        <RecurringSeriesPanel
+          spaceId={spaceId}
           members={members ?? []}
           isPersonal={spaceIsPersonal}
-          onSubmit={handleUpdateSeriesSubmit}
-          onCancel={() => {
-            setEditingSeries(null)
-            updateRecurringTaskSeries.reset()
-          }}
-          submitError={updateRecurringTaskSeries.isError ? t('form.submit_error') : null}
-        />
-      )}
-
-      {deletingSeries && (
-        <ConfirmDeleteModal
-          title={t('delete_confirm.title', { title: deletingSeries.title })}
-          message={t('delete_confirm.message')}
-          confirmLabel={t('delete_confirm.confirm')}
-          cancelLabel={t('delete_confirm.cancel')}
-          isPending={deleteRecurringTaskSeries.isPending}
-          error={deleteRecurringTaskSeries.isError ? t('delete_confirm.error') : null}
-          onCancel={() => {
-            setDeletingSeries(null)
-            deleteRecurringTaskSeries.reset()
-          }}
-          onConfirm={() => deleteRecurringTaskSeries.mutate(deletingSeries.id, { onSuccess: () => setDeletingSeries(null) })}
+          onClose={() => setManagingRecurringSeries(false)}
         />
       )}
     </div>
