@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { timezoneChoices } from '@/shared/lib'
 import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
@@ -23,15 +23,36 @@ interface PersonalSpaceSectionProps {
  */
 export function PersonalSpaceSection({ space, onSave }: PersonalSpaceSectionProps) {
   const { t } = useTranslation('account')
-  const [timezone, setTimezone] = useState<string | null>(null)
+  /**
+   * What the user is choosing, until the space itself says otherwise.
+   *
+   * <p>Cleared by the effect below whenever the space's zone changes, rather than compared to anything:
+   * the banner above this section can move the calendar on its own, and a draft that outlived that
+   * showed the earlier pick with its save button live — one click from silently undoing the move that
+   * had just been accepted.
+   *
+   * <p>Two cleverer versions of this were wrong, and the browser caught both while the unit tests
+   * passed. Comparing the draft to the zone it was made against fails when the space returns to
+   * exactly that zone — pick Paris on Toronto, save, then accept the banner's move back to Toronto,
+   * and the spent Paris draft matches again and comes back to life. Tracking the previously rendered
+   * zone fails the same way, since it too ends up equal. What actually distinguishes "still choosing"
+   * from "the space moved under me" is that the space changed at all, which is what an effect keyed on
+   * it observes and no derivation can.
+   */
+  const [draft, setDraft] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [failed, setFailed] = useState(false)
+
+  const spaceTimezone = space?.timezone
+  useEffect(() => {
+    setDraft(null)
+  }, [spaceTimezone])
 
   if (!space) {
     return null
   }
 
-  const selected = timezone ?? space.timezone
+  const selected = draft ?? space.timezone
   const isDirty = selected !== space.timezone
 
   async function handleSave() {
@@ -60,7 +81,7 @@ export function PersonalSpaceSection({ space, onSave }: PersonalSpaceSectionProp
         </label>
         <select
           id="personal-timezone" value={selected} disabled={isSaving}
-          onChange={(e) => setTimezone(e.target.value)}
+          onChange={(e) => setDraft(e.target.value)}
           className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent">
           {timezoneChoices(space.timezone).map((zone) => (
             <option key={zone} value={zone}>{zone.replace(/_/g, ' ')}</option>
