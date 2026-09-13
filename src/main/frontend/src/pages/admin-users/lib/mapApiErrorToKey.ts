@@ -1,5 +1,5 @@
 import { NetworkError, RateLimitError, ForbiddenError, NotFoundError } from '@/shared/lib'
-import { ConflictError, RoleAlreadyAssignedError } from '../api/adminUsersApi'
+import { ConflictError, RoleAlreadyAssignedError } from '@/entities/user'
 
 /**
  * Maps an API error to a translation key under the given namespace prefix.

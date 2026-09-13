@@ -4,18 +4,14 @@ import { Plus } from 'lucide-react'
 import { Alert, Button, Pagination, SearchInput, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { useDebouncedValue, pageAfterRemoval } from '@/shared/lib'
 import { useAuth } from '@/features/auth'
-import type { AdminUser } from '@/entities/user'
-import { adminUsersApi } from '../api/adminUsersApi'
-import type { IAdminUsersApi } from '../model/IAdminUsersApi'
-import { AdminUsersApiProvider } from '../model/adminUsersApiContext'
-import { useUsers } from '../model/useUsers'
-import {
+import type { AdminUser , IAdminUsersApi } from '@/entities/user'
+import { adminUsersApi , AdminUsersApiProvider , useUsers ,
   useCreateUser,
   useUpdateUserRole,
   useDeleteUser,
   useResetTotp,
   useToggleUserActive,
-} from '../model/useUserMutations'
+} from '@/entities/user'
 import { UsersTable } from './UsersTable'
 import { UsersCardList } from './UsersCardList'
 import { CreateUserModal } from './CreateUserModal'

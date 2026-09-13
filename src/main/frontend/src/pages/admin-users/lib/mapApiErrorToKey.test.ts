@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mapApiErrorToKey } from './mapApiErrorToKey'
-import { ConflictError, RoleAlreadyAssignedError } from '../api/adminUsersApi'
+import { ConflictError, RoleAlreadyAssignedError } from '@/entities/user'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
 
 describe('mapApiErrorToKey', () => {
