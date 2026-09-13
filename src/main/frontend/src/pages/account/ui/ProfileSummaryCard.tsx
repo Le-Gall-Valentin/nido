@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { resolveLocale } from '@/shared/lib'
 import type { User } from '@/entities/user'
 import { RolePill, UserAvatar } from '@/entities/user'
 
@@ -10,7 +11,7 @@ export function ProfileSummaryCard({ user }: ProfileSummaryCardProps) {
   const { t, i18n } = useTranslation(['account', 'shell'])
 
   const createdDate = new Date(user.createdAt).toLocaleDateString(
-    i18n.language === 'fr' ? 'fr-FR' : 'en-GB',
+    resolveLocale(i18n.language),
     { day: '2-digit', month: 'long', year: 'numeric' }
   )
 

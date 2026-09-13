@@ -1,3 +1,5 @@
+import { resolveLocale } from './resolveLocale'
+
 const DIVISIONS: { amount: number; unit: Intl.RelativeTimeFormatUnit }[] = [
   { amount: 60, unit: 'second' },
   { amount: 60, unit: 'minute' },
@@ -24,7 +26,7 @@ function relativeTimeFormat(locale: string): Intl.RelativeTimeFormat {
 export function formatRelativeTime(iso: string, lang: string, now: Date = new Date()): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return '—'
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB'
+  const locale = resolveLocale(lang)
   const rtf = relativeTimeFormat(locale)
   let duration = (date.getTime() - now.getTime()) / 1000
   for (const division of DIVISIONS) {

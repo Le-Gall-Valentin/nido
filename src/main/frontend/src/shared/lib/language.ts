@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
+import type { Language } from './resolveLocale'
 
-export type Language = 'fr' | 'en'
+export type { Language }
 
 interface LanguageContextValue {
   language: Language
