@@ -130,10 +130,10 @@ describe('KitchenRecipesPage', () => {
     const { api } = setup()
     await screen.findByText('Pâtes bolognaise')
 
-    const copyButtons = await screen.findAllByText('transfer.copy_submit:{"ns":"common"}')
+    const copyButtons = await screen.findAllByText('copy_submit:{"ns":"transfer"}')
     fireEvent.click(copyButtons[0])
     fireEvent.click(await screen.findByText('Perso'))
-    fireEvent.click(screen.getByText('transfer.copy_submit'))
+    fireEvent.click(screen.getByText('copy_submit'))
 
     await waitFor(() => expect(api.copyRecipe).toHaveBeenCalledWith('space-1', 'r1', 'space-2'))
   })
@@ -142,10 +142,10 @@ describe('KitchenRecipesPage', () => {
     const { api } = setup()
     await screen.findByText('Pâtes bolognaise')
 
-    const moveButtons = await screen.findAllByText('transfer.move_submit:{"ns":"common"}')
+    const moveButtons = await screen.findAllByText('move_submit:{"ns":"transfer"}')
     fireEvent.click(moveButtons[0])
     fireEvent.click(await screen.findByText('Perso'))
-    fireEvent.click(screen.getByText('transfer.move_submit'))
+    fireEvent.click(screen.getByText('move_submit'))
 
     await waitFor(() => expect(api.moveRecipe).toHaveBeenCalledWith('space-1', 'r1', 'space-2'))
   })
@@ -158,12 +158,12 @@ describe('KitchenRecipesPage — read-only role', () => {
     await screen.findByText('Pâtes bolognaise')
     // "Copier" is never role-gated; waiting for it also forces the concurrent
     // spaces query to settle before the role-gated buttons are asserted absent.
-    const copyButtons = await screen.findAllByText('transfer.copy_submit:{"ns":"common"}')
+    const copyButtons = await screen.findAllByText('copy_submit:{"ns":"transfer"}')
 
     expect(copyButtons.length).toBeGreaterThan(0)
     expect(screen.queryByText('recipes.new_recipe')).toBeNull()
     expect(screen.queryByText('edit')).toBeNull()
     expect(screen.queryByText('delete')).toBeNull()
-    expect(screen.queryByText('transfer.move_submit:{"ns":"common"}')).toBeNull()
+    expect(screen.queryByText('move_submit:{"ns":"transfer"}')).toBeNull()
   })
 })
