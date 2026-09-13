@@ -2,7 +2,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EditUserRoleModal } from './EditUserRoleModal'
 import { NetworkError, ServerError } from '@/shared/lib'
-import { RoleAlreadyAssignedError } from '../api/adminUsersApi'
+import { RoleAlreadyAssignedError } from '@/entities/user'
 import type { User, AdminUser } from '@/entities/user'
 
 vi.mock('react-i18next', () => ({

@@ -1,7 +1,7 @@
 import { isAxiosError } from 'axios'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
-import type { AdminUser } from '@/entities/user'
+import type { AdminUser } from '../model/types'
 import type { IAdminUsersApi, UsersPage } from '../model/IAdminUsersApi'
 
 export type { AdminUser }

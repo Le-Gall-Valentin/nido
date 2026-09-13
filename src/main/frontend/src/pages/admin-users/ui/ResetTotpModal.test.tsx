@@ -2,7 +2,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ResetTotpModal } from './ResetTotpModal'
 import { NetworkError, ServerError } from '@/shared/lib'
-import type { AdminUser } from '../api/adminUsersApi'
+import type { AdminUser } from '@/entities/user'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, string>) => {

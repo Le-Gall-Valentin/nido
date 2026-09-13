@@ -1,4 +1,4 @@
-import type { AdminUser } from '@/entities/user'
+import type { AdminUser } from './types'
 
 /** Paginated users payload returned by the backend (mirrors `PageResponse`). */
 export interface UsersPage {
