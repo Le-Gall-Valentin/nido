@@ -1,8 +1,11 @@
-export type RecipeCategory = 'PLAT' | 'EXPRESS' | 'VEGETARIAN' | 'DESSERT' | 'SOUP'
+// Re-exported rather than redeclared: the same union lived here and in shared/lib, and two copies of
+// a list of units drift the day one of them gains a unit. The shopping list reaches it from shared,
+// so shared is where it belongs.
+import type { MeasurementUnit } from '@/shared/lib'
 
-export type MeasurementUnit =
-  | 'GRAM' | 'KILOGRAM' | 'MILLILITER' | 'CENTILITER' | 'LITER'
-  | 'PIECE' | 'SLICE' | 'TABLESPOON' | 'TEASPOON' | 'PINCH' | 'SACHET'
+export type { MeasurementUnit }
+
+export type RecipeCategory = 'PLAT' | 'EXPRESS' | 'VEGETARIAN' | 'DESSERT' | 'SOUP'
 
 export interface RecipeIngredient {
   name: string

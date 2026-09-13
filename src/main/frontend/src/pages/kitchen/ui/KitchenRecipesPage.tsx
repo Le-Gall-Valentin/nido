@@ -6,15 +6,11 @@ import { Alert, Button, SearchInput, Spinner, CTA_BUTTON_STYLE } from '@/shared/
 import { ROUTES } from '@/shared/config'
 import { useMySpaces, useWritableSpaces } from '@/features/space-switcher'
 import { canWrite, TransferDialog, type TransferOperation } from '@/entities/space'
-import { kitchenApi } from '../api/kitchenApi'
-import type { IKitchenApi } from '../model/IKitchenApi'
-import { KitchenApiProvider } from '../model/kitchenApiContext'
-import { useRecipes } from '../model/useRecipes'
-import { useCreateRecipe, useDeleteRecipe, useToggleFavorite, useUpdateRecipe, useCopyRecipe, useMoveRecipe } from '../model/useRecipeMutations'
 import { RECIPE_CATEGORY_META } from '../lib/recipeCategoryMeta'
 import { RecipeFormModal } from './RecipeFormModal'
 import { DeleteRecipeModal } from './DeleteRecipeModal'
-import type { Recipe, RecipeInput } from '../model/types'
+import { kitchenApi, KitchenApiProvider, useRecipes, useCreateRecipe, useDeleteRecipe, useToggleFavorite, useUpdateRecipe, useCopyRecipe, useMoveRecipe } from '@/entities/kitchen'
+import type { IKitchenApi, Recipe, RecipeInput } from '@/entities/kitchen'
 
 interface KitchenRecipesPageProps {
   api?: IKitchenApi
