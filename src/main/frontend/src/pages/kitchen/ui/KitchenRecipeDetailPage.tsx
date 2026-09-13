@@ -3,12 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { ArrowLeft } from 'lucide-react'
 import { Alert, Spinner } from '@/shared/ui'
 import { ROUTES } from '@/shared/config'
-import { kitchenApi } from '../api/kitchenApi'
-import type { IKitchenApi } from '../model/IKitchenApi'
-import { KitchenApiProvider } from '../model/kitchenApiContext'
-import { useRecipe } from '../model/useRecipe'
 import { RECIPE_CATEGORY_META } from '../lib/recipeCategoryMeta'
 import { RECIPE_UNIT_LABEL_KEY } from '../lib/recipeUnitMeta'
+import { kitchenApi, KitchenApiProvider, useRecipe } from '@/entities/kitchen'
+import type { IKitchenApi } from '@/entities/kitchen'
 
 interface KitchenRecipeDetailPageProps {
   api?: IKitchenApi

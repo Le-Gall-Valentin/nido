@@ -4,7 +4,7 @@ import { X } from 'lucide-react'
 import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { RECIPE_CATEGORY_META, RECIPE_CATEGORY_ORDER } from '../lib/recipeCategoryMeta'
 import { RECIPE_UNITS, RECIPE_UNIT_LABEL_KEY } from '../lib/recipeUnitMeta'
-import type { MeasurementUnit, Recipe, RecipeInput, RecipeCategory } from '../model/types'
+import type { MeasurementUnit, Recipe, RecipeInput, RecipeCategory } from '@/entities/kitchen'
 
 interface IngredientDraft {
   name: string

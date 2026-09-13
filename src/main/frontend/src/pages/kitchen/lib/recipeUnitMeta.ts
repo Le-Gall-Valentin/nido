@@ -1,4 +1,4 @@
-import type { MeasurementUnit } from '../model/types'
+import type { MeasurementUnit } from '@/entities/kitchen'
 
 /** Order mirrors the backend enum and the mockup's unit picker. */
 export const RECIPE_UNITS: MeasurementUnit[] = [
