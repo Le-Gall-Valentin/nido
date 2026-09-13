@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { spaceMembersKey } from '@/entities/space'
-import { SPACES_QUERY_KEY } from '@/features/space-switcher'
-import type { AssignableSpaceRole, CreateSpaceInput, UpdateSpaceInput } from './ISpacesPageApi'
-import { useSpacesPageApi } from './spacesPageApiContext'
+import { spaceMembersKey } from './useSpaceMembers'
+import { SPACES_QUERY_KEY } from './queryKeys'
+import type { AssignableSpaceRole, CreateSpaceInput, UpdateSpaceInput } from './ISpaceApi'
+import { useSpaceApi } from './spaceApiContext'
 import { spaceDetailKey } from './useSpaceDetail'
 import { spaceInvitationsKey } from './useSpaceInvitations'
 import { RECEIVED_INVITATIONS_QUERY_KEY } from './useReceivedInvitations'
@@ -13,7 +13,7 @@ import { RECEIVED_INVITATIONS_QUERY_KEY } from './useReceivedInvitations'
  */
 
 export function useCreateSpace() {
-  const api = useSpacesPageApi()
+  const api = useSpaceApi()
   const queryClient = useQueryClient()
   return useMutation({
     // A new context appears in "my spaces".
@@ -23,7 +23,7 @@ export function useCreateSpace() {
 }
 
 export function useUpdateSpace(spaceId: string) {
-  const api = useSpacesPageApi()
+  const api = useSpaceApi()
   const queryClient = useQueryClient()
   return useMutation({
     // Name/accent/glyph are shown both in the detail and in "my spaces".
@@ -36,7 +36,7 @@ export function useUpdateSpace(spaceId: string) {
 }
 
 export function useDeleteSpace(spaceId: string) {
-  const api = useSpacesPageApi()
+  const api = useSpaceApi()
   const queryClient = useQueryClient()
   return useMutation({
     // The context disappears from "my spaces"; the route guard needs this to
@@ -48,7 +48,7 @@ export function useDeleteSpace(spaceId: string) {
 }
 
 export function useChangeMemberRole(spaceId: string) {
-  const api = useSpacesPageApi()
+  const api = useSpaceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: AssignableSpaceRole }) =>
@@ -58,7 +58,7 @@ export function useChangeMemberRole(spaceId: string) {
 }
 
 export function useRemoveMember(spaceId: string) {
-  const api = useSpacesPageApi()
+  const api = useSpaceApi()
   const queryClient = useQueryClient()
   return useMutation({
     // memberCount changes, both in the detail and in "my spaces". Invalidating
@@ -73,7 +73,7 @@ export function useRemoveMember(spaceId: string) {
 }
 
 export function useTransferOwnership(spaceId: string) {
-  const api = useSpacesPageApi()
+  const api = useSpaceApi()
   const queryClient = useQueryClient()
   return useMutation({
     // myRole changes for both the previous and the new owner, everywhere it
@@ -88,7 +88,7 @@ export function useTransferOwnership(spaceId: string) {
 }
 
 export function useLeaveSpace(spaceId: string) {
-  const api = useSpacesPageApi()
+  const api = useSpaceApi()
   const queryClient = useQueryClient()
   return useMutation({
     // Leaving (or being removed) makes the current URL inaccessible: the
@@ -100,7 +100,7 @@ export function useLeaveSpace(spaceId: string) {
 }
 
 export function useInviteMember(spaceId: string) {
-  const api = useSpacesPageApi()
+  const api = useSpaceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ email, role }: { email: string; role: AssignableSpaceRole }) =>
@@ -110,7 +110,7 @@ export function useInviteMember(spaceId: string) {
 }
 
 export function useRevokeInvitation(spaceId: string) {
-  const api = useSpacesPageApi()
+  const api = useSpaceApi()
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (invitationId: string) => api.revokeInvitation(spaceId, invitationId),
@@ -119,7 +119,7 @@ export function useRevokeInvitation(spaceId: string) {
 }
 
 export function useAcceptInvitation() {
-  const api = useSpacesPageApi()
+  const api = useSpaceApi()
   const queryClient = useQueryClient()
   return useMutation({
     // A context appears in "my spaces" and the accepted invitation leaves the received list.

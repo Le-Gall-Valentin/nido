@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Check, Copy, Send } from 'lucide-react'
 import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { isValidEmail } from '@/shared/lib'
-import type { SpaceInvitation } from '@/entities/space'
-import type { AssignableSpaceRole } from '../model/ISpacesPageApi'
+import type { SpaceInvitation , AssignableSpaceRole } from '@/entities/space'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 
 const ASSIGNABLE_ROLES: AssignableSpaceRole[] = ['ADMIN', 'MEMBER', 'VIEWER']

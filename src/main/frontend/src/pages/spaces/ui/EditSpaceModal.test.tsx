@@ -2,8 +2,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { EditSpaceModal } from './EditSpaceModal'
 import { NetworkError, ServerError } from '@/shared/lib'
-import type { SpaceDetail } from '@/entities/space'
-import type { UpdateSpaceInput } from '../model/ISpacesPageApi'
+import type { SpaceDetail , UpdateSpaceInput } from '@/entities/space'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),

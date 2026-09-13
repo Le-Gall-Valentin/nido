@@ -4,8 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import { SpacesApiProvider } from '@/features/space-switcher'
 import type { ISpacesApi } from '@/features/space-switcher'
-import type { SpaceSummary, SpaceDetail } from '@/entities/space'
-import type { ISpacesPageApi } from '../model/ISpacesPageApi'
+import type { SpaceSummary, SpaceDetail , ISpaceApi } from '@/entities/space'
 import { SpacesPage } from './SpacesPage'
 
 vi.mock('react-i18next', () => ({
@@ -25,7 +24,7 @@ function fakeSpacesApi(spaces: SpaceSummary[] = [PERSONAL, SHARED]): ISpacesApi 
   return { listMySpaces: vi.fn().mockResolvedValue(spaces), getSpace: vi.fn() }
 }
 
-function fakePageApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
+function fakePageApi(overrides: Partial<ISpaceApi> = {}): ISpaceApi {
   return {
     getSpaceDetail: vi.fn(), listMembers: vi.fn(), listInvitations: vi.fn(),
     listReceivedInvitations: vi.fn().mockResolvedValue([]),
@@ -36,7 +35,7 @@ function fakePageApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
   }
 }
 
-function renderPage(spacesApi: ISpacesApi, pageApi: ISpacesPageApi) {
+function renderPage(spacesApi: ISpacesApi, pageApi: ISpaceApi) {
   const queryClient = createTestQueryClient()
   return render(
     <QueryClientProvider client={queryClient}>

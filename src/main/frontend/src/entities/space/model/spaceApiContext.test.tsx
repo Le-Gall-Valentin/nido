@@ -1,10 +1,10 @@
 import { render, renderHook } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import type { ReactNode } from 'react'
-import { SpacesPageApiProvider, useSpacesPageApi } from './spacesPageApiContext'
-import type { ISpacesPageApi } from './ISpacesPageApi'
+import { SpaceApiProvider, useSpaceApi } from './spaceApiContext'
+import type { ISpaceApi } from './ISpaceApi'
 
-function fakeApi(): ISpacesPageApi {
+function fakeApi(): ISpaceApi {
   return {
     getSpaceDetail: vi.fn(),
     listMembers: vi.fn(),
@@ -23,23 +23,23 @@ function fakeApi(): ISpacesPageApi {
   }
 }
 
-describe('useSpacesPageApi', () => {
+describe('useSpaceApi', () => {
   it('returns the injected api when used within the provider', () => {
     const api = fakeApi()
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <SpacesPageApiProvider api={api}>{children}</SpacesPageApiProvider>
+      <SpaceApiProvider api={api}>{children}</SpaceApiProvider>
     )
-    const { result } = renderHook(() => useSpacesPageApi(), { wrapper })
+    const { result } = renderHook(() => useSpaceApi(), { wrapper })
     expect(result.current).toBe(api)
   })
 
   it('throws when used without a provider', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     function Consumer() {
-      useSpacesPageApi()
+      useSpaceApi()
       return null
     }
-    expect(() => render(<Consumer />)).toThrow('SpacesPageApiProvider')
+    expect(() => render(<Consumer />)).toThrow('SpaceApiProvider')
     spy.mockRestore()
   })
 })

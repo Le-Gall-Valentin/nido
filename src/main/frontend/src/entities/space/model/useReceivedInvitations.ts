@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { useSpacesPageApi } from './spacesPageApiContext'
+import { useSpaceApi } from './spaceApiContext'
 
 export const RECEIVED_INVITATIONS_QUERY_KEY = ['invitations', 'received'] as const
 
 export function useReceivedInvitations() {
-  const api = useSpacesPageApi()
+  const api = useSpaceApi()
   return useQuery({
     queryKey: RECEIVED_INVITATIONS_QUERY_KEY,
     queryFn: () => api.listReceivedInvitations(),

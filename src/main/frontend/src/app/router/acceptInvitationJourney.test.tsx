@@ -9,10 +9,10 @@ import type { SpaceSummary, ReceivedInvitation } from '@/entities/space'
 import { SpacesPage } from '@/pages/spaces'
 import { SpaceRoute } from './SpaceRoute'
 
-// pages/spaces's ISpacesPageApi is a private, unexported part of that slice
+// pages/spaces's ISpaceApi is a private, unexported part of that slice
 // from this (app-layer) test's point of view — derived structurally from
 // SpacesPage's own prop instead of a boundary-violating deep import.
-type SpacesPageApi = NonNullable<NonNullable<Parameters<typeof SpacesPage>[0]>['api']>
+type SpaceApiShape = NonNullable<NonNullable<Parameters<typeof SpacesPage>[0]>['api']>
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -57,7 +57,7 @@ describe('accepting an invitation', () => {
       ),
       getSpace: vi.fn(),
     }
-    const pageApi: SpacesPageApi = {
+    const pageApi: SpaceApiShape = {
       getSpaceDetail: vi.fn(), listMembers: vi.fn(), listInvitations: vi.fn(),
       listReceivedInvitations: vi.fn().mockResolvedValue([INVITATION]),
       createSpace: vi.fn(), updateSpace: vi.fn(), deleteSpace: vi.fn(),

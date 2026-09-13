@@ -1,24 +1,5 @@
 import { NetworkError, RateLimitError } from '@/shared/lib'
-import { SpaceNotAccessibleError } from '@/features/space-switcher'
-import {
-  InsufficientRoleError,
-  SelfManagementError,
-  OwnerProtectedError,
-  SpaceRoleAlreadyAssignedError,
-  LastOwnerError,
-  MemberNotFoundError,
-  AlreadyMemberError,
-  InvitationAlreadyPendingError,
-  InvitationNotFoundError,
-  InvitationNotPendingError,
-  InvitationExpiredError,
-  PersonalSpaceImmutableError,
-  NoAccountForEmailError,
-  InvalidAppearanceError,
-  InvalidSpaceNameError,
-  InvalidSpaceDescriptionError,
-  OwnerRoleNotAssignableError,
-} from '../api/spacesPageApi'
+import { InsufficientRoleError, SelfManagementError, OwnerProtectedError, SpaceRoleAlreadyAssignedError, LastOwnerError, MemberNotFoundError, AlreadyMemberError, InvitationAlreadyPendingError, InvitationNotFoundError, InvitationNotPendingError, InvitationExpiredError, PersonalSpaceImmutableError, NoAccountForEmailError, InvalidAppearanceError, InvalidSpaceNameError, InvalidSpaceDescriptionError, OwnerRoleNotAssignableError, SpaceNotAccessibleError } from '@/entities/space'
 
 function suffixFor(error: unknown): string {
   if (error instanceof SpaceNotAccessibleError) return 'not_accessible'

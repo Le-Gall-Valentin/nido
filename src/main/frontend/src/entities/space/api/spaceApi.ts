@@ -1,16 +1,21 @@
 import { isAxiosError } from 'axios'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
-import { SpaceNotAccessibleError } from '@/features/space-switcher'
-import type { SpaceDetail, SpaceMember, SpaceInvitation, ReceivedInvitation } from '@/entities/space'
+import type { SpaceDetail, SpaceMember, SpaceInvitation, ReceivedInvitation } from '../model/types'
 import type {
-  ISpacesPageApi,
+  ISpaceApi,
   AssignableSpaceRole,
   CreateSpaceInput,
   UpdateSpaceInput,
-} from '../model/ISpacesPageApi'
+} from '../model/ISpaceApi'
 
-export { SpaceNotAccessibleError }
+/**
+ * 404 on a space: the backend collapses "does not exist" and "you are not a member" into the same
+ * answer on purpose, so this never describes a permission problem to the user.
+ */
+export class SpaceNotAccessibleError extends Error {
+  constructor() { super('Space does not exist or is no longer accessible'); this.name = 'SpaceNotAccessibleError' }
+}
 
 /** 403 InsufficientRole and 403 OwnerRequired: the caller's role does not allow this action. */
 export class InsufficientRoleError extends Error {
@@ -162,7 +167,7 @@ function handleError(error: unknown): never {
   throw new NetworkError()
 }
 
-export const spacesPageApi: ISpacesPageApi = {
+export const spaceApi: ISpaceApi = {
   async getSpaceDetail(spaceId: string): Promise<SpaceDetail> {
     try {
       const res = await client.get<SpaceDetail>(`/spaces/${spaceId}`)

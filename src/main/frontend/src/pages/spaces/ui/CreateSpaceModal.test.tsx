@@ -2,8 +2,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { CreateSpaceModal } from './CreateSpaceModal'
 import { browserTimezone, NetworkError, ServerError } from '@/shared/lib'
-import type { SpaceDetail } from '@/entities/space'
-import type { CreateSpaceInput } from '../model/ISpacesPageApi'
+import type { SpaceDetail , CreateSpaceInput } from '@/entities/space'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
