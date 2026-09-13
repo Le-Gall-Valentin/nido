@@ -52,6 +52,23 @@ export default tseslint.config(
     },
   },
   {
+    // The HTTP client belongs to the segments whose job is HTTP. A store, a hook or a component that
+    // imports it is reaching past its own port — which is what twenty I*Api interfaces exist to
+    // prevent, and what authStore was doing to say "somebody signed in" (see shared/lib/
+    // sessionCallbacks for where that conversation lives now). The api/ segments are the exception,
+    // because implementing the port is precisely their job.
+    files: ['src/{entities,features,pages}/**/*.{ts,tsx}'],
+    ignores: ['src/*/*/api/**', 'src/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['@/shared/api', '@/shared/api/*'],
+          message: 'Only an api/ segment may reach the HTTP client. Depend on your port, or route the call through shared/lib.',
+        }],
+      }],
+    },
+  },
+  {
     plugins: { boundaries, import: importPlugin },
     settings: {
       'import/resolver': {
