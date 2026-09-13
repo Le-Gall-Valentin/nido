@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createAuthStore } from './authStore'
 import type { IAuthApi } from './IAuthApi'
-import { clearSessionHint, hasSessionHint, setSessionHint } from '@/shared/lib'
-import { notifyLoginSuccess } from '@/shared/api'
+import { clearSessionHint, hasSessionHint, notifyLoginSuccess, setSessionHint } from '@/shared/lib'
 import { CredentialsError, NetworkError, ServerError } from './errors'
 
 vi.mock('@/shared/lib', async (importActual) => {
@@ -12,13 +11,9 @@ vi.mock('@/shared/lib', async (importActual) => {
     setSessionHint: vi.fn(),
     clearSessionHint: vi.fn(),
     hasSessionHint: vi.fn(),
+    notifyLoginSuccess: vi.fn(),
   }
 })
-
-vi.mock('@/shared/api', () => ({
-  notifyLoginSuccess: vi.fn(),
-  client: { post: vi.fn(), get: vi.fn() },
-}))
 
 const mockedSetSessionHint = vi.mocked(setSessionHint)
 const mockedClearSessionHint = vi.mocked(clearSessionHint)

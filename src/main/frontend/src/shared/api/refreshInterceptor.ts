@@ -1,5 +1,5 @@
 import type { AxiosInstance, AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
-import { triggerSessionExpired } from '@/shared/lib'
+import { setLoginSuccessCallback, triggerSessionExpired } from '@/shared/lib'
 
 interface QueueEntry {
   resolve: (value: unknown) => void
@@ -110,8 +110,10 @@ export function createRefreshInterceptorHandlers(
   return { onFulfilled, onRejected, notifyLoginSuccess }
 }
 
-export function attachRefreshInterceptor(client: AxiosInstance): () => void {
+export function attachRefreshInterceptor(client: AxiosInstance): void {
   const { onFulfilled, onRejected, notifyLoginSuccess } = createRefreshInterceptorHandlers(client, triggerSessionExpired)
   client.interceptors.response.use(onFulfilled, onRejected)
-  return notifyLoginSuccess
+  // Registered rather than returned: this used to travel out through the client's exports, so the
+  // auth store imported an axios module to say "somebody signed in".
+  setLoginSuccessCallback(notifyLoginSuccess)
 }

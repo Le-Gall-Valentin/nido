@@ -2,7 +2,10 @@ export type { PaletteItem, PaletteIconComponent } from './paletteRegistry'
 export { usePaletteItems, usePaletteResults } from './paletteRegistry'
 export { registerLocales } from './registerLocales'
 export { useFocusTrap } from './useFocusTrap'
-export { setSessionExpiredCallback, triggerSessionExpired } from './sessionCallbacks'
+export {
+  setSessionExpiredCallback, triggerSessionExpired,
+  setLoginSuccessCallback, notifyLoginSuccess,
+} from './sessionCallbacks'
 export { setSessionHint, clearSessionHint, hasSessionHint } from './sessionHint'
 export { NetworkError, ServerError, RateLimitError, ForbiddenError, NotFoundError } from './apiErrors'
 export { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_REGEX, isValidPassword } from './passwordPolicy'
