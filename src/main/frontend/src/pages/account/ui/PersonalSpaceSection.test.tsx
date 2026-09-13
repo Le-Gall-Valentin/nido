@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, type Mock } from 'vitest'
 import { PersonalSpaceSection } from './PersonalSpaceSection'
@@ -53,6 +54,60 @@ describe('PersonalSpaceSection', () => {
     fireEvent.click(getByText('personal_space.submit'))
 
     await waitFor(() => expect(screen.queryByText('personal_space.error')).toBeNull())
+  })
+
+  it('follows the space when it changes elsewhere, instead of holding a stale draft', async () => {
+    // Found by clicking through the real application, not by a test. The suggestion banner above this
+    // section can move the calendar on its own; when it did, this form kept showing the zone the user
+    // had picked here a moment earlier and left its save button enabled — so the next click would have
+    // silently undone the change that had just been accepted.
+    const { getByLabelText, getByText, rerender } = setup()
+    fireEvent.change(getByLabelText('personal_space.timezone'), { target: { value: 'Europe/Lisbon' } })
+    expect((getByLabelText('personal_space.timezone') as HTMLSelectElement).value).toBe('Europe/Lisbon')
+
+    rerender(<PersonalSpaceSection space={{ ...PERSONAL, timezone: 'America/Toronto' }} onSave={vi.fn()} />)
+
+    expect((getByLabelText('personal_space.timezone') as HTMLSelectElement).value).toBe('America/Toronto')
+    expect((getByText('personal_space.submit') as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('does not resurrect an old draft when the space comes back to where it started', () => {
+    // Driven through a parent that owns the space, because that is how it happens: the banner and this
+    // section are siblings under one page, and rerender() with a different prop remounts the component
+    // — which resets its state and hides the very bug being tested. The browser found this one; the
+    // first two attempts at a fix passed a rerender-based test and were still broken on screen.
+    const TORONTO = { ...PERSONAL, timezone: 'America/Toronto' }
+    function Host() {
+      const [space, setSpace] = useState<SpaceSummary>(PERSONAL)
+      return (
+        <>
+          <button type="button" onClick={() => setSpace(TORONTO)}>banner-accepts-toronto</button>
+          <PersonalSpaceSection space={space} onSave={vi.fn()} />
+        </>
+      )
+    }
+    render(<Host />)
+    // Re-queried after each step rather than captured once: the element is replaced on re-render, and
+    // a stale handle reports the value it had before, which is how a broken fix can look like a pass.
+    const zone = () => screen.getByLabelText('personal_space.timezone') as HTMLSelectElement
+    fireEvent.change(zone(), { target: { value: 'Europe/Lisbon' } })
+    expect(zone().value).toBe('Europe/Lisbon')
+
+    fireEvent.click(screen.getByText('banner-accepts-toronto'))
+
+    // The space is Toronto now, so that is what the form must show — the Lisbon draft is spent.
+    expect(zone().value).toBe('America/Toronto')
+    expect((screen.getByText('personal_space.submit') as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('keeps what the user is choosing while the space does not move', async () => {
+    // The other half: re-rendering for any other reason must not throw away a pick in progress.
+    const { getByLabelText, rerender } = setup()
+    fireEvent.change(getByLabelText('personal_space.timezone'), { target: { value: 'Europe/Lisbon' } })
+
+    rerender(<PersonalSpaceSection space={PERSONAL} onSave={vi.fn()} />)
+
+    expect((getByLabelText('personal_space.timezone') as HTMLSelectElement).value).toBe('Europe/Lisbon')
   })
 
   it('saves the chosen calendar', async () => {
