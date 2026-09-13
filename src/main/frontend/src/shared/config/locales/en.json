@@ -5,6 +5,8 @@
     "unexpected": "An unexpected error occurred.",
     "retry": "Try again",
     "reload": "Reload page",
+    "details": "Technical details",
+    "copy_details": "Copy the details",
     "spaces_unavailable": "Could not load your contexts. Check your connection and try again."
   },
   "transfer": {
