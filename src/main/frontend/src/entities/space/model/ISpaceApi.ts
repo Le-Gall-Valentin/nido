@@ -25,9 +25,9 @@ export interface UpdateSpaceInput {
 /**
  * Port for the "Membres et groupes" page. Consumers (hooks) depend on this
  * contract, never on the concrete axios-backed implementation, which is
- * injected through SpacesPageApiProvider.
+ * injected through SpaceApiProvider.
  */
-export interface ISpacesPageApi {
+export interface ISpaceApi {
   getSpaceDetail(spaceId: string): Promise<SpaceDetail>
   listMembers(spaceId: string): Promise<SpaceMember[]>
   listInvitations(spaceId: string): Promise<SpaceInvitation[]>

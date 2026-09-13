@@ -1,15 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/shared/config'
-import { SpaceMembersApiProvider } from '@/entities/space'
+import { SpaceMembersApiProvider , spaceApi , SpaceApiProvider } from '@/entities/space'
 import { useActiveSpace } from '@/features/space-switcher'
-import { spacesPageApi } from '../api/spacesPageApi'
-import type { ISpacesPageApi } from '../model/ISpacesPageApi'
-import { SpacesPageApiProvider } from '../model/spacesPageApiContext'
+import type { ISpaceApi } from '@/entities/space'
 import { SpaceDetailSection } from './SpaceDetailSection'
 
 interface SpaceMembersPageProps {
   /** Composition seam: defaults to the real implementation; tests inject a fake. */
-  api?: ISpacesPageApi
+  api?: ISpaceApi
 }
 
 /**
@@ -17,13 +15,13 @@ interface SpaceMembersPageProps {
  * The context comes from the URL through useActiveSpace(), never from a
  * local selection state — that is what makes a link to a group shareable.
  */
-export function SpaceMembersPage({ api = spacesPageApi }: SpaceMembersPageProps = {}) {
+export function SpaceMembersPage({ api = spaceApi }: SpaceMembersPageProps = {}) {
   return (
-    <SpacesPageApiProvider api={api}>
+    <SpaceApiProvider api={api}>
       <SpaceMembersApiProvider api={api}>
         <SpaceMembersPageContent />
       </SpaceMembersApiProvider>
-    </SpacesPageApiProvider>
+    </SpaceApiProvider>
   )
 }
 

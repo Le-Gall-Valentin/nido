@@ -3,10 +3,9 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom
 import { LoginPage } from '@/pages/login'
 import { ROUTES } from '@/shared/config'
 import { AppLayout, SpaceLayout } from '@/app/layouts'
-import { SpaceMembersApiProvider } from '@/entities/space'
+import { SpaceApiProvider, SpaceMembersApiProvider, spaceApi } from '@/entities/space'
 import { TasksApiProvider, tasksApi } from '@/entities/tasks'
 import { SpacesApiProvider, spacesApi } from '@/features/space-switcher'
-import { SpacesPageApiProvider, spacesPageApi } from '@/pages/spaces/invitations'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AdminRoute } from './AdminRoute'
 import { SpaceRoute } from './SpaceRoute'
@@ -47,13 +46,13 @@ export function AppRouter() {
           element={
             <ProtectedRoute>
               <SpacesApiProvider api={spacesApi}>
-                <SpacesPageApiProvider api={spacesPageApi}>
-                  <SpaceMembersApiProvider api={spacesPageApi}>
+                <SpaceApiProvider api={spaceApi}>
+                  <SpaceMembersApiProvider api={spaceApi}>
                     <TasksApiProvider api={tasksApi}>
                       <AppLayout />
                     </TasksApiProvider>
                   </SpaceMembersApiProvider>
-                </SpacesPageApiProvider>
+                </SpaceApiProvider>
               </SpacesApiProvider>
             </ProtectedRoute>
           }

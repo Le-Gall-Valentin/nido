@@ -5,11 +5,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Clock, LogOut, Pencil, Trash2, UserPlus } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { Alert, Button, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { SpaceAvatar, SpaceRolePill, canManageSpace, isOwner, isPersonal, useSpaceMembers, type SpaceMember } from '@/entities/space'
-import { SpaceNotAccessibleError, SPACES_QUERY_KEY } from '@/features/space-switcher'
-import { useSpaceDetail } from '../model/useSpaceDetail'
-import { useSpaceInvitations } from '../model/useSpaceInvitations'
-import {
+import { SpaceAvatar, SpaceRolePill, canManageSpace, isOwner, isPersonal, useSpaceMembers, type SpaceMember, SpaceNotAccessibleError, SPACES_QUERY_KEY , AssignableSpaceRole } from '@/entities/space'
+import { useSpaceDetail , useSpaceInvitations ,
   useChangeMemberRole,
   useRemoveMember,
   useTransferOwnership,
@@ -18,9 +15,8 @@ import {
   useUpdateSpace,
   useInviteMember,
   useRevokeInvitation,
-} from '../model/useSpaceMutations'
+} from '@/entities/space'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
-import type { AssignableSpaceRole } from '../model/ISpacesPageApi'
 import { MemberList } from './MemberList'
 import { InvitationList } from './InvitationList'
 import { InviteMemberModal } from './InviteMemberModal'

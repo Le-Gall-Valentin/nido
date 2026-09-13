@@ -2,26 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createInstance } from 'i18next'
 import { mapSpaceErrorToKey } from './mapSpaceErrorToKey'
 import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
-import { SpaceNotAccessibleError } from '@/features/space-switcher'
-import {
-  InsufficientRoleError,
-  SelfManagementError,
-  OwnerProtectedError,
-  SpaceRoleAlreadyAssignedError,
-  LastOwnerError,
-  MemberNotFoundError,
-  AlreadyMemberError,
-  InvitationAlreadyPendingError,
-  InvitationNotFoundError,
-  InvitationNotPendingError,
-  InvitationExpiredError,
-  PersonalSpaceImmutableError,
-  NoAccountForEmailError,
-  InvalidAppearanceError,
-  InvalidSpaceNameError,
-  InvalidSpaceDescriptionError,
-  OwnerRoleNotAssignableError,
-} from '../api/spacesPageApi'
+import { InsufficientRoleError, SelfManagementError, OwnerProtectedError, SpaceRoleAlreadyAssignedError, LastOwnerError, MemberNotFoundError, AlreadyMemberError, InvitationAlreadyPendingError, InvitationNotFoundError, InvitationNotPendingError, InvitationExpiredError, PersonalSpaceImmutableError, NoAccountForEmailError, InvalidAppearanceError, InvalidSpaceNameError, InvalidSpaceDescriptionError, OwnerRoleNotAssignableError, SpaceNotAccessibleError } from '@/entities/space'
 import en from '../locales/en.json'
 import fr from '../locales/fr.json'
 

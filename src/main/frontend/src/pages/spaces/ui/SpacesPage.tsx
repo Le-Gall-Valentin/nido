@@ -4,28 +4,26 @@ import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/shared/config'
 import { Alert, Spinner } from '@/shared/ui'
 import { useMySpaces } from '@/features/space-switcher'
-import { spacesPageApi } from '../api/spacesPageApi'
-import type { ISpacesPageApi } from '../model/ISpacesPageApi'
-import { SpacesPageApiProvider } from '../model/spacesPageApiContext'
-import { useCreateSpace } from '../model/useSpaceMutations'
+import { spaceApi , SpaceApiProvider , useCreateSpace } from '@/entities/space'
+import type { ISpaceApi } from '@/entities/space'
 import { ReceivedInvitationsSection } from './ReceivedInvitationsSection'
 import { SpaceListSection } from './SpaceListSection'
 import { CreateSpaceModal } from './CreateSpaceModal'
 
 interface SpacesPageProps {
   /** Composition seam: defaults to the real implementation; tests inject a fake. */
-  api?: ISpacesPageApi
+  api?: ISpaceApi
 }
 
 /**
  * Slice composition root: provisions the spaces page API at its own
  * boundary, so the app/router never has to know about this dependency.
  */
-export function SpacesPage({ api = spacesPageApi }: SpacesPageProps = {}) {
+export function SpacesPage({ api = spaceApi }: SpacesPageProps = {}) {
   return (
-    <SpacesPageApiProvider api={api}>
+    <SpaceApiProvider api={api}>
       <SpacesPageContent />
-    </SpacesPageApiProvider>
+    </SpaceApiProvider>
   )
 }
 

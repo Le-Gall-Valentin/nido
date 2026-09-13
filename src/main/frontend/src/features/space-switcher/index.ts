@@ -1,9 +1,9 @@
 import './locales'
 
 export type { ISpacesApi } from './model/ISpacesApi'
-export { spacesApi, SpaceNotAccessibleError } from './api/spacesApi'
+export { spacesApi } from './api/spacesApi'
 export { SpacesApiProvider, useSpacesApi } from './model/spacesApiContext'
-export { useMySpaces, SPACES_QUERY_KEY } from './model/useMySpaces'
+export { useMySpaces } from './model/useMySpaces'
 export { useWritableSpaces } from './model/useWritableSpaces'
 export { activeSpaceStore, LAST_SPACE_STORAGE_KEY } from './model/activeSpaceStore'
 export { useActiveSpace } from './model/useActiveSpace'

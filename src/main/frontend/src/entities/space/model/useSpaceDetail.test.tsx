@@ -4,8 +4,8 @@ import type { ReactNode } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import type { SpaceDetail } from '@/entities/space'
-import type { ISpacesPageApi } from './ISpacesPageApi'
-import { SpacesPageApiProvider } from './spacesPageApiContext'
+import type { ISpaceApi } from './ISpaceApi'
+import { SpaceApiProvider } from './spaceApiContext'
 import { useSpaceDetail, spaceDetailKey } from './useSpaceDetail'
 
 const DETAIL: SpaceDetail = {
@@ -13,7 +13,7 @@ const DETAIL: SpaceDetail = {
   accent: '#c17a5c', glyph: '🏡', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris',
 }
 
-function fakeApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
+function fakeApi(overrides: Partial<ISpaceApi> = {}): ISpaceApi {
   return {
     getSpaceDetail: vi.fn().mockResolvedValue(DETAIL),
     listMembers: vi.fn(), listInvitations: vi.fn(), listReceivedInvitations: vi.fn(),
@@ -24,11 +24,11 @@ function fakeApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
   }
 }
 
-function wrapperFor(api: ISpacesPageApi) {
+function wrapperFor(api: ISpaceApi) {
   const queryClient = createTestQueryClient()
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <SpacesPageApiProvider api={api}>{children}</SpacesPageApiProvider>
+      <SpaceApiProvider api={api}>{children}</SpaceApiProvider>
     </QueryClientProvider>
   )
 }

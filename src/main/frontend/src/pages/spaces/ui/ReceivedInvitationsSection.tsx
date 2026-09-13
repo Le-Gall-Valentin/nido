@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check } from 'lucide-react'
-import { SpaceAvatar, SpaceRolePill } from '@/entities/space'
+import { SpaceAvatar, SpaceRolePill , useReceivedInvitations , useAcceptInvitation } from '@/entities/space'
 import { Alert, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { formatRelativeTime } from '@/shared/lib'
-import { useReceivedInvitations } from '../model/useReceivedInvitations'
-import { useAcceptInvitation } from '../model/useSpaceMutations'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 
 interface ReceivedInvitationsSectionProps {

@@ -3,11 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
-import { SpaceMembersApiProvider, type SpaceDetail, type SpaceMember, type SpaceInvitation } from '@/entities/space'
-import type { ISpacesPageApi } from '../model/ISpacesPageApi'
-import { SpacesPageApiProvider } from '../model/spacesPageApiContext'
+import { SpaceMembersApiProvider, type SpaceDetail, type SpaceMember, type SpaceInvitation, SpaceNotAccessibleError, SPACES_QUERY_KEY , ISpaceApi } from '@/entities/space'
+import { SpaceApiProvider } from '@/entities/space'
 import { SpaceDetailSection } from './SpaceDetailSection'
-import { SpaceNotAccessibleError, SPACES_QUERY_KEY } from '@/features/space-switcher'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k), i18n: { language: 'en' } }),
@@ -40,7 +38,7 @@ const INVITATIONS: SpaceInvitation[] = [
   { id: 'i-1', email: 'carol@test.com', role: 'MEMBER', code: 'NIDO-ABC', status: 'PENDING', expiresAt: '2999-01-01T00:00:00Z', createdAt: '2024-01-01T00:00:00Z' },
 ]
 
-function fakeApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
+function fakeApi(overrides: Partial<ISpaceApi> = {}): ISpaceApi {
   return {
     getSpaceDetail: vi.fn().mockResolvedValue(SHARED_DETAIL),
     listMembers: vi.fn().mockResolvedValue(MEMBERS),
@@ -61,7 +59,7 @@ function fakeApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
 }
 
 function renderSection(
-  api: ISpacesPageApi,
+  api: ISpaceApi,
   spaceId = 's-1',
   onLeft = vi.fn(),
   onDeleted = vi.fn(),
@@ -69,9 +67,9 @@ function renderSection(
 ) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <SpacesPageApiProvider api={api}>
+      <SpaceApiProvider api={api}>
         <SpaceMembersApiProvider api={api}>{children}</SpaceMembersApiProvider>
-      </SpacesPageApiProvider>
+      </SpaceApiProvider>
     </QueryClientProvider>
   )
   return {

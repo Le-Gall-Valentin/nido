@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useSpacesPageApi } from './spacesPageApiContext'
+import { useSpaceApi } from './spaceApiContext'
 
 export function spaceInvitationsKey(spaceId: string) {
   return ['space', spaceId, 'invitations'] as const
@@ -12,7 +12,7 @@ export function spaceInvitationsKey(spaceId: string) {
  * behaves like the others when the caller does not care.
  */
 export function useSpaceInvitations(spaceId: string | undefined, enabled = true) {
-  const api = useSpacesPageApi()
+  const api = useSpaceApi()
   return useQuery({
     queryKey: spaceInvitationsKey(spaceId ?? ''),
     queryFn: () => api.listInvitations(spaceId as string),
