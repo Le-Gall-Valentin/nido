@@ -13,5 +13,11 @@
     "GRAM": "g", "KILOGRAM": "kg", "MILLILITER": "ml", "CENTILITER": "cl", "LITER": "l",
     "PIECE": "piece(s)", "SLICE": "slice(s)", "TABLESPOON": "tbsp", "TEASPOON": "tsp",
     "PINCH": "pinch(es)", "SACHET": "sachet(s)"
+  },
+  "delete_confirm": {
+    "message": "This cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete",
+    "error": "Something went wrong. Try again."
   }
 }

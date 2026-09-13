@@ -69,9 +69,6 @@ export function FinanceRecurringSeriesPanel({
       {deleting && (
         <ConfirmDeleteModal
           title={t('delete_confirm.title', { label: deleting.label })}
-          message={t('delete_confirm.message')}
-          confirmLabel={t('delete_confirm.confirm')}
-          cancelLabel={t('delete_confirm.cancel')}
           isPending={deleteSeries.isPending}
           error={deleteSeries.isError ? t('delete_confirm.error') : null}
           onCancel={() => {

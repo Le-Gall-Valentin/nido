@@ -34,8 +34,6 @@ export function DeleteRecipeModal({ recipeName, onClose, onDelete }: DeleteRecip
     <ConfirmDeleteModal
       title={t('delete_confirm.title', { name: recipeName })}
       message={t('delete_confirm.body')}
-      confirmLabel={t('delete_confirm.submit')}
-      cancelLabel={t('delete_confirm.cancel')}
       isPending={isLoading}
       error={hasError ? t('delete_confirm.error') : null}
       onCancel={onClose}
