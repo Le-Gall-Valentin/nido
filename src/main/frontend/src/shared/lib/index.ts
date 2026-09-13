@@ -1,6 +1,7 @@
 export type { PaletteItem, PaletteIconComponent } from './paletteRegistry'
 export { usePaletteItems, usePaletteResults } from './paletteRegistry'
 export { registerLocales } from './registerLocales'
+export { resolveLocale, toLanguage } from './resolveLocale'
 export { useFocusTrap } from './useFocusTrap'
 export {
   setSessionExpiredCallback, triggerSessionExpired,
