@@ -1,11 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
 import { useMySpaces } from '@/features/space-switcher'
-import { isPersonal } from '@/entities/space'
+import { isPersonal, useUpdateSpace, type SpaceSummary } from '@/entities/space'
 import { browserTimezone } from '@/shared/lib'
 import { PersonalSpaceSection } from './PersonalSpaceSection'
 import { TimezoneSuggestion } from './TimezoneSuggestion'
-import { personalSpaceApi } from '../api/personalSpaceApi'
 
 /**
  * Settings for the space that has no settings page.
@@ -17,17 +16,11 @@ import { personalSpaceApi } from '../api/personalSpaceApi'
 export function AccountPersonalSpacePage() {
   const { t } = useTranslation('account')
   const user = useAuth((s) => s.user)
-  const { data: spaces, refetch } = useMySpaces()
+  const { data: spaces } = useMySpaces()
 
   if (!user) return null
 
   const personal = spaces?.find(isPersonal)
-
-  async function save(timezone: string) {
-    if (!personal) return
-    await personalSpaceApi.updateTimezone(personal.id, timezone)
-    await refetch()
-  }
 
   return (
     <div className="mx-auto max-w-[760px] px-5 py-6 md:px-10 md:py-[34px]">
@@ -39,9 +32,28 @@ export function AccountPersonalSpacePage() {
         <p className="mt-1 text-[15px] text-fg-2">{t('pages.personal_space.subtitle')}</p>
       </div>
 
-      <TimezoneSuggestion space={personal} browserTimezone={browserTimezone()} onAccept={save} />
-
-      <PersonalSpaceSection space={personal} onSave={save} />
+      {personal && <PersonalSpaceSettings space={personal} />}
     </div>
+  )
+}
+
+/**
+ * Split from the page so the space is known: the write goes through the space entity's own mutation,
+ * which needs an id, and a hook cannot wait for a query to resolve. Mounting this only once the
+ * personal space is loaded is what makes that id real rather than a placeholder.
+ */
+function PersonalSpaceSettings({ space }: { space: SpaceSummary }) {
+  const updateSpace = useUpdateSpace(space.id)
+
+  function save(timezone: string): Promise<void> {
+    return updateSpace.mutateAsync({ timezone })
+  }
+
+  return (
+    <>
+      <TimezoneSuggestion space={space} browserTimezone={browserTimezone()} onAccept={save} />
+
+      <PersonalSpaceSection space={space} onSave={save} />
+    </>
   )
 }
