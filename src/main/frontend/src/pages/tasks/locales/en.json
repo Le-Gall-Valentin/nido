@@ -15,6 +15,11 @@
   "change_status_dialog_title": "Move \"{{title}}\" to…",
   "change_status_target_current": "{{column}} (current column)",
   "change_status_target_blocked": "{{column}} (subtasks incomplete)",
+  "blocked_by_subtasks": {
+    "message_one": "{{count}} subtask is still open on “{{title}}” — finish it first.",
+    "message_other": "{{count}} subtasks are still open on “{{title}}” — finish them first.",
+    "dismiss": "Dismiss warning"
+  },
   "form": {
     "create_title": "New task",
     "edit_title": "Edit task",

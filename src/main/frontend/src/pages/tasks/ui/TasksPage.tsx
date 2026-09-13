@@ -183,6 +183,7 @@ function TasksPageContent() {
     editingSeries, setEditingSeries,
     deletingSeries, setDeletingSeries,
     viewingSeries, setViewingSeries,
+    blockedBySubtasks, dismissBlockedBySubtasks,
     handleFormSubmit, handleUpdateSeriesSubmit, handleToggleDone, handleDragEnd, handleMoveConfirm, handlePickStatus,
     seriesForTask,
   } = useTasksPageState(spaceId)
@@ -220,6 +221,17 @@ function TasksPageContent() {
           </div>
         )}
       </div>
+
+      {blockedBySubtasks && (
+        <Alert
+          variant="warning"
+          className="mb-4"
+          onDismiss={dismissBlockedBySubtasks}
+          dismissLabel={t('blocked_by_subtasks.dismiss')}
+        >
+          {t('blocked_by_subtasks.message', { title: blockedBySubtasks.title, count: blockedBySubtasks.openSubtasks })}
+        </Alert>
+      )}
 
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

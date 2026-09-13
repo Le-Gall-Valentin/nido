@@ -9,7 +9,7 @@ import {
   type Task, type TaskStatus, type RecurringTaskSeries,
 } from '@/entities/tasks'
 import type { TaskFormInput, RecurringTaskSeriesFormInput } from './types'
-import { resolveTaskMove } from '../lib/resolveTaskMove'
+import { resolveTaskMove, type TaskMove } from '../lib/resolveTaskMove'
 
 /**
  * Owns every query, mutation, and local UI-state slice the tasks page needs,
@@ -42,6 +42,18 @@ export function useTasksPageState(spaceId: string) {
   const [editingSeries, setEditingSeries] = useState<RecurringTaskSeries | null>(null)
   const [deletingSeries, setDeletingSeries] = useState<RecurringTaskSeries | null>(null)
   const [viewingSeries, setViewingSeries] = useState<RecurringTaskSeries | null>(null)
+  const [blockedTaskId, setBlockedTaskId] = useState<string | null>(null)
+
+  /**
+   * Why the id and not the message: the reason is re-read from the tasks themselves on every render,
+   * so finishing the last subtask takes the warning down on its own. Kept as text, it would outlive
+   * what it was warning about.
+   */
+  const blockedTask = blockedTaskId ? tasks?.find((t) => t.id === blockedTaskId) : undefined
+  const openSubtasks = blockedTask?.subtasks.filter((sub) => !sub.done).length ?? 0
+  const blockedBySubtasks = blockedTask && openSubtasks > 0
+    ? { title: blockedTask.title, openSubtasks }
+    : null
 
   const currentSpace = mySpaces?.find((s) => s.id === spaceId)
   const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
@@ -80,17 +92,30 @@ export function useTasksPageState(spaceId: string) {
     updateRecurringTaskSeries.mutate({ seriesId: editingSeries.id, ...input }, { onSuccess: () => setEditingSeries(null) })
   }
 
+  /**
+   * The one place a resolved move is acted on, so that a refusal is reported wherever it comes from:
+   * the card's checkbox, a drag onto the column, or the status dialog.
+   */
+  function applyMove(move: TaskMove, targetStatus: TaskStatus) {
+    if (move.kind === 'blocked') {
+      setBlockedTaskId(move.task.id)
+      return
+    }
+    if (move.kind === 'move') {
+      setBlockedTaskId(null)
+      changeTaskStatus.mutate({ taskId: move.task.id, status: targetStatus })
+    }
+  }
+
   function handleToggleDone(task: Task) {
     const target = task.status === 'DONE' ? 'TODO' : 'DONE'
-    const resolved = resolveTaskMove(tasks ?? [], task.id, target)
-    if (resolved) changeTaskStatus.mutate({ taskId: task.id, status: target })
+    applyMove(resolveTaskMove(tasks ?? [], task.id, target), target)
   }
 
   function handleDragEnd(event: DragEndEvent) {
     if (!event.over) return
     const targetStatus = event.over.id as TaskStatus
-    const resolved = resolveTaskMove(tasks ?? [], String(event.active.id), targetStatus)
-    if (resolved) changeTaskStatus.mutate({ taskId: resolved.id, status: targetStatus })
+    applyMove(resolveTaskMove(tasks ?? [], String(event.active.id), targetStatus), targetStatus)
   }
 
   async function handleMoveConfirm(destinationSpaceId: string): Promise<void> {
@@ -100,8 +125,9 @@ export function useTasksPageState(spaceId: string) {
 
   function handlePickStatus(status: TaskStatus) {
     if (!statusPickerTask) return
-    const resolved = resolveTaskMove(tasks ?? [], statusPickerTask.id, status)
-    if (resolved) changeTaskStatus.mutate({ taskId: statusPickerTask.id, status })
+    // The dialog already disables a blocked target, so this goes through applyMove for consistency
+    // rather than to be seen — and stays correct if that dialog ever stops disabling it.
+    applyMove(resolveTaskMove(tasks ?? [], statusPickerTask.id, status), status)
     setStatusPickerTask(null)
   }
 
@@ -126,6 +152,7 @@ export function useTasksPageState(spaceId: string) {
     editingSeries, setEditingSeries,
     deletingSeries, setDeletingSeries,
     viewingSeries, setViewingSeries,
+    blockedBySubtasks, dismissBlockedBySubtasks: () => setBlockedTaskId(null),
     handleFormSubmit, handleUpdateSeriesSubmit, handleToggleDone, handleDragEnd, handleMoveConfirm, handlePickStatus,
     seriesForTask,
   }
