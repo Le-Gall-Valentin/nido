@@ -5,6 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import boundaries from 'eslint-plugin-boundaries'
 import importPlugin from 'eslint-plugin-import'
+import jsxA11y from 'eslint-plugin-jsx-a11y'
 
 export default tseslint.config(
   { ignores: ['dist', 'coverage'] },
@@ -20,11 +21,27 @@ export default tseslint.config(
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
     plugins: {
+      'jsx-a11y': jsxA11y,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      ...jsxA11y.flatConfigs.recommended.rules,
+      /*
+       * Two adjustments, both because the rule reads JSX and cannot read intent.
+       *
+       * aria-role fires on <UserAvatar role="USER"> — a component prop carrying this application's
+       * own notion of a role, not the ARIA attribute. ignoreNonDOM is the option built for exactly
+       * that; the rule stays armed on real DOM elements, where a bad role is a real defect.
+       *
+       * no-autofocus exists because autofocus on page load moves the caret out from under the
+       * reader. Every one of the thirteen here is the first field of a modal the user just opened,
+       * inside a focus trap — which is where putting the caret is the expected behaviour, not a
+       * surprise. Turned off rather than suppressed thirteen times.
+       */
+      'jsx-a11y/aria-role': ['error', { ignoreNonDOM: true }],
+      'jsx-a11y/no-autofocus': 'off',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },

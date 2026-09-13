@@ -73,6 +73,9 @@ export function MobileNavDrawer({ items, spaceId, pathname, onClose, hasPendingI
           </button>
         </div>
 
+        {/* Delegation, not an affordance: the drawer closes when one of the links inside is followed,
+            and those links are ordinary anchors a keyboard reaches and activates on its own. */}
+        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
         <nav
           className="flex flex-1 flex-col gap-[3px] overflow-y-auto px-3 pb-4"
           aria-label={t('nav.label')}
