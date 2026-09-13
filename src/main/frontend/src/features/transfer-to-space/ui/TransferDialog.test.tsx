@@ -23,18 +23,18 @@ describe('TransferDialog', () => {
   it('shows the empty state and disables confirm when there is no destination', () => {
     render(<TransferDialog itemName="Bolognaise" operation="copy" destinations={[]} onClose={vi.fn()} onConfirm={vi.fn()} />)
 
-    expect(screen.getByText('transfer.no_destination')).toBeDefined()
-    expect((screen.getByText('transfer.copy_submit').closest('button') as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByText('no_destination')).toBeDefined()
+    expect((screen.getByText('copy_submit').closest('button') as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('disables confirm until a destination is selected', () => {
     render(<TransferDialog itemName="Bolognaise" operation="copy" destinations={DESTINATIONS} onClose={vi.fn()} onConfirm={vi.fn()} />)
 
-    expect((screen.getByText('transfer.copy_submit').closest('button') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByText('copy_submit').closest('button') as HTMLButtonElement).disabled).toBe(true)
 
     fireEvent.click(screen.getByText('La Famille'))
 
-    expect((screen.getByText('transfer.copy_submit').closest('button') as HTMLButtonElement).disabled).toBe(false)
+    expect((screen.getByText('copy_submit').closest('button') as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('confirms the copy with the selected destination id, then closes', async () => {
@@ -43,7 +43,7 @@ describe('TransferDialog', () => {
     render(<TransferDialog itemName="Bolognaise" operation="copy" destinations={DESTINATIONS} onClose={onClose} onConfirm={onConfirm} />)
 
     fireEvent.click(screen.getByText('La Famille'))
-    fireEvent.click(screen.getByText('transfer.copy_submit'))
+    fireEvent.click(screen.getByText('copy_submit'))
 
     await waitFor(() => expect(onConfirm).toHaveBeenCalledWith('space-2'))
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
@@ -52,8 +52,8 @@ describe('TransferDialog', () => {
   it('shows the move-specific label when operation is move', () => {
     render(<TransferDialog itemName="Bolognaise" operation="move" destinations={DESTINATIONS} onClose={vi.fn()} onConfirm={vi.fn()} />)
 
-    expect(screen.getByText('transfer.move_submit')).toBeDefined()
-    expect(screen.queryByText('transfer.copy_submit')).toBeNull()
+    expect(screen.getByText('move_submit')).toBeDefined()
+    expect(screen.queryByText('copy_submit')).toBeNull()
   })
 
   it('shows an error and does not close when the transfer fails', async () => {
@@ -62,7 +62,7 @@ describe('TransferDialog', () => {
     render(<TransferDialog itemName="Bolognaise" operation="copy" destinations={DESTINATIONS} onClose={onClose} onConfirm={onConfirm} />)
 
     fireEvent.click(screen.getByText('La Famille'))
-    fireEvent.click(screen.getByText('transfer.copy_submit'))
+    fireEvent.click(screen.getByText('copy_submit'))
 
     expect(await screen.findByRole('alert')).toBeDefined()
     expect(onClose).not.toHaveBeenCalled()
@@ -72,7 +72,7 @@ describe('TransferDialog', () => {
     const onClose = vi.fn()
     render(<TransferDialog itemName="Bolognaise" operation="copy" destinations={DESTINATIONS} onClose={onClose} onConfirm={vi.fn()} />)
 
-    fireEvent.click(screen.getByText('transfer.cancel'))
+    fireEvent.click(screen.getByText('cancel'))
 
     expect(onClose).toHaveBeenCalledOnce()
   })
