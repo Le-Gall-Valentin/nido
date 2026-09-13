@@ -29,6 +29,32 @@ describe('PersonalSpaceSection', () => {
     expect((getByLabelText('personal_space.timezone') as HTMLSelectElement).value).toBe('Europe/Paris')
   })
 
+  it('says so when the save fails, instead of just stopping', async () => {
+    // The button releases either way, so without this the screen is indistinguishable from a save
+    // that worked: same form, same values, and the calendar silently unchanged on the server.
+    const onSave = vi.fn<(timezone: string) => Promise<void>>().mockRejectedValue(new Error('network'))
+    const { getByLabelText, getByText } = setup({ onSave })
+
+    fireEvent.change(getByLabelText('personal_space.timezone'), { target: { value: 'America/Toronto' } })
+    fireEvent.click(getByText('personal_space.submit'))
+
+    expect(await screen.findByText('personal_space.error')).toBeDefined()
+  })
+
+  it('drops the failure message once a retry works', async () => {
+    const onSave = vi.fn<(timezone: string) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValue(undefined)
+    const { getByLabelText, getByText } = setup({ onSave })
+    fireEvent.change(getByLabelText('personal_space.timezone'), { target: { value: 'America/Toronto' } })
+    fireEvent.click(getByText('personal_space.submit'))
+    await screen.findByText('personal_space.error')
+
+    fireEvent.click(getByText('personal_space.submit'))
+
+    await waitFor(() => expect(screen.queryByText('personal_space.error')).toBeNull())
+  })
+
   it('saves the chosen calendar', async () => {
     const { getByLabelText, getByText, onSave } = setup()
 

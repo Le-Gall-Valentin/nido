@@ -46,7 +46,7 @@ export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSe
   // leaving them stranded on this dead page.
   useEffect(() => {
     if (detailErrorObj instanceof SpaceNotAccessibleError) {
-      queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] })
+      void queryClient.invalidateQueries({ queryKey: [SPACES_QUERY_KEY] })
     }
   }, [detailErrorObj, queryClient])
   const myRole = space?.myRole

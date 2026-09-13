@@ -13,7 +13,7 @@ import type { ISavingsGoalsApi } from './ISavingsGoalsApi'
 // interdependent enough (any transaction change can shift stats, projection AND balances)
 // that a narrower invalidation list would be easy to under-invalidate by accident.
 function invalidateSpace(queryClient: ReturnType<typeof useQueryClient>, spaceId: string) {
-  queryClient.invalidateQueries({ queryKey: ['finance', spaceId] })
+  return queryClient.invalidateQueries({ queryKey: ['finance', spaceId] })
 }
 
 export function useCreateCategory(spaceId: string) {

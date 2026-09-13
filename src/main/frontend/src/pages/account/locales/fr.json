@@ -83,11 +83,13 @@
     "subtitle": "Décide de ce qu'« aujourd'hui » veut dire dans votre espace personnel : ce qui est dû, ce qui est en retard, quel mois s'affiche.",
     "timezone": "Fuseau horaire",
     "timezone_hint": "Ne concerne que votre espace personnel. Les contextes partagés gardent le leur, réglable dans leurs propres paramètres.",
-    "submit": "Enregistrer"
+    "submit": "Enregistrer",
+    "error": "La modification n'a pas pu être enregistrée. Réessayez."
   },
   "timezone_suggestion": {
     "body": "Votre navigateur indique {{detected}}, mais votre espace personnel est réglé sur {{current}}. Voulez-vous le déplacer ?",
     "accept": "Passer à {{detected}}",
-    "dismiss": "Non merci"
+    "dismiss": "Non merci",
+    "error": "Le déplacement n'a pas pu être enregistré. Réessayez."
   }
 }

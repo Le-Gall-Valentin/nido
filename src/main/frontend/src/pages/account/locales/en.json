@@ -83,11 +83,13 @@
     "subtitle": "Decides what \"today\" means in your personal space: what is due, what is late, which month is shown.",
     "timezone": "Time zone",
     "timezone_hint": "Applies to your personal space only. Shared spaces keep their own, set in their own settings.",
-    "submit": "Save"
+    "submit": "Save",
+    "error": "That change could not be saved. Try again."
   },
   "timezone_suggestion": {
     "body": "Your browser says {{detected}}, but your personal space keeps {{current}}. Move it?",
     "accept": "Switch to {{detected}}",
-    "dismiss": "No thanks"
+    "dismiss": "No thanks",
+    "error": "That move could not be saved. Try again."
   }
 }

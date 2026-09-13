@@ -31,7 +31,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
   const go = useCallback(
     (item: { to?: string; action?: () => void }) => {
       if (item.action) item.action()
-      else if (item.to) nav(item.to)
+      else if (item.to) void nav(item.to)
       onClose()
     },
     [nav, onClose]

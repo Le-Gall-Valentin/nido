@@ -37,8 +37,8 @@ function SpaceMembersPageContent() {
     <div className="mx-auto max-w-[900px] px-5 py-6 md:px-10 md:py-[34px]">
       <SpaceDetailSection
         spaceId={spaceId}
-        onLeft={() => navigate(ROUTES.SPACES)}
-        onDeleted={() => navigate(ROUTES.SPACES)}
+        onLeft={() => void navigate(ROUTES.SPACES)}
+        onDeleted={() => void navigate(ROUTES.SPACES)}
       />
     </div>
   )

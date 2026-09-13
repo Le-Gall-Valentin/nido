@@ -56,7 +56,7 @@ describe('sessionHint', () => {
       removeItem: () => {
         throw new Error('storage unavailable')
       },
-    } as unknown as Storage)
+    })
 
     expect(() => setSessionHint()).not.toThrow()
     expect(() => clearSessionHint()).not.toThrow()

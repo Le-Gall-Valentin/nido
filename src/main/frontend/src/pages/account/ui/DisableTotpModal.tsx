@@ -68,7 +68,7 @@ export function DisableTotpModal({ open, onClose, onSuccess, onDisable }: Disabl
         <h3 className="text-xl font-semibold text-fg-0 mb-1.5">{t('disable.title')}</h3>
         <p className="text-sm text-fg-2">{t('disable.subtitle')}</p>
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => void handleSubmit(e)}>
         <TotpDigitInput
           ref={digitInputRef}
           value={code}

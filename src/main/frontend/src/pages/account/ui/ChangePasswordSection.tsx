@@ -85,7 +85,7 @@ export function ChangePasswordSection({ onChangePassword, onChanged }: ChangePas
         <p className="text-[13.5px] text-fg-2 mt-0.5">{t('password.subtitle')}</p>
       </div>
       <div className="px-7 py-5">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => void handleSubmit(e)}>
           <div className="mb-3 max-w-[360px]">
             <Input
               label={t('password.current')}

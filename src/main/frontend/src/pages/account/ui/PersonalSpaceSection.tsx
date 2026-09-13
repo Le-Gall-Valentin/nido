@@ -25,6 +25,7 @@ export function PersonalSpaceSection({ space, onSave }: PersonalSpaceSectionProp
   const { t } = useTranslation('account')
   const [timezone, setTimezone] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [failed, setFailed] = useState(false)
 
   if (!space) {
     return null
@@ -36,8 +37,13 @@ export function PersonalSpaceSection({ space, onSave }: PersonalSpaceSectionProp
   async function handleSave() {
     if (!isDirty || isSaving) return
     setIsSaving(true)
+    setFailed(false)
     try {
       await onSave(selected)
+    } catch {
+      // The button releases whether the save worked or not, so silence here is indistinguishable from
+      // success: same form, same values, and the calendar unchanged on the server.
+      setFailed(true)
     } finally {
       setIsSaving(false)
     }
@@ -63,8 +69,10 @@ export function PersonalSpaceSection({ space, onSave }: PersonalSpaceSectionProp
         <p className="text-xs text-fg-3">{t('personal_space.timezone_hint')}</p>
       </div>
 
+      {failed && <p className="mt-3 text-[13px] text-status-red">{t('personal_space.error')}</p>}
+
       <div className="mt-4 flex justify-end">
-        <Button type="button" style={CTA_BUTTON_STYLE} onClick={handleSave} disabled={!isDirty || isSaving}>
+        <Button type="button" style={CTA_BUTTON_STYLE} onClick={() => void handleSave()} disabled={!isDirty || isSaving}>
           {t('personal_space.submit')}
         </Button>
       </div>

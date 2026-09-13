@@ -34,7 +34,7 @@ export const totpApi: ITotpVerifyApi & ITotpEnrollApi = {
           // error_code is a stable backend field (not tied to Java class names).
           // 'totp_challenge_expired' → TOTP session timed out, user must restart login.
           // absent                  → wrong or replayed code (catch-all).
-          const errorCode = error.response?.data?.error_code as string | undefined
+          const { error_code: errorCode } = (error.response?.data ?? {}) as { error_code?: string }
           if (errorCode === 'totp_challenge_expired') throw new TotpChallengeExpiredError()
           throw new TotpCodeError()
         }

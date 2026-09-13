@@ -58,7 +58,7 @@ export function ReceivedInvitationsSection({ onAccepted }: ReceivedInvitationsSe
               </div>
               <SpaceRolePill role={invitation.role} label={t(`space:role.${invitation.role}`)} />
               <Button
-                onClick={() => handleAccept(invitation.invitationId)}
+                onClick={() => void handleAccept(invitation.invitationId)}
                 isLoading={accepting}
                 className="border-transparent font-semibold"
                 style={CTA_BUTTON_STYLE}
