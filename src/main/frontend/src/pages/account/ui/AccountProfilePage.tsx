@@ -34,7 +34,7 @@ export function AccountProfilePage({ api = accountApi }: AccountProfilePageProps
       <ProfileEditSection
         user={user}
         onPatch={patchUser}
-        onUpdateProfile={api.updateProfile}
+        onUpdateProfile={(username, email) => api.updateProfile(username, email)}
       />
     </div>
   )

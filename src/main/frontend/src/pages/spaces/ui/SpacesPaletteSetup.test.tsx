@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { SpacesPaletteSetup } from './SpacesPaletteSetup'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts?.name ? `${k}:${opts.name}` : k) }),
+  useTranslation: () => ({ t: (k: string, opts?: Record<string, string | number>) => (opts?.name ? `${k}:${opts.name}` : k) }),
 }))
 
 const mockUsePaletteItems = vi.fn()

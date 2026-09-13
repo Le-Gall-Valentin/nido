@@ -70,7 +70,7 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
       : t(ERROR_I18N_KEYS[errorKind])
 
   return (
-    <form onSubmit={handleSubmit} aria-labelledby={labelId} className="flex flex-col gap-4">
+    <form onSubmit={(e) => void handleSubmit(e)} aria-labelledby={labelId} className="flex flex-col gap-4">
       {errorMessage && (
         <div
           id={errorAlertId}

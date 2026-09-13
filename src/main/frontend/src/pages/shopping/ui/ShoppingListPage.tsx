@@ -148,11 +148,11 @@ function ShoppingListPageContent() {
         <h1 className="text-2xl font-bold text-fg-0">{t('title')}</h1>
         {(items ?? []).length > 0 && canWriteHere && (
           <div className="flex gap-2">
-            <button type="button" onClick={() => runMutation(clearDoneItems.mutateAsync()).catch(() => {})}
+            <button type="button" onClick={() => { runMutation(clearDoneItems.mutateAsync()).catch(() => {}) }}
               className="rounded-[9px] border border-border px-3 py-1.5 text-xs font-semibold text-fg-2">
               {t('clear_done')}
             </button>
-            <button type="button" onClick={() => runMutation(clearAllItems.mutateAsync()).catch(() => {})}
+            <button type="button" onClick={() => { runMutation(clearAllItems.mutateAsync()).catch(() => {}) }}
               className="rounded-[9px] border border-status-red px-3 py-1.5 text-xs font-semibold text-status-red">
               {t('clear_all')}
             </button>
@@ -228,7 +228,7 @@ function ShoppingListPageContent() {
                             </button>
                             {!category.fallback && (
                               <button type="button"
-                                onClick={() => runMutation(deleteCategory.mutateAsync(category.id)).catch(() => {})}
+                                onClick={() => { runMutation(deleteCategory.mutateAsync(category.id)).catch(() => {}) }}
                                 aria-label={t('category_delete', { name: category.name })} className="text-status-red">
                                 <Trash2 className="size-3.5" />
                               </button>
@@ -243,8 +243,8 @@ function ShoppingListPageContent() {
                       {categoryItems.map((item) => (
                         <ShoppingItemRow
                           key={item.id} item={item} canWrite={canWriteHere} quantityLabel={formatQuantity(item)}
-                          onToggleDone={() => runMutation(toggleItemDone.mutateAsync(item.id)).catch(() => {})}
-                          onDelete={() => runMutation(deleteItem.mutateAsync(item.id)).catch(() => {})}
+                          onToggleDone={() => { runMutation(toggleItemDone.mutateAsync(item.id)).catch(() => {}) }}
+                          onDelete={() => { runMutation(deleteItem.mutateAsync(item.id)).catch(() => {}) }}
                           onRequestMove={() => setMovingItem(item)}
                           moveLabel={t('move_item', { name: item.name })}
                           toggleLabel={t('toggle_done', { name: item.name })}

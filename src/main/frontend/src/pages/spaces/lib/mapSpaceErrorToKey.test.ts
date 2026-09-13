@@ -209,7 +209,7 @@ describe('mapSpaceErrorToKey — every produced key resolves to a real translati
           expect(resolved, `${name} under "${prefix}" (${language})`).not.toBe(keys[0])
           expect(resolved, `${name} under "${prefix}" (${language})`).not.toBe(keys[1])
           expect(typeof resolved).toBe('string')
-          expect((resolved as string).length).toBeGreaterThan(0)
+          expect((resolved).length).toBeGreaterThan(0)
         }
       }
     })

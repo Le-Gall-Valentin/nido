@@ -61,10 +61,10 @@ export function useCopyRecipe(spaceId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ recipeId, destinationSpaceId }: TransferVariables) => api.copyRecipe(spaceId, recipeId, destinationSpaceId),
-    onSuccess: (_recipe, { destinationSpaceId }) => {
-      queryClient.invalidateQueries({ queryKey: recipesKey(spaceId) })
-      queryClient.invalidateQueries({ queryKey: recipesKey(destinationSpaceId) })
-    },
+    onSuccess: (_recipe, { destinationSpaceId }) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: recipesKey(spaceId) }),
+      queryClient.invalidateQueries({ queryKey: recipesKey(destinationSpaceId) }),
+    ]),
   })
 }
 
@@ -73,9 +73,9 @@ export function useMoveRecipe(spaceId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ recipeId, destinationSpaceId }: TransferVariables) => api.moveRecipe(spaceId, recipeId, destinationSpaceId),
-    onSuccess: (_recipe, { destinationSpaceId }) => {
-      queryClient.invalidateQueries({ queryKey: recipesKey(spaceId) })
-      queryClient.invalidateQueries({ queryKey: recipesKey(destinationSpaceId) })
-    },
+    onSuccess: (_recipe, { destinationSpaceId }) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: recipesKey(spaceId) }),
+      queryClient.invalidateQueries({ queryKey: recipesKey(destinationSpaceId) }),
+    ]),
   })
 }

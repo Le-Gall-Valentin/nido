@@ -19,10 +19,10 @@ export function useCreateRecurringTask(spaceId: string) {
   return useMutation({
     mutationFn: (input: { title: string; priority: TaskPriority; subtasks: string[]; recurrence: RecurrenceInput }) =>
       api.createRecurringTask(spaceId, input.title, input.priority, input.subtasks, input.recurrence),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) })
-      queryClient.invalidateQueries({ queryKey: recurringTaskSeriesKey(spaceId) })
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) }),
+      queryClient.invalidateQueries({ queryKey: recurringTaskSeriesKey(spaceId) }),
+    ]),
   })
 }
 
@@ -68,10 +68,10 @@ export function useMoveTask(spaceId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { taskId: string; destinationSpaceId: string }) => api.moveTask(spaceId, input.taskId, input.destinationSpaceId),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) })
-      queryClient.invalidateQueries({ queryKey: tasksKey(variables.destinationSpaceId) })
-    },
+    onSuccess: (_data, variables) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) }),
+      queryClient.invalidateQueries({ queryKey: tasksKey(variables.destinationSpaceId) }),
+    ]),
   })
 }
 
@@ -81,10 +81,10 @@ export function useUpdateRecurringTaskSeries(spaceId: string) {
   return useMutation({
     mutationFn: (input: { seriesId: string; title: string; priority: TaskPriority; subtasks: string[]; recurrence: RecurrenceInput }) =>
       api.updateRecurringTaskSeries(spaceId, input.seriesId, input.title, input.priority, input.subtasks, input.recurrence),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) })
-      queryClient.invalidateQueries({ queryKey: recurringTaskSeriesKey(spaceId) })
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) }),
+      queryClient.invalidateQueries({ queryKey: recurringTaskSeriesKey(spaceId) }),
+    ]),
   })
 }
 
@@ -93,9 +93,9 @@ export function useDeleteRecurringTaskSeries(spaceId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (seriesId: string) => api.deleteRecurringTaskSeries(spaceId, seriesId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) })
-      queryClient.invalidateQueries({ queryKey: recurringTaskSeriesKey(spaceId) })
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) }),
+      queryClient.invalidateQueries({ queryKey: recurringTaskSeriesKey(spaceId) }),
+    ]),
   })
 }

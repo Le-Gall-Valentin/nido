@@ -29,6 +29,7 @@ export function TimezoneSuggestion({ space, browserTimezone, onAccept }: Timezon
   const { t } = useTranslation('account')
   const [dismissedFor, setDismissedFor] = useState<string | null>(readDismissed)
   const [isSaving, setIsSaving] = useState(false)
+  const [failed, setFailed] = useState(false)
 
   if (!shouldSuggestTimezoneChange({ space, browser: browserTimezone, dismissedFor })) {
     return null
@@ -50,8 +51,13 @@ export function TimezoneSuggestion({ space, browserTimezone, onAccept }: Timezon
   async function accept() {
     if (isSaving) return
     setIsSaving(true)
+    setFailed(false)
     try {
       await onAccept(browserTimezone)
+    } catch {
+      // Without this the banner just stays there, which reads as "nothing happened" — and the next
+      // thing the user does is click it again.
+      setFailed(true)
     } finally {
       setIsSaving(false)
     }
@@ -69,13 +75,14 @@ export function TimezoneSuggestion({ space, browserTimezone, onAccept }: Timezon
             })}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="button" style={CTA_BUTTON_STYLE} onClick={accept} disabled={isSaving}>
+            <Button type="button" style={CTA_BUTTON_STYLE} onClick={() => void accept()} disabled={isSaving}>
               {t('timezone_suggestion.accept', { detected })}
             </Button>
             <Button type="button" onClick={dismiss} disabled={isSaving}>
               {t('timezone_suggestion.dismiss')}
             </Button>
           </div>
+          {failed && <p className="mt-2 text-[13px] text-status-red">{t('timezone_suggestion.error')}</p>}
         </div>
       </div>
     </section>

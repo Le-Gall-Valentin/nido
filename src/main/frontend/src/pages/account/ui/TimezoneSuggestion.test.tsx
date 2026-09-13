@@ -37,6 +37,17 @@ describe('TimezoneSuggestion', () => {
       .toBeTruthy()
   })
 
+  it('says so when the move fails, instead of quietly staying put', async () => {
+    // Without this the banner simply stays there after the click, which reads as "nothing happened"
+    // — and the next thing the user does is click it again.
+    const onAccept = vi.fn<(timezone: string) => Promise<void>>().mockRejectedValue(new Error('network'))
+    setup({ onAccept })
+
+    fireEvent.click(screen.getByText(/timezone_suggestion\.accept/))
+
+    expect(await screen.findByText('timezone_suggestion.error')).toBeDefined()
+  })
+
   it('names the destination on the button itself', () => {
     // The label reads "Switch to {{detected}}", so it needs the variable the body was given. Asked
     // for without it, i18next leaves the placeholder on screen — which is what shipped: the button

@@ -61,7 +61,7 @@ export function EditUserRoleModal({ target, caller, onClose, onUpdate, onSuccess
           {t('edit_role.title', { username: target.username })}
         </h3>
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => void handleSubmit(e)}>
         <div className="mb-1 flex flex-col gap-2">
           <label htmlFor="edit-role" className="text-[13px] font-semibold text-fg-1">
             {t('edit_role.role')}

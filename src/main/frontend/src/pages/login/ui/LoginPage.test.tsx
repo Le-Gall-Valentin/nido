@@ -47,7 +47,7 @@ const mockTotpApi = { verify: vi.fn(), setup: vi.fn(), confirm: vi.fn(), getStat
 describe('LoginPage', () => {
   beforeEach(() => {
     vi.mocked(useAuth).mockImplementation((selector) =>
-      selector({ finalizeLogin: mockFinalizeLogin, user: null, isInitializing: false, login: vi.fn(), logout: vi.fn(), initialize: vi.fn(), patchUser: vi.fn() } as Parameters<typeof selector>[0])
+      selector({ finalizeLogin: mockFinalizeLogin, user: null, isInitializing: false, login: vi.fn(), logout: vi.fn(), initialize: vi.fn(), patchUser: vi.fn() })
     )
     mockFinalizeLogin.mockClear()
   })

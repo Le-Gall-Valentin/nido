@@ -2,10 +2,10 @@ import { fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AdminUsersPage } from './AdminUsersPage'
 import { renderWithQuery } from '@/shared/test'
-import type { AdminUser, UsersPage , IAdminUsersApi , User } from '@/entities/user'
+import type { AdminUser, UsersPage, User } from '@/entities/user'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => {
+  useTranslation: () => ({ t: (k: string, opts?: Record<string, string | number>) => {
     if (opts && typeof opts.count === 'number') return `${k}:${opts.count}`
     if (opts && opts.current) return `${k}:${opts.current}/${opts.total}`
     return k
@@ -105,7 +105,7 @@ function setup() {
   mockUseAuth.mockImplementation((selector: (s: { user: User }) => unknown) =>
     selector({ user: MOCK_CURRENT_USER })
   )
-  return renderWithQuery(<AdminUsersPage api={mockApi as IAdminUsersApi} />)
+  return renderWithQuery(<AdminUsersPage api={mockApi} />)
 }
 
 beforeEach(() => {

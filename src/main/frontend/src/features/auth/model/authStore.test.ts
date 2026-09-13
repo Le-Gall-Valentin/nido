@@ -157,7 +157,7 @@ describe('authStore', () => {
       let resolveGetMe!: (value: { id: string; username: string; role: 'USER'; email: string; createdAt: string; totpEnabled: boolean }) => void
       vi.mocked(api.getMe)
         .mockImplementationOnce(
-          () => new Promise((resolve) => { resolveGetMe = resolve as typeof resolveGetMe })
+          () => new Promise((resolve) => { resolveGetMe = resolve })
         )
         .mockResolvedValueOnce({ id: '2', username: 'alice', role: 'USER', email: 'alice@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false })
 
@@ -182,7 +182,7 @@ describe('authStore', () => {
 
       let resolveGetMe!: (value: { id: string; username: string; role: 'USER'; email: string; createdAt: string; totpEnabled: boolean }) => void
       vi.mocked(api.getMe).mockImplementation(
-        () => new Promise((resolve) => { resolveGetMe = resolve as typeof resolveGetMe })
+        () => new Promise((resolve) => { resolveGetMe = resolve })
       )
       mockedHasSessionHint.mockReturnValue(true)
 

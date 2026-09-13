@@ -71,7 +71,7 @@ export function createRefreshInterceptorHandlers(
       return Promise.reject(error)
     }
 
-    const original = error.config as InternalAxiosRequestConfig
+    const original = error.config
 
     if (error.response?.status !== 401 || original._retry) {
       return Promise.reject(error)
@@ -101,7 +101,7 @@ export function createRefreshInterceptorHandlers(
         sessionExpiredTriggered = true
         onSessionExpired()
       }
-      return Promise.reject(refreshError)
+      throw refreshError
     } finally {
       isRefreshing = false
     }

@@ -151,7 +151,7 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} aria-labelledby={headingId} className="mt-4">
+      <form onSubmit={(e) => void handleSubmit(e)} aria-labelledby={headingId} className="mt-4">
         <TotpDigitInput
           ref={digitInputRef}
           value={code}

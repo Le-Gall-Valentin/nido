@@ -64,7 +64,7 @@ export function CreateSpaceModal({ onClose, onCreate, onSuccess }: CreateSpaceMo
       <div className="mb-5">
         <h3 className="text-xl font-semibold text-fg-0">{t('create.title')}</h3>
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => void handleSubmit(e)}>
         <div className="mb-3">
           <Input
             label={t('create.name')}

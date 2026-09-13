@@ -70,7 +70,7 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
       <div className="mb-5">
         <h3 className="text-xl font-semibold text-fg-0">{t('create.title')}</h3>
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => void handleSubmit(e)}>
         <div className="flex flex-col gap-3 sm:flex-row mb-3">
           <div className="min-w-0 flex-1">
             <Input

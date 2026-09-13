@@ -76,7 +76,7 @@ export function EditSpaceModal({ space, onClose, onUpdate, onSuccess }: EditSpac
       <div className="mb-5">
         <h3 className="text-xl font-semibold text-fg-0">{t('edit.title', { name: space.name })}</h3>
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => void handleSubmit(e)}>
         <div className="mb-3">
           <Input
             label={t('edit.name')}

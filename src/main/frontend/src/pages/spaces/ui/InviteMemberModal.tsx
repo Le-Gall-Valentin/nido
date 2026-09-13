@@ -99,7 +99,7 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
       <div className="mb-5">
         <h3 className="text-xl font-semibold text-fg-0">{t('invite.title')}</h3>
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => void handleSubmit(e)}>
         <div className="mb-3">
           <Input
             label={t('invite.email')}
