@@ -7,7 +7,7 @@
   "error": { "load_failed": "Could not load this data.", "action_failed": "Action failed. Please try again." },
   "delete_confirm": {
     "title": "Delete \"{{name}}\"?", "body": "This recipe and its ingredients will be permanently deleted. This action cannot be undone.",
-    "cancel": "Cancel", "submit": "Delete", "error": "Failed to delete. Please try again."
+    "error": "Failed to delete. Please try again."
   },
   "category": {
     "plat": "Main course", "express": "Express", "vegetarian": "Vegetarian", "dessert": "Dessert", "soup": "Soup"

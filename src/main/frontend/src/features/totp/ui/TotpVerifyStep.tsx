@@ -97,7 +97,7 @@ export function TotpVerifyStep({ username, api, onVerified, onBack }: TotpVerify
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} aria-labelledby={headingId}>
+      <form onSubmit={(e) => void handleSubmit(e)} aria-labelledby={headingId}>
         <TotpDigitInput
           ref={digitInputRef}
           value={code}

@@ -1,7 +1,7 @@
 import { render, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { TransferOwnershipModal } from './TransferOwnershipModal'
-import { OwnerProtectedError } from '../api/spacesPageApi'
+import { OwnerProtectedError } from '@/entities/space'
 import type { SpaceMember } from '@/entities/space'
 
 vi.mock('react-i18next', () => ({

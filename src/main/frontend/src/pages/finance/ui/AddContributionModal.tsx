@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { todayIso } from '@/shared/lib'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { SpaceMember } from '@/entities/space'
 
@@ -14,6 +15,8 @@ export interface AddContributionInput {
 }
 
 interface AddContributionModalProps {
+  /** The household's calendar — the default date has to be its today, not the browser's. */
+  spaceTimezone?: string
   goalName: string
   /** What's left to reach the goal's target (targetAmount - totalContributed). A contribution cannot exceed it. */
   remaining: number
@@ -25,11 +28,11 @@ interface AddContributionModalProps {
   submitError?: string | null
 }
 
-export function AddContributionModal({ goalName, remaining, members, onSubmit, onCancel, isPending, submitError = null }: AddContributionModalProps) {
+export function AddContributionModal({ spaceTimezone, goalName, remaining, members, onSubmit, onCancel, isPending, submitError = null }: AddContributionModalProps) {
   const { t } = useTranslation('finance')
   const [memberId, setMemberId] = useState(members[0]?.userId ?? '')
   const [amount, setAmount] = useState('')
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(todayIso(new Date(), spaceTimezone))
   const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: React.FormEvent) {

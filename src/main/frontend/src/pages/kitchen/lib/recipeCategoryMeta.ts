@@ -1,4 +1,4 @@
-import type { RecipeCategory } from '../model/types'
+import type { RecipeCategory } from '@/entities/kitchen'
 
 export interface RecipeCategoryMeta {
   labelKey: string

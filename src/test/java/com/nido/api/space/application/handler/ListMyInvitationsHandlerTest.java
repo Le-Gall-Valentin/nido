@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -76,6 +77,6 @@ class ListMyInvitationsHandlerTest {
     }
 
     private Space sharedSpace(UUID id) {
-        return new Space(id, SpaceType.SHARED, "Chez Valentin", null, "#4a7fa0", "🏠", null, Instant.now());
+        return new Space(id, SpaceType.SHARED, "Chez Valentin", null, "#4a7fa0", "🏠", null, ZoneId.of("Europe/Paris"), Instant.now());
     }
 }

@@ -3,10 +3,9 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom
 import { LoginPage } from '@/pages/login'
 import { ROUTES } from '@/shared/config'
 import { AppLayout, SpaceLayout } from '@/app/layouts'
-import { SpaceMembersApiProvider } from '@/entities/space'
+import { SpaceApiProvider, SpaceMembersApiProvider, spaceApi } from '@/entities/space'
 import { TasksApiProvider, tasksApi } from '@/entities/tasks'
 import { SpacesApiProvider, spacesApi } from '@/features/space-switcher'
-import { SpacesPageApiProvider, spacesPageApi } from '@/pages/spaces/invitations'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AdminRoute } from './AdminRoute'
 import { SpaceRoute } from './SpaceRoute'
@@ -17,6 +16,7 @@ const AdminUsersPage = lazy(() => import('@/pages/admin-users'))
 const AccountProfilePage = lazy(() => import('@/pages/account'))
 const AccountSecurityPage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountSecurityPage })))
 const AccountPreferencesPage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountPreferencesPage })))
+const AccountPersonalSpacePage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountPersonalSpacePage })))
 const SpacesPage = lazy(() => import('@/pages/spaces'))
 const SpaceMembersPage = lazy(() => import('@/pages/spaces').then((m) => ({ default: m.SpaceMembersPage })))
 const KitchenRecipesPage = lazy(() => import('@/pages/kitchen'))
@@ -46,13 +46,13 @@ export function AppRouter() {
           element={
             <ProtectedRoute>
               <SpacesApiProvider api={spacesApi}>
-                <SpacesPageApiProvider api={spacesPageApi}>
-                  <SpaceMembersApiProvider api={spacesPageApi}>
+                <SpaceApiProvider api={spaceApi}>
+                  <SpaceMembersApiProvider api={spaceApi}>
                     <TasksApiProvider api={tasksApi}>
                       <AppLayout />
                     </TasksApiProvider>
                   </SpaceMembersApiProvider>
-                </SpacesPageApiProvider>
+                </SpaceApiProvider>
               </SpacesApiProvider>
             </ProtectedRoute>
           }
@@ -70,6 +70,7 @@ export function AppRouter() {
             <Route path="profile" element={<AccountProfilePage />} />
             <Route path="security" element={<AccountSecurityPage />} />
             <Route path="preferences" element={<AccountPreferencesPage />} />
+            <Route path="personal-space" element={<AccountPersonalSpacePage />} />
           </Route>
 
           <Route path={ROUTES.SPACES} element={<SpacesPage />} />

@@ -2,14 +2,15 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { SpacesApiProvider } from './spacesApiContext'
-import { useMySpaces, SPACES_QUERY_KEY } from './useMySpaces'
+import { useMySpaces } from './useMySpaces'
+import { SPACES_QUERY_KEY } from '@/entities/space'
 import type { ISpacesApi } from './ISpacesApi'
 import type { SpaceSummary } from '@/entities/space'
 import { createTestQueryClient } from '@/shared/test'
 import { QueryClientProvider } from '@tanstack/react-query'
 
 const PERSONAL: SpaceSummary = {
-  id: 'personal-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1,
+  id: 'personal-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris',
 }
 
 function fakeApi(overrides: Partial<ISpacesApi> = {}): ISpacesApi {

@@ -7,11 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.TestPropertySource;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -45,15 +41,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ApiDocumentationAccessIT {
 
     private static final String JWT_SECRET = "integration-test-secret-at-least-32-chars!";
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
-
-    @Container
-    @ServiceConnection
-    @SuppressWarnings("resource")
-    static GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
 
     @LocalServerPort int port;
 

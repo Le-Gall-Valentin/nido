@@ -2,8 +2,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { EditSpaceModal } from './EditSpaceModal'
 import { NetworkError, ServerError } from '@/shared/lib'
-import type { SpaceDetail } from '@/entities/space'
-import type { UpdateSpaceInput } from '../model/ISpacesPageApi'
+import type { SpaceDetail , UpdateSpaceInput } from '@/entities/space'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),
@@ -32,7 +31,7 @@ vi.mock('@/shared/ui', () => ({
 
 const SPACE: SpaceDetail = {
   id: 's-1', type: 'SHARED', name: 'Chez nous', description: 'Notre appartement',
-  accent: '#4a7fa0', glyph: '🌿', myRole: 'OWNER', memberCount: 2,
+  accent: '#4a7fa0', glyph: '🌿', myRole: 'OWNER', memberCount: 2, timezone: 'Europe/Paris',
 }
 
 function setup(overrides: { space?: SpaceDetail; onUpdate?: Mock<(patch: UpdateSpaceInput) => Promise<void>> } = {}) {
@@ -161,5 +160,38 @@ describe('EditSpaceModal — errors', () => {
     const { getByText, onClose } = setup()
     fireEvent.click(getByText('edit.cancel'))
     expect(onClose).toHaveBeenCalledOnce()
+  })
+})
+
+describe('EditSpaceModal — timezone', () => {
+  it('preselects the calendar the space keeps', () => {
+    const { getByLabelText } = setup()
+
+    expect((getByLabelText('edit.timezone') as HTMLSelectElement).value).toBe('Europe/Paris')
+  })
+
+  it('sends only the changed timezone', async () => {
+    // The move this exists for: somebody who created their space from one country and now lives in
+    // another. Nothing else on the form changed, so nothing else may be sent.
+    const { getByLabelText, getByText, onUpdate } = setup()
+
+    fireEvent.change(getByLabelText('edit.timezone'), { target: { value: 'America/Toronto' } })
+    fireEvent.click(getByText('edit.submit'))
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledWith({ timezone: 'America/Toronto' }))
+  })
+
+  it('submit stays disabled while the timezone is untouched', () => {
+    const { getByText } = setup()
+
+    expect((getByText('edit.submit') as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('keeps offering the zone a space already has, even one the short list forgot', () => {
+    // A household somewhere the list does not name must not have its zone silently replaced by
+    // the first option the moment the form opens.
+    const { getByLabelText } = setup({ space: { ...SPACE, timezone: 'Pacific/Noumea' } })
+
+    expect((getByLabelText('edit.timezone') as HTMLSelectElement).value).toBe('Pacific/Noumea')
   })
 })

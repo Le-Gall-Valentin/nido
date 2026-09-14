@@ -16,5 +16,15 @@ public record CreateSpaceRequest(
     @NotBlank @Size(max = 7) String accent,
 
     @Schema(description = "Glyphe, parmi la liste autorisée", example = "🏡")
-    @NotBlank @Size(max = 8) String glyph
+    @NotBlank @Size(max = 8) String glyph,
+
+    @Schema(description = """
+        Fuseau horaire du contexte, identifiant IANA. Absent : Europe/Paris.
+
+        Le front l'envoie depuis `Intl.DateTimeFormat().resolvedOptions().timeZone`, pour que le
+        contexte naisse sur le calendrier de celui qui le crée plutôt que sur celui du serveur.
+        Modifiable ensuite dans les réglages.
+        """,
+        example = "Europe/Paris")
+    @Size(max = 64) String timezone
 ) {}

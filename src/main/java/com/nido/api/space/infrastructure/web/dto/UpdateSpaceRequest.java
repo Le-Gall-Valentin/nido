@@ -18,5 +18,17 @@ public record UpdateSpaceRequest(
     @Size(max = 7) String accent,
 
     @Schema(description = "Glyphe, parmi la liste autorisée. Absent : inchangé.", example = "🏡")
-    @Size(max = 8) String glyph
+    @Size(max = 8) String glyph,
+
+    @Schema(description = """
+        Fuseau horaire du contexte, identifiant IANA. Absent : inchangé.
+
+        C'est lui qui décide de ce qu'« aujourd'hui » veut dire pour ce contexte — ce qui est dû,
+        ce qui est en retard, quel mois s'ouvre. Un contexte partagé s'accorde donc sur un seul
+        fuseau pour tous ses membres ; un contexte personnel n'ayant qu'un membre, c'est le sien.
+
+        Les décalages fixes (`+02:00`) sont refusés : ils ne suivent pas l'heure d'été.
+        """,
+        example = "Europe/Paris")
+    @Size(max = 64) String timezone
 ) {}

@@ -5,20 +5,19 @@
     "unexpected": "Une erreur inattendue est survenue.",
     "retry": "Réessayer",
     "reload": "Recharger la page",
+    "details": "Détails techniques",
+    "copy_details": "Copier le détail",
     "spaces_unavailable": "Impossible de charger vos contextes. Vérifiez votre connexion et réessayez."
-  },
-  "transfer": {
-    "copy_title": "Copier « {{name}} » vers…",
-    "move_title": "Déplacer « {{name}} » vers…",
-    "no_destination": "Aucun autre contexte disponible.",
-    "cancel": "Annuler",
-    "copy_submit": "Copier",
-    "move_submit": "Déplacer",
-    "error": "Une erreur est survenue. Réessayez."
   },
   "unit": {
     "GRAM": "g", "KILOGRAM": "kg", "MILLILITER": "ml", "CENTILITER": "cl", "LITER": "l",
     "PIECE": "pièce(s)", "SLICE": "tranche(s)", "TABLESPOON": "c. à s.", "TEASPOON": "c. à c.",
     "PINCH": "pincée(s)", "SACHET": "sachet(s)"
+  },
+  "delete_confirm": {
+    "message": "Cette action est définitive.",
+    "cancel": "Annuler",
+    "confirm": "Supprimer",
+    "error": "Une erreur est survenue. Réessayez."
   }
 }

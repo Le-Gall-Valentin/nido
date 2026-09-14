@@ -39,7 +39,8 @@
     "dismiss_profile": "Cancel",
     "loading": "Loading...",
     "error": {
-      "invalid_code": "Enter the 6-digit code shown by your application.",
+      "invalid_code": "Invalid or expired code.",
+      "incomplete": "Please enter all 6 digits.",
       "setup_failed": "Unable to generate QR code. Please try again.",
       "max_attempts": "Too many failed attempts. Setup has been cancelled, please try again.",
       "rate_limit": "Too many attempts. Please wait before trying again.",

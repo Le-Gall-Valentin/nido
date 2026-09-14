@@ -1,12 +1,8 @@
 import { isAxiosError } from 'axios'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError } from '@/shared/lib'
-import type { SpaceDetail, SpaceSummary } from '@/entities/space'
+import { SpaceNotAccessibleError, type SpaceDetail, type SpaceSummary } from '@/entities/space'
 import type { ISpacesApi } from '../model/ISpacesApi'
-
-export class SpaceNotAccessibleError extends Error {
-  constructor() { super('Space does not exist or is no longer accessible'); this.name = 'SpaceNotAccessibleError' }
-}
 
 function handleError(error: unknown): never {
   if (isAxiosError(error)) {

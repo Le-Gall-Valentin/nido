@@ -1,7 +1,7 @@
 import { render, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { LeaveSpaceModal } from './LeaveSpaceModal'
-import { LastOwnerError } from '../api/spacesPageApi'
+import { LastOwnerError } from '@/entities/space'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),

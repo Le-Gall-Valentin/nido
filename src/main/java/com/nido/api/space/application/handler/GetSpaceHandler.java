@@ -27,7 +27,7 @@ public class GetSpaceHandler implements GetSpaceUseCase {
         Space space = spaceRepository.findById(spaceId)
             .orElseThrow(SpaceException.SpaceNotFound::new);
         return new SpaceDetailView(space.id(), space.type(), space.name(), space.description(),
-            space.accent(), space.glyph(), caller.role(),
+            space.accent(), space.glyph(), space.timezone(), caller.role(),
             spaceRepository.countMembers(space.id()));
     }
 }

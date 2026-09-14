@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.time.ZoneId;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,8 +32,7 @@ class ListMySpacesHandlerTest {
     @Test
     void returns_what_the_repository_gives() {
         UUID userId = UUID.randomUUID();
-        SpaceSummaryView personal = new SpaceSummaryView(
-            UUID.randomUUID(), SpaceType.PERSONAL, "Perso", "#8a7d6b", "👤", SpaceRole.OWNER, 1);
+        SpaceSummaryView personal = new SpaceSummaryView(UUID.randomUUID(), SpaceType.PERSONAL, "Perso", "#8a7d6b", "👤", ZoneId.of("Europe/Paris"), SpaceRole.OWNER, 1);
         when(spaceRepository.findMySpaces(userId)).thenReturn(List.of(personal));
 
         List<SpaceSummaryView> result = handler.listMine(userId);

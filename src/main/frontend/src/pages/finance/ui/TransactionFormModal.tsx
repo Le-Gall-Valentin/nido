@@ -19,6 +19,8 @@ export interface TransactionFormInput {
 }
 
 interface TransactionFormModalProps {
+  /** The household's calendar — the default date has to be its today, not the browser's. */
+  spaceTimezone?: string
   mode: 'create' | 'edit'
   transaction?: Transaction
   categories: Category[]
@@ -35,7 +37,7 @@ interface TransactionFormModalProps {
 
 const SELECT_CLASSNAME = 'rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent'
 
-export function TransactionFormModal({ mode, transaction, categories, members, canPickContributors, currentUserId = null, onSubmit, onCancel, submitError = null }: TransactionFormModalProps) {
+export function TransactionFormModal({ spaceTimezone, mode, transaction, categories, members, canPickContributors, currentUserId = null, onSubmit, onCancel, submitError = null }: TransactionFormModalProps) {
   const { t } = useTranslation('finance')
   const [label, setLabel] = useState(transaction?.label ?? '')
   const [amount, setAmount] = useState(transaction ? String(transaction.amount) : '')
@@ -43,7 +45,7 @@ export function TransactionFormModal({ mode, transaction, categories, members, c
   const [categoryId, setCategoryId] = useState(
     transaction?.categoryId ?? categories.find((c) => c.type === (transaction?.type ?? 'EXPENSE'))?.id ?? ''
   )
-  const [date, setDate] = useState(transaction?.date ?? new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(transaction?.date ?? todayIso(new Date(), spaceTimezone))
   const [payerId, setPayerId] = useState<string>(transaction?.payerId ?? currentUserId ?? '')
   const [contributorIds, setContributorIds] = useState<string[]>(
     transaction?.contributors.map((c) => c.memberId) ?? defaultContributorIds(transaction?.type ?? 'EXPENSE')

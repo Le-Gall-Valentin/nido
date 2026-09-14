@@ -62,7 +62,8 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
-    if (code.length < 6 || isSubmittingRef.current) return
+    if (code.length < 6) { setErrorKey('setup.error.incomplete'); return }
+    if (isSubmittingRef.current) return
     isSubmittingRef.current = true
     setIsLoading(true)
     setErrorKey(null)
@@ -151,7 +152,7 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} aria-labelledby={headingId} className="mt-4">
+      <form onSubmit={(e) => void handleSubmit(e)} aria-labelledby={headingId} className="mt-4">
         <TotpDigitInput
           ref={digitInputRef}
           value={code}

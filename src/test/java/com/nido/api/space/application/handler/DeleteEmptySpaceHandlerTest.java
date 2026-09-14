@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -65,7 +66,6 @@ class DeleteEmptySpaceHandlerTest {
     }
 
     private Space shared() {
-        return new Space(spaceId, SpaceType.SHARED, "Chez Valentin", null,
-            "#c17a5c", "🏡", null, Instant.now());
+        return new Space(spaceId, SpaceType.SHARED, "Chez Valentin", null, "#c17a5c", "🏡", null, ZoneId.of("Europe/Paris"), Instant.now());
     }
 }

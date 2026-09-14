@@ -37,7 +37,7 @@ export function AccountSecurityPage({ api = accountApi }: AccountSecurityPagePro
       />
 
       <ChangePasswordSection
-        onChangePassword={api.changePassword}
+        onChangePassword={(current, next) => api.changePassword(current, next)}
         // The store clears the local session in its own finally block, so a failing
         // logout call still signs this device out — the catch only keeps the rejection
         // from surfacing as an unhandled one.

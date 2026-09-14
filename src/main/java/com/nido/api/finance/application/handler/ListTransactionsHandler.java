@@ -6,6 +6,7 @@ import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository
 import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -15,18 +16,21 @@ import java.util.List;
 @ApplicationService
 public class ListTransactionsHandler implements ListTransactionsUseCase {
 
+    private final GetSpaceTodayUseCase spaceToday;
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionSeriesRepository seriesRepository;
 
-    public ListTransactionsHandler(TransactionRepository transactionRepository, RecurringTransactionSeriesRepository seriesRepository) {
+    public ListTransactionsHandler(TransactionRepository transactionRepository, RecurringTransactionSeriesRepository seriesRepository,
+                            GetSpaceTodayUseCase spaceToday) {
         this.transactionRepository = transactionRepository;
         this.seriesRepository = seriesRepository;
+        this.spaceToday = spaceToday;
     }
 
     @Override
     @Transactional
     public List<Transaction> list(YearMonth month, SpaceMembership caller) {
-        return list(month, caller, LocalDate.now());
+        return list(month, caller, spaceToday.today(caller.spaceId()));
     }
 
     /**

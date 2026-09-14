@@ -1,10 +1,38 @@
 import type { AxiosInstance, AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
-import { triggerSessionExpired } from '@/shared/lib'
+import { setLoginSuccessCallback, triggerSessionExpired } from '@/shared/lib'
 
 interface QueueEntry {
   resolve: (value: unknown) => void
   reject: (reason: unknown) => void
   config: InternalAxiosRequestConfig
+}
+
+/**
+ * Routes whose 401 is about the session itself, where refreshing would either loop or say nothing:
+ * signing in, refreshing, signing out.
+ */
+const SESSION_ROUTES = ['/auth/login', '/auth/refresh', '/auth/logout'] as const
+
+/**
+ * Routes that authenticate the request by what it carries — a TOTP code, or the challenge cookie
+ * from a login in progress — rather than by the access token. Their 401 says "that code is wrong"
+ * while the session is perfectly valid, so refreshing rotates both tokens for nothing and replaying
+ * the request spends a second of the attempts the server allows on it. The method is part of the
+ * rule: the disable route is the DELETE on /auth/2fa, while /auth/2fa/setup and /auth/2fa/status sit
+ * under the same prefix and carry no code, so a 401 from those two is what refreshing is for.
+ */
+const CODE_BEARING_ROUTES = [
+  { method: 'post', path: '/auth/2fa/verify' },
+  { method: 'post', path: '/auth/2fa/confirm' },
+  { method: 'delete', path: '/auth/2fa' },
+] as const
+
+function answersSomethingOtherThanTheSession(request: InternalAxiosRequestConfig): boolean {
+  const path = request.url?.split('?')[0]
+  if (!path) return false
+  const method = request.method?.toLowerCase()
+  return SESSION_ROUTES.some((route) => path.endsWith(route))
+    || CODE_BEARING_ROUTES.some((route) => path.endsWith(route.path) && route.method === method)
 }
 
 export function createRefreshInterceptorHandlers(
@@ -43,22 +71,13 @@ export function createRefreshInterceptorHandlers(
       return Promise.reject(error)
     }
 
-    const original = error.config as InternalAxiosRequestConfig
+    const original = error.config
 
     if (error.response?.status !== 401 || original._retry) {
       return Promise.reject(error)
     }
 
-    const requestPath = original.url?.split('?')[0]
-    if (
-      requestPath?.endsWith('/auth/login') ||
-      requestPath?.endsWith('/auth/refresh') ||
-      requestPath?.endsWith('/auth/logout') ||
-      // TOTP endpoints authenticated via challenge cookie or TOTP code validation, not JWT.
-      // A 401 from these paths means wrong code — must NOT trigger a refresh or session expiry.
-      requestPath?.endsWith('/auth/2fa/verify') ||
-      requestPath?.endsWith('/auth/2fa/confirm')
-    ) {
+    if (answersSomethingOtherThanTheSession(original)) {
       return Promise.reject(error)
     }
 
@@ -82,7 +101,7 @@ export function createRefreshInterceptorHandlers(
         sessionExpiredTriggered = true
         onSessionExpired()
       }
-      return Promise.reject(refreshError)
+      throw refreshError
     } finally {
       isRefreshing = false
     }
@@ -91,8 +110,10 @@ export function createRefreshInterceptorHandlers(
   return { onFulfilled, onRejected, notifyLoginSuccess }
 }
 
-export function attachRefreshInterceptor(client: AxiosInstance): () => void {
+export function attachRefreshInterceptor(client: AxiosInstance): void {
   const { onFulfilled, onRejected, notifyLoginSuccess } = createRefreshInterceptorHandlers(client, triggerSessionExpired)
   client.interceptors.response.use(onFulfilled, onRejected)
-  return notifyLoginSuccess
+  // Registered rather than returned: this used to travel out through the client's exports, so the
+  // auth store imported an axios module to say "somebody signed in".
+  setLoginSuccessCallback(notifyLoginSuccess)
 }

@@ -2,6 +2,7 @@ package com.nido.api.tasks.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.tasks.application.port.in.CreateRecurringTaskUseCase;
 import com.nido.api.tasks.application.service.TaskSpaceMemberValidator;
 import com.nido.api.tasks.domain.model.CreateRecurringTaskSeriesCommand;
@@ -21,21 +22,24 @@ import java.util.UUID;
 @ApplicationService
 public class CreateRecurringTaskHandler implements CreateRecurringTaskUseCase {
 
+    private final GetSpaceTodayUseCase spaceToday;
     private final TaskRepository taskRepository;
     private final RecurringTaskSeriesRepository seriesRepository;
     private final TaskSpaceMemberValidator spaceMemberValidator;
 
     public CreateRecurringTaskHandler(TaskRepository taskRepository, RecurringTaskSeriesRepository seriesRepository,
-                                       TaskSpaceMemberValidator spaceMemberValidator) {
+                                       TaskSpaceMemberValidator spaceMemberValidator,
+                            GetSpaceTodayUseCase spaceToday) {
         this.taskRepository = taskRepository;
         this.seriesRepository = seriesRepository;
         this.spaceMemberValidator = spaceMemberValidator;
+        this.spaceToday = spaceToday;
     }
 
     @Override
     @Transactional
     public Task create(CreateRecurringTaskSeriesCommand command, SpaceMembership caller) {
-        return create(command, caller, LocalDate.now());
+        return create(command, caller, spaceToday.today(caller.spaceId()));
     }
 
     /**

@@ -9,10 +9,10 @@ import { createTestQueryClient } from '@/shared/test'
 import { GroupAccentStrip } from './GroupAccentStrip'
 
 const PERSONAL: SpaceSummary = {
-  id: 'personal-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1,
+  id: 'personal-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris',
 }
 const FAMILY: SpaceSummary = {
-  id: 'space-2', type: 'SHARED', name: 'La Famille', accent: '#c17a5c', glyph: '🏡', myRole: 'ADMIN', memberCount: 4,
+  id: 'space-2', type: 'SHARED', name: 'La Famille', accent: '#c17a5c', glyph: '🏡', myRole: 'ADMIN', memberCount: 4, timezone: 'Europe/Paris',
 }
 
 function fakeApi(spaces: SpaceSummary[]): ISpacesApi {
