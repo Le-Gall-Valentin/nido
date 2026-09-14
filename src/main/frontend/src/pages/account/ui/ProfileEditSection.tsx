@@ -75,7 +75,7 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
         <p className="text-[13.5px] text-fg-2 mt-0.5">{t('profile.subtitle')}</p>
       </div>
       <div className="px-7 py-5">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => void handleSubmit(e)}>
           {usernameTooShort && <p className="text-xs text-status-orange mb-2">{t('profile.error.username_too_short')}</p>}
           {usernameTooLong && <p className="text-xs text-status-orange mb-2">{t('profile.error.username_too_long')}</p>}
           {emailEmpty && isDirty && <p className="text-xs text-status-orange mb-2">{t('profile.error.email_required')}</p>}

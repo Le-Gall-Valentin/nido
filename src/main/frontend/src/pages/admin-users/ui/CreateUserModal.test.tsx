@@ -2,7 +2,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { CreateUserModal } from './CreateUserModal'
 import { NetworkError, ServerError } from '@/shared/lib'
-import { ConflictError } from '../api/adminUsersApi'
+import { ConflictError } from '@/entities/user'
 import type { User } from '@/entities/user'
 
 vi.mock('react-i18next', () => ({

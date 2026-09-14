@@ -10,10 +10,10 @@ import { createTestQueryClient } from '@/shared/test'
 import { SpaceLayout } from './SpaceLayout'
 
 const FAMILY: SpaceSummary = {
-  id: 'space-2', type: 'SHARED', name: 'La Famille', accent: '#c17a5c', glyph: '🏡', myRole: 'ADMIN', memberCount: 4,
+  id: 'space-2', type: 'SHARED', name: 'La Famille', accent: '#c17a5c', glyph: '🏡', myRole: 'ADMIN', memberCount: 4, timezone: 'Europe/Paris',
 }
 const ROGUE_ACCENT: SpaceSummary = {
-  id: 'space-3', type: 'SHARED', name: 'Rogue', accent: 'javascript:alert(1)', glyph: '🏡', myRole: 'ADMIN', memberCount: 1,
+  id: 'space-3', type: 'SHARED', name: 'Rogue', accent: 'javascript:alert(1)', glyph: '🏡', myRole: 'ADMIN', memberCount: 1, timezone: 'Europe/Paris',
 }
 
 function fakeApi(spaces: SpaceSummary[]): ISpacesApi {

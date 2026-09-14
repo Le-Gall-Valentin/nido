@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { timezoneChoices } from '@/shared/lib'
 import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { safeAccent, safeGlyph, type SpaceDetail } from '@/entities/space'
-import type { UpdateSpaceInput } from '../model/ISpacesPageApi'
+import { safeAccent, safeGlyph, type SpaceDetail , UpdateSpaceInput } from '@/entities/space'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 import { AppearancePicker, NAME_MAX, DESCRIPTION_MAX } from './AppearancePicker'
 
@@ -24,6 +24,7 @@ export function EditSpaceModal({ space, onClose, onUpdate, onSuccess }: EditSpac
   const [description, setDescription] = useState(originalDescription)
   const [accent, setAccent] = useState<string>(originalAccent)
   const [glyph, setGlyph] = useState<string>(originalGlyph)
+  const [timezone, setTimezone] = useState<string>(space.timezone)
   const [isLoading, setIsLoading] = useState(false)
   const [errorKey, setErrorKey] = useState<string[] | null>(null)
   const pendingRef = useRef(false)
@@ -40,6 +41,7 @@ export function EditSpaceModal({ space, onClose, onUpdate, onSuccess }: EditSpac
     if (trimmedDescription !== originalDescription) patch.description = trimmedDescription
     if (accent !== originalAccent) patch.accent = accent
     if (glyph !== originalGlyph) patch.glyph = glyph
+    if (timezone !== space.timezone) patch.timezone = timezone
     return patch
   }
 
@@ -74,7 +76,7 @@ export function EditSpaceModal({ space, onClose, onUpdate, onSuccess }: EditSpac
       <div className="mb-5">
         <h3 className="text-xl font-semibold text-fg-0">{t('edit.title', { name: space.name })}</h3>
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => void handleSubmit(e)}>
         <div className="mb-3">
           <Input
             label={t('edit.name')}
@@ -111,6 +113,19 @@ export function EditSpaceModal({ space, onClose, onUpdate, onSuccess }: EditSpac
           onGlyphChange={setGlyph}
           disabled={isLoading}
         />
+
+        <div className="mt-4 flex flex-col gap-1.5">
+          <label htmlFor="timezone" className="text-[13px] font-semibold text-fg-1">{t('edit.timezone')}</label>
+          <select
+            id="timezone" name="timezone" value={timezone} disabled={isLoading}
+            onChange={(e) => setTimezone(e.target.value)}
+            className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent">
+            {timezoneChoices(space.timezone).map((zone) => (
+              <option key={zone} value={zone}>{zone.replace(/_/g, ' ')}</option>
+            ))}
+          </select>
+          <p className="text-xs text-fg-3">{t('edit.timezone_hint')}</p>
+        </div>
 
         {errorKey && (
           <Alert variant="error" className="mt-4">{t(errorKey)}</Alert>

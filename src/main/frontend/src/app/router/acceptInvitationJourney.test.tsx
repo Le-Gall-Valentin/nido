@@ -9,10 +9,10 @@ import type { SpaceSummary, ReceivedInvitation } from '@/entities/space'
 import { SpacesPage } from '@/pages/spaces'
 import { SpaceRoute } from './SpaceRoute'
 
-// pages/spaces's ISpacesPageApi is a private, unexported part of that slice
+// pages/spaces's ISpaceApi is a private, unexported part of that slice
 // from this (app-layer) test's point of view — derived structurally from
 // SpacesPage's own prop instead of a boundary-violating deep import.
-type SpacesPageApi = NonNullable<NonNullable<Parameters<typeof SpacesPage>[0]>['api']>
+type SpaceApiShape = NonNullable<NonNullable<Parameters<typeof SpacesPage>[0]>['api']>
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -22,10 +22,10 @@ vi.mock('react-i18next', () => ({
 }))
 
 const PERSONAL: SpaceSummary = {
-  id: 'personal-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1,
+  id: 'personal-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris',
 }
 const GROUP: SpaceSummary = {
-  id: 'group-9', type: 'SHARED', name: 'La Famille', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 3,
+  id: 'group-9', type: 'SHARED', name: 'La Famille', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 3, timezone: 'Europe/Paris',
 }
 const INVITATION: ReceivedInvitation = {
   invitationId: 'i-1', spaceId: 'group-9', spaceName: 'La Famille', spaceAccent: '#c17a5c', spaceGlyph: '🏡',
@@ -57,7 +57,7 @@ describe('accepting an invitation', () => {
       ),
       getSpace: vi.fn(),
     }
-    const pageApi: SpacesPageApi = {
+    const pageApi: SpaceApiShape = {
       getSpaceDetail: vi.fn(), listMembers: vi.fn(), listInvitations: vi.fn(),
       listReceivedInvitations: vi.fn().mockResolvedValue([INVITATION]),
       createSpace: vi.fn(), updateSpace: vi.fn(), deleteSpace: vi.fn(),

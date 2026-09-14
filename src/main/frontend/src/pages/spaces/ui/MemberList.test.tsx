@@ -4,7 +4,7 @@ import type { SpaceMember } from '@/entities/space'
 import { MemberList } from './MemberList'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => opts?.name ? `${k}:${opts.name}` : k, i18n: { language: 'en' } }),
+  useTranslation: () => ({ t: (k: string, opts?: Record<string, string | number>) => opts?.name ? `${k}:${opts.name}` : k, i18n: { language: 'en' } }),
 }))
 
 const OWNER: SpaceMember = { userId: 'u-owner', username: 'alice', email: 'alice@test.com', role: 'OWNER', joinedAt: '2024-01-01T00:00:00Z' }

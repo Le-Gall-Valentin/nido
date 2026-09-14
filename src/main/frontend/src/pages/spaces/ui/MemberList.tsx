@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { Crown, UserMinus, UserX } from 'lucide-react'
-import { SpaceRolePill, canManageSpace, isOwner, type SpaceMember, type SpaceRole } from '@/entities/space'
+import { SpaceRolePill, canManageSpace, isOwner, type SpaceMember, type SpaceRole , AssignableSpaceRole } from '@/entities/space'
 import { getInitials } from '@/entities/user'
 import { formatRelativeTime } from '@/shared/lib'
-import type { AssignableSpaceRole } from '../model/ISpacesPageApi'
 
 const ASSIGNABLE_ROLES: AssignableSpaceRole[] = ['ADMIN', 'MEMBER', 'VIEWER']
 

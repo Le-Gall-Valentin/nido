@@ -4,7 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import { KitchenRecipeDetailPage } from './KitchenRecipeDetailPage'
-import type { IKitchenApi } from '../model/IKitchenApi'
+import type { IKitchenApi } from '@/entities/kitchen'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),

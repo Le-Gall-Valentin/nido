@@ -7,8 +7,7 @@ import { SpacesApiProvider } from '@/features/space-switcher'
 import type { ISpacesApi } from '@/features/space-switcher'
 import type { SpaceSummary } from '@/entities/space'
 import { KitchenMenuPage } from './KitchenMenuPage'
-import type { IKitchenApi } from '../model/IKitchenApi'
-import type { MenuEntry, Recipe, ShoppingListLine } from '../model/types'
+import type { IKitchenApi, MenuEntry, Recipe, ShoppingListLine } from '@/entities/kitchen'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -37,7 +36,7 @@ const ENTRIES: MenuEntry[] = [
 const SHOPPING_LIST: ShoppingListLine[] = [{ name: 'Pâtes', quantity: 500, unit: 'GRAM' }]
 
 const CURRENT_SPACE: SpaceSummary = {
-  id: 'space-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 2,
+  id: 'space-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 2, timezone: 'Europe/Paris',
 }
 
 function fakeApi(overrides: Partial<IKitchenApi> = {}): IKitchenApi {

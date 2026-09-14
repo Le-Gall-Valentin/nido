@@ -7,7 +7,7 @@
   "error": { "load_failed": "Impossible de charger ces données.", "action_failed": "Échec de l'action. Réessayez." },
   "delete_confirm": {
     "title": "Supprimer « {{name}} » ?", "body": "Cette recette et ses ingrédients seront définitivement supprimés. Cette action est irréversible.",
-    "cancel": "Annuler", "submit": "Supprimer", "error": "Échec de la suppression. Réessayez."
+    "error": "Échec de la suppression. Réessayez."
   },
   "category": {
     "plat": "Plat", "express": "Express", "vegetarian": "Végétarien", "dessert": "Dessert", "soup": "Soupe"

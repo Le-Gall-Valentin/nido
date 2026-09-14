@@ -119,7 +119,7 @@ export function TwoFactorSection({ user, onPatch, enrollApi }: TwoFactorSectionP
         open={disableOpen}
         onClose={() => setDisableOpen(false)}
         onSuccess={handleDisableSuccess}
-        onDisable={enrollApi.disable}
+        onDisable={(code) => enrollApi.disable(code)}
       />
     </section>
   )

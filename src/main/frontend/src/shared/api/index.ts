@@ -1,1 +1,2 @@
-export { client, notifyLoginSuccess } from './client'
+export { client } from './client'
+export { shouldRetryQuery } from './retryPolicy'

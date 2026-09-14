@@ -5,3 +5,4 @@ import { AccountPreferencesPage } from './ui/AccountPreferencesPage'
 import { AccountPaletteSetup } from './ui/AccountPaletteSetup'
 export { AccountProfilePage, AccountSecurityPage, AccountPreferencesPage, AccountPaletteSetup }
 export default AccountProfilePage
+export { AccountPersonalSpacePage } from './ui/AccountPersonalSpacePage'

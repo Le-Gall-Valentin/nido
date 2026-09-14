@@ -4,8 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import { SpacesApiProvider } from '@/features/space-switcher'
 import type { ISpacesApi } from '@/features/space-switcher'
-import type { SpaceSummary, SpaceDetail } from '@/entities/space'
-import type { ISpacesPageApi } from '../model/ISpacesPageApi'
+import type { SpaceSummary, SpaceDetail , ISpaceApi } from '@/entities/space'
 import { SpacesPage } from './SpacesPage'
 
 vi.mock('react-i18next', () => ({
@@ -18,14 +17,14 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return { ...actual, useNavigate: () => mockNavigate }
 })
 
-const PERSONAL: SpaceSummary = { id: 'p-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1 }
-const SHARED: SpaceSummary = { id: 's-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'ADMIN', memberCount: 2 }
+const PERSONAL: SpaceSummary = { id: 'p-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris' }
+const SHARED: SpaceSummary = { id: 's-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'ADMIN', memberCount: 2, timezone: 'Europe/Paris' }
 
 function fakeSpacesApi(spaces: SpaceSummary[] = [PERSONAL, SHARED]): ISpacesApi {
   return { listMySpaces: vi.fn().mockResolvedValue(spaces), getSpace: vi.fn() }
 }
 
-function fakePageApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
+function fakePageApi(overrides: Partial<ISpaceApi> = {}): ISpaceApi {
   return {
     getSpaceDetail: vi.fn(), listMembers: vi.fn(), listInvitations: vi.fn(),
     listReceivedInvitations: vi.fn().mockResolvedValue([]),
@@ -36,7 +35,7 @@ function fakePageApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
   }
 }
 
-function renderPage(spacesApi: ISpacesApi, pageApi: ISpacesPageApi) {
+function renderPage(spacesApi: ISpacesApi, pageApi: ISpaceApi) {
   const queryClient = createTestQueryClient()
   return render(
     <QueryClientProvider client={queryClient}>
@@ -68,7 +67,7 @@ describe('SpacesPage', () => {
   })
 
   it('creates a group and navigates to its members page', async () => {
-    const created: SpaceDetail = { id: 's-2', type: 'SHARED', name: 'New group', description: null, accent: '#4a7fa0', glyph: '🌿', myRole: 'OWNER', memberCount: 1 }
+    const created: SpaceDetail = { id: 's-2', type: 'SHARED', name: 'New group', description: null, accent: '#4a7fa0', glyph: '🌿', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris' }
     const pageApi = fakePageApi({ createSpace: vi.fn().mockResolvedValue(created) })
     renderPage(fakeSpacesApi(), pageApi)
 

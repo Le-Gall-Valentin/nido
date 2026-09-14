@@ -5,16 +5,13 @@ import { Star, Clock, Users, Plus, Pencil, Copy, ArrowRightLeft } from 'lucide-r
 import { Alert, Button, SearchInput, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { ROUTES } from '@/shared/config'
 import { useMySpaces, useWritableSpaces } from '@/features/space-switcher'
-import { canWrite, TransferDialog, type TransferOperation } from '@/entities/space'
-import { kitchenApi } from '../api/kitchenApi'
-import type { IKitchenApi } from '../model/IKitchenApi'
-import { KitchenApiProvider } from '../model/kitchenApiContext'
-import { useRecipes } from '../model/useRecipes'
-import { useCreateRecipe, useDeleteRecipe, useToggleFavorite, useUpdateRecipe, useCopyRecipe, useMoveRecipe } from '../model/useRecipeMutations'
+import { canWrite } from '@/entities/space'
+import { TransferDialog, type TransferOperation } from '@/features/transfer-to-space'
 import { RECIPE_CATEGORY_META } from '../lib/recipeCategoryMeta'
 import { RecipeFormModal } from './RecipeFormModal'
 import { DeleteRecipeModal } from './DeleteRecipeModal'
-import type { Recipe, RecipeInput } from '../model/types'
+import { kitchenApi, KitchenApiProvider, useRecipes, useCreateRecipe, useDeleteRecipe, useToggleFavorite, useUpdateRecipe, useCopyRecipe, useMoveRecipe } from '@/entities/kitchen'
+import type { IKitchenApi, Recipe, RecipeInput } from '@/entities/kitchen'
 
 interface KitchenRecipesPageProps {
   api?: IKitchenApi
@@ -128,12 +125,12 @@ function KitchenRecipesPageContent() {
                   )}
                   <button type="button" onClick={() => setTransferState({ recipe, operation: 'copy' })}
                     className="flex flex-1 items-center justify-center gap-1 rounded-[9px] py-1.5 text-xs font-semibold text-fg-2 hover:bg-bg-2">
-                    <Copy className="size-3.5" /> {t('transfer.copy_submit', { ns: 'common' })}
+                    <Copy className="size-3.5" /> {t('copy_submit', { ns: 'transfer' })}
                   </button>
                   {canWriteHere && (
                     <button type="button" onClick={() => setTransferState({ recipe, operation: 'move' })}
                       className="flex flex-1 items-center justify-center gap-1 rounded-[9px] py-1.5 text-xs font-semibold text-fg-2 hover:bg-bg-2">
-                      <ArrowRightLeft className="size-3.5" /> {t('transfer.move_submit', { ns: 'common' })}
+                      <ArrowRightLeft className="size-3.5" /> {t('move_submit', { ns: 'transfer' })}
                     </button>
                   )}
                   {canWriteHere && (

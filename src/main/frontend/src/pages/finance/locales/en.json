@@ -141,9 +141,6 @@
   },
   "delete_confirm": {
     "title": "Delete \"{{label}}\"?",
-    "message": "This action is permanent.",
-    "cancel": "Cancel",
-    "confirm": "Delete",
     "error": "Something went wrong. Try again."
   }
 }

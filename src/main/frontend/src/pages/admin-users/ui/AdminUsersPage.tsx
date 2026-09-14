@@ -1,21 +1,17 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
-import { Alert, Button, Pagination, SearchInput, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { useDebouncedValue, pageAfterRemoval } from '@/shared/lib'
+import { Alert, Button, DebouncedSearchInput, Pagination, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { pageAfterRemoval } from '@/shared/lib'
 import { useAuth } from '@/features/auth'
-import type { AdminUser } from '@/entities/user'
-import { adminUsersApi } from '../api/adminUsersApi'
-import type { IAdminUsersApi } from '../model/IAdminUsersApi'
-import { AdminUsersApiProvider } from '../model/adminUsersApiContext'
-import { useUsers } from '../model/useUsers'
-import {
+import type { AdminUser , IAdminUsersApi } from '@/entities/user'
+import { adminUsersApi , AdminUsersApiProvider , useUsers ,
   useCreateUser,
   useUpdateUserRole,
   useDeleteUser,
   useResetTotp,
   useToggleUserActive,
-} from '../model/useUserMutations'
+} from '@/entities/user'
 import { UsersTable } from './UsersTable'
 import { UsersCardList } from './UsersCardList'
 import { CreateUserModal } from './CreateUserModal'
@@ -46,8 +42,7 @@ function AdminUsersPageContent() {
   const currentUser = useAuth(s => s.user)
 
   const [page, setPage] = useState(0)
-  const [searchInput, setSearchInput] = useState('')
-  const search = useDebouncedValue(searchInput, 300)
+  const [search, setSearch] = useState('')
   const { data, isPending, isError: loadError, isPlaceholderData } = useUsers(page, search)
 
   const [toggleError, setToggleError] = useState(false)
@@ -62,10 +57,11 @@ function AdminUsersPageContent() {
   const resetTotp = useResetTotp()
   const toggleActive = useToggleUserActive(page, search)
 
-  function handleSearchChange(value: string) {
-    setSearchInput(value)
+  // Settled value only: the field below keeps the keystrokes, so this runs once the typing stops.
+  const handleSearch = useCallback((value: string) => {
+    setSearch(value)
     setPage(0)
-  }
+  }, [])
 
   function handleToggle(user: AdminUser) {
     setToggleError(false)
@@ -123,9 +119,8 @@ function AdminUsersPageContent() {
         </Alert>
       )}
 
-      <SearchInput
-        value={searchInput}
-        onChange={handleSearchChange}
+      <DebouncedSearchInput
+        onSearch={handleSearch}
         placeholder={t('search.placeholder')}
         clearLabel={t('search.clear')}
         className="mb-3 max-w-md"

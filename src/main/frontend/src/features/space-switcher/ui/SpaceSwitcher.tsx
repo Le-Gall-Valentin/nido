@@ -56,13 +56,13 @@ export function SpaceSwitcher() {
     // an unscoped page (e.g. /account) doesn't move at all.
     const nextPath = replaceSpaceInPath(location.pathname, space.id)
     if (nextPath !== location.pathname) {
-      navigate({ pathname: nextPath, search: location.search, hash: location.hash })
+      void navigate({ pathname: nextPath, search: location.search, hash: location.hash })
     }
     closeMenu()
   }
 
   function createOrJoin(): void {
-    navigate(ROUTES.SPACES)
+    void navigate(ROUTES.SPACES)
     closeMenu()
   }
 

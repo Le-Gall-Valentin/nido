@@ -26,9 +26,9 @@ export function useDeleteCategory(spaceId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (categoryId: string) => api.deleteCategory(spaceId, categoryId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: shoppingCategoriesKey(spaceId) })
-      queryClient.invalidateQueries({ queryKey: shoppingItemsKey(spaceId) })
-    },
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: shoppingCategoriesKey(spaceId) }),
+      queryClient.invalidateQueries({ queryKey: shoppingItemsKey(spaceId) }),
+    ]),
   })
 }

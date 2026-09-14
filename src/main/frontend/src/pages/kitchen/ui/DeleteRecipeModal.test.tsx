@@ -18,7 +18,7 @@ function setup(overrides: { onDelete?: () => Promise<void> } = {}) {
 describe('DeleteRecipeModal', () => {
   it('calls onDelete and then onClose when confirmed', async () => {
     const { getByText, onDelete, onClose } = setup()
-    fireEvent.click(getByText('delete_confirm.submit'))
+    fireEvent.click(getByText('delete_confirm.confirm'))
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
     expect(onDelete).toHaveBeenCalledOnce()
   })
@@ -32,7 +32,7 @@ describe('DeleteRecipeModal', () => {
 
   it('shows an error and does not call onClose when deletion fails', async () => {
     const { getByText, onClose, findByRole } = setup({ onDelete: vi.fn().mockRejectedValue(new Error('boom')) })
-    fireEvent.click(getByText('delete_confirm.submit'))
+    fireEvent.click(getByText('delete_confirm.confirm'))
     const alert = await findByRole('alert')
     expect(alert.textContent).toContain('delete_confirm.error')
     expect(onClose).not.toHaveBeenCalled()

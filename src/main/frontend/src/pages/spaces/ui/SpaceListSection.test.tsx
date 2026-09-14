@@ -7,8 +7,8 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),
 }))
 
-const PERSONAL: SpaceSummary = { id: 'p-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1 }
-const SHARED: SpaceSummary = { id: 's-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'ADMIN', memberCount: 3 }
+const PERSONAL: SpaceSummary = { id: 'p-1', type: 'PERSONAL', name: 'Alice', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris' }
+const SHARED: SpaceSummary = { id: 's-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'ADMIN', memberCount: 3, timezone: 'Europe/Paris' }
 
 describe('SpaceListSection — personal space', () => {
   it('renders the personal space first and not as a clickable button', () => {
@@ -45,5 +45,25 @@ describe('SpaceListSection — create action', () => {
     render(<SpaceListSection spaces={[PERSONAL]} onSelect={vi.fn()} onCreateClick={onCreateClick} />)
     fireEvent.click(screen.getByText('list.action_create'))
     expect(onCreateClick).toHaveBeenCalledOnce()
+  })
+})
+
+describe('SpaceListSection — timezone', () => {
+  it('shows which calendar each space keeps', () => {
+    // Without this there is nowhere in the application that says it, so nobody can notice a space
+    // is on the wrong one — which is exactly how a household ends up reading yesterday's tasks.
+    render(<SpaceListSection spaces={[PERSONAL, { ...SHARED, timezone: 'America/Toronto' }]}
+      onSelect={vi.fn()} onCreateClick={vi.fn()} />)
+
+    expect(screen.getByText(/Paris/)).toBeTruthy()
+    expect(screen.getByText(/Toronto/)).toBeTruthy()
+  })
+
+  it('shows the place rather than the database path', () => {
+    render(<SpaceListSection spaces={[{ ...PERSONAL, timezone: 'America/Los_Angeles' }]}
+      onSelect={vi.fn()} onCreateClick={vi.fn()} />)
+
+    expect(screen.getByText(/Los Angeles/)).toBeTruthy()
+    expect(screen.queryByText(/America\//)).toBeNull()
   })
 })

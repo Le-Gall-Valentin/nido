@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
+import { browserTimezone , timezoneChoices} from '@/shared/lib'
 import { useTranslation } from 'react-i18next'
 import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { SPACE_ACCENTS, SPACE_GLYPHS, type SpaceDetail } from '@/entities/space'
-import type { CreateSpaceInput } from '../model/ISpacesPageApi'
+import { SPACE_ACCENTS, SPACE_GLYPHS, type SpaceDetail , CreateSpaceInput } from '@/entities/space'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 import { AppearancePicker, NAME_MAX, DESCRIPTION_MAX } from './AppearancePicker'
 
@@ -19,6 +19,9 @@ export function CreateSpaceModal({ onClose, onCreate, onSuccess }: CreateSpaceMo
   const [description, setDescription] = useState('')
   const [accent, setAccent] = useState<string>(SPACE_ACCENTS[0])
   const [glyph, setGlyph] = useState<string>(SPACE_GLYPHS[0])
+  // Detected once, on open: a form that re-read the zone as you filled it in would be
+  // changing its own field under the user.
+  const [timezone, setTimezone] = useState<string>(browserTimezone)
   const [isLoading, setIsLoading] = useState(false)
   const [errorKey, setErrorKey] = useState<string[] | null>(null)
   const pendingRef = useRef(false)
@@ -39,6 +42,7 @@ export function CreateSpaceModal({ onClose, onCreate, onSuccess }: CreateSpaceMo
         name: trimmedName,
         description: description.trim() || undefined,
         accent,
+        timezone,
         glyph,
       })
       onSuccess(created)
@@ -60,7 +64,7 @@ export function CreateSpaceModal({ onClose, onCreate, onSuccess }: CreateSpaceMo
       <div className="mb-5">
         <h3 className="text-xl font-semibold text-fg-0">{t('create.title')}</h3>
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => void handleSubmit(e)}>
         <div className="mb-3">
           <Input
             label={t('create.name')}
@@ -97,6 +101,19 @@ export function CreateSpaceModal({ onClose, onCreate, onSuccess }: CreateSpaceMo
           onGlyphChange={setGlyph}
           disabled={isLoading}
         />
+
+        <div className="mt-4 flex flex-col gap-1.5">
+          <label htmlFor="timezone" className="text-[13px] font-semibold text-fg-1">{t('create.timezone')}</label>
+          <select
+            id="timezone" name="timezone" value={timezone} disabled={isLoading}
+            onChange={(e) => setTimezone(e.target.value)}
+            className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent">
+            {timezoneChoices(timezone).map((zone) => (
+              <option key={zone} value={zone}>{zone.replace(/_/g, ' ')}</option>
+            ))}
+          </select>
+          <p className="text-xs text-fg-3">{t('create.timezone_hint')}</p>
+        </div>
 
         {errorKey && (
           <Alert variant="error" className="mt-4">{t(errorKey)}</Alert>

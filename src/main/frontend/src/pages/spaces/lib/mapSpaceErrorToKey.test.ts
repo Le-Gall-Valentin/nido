@@ -2,26 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createInstance } from 'i18next'
 import { mapSpaceErrorToKey } from './mapSpaceErrorToKey'
 import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
-import { SpaceNotAccessibleError } from '@/features/space-switcher'
-import {
-  InsufficientRoleError,
-  SelfManagementError,
-  OwnerProtectedError,
-  SpaceRoleAlreadyAssignedError,
-  LastOwnerError,
-  MemberNotFoundError,
-  AlreadyMemberError,
-  InvitationAlreadyPendingError,
-  InvitationNotFoundError,
-  InvitationNotPendingError,
-  InvitationExpiredError,
-  PersonalSpaceImmutableError,
-  NoAccountForEmailError,
-  InvalidAppearanceError,
-  InvalidSpaceNameError,
-  InvalidSpaceDescriptionError,
-  OwnerRoleNotAssignableError,
-} from '../api/spacesPageApi'
+import { InsufficientRoleError, SelfManagementError, OwnerProtectedError, SpaceRoleAlreadyAssignedError, LastOwnerError, MemberNotFoundError, AlreadyMemberError, InvitationAlreadyPendingError, InvitationNotFoundError, InvitationNotPendingError, InvitationExpiredError, PersonalSpaceImmutableError, NoAccountForEmailError, InvalidAppearanceError, InvalidSpaceNameError, InvalidSpaceDescriptionError, OwnerRoleNotAssignableError, SpaceNotAccessibleError } from '@/entities/space'
 import en from '../locales/en.json'
 import fr from '../locales/fr.json'
 
@@ -228,7 +209,7 @@ describe('mapSpaceErrorToKey — every produced key resolves to a real translati
           expect(resolved, `${name} under "${prefix}" (${language})`).not.toBe(keys[0])
           expect(resolved, `${name} under "${prefix}" (${language})`).not.toBe(keys[1])
           expect(typeof resolved).toBe('string')
-          expect((resolved as string).length).toBeGreaterThan(0)
+          expect((resolved).length).toBeGreaterThan(0)
         }
       }
     })

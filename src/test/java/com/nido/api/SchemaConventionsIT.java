@@ -2,12 +2,8 @@ package com.nido.api;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 
 import java.util.List;
 
@@ -23,15 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @IntegrationTestConfig
 class SchemaConventionsIT {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
-
-    @Container
-    @ServiceConnection
-    @SuppressWarnings("resource")
-    static GenericContainer<?> redis = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
 
     @Autowired JdbcTemplate jdbcTemplate;
 

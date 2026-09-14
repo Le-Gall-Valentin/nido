@@ -28,7 +28,12 @@ public class UpdateSpaceHandler implements UpdateSpaceUseCase {
         caller.ensureCanManageSpace();
         Space space = spaceRepository.findById(command.spaceId())
             .orElseThrow(SpaceException.SpaceNotFound::new);
-        space.ensureShared();
+        // Not ensureShared(): a personal space accepts a change of calendar and nothing else.
+        // Checked on the command rather than the field being written, so a rename smuggled in
+        // alongside a zone is refused as a whole instead of partly applied.
+        if (space.isPersonal() && command.changesIdentity()) {
+            throw new SpaceException.PersonalSpaceImmutable();
+        }
         spaceCommandPort.update(command);
     }
 }

@@ -8,6 +8,7 @@ public abstract sealed class SpaceException extends RuntimeException
             SpaceException.OwnerRequired,
             SpaceException.PersonalSpaceImmutable,
             SpaceException.InvalidAppearance,
+            SpaceException.InvalidTimezone,
             SpaceException.InvalidSpaceName,
             SpaceException.InvalidSpaceDescription,
             SpaceException.OwnerRoleNotAssignable,
@@ -50,6 +51,10 @@ public abstract sealed class SpaceException extends RuntimeException
     }
     public static final class InvalidAppearance extends SpaceException {
         public InvalidAppearance() { super("Accent or glyph outside the allowed palette"); }
+    }
+    /** Un identifiant qui ne désigne aucune région connue, ou un simple décalage fixe. */
+    public static final class InvalidTimezone extends SpaceException {
+        public InvalidTimezone() { super("Timezone must be an IANA region identifier"); }
     }
     public static final class InvalidSpaceName extends SpaceException {
         public InvalidSpaceName() { super("Space name must be between 1 and 80 characters"); }

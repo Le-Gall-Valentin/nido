@@ -141,9 +141,6 @@
   },
   "delete_confirm": {
     "title": "Supprimer « {{label}} » ?",
-    "message": "Cette action est définitive.",
-    "cancel": "Annuler",
-    "confirm": "Supprimer",
     "error": "Une erreur est survenue. Réessayez."
   }
 }

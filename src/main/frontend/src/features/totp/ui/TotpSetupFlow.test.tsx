@@ -160,6 +160,41 @@ describe('TotpSetupFlow', () => {
     inputs.forEach(input => expect(input.value).toBe(''))
   })
 
+  it('says the code was refused, not that a code is needed', async () => {
+    // The wording, which was a plain instruction — "enter the 6-digit code shown by your application"
+    // — shown after six digits had been entered and the server had rejected them. Read as "your input
+    // did not register" rather than "that code is wrong", which sends the user to re-type instead of
+    // to look at their authenticator. The login step has said "invalid or expired code" all along.
+    const api = makeApi({ confirm: vi.fn().mockRejectedValue(new TotpCodeError()) })
+    const { container, getByRole, findByRole, findByTestId } = render(
+      <TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+    await findByTestId('qr-code')
+
+    fillCode(container, '999999')
+    await act(async () => {
+      fireEvent.submit(getByRole('button', { name: /setup\.submit/i }).closest('form')!)
+    })
+
+    expect((await findByRole('alert')).textContent).toContain('setup.error.invalid_code')
+  })
+
+  it('asks for the missing digits when the code is too short, instead of doing nothing', async () => {
+    // Submitting four digits returned silently: no request, no message, the form unchanged. The same
+    // dead end the task checkbox had before F3, and the login step already says "enter all 6 digits".
+    const api = makeApi()
+    const { container, getByRole, findByRole, findByTestId } = render(
+      <TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+    await findByTestId('qr-code')
+
+    fillCode(container, '1234')
+    await act(async () => {
+      fireEvent.submit(getByRole('button', { name: /setup\.submit/i }).closest('form')!)
+    })
+
+    expect((await findByRole('alert')).textContent).toContain('setup.error.incomplete')
+    expect(api.confirm).not.toHaveBeenCalled()
+  })
+
   it('renders dismiss button when onDismiss is provided', async () => {
     const api = makeApi()
     const { findByTestId, getByText } = render(

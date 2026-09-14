@@ -15,6 +15,12 @@ export interface SpaceSummary {
   name: string
   accent: string
   glyph: string
+  /**
+   * IANA identifier of the calendar this space keeps. Screens showing the space format "today" in
+   * it rather than in the viewer's own zone, so that a member abroad sees the same dates, and the
+   * same lateness, as everyone else in the household — and the same ones the backend computes.
+   */
+  timezone: string
   myRole: SpaceRole
   memberCount: number
 }

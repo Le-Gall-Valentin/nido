@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -65,7 +66,6 @@ class CreatePersonalSpaceHandlerTest {
     }
 
     private Space personalSpace() {
-        return new Space(UUID.randomUUID(), SpaceType.PERSONAL, "Perso", null,
-            SpaceAppearance.PERSONAL_ACCENT, SpaceAppearance.PERSONAL_GLYPH, userId, Instant.now());
+        return new Space(UUID.randomUUID(), SpaceType.PERSONAL, "Perso", null, SpaceAppearance.PERSONAL_ACCENT, SpaceAppearance.PERSONAL_GLYPH, userId, ZoneId.of("Europe/Paris"), Instant.now());
     }
 }

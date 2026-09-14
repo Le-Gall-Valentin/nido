@@ -3,9 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ReactNode } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
-import type { ReceivedInvitation } from '@/entities/space'
-import type { ISpacesPageApi } from '../model/ISpacesPageApi'
-import { SpacesPageApiProvider } from '../model/spacesPageApiContext'
+import type { ReceivedInvitation , ISpaceApi } from '@/entities/space'
+import { SpaceApiProvider } from '@/entities/space'
 import { ReceivedInvitationsSection } from './ReceivedInvitationsSection'
 
 vi.mock('react-i18next', () => ({
@@ -17,7 +16,7 @@ const INVITATION: ReceivedInvitation = {
   role: 'MEMBER', expiresAt: '2999-01-01T00:00:00Z',
 }
 
-function fakeApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
+function fakeApi(overrides: Partial<ISpaceApi> = {}): ISpaceApi {
   return {
     getSpaceDetail: vi.fn(), listMembers: vi.fn(), listInvitations: vi.fn(),
     listReceivedInvitations: vi.fn().mockResolvedValue([INVITATION]),
@@ -29,10 +28,10 @@ function fakeApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
   }
 }
 
-function renderWith(api: ISpacesPageApi, onAccepted = vi.fn(), queryClient = createTestQueryClient()) {
+function renderWith(api: ISpaceApi, onAccepted = vi.fn(), queryClient = createTestQueryClient()) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <SpacesPageApiProvider api={api}>{children}</SpacesPageApiProvider>
+      <SpaceApiProvider api={api}>{children}</SpaceApiProvider>
     </QueryClientProvider>
   )
   return { ...render(<ReceivedInvitationsSection onAccepted={onAccepted} />, { wrapper }), onAccepted, queryClient }

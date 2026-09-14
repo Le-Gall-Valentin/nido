@@ -31,6 +31,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.time.ZoneId;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -69,6 +70,7 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
             .collect(Collectors.toMap(MemberCount::spaceId, MemberCount::total));
         return spaces.findAllById(roleBySpace.keySet()).stream()
             .map(e -> new SpaceSummaryView(e.getId(), e.getType(), e.getName(), e.getAccent(), e.getGlyph(),
+                ZoneId.of(e.getTimezone()),
                 roleBySpace.get(e.getId()), counts.getOrDefault(e.getId(), 0L)))
             // l'espace perso d'abord, puis les groupes par nom
             .sorted(Comparator.comparing((SpaceSummaryView v) -> v.type() != SpaceType.PERSONAL)
@@ -128,6 +130,7 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
         e.setAccent(command.accent());
         e.setGlyph(command.glyph());
         e.setCreatedBy(command.creatorUserId());
+        e.setTimezone(command.timezone().getId());
         return save(e);
     }
 
@@ -141,6 +144,7 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
         if (command.description() != null) e.setDescription(command.description().isEmpty() ? null : command.description());
         if (command.accent() != null) e.setAccent(command.accent());
         if (command.glyph() != null) e.setGlyph(command.glyph());
+        if (command.timezone() != null) e.setTimezone(command.timezone().getId());
         save(e);
     }
 
@@ -231,7 +235,8 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
 
     private static Space toDomain(SpaceEntity e) {
         return new Space(e.getId(), e.getType(), e.getName(), e.getDescription(),
-            e.getAccent(), e.getGlyph(), e.getPersonalOwnerId(), e.getCreatedAt());
+            e.getAccent(), e.getGlyph(), e.getPersonalOwnerId(),
+            ZoneId.of(e.getTimezone()), e.getCreatedAt());
     }
 
     private static SpaceMembership toDomain(SpaceMemberEntity e) {

@@ -7,8 +7,7 @@ import { SpacesApiProvider } from '@/features/space-switcher'
 import type { ISpacesApi } from '@/features/space-switcher'
 import type { SpaceSummary } from '@/entities/space'
 import { KitchenRecipesPage } from './KitchenRecipesPage'
-import type { IKitchenApi } from '../model/IKitchenApi'
-import type { Recipe } from '../model/types'
+import type { IKitchenApi, Recipe } from '@/entities/kitchen'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),
@@ -20,10 +19,10 @@ const RECIPES: Recipe[] = [
 ]
 
 const CURRENT_SPACE: SpaceSummary = {
-  id: 'space-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 2,
+  id: 'space-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 2, timezone: 'Europe/Paris',
 }
 const OTHER_SPACE: SpaceSummary = {
-  id: 'space-2', type: 'PERSONAL', name: 'Perso', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1,
+  id: 'space-2', type: 'PERSONAL', name: 'Perso', accent: '#8a7d6b', glyph: '👤', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris',
 }
 
 function fakeApi(overrides: Partial<IKitchenApi> = {}): IKitchenApi {
@@ -92,7 +91,7 @@ describe('KitchenRecipesPage', () => {
 
     fireEvent.click(screen.getAllByText('delete')[0])
     expect(api.deleteRecipe).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByText('delete_confirm.submit'))
+    fireEvent.click(screen.getByText('delete_confirm.confirm'))
 
     await waitFor(() => expect(api.deleteRecipe).toHaveBeenCalledWith('space-1', 'r1'))
   })
@@ -105,7 +104,7 @@ describe('KitchenRecipesPage', () => {
     fireEvent.click(screen.getByText('delete_confirm.cancel'))
 
     expect(api.deleteRecipe).not.toHaveBeenCalled()
-    expect(screen.queryByText('delete_confirm.submit')).toBeNull()
+    expect(screen.queryByText('delete_confirm.confirm')).toBeNull()
   })
 
   it('edits a recipe', async () => {
@@ -131,10 +130,10 @@ describe('KitchenRecipesPage', () => {
     const { api } = setup()
     await screen.findByText('Pâtes bolognaise')
 
-    const copyButtons = await screen.findAllByText('transfer.copy_submit:{"ns":"common"}')
+    const copyButtons = await screen.findAllByText('copy_submit:{"ns":"transfer"}')
     fireEvent.click(copyButtons[0])
     fireEvent.click(await screen.findByText('Perso'))
-    fireEvent.click(screen.getByText('transfer.copy_submit'))
+    fireEvent.click(screen.getByText('copy_submit'))
 
     await waitFor(() => expect(api.copyRecipe).toHaveBeenCalledWith('space-1', 'r1', 'space-2'))
   })
@@ -143,10 +142,10 @@ describe('KitchenRecipesPage', () => {
     const { api } = setup()
     await screen.findByText('Pâtes bolognaise')
 
-    const moveButtons = await screen.findAllByText('transfer.move_submit:{"ns":"common"}')
+    const moveButtons = await screen.findAllByText('move_submit:{"ns":"transfer"}')
     fireEvent.click(moveButtons[0])
     fireEvent.click(await screen.findByText('Perso'))
-    fireEvent.click(screen.getByText('transfer.move_submit'))
+    fireEvent.click(screen.getByText('move_submit'))
 
     await waitFor(() => expect(api.moveRecipe).toHaveBeenCalledWith('space-1', 'r1', 'space-2'))
   })
@@ -159,12 +158,12 @@ describe('KitchenRecipesPage — read-only role', () => {
     await screen.findByText('Pâtes bolognaise')
     // "Copier" is never role-gated; waiting for it also forces the concurrent
     // spaces query to settle before the role-gated buttons are asserted absent.
-    const copyButtons = await screen.findAllByText('transfer.copy_submit:{"ns":"common"}')
+    const copyButtons = await screen.findAllByText('copy_submit:{"ns":"transfer"}')
 
     expect(copyButtons.length).toBeGreaterThan(0)
     expect(screen.queryByText('recipes.new_recipe')).toBeNull()
     expect(screen.queryByText('edit')).toBeNull()
     expect(screen.queryByText('delete')).toBeNull()
-    expect(screen.queryByText('transfer.move_submit:{"ns":"common"}')).toBeNull()
+    expect(screen.queryByText('move_submit:{"ns":"transfer"}')).toBeNull()
   })
 })

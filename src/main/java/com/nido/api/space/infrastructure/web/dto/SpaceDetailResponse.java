@@ -13,11 +13,13 @@ public record SpaceDetailResponse(
     String description,
     String accent,
     String glyph,
+    /** IANA identifier — what "today" means inside this space. */
+    String timezone,
     SpaceRole myRole,
     long memberCount
 ) {
     public static SpaceDetailResponse from(SpaceDetailView view) {
         return new SpaceDetailResponse(view.id(), view.type(), view.name(), view.description(),
-            view.accent(), view.glyph(), view.myRole(), view.memberCount());
+            view.accent(), view.glyph(), view.timezone().getId(), view.myRole(), view.memberCount());
     }
 }

@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,12 +38,11 @@ class CreateSharedSpaceHandlerTest {
 
     @Test
     void the_creator_becomes_the_owner() {
-        Space created = new Space(UUID.randomUUID(), SpaceType.SHARED, "Chez Valentin", null,
-            "#c17a5c", "🏡", null, Instant.now());
+        Space created = new Space(UUID.randomUUID(), SpaceType.SHARED, "Chez Valentin", null, "#c17a5c", "🏡", null, ZoneId.of("Europe/Paris"), Instant.now());
         when(spaceCommandPort.createShared(any(CreateSharedSpaceCommand.class))).thenReturn(created);
 
         Space result = handler.create(
-            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", creator));
+            new CreateSharedSpaceCommand("Chez Valentin", null, "#c17a5c", "🏡", creator, ZoneId.of("Europe/Paris")));
 
         assertThat(result).isEqualTo(created);
         verify(spaceMembershipPort).add(created.id(), creator, SpaceRole.OWNER);

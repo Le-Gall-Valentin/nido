@@ -1,9 +1,8 @@
 import { render, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { CreateSpaceModal } from './CreateSpaceModal'
-import { NetworkError, ServerError } from '@/shared/lib'
-import type { SpaceDetail } from '@/entities/space'
-import type { CreateSpaceInput } from '../model/ISpacesPageApi'
+import { browserTimezone, NetworkError, ServerError } from '@/shared/lib'
+import type { SpaceDetail , CreateSpaceInput } from '@/entities/space'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -32,7 +31,7 @@ vi.mock('@/shared/ui', () => ({
 
 const CREATED: SpaceDetail = {
   id: 's-1', type: 'SHARED', name: 'Chez nous', description: null,
-  accent: '#4a7fa0', glyph: '🌿', myRole: 'OWNER', memberCount: 1,
+  accent: '#4a7fa0', glyph: '🌿', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris',
 }
 
 function setup(overrides: { onCreate?: Mock<(input: CreateSpaceInput) => Promise<SpaceDetail>> } = {}) {
@@ -117,5 +116,37 @@ describe('CreateSpaceModal — accent and glyph pickers', () => {
     const options = getAllByLabelText('create.glyph_option', { exact: false })
     fireEvent.click(options[2])
     expect(options[2].getAttribute('aria-pressed')).toBe('true')
+  })
+})
+
+describe('CreateSpaceModal — timezone', () => {
+  it('opens on the calendar the creator is actually in', () => {
+    // Nobody should have to configure this in the ordinary case: create a household from where you
+    // live and it starts on your calendar, not on the server's.
+    const { getByLabelText } = setup()
+
+    expect((getByLabelText('create.timezone') as HTMLSelectElement).value).toBe(browserTimezone())
+  })
+
+  it('sends the chosen zone, which need not be the detected one', async () => {
+    // Somebody setting up the household they are moving into next month, from somewhere else.
+    const { getByLabelText, getByText, onCreate } = setup()
+
+    fireEvent.change(getByLabelText('create.name'), { target: { value: 'Chez nous' } })
+    fireEvent.change(getByLabelText('create.timezone'), { target: { value: 'Europe/Paris' } })
+    fireEvent.click(getByText('create.submit'))
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ timezone: 'Europe/Paris' })))
+  })
+
+  it('sends the detected zone when the creator leaves it alone', async () => {
+    const { getByLabelText, getByText, onCreate } = setup()
+
+    fireEvent.change(getByLabelText('create.name'), { target: { value: 'Chez nous' } })
+    fireEvent.click(getByText('create.submit'))
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ timezone: browserTimezone() })))
   })
 })

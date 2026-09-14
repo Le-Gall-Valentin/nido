@@ -5,7 +5,8 @@ import { Dialog, Button, Alert, Input } from '@/shared/ui'
 import { ROUTES } from '@/shared/config'
 import { MEASUREMENT_UNITS, MEASUREMENT_UNIT_LABEL_KEY, type MeasurementUnit } from '@/shared/lib'
 import {
-  shoppingApi, ShoppingApiProvider, useShoppingCategories, useImportFromMenu, type IShoppingApi,
+  shoppingApi, ShoppingApiProvider, useShoppingCategories, useImportFromMenu,
+  type IShoppingApi, type ShoppingImportLine,
 } from '@/entities/shopping-list'
 
 /** A suggested ingredient line — this feature has no notion of recipes, only a name and an optional structured quantity. */
@@ -52,10 +53,11 @@ function ExportToShoppingListModalContent({
   const defaultCategoryApplied = useRef(false)
 
   useEffect(() => {
-    if (!defaultCategoryApplied.current && categories && categories.length > 0) {
+    const [firstCategory] = categories ?? []
+    if (!defaultCategoryApplied.current && firstCategory) {
       defaultCategoryApplied.current = true
-      setBulkCategoryId(categories[0].id)
-      setRowCategoryId(shoppingList.map(() => categories[0].id))
+      setBulkCategoryId(firstCategory.id)
+      setRowCategoryId(shoppingList.map(() => firstCategory.id))
     }
   }, [categories, shoppingList])
 
@@ -73,23 +75,28 @@ function ExportToShoppingListModalContent({
   }
 
   function handleConfirm() {
-    const included = shoppingList
-      .map((line, i) => ({ line, i }))
-      .filter(({ i }) => checked[i])
-
-    const quantities = included.map(({ i }) => (quantityDrafts[i].trim() === '' ? null : Number(quantityDrafts[i])))
-    if (quantities.some((quantity) => quantity != null && (!Number.isFinite(quantity) || quantity <= 0))) {
-      setQuantityError(true)
-      return
+    // One pass over the rows instead of three arrays read at the same index in turn. The drafts are
+    // kept per row in parallel state, so every read was a separate index the compiler had to doubt —
+    // and the quantity was read from a fourth list built from a filtered copy, indexed by a position
+    // that only happened to line up. Resolving each row once removes both the doubt and the coupling.
+    const lines: ShoppingImportLine[] = []
+    for (const [i, line] of shoppingList.entries()) {
+      if (!checked[i]) continue
+      const draft = quantityDrafts[i] ?? ''
+      const quantity = draft.trim() === '' ? null : Number(draft)
+      if (quantity != null && (!Number.isFinite(quantity) || quantity <= 0)) {
+        setQuantityError(true)
+        return
+      }
+      const unit = unitDrafts[i]
+      lines.push({
+        name: line.name,
+        quantity,
+        unit: unit === '' || unit === undefined ? null : unit,
+        categoryId: rowCategoryId[i] ?? bulkCategoryId,
+      })
     }
     setQuantityError(false)
-
-    const lines = included.map(({ line, i }, index) => ({
-      name: line.name,
-      quantity: quantities[index],
-      unit: unitDrafts[i] === '' ? null : unitDrafts[i],
-      categoryId: rowCategoryId[i],
-    }))
     setError(false)
     importFromMenu.mutateAsync(lines)
       .then(() => { setImported(true); onImported() })

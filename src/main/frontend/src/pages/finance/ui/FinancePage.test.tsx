@@ -24,7 +24,7 @@ const MEMBERS: SpaceMember[] = [
 ]
 
 const CURRENT_SPACE: SpaceSummary = {
-  id: 'space-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 2,
+  id: 'space-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'MEMBER', memberCount: 2, timezone: 'Europe/Paris',
 }
 
 function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
@@ -143,6 +143,57 @@ describe('FinancePage', () => {
     fireEvent.click(screen.getByText('delete_confirm.confirm'))
 
     await waitFor(() => expect(deleteRecurringSeries).toHaveBeenCalledWith('space-1', 's1'))
+  })
+
+  it('creates a one-off operation from the new-operation form', async () => {
+    // The most ordinary thing this page does, and it had no test: writing an expense. It showed as
+    // covered only because the submit logic sat inside a five-hundred-line component; splitting the
+    // page into panels is what made the gap visible.
+    const createTransaction = vi.fn().mockResolvedValue(undefined)
+    const api = fakeApi({ createTransaction })
+    renderPage(api)
+    await screen.findByText('new_transaction')
+
+    fireEvent.click(screen.getByText('new_transaction'))
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Courses' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '42.50' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    // Positional, as the port declares it: (spaceId, label, amount, type, categoryId, ...).
+    await waitFor(() => expect(createTransaction).toHaveBeenCalledWith(
+      'space-1', 'Courses', 42.5, 'EXPENSE', 'c1', expect.anything(), expect.anything(), expect.anything()))
+  })
+
+  it('says so when saving an operation fails, instead of closing on a lie', async () => {
+    const api = fakeApi({ createTransaction: vi.fn().mockRejectedValue(new Error('server')) })
+    renderPage(api)
+    await screen.findByText('new_transaction')
+    fireEvent.click(screen.getByText('new_transaction'))
+    fireEvent.change(screen.getByLabelText('form.label_label'), { target: { value: 'Courses' } })
+    fireEvent.change(screen.getByLabelText('form.amount_label'), { target: { value: '10' } })
+
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(await screen.findByText('form.submit_error')).toBeDefined()
+  })
+
+  it('asks for confirmation before deleting an operation, and only deletes it once confirmed', async () => {
+    const deleteTransaction = vi.fn().mockResolvedValue(undefined)
+    const api = fakeApi({
+      listTransactions: vi.fn().mockResolvedValue([{
+        id: 't1', label: 'Courses', amount: 30, type: 'EXPENSE', categoryId: 'c1',
+        date: '2026-01-10', payerId: 'u-1', contributors: [], recurringSeriesId: null,
+      }]),
+      deleteTransaction,
+    })
+    renderPage(api)
+    await screen.findByText('Courses')
+
+    fireEvent.click(screen.getByLabelText('transactions.delete'))
+    expect(deleteTransaction).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('delete_confirm.confirm'))
+
+    await waitFor(() => expect(deleteTransaction).toHaveBeenCalledWith('space-1', 't1'))
   })
 
   it('shows a tooltip with the category, percentage and amount when hovering a donut segment', async () => {

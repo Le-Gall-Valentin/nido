@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.domain.model.Budget;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.finance.domain.model.FinanceStats;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
@@ -33,6 +34,8 @@ import static org.mockito.Mockito.when;
 class GetFinanceStatsHandlerTest {
 
     @Mock TransactionRepository transactionRepository;
+
+    @Mock GetSpaceTodayUseCase spaceToday;
     @Mock RecurringTransactionSeriesRepository seriesRepository;
     @Mock BudgetRepository budgetRepository;
     private GetFinanceStatsHandler handler;
@@ -43,7 +46,7 @@ class GetFinanceStatsHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new GetFinanceStatsHandler(transactionRepository, seriesRepository, budgetRepository);
+        handler = new GetFinanceStatsHandler(transactionRepository, seriesRepository, budgetRepository, spaceToday);
     }
 
     private SpaceMembership membership() {

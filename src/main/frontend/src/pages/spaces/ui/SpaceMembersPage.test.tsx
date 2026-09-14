@@ -5,8 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import { SpacesApiProvider } from '@/features/space-switcher'
 import type { ISpacesApi } from '@/features/space-switcher'
-import type { SpaceSummary } from '@/entities/space'
-import type { ISpacesPageApi } from '../model/ISpacesPageApi'
+import type { SpaceSummary , ISpaceApi } from '@/entities/space'
 import { SpaceMembersPage } from './SpaceMembersPage'
 
 vi.mock('react-i18next', () => ({
@@ -21,13 +20,13 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return { ...actual, useNavigate: () => mockNavigate }
 })
 
-const SHARED: SpaceSummary = { id: 's-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'OWNER', memberCount: 1 }
+const SHARED: SpaceSummary = { id: 's-1', type: 'SHARED', name: 'Chez nous', accent: '#c17a5c', glyph: '🏡', myRole: 'OWNER', memberCount: 1, timezone: 'Europe/Paris' }
 
 function fakeSpacesApi(): ISpacesApi {
   return { listMySpaces: vi.fn().mockResolvedValue([SHARED]), getSpace: vi.fn() }
 }
 
-function fakePageApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
+function fakePageApi(overrides: Partial<ISpaceApi> = {}): ISpaceApi {
   return {
     getSpaceDetail: vi.fn().mockResolvedValue({ ...SHARED, description: null }),
     listMembers: vi.fn().mockResolvedValue([{ userId: 'me-1', username: 'alice', email: 'a@test.com', role: 'OWNER', joinedAt: '2024-01-01T00:00:00Z' }]),
@@ -40,7 +39,7 @@ function fakePageApi(overrides: Partial<ISpacesPageApi> = {}): ISpacesPageApi {
   }
 }
 
-function renderAt(spaceId: string, pageApi: ISpacesPageApi) {
+function renderAt(spaceId: string, pageApi: ISpaceApi) {
   const queryClient = createTestQueryClient()
   return render(
     <QueryClientProvider client={queryClient}>

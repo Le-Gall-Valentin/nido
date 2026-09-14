@@ -1,6 +1,7 @@
 package com.nido.api.tasks.application.handler;
 
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.tasks.domain.model.CreateTaskCommand;
 import com.nido.api.tasks.domain.model.RecurrenceInterval;
@@ -31,13 +32,15 @@ import static org.mockito.Mockito.when;
 class ListTasksHandlerTest {
 
     @Mock TaskRepository taskRepository;
+
+    @Mock GetSpaceTodayUseCase spaceToday;
     @Mock RecurringTaskSeriesRepository seriesRepository;
     private ListTasksHandler handler;
     private final UUID spaceId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        handler = new ListTasksHandler(taskRepository, seriesRepository);
+        handler = new ListTasksHandler(taskRepository, seriesRepository, spaceToday);
     }
 
     private SpaceMembership membership() {

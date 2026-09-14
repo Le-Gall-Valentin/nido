@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import type { IAuthApi } from './IAuthApi'
-import { clearSessionHint, hasSessionHint, setSessionHint } from '@/shared/lib'
-import { notifyLoginSuccess } from '@/shared/api'
+import { clearSessionHint, hasSessionHint, notifyLoginSuccess, setSessionHint } from '@/shared/lib'
 import type { User } from '@/entities/user'
 import type { LoginCredentials, LoginOutcome } from './types'
 import { CredentialsError } from './errors'

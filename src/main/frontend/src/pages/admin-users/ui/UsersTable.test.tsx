@@ -1,8 +1,7 @@
 import { render, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { UsersTable } from './UsersTable'
-import type { AdminUser } from '../api/adminUsersApi'
-import type { User } from '@/entities/user'
+import type { AdminUser , User } from '@/entities/user'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, string>) => {

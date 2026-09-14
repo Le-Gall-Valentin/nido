@@ -2,6 +2,7 @@ package com.nido.api.tasks.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.tasks.application.port.in.ListTasksUseCase;
 import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskOrdering;
@@ -15,18 +16,21 @@ import java.util.List;
 @ApplicationService
 public class ListTasksHandler implements ListTasksUseCase {
 
+    private final GetSpaceTodayUseCase spaceToday;
     private final TaskRepository taskRepository;
     private final RecurringTaskSeriesRepository seriesRepository;
 
-    public ListTasksHandler(TaskRepository taskRepository, RecurringTaskSeriesRepository seriesRepository) {
+    public ListTasksHandler(TaskRepository taskRepository, RecurringTaskSeriesRepository seriesRepository,
+                            GetSpaceTodayUseCase spaceToday) {
         this.taskRepository = taskRepository;
         this.seriesRepository = seriesRepository;
+        this.spaceToday = spaceToday;
     }
 
     @Override
     @Transactional
     public List<Task> list(SpaceMembership caller) {
-        return list(caller, LocalDate.now());
+        return list(caller, spaceToday.today(caller.spaceId()));
     }
 
     /**

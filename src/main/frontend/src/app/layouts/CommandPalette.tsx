@@ -31,7 +31,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
   const go = useCallback(
     (item: { to?: string; action?: () => void }) => {
       if (item.action) item.action()
-      else if (item.to) nav(item.to)
+      else if (item.to) void nav(item.to)
       onClose()
     },
     [nav, onClose]
@@ -48,10 +48,18 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
   )
 
   return (
+    // The backdrop closes on click, and the rules below want a key handler on the same element. The
+    // keyboard way out of this dialog is Escape, handled on the panel where the focus actually is
+    // (useFocusTrap keeps it there) — putting a second one out here would be unreachable by keyboard,
+    // which is what makes this a false positive rather than a missing affordance.
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className="fixed inset-0 z-[200] flex justify-center bg-[rgba(44,42,38,0.32)] px-5 pt-[12vh]"
       onClick={onClose}
     >
+      {/* The onClick here is not an affordance: it stops a click inside the panel from reaching the
+          backdrop and closing the dialog. There is nothing for a keyboard to do with it. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
       <div
         ref={dialogRef}
         role="dialog"

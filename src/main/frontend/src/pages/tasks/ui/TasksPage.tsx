@@ -2,19 +2,20 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, ArrowRightLeft, GripVertical, Repeat } from 'lucide-react'
 import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import { Alert, ConfirmDeleteModal, Dialog, Spinner } from '@/shared/ui'
-import { usePointerIsFine } from '@/shared/lib'
-import { useSpaceMembers, TransferDialog } from '@/entities/space'
+import { Alert, Dialog, Spinner } from '@/shared/ui'
+import { todayIso, usePointerIsFine } from '@/shared/lib'
+import { useSpaceMembers } from '@/entities/space'
+import { useSpaceTimezone } from '@/features/space-switcher'
+import { isOverdue } from '../lib/isOverdue'
 import { UserAvatar } from '@/entities/user'
 import { tasksApi, TasksApiProvider, type TasksApi, type Task, type TaskStatus } from '@/entities/tasks'
 import { TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
 import { useTasksPageState } from '../model/useTasksPageState'
-import { TaskFormModal } from './TaskFormModal'
 import { TaskDetailModal } from './TaskDetailModal'
-import { DeleteTaskModal } from './DeleteTaskModal'
-import { RecurringTaskSeriesManagerModal } from './RecurringTaskSeriesManagerModal'
-import { RecurringTaskSeriesFormModal } from './RecurringTaskSeriesFormModal'
-import { RecurringTaskSeriesDetailModal } from './RecurringTaskSeriesDetailModal'
+import { TaskFormPanel } from './TaskFormPanel'
+import { DeleteTaskPanel } from './DeleteTaskPanel'
+import { MoveTaskPanel } from './MoveTaskPanel'
+import { RecurringSeriesPanel } from './RecurringSeriesPanel'
 
 const COLUMN_ORDER: TaskStatus[] = ['TODO', 'DOING', 'DONE']
 
@@ -30,13 +31,10 @@ export function TasksPage({ api = tasksApi }: TasksPageProps = {}) {
   )
 }
 
-function isOverdue(dueDate: string | null): boolean {
-  if (!dueDate) return false
-  return dueDate < new Date().toISOString().slice(0, 10)
-}
-
 interface TaskCardProps {
   task: Task
+  /** The household's date — lateness is decided on its calendar, not the viewer's. */
+  today: string
   members: ReturnType<typeof useSpaceMembers>['data']
   canWriteHere: boolean
   onToggleDone: (task: Task) => void
@@ -48,7 +46,7 @@ interface TaskCardProps {
   onView: (task: Task) => void
 }
 
-function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, onEdit, onMove, onDelete, onChangeStatus, onView }: TaskCardProps) {
+function TaskCard({ task, today, members, canWriteHere, onToggleDone, onToggleSubtask, onEdit, onMove, onDelete, onChangeStatus, onView }: TaskCardProps) {
   const { t } = useTranslation('tasks')
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: task.id })
   const pointerIsFine = usePointerIsFine()
@@ -68,7 +66,7 @@ function TaskCard({ task, members, canWriteHere, onToggleDone, onToggleSubtask, 
         <span className={`size-1.5 rounded-full ${meta.dotClassName}`} />
         {t(meta.labelKey)}
       </span>
-      {task.dueDate && <span className={isOverdue(task.dueDate) ? 'text-status-red' : 'text-fg-4'}>{task.dueDate}</span>}
+      {task.dueDate && <span className={isOverdue(task.dueDate, today) ? 'text-status-red' : 'text-fg-4'}>{task.dueDate}</span>}
       {task.assigneeIds.length > 0 && (
         <div className="ml-auto flex -space-x-1.5">
           {task.assigneeIds.map((userId) => {
@@ -167,21 +165,21 @@ function TasksPageContent() {
   const { t } = useTranslation('tasks')
   const { spaceId = '' } = useParams<{ spaceId: string }>()
   const { data: members } = useSpaceMembers(spaceId)
+  // The space's calendar, not the browser's: a member reading from another continent
+  // must see the same tasks struck through as everyone else in the household.
+  const today = todayIso(new Date(), useSpaceTimezone(spaceId))
   const {
-    tasks, isPending, isError, writableDestinations, recurringTaskSeries,
+    tasks, isPending, isError,
     canWriteHere, spaceIsPersonal,
-    createTask, createRecurringTask, updateTask, toggleSubtask, deleteTask,
-    updateRecurringTaskSeries, deleteRecurringTaskSeries,
-    formState, setFormState, closeForm,
+    toggleSubtask,
+    formState, setFormState,
     deletingTask, setDeletingTask,
     movingTask, setMovingTask,
     statusPickerTask, setStatusPickerTask,
     viewingTask, setViewingTask,
     managingRecurringSeries, setManagingRecurringSeries,
-    editingSeries, setEditingSeries,
-    deletingSeries, setDeletingSeries,
-    viewingSeries, setViewingSeries,
-    handleFormSubmit, handleUpdateSeriesSubmit, handleToggleDone, handleDragEnd, handleMoveConfirm, handlePickStatus,
+    blockedBySubtasks, dismissBlockedBySubtasks,
+    handleToggleDone, handleDragEnd, handlePickStatus,
     seriesForTask,
   } = useTasksPageState(spaceId)
 
@@ -191,7 +189,7 @@ function TasksPageContent() {
   if (isError) return <Alert variant="error">{t('error.load_failed')}</Alert>
 
   const cardProps = {
-    members, canWriteHere,
+    members, canWriteHere, today,
     onToggleDone: handleToggleDone,
     onToggleSubtask: (taskId: string, subtaskId: string) => toggleSubtask.mutate({ taskId, subtaskId }),
     onEdit: (task: Task) => setFormState({ mode: 'edit', task }),
@@ -219,6 +217,17 @@ function TasksPageContent() {
         )}
       </div>
 
+      {blockedBySubtasks && (
+        <Alert
+          variant="warning"
+          className="mb-4"
+          onDismiss={dismissBlockedBySubtasks}
+          dismissLabel={t('blocked_by_subtasks.dismiss')}
+        >
+          {t('blocked_by_subtasks.message', { title: blockedBySubtasks.title, count: blockedBySubtasks.openSubtasks })}
+        </Alert>
+      )}
+
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {COLUMN_ORDER.map((status) => (
@@ -228,33 +237,21 @@ function TasksPageContent() {
       </DndContext>
 
       {formState && (
-        <TaskFormModal
-          open
-          onClose={closeForm}
-          onSubmit={handleFormSubmit}
-          initialTask={formState.mode === 'edit' ? formState.task : null}
+        <TaskFormPanel
+          spaceId={spaceId}
+          task={formState.mode === 'edit' ? formState.task : null}
           members={members ?? []}
           isPersonal={spaceIsPersonal}
-          submitError={(createTask.isError || createRecurringTask.isError || updateTask.isError) ? t('form.submit_error') : null}
+          onClose={() => setFormState(null)}
         />
       )}
 
       {deletingTask && (
-        <DeleteTaskModal
-          taskTitle={deletingTask.title}
-          onClose={() => setDeletingTask(null)}
-          onDelete={() => deleteTask.mutateAsync(deletingTask.id)}
-        />
+        <DeleteTaskPanel spaceId={spaceId} task={deletingTask} onClose={() => setDeletingTask(null)} />
       )}
 
       {movingTask && (
-        <TransferDialog
-          itemName={movingTask.title}
-          operation="move"
-          destinations={writableDestinations ?? []}
-          onClose={() => setMovingTask(null)}
-          onConfirm={handleMoveConfirm}
-        />
+        <MoveTaskPanel spaceId={spaceId} task={movingTask} onClose={() => setMovingTask(null)} />
       )}
 
       {statusPickerTask && (
@@ -290,50 +287,11 @@ function TasksPageContent() {
       )}
 
       {managingRecurringSeries && (
-        <RecurringTaskSeriesManagerModal
-          series={recurringTaskSeries ?? []}
-          onView={(series) => setViewingSeries(series)}
-          onEdit={(series) => setEditingSeries(series)}
-          onDelete={(seriesId) => setDeletingSeries((recurringTaskSeries ?? []).find((s) => s.id === seriesId) ?? null)}
-          onClose={() => setManagingRecurringSeries(false)}
-        />
-      )}
-
-      {viewingSeries && (
-        <RecurringTaskSeriesDetailModal
-          series={viewingSeries}
-          members={members ?? []}
-          onClose={() => setViewingSeries(null)}
-        />
-      )}
-
-      {editingSeries && (
-        <RecurringTaskSeriesFormModal
-          series={editingSeries}
+        <RecurringSeriesPanel
+          spaceId={spaceId}
           members={members ?? []}
           isPersonal={spaceIsPersonal}
-          onSubmit={handleUpdateSeriesSubmit}
-          onCancel={() => {
-            setEditingSeries(null)
-            updateRecurringTaskSeries.reset()
-          }}
-          submitError={updateRecurringTaskSeries.isError ? t('form.submit_error') : null}
-        />
-      )}
-
-      {deletingSeries && (
-        <ConfirmDeleteModal
-          title={t('delete_confirm.title', { title: deletingSeries.title })}
-          message={t('delete_confirm.message')}
-          confirmLabel={t('delete_confirm.confirm')}
-          cancelLabel={t('delete_confirm.cancel')}
-          isPending={deleteRecurringTaskSeries.isPending}
-          error={deleteRecurringTaskSeries.isError ? t('delete_confirm.error') : null}
-          onCancel={() => {
-            setDeletingSeries(null)
-            deleteRecurringTaskSeries.reset()
-          }}
-          onConfirm={() => deleteRecurringTaskSeries.mutate(deletingSeries.id, { onSuccess: () => setDeletingSeries(null) })}
+          onClose={() => setManagingRecurringSeries(false)}
         />
       )}
     </div>

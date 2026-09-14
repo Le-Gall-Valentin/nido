@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { setSessionExpiredCallback, triggerSessionExpired, resetSessionCallbacks } from './sessionCallbacks'
+import {
+  setSessionExpiredCallback, triggerSessionExpired,
+  setLoginSuccessCallback, notifyLoginSuccess,
+  resetSessionCallbacks,
+} from './sessionCallbacks'
 
 afterEach(() => {
   resetSessionCallbacks()
@@ -22,6 +26,31 @@ describe('sessionCallbacks', () => {
     setSessionExpiredCallback(cb)
     resetSessionCallbacks()
     triggerSessionExpired()
+    expect(cb).not.toHaveBeenCalled()
+  })
+
+  it('tells whoever registered that a login succeeded', () => {
+    // The mirror of the above, and the reason this half exists: the auth store has to say "somebody
+    // signed in" without knowing that an axios interceptor is what listens.
+    const cb = vi.fn()
+    setLoginSuccessCallback(cb)
+
+    notifyLoginSuccess()
+
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  it('a login with nobody listening is not an error', () => {
+    expect(() => notifyLoginSuccess()).not.toThrow()
+  })
+
+  it('resetSessionCallbacks clears the login side too', () => {
+    const cb = vi.fn()
+    setLoginSuccessCallback(cb)
+    resetSessionCallbacks()
+
+    notifyLoginSuccess()
+
     expect(cb).not.toHaveBeenCalled()
   })
 })
