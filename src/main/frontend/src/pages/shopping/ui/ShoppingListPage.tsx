@@ -162,8 +162,10 @@ function ShoppingListPageContent() {
 
       <p className="mb-4 text-xs text-fg-3">{t('remaining_count', { count: remaining })}</p>
 
+      {/* Two equal columns from sm up, one stacked column below: a grid rather than a flex row, so
+          the pair keeps a single width whatever the two labels translate to. */}
       {canWriteHere && (
-        <div className="mb-6 flex flex-col items-stretch gap-2 sm:items-start">
+        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <button type="button" onClick={() => setAddingItem(true)}
             className="flex items-center justify-center gap-1.5 rounded-[10px] px-4 py-2.5 text-sm font-semibold text-bg-0"
             style={{ background: 'var(--color-accent)' }}>
