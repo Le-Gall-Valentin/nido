@@ -29,11 +29,11 @@ const CURRENT_SPACE: SpaceSummary = {
 function fakeApi(overrides: Partial<IShoppingApi> = {}): IShoppingApi {
   return {
     listCategories: vi.fn().mockResolvedValue(CATEGORIES),
-    createCategory: vi.fn(),
-    renameCategory: vi.fn(),
-    deleteCategory: vi.fn(),
+    createCategory: vi.fn().mockResolvedValue(undefined),
+    renameCategory: vi.fn().mockResolvedValue(undefined),
+    deleteCategory: vi.fn().mockResolvedValue(undefined),
     listItems: vi.fn().mockResolvedValue(ITEMS),
-    addItem: vi.fn(),
+    addItem: vi.fn().mockResolvedValue(undefined),
     updateItem: vi.fn(),
     toggleItemDone: vi.fn().mockResolvedValue(undefined),
     deleteItem: vi.fn().mockResolvedValue(undefined),
@@ -71,41 +71,50 @@ describe('ShoppingListPage', () => {
   it('shows items grouped under their category', async () => {
     setup()
 
-    // "Épicerie" also appears as an <option> in the category <select> dropdowns,
-    // so at least one match (not exactly one) is the meaningful assertion here.
-    expect((await screen.findAllByText('Épicerie')).length).toBeGreaterThan(0)
+    expect(await screen.findByText('Épicerie')).toBeDefined()
     expect(screen.getByText('Pâtes')).toBeDefined()
   })
 
-  it('adds an item with no quantity to the selected category', async () => {
-    const api = fakeApi({ addItem: vi.fn().mockResolvedValue({ ...ITEMS[0], id: 'i2', name: 'Riz' }) })
-    setup(api)
+  it('leaves a category holding no item out of the list entirely', async () => {
+    setup()
     await screen.findByText('Pâtes')
 
-    fireEvent.change(screen.getByLabelText('add_item_placeholder'), { target: { value: 'Riz' } })
-    fireEvent.click(screen.getByLabelText('add_item'))
-
-    await waitFor(() => expect(api.addItem).toHaveBeenCalledWith('space-1', 'cat-1', 'Riz', null, null))
+    // cat-2 holds nothing, and with both modals closed its name appears nowhere on the page —
+    // not as a header, not as a <select> option.
+    expect(screen.queryByText('Maison & divers')).toBeNull()
   })
 
-  it('adds an item with an optional quantity and unit', async () => {
-    const api = fakeApi({ addItem: vi.fn().mockResolvedValue({ ...ITEMS[0], id: 'i2', name: 'Riz' }) })
-    setup(api)
-    await screen.findByText('Pâtes')
-
-    fireEvent.change(screen.getByLabelText('add_item_placeholder'), { target: { value: 'Riz' } })
-    fireEvent.change(screen.getByLabelText('quantity_label'), { target: { value: '300' } })
-    fireEvent.change(screen.getByLabelText('unit_label'), { target: { value: 'GRAM' } })
-    fireEvent.click(screen.getByLabelText('add_item'))
-
-    await waitFor(() => expect(api.addItem).toHaveBeenCalledWith('space-1', 'cat-1', 'Riz', 300, 'GRAM'))
-  })
-
-  it('moves an item to another category via the fallback dialog, preserving its quantity and unit', async () => {
+  it('adds an item through the add-item modal', async () => {
     const api = fakeApi()
     setup(api)
     await screen.findByText('Pâtes')
 
+    fireEvent.click(screen.getByText('add_item'))
+    fireEvent.change(screen.getByLabelText('add_item_name_label'), { target: { value: 'Riz' } })
+    fireEvent.change(screen.getByLabelText('quantity_label'), { target: { value: '300' } })
+    fireEvent.change(screen.getByLabelText('unit_label'), { target: { value: 'GRAM' } })
+    fireEvent.click(screen.getByText('add_item_confirm'))
+
+    await waitFor(() => expect(api.addItem).toHaveBeenCalledWith('space-1', 'cat-1', 'Riz', 300, 'GRAM'))
+    await waitFor(() => expect(screen.queryByLabelText('add_item_name_label')).toBeNull())
+  })
+
+  it('offers every category in the add-item modal, the empty ones included', async () => {
+    setup()
+    await screen.findByText('Pâtes')
+
+    fireEvent.click(screen.getByText('add_item'))
+
+    const select = screen.getByLabelText('category_label')
+    expect(within(select).getByText('Maison & divers')).toBeDefined()
+  })
+
+  it('moves an item to a category holding no item, preserving its quantity and unit', async () => {
+    const api = fakeApi()
+    setup(api)
+    await screen.findByText('Pâtes')
+
+    // The only way into an empty category, now that empty ones are not drop targets on the list.
     fireEvent.click(screen.getByLabelText('move_item'))
     const dialog = screen.getByRole('dialog')
     fireEvent.click(within(dialog).getByText('Maison & divers'))
@@ -114,7 +123,7 @@ describe('ShoppingListPage', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('disables the item\'s current category in the fallback dialog', async () => {
+  it('disables the item\'s current category in the move dialog', async () => {
     setup()
     await screen.findByText('Pâtes')
 
@@ -164,60 +173,53 @@ describe('ShoppingListPage', () => {
     await waitFor(() => expect(api.clearAllItems).toHaveBeenCalledWith('space-1'))
   })
 
-  it('renames a category', async () => {
-    const api = fakeApi({ renameCategory: vi.fn().mockResolvedValue({ ...CATEGORIES[0], name: 'Épicerie fine' }) })
+  it('offers no way to rename or delete a category from the list itself', async () => {
+    setup()
+    await screen.findByText('Pâtes')
+
+    expect(screen.queryByLabelText('category_rename_for')).toBeNull()
+    expect(screen.queryByLabelText('category_delete')).toBeNull()
+  })
+})
+
+describe('ShoppingListPage — managing categories', () => {
+  it('renames a category through the manage-categories modal', async () => {
+    const api = fakeApi()
     setup(api)
     await screen.findByText('Pâtes')
 
-    // Both categories render a rename control; cat-1 ("Épicerie") is the first in position order.
-    // The other category's rename *button* shares the same accessible name, so scope to the input.
-    fireEvent.click(screen.getAllByText('category_rename')[0])
-    fireEvent.change(screen.getByLabelText('category_rename', { selector: 'input' }), { target: { value: 'Épicerie fine' } })
+    fireEvent.click(screen.getByText('manage_categories'))
+    // Every row's rename control shares an accessible name here, because the mocked t() drops the
+    // interpolated category name. cat-1 is first in position order.
+    fireEvent.click(screen.getAllByLabelText('category_rename_for')[0]!)
+    fireEvent.change(screen.getByLabelText('category_rename'), { target: { value: 'Épicerie fine' } })
     fireEvent.click(screen.getByLabelText('category_rename_confirm'))
 
     await waitFor(() => expect(api.renameCategory).toHaveBeenCalledWith('space-1', 'cat-1', 'Épicerie fine'))
   })
 
-  it('shows a category header even when it has no items yet', async () => {
-    setup()
-    await screen.findByText('Pâtes')
-
-    // "Maison & divers" (cat-2, empty) also appears as an <option> in every category
-    // <select>, so scope to the section heading span to prove the header itself renders.
-    expect(screen.getByText('Maison & divers', { selector: 'span' })).toBeDefined()
-  })
-
-  it('shows an error and does not submit when the quantity is not a positive number', async () => {
+  it('creates a category through the manage-categories modal', async () => {
     const api = fakeApi()
     setup(api)
     await screen.findByText('Pâtes')
 
-    fireEvent.change(screen.getByLabelText('add_item_placeholder'), { target: { value: 'Riz' } })
-    fireEvent.change(screen.getByLabelText('quantity_label'), { target: { value: '-5' } })
-    fireEvent.click(screen.getByLabelText('add_item'))
-
-    expect(await screen.findByText('error.quantity_invalid')).toBeDefined()
-    expect(api.addItem).not.toHaveBeenCalled()
-  })
-
-  it('creates a new category', async () => {
-    const api = fakeApi({ createCategory: vi.fn().mockResolvedValue({ id: 'cat-3', name: 'Bricolage', position: 2, fallback: false }) })
-    setup(api)
-    await screen.findByText('Pâtes')
-
+    fireEvent.click(screen.getByText('manage_categories'))
     fireEvent.change(screen.getByLabelText('new_category_placeholder'), { target: { value: 'Bricolage' } })
     fireEvent.click(screen.getByText('new_category'))
 
     await waitFor(() => expect(api.createCategory).toHaveBeenCalledWith('space-1', 'Bricolage'))
   })
 
-  it('deletes a non-fallback category but not the fallback one', async () => {
+  it('deletes a category through the manage-categories modal, but never the fallback one', async () => {
     const api = fakeApi()
     setup(api)
     await screen.findByText('Pâtes')
 
-    expect(screen.queryByLabelText('category_delete')).not.toBeNull()
+    fireEvent.click(screen.getByText('manage_categories'))
+    // Two categories, one bin: the fallback category offers none.
+    expect(screen.getAllByLabelText('category_delete')).toHaveLength(1)
     fireEvent.click(screen.getByLabelText('category_delete'))
+    fireEvent.click(screen.getByText('category_delete_confirm_action'))
 
     await waitFor(() => expect(api.deleteCategory).toHaveBeenCalledWith('space-1', 'cat-1'))
   })
@@ -229,25 +231,14 @@ describe('ShoppingListPage — read-only role', () => {
     setup(fakeApi(), spacesApi)
     await screen.findByText('Pâtes')
 
-    expect(screen.queryByLabelText('add_item_placeholder')).toBeNull()
+    expect(screen.queryByText('add_item')).toBeNull()
+    expect(screen.queryByText('manage_categories')).toBeNull()
     expect(screen.queryByLabelText('move_item')).toBeNull()
     expect(screen.queryByLabelText('delete_item')).toBeNull()
-    expect(screen.queryByText('new_category')).toBeNull()
   })
 })
 
 describe('ShoppingListPage — mutation errors', () => {
-  it('shows an error message when adding an item fails', async () => {
-    const api = fakeApi({ addItem: vi.fn().mockRejectedValue(new Error('boom')) })
-    setup(api)
-    await screen.findByText('Pâtes')
-
-    fireEvent.change(screen.getByLabelText('add_item_placeholder'), { target: { value: 'Riz' } })
-    fireEvent.click(screen.getByLabelText('add_item'))
-
-    expect(await screen.findByText('error.action_failed')).toBeDefined()
-  })
-
   it('shows an error message when moving an item to another category fails', async () => {
     const api = fakeApi({ updateItem: vi.fn().mockRejectedValue(new Error('boom')) })
     setup(api)
