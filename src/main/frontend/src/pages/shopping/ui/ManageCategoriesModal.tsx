@@ -103,18 +103,30 @@ export function ManageCategoriesModal({
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="flex-1 text-sm text-fg-1">{category.name}</span>
-                <span className="text-xs text-fg-4">
-                  {category.fallback
-                    ? t('category_fallback_hint')
-                    : t('category_item_count', { count: itemCountByCategory.get(category.id) ?? 0 })}
+                {/* What the category *is* travels with its name; what it *holds* keeps the column on
+                    the right, for every row alike. Wrapping rather than truncating: on a narrow
+                    screen a long name pushes the badge onto a second line instead of eating it. */}
+                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-sm text-fg-1">{category.name}</span>
+                  {category.fallback && (
+                    <span className="rounded-full bg-bg-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fg-3">
+                      {t('category_fallback_hint')}
+                    </span>
+                  )}
+                </span>
+                <span className="shrink-0 text-xs text-fg-4">
+                  {t('category_item_count', { count: itemCountByCategory.get(category.id) ?? 0 })}
                 </span>
                 <button type="button" onClick={() => startRename(category)}
                   aria-label={t('category_rename_for', { name: category.name })}
                   className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-bg-2 hover:text-fg-1">
                   <Pencil className="size-3.5" />
                 </button>
-                {!category.fallback && (
+                {category.fallback ? (
+                  // The fallback row has no bin, and without this the pencils would not line up: its
+                  // own would sit where every other row shows a bin.
+                  <span aria-hidden="true" className="size-7 shrink-0" />
+                ) : (
                   <button type="button" onClick={() => { setRenamingId(null); setDeletingId(category.id) }}
                     aria-label={t('category_delete', { name: category.name })}
                     className="grid size-7 place-items-center rounded-md text-fg-3 hover:bg-bg-2 hover:text-status-red">

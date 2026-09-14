@@ -24,7 +24,7 @@
   "category_item_count_zero": "empty",
   "category_item_count_one": "{{count}} item",
   "category_item_count_other": "{{count}} items",
-  "category_fallback_hint": "Default category",
+  "category_fallback_hint": "Default",
   "category_rename": "Rename",
   "category_rename_for": "Rename \"{{name}}\"",
   "category_rename_confirm": "Confirm",
