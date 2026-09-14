@@ -24,7 +24,7 @@
   "category_item_count_zero": "vide",
   "category_item_count_one": "{{count}} article",
   "category_item_count_other": "{{count}} articles",
-  "category_fallback_hint": "Catégorie par défaut",
+  "category_fallback_hint": "Par défaut",
   "category_rename": "Renommer",
   "category_rename_for": "Renommer « {{name}} »",
   "category_rename_confirm": "Valider",

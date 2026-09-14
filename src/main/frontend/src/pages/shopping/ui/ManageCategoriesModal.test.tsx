@@ -19,7 +19,7 @@ const CATEGORIES: ShoppingCategory[] = [
   { id: 'cat-3', name: 'Bricolage', position: 2, fallback: false },
 ]
 
-const ITEM_COUNTS = new Map([['cat-1', 2], ['cat-3', 3]])
+const ITEM_COUNTS = new Map([['cat-1', 2], ['cat-2', 1], ['cat-3', 3]])
 
 interface Handlers {
   onCreate?: Mock<(name: string) => Promise<unknown>>
@@ -141,11 +141,22 @@ describe('ManageCategoriesModal', () => {
     expect(screen.queryByText('category_delete_confirm(name=Bricolage)')).toBeNull()
   })
 
-  it('offers no deletion for the fallback category', () => {
+  it('offers no deletion for the fallback category, and says why on its name', () => {
     setup()
 
     expect(screen.queryByLabelText('category_delete(name=Maison & divers)')).toBeNull()
     expect(screen.getByText('category_fallback_hint')).toBeDefined()
+  })
+
+  it('counts the items of every category in the same place, the fallback one included', () => {
+    setup()
+
+    // One reading per row, in one column: what a category *holds*. What it *is* — the fallback
+    // marker — sits by the name instead, so neither reading has to displace the other.
+    expect(screen.getByText('category_item_count(count=2)')).toBeDefined()
+    expect(screen.getByText('category_item_count(count=1)')).toBeDefined()
+    expect(screen.getByText('category_item_count(count=3)')).toBeDefined()
+    expect(screen.queryAllByText('category_item_count(count=0)')).toHaveLength(0)
   })
 
   it('shows an error when a mutation fails', async () => {
