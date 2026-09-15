@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle } from 'lucide-react'
 import type { BudgetLine, Category } from '@/entities/finance'
-import { formatAmount } from '../lib/formatAmount'
+import { formatAmount } from '@/shared/lib'
 
 interface BudgetSectionProps {
   budgetVsActual: BudgetLine[]

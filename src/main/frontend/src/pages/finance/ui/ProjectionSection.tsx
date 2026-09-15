@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Target } from 'lucide-react'
 import type { Projection } from '@/entities/finance'
-import { formatAmount } from '../lib/formatAmount'
+import { formatAmount } from '@/shared/lib'
 
 interface ProjectionSectionProps {
   projection?: Projection

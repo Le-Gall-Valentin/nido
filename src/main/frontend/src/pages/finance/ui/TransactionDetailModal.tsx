@@ -5,9 +5,9 @@ import { UserAvatar } from '@/entities/user'
 import type { SpaceMember } from '@/entities/space'
 import type { Category, Transaction } from '@/entities/finance'
 import { CategoryIconBadge } from './CategoryIconBadge'
-import { formatAmount } from '../lib/formatAmount'
 import { roundSharePercentages } from '../lib/roundSharePercentages'
 import { contributionLabelKeys } from '../lib/contributionLabelKeys'
+import { formatAmount } from '@/shared/lib'
 
 interface TransactionDetailModalProps {
   transaction: Transaction

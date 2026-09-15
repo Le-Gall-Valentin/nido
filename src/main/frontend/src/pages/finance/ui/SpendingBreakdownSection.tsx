@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Category, CategoryAmount, TransactionType } from '@/entities/finance'
-import { formatAmount } from '../lib/formatAmount'
+import { formatAmount } from '@/shared/lib'
 
 /** A hand-drawn SVG donut (no charting library in this app) with a colored ring segment per category. */
 function BreakdownDonut({ breakdown, categoryById }: { breakdown: CategoryAmount[]; categoryById: Map<string, Category> }) {

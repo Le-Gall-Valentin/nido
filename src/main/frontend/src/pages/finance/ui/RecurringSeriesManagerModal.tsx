@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Pencil, Trash2 } from 'lucide-react'
 import { Dialog } from '@/shared/ui'
 import type { RecurringSeries } from '@/entities/finance'
-import { formatAmount } from '../lib/formatAmount'
+import { formatAmount } from '@/shared/lib'
 
 interface RecurringSeriesManagerModalProps {
   series: RecurringSeries[]

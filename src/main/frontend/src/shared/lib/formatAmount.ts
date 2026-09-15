@@ -1,5 +1,5 @@
 import i18next from 'i18next'
-import { resolveLocale } from '@/shared/lib'
+import { resolveLocale } from './resolveLocale'
 
 // Nido is single-currency today — the currency is a fixed business fact, never derived
 // from the UI language, so a future language never implies a different currency. Real

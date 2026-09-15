@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { ArrowRight, CheckCircle2, HandCoins } from 'lucide-react'
 import { UserAvatar } from '@/entities/user'
 import type { Balances, SuggestedTransfer } from '@/entities/finance'
-import { formatAmount } from '../lib/formatAmount'
+import { formatAmount } from '@/shared/lib'
 
 interface BalancesSectionProps {
   balances?: Balances

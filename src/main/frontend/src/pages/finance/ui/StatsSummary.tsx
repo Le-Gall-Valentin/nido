@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Wallet, TrendingDown, TrendingUp, PiggyBank } from 'lucide-react'
 import type { FinanceStats } from '@/entities/finance'
-import { formatAmount } from '../lib/formatAmount'
+import { formatAmount } from '@/shared/lib'
 
 function StatCard({ icon: Icon, tintClassName, label, value, onClick }: {
   icon: typeof Wallet; tintClassName: string; label: string; value: string; onClick?: () => void
