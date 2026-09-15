@@ -1,14 +1,17 @@
 package com.nido.api.calendar.infrastructure.web;
 
+import com.nido.api.calendar.application.port.in.CopyEventUseCase;
 import com.nido.api.calendar.application.port.in.CreateEventUseCase;
 import com.nido.api.calendar.application.port.in.DeleteEventUseCase;
 import com.nido.api.calendar.application.port.in.JoinEventUseCase;
 import com.nido.api.calendar.application.port.in.LeaveEventUseCase;
+import com.nido.api.calendar.application.port.in.MoveEventUseCase;
 import com.nido.api.calendar.application.port.in.UpdateEventUseCase;
 import com.nido.api.calendar.domain.model.CreateEventCommand;
 import com.nido.api.calendar.domain.model.UpdateEventCommand;
 import com.nido.api.calendar.infrastructure.web.dto.CreateEventRequest;
 import com.nido.api.calendar.infrastructure.web.dto.EventResponse;
+import com.nido.api.calendar.infrastructure.web.dto.TransferEventRequest;
 import com.nido.api.calendar.infrastructure.web.dto.UpdateEventRequest;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import com.nido.api.infrastructure.web.CurrentMembership;
@@ -42,17 +45,23 @@ public class CalendarEventController {
     private final DeleteEventUseCase deleteEventUseCase;
     private final JoinEventUseCase joinEventUseCase;
     private final LeaveEventUseCase leaveEventUseCase;
+    private final CopyEventUseCase copyEventUseCase;
+    private final MoveEventUseCase moveEventUseCase;
 
     public CalendarEventController(CreateEventUseCase createEventUseCase,
                                    UpdateEventUseCase updateEventUseCase,
                                    DeleteEventUseCase deleteEventUseCase,
                                    JoinEventUseCase joinEventUseCase,
-                                   LeaveEventUseCase leaveEventUseCase) {
+                                   LeaveEventUseCase leaveEventUseCase,
+                                   CopyEventUseCase copyEventUseCase,
+                                   MoveEventUseCase moveEventUseCase) {
         this.createEventUseCase = createEventUseCase;
         this.updateEventUseCase = updateEventUseCase;
         this.deleteEventUseCase = deleteEventUseCase;
         this.joinEventUseCase = joinEventUseCase;
         this.leaveEventUseCase = leaveEventUseCase;
+        this.copyEventUseCase = copyEventUseCase;
+        this.moveEventUseCase = moveEventUseCase;
     }
 
     @PostMapping
@@ -111,5 +120,29 @@ public class CalendarEventController {
             @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         leaveEventUseCase.leave(eventId, membership);
         return ResponseEntity.noContent().build();
+    }
+
+    // Both take the default VIEWER floor: the rule differs per operation and lives in the handler.
+    // Copying needs write access at the destination only, moving needs it on both sides.
+    @PostMapping("/{eventId}/copy")
+    @RateLimiting(max = 20)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<EventResponse> copy(
+            @PathVariable UUID spaceId, @PathVariable UUID eventId,
+            @Valid @RequestBody TransferEventRequest request,
+            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(EventResponse.from(
+            copyEventUseCase.copy(eventId, request.destinationSpaceId(), membership)));
+    }
+
+    @PostMapping("/{eventId}/move")
+    @RateLimiting(max = 20)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<EventResponse> move(
+            @PathVariable UUID spaceId, @PathVariable UUID eventId,
+            @Valid @RequestBody TransferEventRequest request,
+            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(EventResponse.from(
+            moveEventUseCase.move(eventId, request.destinationSpaceId(), membership)));
     }
 }
