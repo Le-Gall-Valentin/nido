@@ -42,6 +42,7 @@ export const NAV_CONFIG: NavItemConfig[] = [
     children: [
       { id: 'nav:organisation:courses', to: (spaceId) => (spaceId ? ROUTES.spaceOrganisationCourses(spaceId) : undefined), icon: ShoppingCart, labelKey: 'nav.organisation_courses' },
       { id: 'nav:organisation:tasks', to: (spaceId) => (spaceId ? ROUTES.spaceOrganisationTasks(spaceId) : undefined), icon: CheckSquare, labelKey: 'nav.organisation_tasks' },
+      { id: 'nav:organisation:calendar', to: (spaceId) => (spaceId ? ROUTES.spaceOrganisationCalendar(spaceId) : undefined), icon: Calendar, labelKey: 'nav.organisation_calendar' },
     ],
   },
   {
