@@ -1,0 +1,64 @@
+databaseChangeLog:
+  - changeSet:
+      id: 052-create-calendar-event-participants
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: calendar_event_participants
+      changes:
+        - createTable:
+            tableName: calendar_event_participants
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: event_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: calendar_event_participants
+            columnNames: event_id, user_id
+            constraintName: uq_cep_owner_user
+        - createIndex:
+            tableName: calendar_event_participants
+            indexName: idx_cep_event_id
+            columns:
+              - column:
+                  name: event_id
+        - createIndex:
+            tableName: calendar_event_participants
+            indexName: idx_cep_user_id
+            columns:
+              - column:
+                  name: user_id
+        - addForeignKeyConstraint:
+            baseTableName: calendar_event_participants
+            baseColumnNames: event_id
+            referencedTableName: calendar_events
+            referencedColumnNames: id
+            constraintName: fk_cep_owner
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: calendar_event_participants
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_cep_user
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: calendar_event_participants
+            cascadeConstraints: true

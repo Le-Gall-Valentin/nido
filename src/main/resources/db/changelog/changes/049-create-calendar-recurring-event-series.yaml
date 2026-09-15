@@ -1,0 +1,121 @@
+databaseChangeLog:
+  - changeSet:
+      id: 049-create-calendar-recurring-event-series
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: calendar_recurring_event_series
+      changes:
+        - createTable:
+            tableName: calendar_recurring_event_series
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title_encrypted
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description_encrypted
+                  type: TEXT
+              - column:
+                  name: location_encrypted
+                  type: TEXT
+              - column:
+                  name: all_day
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_time
+                  type: TIME
+              - column:
+                  name: end_time
+                  type: TIME
+              - column:
+                  name: duration_days
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: color
+                  type: VARCHAR(30)
+              - column:
+                  name: interval_type
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: interval_count
+                  type: INT
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: anchor_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_date
+                  type: DATE
+              - column:
+                  name: created_by
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series ADD CONSTRAINT chk_cres_interval_type CHECK (interval_type IN ('DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'))
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series ADD CONSTRAINT chk_cres_interval_count CHECK (interval_count >= 1)
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series ADD CONSTRAINT chk_cres_duration CHECK (duration_days >= 0)
+            splitStatements: false
+        # An all-day occurrence has no times and a timed one always has both. Expressed here
+        # rather than only in the domain so no future code path can write a half-specified row.
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series ADD CONSTRAINT chk_cres_all_day CHECK ((all_day AND start_time IS NULL AND end_time IS NULL) OR (NOT all_day AND start_time IS NOT NULL AND end_time IS NOT NULL))
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series ADD CONSTRAINT chk_cres_end_date CHECK (end_date IS NULL OR end_date >= anchor_date)
+            splitStatements: false
+        - createIndex:
+            tableName: calendar_recurring_event_series
+            indexName: idx_calendar_recurring_event_series_space_id
+            columns:
+              - column:
+                  name: space_id
+        - addForeignKeyConstraint:
+            baseTableName: calendar_recurring_event_series
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_calendar_recurring_event_series_space
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: calendar_recurring_event_series
+            cascadeConstraints: true

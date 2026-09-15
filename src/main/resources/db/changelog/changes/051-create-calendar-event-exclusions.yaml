@@ -1,0 +1,55 @@
+databaseChangeLog:
+  - changeSet:
+      id: 051-create-calendar-event-exclusions
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: calendar_event_exclusions
+      changes:
+        # One cancelled occurrence of a series. It carries no content: a cancellation is the
+        # absence of an occurrence, so there is nothing to store beyond which slot is gone.
+        - createTable:
+            tableName: calendar_event_exclusions
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: series_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: original_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: calendar_event_exclusions
+            columnNames: series_id, original_date
+            constraintName: uq_calendar_event_exclusions_series_date
+        - createIndex:
+            tableName: calendar_event_exclusions
+            indexName: idx_calendar_event_exclusions_series_date
+            columns:
+              - column:
+                  name: series_id
+              - column:
+                  name: original_date
+        - addForeignKeyConstraint:
+            baseTableName: calendar_event_exclusions
+            baseColumnNames: series_id
+            referencedTableName: calendar_recurring_event_series
+            referencedColumnNames: id
+            constraintName: fk_calendar_event_exclusions_series
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: calendar_event_exclusions
+            cascadeConstraints: true
