@@ -72,11 +72,11 @@ export function monthGridDates(iso: string): string[] {
 export function windowFor(view: CalendarView, iso: string): { from: string; to: string } {
   if (view === 'day') return { from: iso, to: iso }
   if (view === 'week') {
-    const days = weekDates(iso)
-    return { from: days[0], to: days[6] }
+    const monday = startOfWeek(iso)
+    return { from: monday, to: addDays(monday, 6) }
   }
-  const days = monthGridDates(iso)
-  return { from: days[0], to: days[41] }
+  const first = startOfWeek(startOfMonth(iso))
+  return { from: first, to: addDays(first, 41) }
 }
 
 /**

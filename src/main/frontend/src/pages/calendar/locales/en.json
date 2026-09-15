@@ -1,0 +1,43 @@
+{
+  "title": "Calendar",
+  "new_event": "New event",
+  "loading": "Loading…",
+  "error": "Could not load the calendar.",
+  "today": "Today",
+  "previous_period": "Previous period",
+  "next_period": "Next period",
+  "empty_day": "Nothing planned.",
+  "all_day_band": "All day",
+  "all_day_short": "All day",
+  "open_day": "Open {{date}}",
+  "view": {
+    "month": "Month",
+    "week": "Week",
+    "day": "Day"
+  },
+  "weekday_short": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+  },
+  "source": {
+    "EVENT": "Events",
+    "TASK": "Tasks",
+    "FINANCE": "Finance",
+    "MEAL": "Meals",
+    "SAVINGS": "Savings"
+  },
+  "filters": {
+    "label": "Filter by source"
+  },
+  "recurring_series": {
+    "manage": "Manage recurring events"
+  },
+  "palette": {
+    "today": "Calendar — today"
+  }
+}

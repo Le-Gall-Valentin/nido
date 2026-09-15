@@ -1,0 +1,41 @@
+import { useTranslation } from 'react-i18next'
+import type { CalendarOccurrence } from '@/entities/calendar'
+import { groupByDay } from '../lib/calendarWindow'
+import { AllDayBand } from './AllDayBand'
+import { HourColumn, HourGutter } from './HourColumn'
+
+interface DayAgendaProps {
+  date: string
+  occurrences: CalendarOccurrence[]
+  onSelectOccurrence: (occurrence: CalendarOccurrence) => void
+}
+
+/**
+ * One day, one column — the same at every width. A single hour column is already the shape a
+ * phone wants, so this is the one view that needs no responsive branch.
+ */
+export function DayAgenda({ date, occurrences, onSelectOccurrence }: DayAgendaProps) {
+  const { t } = useTranslation('calendar')
+  const dayOccurrences = groupByDay(occurrences, [date]).get(date) ?? []
+  const timed = dayOccurrences.filter((o) => !o.allDay)
+
+  return (
+    <div className="rounded-2xl border border-border bg-bg-1">
+      <AllDayBand
+        occurrences={dayOccurrences.filter((o) => o.allDay)}
+        onSelectOccurrence={onSelectOccurrence}
+      />
+      {dayOccurrences.length === 0 && (
+        <p className="px-3 py-6 text-center text-sm text-fg-3">{t('empty_day')}</p>
+      )}
+      {timed.length > 0 && (
+        <div className="flex max-h-[65vh] overflow-y-auto">
+          <HourGutter />
+          <div className="flex-1 border-l border-border">
+            <HourColumn occurrences={timed} onSelectOccurrence={onSelectOccurrence} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

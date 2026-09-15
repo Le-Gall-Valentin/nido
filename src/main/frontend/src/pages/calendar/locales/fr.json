@@ -1,0 +1,38 @@
+{
+  "title": "Calendrier",
+  "new_event": "Nouvel événement",
+  "loading": "Chargement…",
+  "error": "Impossible de charger le calendrier.",
+  "today": "Aujourd'hui",
+  "previous_period": "Période précédente",
+  "next_period": "Période suivante",
+  "empty_day": "Rien de prévu.",
+  "all_day_band": "Sur la journée",
+  "all_day_short": "Journée",
+  "open_day": "Ouvrir le {{date}}",
+  "view": {
+    "month": "Mois",
+    "week": "Semaine",
+    "day": "Jour"
+  },
+  "weekday_short": {
+    "mon": "Lun", "tue": "Mar", "wed": "Mer", "thu": "Jeu",
+    "fri": "Ven", "sat": "Sam", "sun": "Dim"
+  },
+  "source": {
+    "EVENT": "Événements",
+    "TASK": "Tâches",
+    "FINANCE": "Finances",
+    "MEAL": "Repas",
+    "SAVINGS": "Épargne"
+  },
+  "filters": {
+    "label": "Filtrer par source"
+  },
+  "recurring_series": {
+    "manage": "Gérer les événements récurrents"
+  },
+  "palette": {
+    "today": "Calendrier — aujourd'hui"
+  }
+}
