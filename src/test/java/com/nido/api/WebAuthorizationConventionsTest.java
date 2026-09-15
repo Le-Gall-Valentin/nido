@@ -57,10 +57,16 @@ class WebAuthorizationConventionsTest {
      * destination membership instead, so a floor here would refuse a VIEWER copying a shared recipe
      * into their own space. This is the case that a floor derived from "does the handler call
      * ensureCanWrite" gets wrong: the guard is real, it just governs a different membership.
+     *
+     * <p>Copying a calendar event is the same case as copying a recipe, for the same reason —
+     * {@code CopyEventHandler} resolves the destination membership and checks write access there.
+     * Its sibling {@code #move} is absent from this list on purpose: moving deletes from the source
+     * as well, so it declares a MEMBER floor like every other write.
      */
     private static final Set<String> VIEWER_MAY_WRITE = Set.of(
         "SpaceController#leave",
-        "RecipeController#copy");
+        "RecipeController#copy",
+        "CalendarEventController#copy");
 
     private record Route(String name, SpaceRole floor) {}
 

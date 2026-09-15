@@ -72,7 +72,7 @@ public class CalendarEventController {
             @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         return ResponseEntity.status(HttpStatus.CREATED).body(EventResponse.from(
             createEventUseCase.create(new CreateEventCommand(
-                spaceId, request.title(), request.description(), request.location(), request.allDay(),
+                spaceId, request.title(), request.description(), request.location(), request.allDayOrDefault(),
                 request.startDate(), request.startTime(), request.endDate(), request.endTime(),
                 request.color(), request.participantIds(), null, null, membership.userId()), membership)));
     }
@@ -85,7 +85,7 @@ public class CalendarEventController {
             @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         return ResponseEntity.ok(EventResponse.from(
             updateEventUseCase.update(new UpdateEventCommand(
-                eventId, request.title(), request.description(), request.location(), request.allDay(),
+                eventId, request.title(), request.description(), request.location(), request.allDayOrDefault(),
                 request.startDate(), request.startTime(), request.endDate(), request.endTime(),
                 request.color(), request.participantIds()), membership)));
     }
@@ -122,8 +122,11 @@ public class CalendarEventController {
         return ResponseEntity.noContent().build();
     }
 
-    // Both take the default VIEWER floor: the rule differs per operation and lives in the handler.
-    // Copying needs write access at the destination only, moving needs it on both sides.
+    // Copying takes the default VIEWER floor: it writes into the DESTINATION space, not into the
+    // route's spaceId, which it only reads — CopyEventHandler checks write access on the
+    // destination membership instead. Moving declares MEMBER, because it also deletes from the
+    // source and so needs write access here too. Same split as RecipeController.
+    
     @PostMapping("/{eventId}/copy")
     @RateLimiting(max = 20)
     @PreAuthorize("isAuthenticated()")
@@ -141,7 +144,7 @@ public class CalendarEventController {
     public ResponseEntity<EventResponse> move(
             @PathVariable UUID spaceId, @PathVariable UUID eventId,
             @Valid @RequestBody TransferEventRequest request,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         return ResponseEntity.status(HttpStatus.CREATED).body(EventResponse.from(
             moveEventUseCase.move(eventId, request.destinationSpaceId(), membership)));
     }

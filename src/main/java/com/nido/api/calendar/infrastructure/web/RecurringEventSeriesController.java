@@ -83,8 +83,8 @@ public class RecurringEventSeriesController {
             @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         return ResponseEntity.status(HttpStatus.CREATED).body(RecurringEventSeriesResponse.from(
             createUseCase.create(new CreateRecurringEventSeriesCommand(
-                spaceId, request.title(), request.description(), request.location(), request.allDay(),
-                request.startTime(), request.endTime(), request.durationDays(), request.color(),
+                spaceId, request.title(), request.description(), request.location(), request.allDayOrDefault(),
+                request.startTime(), request.endTime(), request.durationDaysOrDefault(), request.color(),
                 request.intervalType(), request.intervalCount(), request.anchorDate(), request.endDate(),
                 request.participantIds(), membership.userId()), membership)));
     }
@@ -98,8 +98,8 @@ public class RecurringEventSeriesController {
             @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         return ResponseEntity.ok(RecurringEventSeriesResponse.from(
             updateUseCase.update(new UpdateRecurringEventSeriesCommand(
-                seriesId, request.title(), request.description(), request.location(), request.allDay(),
-                request.startTime(), request.endTime(), request.durationDays(), request.color(),
+                seriesId, request.title(), request.description(), request.location(), request.allDayOrDefault(),
+                request.startTime(), request.endTime(), request.durationDaysOrDefault(), request.color(),
                 request.intervalType(), request.intervalCount(), request.anchorDate(), request.endDate(),
                 request.participantIds()), membership)));
     }
@@ -128,7 +128,7 @@ public class RecurringEventSeriesController {
             @Valid @RequestBody UpdateEventRequest request,
             @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         return ResponseEntity.ok(EventResponse.from(detachUseCase.detach(seriesId, date, new UpdateEventCommand(
-            null, request.title(), request.description(), request.location(), request.allDay(),
+            null, request.title(), request.description(), request.location(), request.allDayOrDefault(),
             request.startDate(), request.startTime(), request.endDate(), request.endTime(),
             request.color(), request.participantIds()), membership)));
     }
