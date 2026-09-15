@@ -1,0 +1,52 @@
+{
+  "delete_confirm": {
+    "title": "Delete \"{{label}}\"?",
+    "error": "Something went wrong. Try again."
+  },
+  "form": {
+    "create_title": "New transaction",
+    "edit_title": "Edit transaction",
+    "label_label": "Label",
+    "label_required": "The label is required.",
+    "amount_label": "Amount",
+    "amount_required": "The amount must be greater than zero.",
+    "category_label": "Category",
+    "category_required": "The category is required.",
+    "date_label": "Date",
+    "payer_label": "Paid by",
+    "payer_required": "You must specify who paid.",
+    "receiver_label": "Received by",
+    "receiver_required": "You must specify who received it.",
+    "contributors_label": "Contributors",
+    "beneficiaries_label": "Beneficiaries",
+    "customize_shares_label": "Customize shares",
+    "shares_invalid": "Shares must sum to the total amount.",
+    "recurring_label": "Recurring transaction",
+    "recurrence_interval_type_label": "Frequency",
+    "recurrence_interval_count_label": "Every",
+    "interval": {
+      "DAILY": "day(s)",
+      "WEEKLY": "week(s)",
+      "MONTHLY": "month(s)",
+      "YEARLY": "year(s)"
+    },
+    "cancel": "Cancel",
+    "save": "Save",
+    "too_many_past_occurrences": "This series would create {{occurrences}} past occurrences at once (maximum {{maximum}}). Move its start date closer, or use a longer interval.",
+    "submit_error": "Something went wrong. Try again."
+  },
+  "recurring_series": {
+    "manage": "Manage recurring transactions",
+    "title": "Manage recurring transactions",
+    "empty": "No recurring transactions.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "edit_title": "Edit recurring transaction",
+    "end_date_label": "End date",
+    "end_date_before_start": "The end date must be after the start date."
+  },
+  "type": {
+    "EXPENSE": "Expense",
+    "INCOME": "Income"
+  }
+}

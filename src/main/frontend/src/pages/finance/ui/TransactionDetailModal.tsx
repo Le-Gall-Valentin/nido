@@ -6,7 +6,7 @@ import type { SpaceMember } from '@/entities/space'
 import type { Category, Transaction } from '@/entities/finance'
 import { CategoryIconBadge } from './CategoryIconBadge'
 import { roundSharePercentages } from '../lib/roundSharePercentages'
-import { contributionLabelKeys } from '../lib/contributionLabelKeys'
+import { contributionLabelKeys } from '@/widgets/finance-recurring-series'
 import { formatAmount } from '@/shared/lib'
 
 interface TransactionDetailModalProps {

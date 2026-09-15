@@ -23,7 +23,7 @@ import { TransactionFormPanel } from './TransactionFormPanel'
 import { DeleteTransactionPanel } from './DeleteTransactionPanel'
 import { CategoryManagerPanel } from './CategoryManagerPanel'
 import { BudgetManagerPanel } from './BudgetManagerPanel'
-import { FinanceRecurringSeriesPanel } from './FinanceRecurringSeriesPanel'
+import { FinanceRecurringSeriesPanel } from '@/widgets/finance-recurring-series'
 import { SavingsGoalsPanel } from './SavingsGoalsPanel'
 import { BalancesPanel } from './BalancesPanel'
 
