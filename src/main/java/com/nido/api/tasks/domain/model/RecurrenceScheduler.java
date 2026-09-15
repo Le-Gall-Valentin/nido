@@ -3,6 +3,8 @@ package com.nido.api.tasks.domain.model;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Computes a recurring series' due dates as a fixed calendar sequence
@@ -38,6 +40,35 @@ public final class RecurrenceScheduler {
             }
             case YEARLY -> anchorDate.plusYears(steps);
         };
+    }
+
+    /**
+     * Every occurrence of a series falling inside {@code [from, to]}, in ascending order, capped
+     * at {@code limit}.
+     *
+     * <p>Exists for the calendar, which shows the future of a recurring task — and that future
+     * exists nowhere else: materialization stops at today, by design. Shaped after Finance's
+     * {@code RecurrenceProjector.occurrencesBetween} so the two read as the pair they are.
+     *
+     * <p>Like that one, it locates its first occurrence arithmetically rather than stepping from
+     * occurrence 0, so the cost depends on how many dates come back and never on how old the
+     * anchor is; {@code limit} is the safety net for a caller asking for an absurd range.
+     */
+    public static List<LocalDate> occurrencesBetween(LocalDate anchorDate, RecurrenceInterval intervalType,
+                                                     int intervalCount, LocalDate endDate,
+                                                     LocalDate from, LocalDate to, int limit) {
+        LocalDate lastAllowed = endDate != null && endDate.isBefore(to) ? endDate : to;
+        List<LocalDate> dates = new ArrayList<>();
+        long index = firstOccurrenceIndexOnOrAfter(anchorDate, intervalType, intervalCount, from);
+        while (dates.size() < limit && index <= Integer.MAX_VALUE) {
+            LocalDate date = nextDueDate(anchorDate, intervalType, intervalCount, (int) index);
+            if (date.isAfter(lastAllowed)) {
+                break;
+            }
+            dates.add(date);
+            index++;
+        }
+        return dates;
     }
 
     /**
