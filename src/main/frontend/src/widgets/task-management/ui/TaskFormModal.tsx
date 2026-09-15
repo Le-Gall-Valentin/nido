@@ -8,7 +8,7 @@ import type { RecurrenceInterval, Task, TaskPriority } from '@/entities/tasks'
 import type { TaskFormInput } from '../model/types'
 import { TASK_PRIORITY_ORDER, TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
 import { MAX_PAST_OCCURRENCES, pastOccurrenceCount, todayIso } from '@/shared/lib'
-import { leadTimeExceedsInterval } from './leadTimeExceedsInterval'
+import { leadTimeExceedsInterval } from '../lib/leadTimeExceedsInterval'
 
 const INTERVAL_ORDER: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
 

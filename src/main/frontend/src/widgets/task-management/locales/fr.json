@@ -1,0 +1,73 @@
+{
+  "detail": {
+    "title": "Détail de la tâche",
+    "status_label": "Statut",
+    "due_date_label": "Échéance",
+    "no_due_date": "Aucune échéance",
+    "assignees_label": "Assigné(e)(s)",
+    "no_assignee": "Personne",
+    "created_by_label": "Créée par",
+    "unknown_creator": "Inconnu",
+    "rotation_participants_label": "Participants à la rotation",
+    "this_occurrence_label": "Cette fois-ci",
+    "close": "Fermer"
+  },
+  "form": {
+    "create_title": "Nouvelle tâche",
+    "edit_title": "Modifier la tâche",
+    "title_label": "Titre",
+    "title_required": "Le titre est obligatoire.",
+    "priority_label": "Priorité",
+    "due_date_label": "Échéance",
+    "assignees_label": "Assigné à",
+    "subtasks_title": "Sous-tâches",
+    "subtask_placeholder": "Nouvelle sous-tâche…",
+    "remove": "Supprimer",
+    "recurring_label": "Tâche récurrente",
+    "recurrence_interval_type_label": "Fréquence",
+    "recurrence_interval_count_label": "Tous les",
+    "recurrence_anchor_date_label": "À partir du",
+    "recurrence_anchor_date_required": "La date de départ est obligatoire.",
+    "recurrence_rotation_label": "Faire tourner entre",
+    "interval": {
+      "DAILY": "jour(s)",
+      "WEEKLY": "semaine(s)",
+      "MONTHLY": "mois",
+      "YEARLY": "an(s)"
+    },
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "lead_time_exceeds_interval": "Le délai ne peut pas dépasser la fréquence de récurrence.",
+    "too_many_past_occurrences": "Cette série créerait {{occurrences}} occurrences passées d'un coup (maximum {{maximum}}). Rapprochez la date de départ, ou espacez la fréquence.",
+    "submit_error": "Une erreur est survenue. Réessayez."
+  },
+  "delete_confirm": {
+    "title": "Supprimer « {{title}} » ?",
+    "error": "Une erreur est survenue. Réessayez."
+  },
+  "column": {
+    "TODO": "À faire",
+    "DOING": "En cours",
+    "DONE": "Terminé"
+  },
+  "recurring_series": {
+    "manage": "Gérer les tâches récurrentes",
+    "title": "Gérer les tâches récurrentes",
+    "detail_title": "Détail de la tâche récurrente",
+    "empty": "Aucune tâche récurrente.",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "edit_title": "Modifier la tâche récurrente",
+    "lead_time_label": "Apparaît",
+    "lead_time_before_due_date": "avant l'échéance",
+    "lead_time_count_label": "Anticipation",
+    "lead_time_type_label": "Unité d'anticipation",
+    "end_date_label": "Date de fin (facultatif)",
+    "end_date_before_start": "La date de fin doit être postérieure à la date de départ."
+  },
+  "priority": {
+    "HIGH": "Haute",
+    "MED": "Moyenne",
+    "LOW": "Basse"
+  }
+}
