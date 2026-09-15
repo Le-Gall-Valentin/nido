@@ -7,7 +7,7 @@ import {
   useAddSavingsContribution, type SavingsGoal,
 } from '@/entities/finance'
 import { SavingsGoalsSection } from './SavingsGoalsSection'
-import { SavingsGoalFormModal, type SavingsGoalFormInput } from './SavingsGoalFormModal'
+import { SavingsGoalFormModal, type SavingsGoalFormInput } from '@/widgets/savings-goal'
 import { AddContributionModal } from './AddContributionModal'
 import { SavingsGoalContributionsModal } from './SavingsGoalContributionsModal'
 

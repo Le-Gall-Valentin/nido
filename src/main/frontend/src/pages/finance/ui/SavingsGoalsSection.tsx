@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { CheckCircle2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { UserAvatar } from '@/entities/user'
 import type { SavingsGoal } from '@/entities/finance'
-import { safeSavingsGoalColor, safeSavingsGoalGlyph } from '../lib/savingsGoalAppearance'
+import { safeSavingsGoalColor, safeSavingsGoalGlyph } from '@/widgets/savings-goal'
 import { formatAmount } from '@/shared/lib'
 
 interface SavingsGoalsSectionProps {
