@@ -48,6 +48,11 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     }
 
     @Override
+    public List<Transaction> findBySpaceIdAndDateBetween(UUID spaceId, java.time.LocalDate from, java.time.LocalDate to) {
+        return toDomainList(transactions.findBySpaceIdAndDateBetween(spaceId, from, to));
+    }
+
+    @Override
     public List<Transaction> findBySpaceIdAndMonth(UUID spaceId, YearMonth month) {
         List<FinanceTransactionEntity> found = transactions.findBySpaceIdAndDateBetween(
             spaceId, month.atDay(1), month.atEndOfMonth());
