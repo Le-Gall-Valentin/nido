@@ -93,7 +93,7 @@ export function EventFormModal({
           <span className="mb-1 block text-xs font-semibold text-fg-2">{t('form.color')}</span>
           <div className="flex gap-1.5">
             {COLOR_CHOICES.map((token) => (
-              <button key={token} type="button" aria-label={t('form.color_option', { color: token })}
+              <button key={token} type="button" aria-label={t(`form.color_name.${token}`)}
                 aria-pressed={form.color === token}
                 onClick={() => patch({ color: form.color === token ? null : token })}
                 className={`size-6 rounded-full border-2 ${form.color === token ? 'border-fg-1' : 'border-transparent'}

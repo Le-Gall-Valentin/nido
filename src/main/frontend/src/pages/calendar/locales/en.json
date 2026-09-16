@@ -76,7 +76,6 @@
     "start_time": "Start time",
     "end_time": "End time",
     "color": "Colour",
-    "color_option": "Colour {{color}}",
     "participants": "Participants",
     "cancel": "Cancel",
     "save": "Save",
@@ -84,7 +83,14 @@
     "dates_required": "Start and end dates are required.",
     "times_required": "An event that is not all day has a start and an end time.",
     "end_before_start": "The end cannot precede the start.",
-    "save_failed": "Saving failed."
+    "save_failed": "Saving failed.",
+    "color_name": {
+      "accent": "Green",
+      "status-blue": "Blue",
+      "status-orange": "Orange",
+      "status-green": "Dark green",
+      "status-red": "Red"
+    }
   },
   "delete": {
     "failed": "Deleting failed.",

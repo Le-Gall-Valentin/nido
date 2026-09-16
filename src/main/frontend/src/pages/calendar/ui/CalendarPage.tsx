@@ -70,7 +70,10 @@ function CalendarPageContent() {
   const occurrences = useMemo(() => filter(data ?? []), [filter, data])
 
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
-  const [selectedOccurrence, setSelectedOccurrence] = useState<CalendarOccurrence | null>(null)
+  // The id, not the object: an occurrence held in state is a snapshot, and every mutation that
+  // refetches the window would leave the open modal showing what was true before the write —
+  // joining an event and watching "Nobody" stay on screen is how that shows up.
+  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
   const [creatingEvent, setCreatingEvent] = useState(false)
   const [managingSeries, setManagingSeries] = useState(false)
   const [editing, setEditing] = useState<{ occurrence: CalendarOccurrence; detachSlot: { seriesId: string; date: string } | null } | null>(null)
@@ -106,6 +109,13 @@ function CalendarPageContent() {
     if (action === 'edit') setEditing({ occurrence, detachSlot: slot })
     else setDeleting(occurrence)
   }
+
+  const selectedOccurrence = selectedSourceId === null
+    ? null
+    : occurrences.find((candidate) => candidate.sourceId === selectedSourceId) ?? null
+
+  const setSelectedOccurrence = (occurrence: CalendarOccurrence | null) =>
+    setSelectedSourceId(occurrence?.sourceId ?? null)
 
   const paletteEntries = useMemo(
     () => (canWriteHere

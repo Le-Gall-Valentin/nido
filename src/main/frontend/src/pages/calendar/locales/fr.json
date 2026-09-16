@@ -76,7 +76,6 @@
     "start_time": "Heure de début",
     "end_time": "Heure de fin",
     "color": "Couleur",
-    "color_option": "Couleur {{color}}",
     "participants": "Participants",
     "cancel": "Annuler",
     "save": "Enregistrer",
@@ -84,7 +83,14 @@
     "dates_required": "Les dates de début et de fin sont obligatoires.",
     "times_required": "Un événement qui n'est pas sur la journée entière a une heure de début et de fin.",
     "end_before_start": "La fin ne peut pas précéder le début.",
-    "save_failed": "L'enregistrement a échoué."
+    "save_failed": "L'enregistrement a échoué.",
+    "color_name": {
+      "accent": "Vert",
+      "status-blue": "Bleu",
+      "status-orange": "Orange",
+      "status-green": "Vert foncé",
+      "status-red": "Rouge"
+    }
   },
   "delete": {
     "failed": "La suppression a échoué.",
