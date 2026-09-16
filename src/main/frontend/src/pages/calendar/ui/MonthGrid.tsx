@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay, monthGridDates } from '../lib/calendarWindow'
+import { isDraggable } from '../lib/isDraggable'
 import { SOURCE_ORDER, dotClassFor, dotClassForSource } from '../lib/sourceAppearance'
 
 interface MonthGridProps {
@@ -11,6 +13,8 @@ interface MonthGridProps {
   today: string
   onSelectDay: (day: string) => void
   onSelectOccurrence: (occurrence: CalendarOccurrence) => void
+  /** Off for a viewer: nothing they drag could be saved. */
+  canWrite?: boolean
 }
 
 const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
@@ -29,7 +33,9 @@ const MAX_LABELS = 3
  * source present, never one per occurrence. A busy Saturday is then still legible at a glance,
  * and the dots line up column to column because their order is fixed.
  */
-export function MonthGrid({ date, occurrences, today, onSelectDay, onSelectOccurrence }: MonthGridProps) {
+export function MonthGrid({
+  date, occurrences, today, onSelectDay, onSelectOccurrence, canWrite = false,
+}: MonthGridProps) {
   const { t } = useTranslation('calendar')
   const days = monthGridDates(date)
   const byDay = groupByDay(occurrences, days)
@@ -54,7 +60,7 @@ export function MonthGrid({ date, occurrences, today, onSelectDay, onSelectOccur
             (source) => dayOccurrences.some((o) => o.source === source))
 
           return (
-            <div key={day} className="min-h-[68px] border-b border-r border-border p-1 md:min-h-[116px] md:p-1.5">
+            <DayCell key={day} day={day} canWrite={canWrite}>
               <button
                 type="button"
                 onClick={() => onSelectDay(day)}
@@ -81,22 +87,12 @@ export function MonthGrid({ date, occurrences, today, onSelectDay, onSelectOccur
               {/* Desktop: the labels themselves, capped so a busy day cannot overflow its cell. */}
               <div className="hidden flex-col gap-0.5 md:flex">
                 {dayOccurrences.slice(0, MAX_LABELS).map((occurrence) => (
-                  <button
+                  <OccurrenceChip
                     key={`${occurrence.sourceId}-${day}`}
-                    type="button"
-                    onClick={(event) => {
-                      // The cell behind this chip opens the day. Without this the click would do both.
-                      event.stopPropagation()
-                      onSelectOccurrence(occurrence)
-                    }}
-                    className="flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] text-fg-1 hover:bg-bg-2"
-                  >
-                    <span className={`size-1.5 shrink-0 rounded-full ${dotClassFor(occurrence)}`} />
-                    {!occurrence.allDay && occurrence.startTime && (
-                      <span className="shrink-0 tabular-nums text-fg-3">{occurrence.startTime.slice(0, 5)}</span>
-                    )}
-                    <span className="truncate">{occurrence.title}</span>
-                  </button>
+                    occurrence={occurrence}
+                    canWrite={canWrite}
+                    onSelect={() => onSelectOccurrence(occurrence)}
+                  />
                 ))}
                 {dayOccurrences.length > MAX_LABELS && (
                   <button
@@ -108,10 +104,66 @@ export function MonthGrid({ date, occurrences, today, onSelectDay, onSelectOccur
                   </button>
                 )}
               </div>
-            </div>
+            </DayCell>
           )
         })}
       </div>
     </div>
+  )
+}
+
+/** A day is a drop target only while dragging is possible at all. */
+function DayCell({ day, canWrite, children }: { day: string; canWrite: boolean; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `day:${day}`, disabled: !canWrite })
+  return (
+    <div ref={canWrite ? setNodeRef : undefined}
+      className={`min-h-[68px] border-b border-r border-border p-1 md:min-h-[116px] md:p-1.5
+        ${isOver ? 'bg-accent-dim' : ''}`}>
+      {children}
+    </div>
+  )
+}
+
+interface ChipProps {
+  occurrence: CalendarOccurrence
+  canWrite: boolean
+  onSelect: () => void
+}
+
+/**
+ * One occurrence inside a month cell. Draggable only when it has a row whose date the calendar may
+ * rewrite — see isDraggable. Everything else keeps a normal cursor, so the affordance never
+ * promises something the drop would refuse.
+ */
+function OccurrenceChip({ occurrence, canWrite, onSelect }: ChipProps) {
+  const draggable = canWrite && isDraggable(occurrence)
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: `occurrence:${occurrence.sourceId}`,
+    disabled: !draggable,
+    data: { occurrence },
+  })
+
+  return (
+    <button
+      ref={draggable ? setNodeRef : undefined}
+      {...(draggable ? listeners : undefined)}
+      {...(draggable ? attributes : undefined)}
+      type="button"
+      data-draggable={draggable || undefined}
+      style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
+      onClick={(event) => {
+        // The cell behind this chip opens the day. Without this the click would do both.
+        event.stopPropagation()
+        onSelect()
+      }}
+      className={`flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] text-fg-1 hover:bg-bg-2
+        ${draggable ? 'touch-none cursor-grab active:cursor-grabbing' : ''}`}
+    >
+      <span className={`size-1.5 shrink-0 rounded-full ${dotClassFor(occurrence)}`} />
+      {!occurrence.allDay && occurrence.startTime && (
+        <span className="shrink-0 tabular-nums text-fg-3">{occurrence.startTime.slice(0, 5)}</span>
+      )}
+      <span className="truncate">{occurrence.title}</span>
+    </button>
   )
 }

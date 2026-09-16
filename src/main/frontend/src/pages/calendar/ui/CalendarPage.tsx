@@ -2,18 +2,20 @@ import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { Alert, Spinner } from '@/shared/ui'
-import { todayIso, usePaletteItems } from '@/shared/lib'
+import { todayIso, usePaletteItems, usePointerIsFine } from '@/shared/lib'
 import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
 import { useAuth } from '@/features/auth'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
 import {
-  calendarApi, CalendarApiProvider, useOccurrences, useJoinEvent, useLeaveEvent,
+  calendarApi, CalendarApiProvider, useOccurrences, useJoinEvent, useLeaveEvent, useUpdateEvent,
   type CalendarApi, type CalendarOccurrence,
 } from '@/entities/calendar'
-import { windowFor, type CalendarView } from '../lib/calendarWindow'
+import { daysBetween, addDays, windowFor, type CalendarView } from '../lib/calendarWindow'
 import { useCalendarUrlState } from '../model/useCalendarUrlState'
 import { useCalendarFilters } from '../model/useCalendarFilters'
+import { useSwipePeriod } from '../model/useSwipePeriod'
 import { MonthGrid } from './MonthGrid'
 import { WeekGrid } from './WeekGrid'
 import { DayAgenda } from './DayAgenda'
@@ -64,6 +66,35 @@ function CalendarPageContent() {
   const currentUserId = useAuth((state) => state.user?.id) ?? ''
   const joinEvent = useJoinEvent(spaceId)
   const leaveEvent = useLeaveEvent(spaceId)
+  const updateEvent = useUpdateEvent(spaceId)
+
+  // On a mouse a drag starts at once; on touch it takes a long press. Below that threshold the
+  // gesture belongs to the scroller and to the swipe handler — which is what keeps a calendar
+  // scrollable and swipeable while its chips are still draggable.
+  const pointerIsFine = usePointerIsFine()
+  const sensors = useSensors(useSensor(PointerSensor, {
+    activationConstraint: pointerIsFine ? undefined : { delay: 250, tolerance: 5 },
+  }))
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const targetDay = String(event.over?.id ?? '').replace('day:', '')
+    const dragged = event.active.data.current?.occurrence as CalendarOccurrence | undefined
+    if (!targetDay || !dragged || targetDay === dragged.startDate) return
+    if (dragged.source !== 'EVENT') return
+    // A multi-day event keeps its length: dragging moves it, it does not resize it.
+    const span = daysBetween(dragged.startDate, dragged.endDate)
+    updateEvent.mutate({
+      eventId: dragged.sourceId,
+      input: {
+        title: dragged.title, description: null, location: null, allDay: dragged.allDay,
+        startDate: targetDay, startTime: dragged.startTime,
+        endDate: addDays(targetDay, span), endTime: dragged.endTime,
+        color: dragged.color, participantIds: dragged.participantIds,
+      },
+    })
+  }
+
+  const swipe = useSwipePeriod(shiftPeriod)
 
   const window = useMemo(() => windowFor(view, date), [view, date])
   const { data, isPending, isError } = useOccurrences(spaceId, window.from, window.to)
@@ -187,10 +218,12 @@ function CalendarPageContent() {
       {isPending && <div className="flex justify-center py-10"><Spinner /></div>}
 
       {!isPending && !isError && (
-        <div className="rounded-2xl border border-border bg-bg-1 p-1 md:p-2">
+        <div className="rounded-2xl border border-border bg-bg-1 p-1 md:p-2" {...swipe}>
           {view === 'month' && (
-            <MonthGrid date={date} occurrences={occurrences} today={today}
-              onSelectDay={setSelectedDay} onSelectOccurrence={setSelectedOccurrence} />
+            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+              <MonthGrid date={date} occurrences={occurrences} today={today} canWrite={canWriteHere}
+                onSelectDay={setSelectedDay} onSelectOccurrence={setSelectedOccurrence} />
+            </DndContext>
           )}
           {view === 'week' && (
             <WeekGrid date={date} occurrences={occurrences} today={today}

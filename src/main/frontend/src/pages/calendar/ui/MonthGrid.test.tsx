@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { DndContext } from '@dnd-kit/core'
 import { MonthGrid } from './MonthGrid'
 
 // The whole suite mocks i18n and asserts on keys — translations are verified in the browser,
@@ -24,12 +25,14 @@ function onDay(title: string, source: CalendarSourceType): CalendarOccurrence {
   return occurrence({ title, source })
 }
 
-function renderGrid(occurrences: CalendarOccurrence[], today = '2026-01-15') {
+function renderGrid(occurrences: CalendarOccurrence[], today = '2026-01-15', canWrite = true) {
   const onSelectDay = vi.fn()
   const onSelectOccurrence = vi.fn()
   const view = render(
-    <MonthGrid date="2026-01-14" occurrences={occurrences} today={today}
-      onSelectDay={onSelectDay} onSelectOccurrence={onSelectOccurrence} />)
+    <DndContext>
+      <MonthGrid date="2026-01-14" occurrences={occurrences} today={today} canWrite={canWrite}
+        onSelectDay={onSelectDay} onSelectOccurrence={onSelectOccurrence} />
+    </DndContext>)
   return { ...view, onSelectDay, onSelectOccurrence }
 }
 
@@ -96,5 +99,20 @@ describe('MonthGrid', () => {
   it('shows a timed occurrence with its start time', () => {
     renderGrid([occurrence({ title: 'Piano', allDay: false, startTime: '18:00', endTime: '19:00' })])
     expect(screen.getByText('18:00')).toBeTruthy()
+  })
+
+  it('attaches a drag handle only to what the calendar may move', () => {
+    renderGrid([
+      onDay('Piano', 'EVENT'),
+      onDay('Loyer', 'FINANCE'),
+    ])
+    expect(screen.getByText('Piano').closest('button')?.getAttribute('data-draggable')).toBe('true')
+    // A finance date is an accounting fact, not a plan to drag around.
+    expect(screen.getByText('Loyer').closest('button')?.getAttribute('data-draggable')).toBeNull()
+  })
+
+  it('attaches no drag handle at all for a viewer', () => {
+    renderGrid([onDay('Piano', 'EVENT')], '2026-01-15', false)
+    expect(screen.getByText('Piano').closest('button')?.getAttribute('data-draggable')).toBeNull()
   })
 })
