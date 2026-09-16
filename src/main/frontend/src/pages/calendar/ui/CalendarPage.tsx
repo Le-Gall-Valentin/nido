@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import i18next from 'i18next'
 import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { Alert, Spinner } from '@/shared/ui'
-import { todayIso, usePaletteItems, usePointerIsFine } from '@/shared/lib'
+import { todayIso, usePaletteItems, usePointerIsFine, resolveLocale } from '@/shared/lib'
 import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
 import { useAuth } from '@/features/auth'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
@@ -16,6 +17,7 @@ import { daysBetween, addDays, windowFor, type CalendarView } from '../lib/calen
 import { useCalendarUrlState } from '../model/useCalendarUrlState'
 import { useCalendarFilters } from '../model/useCalendarFilters'
 import { useSwipePeriod } from '../model/useSwipePeriod'
+import { formatPeriodLabel } from '../lib/periodLabel'
 import { MonthGrid } from './MonthGrid'
 import { WeekGrid } from './WeekGrid'
 import { DayAgenda } from './DayAgenda'
@@ -95,6 +97,9 @@ function CalendarPageContent() {
   }
 
   const swipe = useSwipePeriod(shiftPeriod)
+
+  // Says where paging has arrived. Each view names itself at the granularity it shows.
+  const periodLabel = formatPeriodLabel(view, date, resolveLocale(i18next.language))
 
   const window = useMemo(() => windowFor(view, date), [view, date])
   const { data, isPending, isError } = useOccurrences(spaceId, window.from, window.to)
@@ -184,15 +189,21 @@ function CalendarPageContent() {
             className="grid size-8 place-items-center rounded-lg border border-border text-fg-2 hover:bg-bg-2">
             <ChevronLeft className="size-4" />
           </button>
-          <button type="button" onClick={goToToday}
-            className="rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-fg-1 hover:bg-bg-2">
-            {t('today')}
-          </button>
           <button type="button" aria-label={t('next_period')} onClick={() => shiftPeriod(1)}
             className="grid size-8 place-items-center rounded-lg border border-border text-fg-2 hover:bg-bg-2">
             <ChevronRight className="size-4" />
           </button>
+          <button type="button" onClick={goToToday}
+            className="rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-fg-1 hover:bg-bg-2">
+            {t('today')}
+          </button>
         </div>
+
+        {/* aria-live, because paging is what changes it and the grid gives a screen reader no
+            other way to hear where it landed. */}
+        <h2 aria-live="polite" className="order-first w-full text-lg font-semibold text-fg-0 sm:order-none sm:w-auto">
+          {periodLabel}
+        </h2>
 
         <div role="group" className="flex w-full rounded-lg border border-border sm:w-auto">
           {VIEWS.map((candidate) => (
