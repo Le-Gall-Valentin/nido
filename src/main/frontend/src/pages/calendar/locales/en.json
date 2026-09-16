@@ -39,5 +39,99 @@
   },
   "palette": {
     "today": "Calendar — today"
+  },
+  "day_detail": {
+    "title": "{{date}}"
+  },
+  "detail": {
+    "title": "Details",
+    "recurring": "Recurring event",
+    "participants": "Participants",
+    "no_participants": "Nobody",
+    "edit": "Edit",
+    "delete": "Delete",
+    "copy": "Copy to…",
+    "move": "Move to…",
+    "join": "Join",
+    "leave": "Leave",
+    "missing": "This item no longer exists.",
+    "projected_hint": "Upcoming occurrence: it does not exist yet, only its series can be changed.",
+    "open_in": {
+      "EVENT": "Open",
+      "TASK": "Open in Tasks",
+      "FINANCE": "Open in Finance",
+      "MEAL": "Plan this meal",
+      "SAVINGS": "Open in Savings"
+    }
+  },
+  "form": {
+    "create_title": "New event",
+    "edit_title": "Edit event",
+    "title": "Title",
+    "description": "Description",
+    "location": "Location",
+    "all_day": "All day",
+    "start_date": "Start date",
+    "end_date": "End date",
+    "start_time": "Start time",
+    "end_time": "End time",
+    "color": "Colour",
+    "color_option": "Colour {{color}}",
+    "participants": "Participants",
+    "cancel": "Cancel",
+    "save": "Save",
+    "title_required": "A title is required.",
+    "dates_required": "Start and end dates are required.",
+    "times_required": "An event that is not all day has a start and an end time.",
+    "end_before_start": "The end cannot precede the start.",
+    "save_failed": "Saving failed."
+  },
+  "delete": {
+    "failed": "Deleting failed.",
+    "occurrence_message": "This occurrence will be removed from the series. The others are unchanged."
+  },
+  "scope": {
+    "edit_title": "Edit",
+    "delete_title": "Delete",
+    "edit_question": "Edit this occurrence only, or the whole series?",
+    "delete_question": "Delete this occurrence only, or the whole series?",
+    "this_occurrence": "This occurrence",
+    "whole_series": "The whole series"
+  },
+  "series": {
+    "create_title": "New series",
+    "edit_title": "Edit series",
+    "new": "New series",
+    "empty": "No recurring events.",
+    "edit": "Edit {{name}}",
+    "delete": "Delete {{name}}",
+    "delete_message": "The series and all its occurrences will be deleted, including the ones you edited or cancelled.",
+    "interval_count": "Every",
+    "interval_type": "Frequency",
+    "interval": {
+      "DAILY": "day(s)",
+      "WEEKLY": "week(s)",
+      "MONTHLY": "month(s)",
+      "YEARLY": "year(s)"
+    },
+    "duration_days": "Duration (days past the start)",
+    "anchor_date": "Starting",
+    "end_date": "End date (optional)",
+    "from": "from {{date}}",
+    "anchor_required": "A start date is required.",
+    "interval_invalid": "The frequency must be at least 1.",
+    "end_before_anchor": "The end date must follow the start date."
+  },
+  "meal": {
+    "title": "Meals on {{date}}",
+    "recipe": "Recipe",
+    "pick_recipe": "Pick a recipe…",
+    "portions": "Portions",
+    "portions_short": "{{count}} portions",
+    "add": "Add",
+    "remove": "Remove {{name}}",
+    "recipe_required": "Pick a recipe.",
+    "portions_invalid": "Portions must be a positive whole number.",
+    "save_failed": "Adding failed."
   }
 }

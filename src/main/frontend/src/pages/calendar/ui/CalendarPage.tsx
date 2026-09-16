@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next'
 import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { Alert, Spinner } from '@/shared/ui'
 import { todayIso, usePaletteItems } from '@/shared/lib'
-import { canWrite } from '@/entities/space'
+import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
+import { useAuth } from '@/features/auth'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
 import {
-  calendarApi, CalendarApiProvider, useOccurrences,
+  calendarApi, CalendarApiProvider, useOccurrences, useJoinEvent, useLeaveEvent,
   type CalendarApi, type CalendarOccurrence,
 } from '@/entities/calendar'
 import { windowFor, type CalendarView } from '../lib/calendarWindow'
@@ -17,6 +18,15 @@ import { MonthGrid } from './MonthGrid'
 import { WeekGrid } from './WeekGrid'
 import { DayAgenda } from './DayAgenda'
 import { SourceFilters } from './SourceFilters'
+import { DayDetailModal } from './DayDetailModal'
+import { OccurrenceRouter } from './OccurrenceRouter'
+import { EventDetailModal } from './EventDetailModal'
+import { EventFormPanel } from './EventFormPanel'
+import { DeleteEventPanel } from './DeleteEventPanel'
+import { TransferEventPanel } from './TransferEventPanel'
+import { MealEntryModal } from './MealEntryModal'
+import { OccurrenceScopeDialog, type OccurrenceScope } from './OccurrenceScopeDialog'
+import { RecurringEventSeriesPanel } from './RecurringEventSeriesPanel'
 
 const VIEWS: CalendarView[] = ['month', 'week', 'day']
 
@@ -48,6 +58,12 @@ function CalendarPageContent() {
   // Defaults to false while the role is unresolved, so a write affordance never flashes visible
   // before disappearing — the correction already made once on the recipes page.
   const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
+  const spaceIsPersonal = currentSpace ? isPersonal(currentSpace) : false
+  const { data: members } = useSpaceMembers(spaceId)
+  // Whether the caller is already a participant decides between offering "join" and "leave".
+  const currentUserId = useAuth((state) => state.user?.id) ?? ''
+  const joinEvent = useJoinEvent(spaceId)
+  const leaveEvent = useLeaveEvent(spaceId)
 
   const window = useMemo(() => windowFor(view, date), [view, date])
   const { data, isPending, isError } = useOccurrences(spaceId, window.from, window.to)
@@ -57,6 +73,39 @@ function CalendarPageContent() {
   const [selectedOccurrence, setSelectedOccurrence] = useState<CalendarOccurrence | null>(null)
   const [creatingEvent, setCreatingEvent] = useState(false)
   const [managingSeries, setManagingSeries] = useState(false)
+  const [editing, setEditing] = useState<{ occurrence: CalendarOccurrence; detachSlot: { seriesId: string; date: string } | null } | null>(null)
+  const [deleting, setDeleting] = useState<CalendarOccurrence | null>(null)
+  const [transferring, setTransferring] = useState<{ occurrence: CalendarOccurrence; operation: 'copy' | 'move' } | null>(null)
+  const [planningMeal, setPlanningMeal] = useState<string | null>(null)
+  // Set when an action landed on an occurrence of a series and the scope question is still open.
+  const [pendingScope, setPendingScope] = useState<{ occurrence: CalendarOccurrence; action: 'edit' | 'delete' } | null>(null)
+
+  /** An occurrence of a series must be asked about before it is edited or deleted. */
+  const startScopedAction = (occurrence: CalendarOccurrence, action: 'edit' | 'delete') => {
+    if (occurrence.seriesId && occurrence.source === 'EVENT') {
+      setPendingScope({ occurrence, action })
+      return
+    }
+    if (action === 'edit') setEditing({ occurrence, detachSlot: null })
+    else setDeleting(occurrence)
+  }
+
+  const resolveScope = (scope: OccurrenceScope) => {
+    if (!pendingScope) return
+    const { occurrence, action } = pendingScope
+    setPendingScope(null)
+    if (scope === 'series') {
+      // Editing or deleting the template is what the series manager is for.
+      setSelectedOccurrence(null)
+      setManagingSeries(true)
+      return
+    }
+    const slot = occurrence.seriesId && occurrence.originalDate
+      ? { seriesId: occurrence.seriesId, date: occurrence.originalDate }
+      : null
+    if (action === 'edit') setEditing({ occurrence, detachSlot: slot })
+    else setDeleting(occurrence)
+  }
 
   const paletteEntries = useMemo(
     () => (canWriteHere
@@ -143,11 +192,84 @@ function CalendarPageContent() {
         </div>
       )}
 
-      {/* Detail and form modals arrive in the next tasks; the state they read is already here. */}
-      {selectedDay !== null && <span data-testid="pending-day-detail" hidden>{selectedDay}</span>}
-      {selectedOccurrence !== null && <span data-testid="pending-occurrence-detail" hidden>{selectedOccurrence.title}</span>}
-      {creatingEvent && <span data-testid="pending-event-form" hidden />}
-      {managingSeries && <span data-testid="pending-series-manager" hidden />}
+      {selectedDay !== null && (
+        <DayDetailModal
+          date={selectedDay}
+          occurrences={occurrences}
+          onSelectOccurrence={(occurrence) => { setSelectedDay(null); setSelectedOccurrence(occurrence) }}
+          onClose={() => setSelectedDay(null)}
+        />
+      )}
+
+      {selectedOccurrence?.source === 'EVENT' && (
+        <EventDetailModal
+          occurrence={selectedOccurrence}
+          members={members ?? []}
+          currentUserId={currentUserId}
+          canWrite={canWriteHere}
+          onEdit={() => { const o = selectedOccurrence; setSelectedOccurrence(null); startScopedAction(o, 'edit') }}
+          onDelete={() => { const o = selectedOccurrence; setSelectedOccurrence(null); startScopedAction(o, 'delete') }}
+          onCopy={() => { setTransferring({ occurrence: selectedOccurrence, operation: 'copy' }); setSelectedOccurrence(null) }}
+          onMove={() => { setTransferring({ occurrence: selectedOccurrence, operation: 'move' }); setSelectedOccurrence(null) }}
+          onJoin={() => joinEvent.mutate(selectedOccurrence.sourceId)}
+          onLeave={() => leaveEvent.mutate(selectedOccurrence.sourceId)}
+          onClose={() => setSelectedOccurrence(null)}
+        />
+      )}
+
+      {selectedOccurrence && selectedOccurrence.source !== 'EVENT' && (
+        <OccurrenceRouter
+          spaceId={spaceId}
+          occurrence={selectedOccurrence}
+          members={members ?? []}
+          onOpenInModule={(occurrence) => {
+            if (occurrence.source === 'MEAL') setPlanningMeal(occurrence.startDate)
+            setSelectedOccurrence(null)
+          }}
+          onClose={() => setSelectedOccurrence(null)}
+        />
+      )}
+
+      {pendingScope && (
+        <OccurrenceScopeDialog
+          action={pendingScope.action}
+          onChoose={resolveScope}
+          onCancel={() => setPendingScope(null)}
+        />
+      )}
+
+      {(creatingEvent || editing) && (
+        <EventFormPanel
+          spaceId={spaceId}
+          occurrence={editing?.occurrence ?? null}
+          detachSlot={editing?.detachSlot ?? null}
+          defaultDate={selectedDay ?? date}
+          members={members ?? []}
+          isPersonal={spaceIsPersonal}
+          onClose={() => { setCreatingEvent(false); setEditing(null) }}
+        />
+      )}
+
+      {deleting && (
+        <DeleteEventPanel spaceId={spaceId} occurrence={deleting} onClose={() => setDeleting(null)} />
+      )}
+
+      {transferring && (
+        <TransferEventPanel
+          spaceId={spaceId}
+          occurrence={transferring.occurrence}
+          operation={transferring.operation}
+          onClose={() => setTransferring(null)}
+        />
+      )}
+
+      {planningMeal && (
+        <MealEntryModal spaceId={spaceId} date={planningMeal} onClose={() => setPlanningMeal(null)} />
+      )}
+
+      {managingSeries && (
+        <RecurringEventSeriesPanel spaceId={spaceId} onClose={() => setManagingSeries(false)} />
+      )}
     </div>
   )
 }

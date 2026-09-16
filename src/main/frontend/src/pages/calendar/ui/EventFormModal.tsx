@@ -1,0 +1,149 @@
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
+import type { SpaceMember } from '@/entities/space'
+import { UserAvatar } from '@/entities/user'
+import type { EventInput } from '@/entities/calendar'
+import { SOURCE_TOKEN } from '../lib/sourceAppearance'
+
+export interface EventFormModalProps {
+  /** Pre-filled values. When creating, these are the blanks the caller wants (e.g. the clicked day). */
+  initial: EventInput
+  /** Chooses the title and nothing else — the fields are the same either way. */
+  mode: 'create' | 'edit'
+  members: SpaceMember[]
+  /** Hides the participant picker: a personal context has nobody to invite. */
+  isPersonal: boolean
+  submitError?: string | null
+  isPending?: boolean
+  onSubmit: (input: EventInput) => void
+  onCancel: () => void
+}
+
+const COLOR_CHOICES = Object.values(SOURCE_TOKEN)
+
+/**
+ * Pure presentation: it validates what it can see and hands a well-formed input upward. The
+ * mutations live in EventFormPanel, which is what lets this be tested without a query client.
+ */
+export function EventFormModal({
+  initial, mode, members, isPersonal, submitError, isPending, onSubmit, onCancel,
+}: EventFormModalProps) {
+  const { t } = useTranslation('calendar')
+  const [form, setForm] = useState<EventInput>(initial)
+  const [error, setError] = useState<string | null>(null)
+
+  const patch = (changes: Partial<EventInput>) => setForm((current) => ({ ...current, ...changes }))
+
+  const toggleAllDay = (allDay: boolean) => {
+    // The two halves must stay consistent or the backend rejects the whole thing: an all-day
+    // event carries no times, a timed one carries both.
+    patch(allDay
+      ? { allDay, startTime: null, endTime: null }
+      : { allDay, startTime: form.startTime ?? '09:00', endTime: form.endTime ?? '10:00' })
+  }
+
+  const submit = () => {
+    if (!form.title.trim()) return setError(t('form.title_required'))
+    if (!form.startDate || !form.endDate) return setError(t('form.dates_required'))
+    if (form.endDate < form.startDate) return setError(t('form.end_before_start'))
+    if (!form.allDay && (!form.startTime || !form.endTime)) return setError(t('form.times_required'))
+    if (!form.allDay && form.startDate === form.endDate
+        && form.endTime && form.startTime && form.endTime < form.startTime) {
+      // Only comparable on a single day — across days an "earlier" end time is an overnight event.
+      return setError(t('form.end_before_start'))
+    }
+    setError(null)
+    onSubmit({ ...form, title: form.title.trim() })
+  }
+
+  return (
+    <Dialog open onClose={onCancel} title={t(`form.${mode}_title`)} maxWidth="max-w-lg">
+      <div className="flex flex-col gap-3">
+        <Input label={t('form.title')} value={form.title} autoFocus
+          onChange={(e) => patch({ title: e.target.value })} />
+
+        <Textarea label={t('form.description')} value={form.description ?? ''} rows={2}
+          onChange={(e) => patch({ description: e.target.value || null })} />
+
+        <Input label={t('form.location')} value={form.location ?? ''}
+          onChange={(e) => patch({ location: e.target.value || null })} />
+
+        <label className="flex items-center gap-2 text-sm text-fg-1">
+          <input type="checkbox" checked={form.allDay} onChange={(e) => toggleAllDay(e.target.checked)} />
+          {t('form.all_day')}
+        </label>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input label={t('form.start_date')} type="date" value={form.startDate}
+            onChange={(e) => patch({ startDate: e.target.value, endDate: form.endDate || e.target.value })} />
+          <Input label={t('form.end_date')} type="date" value={form.endDate}
+            onChange={(e) => patch({ endDate: e.target.value })} />
+          {!form.allDay && (
+            <>
+              <Input label={t('form.start_time')} type="time" value={form.startTime ?? ''}
+                onChange={(e) => patch({ startTime: e.target.value })} />
+              <Input label={t('form.end_time')} type="time" value={form.endTime ?? ''}
+                onChange={(e) => patch({ endTime: e.target.value })} />
+            </>
+          )}
+        </div>
+
+        <div>
+          <span className="mb-1 block text-xs font-semibold text-fg-2">{t('form.color')}</span>
+          <div className="flex gap-1.5">
+            {COLOR_CHOICES.map((token) => (
+              <button key={token} type="button" aria-label={t('form.color_option', { color: token })}
+                aria-pressed={form.color === token}
+                onClick={() => patch({ color: form.color === token ? null : token })}
+                className={`size-6 rounded-full border-2 ${form.color === token ? 'border-fg-1' : 'border-transparent'}
+                  ${COLOR_SWATCH[token]}`} />
+            ))}
+          </div>
+        </div>
+
+        {!isPersonal && members.length > 0 && (
+          <div>
+            <span className="mb-1 block text-xs font-semibold text-fg-2">{t('form.participants')}</span>
+            <div className="flex flex-wrap gap-1.5">
+              {members.map((member) => {
+                const selected = form.participantIds.includes(member.userId)
+                return (
+                  <button key={member.userId} type="button" aria-pressed={selected} aria-label={member.username ?? '?'}
+                    onClick={() => patch({
+                      participantIds: selected
+                        ? form.participantIds.filter((id) => id !== member.userId)
+                        : [...form.participantIds, member.userId],
+                    })}
+                    className={`rounded-full border p-0.5 ${selected ? 'border-accent' : 'border-transparent opacity-50'}`}>
+                    <UserAvatar username={member.username ?? '?'} role="USER" className="size-7 rounded-full text-[11px]" />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {(error ?? submitError) && (
+          <p role="alert" className="text-sm text-status-red">{error ?? submitError}</p>
+        )}
+
+        <div className="mt-1 flex justify-end gap-2">
+          <Button type="button" onClick={onCancel}>{t('form.cancel')}</Button>
+          <Button type="button" style={CTA_BUTTON_STYLE} disabled={isPending} onClick={submit}>
+            {t('form.save')}
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+  )
+}
+
+/** Literal class names, for the same Tailwind-purge reason as the dots. */
+const COLOR_SWATCH: Record<string, string> = {
+  'accent': 'bg-accent',
+  'status-blue': 'bg-status-blue',
+  'status-orange': 'bg-status-orange',
+  'status-green': 'bg-status-green',
+  'status-red': 'bg-status-red',
+}
