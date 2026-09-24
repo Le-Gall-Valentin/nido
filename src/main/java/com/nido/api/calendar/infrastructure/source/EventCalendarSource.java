@@ -54,10 +54,14 @@ public class EventCalendarSource implements CalendarSource {
                 event.color(), event.participantIds()));
         }
         for (RecurringEventSeries s : series.findBySpaceId(caller.spaceId())) {
+            // Looked up as far back as the projector scans: an occurrence lasting several days that
+            // began before the window is still projected, so its cancellation or its detached
+            // instance must be found too.
+            LocalDate scanFrom = EventRecurrenceProjector.scanFrom(s, from);
             produced.addAll(EventRecurrenceProjector.project(
                 s,
-                exclusions.findSlots(s.id(), from, to),
-                events.findDetachedSlots(s.id(), from, to),
+                exclusions.findSlots(s.id(), scanFrom, to),
+                events.findDetachedSlots(s.id(), scanFrom, to),
                 from, to));
         }
         return produced;

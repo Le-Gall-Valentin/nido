@@ -59,10 +59,19 @@ public final class EventRecurrenceProjector {
         };
     }
 
+    /**
+     * The earliest slot that can still be running inside a window starting at {@code from}: an
+     * occurrence lasting several days may have begun before it. Whoever looks up the slots a series
+     * has cancelled or detached must look this far back too — or an occurrence that began before
+     * the window comes back from the dead, or shows twice.
+     */
+    public static LocalDate scanFrom(RecurringEventSeries series, LocalDate from) {
+        return from.minusDays(series.durationDays());
+    }
+
     /** Every slot of {@code series} overlapping {@code [from, to]}, in ascending order. */
     public static List<LocalDate> slotsBetween(RecurringEventSeries series, LocalDate from, LocalDate to) {
-        // An occurrence that began before the window can still be running inside it.
-        LocalDate scanFrom = from.minusDays(series.durationDays());
+        LocalDate scanFrom = scanFrom(series, from);
         LocalDate lastAllowed = series.endDate() == null || series.endDate().isAfter(to) ? to : series.endDate();
 
         List<LocalDate> slots = new ArrayList<>();

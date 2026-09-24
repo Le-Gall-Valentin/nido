@@ -101,6 +101,51 @@ class EventCalendarSourceTest {
         assertThat(produced.location()).isEqualTo("Salle Pleyel");
     }
 
+    // A weekend away, Friday to Sunday every week from Fri 2026-01-09. Looked at from Saturday the
+    // 17th, the occurrence of Friday the 16th is still running, so the projector reaches back to it.
+    // The repositories answer like the real queries: only for slots inside the range they are asked.
+
+    @Test
+    void keepsACancelledOccurrenceCancelledWhenItStartedBeforeTheWindow() {
+        LocalDate cancelled = LocalDate.of(2026, 1, 16);
+        when(events.findBySpaceIdOverlapping(eq(spaceId), any(), any())).thenReturn(List.of());
+        when(series.findBySpaceId(spaceId)).thenReturn(List.of(weekend()));
+        when(exclusions.findSlots(eq(seriesId), any(), any())).thenAnswer(ask -> slotsIn(ask.getArgument(1), ask.getArgument(2), cancelled));
+        when(events.findDetachedSlots(eq(seriesId), any(), any())).thenReturn(Set.of());
+
+        assertThat(source.occurrencesBetween(caller, LocalDate.of(2026, 1, 17), LocalDate.of(2026, 1, 25)))
+            .extracting(CalendarOccurrence::startDate)
+            .containsExactly(LocalDate.of(2026, 1, 23));
+    }
+
+    @Test
+    void neverShowsAMovedOccurrenceTwiceWhenItsSlotStartedBeforeTheWindow() {
+        // The weekend of the 16th was moved a day later: it now runs Saturday 17 to Monday 19.
+        LocalDate slot = LocalDate.of(2026, 1, 16);
+        CalendarEvent moved = new CalendarEvent(UUID.randomUUID(), spaceId, "Week-end", null, null, true,
+            LocalDate.of(2026, 1, 17), null, LocalDate.of(2026, 1, 19), null,
+            null, List.of(), seriesId, slot, UUID.randomUUID(), Instant.now());
+        when(events.findBySpaceIdOverlapping(eq(spaceId), any(), any())).thenReturn(List.of(moved));
+        when(series.findBySpaceId(spaceId)).thenReturn(List.of(weekend()));
+        when(exclusions.findSlots(eq(seriesId), any(), any())).thenReturn(Set.of());
+        when(events.findDetachedSlots(eq(seriesId), any(), any())).thenAnswer(ask -> slotsIn(ask.getArgument(1), ask.getArgument(2), slot));
+
+        assertThat(source.occurrencesBetween(caller, LocalDate.of(2026, 1, 17), LocalDate.of(2026, 1, 25)))
+            .extracting(CalendarOccurrence::startDate)
+            .containsExactlyInAnyOrder(LocalDate.of(2026, 1, 17), LocalDate.of(2026, 1, 23));
+    }
+
+    private static Set<LocalDate> slotsIn(LocalDate from, LocalDate to, LocalDate slot) {
+        return slot.isBefore(from) || slot.isAfter(to) ? Set.of() : Set.of(slot);
+    }
+
+    private RecurringEventSeries weekend() {
+        return new RecurringEventSeries(
+            seriesId, spaceId, "Week-end", null, null, true,
+            null, null, 2, null,
+            RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 1, 9), null, List.of(), UUID.randomUUID(), Instant.now());
+    }
+
     @Test
     void reportsItselfAsTheEventSource() {
         assertThat(source.type()).isEqualTo(CalendarSourceType.EVENT);
