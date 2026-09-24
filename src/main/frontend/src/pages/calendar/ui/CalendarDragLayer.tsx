@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   DndContext, DragOverlay, MouseSensor, TouchSensor, pointerWithin, useSensor, useSensors,
-  type DragEndEvent, type DragMoveEvent, type DragStartEvent,
+  type DragEndEvent, type DragMoveEvent, type DragOverEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import type { CalendarView } from '../lib/calendarWindow'
 import type { DragData, DragIntent, DropData, ScheduleChange } from '../lib/dragTypes'
-import { resolveDrop } from '../lib/dragResolution'
+import { previewDrop, resolveDrop, sameSchedule } from '../lib/dragResolution'
 import { dragZone, type Zone } from '../lib/edgeDwell'
 import { minutesAt } from '../lib/timeMath'
 import { useEdgeNavigation } from '../model/useEdgeNavigation'
+import { DragPreviewProvider } from '../model/DragPreviewProvider'
 import { useWideLayout } from '../model/useWideLayout'
 import { DragGhost } from './DragGhost'
 import { EdgeCue } from './EdgeCue'
@@ -48,8 +49,12 @@ function scrollParentOf(element: HTMLElement | null): HTMLElement | null {
 
 /**
  * The one drag context for every view. It measures (pointer, column, edge); resolveDrop decides;
- * onApply writes. The ghost is a DragOverlay, independent of the grid, which is what lets a drag
- * survive the period changing underneath it.
+ * onApply writes. While it lasts, the landing slot is handed to the views, which draw the item
+ * there — snapped to its day and its quarter hour, never loose under the pointer.
+ *
+ * A DragOverlay stays mounted all along, which is what lets a drag survive the period changing
+ * underneath it. It shows the item's title only off any slot (past an edge, waiting for the next
+ * period); over a slot it is kept invisible, so the rect dnd-kit auto-scrolls by never changes.
  *
  * The dragged item is kept in this layer's state from the start: once a period change unmounts the
  * source, dnd-kit's `active.data` is an empty object, and a drop read from it would save nothing.
@@ -65,6 +70,7 @@ export function CalendarDragLayer({ enabled, view, onShift, onDragStart, onApply
   const container = useRef<HTMLDivElement>(null)
   const [intent, setIntent] = useState<DragIntent | null>(null)
   const [preview, setPreview] = useState<ScheduleChange | null>(null)
+  const dragState = useMemo(() => (intent ? { intent, change: preview } : null), [intent, preview])
   const vertical = intent?.kind === 'move' && intent.from === 'row'
 
   // The pointer itself, read from the input events. dnd-kit's `delta` adds whatever its scrollers
@@ -99,7 +105,7 @@ export function CalendarDragLayer({ enabled, view, onShift, onDragStart, onApply
   }
   const edges = useEdgeNavigation(shift)
 
-  const minutesFor = (event: DragMoveEvent | DragEndEvent): number | null => {
+  const minutesFor = (event: DragMoveEvent | DragOverEvent | DragEndEvent): number | null => {
     const data = event.over?.data.current as DropData | undefined
     const column = data?.column?.()
     if (!column) return null
@@ -134,11 +140,16 @@ export function CalendarDragLayer({ enabled, view, onShift, onDragStart, onApply
     setPreview(null)
   }
 
-  const handleMove = (event: DragMoveEvent) => {
+  // Also run on dnd-kit's onDragOver: it settles the slot under the pointer one render after the
+  // move, so the last move of a gesture still carries the slot it left — a pointer that stopped
+  // just past the calendar's edge kept showing the Sunday it had crossed.
+  const handleMove = (event: DragMoveEvent | DragOverEvent) => {
     if (!intent) return
     edges.update(zoneFor(intent))
     const data = event.over?.data.current as DropData | undefined
-    setPreview(data ? resolveDrop(intent, data.target, minutesFor(event)) : null)
+    const next = data ? previewDrop(intent, data.target, minutesFor(event)) : null
+    // Only when the slot changes: every view redraws on it, and a pointer moves far more often.
+    setPreview((current) => (sameSchedule(current, next) ? current : next))
   }
 
   const finish = () => { edges.stop(); stopTracking.current?.(); setIntent(null); setPreview(null) }
@@ -157,13 +168,14 @@ export function CalendarDragLayer({ enabled, view, onShift, onDragStart, onApply
 
   return (
     <DndContext sensors={sensors} collisionDetection={pointerWithin}
-      onDragStart={handleStart} onDragMove={handleMove} onDragEnd={handleEnd} onDragCancel={finish}>
+      onDragStart={handleStart} onDragMove={handleMove} onDragOver={handleMove} onDragEnd={handleEnd}
+      onDragCancel={finish}>
       <div ref={container} className="relative">
-        {children}
+        <DragPreviewProvider value={dragState}>{children}</DragPreviewProvider>
         <EdgeCue armed={edges.armed} view={view} vertical={vertical} />
       </div>
       <DragOverlay dropAnimation={null}>
-        {intent && <DragGhost intent={intent} preview={preview} />}
+        {intent && <DragGhost occurrence={intent.occurrence} visible={preview === null} />}
       </DragOverlay>
     </DndContext>
   )

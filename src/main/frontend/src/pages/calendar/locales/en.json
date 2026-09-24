@@ -142,7 +142,6 @@
   },
   "drag": {
     "failed": "The move could not be saved.",
-    "duration": "{{hours}}h {{minutes}}m",
     "next_month": "Next month →",
     "prev_month": "← Previous month",
     "next_week": "Next week →",

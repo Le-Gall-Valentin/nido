@@ -4,6 +4,8 @@ import { DndContext } from '@dnd-kit/core'
 import { WeekGrid } from './WeekGrid'
 import { DayAgenda } from './DayAgenda'
 import type { CalendarOccurrence, CalendarSourceType } from '@/entities/calendar'
+import { DragPreviewProvider } from '../model/DragPreviewProvider'
+import type { DragPreviewState } from '../model/dragPreview'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -37,12 +39,19 @@ function allDayFrom(title: string, source: CalendarSourceType): CalendarOccurren
   return occurrence({ title, source })
 }
 
-function renderWeek(occurrences: CalendarOccurrence[], canWrite = true) {
+function renderWeek(occurrences: CalendarOccurrence[], canWrite = true, drag: DragPreviewState | null = null) {
   return render(
     <DndContext>
-      <WeekGrid date="2026-01-08" occurrences={occurrences} today="2026-01-06" canWrite={canWrite}
-        onSelectDay={vi.fn()} onSelectOccurrence={vi.fn()} />
+      <DragPreviewProvider value={drag}>
+        <WeekGrid date="2026-01-08" occurrences={occurrences} today="2026-01-06" canWrite={canWrite}
+          onSelectDay={vi.fn()} onSelectOccurrence={vi.fn()} />
+      </DragPreviewProvider>
     </DndContext>)
+}
+
+/** The seven hour columns of the desktop grid, Monday first. */
+function columnsOf(container: HTMLElement): HTMLElement[] {
+  return [...container.querySelectorAll<HTMLElement>('[style*="height: 1440px"]')]
 }
 
 /** A grid block is positioned on its wrapper, which also holds its resize handles. */
@@ -149,6 +158,88 @@ describe('WeekGrid', () => {
     expect(rows[0].getAttribute('data-drag-origin')).toBe('row')
   })
 
+  it('draws a moved block at its landing slot — right day, right time — and dims the original', () => {
+    const piano = timed('Piano', '18:00', '19:00')
+    const { container } = renderWeek([piano], true, {
+      intent: { kind: 'move', occurrence: piano, from: 'grid', day: '2026-01-06' },
+      change: { allDay: false, startDate: '2026-01-07', startTime: '09:00', endDate: '2026-01-07', endTime: '10:00' },
+    })
+    const columns = columnsOf(container)
+    const landing = within(columns[2]).getByTestId('drag-preview')
+    expect(landing.style.top).toBe('540px')
+    expect(landing.style.height).toBe('60px')
+    expect(landing.textContent).toContain('09:00 – 10:00')
+    expect(within(columns[1]).queryByTestId('drag-preview')).toBeNull()
+    expect(positionOf(within(columns[1]).getByRole('button', { name: /Piano/ }))?.className).toContain('opacity-40')
+  })
+
+  it('stretches the block itself while its end is dragged', () => {
+    const piano = timed('Piano', '18:00', '19:00')
+    const { container } = renderWeek([piano], true, {
+      intent: { kind: 'resize-end', occurrence: piano },
+      change: { allDay: false, startDate: '2026-01-06', startTime: '18:00', endDate: '2026-01-06', endTime: '20:00' },
+    })
+    const tuesday = columnsOf(container)[1]
+    const stretched = within(tuesday).getByTestId('drag-preview')
+    expect(stretched.style.top).toBe('1080px')
+    expect(stretched.style.height).toBe('120px')
+    // The copy is the stretch: the original is hidden behind it, not shown twice.
+    expect(positionOf(within(tuesday).getByRole('button', { name: /Piano/ }))?.className).toContain('opacity-0')
+  })
+
+  it('draws a block dropped on a band as an all-day item in that day\'s band', () => {
+    const piano = timed('Piano', '18:00', '19:00')
+    const { container } = renderWeek([piano], true, {
+      intent: { kind: 'move', occurrence: piano, from: 'grid', day: '2026-01-06' },
+      change: { allDay: true, startDate: '2026-01-08', startTime: null, endDate: '2026-01-08', endTime: null },
+    })
+    const bands = [...container.querySelectorAll<HTMLElement>('[data-testid="all-day-band"]')]
+    expect(within(bands[3]).getByTestId('drag-preview').textContent).toContain('Piano')
+    expect(bands.filter((band) => within(band).queryByTestId('drag-preview'))).toHaveLength(1)
+    expect(columnsOf(container).some((column) => within(column).queryByTestId('drag-preview'))).toBe(false)
+  })
+
+  it('draws a moved phone row in the section of its landing day, and dims the original', () => {
+    const birthday = allDayFrom('Anniversaire', 'EVENT')
+    const { container } = renderWeek([birthday], true, {
+      intent: { kind: 'move', occurrence: birthday, from: 'row', day: '2026-01-06' },
+      change: { allDay: true, startDate: '2026-01-09', startTime: null, endDate: '2026-01-09', endTime: null },
+    })
+    const sections = [...container.querySelectorAll<HTMLElement>('[data-testid="week-day-section"]')]
+    expect(within(sections[4]).getByTestId('drag-preview').textContent).toContain('Anniversaire')
+    expect(within(sections[1]).getByRole('button', { name: /Anniversaire/ }).className).toContain('opacity-40')
+  })
+
+  it('draws no copy while the item hovers its own place', () => {
+    const piano = timed('Piano', '18:00', '19:00')
+    const { container } = renderWeek([piano], true, {
+      intent: { kind: 'move', occurrence: piano, from: 'grid', day: '2026-01-06' },
+      change: { allDay: false, startDate: '2026-01-06', startTime: '18:00', endDate: '2026-01-06', endTime: '19:00' },
+    })
+    expect(container.querySelectorAll('[data-testid="drag-preview"]')).toHaveLength(0)
+  })
+
+  it('draws each day\'s divider down the whole day, not only the first screenful', () => {
+    // In a scrolling flex row, a stretched column is only as tall as the scroller: its border
+    // stopped wherever the first 60vh ended.
+    const { container } = renderWeek([])
+    const scroller = columnsOf(container)[0].parentElement?.parentElement as HTMLElement
+    expect(scroller.className).toContain('overflow-y-auto')
+    expect(scroller.className).toContain('items-start')
+  })
+
+  it('keeps the day headers and bands lined up with the hour columns beside a scrollbar', () => {
+    // The grid below scrolls and its scrollbar takes width; rows above that did not reserve the
+    // same gutter drifted by up to its width at Sunday — a landing preview then sat off its column.
+    const { container } = renderWeek([])
+    const [header, band, grid] = [...container.querySelectorAll<HTMLElement>('.md\\:block > div')]
+    expect(grid.className).toContain('overflow-y-auto')
+    for (const row of [header, band]) {
+      expect(row.className).toContain('[scrollbar-gutter:stable]')
+      expect(row.className).toContain('overflow-hidden')
+    }
+  })
+
   it('never makes finance or savings draggable', () => {
     renderWeek([allDayFrom('Loyer', 'FINANCE'), allDayFrom('Vacances', 'SAVINGS')])
     expect(document.querySelectorAll('[data-draggable]')).toHaveLength(0)
@@ -180,6 +271,14 @@ describe('DayAgenda', () => {
     const message = screen.getByText('empty_day')
     expect(message.closest('[data-testid="day-grid"]')).toBeTruthy()
     expect(message.className).toContain('absolute')
+  })
+
+  it('draws the day\'s divider down the whole day', () => {
+    const { container } = renderDay([])
+    const column = container.querySelector('[style*="height: 1440px"]') as HTMLElement
+    const scroller = column.parentElement?.parentElement as HTMLElement
+    expect(scroller.className).toContain('overflow-y-auto')
+    expect(scroller.className).toContain('items-start')
   })
 
   it('shows the all-day band and the hour grid together', () => {

@@ -5,7 +5,8 @@ import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay, weekDates } from '../lib/calendarWindow'
 import type { DragData, DropData } from '../lib/dragTypes'
 import { isDraggable } from '../lib/isDraggable'
-import { isBandOccurrence } from '../lib/segments'
+import { covers, isBandOccurrence } from '../lib/segments'
+import { fadeClassFor, useDragPreview } from '../model/dragPreview'
 import { tintClassFor } from '../lib/sourceAppearance'
 import { AllDayBand } from './AllDayBand'
 import { HourColumn, HourGutter } from './HourColumn'
@@ -37,6 +38,9 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
   const { t } = useTranslation('calendar')
   const days = weekDates(date)
   const byDay = groupByDay(occurrences, days)
+  const landing = useDragPreview()?.occurrence
+  const labelFor = (occurrence: CalendarOccurrence) =>
+    occurrence.allDay ? t('all_day_short') : occurrence.startTime?.slice(0, 5) ?? ''
 
   return (
     <>
@@ -44,6 +48,8 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
       <div className="flex flex-col gap-3 md:hidden">
         {days.map((day) => {
           const dayOccurrences = byDay.get(day) ?? []
+          // A dragged row landing on this day is drawn among its rows, at its place in the day.
+          const landingAt = landing && covers(landing, day) ? landingIndex(dayOccurrences, landing) : -1
           return (
             <PhoneDaySection key={day} day={day} canWrite={canWrite}>
               <button
@@ -57,17 +63,20 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
                 </span>
                 {t(`weekday_short.${['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'][days.indexOf(day)]}`)}
               </button>
-              {dayOccurrences.length === 0 ? (
+              {dayOccurrences.length === 0 && landingAt < 0 ? (
                 <p className="text-xs text-fg-3">{t('empty_day')}</p>
               ) : (
                 <ul className="flex flex-col gap-1">
-                  {dayOccurrences.map((occurrence) => (
+                  {dayOccurrences.map((occurrence, index) => (
                     <li key={`${occurrence.sourceId}-${day}`}>
-                      <PhoneRow occurrence={occurrence} day={day} canWrite={canWrite}
-                        label={occurrence.allDay ? t('all_day_short') : occurrence.startTime?.slice(0, 5) ?? ''}
+                      {index === landingAt && landing && <LandingRow occurrence={landing} label={labelFor(landing)} />}
+                      <PhoneRow occurrence={occurrence} day={day} canWrite={canWrite} label={labelFor(occurrence)}
                         onSelect={() => onSelectOccurrence(occurrence)} />
                     </li>
                   ))}
+                  {landingAt === dayOccurrences.length && landing && (
+                    <li><LandingRow occurrence={landing} label={labelFor(landing)} /></li>
+                  )}
                 </ul>
               )}
             </PhoneDaySection>
@@ -77,7 +86,9 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
 
       {/* Desktop: the real hour grid. */}
       <div className="hidden md:block">
-        <div className="flex">
+        {/* The rows above the scrolling grid reserve the gutter its scrollbar takes, so every
+            header and band stays over its own hour column. */}
+        <div className="flex overflow-hidden [scrollbar-gutter:stable]">
           <div className="w-10 shrink-0" />
           {days.map((day) => (
             <button
@@ -97,7 +108,7 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
           ))}
         </div>
 
-        <div className="flex">
+        <div className="flex overflow-hidden [scrollbar-gutter:stable]">
           <div className="w-10 shrink-0" />
           {/* One band per day: each is its own drop target, so a timed event dropped on it becomes
               all-day on that day. */}
@@ -111,7 +122,7 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
           </div>
         </div>
 
-        <div className="flex max-h-[60vh] overflow-y-auto">
+        <div className="flex items-start max-h-[60vh] overflow-y-auto">
           <HourGutter />
           {days.map((day) => (
             <div key={day} className="flex-1 border-l border-border">
@@ -146,7 +157,8 @@ function PhoneRow({ occurrence, day, canWrite, label, onSelect }: {
   occurrence: CalendarOccurrence; day: string; canWrite: boolean; label: string; onSelect: () => void
 }) {
   const draggable = canWrite && isDraggable(occurrence)
-  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
+  const fade = fadeClassFor(useDragPreview(), occurrence)
+  const { setNodeRef, listeners, attributes } = useDraggable({
     id: `row:${occurrence.sourceId}:${day}`, disabled: !draggable,
     data: { intent: { kind: 'move', occurrence, from: 'row', day } } satisfies DragData,
   })
@@ -156,9 +168,27 @@ function PhoneRow({ occurrence, day, canWrite, label, onSelect }: {
       // touch-manipulation, never touch-none: the list must keep scrolling under a finger that
       // touches a row. TouchSensor blocks the scroll itself, once the long press has started a drag.
       className={`flex w-full touch-manipulation items-center gap-2 rounded px-2 py-1.5 text-left text-xs font-medium ${tintClassFor(occurrence)}
-        ${isDragging ? 'opacity-40' : ''}`}>
+        ${fade}`}>
       <span className="shrink-0 tabular-nums">{label}</span>
       <span className="truncate">{occurrence.title}</span>
     </button>
+  )
+}
+
+/** Where a landing row goes among a day's rows: all-day items first, then by start time. */
+function landingIndex(rows: CalendarOccurrence[], landing: CalendarOccurrence): number {
+  const key = (o: CalendarOccurrence) => (o.allDay ? '' : o.startTime?.slice(0, 5) ?? '')
+  const index = rows.findIndex((row) => key(row) > key(landing))
+  return index < 0 ? rows.length : index
+}
+
+/** A dragged row drawn where it would land. Inert, like every landing preview. */
+function LandingRow({ occurrence, label }: { occurrence: CalendarOccurrence; label: string }) {
+  return (
+    <div data-testid="drag-preview"
+      className={`pointer-events-none mb-1 flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs font-medium shadow-md ring-2 ring-accent ${tintClassFor(occurrence)}`}>
+      <span className="shrink-0 tabular-nums">{label}</span>
+      <span className="truncate">{occurrence.title}</span>
+    </div>
   )
 }

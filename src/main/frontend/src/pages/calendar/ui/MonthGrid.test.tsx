@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { DndContext } from '@dnd-kit/core'
 import { MonthGrid } from './MonthGrid'
+import { DragPreviewProvider } from '../model/DragPreviewProvider'
+import type { DragPreviewState } from '../model/dragPreview'
 
 // The whole suite mocks i18n and asserts on keys — translations are verified in the browser,
 // not here. Interpolation is kept so labels built from a date stay distinguishable.
@@ -25,13 +27,16 @@ function onDay(title: string, source: CalendarSourceType): CalendarOccurrence {
   return occurrence({ title, source })
 }
 
-function renderGrid(occurrences: CalendarOccurrence[], today = '2026-01-15', canWrite = true) {
+function renderGrid(occurrences: CalendarOccurrence[], today = '2026-01-15', canWrite = true,
+  drag: DragPreviewState | null = null) {
   const onSelectDay = vi.fn()
   const onSelectOccurrence = vi.fn()
   const view = render(
     <DndContext>
-      <MonthGrid date="2026-01-14" occurrences={occurrences} today={today} canWrite={canWrite}
-        onSelectDay={onSelectDay} onSelectOccurrence={onSelectOccurrence} />
+      <DragPreviewProvider value={drag}>
+        <MonthGrid date="2026-01-14" occurrences={occurrences} today={today} canWrite={canWrite}
+          onSelectDay={onSelectDay} onSelectOccurrence={onSelectOccurrence} />
+      </DragPreviewProvider>
     </DndContext>)
   return { ...view, onSelectDay, onSelectOccurrence }
 }
@@ -134,6 +139,21 @@ describe('MonthGrid', () => {
     const chip = screen.getByText('Piano').closest('button') as HTMLElement
     expect(chip.className).not.toContain('touch-none')
     expect(chip.className).toContain('touch-manipulation')
+  })
+
+  it('draws a moved trip on every day of its landing span, and dims it where it was', () => {
+    const trip = occurrence({ title: 'Voyage', startDate: '2026-01-12', endDate: '2026-01-14' })
+    renderGrid([trip], '2026-01-15', true, {
+      intent: { kind: 'move', occurrence: trip, from: 'cell', day: '2026-01-13' },
+      change: { allDay: true, startDate: '2026-01-19', startTime: null, endDate: '2026-01-21', endTime: null },
+    })
+    const cellOf = (day: string) => screen.getByRole('button', { name: `open_day:${day}` }).parentElement as HTMLElement
+    for (const day of ['2026-01-19', '2026-01-20', '2026-01-21']) {
+      expect(cellOf(day).querySelector('[data-testid="drag-preview"]')?.textContent).toContain('Voyage')
+    }
+    expect(cellOf('2026-01-22').querySelector('[data-testid="drag-preview"]')).toBeNull()
+    expect(cellOf('2026-01-13').querySelector('[data-testid="drag-preview"]')).toBeNull()
+    expect((cellOf('2026-01-13').querySelector('button[data-draggable]') as HTMLElement).className).toContain('opacity-40')
   })
 
   it('attaches no drag handle at all for a viewer', () => {

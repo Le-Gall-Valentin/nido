@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { effectiveEndDate, isBandOccurrence, segmentFor } from './segments'
+import { covers, effectiveEndDate, isBandOccurrence, segmentFor } from './segments'
 import type { CalendarOccurrence } from '@/entities/calendar'
 
 function timed(startDate: string, startTime: string, endDate: string, endTime: string): CalendarOccurrence {
@@ -54,5 +54,16 @@ describe('effectiveEndDate', () => {
   it('pulls back an end at exactly 00:00 to the day before', () => {
     expect(effectiveEndDate(timed('2026-09-23', '22:00', '2026-09-24', '00:00'))).toBe('2026-09-23')
     expect(effectiveEndDate(timed('2026-09-23', '22:00', '2026-09-24', '02:00'))).toBe('2026-09-24')
+  })
+})
+
+describe('covers', () => {
+  it('says which days an occurrence occupies, the day after an end at 00:00 excluded', () => {
+    const late = timed('2026-09-23', '22:00', '2026-09-24', '00:00')
+    expect(covers(late, '2026-09-23')).toBe(true)
+    expect(covers(late, '2026-09-24')).toBe(false)
+    const party = timed('2026-09-23', '22:00', '2026-09-24', '02:00')
+    expect(covers(party, '2026-09-24')).toBe(true)
+    expect(covers(party, '2026-09-22')).toBe(false)
   })
 })

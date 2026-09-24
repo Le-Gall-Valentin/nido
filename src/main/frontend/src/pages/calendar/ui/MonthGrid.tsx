@@ -4,6 +4,8 @@ import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay, monthGridDates } from '../lib/calendarWindow'
 import { isDraggable } from '../lib/isDraggable'
 import type { DragData, DropData } from '../lib/dragTypes'
+import { covers } from '../lib/segments'
+import { fadeClassFor, useDragPreview } from '../model/dragPreview'
 import { SOURCE_ORDER, dotClassFor, dotClassForSource } from '../lib/sourceAppearance'
 
 interface MonthGridProps {
@@ -45,6 +47,7 @@ export function MonthGrid({
   const { t } = useTranslation('calendar')
   const days = monthGridDates(date)
   const byDay = groupByDay(occurrences, days)
+  const landing = useDragPreview()?.occurrence
   const shownMonth = date.slice(0, 7)
 
   return (
@@ -93,6 +96,8 @@ export function MonthGrid({
 
               {/* Desktop: the labels themselves, capped so a busy day cannot overflow its cell. */}
               <div className="hidden flex-col gap-0.5 md:flex">
+                {/* A dragged item landing here goes first, so a busy day never hides where it lands. */}
+                {landing && covers(landing, day) && <LandingChip occurrence={landing} />}
                 {dayOccurrences.slice(0, MAX_LABELS).map((occurrence) => (
                   <OccurrenceChip
                     key={`${occurrence.sourceId}-${day}`}
@@ -149,8 +154,9 @@ interface ChipProps {
  */
 function OccurrenceChip({ occurrence, day, canWrite, onSelect }: ChipProps) {
   const draggable = canWrite && isDraggable(occurrence)
+  const fade = fadeClassFor(useDragPreview(), occurrence)
   // Keyed by day too: dnd-kit needs one id per handle, and a trip shows a chip on every day.
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef } = useDraggable({
     id: `cell:${occurrence.sourceId}:${day}`,
     disabled: !draggable,
     data: { intent: { kind: 'move', occurrence, from: 'cell', day } } satisfies DragData,
@@ -169,7 +175,7 @@ function OccurrenceChip({ occurrence, day, canWrite, onSelect }: ChipProps) {
         onSelect()
       }}
       className={`relative z-10 flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] text-fg-1 hover:bg-bg-2
-        ${draggable ? 'touch-manipulation cursor-grab active:cursor-grabbing' : ''} ${isDragging ? 'opacity-40' : ''}`}
+        ${draggable ? 'touch-manipulation cursor-grab active:cursor-grabbing' : ''} ${fade}`}
     >
       <span className={`size-1.5 shrink-0 rounded-full ${dotClassFor(occurrence)}`} />
       {!occurrence.allDay && occurrence.startTime && (
@@ -177,5 +183,19 @@ function OccurrenceChip({ occurrence, day, canWrite, onSelect }: ChipProps) {
       )}
       <span className="truncate">{occurrence.title}</span>
     </button>
+  )
+}
+
+/** A dragged item drawn in the cell it would land in. Inert, like every landing preview. */
+function LandingChip({ occurrence }: { occurrence: CalendarOccurrence }) {
+  return (
+    <div data-testid="drag-preview"
+      className="pointer-events-none relative z-10 flex items-center gap-1 truncate rounded bg-bg-1 px-1 py-0.5 text-[11px] text-fg-0 shadow-md ring-2 ring-accent">
+      <span className={`size-1.5 shrink-0 rounded-full ${dotClassFor(occurrence)}`} />
+      {!occurrence.allDay && occurrence.startTime && (
+        <span className="shrink-0 tabular-nums text-fg-3">{occurrence.startTime.slice(0, 5)}</span>
+      )}
+      <span className="truncate">{occurrence.title}</span>
+    </div>
   )
 }

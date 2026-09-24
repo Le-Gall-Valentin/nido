@@ -38,7 +38,7 @@ export function DayAgenda({ date, occurrences, onSelectOccurrence, canWrite = fa
         {dayOccurrences.length === 0 && (
           <p className="pointer-events-none absolute inset-x-0 top-4 z-10 text-center text-sm text-fg-3">{t('empty_day')}</p>
         )}
-        <div className="flex max-h-[65vh] overflow-y-auto">
+        <div className="flex items-start max-h-[65vh] overflow-y-auto">
           <HourGutter />
           <div className="flex-1 border-l border-border">
             <HourColumn day={date} occurrences={timed} canWrite={canWrite} onSelectOccurrence={onSelectOccurrence} />

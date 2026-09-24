@@ -13,6 +13,11 @@ export function effectiveEndDate(o: CalendarOccurrence): string {
   return endsAtMidnight(o) ? addDays(o.endDate, -1) : o.endDate
 }
 
+/** Whether an occurrence is shown on `day` — the same days the month, the band and the lists use. */
+export function covers(o: CalendarOccurrence, day: string): boolean {
+  return day >= o.startDate && day <= effectiveEndDate(o)
+}
+
 function totalMinutes(o: CalendarOccurrence): number {
   if (o.allDay || !o.startTime || !o.endTime) return 0
   return daysBetween(o.startDate, o.endDate) * DAY_MINUTES + timeToMinutes(o.endTime) - timeToMinutes(o.startTime)

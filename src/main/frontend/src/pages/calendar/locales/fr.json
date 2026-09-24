@@ -142,7 +142,6 @@
   },
   "drag": {
     "failed": "Le déplacement n'a pas pu être enregistré.",
-    "duration": "{{hours}} h {{minutes}}",
     "next_month": "Mois suivant →",
     "prev_month": "← Mois précédent",
     "next_week": "Semaine suivante →",

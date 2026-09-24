@@ -55,9 +55,26 @@ function timedFrom(day: string, startMinutes: number, duration: number): Schedul
  * grid drop with no pointer time). The only place drag rules live; the layer measures, this decides.
  */
 export function resolveDrop(intent: DragIntent, target: DropTarget, pointerMinutes: number | null): ScheduleChange | null {
-  const o = intent.occurrence
   const next = decide(intent, target, pointerMinutes)
-  return next === null || same(scheduleOf(o), next) ? null : next
+  return next === null || isUnchanged(intent.occurrence, next) ? null : next
+}
+
+/**
+ * Where the item is drawn while it is dragged: the same rules as the drop, but an unchanged schedule
+ * is still a place — hovering the item's own slot shows it there rather than nowhere.
+ */
+export function previewDrop(intent: DragIntent, target: DropTarget, pointerMinutes: number | null): ScheduleChange | null {
+  return decide(intent, target, pointerMinutes)
+}
+
+/** Whether two landing slots are the same one — including "no slot" on both sides. */
+export function sameSchedule(a: ScheduleChange | null, b: ScheduleChange | null): boolean {
+  return a === null || b === null ? a === b : same(a, b)
+}
+
+/** Whether a schedule is the one the occurrence already has — the API's "14:00:00" is the drag's "14:00". */
+export function isUnchanged(o: CalendarOccurrence, change: ScheduleChange): boolean {
+  return same(scheduleOf(o), change)
 }
 
 function decide(intent: DragIntent, target: DropTarget, pointerMinutes: number | null): ScheduleChange | null {

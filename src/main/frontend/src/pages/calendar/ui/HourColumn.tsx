@@ -5,7 +5,8 @@ import { usePointerIsFine } from '@/shared/lib'
 import type { DragData, DropData } from '../lib/dragTypes'
 import { isDraggable } from '../lib/isDraggable'
 import { tintClassFor } from '../lib/sourceAppearance'
-import { segmentFor, type Segment } from '../lib/segments'
+import { isBandOccurrence, segmentFor, type Segment } from '../lib/segments'
+import { fadeClassFor, useDragPreview } from '../model/dragPreview'
 import { HOUR_HEIGHT } from '../lib/timeMath'
 
 export { HOUR_HEIGHT } from '../lib/timeMath'
@@ -30,6 +31,10 @@ interface HourColumnProps {
  */
 export function HourColumn({ day, occurrences, canWrite, onSelectOccurrence }: HourColumnProps) {
   const element = useRef<HTMLDivElement | null>(null)
+  // While an item is dragged, its landing slot is drawn here, by the same segment rules as a saved
+  // block — an overnight landing shows its piece on each day.
+  const landing = useDragPreview()?.occurrence
+  const landingSegment = landing && !isBandOccurrence(landing) ? segmentFor(landing, day) : null
   const { setNodeRef } = useDroppable({
     id: `hours:${day}`, disabled: !canWrite,
     data: { target: { kind: 'hours', day }, column: () => element.current } satisfies DropData,
@@ -48,6 +53,32 @@ export function HourColumn({ day, occurrences, canWrite, onSelectOccurrence }: H
             onSelect={() => onSelectOccurrence(occurrence)} />
         )
       })}
+      {landing && landingSegment && <LandingBlock occurrence={landing} segment={landingSegment} />}
+    </div>
+  )
+}
+
+/** A segment's place in the column, in pixels. */
+function boxOf(segment: Segment): { top: string; height: string } {
+  const top = (segment.startMinutes / 60) * HOUR_HEIGHT
+  const height = Math.max(MIN_BLOCK_HEIGHT, ((segment.endMinutes - segment.startMinutes) / 60) * HOUR_HEIGHT)
+  return { top: `${top}px`, height: `${height}px` }
+}
+
+/**
+ * Where a dragged item would land: drawn solid over the grid, with the times it would get. Inert —
+ * the pointer and the drop targets see straight through it.
+ */
+function LandingBlock({ occurrence, segment }: { occurrence: CalendarOccurrence; segment: Segment }) {
+  return (
+    <div data-testid="drag-preview" style={boxOf(segment)}
+      className="pointer-events-none absolute inset-x-0.5 z-20 rounded bg-bg-1 shadow-lg ring-2 ring-accent">
+      <div className={`h-full overflow-hidden rounded px-1 py-0.5 text-[11px] font-medium ${tintClassFor(occurrence)}`}>
+        <div className="truncate">{occurrence.title}</div>
+        <div className="tabular-nums opacity-80">
+          {occurrence.startTime?.slice(0, 5)} – {occurrence.endTime?.slice(0, 5)}
+        </div>
+      </div>
     </div>
   )
 }
@@ -70,17 +101,15 @@ interface GridBlockProps {
 function GridBlock({ occurrence, day, segment, canWrite, column, onSelect }: GridBlockProps) {
   const pointerIsFine = usePointerIsFine()
   const draggable = canWrite && isDraggable(occurrence)
+  const fade = fadeClassFor(useDragPreview(), occurrence)
   const move = useDraggable({
     id: `grid:${occurrence.sourceId}:${day}`, disabled: !draggable,
     data: { intent: { kind: 'move', occurrence, from: 'grid', day }, column } satisfies DragData,
   })
-  const top = (segment.startMinutes / 60) * HOUR_HEIGHT
-  const height = Math.max(MIN_BLOCK_HEIGHT, ((segment.endMinutes - segment.startMinutes) / 60) * HOUR_HEIGHT)
   // A six-pixel strip is a mouse target; a finger resizes through the edit form instead.
   const resizable = draggable && pointerIsFine && occurrence.source === 'EVENT'
   return (
-    <div style={{ top: `${top}px`, height: `${height}px` }}
-      className={`absolute inset-x-0.5 ${move.isDragging ? 'opacity-40' : ''}`}>
+    <div style={boxOf(segment)} className={`absolute inset-x-0.5 ${fade}`}>
       {resizable && segment.isStart && <ResizeHandle occurrence={occurrence} edge="start" />}
       <button ref={draggable ? move.setNodeRef : undefined}
         {...(draggable ? move.listeners : {})} {...(draggable ? move.attributes : {})}

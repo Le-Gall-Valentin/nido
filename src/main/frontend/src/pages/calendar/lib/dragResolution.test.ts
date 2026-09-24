@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveDrop } from './dragResolution'
+import { isUnchanged, previewDrop, resolveDrop, sameSchedule } from './dragResolution'
 import type { CalendarOccurrence } from '@/entities/calendar'
 
 function base(overrides: Partial<CalendarOccurrence>): CalendarOccurrence {
@@ -168,5 +168,37 @@ describe('resolveDrop — anchored on the piece that was grabbed', () => {
     expect(resolveDrop(move(evening, 'grid'), { kind: 'all-day', day: '2026-09-25' }, null)).toEqual({
       allDay: true, startDate: '2026-09-25', startTime: null, endDate: '2026-09-25', endTime: null,
     })
+  })
+})
+
+describe('previewDrop — where the item is drawn while it is dragged', () => {
+  it('gives the landing place even when it is where the item already is', () => {
+    // The preview is drawn at home rather than vanishing; only the write is skipped.
+    const home = { kind: 'day' as const, day: '2026-09-23' }
+    expect(previewDrop(move(meeting, 'cell'), home, null)).toEqual({
+      allDay: false, startDate: '2026-09-23', startTime: '14:00', endDate: '2026-09-23', endTime: '15:30',
+    })
+    expect(resolveDrop(move(meeting, 'cell'), home, null)).toBeNull()
+  })
+
+  it('gives nothing where a drop would mean nothing', () => {
+    expect(previewDrop(move(meeting), { kind: 'hours', day: '2026-09-24' }, null)).toBeNull()
+  })
+})
+
+describe('isUnchanged', () => {
+  it('reads the API\'s seconds and the drag\'s minutes as the same time', () => {
+    expect(isUnchanged(meeting, { allDay: false, startDate: '2026-09-23', startTime: '14:00', endDate: '2026-09-23', endTime: '15:30' })).toBe(true)
+    expect(isUnchanged(meeting, { allDay: false, startDate: '2026-09-23', startTime: '14:15', endDate: '2026-09-23', endTime: '15:45' })).toBe(false)
+  })
+})
+
+describe('sameSchedule', () => {
+  it('tells when the landing slot has not changed, so the views are not redrawn for nothing', () => {
+    const slot = { allDay: false, startDate: '2026-09-23', startTime: '14:00', endDate: '2026-09-23', endTime: '15:30' }
+    expect(sameSchedule(slot, { ...slot })).toBe(true)
+    expect(sameSchedule(null, null)).toBe(true)
+    expect(sameSchedule(slot, null)).toBe(false)
+    expect(sameSchedule(slot, { ...slot, startTime: '14:15' })).toBe(false)
   })
 })
