@@ -116,6 +116,20 @@ public final class RecurrenceScheduler {
      * estimate overflows an {@code int}, which callers read as "further away than anything
      * worth producing".
      */
+    /**
+     * The number of a schedule's last occurrence falling on or before {@code day}, or -1 when the
+     * schedule starts after it — so that the next occurrence, number + 1, is the first one strictly
+     * after {@code day}. What a series' count must be when its start moves: the tasks it already
+     * generated stay put, and the next one must fall after the last of them.
+     */
+    public static int lastOccurrenceNumberOnOrBefore(LocalDate anchorDate, RecurrenceInterval intervalType,
+                                                     int intervalCount, LocalDate day) {
+        if (day.isBefore(anchorDate)) {
+            return -1;
+        }
+        return (int) Math.min(Integer.MAX_VALUE, firstOccurrenceIndexOnOrAfter(anchorDate, intervalType, intervalCount, day.plusDays(1)) - 1);
+    }
+
     static long firstOccurrenceIndexOnOrAfter(LocalDate anchorDate, RecurrenceInterval intervalType,
                                               int intervalCount, LocalDate target) {
         if (intervalCount < 1) {

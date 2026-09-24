@@ -273,4 +273,19 @@ class RecurrenceSchedulerTest {
             }
         }
     }
+
+    @Test
+    void lastOccurrenceNumberOnOrBefore_names_the_last_date_of_a_schedule_up_to_a_day() {
+        LocalDate wed = LocalDate.of(2026, 1, 7);
+        // Jan 7, 14, 21: on or before Jan 21 is number 2, and so is Jan 27.
+        assertThat(
+            RecurrenceScheduler.lastOccurrenceNumberOnOrBefore(wed, RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 1, 21))).isEqualTo(2);
+        assertThat(
+            RecurrenceScheduler.lastOccurrenceNumberOnOrBefore(wed, RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 1, 27))).isEqualTo(2);
+        assertThat(
+            RecurrenceScheduler.lastOccurrenceNumberOnOrBefore(wed, RecurrenceInterval.WEEKLY, 1, wed)).isZero();
+        // A schedule that starts after the day has none: -1, so the next one is its start.
+        assertThat(
+            RecurrenceScheduler.lastOccurrenceNumberOnOrBefore(wed, RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 1, 6))).isEqualTo(-1);
+    }
 }

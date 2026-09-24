@@ -1,5 +1,6 @@
 package com.nido.api.tasks.infrastructure.web;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
@@ -30,6 +31,7 @@ import java.time.LocalDate;
 import java.util.Date;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -224,7 +226,10 @@ class RecurringTaskSeriesControllerIT {
     }
 
     @Test
-    void moving_an_existing_series_anchor_into_the_distant_past_is_refused_too() throws Exception {
+    void moving_an_existing_series_anchor_into_the_distant_past_back_fills_nothing() throws Exception {
+        // It used to be refused: the series kept its count against the new start, so the next read
+        // would have generated every week of those twenty years. Moving a start now re-reads the
+        // count against it — the tasks already generated stay, and nothing before them is added.
         String body = "{\"title\":\"Sortir les poubelles\",\"priority\":\"MED\","
             + "\"recurrence\":{\"intervalType\":\"WEEKLY\",\"intervalCount\":1,"
             + "\"leadIntervalType\":\"DAILY\",\"leadIntervalCount\":0,\"anchorDate\":\"" + LocalDate.now() + "\"}}";
@@ -242,7 +247,16 @@ class RecurringTaskSeriesControllerIT {
             + LocalDate.now().minusYears(20) + "\"}}";
         mockMvc.perform(patch("/api/spaces/" + spaceId + "/recurring-task-series/" + seriesId)
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(updateBody))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.title").value("RecurrenceBacklogTooLarge"));
+            .andExpect(status().isOk());
+
+        // Reading the tasks materializes whatever is due: nothing from those twenty years. A day of
+        // margin covers a space whose today is ahead of the server's.
+        String tasksBody = mockMvc.perform(get("/api/spaces/" + spaceId + "/tasks").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        JsonNode tasks = objectMapper.readTree(tasksBody);
+        assertThat(tasks.size()).isBetween(1, 2);
+        tasks.forEach(task -> assertThat(LocalDate.parse(task.get("dueDate").asText()))
+            .isAfterOrEqualTo(LocalDate.now().minusDays(1)));
     }
 }
