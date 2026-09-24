@@ -25,7 +25,7 @@ export function useCalendarUrlState(today: string): CalendarUrlState {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const rawView = searchParams.get('view')
-  const view = VIEWS.includes(rawView as CalendarView) ? (rawView as CalendarView) : 'month'
+  const view = VIEWS.includes(rawView as CalendarView) ? (rawView as CalendarView) : 'week'
 
   const rawDate = searchParams.get('date')
   const date = rawDate && isValidIso(rawDate) ? rawDate : today

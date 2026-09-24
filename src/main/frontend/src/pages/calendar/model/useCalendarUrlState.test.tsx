@@ -19,9 +19,9 @@ function renderState(initialEntry: string) {
 }
 
 describe('useCalendarUrlState', () => {
-  it('defaults to the month view anchored on the household today', () => {
+  it('defaults to the week view anchored on the household today', () => {
     const { result } = renderState('/c')
-    expect(result.current.state.view).toBe('month')
+    expect(result.current.state.view).toBe('week')
     expect(result.current.state.date).toBe(TODAY)
   })
 
@@ -33,7 +33,7 @@ describe('useCalendarUrlState', () => {
 
   it('falls back to the default when the view is not one of the three', () => {
     const { result } = renderState('/c?view=decade&date=2026-03-02')
-    expect(result.current.state.view).toBe('month')
+    expect(result.current.state.view).toBe('week')
   })
 
   it('falls back to today when the date is not a real date', () => {
