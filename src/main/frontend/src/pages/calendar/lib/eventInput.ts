@@ -1,5 +1,4 @@
 import type { CalendarOccurrence, EventInput } from '@/entities/calendar'
-import { addDays, daysBetween } from './calendarWindow'
 
 /**
  * The writable half of an occurrence, field for field.
@@ -22,10 +21,4 @@ export function toEventInput(occurrence: CalendarOccurrence): EventInput {
     color: occurrence.color,
     participantIds: occurrence.participantIds,
   }
-}
-
-/** The same event on another day. A multi-day event keeps its length: dragging moves, never resizes. */
-export function rescheduledInput(occurrence: CalendarOccurrence, targetDay: string): EventInput {
-  const span = daysBetween(occurrence.startDate, occurrence.endDate)
-  return { ...toEventInput(occurrence), startDate: targetDay, endDate: addDays(targetDay, span) }
 }

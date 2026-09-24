@@ -3,6 +3,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay, monthGridDates } from '../lib/calendarWindow'
 import { isDraggable } from '../lib/isDraggable'
+import type { DragData, DropData } from '../lib/dragTypes'
 import { SOURCE_ORDER, dotClassFor, dotClassForSource } from '../lib/sourceAppearance'
 
 interface MonthGridProps {
@@ -120,7 +121,9 @@ export function MonthGrid({
 
 /** A day is a drop target only while dragging is possible at all. */
 function DayCell({ day, canWrite, children }: { day: string; canWrite: boolean; children: React.ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `day:${day}`, disabled: !canWrite })
+  const { setNodeRef, isOver } = useDroppable({
+    id: `day:${day}`, disabled: !canWrite, data: { target: { kind: 'day', day } } satisfies DropData,
+  })
   return (
     <div ref={canWrite ? setNodeRef : undefined}
       className={`relative min-h-[68px] border-b border-r border-border p-1 md:min-h-[116px] md:p-1.5
@@ -144,9 +147,9 @@ interface ChipProps {
 function OccurrenceChip({ occurrence, canWrite, onSelect }: ChipProps) {
   const draggable = canWrite && isDraggable(occurrence)
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: `occurrence:${occurrence.sourceId}`,
+    id: `cell:${occurrence.sourceId}`,
     disabled: !draggable,
-    data: { occurrence },
+    data: { intent: { kind: 'move', occurrence, from: 'cell' } } satisfies DragData,
   })
 
   return (

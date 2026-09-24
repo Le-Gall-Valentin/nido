@@ -8,6 +8,7 @@ import { SpaceMembersApiProvider, type ISpaceMembersApi, type SpaceSummary } fro
 import type { CalendarApi, CalendarOccurrence } from '@/entities/calendar'
 import type { IFinanceApi } from '@/entities/finance'
 import type { IKitchenApi } from '@/entities/kitchen'
+import { TasksApiProvider, type TasksApi } from '@/entities/tasks'
 import { CalendarPage } from './CalendarPage'
 
 vi.mock('react-i18next', () => ({
@@ -45,16 +46,20 @@ function renderPage(feed: CalendarOccurrence[], apis: {
   const kitchen = { listRecipes: vi.fn().mockResolvedValue([]), listMenuEntries: vi.fn().mockResolvedValue([]), ...apis.kitchen } as unknown as IKitchenApi
   const spaces: ISpacesApi = { listMySpaces: vi.fn().mockResolvedValue([{ ...SPACE, myRole: apis.role ?? 'MEMBER' }]), getSpace: vi.fn() }
   const members: ISpaceMembersApi = { listMembers: vi.fn().mockResolvedValue([]) }
+  // The app mounts the tasks API above every page; dropping a task writes through it.
+  const tasks = { listTasks: vi.fn().mockResolvedValue([]), updateTask: vi.fn() } as unknown as TasksApi
   render(
     <QueryClientProvider client={createTestQueryClient()}>
       <SpacesApiProvider api={spaces}>
         <SpaceMembersApiProvider api={members}>
+          <TasksApiProvider api={tasks}>
           <MemoryRouter initialEntries={['/s/space-1/organisation/calendar?view=month&date=2026-09-23']}>
             <Routes>
               <Route path="/s/:spaceId/organisation/calendar"
                 element={<CalendarPage api={calendar} financeApi={finance} kitchenApi={kitchen} />} />
             </Routes>
           </MemoryRouter>
+          </TasksApiProvider>
         </SpaceMembersApiProvider>
       </SpacesApiProvider>
     </QueryClientProvider>)
@@ -89,5 +94,17 @@ describe('CalendarPage', () => {
     fireEvent.click(await screen.findByText('detail.open_in.MEAL'))
     expect(await screen.findByRole('dialog')).toBeTruthy()
     expect(kitchen.listRecipes).toHaveBeenCalledWith('space-1')
+  })
+
+  it('offers a drag handle to a member', async () => {
+    renderPage([occurrence({ title: 'Concert' })])
+    const chip = (await screen.findByText('Concert')).closest('button')
+    expect(chip?.getAttribute('data-draggable')).toBe('true')
+  })
+
+  it('offers no drag handle to a viewer', async () => {
+    renderPage([occurrence({ title: 'Concert' })], { role: 'VIEWER' })
+    const chip = (await screen.findByText('Concert')).closest('button')
+    expect(chip?.getAttribute('data-draggable')).toBeNull()
   })
 })

@@ -63,3 +63,8 @@ export function formatSpan(from: string, to: string, locale: string): string {
   const start = format(from, locale, { day: 'numeric', month: 'short', year: 'numeric' })
   return `${start} – ${format(to, locale, { day: 'numeric', month: 'short', year: 'numeric' })}`
 }
+
+/** "Mer. 23" — the ghost's day, short enough to sit next to a time. */
+export function formatShortDay(iso: string, locale: string): string {
+  return asHeading(format(iso, locale, { weekday: 'short', day: 'numeric' }))
+}

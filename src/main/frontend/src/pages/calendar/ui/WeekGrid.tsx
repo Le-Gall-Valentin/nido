@@ -12,6 +12,8 @@ interface WeekGridProps {
   today: string
   onSelectDay: (day: string) => void
   onSelectOccurrence: (occurrence: CalendarOccurrence) => void
+  /** Off for a viewer: nothing they drag could be saved. */
+  canWrite?: boolean
 }
 
 function dayLabel(day: string): string {

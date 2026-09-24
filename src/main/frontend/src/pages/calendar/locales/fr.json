@@ -141,6 +141,15 @@
     "save_failed": "L'ajout a échoué."
   },
   "drag": {
-    "failed": "Le déplacement n'a pas pu être enregistré."
+    "failed": "Le déplacement n'a pas pu être enregistré.",
+    "duration": "{{hours}} h {{minutes}}",
+    "next_month": "Mois suivant →",
+    "prev_month": "← Mois précédent",
+    "next_week": "Semaine suivante →",
+    "prev_week": "← Semaine précédente",
+    "next_day": "Jour suivant →",
+    "prev_day": "← Jour précédent",
+    "next_week_vertical": "Semaine suivante ↓",
+    "prev_week_vertical": "↑ Semaine précédente"
   }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatPeriodLabel } from './periodLabel'
+import { formatPeriodLabel, formatShortDay } from './periodLabel'
 
 const FR = 'fr-FR'
 const EN = 'en-GB'
@@ -49,5 +49,11 @@ describe('formatPeriodLabel — week', () => {
     const monday = formatPeriodLabel('week', '2026-09-14', FR)
     const sunday = formatPeriodLabel('week', '2026-09-20', FR)
     expect(sunday).toBe(monday)
+  })
+})
+
+describe('formatShortDay', () => {
+  it('names the ghost\'s day in a few letters', () => {
+    expect(formatShortDay('2026-09-23', 'fr-FR')).toBe('Mer. 23')
   })
 })

@@ -3,25 +3,24 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
 import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
-import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { Alert, Spinner } from '@/shared/ui'
-import { todayIso, usePaletteItems, usePointerIsFine, resolveLocale } from '@/shared/lib'
+import { todayIso, usePaletteItems, resolveLocale } from '@/shared/lib'
 import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
 import { useAuth } from '@/features/auth'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
 import {
-  calendarApi, CalendarApiProvider, useOccurrences, useJoinEvent, useLeaveEvent, useUpdateEvent,
+  calendarApi, CalendarApiProvider, useOccurrences, useJoinEvent, useLeaveEvent,
   type CalendarApi, type CalendarOccurrence,
 } from '@/entities/calendar'
 import { FinanceApiProvider, financeApi as defaultFinanceApi, type IFinanceApi } from '@/entities/finance'
 import { KitchenApiProvider, kitchenApi as defaultKitchenApi, type IKitchenApi } from '@/entities/kitchen'
 import { windowFor, type CalendarView } from '../lib/calendarWindow'
-import { rescheduledInput } from '../lib/eventInput'
-import { dragActivationConstraint } from '../lib/dragActivation'
 import { useCalendarUrlState } from '../model/useCalendarUrlState'
 import { useCalendarFilters } from '../model/useCalendarFilters'
 import { useSwipePeriod } from '../model/useSwipePeriod'
+import { useApplyDrop } from '../model/useApplyDrop'
 import { formatPeriodLabel } from '../lib/periodLabel'
+import { CalendarDragLayer } from './CalendarDragLayer'
 import { MonthGrid } from './MonthGrid'
 import { WeekGrid } from './WeekGrid'
 import { DayAgenda } from './DayAgenda'
@@ -85,23 +84,7 @@ function CalendarPageContent() {
   const currentUserId = useAuth((state) => state.user?.id) ?? ''
   const joinEvent = useJoinEvent(spaceId)
   const leaveEvent = useLeaveEvent(spaceId)
-  const updateEvent = useUpdateEvent(spaceId)
-
-  // On a mouse a drag starts at once; on touch it takes a long press. Below that threshold the
-  // gesture belongs to the scroller and to the swipe handler — which is what keeps a calendar
-  // scrollable and swipeable while its chips are still draggable.
-  const pointerIsFine = usePointerIsFine()
-  const sensors = useSensors(useSensor(PointerSensor, {
-    activationConstraint: dragActivationConstraint(pointerIsFine),
-  }))
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const targetDay = String(event.over?.id ?? '').replace('day:', '')
-    const dragged = event.active.data.current?.occurrence as CalendarOccurrence | undefined
-    if (!targetDay || !dragged || targetDay === dragged.startDate) return
-    if (dragged.source !== 'EVENT') return
-    updateEvent.mutate({ eventId: dragged.sourceId, input: rescheduledInput(dragged, targetDay) })
-  }
+  const { apply: applyDrop, failed: dropFailed, dismissFailure } = useApplyDrop(spaceId)
 
   const swipe = useSwipePeriod(shiftPeriod)
 
@@ -235,23 +218,30 @@ function CalendarPageContent() {
       </div>
 
       {isError && <Alert variant="error" className="mb-4">{t('error')}</Alert>}
+      {dropFailed && (
+        <Alert variant="error" className="mb-4" onDismiss={dismissFailure} dismissLabel={t('form.cancel')}>
+          {t('drag.failed')}
+        </Alert>
+      )}
       {isPending && <div className="flex justify-center py-10"><Spinner /></div>}
 
       {!isPending && !isError && (
         <div className="rounded-2xl border border-border bg-bg-1 p-1 md:p-2" {...swipe.handlers}>
-          {view === 'month' && (
-            <DndContext sensors={sensors} onDragStart={swipe.cancel} onDragEnd={handleDragEnd}>
+          <CalendarDragLayer enabled={canWriteHere} view={view} onShift={shiftPeriod}
+            onDragStart={swipe.cancel} onApply={(o, change) => { void applyDrop(o, change) }}>
+            {view === 'month' && (
               <MonthGrid date={date} occurrences={occurrences} today={today} canWrite={canWriteHere}
                 onSelectDay={setSelectedDay} onSelectOccurrence={setSelectedOccurrence} />
-            </DndContext>
-          )}
-          {view === 'week' && (
-            <WeekGrid date={date} occurrences={occurrences} today={today}
-              onSelectDay={setSelectedDay} onSelectOccurrence={setSelectedOccurrence} />
-          )}
-          {view === 'day' && (
-            <DayAgenda date={date} occurrences={occurrences} onSelectOccurrence={setSelectedOccurrence} />
-          )}
+            )}
+            {view === 'week' && (
+              <WeekGrid date={date} occurrences={occurrences} today={today} canWrite={canWriteHere}
+                onSelectDay={setSelectedDay} onSelectOccurrence={setSelectedOccurrence} />
+            )}
+            {view === 'day' && (
+              <DayAgenda date={date} occurrences={occurrences} canWrite={canWriteHere}
+                onSelectOccurrence={setSelectedOccurrence} />
+            )}
+          </CalendarDragLayer>
         </div>
       )}
 

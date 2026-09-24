@@ -141,6 +141,15 @@
     "save_failed": "Adding failed."
   },
   "drag": {
-    "failed": "The move could not be saved."
+    "failed": "The move could not be saved.",
+    "duration": "{{hours}}h {{minutes}}m",
+    "next_month": "Next month →",
+    "prev_month": "← Previous month",
+    "next_week": "Next week →",
+    "prev_week": "← Previous week",
+    "next_day": "Next day →",
+    "prev_day": "← Previous day",
+    "next_week_vertical": "Next week ↓",
+    "prev_week_vertical": "↑ Previous week"
   }
 }

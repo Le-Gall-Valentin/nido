@@ -9,6 +9,8 @@ interface DayAgendaProps {
   date: string
   occurrences: CalendarOccurrence[]
   onSelectOccurrence: (occurrence: CalendarOccurrence) => void
+  /** Off for a viewer: nothing they drag could be saved. */
+  canWrite?: boolean
 }
 
 /**
