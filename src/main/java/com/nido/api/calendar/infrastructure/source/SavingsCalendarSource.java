@@ -44,6 +44,6 @@ public class SavingsCalendarSource implements CalendarSource {
         LocalDate date = goal.targetDate();
         return new CalendarOccurrence(
             CalendarSourceType.SAVINGS, goal.id().toString(), null, null, true,
-            goal.name(), true, date, null, date, null, null, List.of());
+            goal.name(), null, null, true, date, null, date, null, null, List.of());
     }
 }

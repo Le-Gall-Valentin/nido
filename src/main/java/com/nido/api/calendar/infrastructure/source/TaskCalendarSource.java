@@ -48,14 +48,14 @@ public class TaskCalendarSource implements CalendarSource {
             }
             produced.add(new CalendarOccurrence(
                 CalendarSourceType.TASK, task.id().toString(), task.recurringSeriesId(), null, true,
-                task.title(), true, dueDate, null, dueDate, null, null, task.assigneeIds()));
+                task.title(), null, null, true, dueDate, null, dueDate, null, null, task.assigneeIds()));
         }
         for (ProjectedTaskOccurrence projected : projectRecurringTasksUseCase.project(caller, from, to)) {
             produced.add(new CalendarOccurrence(
                 CalendarSourceType.TASK,
                 CalendarOccurrence.projectedId(projected.seriesId(), projected.dueDate()),
                 projected.seriesId(), projected.dueDate(), false,
-                projected.title(), true,
+                projected.title(), null, null, true,
                 projected.dueDate(), null, projected.dueDate(), null, null, List.of()));
         }
         return produced;

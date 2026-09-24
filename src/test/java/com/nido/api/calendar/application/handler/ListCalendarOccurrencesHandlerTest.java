@@ -102,11 +102,11 @@ class ListCalendarOccurrencesHandlerTest {
 
     private static CalendarOccurrence allDay(String title, LocalDate date) {
         return new CalendarOccurrence(CalendarSourceType.MEAL, UUID.randomUUID().toString(), null, null,
-            true, title, true, date, null, date, null, null, List.of());
+            true, title, null, null, true, date, null, date, null, null, List.of());
     }
 
     private static CalendarOccurrence timed(String title, LocalDate date, LocalTime time) {
         return new CalendarOccurrence(CalendarSourceType.EVENT, UUID.randomUUID().toString(), null, null,
-            true, title, false, date, time, date, time.plusHours(1), null, List.of());
+            true, title, null, null, false, date, time, date, time.plusHours(1), null, List.of());
     }
 }

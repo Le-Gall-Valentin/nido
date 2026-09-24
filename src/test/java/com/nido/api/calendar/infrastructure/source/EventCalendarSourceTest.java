@@ -87,6 +87,21 @@ class EventCalendarSourceTest {
     }
 
     @Test
+    void carriesAStoredEventsDescriptionAndLocation() {
+        CalendarEvent stored = new CalendarEvent(UUID.randomUUID(), spaceId, "Concert", "Apporter les billets",
+            "Salle Pleyel", true, LocalDate.of(2026, 1, 2), null, LocalDate.of(2026, 1, 2), null,
+            null, List.of(), null, null, UUID.randomUUID(), Instant.now());
+        when(events.findBySpaceIdOverlapping(eq(spaceId), any(), any())).thenReturn(List.of(stored));
+        when(series.findBySpaceId(spaceId)).thenReturn(List.of());
+
+        CalendarOccurrence produced =
+            source.occurrencesBetween(caller, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 7)).getFirst();
+
+        assertThat(produced.description()).isEqualTo("Apporter les billets");
+        assertThat(produced.location()).isEqualTo("Salle Pleyel");
+    }
+
+    @Test
     void reportsItselfAsTheEventSource() {
         assertThat(source.type()).isEqualTo(CalendarSourceType.EVENT);
     }

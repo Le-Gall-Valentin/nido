@@ -122,6 +122,22 @@ class EventRecurrenceProjectorTest {
             .containsExactly(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 12));
     }
 
+    @Test
+    void carriesTheSeriesDescriptionAndLocationIntoEachOccurrence() {
+        // Editing an occurrence starts from what the feed says it is. Without these two fields the
+        // form opened empty and saving wiped them — a silent loss the reader never asked for.
+        RecurringEventSeries series = new RecurringEventSeries(
+            SERIES_ID, UUID.randomUUID(), "Piano", "Apporter la partition", "Conservatoire", false,
+            LocalTime.of(18, 0), LocalTime.of(19, 0), 0, null,
+            RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 1, 6), null, List.of(), UUID.randomUUID(), Instant.now());
+
+        CalendarOccurrence first = EventRecurrenceProjector.project(
+            series, Set.of(), Set.of(), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 7)).getFirst();
+
+        assertThat(first.description()).isEqualTo("Apporter la partition");
+        assertThat(first.location()).isEqualTo("Conservatoire");
+    }
+
     private RecurringEventSeries weekly(LocalDate anchor, LocalDate end, int durationDays) {
         return series(RecurrenceInterval.WEEKLY, anchor, end, durationDays);
     }

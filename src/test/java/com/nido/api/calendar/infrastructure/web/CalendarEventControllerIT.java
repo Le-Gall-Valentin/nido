@@ -125,6 +125,22 @@ class CalendarEventControllerIT {
     }
 
     @Test
+    void the_feed_carries_description_and_location_so_an_edit_cannot_erase_them() throws Exception {
+        // The edit form and drag-to-reschedule both rebuild the event from the feed. When the feed
+        // left these two fields out, opening an event and saving it untouched wiped both.
+        mockMvc.perform(post(events())
+                .cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Concert","description":"Apporter les billets","location":"Salle Pleyel",
+                     "allDay":true,"startDate":"2026-03-02","endDate":"2026-03-02"}"""))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get(occurrences() + "?from=2026-03-01&to=2026-03-31").cookie(tokenFor(aliceId)))
+            .andExpect(jsonPath("$[0].description").value("Apporter les billets"))
+            .andExpect(jsonPath("$[0].location").value("Salle Pleyel"));
+    }
+
+    @Test
     void a_viewer_cannot_create_an_event() throws Exception {
         mockMvc.perform(post(events())
                 .cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)

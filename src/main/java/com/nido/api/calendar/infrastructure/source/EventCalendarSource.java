@@ -49,7 +49,7 @@ public class EventCalendarSource implements CalendarSource {
             produced.add(new CalendarOccurrence(
                 CalendarSourceType.EVENT, event.id().toString(),
                 event.recurringSeriesId(), event.recurringOriginalDate(), true,
-                event.title(), event.allDay(),
+                event.title(), event.description(), event.location(), event.allDay(),
                 event.startDate(), event.startTime(), event.endDate(), event.endTime(),
                 event.color(), event.participantIds()));
         }

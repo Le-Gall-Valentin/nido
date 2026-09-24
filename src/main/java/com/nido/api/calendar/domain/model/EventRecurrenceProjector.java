@@ -90,7 +90,7 @@ public final class EventRecurrenceProjector {
             }
             produced.add(new CalendarOccurrence(
                 CalendarSourceType.EVENT, CalendarOccurrence.projectedId(series.id(), slot),
-                series.id(), slot, false, series.title(), series.allDay(),
+                series.id(), slot, false, series.title(), series.description(), series.location(), series.allDay(),
                 slot, series.startTime(), slot.plusDays(series.durationDays()), series.endTime(),
                 series.color(), series.participantIds()));
         }

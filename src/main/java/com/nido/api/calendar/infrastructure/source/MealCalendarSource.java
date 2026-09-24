@@ -40,6 +40,6 @@ public class MealCalendarSource implements CalendarSource {
         String title = view.recipe() == null ? "—" : view.recipe().name();
         return new CalendarOccurrence(
             CalendarSourceType.MEAL, view.entry().id().toString(), null, null, true,
-            title, true, date, null, date, null, null, List.of());
+            title, null, null, true, date, null, date, null, null, List.of());
     }
 }

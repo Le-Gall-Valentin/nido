@@ -47,7 +47,7 @@ public class FinanceCalendarSource implements CalendarSource {
             produced.add(new CalendarOccurrence(
                 CalendarSourceType.FINANCE, transaction.id().toString(),
                 transaction.recurringSeriesId(), transaction.date(), true,
-                transaction.label(), true,
+                transaction.label(), null, null, true,
                 transaction.date(), null, transaction.date(), null, null, List.of()));
         }
         for (ProjectedOccurrence projected : projectRecurringSeriesUseCase.project(caller, from, to)) {
@@ -55,7 +55,7 @@ public class FinanceCalendarSource implements CalendarSource {
                 CalendarSourceType.FINANCE,
                 CalendarOccurrence.projectedId(projected.seriesId(), projected.date()),
                 projected.seriesId(), projected.date(), false,
-                projected.label(), true,
+                projected.label(), null, null, true,
                 projected.date(), null, projected.date(), null, null, List.of()));
         }
         return produced;
