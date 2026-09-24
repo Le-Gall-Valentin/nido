@@ -64,10 +64,27 @@ class ProjectRecurringSeriesHandlerTest {
     }
 
     @Test
+    void neverProjectsADateTheSeriesAlreadyTurnedIntoATransaction() {
+        // Jan 15 to Mar 15 are real transactions by now, and the calendar lists them as such.
+        // Projecting them as well showed every past occurrence, and today's, twice.
+        RecurringTransactionSeries rent = materializedUpTo(monthlyOn(LocalDate.of(2026, 1, 15)), LocalDate.of(2026, 3, 15));
+        when(series.findActiveBySpaceId(eq(spaceId), any())).thenReturn(List.of(rent));
+
+        assertThat(handler.project(caller, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 4, 30)))
+            .extracting(ProjectedOccurrence::date)
+            .containsExactly(LocalDate.of(2026, 4, 15));
+    }
+
+    @Test
     void returnsNothingWhenTheSpaceHasNoActiveSeries() {
         when(series.findActiveBySpaceId(eq(spaceId), any())).thenReturn(List.of());
 
         assertThat(handler.project(caller, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31))).isEmpty();
+    }
+
+    private RecurringTransactionSeries materializedUpTo(RecurringTransactionSeries s, LocalDate lastMaterialized) {
+        return new RecurringTransactionSeries(s.id(), s.spaceId(), s.label(), s.amount(), s.type(), s.categoryId(),
+            s.payerId(), s.contributors(), s.intervalType(), s.intervalCount(), s.anchorDate(), s.endDate(), lastMaterialized);
     }
 
     private RecurringTransactionSeries monthlyOn(LocalDate anchor) {

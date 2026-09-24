@@ -30,9 +30,19 @@ public class ProjectRecurringSeriesHandler implements ProjectRecurringSeriesUseC
     public List<ProjectedOccurrence> project(SpaceMembership caller, LocalDate from, LocalDate to) {
         List<ProjectedOccurrence> upcoming = new ArrayList<>();
         for (RecurringTransactionSeries series : seriesRepository.findActiveBySpaceId(caller.spaceId(), from)) {
+            // Every date up to the cursor is already a real transaction, which the calendar lists on
+            // its own; projecting those too showed each past occurrence, and today's, twice. Only
+            // what the series has not accounted for yet is projected — the cursor, not "today",
+            // so a date that is due but not materialized yet still shows, once.
+            LocalDate firstUnaccounted = series.lastMaterializedDate() == null
+                ? series.anchorDate() : series.lastMaterializedDate().plusDays(1);
+            LocalDate windowStart = from.isAfter(firstUnaccounted) ? from : firstUnaccounted;
+            if (windowStart.isAfter(to)) {
+                continue;
+            }
             for (LocalDate date : RecurrenceProjector.occurrencesBetween(
                     series.anchorDate(), series.intervalType(), series.intervalCount(), series.endDate(),
-                    from, to, MAX_PROJECTED_OCCURRENCES_PER_SERIES)) {
+                    windowStart, to, MAX_PROJECTED_OCCURRENCES_PER_SERIES)) {
                 upcoming.add(new ProjectedOccurrence(
                     series.id(), series.label(), series.amount(), series.type(), date));
             }
