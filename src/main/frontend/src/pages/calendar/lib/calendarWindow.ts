@@ -90,7 +90,12 @@ export function groupByDay(
   const inWindow = new Set(days)
   const grouped = new Map<string, CalendarOccurrence[]>()
   for (const occurrence of occurrences) {
-    const span = Math.max(0, daysBetween(occurrence.startDate, occurrence.endDate))
+    // An end at exactly 00:00 belongs to the day before — the same rule as segments.ts, inlined
+    // here because segments.ts depends on this module.
+    const endsAtMidnight = !occurrence.allDay && occurrence.endTime !== null
+      && occurrence.endTime.startsWith('00:00') && occurrence.endDate > occurrence.startDate
+    const lastDay = endsAtMidnight ? addDays(occurrence.endDate, -1) : occurrence.endDate
+    const span = Math.max(0, daysBetween(occurrence.startDate, lastDay))
     for (let i = 0; i <= span; i++) {
       const day = addDays(occurrence.startDate, i)
       if (!inWindow.has(day)) continue

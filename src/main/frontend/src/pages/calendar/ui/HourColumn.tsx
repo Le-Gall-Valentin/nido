@@ -1,6 +1,7 @@
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { tintClassFor } from '../lib/sourceAppearance'
-import { HOUR_HEIGHT, timeToMinutes } from '../lib/timeMath'
+import { segmentFor } from '../lib/segments'
+import { HOUR_HEIGHT } from '../lib/timeMath'
 
 export { HOUR_HEIGHT } from '../lib/timeMath'
 
@@ -8,26 +9,28 @@ export { HOUR_HEIGHT } from '../lib/timeMath'
 const MIN_BLOCK_HEIGHT = 20
 
 interface HourColumnProps {
+  /** The day this column draws: an overnight event shows only its own piece of it. */
+  day: string
   /** Timed occurrences of one day, already filtered. */
   occurrences: CalendarOccurrence[]
   onSelectOccurrence: (occurrence: CalendarOccurrence) => void
 }
 
 /** One day's timed occurrences, positioned by the hour. */
-export function HourColumn({ occurrences, onSelectOccurrence }: HourColumnProps) {
+export function HourColumn({ day, occurrences, onSelectOccurrence }: HourColumnProps) {
   return (
     <div className="relative" style={{ height: `${24 * HOUR_HEIGHT}px` }}>
       {Array.from({ length: 24 }, (_, hour) => (
         <div key={hour} className="border-b border-border/60" style={{ height: `${HOUR_HEIGHT}px` }} />
       ))}
       {occurrences.map((occurrence) => {
-        const start = occurrence.startTime ? timeToMinutes(occurrence.startTime) : 0
-        const end = occurrence.endTime ? timeToMinutes(occurrence.endTime) : start
-        const top = (start / 60) * HOUR_HEIGHT
-        const height = Math.max(MIN_BLOCK_HEIGHT, ((end - start) / 60) * HOUR_HEIGHT)
+        const segment = segmentFor(occurrence, day)
+        if (!segment) return null
+        const top = (segment.startMinutes / 60) * HOUR_HEIGHT
+        const height = Math.max(MIN_BLOCK_HEIGHT, ((segment.endMinutes - segment.startMinutes) / 60) * HOUR_HEIGHT)
         return (
           <button
-            key={occurrence.sourceId}
+            key={`${occurrence.sourceId}-${day}`}
             type="button"
             onClick={() => onSelectOccurrence(occurrence)}
             style={{ top: `${top}px`, height: `${height}px` }}

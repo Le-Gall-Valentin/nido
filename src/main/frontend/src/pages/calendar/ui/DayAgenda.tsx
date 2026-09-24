@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay } from '../lib/calendarWindow'
+import { isBandOccurrence } from '../lib/segments'
 import { AllDayBand } from './AllDayBand'
 import { HourColumn, HourGutter } from './HourColumn'
 
@@ -17,12 +18,12 @@ interface DayAgendaProps {
 export function DayAgenda({ date, occurrences, onSelectOccurrence }: DayAgendaProps) {
   const { t } = useTranslation('calendar')
   const dayOccurrences = groupByDay(occurrences, [date]).get(date) ?? []
-  const timed = dayOccurrences.filter((o) => !o.allDay)
+  const timed = dayOccurrences.filter((o) => !isBandOccurrence(o))
 
   return (
     <div className="rounded-2xl border border-border bg-bg-1">
       <AllDayBand
-        occurrences={dayOccurrences.filter((o) => o.allDay)}
+        occurrences={dayOccurrences.filter(isBandOccurrence)}
         onSelectOccurrence={onSelectOccurrence}
       />
       {dayOccurrences.length === 0 && (
@@ -32,7 +33,7 @@ export function DayAgenda({ date, occurrences, onSelectOccurrence }: DayAgendaPr
         <div className="flex max-h-[65vh] overflow-y-auto">
           <HourGutter />
           <div className="flex-1 border-l border-border">
-            <HourColumn occurrences={timed} onSelectOccurrence={onSelectOccurrence} />
+            <HourColumn day={date} occurrences={timed} onSelectOccurrence={onSelectOccurrence} />
           </div>
         </div>
       )}

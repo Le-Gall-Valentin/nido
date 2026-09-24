@@ -120,4 +120,13 @@ describe('groupByDay', () => {
   it('returns nothing for a day with no occurrence', () => {
     expect(groupByDay([], ['2026-01-05']).get('2026-01-05')).toBeUndefined()
   })
+
+  it('does not show an event ending at exactly midnight on the day after', () => {
+    // A 22:00 → 00:00 evening used to appear on two days in the month view.
+    const evening = occurrence({ allDay: false, startDate: '2026-09-23', startTime: '22:00',
+      endDate: '2026-09-24', endTime: '00:00' })
+    const grouped = groupByDay([evening], ['2026-09-23', '2026-09-24'])
+    expect(grouped.get('2026-09-23')).toEqual([evening])
+    expect(grouped.get('2026-09-24')).toBeUndefined()
+  })
 })

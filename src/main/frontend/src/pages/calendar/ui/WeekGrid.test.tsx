@@ -78,6 +78,14 @@ describe('WeekGrid', () => {
     const { container } = renderWeek([timed('Piano', '18:00', '19:00')])
     expect(container.querySelector('[data-testid="all-day-band"]')).toBeNull()
   })
+
+  it('draws the second half of an overnight event from midnight', () => {
+    renderWeek([occurrence({ title: 'Soirée', allDay: false, startDate: '2026-01-06', startTime: '22:00',
+      endDate: '2026-01-07', endTime: '02:00' })])
+    const tops = screen.getAllByRole('button', { name: /Soirée/ })
+      .filter((el) => el.style.top !== '').map((el) => el.style.top).sort()
+    expect(tops).toEqual(['0px', '1320px'])
+  })
 })
 
 describe('DayAgenda', () => {

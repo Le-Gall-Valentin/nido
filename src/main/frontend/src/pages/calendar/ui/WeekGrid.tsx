@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay, weekDates } from '../lib/calendarWindow'
+import { isBandOccurrence } from '../lib/segments'
 import { tintClassFor } from '../lib/sourceAppearance'
 import { AllDayBand } from './AllDayBand'
 import { HourColumn, HourGutter } from './HourColumn'
@@ -101,7 +102,7 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
           <div className="w-10 shrink-0" />
           <div className="flex-1">
             <AllDayBand
-              occurrences={days.flatMap((day) => (byDay.get(day) ?? []).filter((o) => o.allDay))}
+              occurrences={days.flatMap((day) => (byDay.get(day) ?? []).filter(isBandOccurrence))}
               onSelectOccurrence={onSelectOccurrence}
             />
           </div>
@@ -112,7 +113,8 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
           {days.map((day) => (
             <div key={day} className="flex-1 border-l border-border">
               <HourColumn
-                occurrences={(byDay.get(day) ?? []).filter((o) => !o.allDay)}
+                day={day}
+                occurrences={(byDay.get(day) ?? []).filter((o) => !isBandOccurrence(o))}
                 onSelectOccurrence={onSelectOccurrence}
               />
             </div>
