@@ -111,6 +111,15 @@ describe('WeekGrid', () => {
     expect(screen.getAllByTestId('resize-end')).toHaveLength(1)
   })
 
+  it('keeps resize handles out of the tab order and away from screen readers', () => {
+    // Two nameless "button" stops per event otherwise; the edit form is how they change times.
+    renderWeek([timed('Piano', '18:00', '19:00')])
+    for (const handle of [...screen.getAllByTestId('resize-start'), ...screen.getAllByTestId('resize-end')]) {
+      expect(handle.getAttribute('tabindex')).toBe('-1')
+      expect(handle.getAttribute('aria-hidden')).toBe('true')
+    }
+  })
+
   it('puts no resize handle under a finger', () => {
     mockPointerIsFine = false
     renderWeek([timed('Piano', '18:00', '19:00')])

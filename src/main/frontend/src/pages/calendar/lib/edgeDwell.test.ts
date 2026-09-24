@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { IDLE, horizontalZone, stepDwell, verticalZone, type DwellState } from './edgeDwell'
+import { IDLE, dragZone, horizontalZone, stepDwell, verticalZone, type DwellState } from './edgeDwell'
+import type { CalendarOccurrence } from '@/entities/calendar'
 
 function run(steps: Array<[zone: -1 | 0 | 1, now: number]>) {
   let state: DwellState = IDLE
@@ -33,12 +34,44 @@ describe('stepDwell', () => {
 
 describe('horizontalZone', () => {
   const rect = { left: 100, right: 900 }
-  it('arms within 32px of an edge and beyond it', () => {
-    expect(horizontalZone(880, rect)).toBe(1)
+  it('arms only once the pointer leaves the calendar by a side', () => {
+    expect(horizontalZone(900, rect)).toBe(1)
     expect(horizontalZone(1200, rect)).toBe(1)
-    expect(horizontalZone(120, rect)).toBe(-1)
+    expect(horizontalZone(100, rect)).toBe(-1)
     expect(horizontalZone(40, rect)).toBe(-1)
+  })
+
+  it('never arms over the calendar itself — aiming at a Sunday must not page the week', () => {
+    expect(horizontalZone(880, rect)).toBe(0)
+    expect(horizontalZone(120, rect)).toBe(0)
     expect(horizontalZone(500, rect)).toBe(0)
+  })
+})
+
+describe('dragZone', () => {
+  const occurrence = { source: 'EVENT', sourceId: 'e1', seriesId: null, originalDate: null, materialized: true,
+    title: 'x', description: null, location: null, allDay: false, startDate: '2026-09-23', startTime: '14:00',
+    endDate: '2026-09-23', endTime: '15:00', color: null, participantIds: [] } as CalendarOccurrence
+  const wide = { wide: true, container: { left: 100, right: 900 }, scroller: null }
+  const pastRight = { x: 950, y: 400 }
+
+  it('pages a move that leaves the calendar by a side, on a desktop', () => {
+    expect(dragZone({ kind: 'move', occurrence, from: 'grid', day: '2026-09-23' }, pastRight, wide)).toBe(1)
+  })
+
+  it('never pages a resize — it stretches an event within its own day', () => {
+    expect(dragZone({ kind: 'resize-end', occurrence }, pastRight, wide)).toBe(0)
+    expect(dragZone({ kind: 'resize-start', occurrence }, { x: 50, y: 400 }, wide)).toBe(0)
+  })
+
+  it('never pages sideways on a phone, where the day view only changes time', () => {
+    expect(dragZone({ kind: 'move', occurrence, from: 'grid', day: '2026-09-23' }, pastRight, { ...wide, wide: false })).toBe(0)
+  })
+
+  it('pages a phone-week row at the bottom once the list cannot scroll further', () => {
+    const scroller = { top: 0, bottom: 800, canScrollUp: true, canScrollDown: false }
+    expect(dragZone({ kind: 'move', occurrence, from: 'row', day: '2026-09-23' }, { x: 200, y: 790 },
+      { wide: false, container: null, scroller })).toBe(1)
   })
 })
 

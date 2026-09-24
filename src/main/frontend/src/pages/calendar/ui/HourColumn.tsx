@@ -44,7 +44,8 @@ export function HourColumn({ day, occurrences, canWrite, onSelectOccurrence }: H
         const segment = segmentFor(occurrence, day)
         return segment && (
           <GridBlock key={`${occurrence.sourceId}-${day}`} occurrence={occurrence} day={day}
-            segment={segment} canWrite={canWrite} onSelect={() => onSelectOccurrence(occurrence)} />
+            segment={segment} canWrite={canWrite} column={() => element.current}
+            onSelect={() => onSelectOccurrence(occurrence)} />
         )
       })}
     </div>
@@ -56,6 +57,8 @@ interface GridBlockProps {
   day: string
   segment: Segment
   canWrite: boolean
+  /** The column this piece sits in: the layer reads the grab time against its live top. */
+  column: () => HTMLElement | null
   onSelect: () => void
 }
 
@@ -64,12 +67,12 @@ interface GridBlockProps {
  * handles share its box; they sit only on the event's true start and true end, so an overnight
  * event is stretched from its first piece's top and its last piece's bottom — never from midnight.
  */
-function GridBlock({ occurrence, day, segment, canWrite, onSelect }: GridBlockProps) {
+function GridBlock({ occurrence, day, segment, canWrite, column, onSelect }: GridBlockProps) {
   const pointerIsFine = usePointerIsFine()
   const draggable = canWrite && isDraggable(occurrence)
   const move = useDraggable({
     id: `grid:${occurrence.sourceId}:${day}`, disabled: !draggable,
-    data: { intent: { kind: 'move', occurrence, from: 'grid' } } satisfies DragData,
+    data: { intent: { kind: 'move', occurrence, from: 'grid', day }, column } satisfies DragData,
   })
   const top = (segment.startMinutes / 60) * HOUR_HEIGHT
   const height = Math.max(MIN_BLOCK_HEIGHT, ((segment.endMinutes - segment.startMinutes) / 60) * HOUR_HEIGHT)
@@ -96,7 +99,9 @@ function ResizeHandle({ occurrence, edge }: { occurrence: CalendarOccurrence; ed
     data: { intent: { kind: edge === 'start' ? 'resize-start' : 'resize-end', occurrence } } satisfies DragData,
   })
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes} data-testid={`resize-${edge}`}
+    // A mouse target only: out of the tab order and hidden from screen readers, which reach the
+    // same change through the edit form.
+    <div ref={setNodeRef} {...listeners} {...attributes} tabIndex={-1} aria-hidden="true" data-testid={`resize-${edge}`}
       className={`absolute inset-x-1 z-10 h-1.5 cursor-ns-resize ${edge === 'start' ? 'top-0' : 'bottom-0'}`} />
   )
 }

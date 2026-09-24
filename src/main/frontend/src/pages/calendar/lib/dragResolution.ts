@@ -1,5 +1,6 @@
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { addDays, daysBetween } from './calendarWindow'
+import { effectiveEndDate } from './segments'
 import { DAY_MINUTES, minutesToTime, timeToMinutes } from './timeMath'
 import type { DragIntent, DropTarget, ScheduleChange } from './dragTypes'
 
@@ -24,14 +25,23 @@ function absolute(startDate: string, date: string, time: string): number {
   return daysBetween(startDate, date) * DAY_MINUTES + timeToMinutes(time)
 }
 
-/** A date and time from minutes past `day`'s midnight; exactly 24:00 reads as the next day at 00:00. */
+/**
+ * A date and time from minutes past `day`'s midnight, either way: exactly 24:00 reads as the next
+ * day at 00:00, and -60 as the day before at 23:00.
+ */
 function at(day: string, minutes: number): { date: string; time: string } {
-  return { date: addDays(day, Math.floor(minutes / DAY_MINUTES)), time: minutesToTime(minutes % DAY_MINUTES) }
+  const rest = ((minutes % DAY_MINUTES) + DAY_MINUTES) % DAY_MINUTES
+  return { date: addDays(day, Math.floor(minutes / DAY_MINUTES)), time: minutesToTime(rest) }
 }
 
-function shiftDays(o: CalendarOccurrence, day: string): ScheduleChange {
-  const current = scheduleOf(o)
-  return { ...current, startDate: day, endDate: addDays(day, daysBetween(o.startDate, o.endDate)) }
+/** The same schedule, `days` later (or earlier). */
+function shiftDays(o: CalendarOccurrence, days: number): ScheduleChange {
+  return { ...scheduleOf(o), startDate: addDays(o.startDate, days), endDate: addDays(o.endDate, days) }
+}
+
+/** How many days separate the grabbed piece from the day it was dropped on. */
+function dayShift(intent: DragIntent, target: DropTarget): number {
+  return daysBetween(intent.kind === 'move' ? intent.day : intent.occurrence.startDate, target.day)
 }
 
 function timedFrom(day: string, startMinutes: number, duration: number): ScheduleChange {
@@ -54,20 +64,32 @@ function decide(intent: DragIntent, target: DropTarget, pointerMinutes: number |
   const o = intent.occurrence
 
   // Tasks and meals have no time and never convert: any target only says which day.
-  if (o.source !== 'EVENT') return shiftDays(o, target.day)
+  if (o.source !== 'EVENT') return shiftDays(o, dayShift(intent, target))
 
   if (intent.kind === 'move') {
-    if (target.kind === 'day') return shiftDays(o, target.day)
+    const days = dayShift(intent, target)
+    if (target.kind === 'day') return shiftDays(o, days)
     if (target.kind === 'all-day') {
-      if (intent.from !== 'grid' || o.allDay) return shiftDays(o, target.day)
-      const span = daysBetween(o.startDate, o.endDate)
-      return { allDay: true, startDate: target.day, startTime: null, endDate: addDays(target.day, span), endTime: null }
+      if (intent.from !== 'grid' || o.allDay) return shiftDays(o, days)
+      // An end at 00:00 belongs to the day before: a 22:00 → 00:00 evening is a one-day event.
+      const startDate = addDays(o.startDate, days)
+      const span = daysBetween(o.startDate, effectiveEndDate(o))
+      return { allDay: true, startDate, startTime: null, endDate: addDays(startDate, span), endTime: null }
     }
     if (pointerMinutes === null) return null
-    const start = Math.min(pointerMinutes, DAY_MINUTES - MIN_DURATION_MINUTES)
-    if (o.allDay || !o.startTime || !o.endTime) return timedFrom(target.day, start, ONE_HOUR)
-    const duration = absolute(o.startDate, o.endDate, o.endTime) - timeToMinutes(o.startTime)
-    return timedFrom(target.day, start, duration)
+    if (o.allDay || !o.startTime || !o.endTime) {
+      return timedFrom(target.day, Math.min(pointerMinutes, DAY_MINUTES - MIN_DURATION_MINUTES), ONE_HOUR)
+    }
+    const startAbs = timeToMinutes(o.startTime)
+    const duration = absolute(o.startDate, o.endDate, o.endTime) - startAbs
+    if (intent.grabMinutes === undefined) {
+      // From the band (a timed event longer than a day): it starts where it is dropped.
+      return timedFrom(target.day, Math.min(pointerMinutes, DAY_MINUTES - MIN_DURATION_MINUTES), duration)
+    }
+    // From the grid: moved by exactly as far as the pointer travelled, so a start off the quarter
+    // hour keeps its minutes, and a block put back has not moved.
+    const moved = days * DAY_MINUTES + pointerMinutes - intent.grabMinutes
+    return timedFrom(o.startDate, startAbs + moved, duration)
   }
 
   // Resizing: only timed events carry handles.

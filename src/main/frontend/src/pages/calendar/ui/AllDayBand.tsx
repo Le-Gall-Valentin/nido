@@ -46,7 +46,7 @@ function BandItem({ occurrence, day, canWrite, onSelect }: {
   const draggable = canWrite && isDraggable(occurrence)
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
     id: `band:${occurrence.sourceId}:${day}`, disabled: !draggable,
-    data: { intent: { kind: 'move', occurrence, from: 'band' } } satisfies DragData,
+    data: { intent: { kind: 'move', occurrence, from: 'band', day } } satisfies DragData,
   })
   return (
     <button ref={draggable ? setNodeRef : undefined} {...(draggable ? listeners : {})} {...(draggable ? attributes : {})}

@@ -12,8 +12,10 @@ function base(overrides: Partial<CalendarOccurrence>): CalendarOccurrence {
 }
 const meeting = base({})
 const birthday = base({ allDay: true, startTime: null, endTime: null })
-const move = (occurrence: CalendarOccurrence, from: 'cell' | 'band' | 'grid' | 'row' = 'grid') =>
-  ({ kind: 'move' as const, occurrence, from })
+/** A move grabbed by its piece on `day` (its first day by default), at `grabMinutes` in the grid. */
+const move = (occurrence: CalendarOccurrence, from: 'cell' | 'band' | 'grid' | 'row' = 'grid',
+  day: string = occurrence.startDate, grabMinutes?: number) =>
+  ({ kind: 'move' as const, occurrence, from, day, grabMinutes })
 
 describe('resolveDrop — moving to another day', () => {
   it('keeps the time and the duration', () => {
@@ -113,5 +115,58 @@ describe('resolveDrop — resizing', () => {
     const party = base({ startDate: '2026-09-23', startTime: '22:00', endDate: '2026-09-24', endTime: '02:00' })
     expect(resolveDrop({ kind: 'resize-end', occurrence: party }, { kind: 'hours', day: '2026-09-24' }, 3 * 60))
       .toMatchObject({ endDate: '2026-09-24', endTime: '03:00', startTime: '22:00' })
+  })
+})
+
+describe('resolveDrop — anchored on the piece that was grabbed', () => {
+  const trip = base({ allDay: true, startTime: null, endTime: null, startDate: '2026-09-21', endDate: '2026-09-25' })
+  const party = base({ startDate: '2026-09-23', startTime: '22:00', endDate: '2026-09-24', endTime: '02:00' })
+
+  it('writes nothing when a trip is put back on the day it was grabbed by', () => {
+    // A Mon–Fri trip grabbed by its Wednesday and put back used to move two days.
+    for (const from of ['cell', 'band', 'row'] as const) {
+      expect(resolveDrop(move(trip, from, '2026-09-23'), { kind: 'day', day: '2026-09-23' }, null)).toBeNull()
+    }
+    expect(resolveDrop(move(trip, 'band', '2026-09-23'), { kind: 'all-day', day: '2026-09-23' }, null)).toBeNull()
+  })
+
+  it('moves a trip by the days between the grabbed piece and the drop', () => {
+    expect(resolveDrop(move(trip, 'cell', '2026-09-23'), { kind: 'day', day: '2026-09-24' }, null))
+      .toMatchObject({ startDate: '2026-09-22', endDate: '2026-09-26' })
+  })
+
+  it('moves an overnight event by its second piece: an hour down is an hour later', () => {
+    expect(resolveDrop(move(party, 'grid', '2026-09-24', 60), { kind: 'hours', day: '2026-09-24' }, 120)).toEqual({
+      allDay: false, startDate: '2026-09-23', startTime: '23:00', endDate: '2026-09-24', endTime: '03:00',
+    })
+  })
+
+  it('writes nothing when an overnight event is put back from its second piece', () => {
+    expect(resolveDrop(move(party, 'grid', '2026-09-24', 60), { kind: 'hours', day: '2026-09-24' }, 60)).toBeNull()
+    expect(resolveDrop(move(party, 'cell', '2026-09-24'), { kind: 'day', day: '2026-09-24' }, null)).toBeNull()
+  })
+
+  it('moves a block by how far the pointer travelled, keeping a start off the quarter hour', () => {
+    const odd = base({ startTime: '14:10', endTime: '15:00' })
+    // Grabbed at 14:15, dropped an hour lower on the next day.
+    expect(resolveDrop(move(odd, 'grid', '2026-09-23', 855), { kind: 'hours', day: '2026-09-24' }, 915)).toEqual({
+      allDay: false, startDate: '2026-09-24', startTime: '15:10', endDate: '2026-09-24', endTime: '16:00',
+    })
+    expect(resolveDrop(move(odd, 'grid', '2026-09-23', 855), { kind: 'hours', day: '2026-09-23' }, 855)).toBeNull()
+  })
+
+  it('carries a block up past midnight into the day before', () => {
+    const early = base({ startDate: '2026-09-24', startTime: '00:00', endDate: '2026-09-24', endTime: '01:00' })
+    // Grabbed at 00:30, dropped on the previous day's column at 23:30.
+    expect(resolveDrop(move(early, 'grid', '2026-09-24', 30), { kind: 'hours', day: '2026-09-23' }, 1410)).toEqual({
+      allDay: false, startDate: '2026-09-23', startTime: '23:00', endDate: '2026-09-24', endTime: '00:00',
+    })
+  })
+
+  it('turns an evening ending at midnight into a one-day all-day event, not two', () => {
+    const evening = base({ startTime: '22:00', endDate: '2026-09-24', endTime: '00:00' })
+    expect(resolveDrop(move(evening, 'grid'), { kind: 'all-day', day: '2026-09-25' }, null)).toEqual({
+      allDay: true, startDate: '2026-09-25', startTime: null, endDate: '2026-09-25', endTime: null,
+    })
   })
 })

@@ -148,7 +148,7 @@ function PhoneRow({ occurrence, day, canWrite, label, onSelect }: {
   const draggable = canWrite && isDraggable(occurrence)
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
     id: `row:${occurrence.sourceId}:${day}`, disabled: !draggable,
-    data: { intent: { kind: 'move', occurrence, from: 'row' } } satisfies DragData,
+    data: { intent: { kind: 'move', occurrence, from: 'row', day } } satisfies DragData,
   })
   return (
     <button ref={draggable ? setNodeRef : undefined} {...(draggable ? listeners : {})} {...(draggable ? attributes : {})}

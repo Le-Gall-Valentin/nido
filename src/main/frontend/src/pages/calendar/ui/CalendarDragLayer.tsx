@@ -7,8 +7,8 @@ import type { CalendarOccurrence } from '@/entities/calendar'
 import type { CalendarView } from '../lib/calendarWindow'
 import type { DragData, DragIntent, DropData, ScheduleChange } from '../lib/dragTypes'
 import { resolveDrop } from '../lib/dragResolution'
-import { horizontalZone, verticalZone, type Zone } from '../lib/edgeDwell'
-import { HOUR_HEIGHT, minutesAt, snap } from '../lib/timeMath'
+import { dragZone, type Zone } from '../lib/edgeDwell'
+import { minutesAt } from '../lib/timeMath'
 import { useEdgeNavigation } from '../model/useEdgeNavigation'
 import { useWideLayout } from '../model/useWideLayout'
 import { DragGhost } from './DragGhost'
@@ -65,7 +65,6 @@ export function CalendarDragLayer({ enabled, view, onShift, onDragStart, onApply
   const container = useRef<HTMLDivElement>(null)
   const [intent, setIntent] = useState<DragIntent | null>(null)
   const [preview, setPreview] = useState<ScheduleChange | null>(null)
-  const grabOffset = useRef(0)
   const vertical = intent?.kind === 'move' && intent.from === 'row'
 
   // The pointer itself, read from the input events. dnd-kit's `delta` adds whatever its scrollers
@@ -100,49 +99,46 @@ export function CalendarDragLayer({ enabled, view, onShift, onDragStart, onApply
   }
   const edges = useEdgeNavigation(shift)
 
-  const minutesFor = (event: DragMoveEvent | DragEndEvent, current: DragIntent): number | null => {
+  const minutesFor = (event: DragMoveEvent | DragEndEvent): number | null => {
     const data = event.over?.data.current as DropData | undefined
     const column = data?.column?.()
     if (!column) return null
-    const minutes = minutesAt(pointer.current.y, column.getBoundingClientRect().top)
-    return current.kind === 'move' ? Math.max(0, minutes - grabOffset.current) : minutes
+    return minutesAt(pointer.current.y, column.getBoundingClientRect().top)
   }
 
   const zoneFor = (current: DragIntent): Zone => {
-    const { x, y } = pointer.current
-    if (current.kind === 'move' && current.from === 'row') {
-      const scroller = scrollParentOf(container.current)
-      if (!scroller) return 0
-      const rect = scroller.getBoundingClientRect()
-      return verticalZone(y, rect, scroller.scrollTop > 0,
-        scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1)
-    }
-    // The phone day view only changes time; a finger near the side of a narrow screen must not flip days.
-    if (!wide || !container.current) return 0
-    return horizontalZone(x, container.current.getBoundingClientRect())
+    const scroller = current.kind === 'move' && current.from === 'row' ? scrollParentOf(container.current) : null
+    const scrollerRect = scroller?.getBoundingClientRect()
+    return dragZone(current, pointer.current, {
+      wide,
+      container: container.current?.getBoundingClientRect() ?? null,
+      scroller: scroller && scrollerRect ? {
+        top: scrollerRect.top, bottom: scrollerRect.bottom, canScrollUp: scroller.scrollTop > 0,
+        canScrollDown: scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 1,
+      } : null,
+    })
   }
 
   const handleStart = (event: DragStartEvent) => {
     const data = event.active.data.current as DragData | undefined
     if (!data) return
     onDragStart()
-    setIntent(data.intent)
-    setPreview(null)
     const start = startPoint(event.activatorEvent)
     trackPointer(start)
-    // Grabbing a two-hour block by its middle must not make it jump so its top meets the pointer.
-    // Measured on the grabbed element: dnd-kit has not measured its own rect yet at this point.
-    const grabbed = (event.activatorEvent.target as Element | null)?.closest('[data-draggable]')
-    const top = grabbed?.getBoundingClientRect().top
-    grabOffset.current = data.intent.kind === 'move' && data.intent.from === 'grid' && top !== undefined
-      ? snap(((start.y - top) / HOUR_HEIGHT) * 60) : 0
+    // A grid block moves by as far as the pointer travels from where it grabbed the block — so
+    // grabbing a two-hour block by its middle never makes it jump, and putting it back is no move.
+    const column = data.column?.()
+    setIntent(data.intent.kind === 'move' && column
+      ? { ...data.intent, grabMinutes: minutesAt(start.y, column.getBoundingClientRect().top) }
+      : data.intent)
+    setPreview(null)
   }
 
   const handleMove = (event: DragMoveEvent) => {
     if (!intent) return
     edges.update(zoneFor(intent))
     const data = event.over?.data.current as DropData | undefined
-    setPreview(data ? resolveDrop(intent, data.target, minutesFor(event, intent)) : null)
+    setPreview(data ? resolveDrop(intent, data.target, minutesFor(event)) : null)
   }
 
   const finish = () => { edges.stop(); stopTracking.current?.(); setIntent(null); setPreview(null) }
@@ -150,7 +146,7 @@ export function CalendarDragLayer({ enabled, view, onShift, onDragStart, onApply
   const handleEnd = (event: DragEndEvent) => {
     const current = intent
     const data = event.over?.data.current as DropData | undefined
-    const minutes = current ? minutesFor(event, current) : null
+    const minutes = minutesFor(event)
     finish()
     if (!current || !data) return
     const change = resolveDrop(current, data.target, minutes)

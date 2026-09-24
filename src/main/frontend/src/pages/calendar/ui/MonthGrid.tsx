@@ -97,6 +97,7 @@ export function MonthGrid({
                   <OccurrenceChip
                     key={`${occurrence.sourceId}-${day}`}
                     occurrence={occurrence}
+                    day={day}
                     canWrite={canWrite}
                     onSelect={() => onSelectOccurrence(occurrence)}
                   />
@@ -135,6 +136,8 @@ function DayCell({ day, canWrite, children }: { day: string; canWrite: boolean; 
 
 interface ChipProps {
   occurrence: CalendarOccurrence
+  /** The cell this chip sits in: a multi-day event has one chip per day, each its own handle. */
+  day: string
   canWrite: boolean
   onSelect: () => void
 }
@@ -144,12 +147,13 @@ interface ChipProps {
  * rewrite — see isDraggable. Everything else keeps a normal cursor, so the affordance never
  * promises something the drop would refuse.
  */
-function OccurrenceChip({ occurrence, canWrite, onSelect }: ChipProps) {
+function OccurrenceChip({ occurrence, day, canWrite, onSelect }: ChipProps) {
   const draggable = canWrite && isDraggable(occurrence)
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: `cell:${occurrence.sourceId}`,
+  // Keyed by day too: dnd-kit needs one id per handle, and a trip shows a chip on every day.
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `cell:${occurrence.sourceId}:${day}`,
     disabled: !draggable,
-    data: { intent: { kind: 'move', occurrence, from: 'cell' } } satisfies DragData,
+    data: { intent: { kind: 'move', occurrence, from: 'cell', day } } satisfies DragData,
   })
 
   return (
@@ -159,14 +163,13 @@ function OccurrenceChip({ occurrence, canWrite, onSelect }: ChipProps) {
       {...(draggable ? attributes : undefined)}
       type="button"
       data-draggable={draggable || undefined}
-      style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
       onClick={(event) => {
         // The cell behind this chip opens the day. Without this the click would do both.
         event.stopPropagation()
         onSelect()
       }}
       className={`relative z-10 flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] text-fg-1 hover:bg-bg-2
-        ${draggable ? 'touch-none cursor-grab active:cursor-grabbing' : ''}`}
+        ${draggable ? 'touch-manipulation cursor-grab active:cursor-grabbing' : ''} ${isDragging ? 'opacity-40' : ''}`}
     >
       <span className={`size-1.5 shrink-0 rounded-full ${dotClassFor(occurrence)}`} />
       {!occurrence.allDay && occurrence.startTime && (

@@ -128,6 +128,14 @@ describe('MonthGrid', () => {
     expect(screen.getByText('Loyer').closest('button')?.getAttribute('data-draggable')).toBeNull()
   })
 
+  it('never blocks a finger that starts a scroll on a chip — a touch tablet shows this grid', () => {
+    // The drag is a long press (TouchSensor), which blocks the scroll itself once it starts.
+    renderGrid([onDay('Piano', 'EVENT')])
+    const chip = screen.getByText('Piano').closest('button') as HTMLElement
+    expect(chip.className).not.toContain('touch-none')
+    expect(chip.className).toContain('touch-manipulation')
+  })
+
   it('attaches no drag handle at all for a viewer', () => {
     renderGrid([onDay('Piano', 'EVENT')], '2026-01-15', false)
     expect(screen.getByText('Piano').closest('button')?.getAttribute('data-draggable')).toBeNull()

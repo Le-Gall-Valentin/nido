@@ -1,3 +1,6 @@
+import type { DragIntent } from './dragTypes'
+
+/** How close to the top or bottom of the phone list a finger arms the vertical edge. */
 export const EDGE_ZONE_PX = 32
 export const FIRST_DELAY_MS = 600
 export const REPEAT_MS = 900
@@ -18,9 +21,13 @@ export function stepDwell(state: DwellState, zone: Zone, now: number): { state: 
   return { state, fire: 0 }
 }
 
+/**
+ * Past a side of the calendar. Only past it: the reader asked to push out of the calendar, and a
+ * zone inside it would page the week under anyone taking a moment to aim at a Sunday.
+ */
 export function horizontalZone(pointerX: number, rect: { left: number; right: number }): Zone {
-  if (pointerX >= rect.right - EDGE_ZONE_PX) return 1
-  if (pointerX <= rect.left + EDGE_ZONE_PX) return -1
+  if (pointerX >= rect.right) return 1
+  if (pointerX <= rect.left) return -1
   return 0
 }
 
@@ -30,4 +37,27 @@ export function verticalZone(pointerY: number, viewport: { top: number; bottom: 
   if (pointerY >= viewport.bottom - EDGE_ZONE_PX && !canScrollDown) return 1
   if (pointerY <= viewport.top + EDGE_ZONE_PX && !canScrollUp) return -1
   return 0
+}
+
+export interface EdgeLayout {
+  /** Whether the desktop layout is on screen. */
+  wide: boolean
+  /** The calendar's own box. */
+  container: { left: number; right: number } | null
+  /** The phone list's scroller: its visible box, and whether it can still scroll either way. */
+  scroller: { top: number; bottom: number; canScrollUp: boolean; canScrollDown: boolean } | null
+}
+
+/** Which edge a drag is holding, if any — the one place that decides which drags page at all. */
+export function dragZone(intent: DragIntent, pointer: { x: number; y: number }, layout: EdgeLayout): Zone {
+  // A resize stretches an event within its own day; paging under it would read the pointer
+  // against another period's column.
+  if (intent.kind !== 'move') return 0
+  if (intent.from === 'row') {
+    const { scroller } = layout
+    return scroller ? verticalZone(pointer.y, scroller, scroller.canScrollUp, scroller.canScrollDown) : 0
+  }
+  // The phone day view only changes time; a finger near the side of a narrow screen must not flip days.
+  if (!layout.wide || !layout.container) return 0
+  return horizontalZone(pointer.x, layout.container)
 }
