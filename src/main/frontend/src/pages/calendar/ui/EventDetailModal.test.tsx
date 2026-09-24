@@ -57,4 +57,10 @@ describe('EventDetailModal', () => {
     expect(screen.queryByRole('button', { name: 'detail.join' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'detail.leave' })).toBeNull()
   })
+
+  it('puts editing before deleting', () => {
+    renderDetail(concert)
+    const labels = screen.getAllByRole('button').map((button) => button.textContent)
+    expect(labels.indexOf('detail.edit')).toBeLessThan(labels.indexOf('detail.delete'))
+  })
 })

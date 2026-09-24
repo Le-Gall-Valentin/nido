@@ -35,6 +35,13 @@ function formatWhen(occurrence: CalendarOccurrence, allDayLabel: string, locale:
   return `${days} · ${occurrence.startTime?.slice(0, 5)} – ${occurrence.endTime?.slice(0, 5)}`
 }
 
+/**
+ * A button of the actions row: an equal share of it. The 9rem start is wider than the longest label,
+ * so no label ever makes its button wider than the others; the modal is as wide as the event form,
+ * which leaves room for three of them on a line.
+ */
+const SHARED_ROW = 'flex-[1_1_9rem] whitespace-nowrap'
+
 export function EventDetailModal({
   occurrence, members, currentUserId, canWrite, isPersonal = false,
   onEdit, onDelete, onCopy, onMove, onJoin, onLeave, onClose,
@@ -44,7 +51,7 @@ export function EventDetailModal({
   const belongsToSeries = occurrence.seriesId !== null
 
   return (
-    <Dialog open onClose={onClose} title={t('detail.title')} showCloseButton>
+    <Dialog open onClose={onClose} title={t('detail.title')} showCloseButton maxWidth="max-w-lg">
       <div className="flex flex-col gap-3">
         <div>
           <p className="flex items-center gap-1.5 pr-8 text-base font-semibold text-fg-0">
@@ -89,22 +96,24 @@ export function EventDetailModal({
           </div>
         )}
 
+        {/* Equal shares of the whole row. A button that no longer fits at its 9rem goes to the next
+            line and takes all of it — which is where "leave" lands on a phone. */}
         <div className="flex flex-wrap gap-2">
           {/* Copy is offered to everyone: reading an event is enough to justify reproducing it in a
               context where the caller can write. Move and the destructive actions are not. */}
-          <Button type="button" onClick={onCopy}>{t('detail.copy')}</Button>
-          {canWrite && <Button type="button" onClick={onMove}>{t('detail.move')}</Button>}
+          <Button type="button" onClick={onCopy} className={SHARED_ROW}>{t('detail.copy')}</Button>
+          {canWrite && <Button type="button" onClick={onMove} className={SHARED_ROW}>{t('detail.move')}</Button>}
           {canWrite && !isPersonal && (
             isParticipant
-              ? <Button type="button" onClick={onLeave}>{t('detail.leave')}</Button>
-              : <Button type="button" onClick={onJoin}>{t('detail.join')}</Button>
+              ? <Button type="button" onClick={onLeave} className={SHARED_ROW}>{t('detail.leave')}</Button>
+              : <Button type="button" onClick={onJoin} className={SHARED_ROW}>{t('detail.join')}</Button>
           )}
         </div>
 
         {canWrite && (
-          <div className="flex justify-end gap-2 border-t border-border pt-3">
-            <Button type="button" onClick={onDelete}>{t('detail.delete')}</Button>
-            <Button type="button" onClick={onEdit}>{t('detail.edit')}</Button>
+          <div className="flex gap-2 border-t border-border pt-3">
+            <Button type="button" onClick={onEdit} className="flex-1">{t('detail.edit')}</Button>
+            <Button type="button" onClick={onDelete} className="flex-1">{t('detail.delete')}</Button>
           </div>
         )}
       </div>
