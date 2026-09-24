@@ -22,7 +22,7 @@ export function DragGhost({ intent, preview }: { intent: DragIntent; preview: Sc
     : intent.kind === 'move'
       ? `${formatShortDay(preview.startDate, locale)} · ${preview.startTime} – ${preview.endTime}`
       : `${preview.startTime} – ${preview.endTime} (${t('drag.duration', {
-          hours: Math.floor(duration(preview) / 60), minutes: duration(preview) % 60 })})`
+          hours: Math.floor(duration(preview) / 60), minutes: String(duration(preview) % 60).padStart(2, '0') })})`
   return (
     <div className={`pointer-events-none rounded-lg px-2 py-1 text-xs font-semibold shadow-lg ${tintClassFor(intent.occurrence)}`}>
       <div className="truncate">{intent.occurrence.title}</div>

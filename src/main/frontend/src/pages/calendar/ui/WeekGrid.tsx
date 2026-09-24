@@ -29,7 +29,7 @@ function dayLabel(day: string): string {
  * same thing at different sizes, and it is deliberate: a thumb reads a list far better than a
  * forty-pixel column.
  */
-export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurrence }: WeekGridProps) {
+export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurrence, canWrite = false }: WeekGridProps) {
   const { t } = useTranslation('calendar')
   const days = weekDates(date)
   const byDay = groupByDay(occurrences, days)
@@ -102,11 +102,15 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
 
         <div className="flex">
           <div className="w-10 shrink-0" />
-          <div className="flex-1">
-            <AllDayBand
-              occurrences={days.flatMap((day) => (byDay.get(day) ?? []).filter(isBandOccurrence))}
-              onSelectOccurrence={onSelectOccurrence}
-            />
+          {/* One band per day: each is its own drop target, so a timed event dropped on it becomes
+              all-day on that day. */}
+          <div className="grid flex-1 grid-cols-7">
+            {days.map((day) => (
+              <div key={day} className="min-w-0 border-l border-border">
+                <AllDayBand day={day} occurrences={(byDay.get(day) ?? []).filter(isBandOccurrence)}
+                  canWrite={canWrite} onSelectOccurrence={onSelectOccurrence} />
+              </div>
+            ))}
           </div>
         </div>
 
@@ -116,6 +120,7 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
             <div key={day} className="flex-1 border-l border-border">
               <HourColumn
                 day={day}
+                canWrite={canWrite}
                 occurrences={(byDay.get(day) ?? []).filter((o) => !isBandOccurrence(o))}
                 onSelectOccurrence={onSelectOccurrence}
               />
