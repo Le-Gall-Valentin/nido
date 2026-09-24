@@ -5,7 +5,7 @@ import type { CalendarOccurrence, CalendarSourceType } from '@/entities/calendar
 function occ(source: CalendarSourceType, materialized: boolean): CalendarOccurrence {
   return {
     source, sourceId: 'x', seriesId: null, originalDate: null, materialized,
-    title: 'x', allDay: true, startDate: '2026-01-01', startTime: null,
+    title: 'x', description: null, location: null, allDay: true, startDate: '2026-01-01', startTime: null,
     endDate: '2026-01-01', endTime: null, color: null, participantIds: [],
   }
 }

@@ -5,6 +5,7 @@ import {
   useCreateEvent, useUpdateEvent, useDetachOccurrence,
   type CalendarOccurrence, type EventInput,
 } from '@/entities/calendar'
+import { toEventInput } from '../lib/eventInput'
 import { EventFormModal } from './EventFormModal'
 
 interface EventFormPanelProps {
@@ -21,15 +22,6 @@ interface EventFormPanelProps {
   members: SpaceMember[]
   isPersonal: boolean
   onClose: () => void
-}
-
-function toInput(occurrence: CalendarOccurrence): EventInput {
-  return {
-    title: occurrence.title, description: null, location: null, allDay: occurrence.allDay,
-    startDate: occurrence.startDate, startTime: occurrence.startTime,
-    endDate: occurrence.endDate, endTime: occurrence.endTime,
-    color: occurrence.color, participantIds: occurrence.participantIds,
-  }
 }
 
 /**
@@ -55,7 +47,7 @@ export function EventFormPanel({
   }
   // Editing one occurrence of a series starts from what that occurrence looks like today, but is
   // written through the slot's endpoint — so the form is pre-filled even though no event row exists.
-  const initial = occurrence ? toInput(occurrence) : null
+  const initial = occurrence ? toEventInput(occurrence) : null
 
   const handleSubmit = (input: EventInput) => {
     setError(null)

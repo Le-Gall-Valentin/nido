@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useSwipePeriod } from './useSwipePeriod'
 
-function pointer(x: number, y: number) {
-  return { clientX: x, clientY: y } as React.PointerEvent
+function pointer(x: number, y: number, pointerType = 'touch') {
+  return { clientX: x, clientY: y, pointerType } as React.PointerEvent
 }
 
 describe('useSwipePeriod', () => {
@@ -13,9 +13,9 @@ describe('useSwipePeriod', () => {
   function swipe(from: [number, number], to: [number, number], durationMs: number) {
     const onShift = vi.fn()
     const { result } = renderHook(() => useSwipePeriod(onShift))
-    act(() => { result.current.onPointerDown(pointer(from[0], from[1])) })
+    act(() => { result.current.handlers.onPointerDown(pointer(from[0], from[1])) })
     act(() => { vi.advanceTimersByTime(durationMs) })
-    act(() => { result.current.onPointerUp(pointer(to[0], to[1])) })
+    act(() => { result.current.handlers.onPointerUp(pointer(to[0], to[1])) })
     return onShift
   }
 
@@ -39,19 +39,39 @@ describe('useSwipePeriod', () => {
     expect(swipe([300, 200], [230, 400], 120)).not.toHaveBeenCalled()
   })
 
+  it('ignores a mouse entirely, which has the arrows and never flicks', () => {
+    // A fast mouse drag of a chip used to be read as a swipe and page the month away mid-drag.
+    const onShift = vi.fn()
+    const { result } = renderHook(() => useSwipePeriod(onShift))
+    act(() => { result.current.handlers.onPointerDown(pointer(300, 200, 'mouse')) })
+    act(() => { result.current.handlers.onPointerUp(pointer(150, 205, 'mouse')) })
+    expect(onShift).not.toHaveBeenCalled()
+  })
+
+  it('gives up a gesture once a drag has taken it over', () => {
+    // The drag starts during the move, so it always arrives before the pointer is released —
+    // no dependence on which listener hears the release first.
+    const onShift = vi.fn()
+    const { result } = renderHook(() => useSwipePeriod(onShift))
+    act(() => { result.current.handlers.onPointerDown(pointer(300, 200)) })
+    act(() => { result.current.cancel() })
+    act(() => { result.current.handlers.onPointerUp(pointer(150, 205)) })
+    expect(onShift).not.toHaveBeenCalled()
+  })
+
   it('forgets a gesture that was cancelled', () => {
     const onShift = vi.fn()
     const { result } = renderHook(() => useSwipePeriod(onShift))
-    act(() => { result.current.onPointerDown(pointer(300, 200)) })
-    act(() => { result.current.onPointerCancel() })
-    act(() => { result.current.onPointerUp(pointer(200, 205)) })
+    act(() => { result.current.handlers.onPointerDown(pointer(300, 200)) })
+    act(() => { result.current.handlers.onPointerCancel() })
+    act(() => { result.current.handlers.onPointerUp(pointer(200, 205)) })
     expect(onShift).not.toHaveBeenCalled()
   })
 
   it('ignores a pointer up that never had a pointer down', () => {
     const onShift = vi.fn()
     const { result } = renderHook(() => useSwipePeriod(onShift))
-    act(() => { result.current.onPointerUp(pointer(200, 205)) })
+    act(() => { result.current.handlers.onPointerUp(pointer(200, 205)) })
     expect(onShift).not.toHaveBeenCalled()
   })
 })

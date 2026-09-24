@@ -16,7 +16,7 @@ import type { CalendarOccurrence, CalendarSourceType } from '@/entities/calendar
 function occurrence(overrides: Partial<CalendarOccurrence> & { title: string }): CalendarOccurrence {
   return {
     source: 'EVENT', sourceId: overrides.title, seriesId: null, originalDate: null,
-    materialized: true, allDay: true, startDate: '2026-01-14', startTime: null,
+    materialized: true, description: null, location: null, allDay: true, startDate: '2026-01-14', startTime: null,
     endDate: '2026-01-14', endTime: null, color: null, participantIds: [], ...overrides,
   }
 }
@@ -82,6 +82,23 @@ describe('MonthGrid', () => {
     expect(screen.getAllByText('Vacances')).toHaveLength(3)
   })
 
+  // jsdom has no layout, so these two pin the structure that produces the hit area rather than the
+  // hit area itself — which is measured in the browser. Only the 24px day number used to open the
+  // day: 4% of a desktop cell, which is why clicking a day on a PC seemed to do nothing.
+  it('stretches the day button over its whole cell, so any empty spot opens the day', () => {
+    renderGrid([])
+    const dayButton = screen.getByRole('button', { name: 'open_day:2026-01-20' })
+    expect(dayButton.className).toContain('after:absolute')
+    expect(dayButton.className).toContain('after:inset-0')
+    expect(dayButton.parentElement?.className).toContain('relative')
+  })
+
+  it('keeps chips above the stretched area, so a chip still opens its own event', () => {
+    renderGrid(['A', 'B', 'C', 'D'].map((title) => onDay(title, 'EVENT')))
+    expect(screen.getByText('A').closest('button')?.className).toContain('z-10')
+    expect(screen.getByText('+1').className).toContain('z-10')
+  })
+
   it('calls onSelectDay when a day number is activated', () => {
     const { onSelectDay } = renderGrid([])
     fireEvent.click(screen.getByRole('button', { name: 'open_day:2026-01-20' }))
@@ -97,7 +114,7 @@ describe('MonthGrid', () => {
   })
 
   it('shows a timed occurrence with its start time', () => {
-    renderGrid([occurrence({ title: 'Piano', allDay: false, startTime: '18:00', endTime: '19:00' })])
+    renderGrid([occurrence({ title: 'Piano', description: null, location: null, allDay: false, startTime: '18:00', endTime: '19:00' })])
     expect(screen.getByText('18:00')).toBeTruthy()
   })
 

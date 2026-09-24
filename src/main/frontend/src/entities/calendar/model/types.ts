@@ -20,6 +20,9 @@ export interface CalendarOccurrence {
   originalDate: string | null
   materialized: boolean
   title: string
+  /** Null for sources with no such notion (tasks, finance, meals, savings). */
+  description: string | null
+  location: string | null
   allDay: boolean
   startDate: string
   startTime: string | null

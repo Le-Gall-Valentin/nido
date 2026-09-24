@@ -13,7 +13,9 @@ import {
   calendarApi, CalendarApiProvider, useOccurrences, useJoinEvent, useLeaveEvent, useUpdateEvent,
   type CalendarApi, type CalendarOccurrence,
 } from '@/entities/calendar'
-import { daysBetween, addDays, windowFor, type CalendarView } from '../lib/calendarWindow'
+import { windowFor, type CalendarView } from '../lib/calendarWindow'
+import { rescheduledInput } from '../lib/eventInput'
+import { dragActivationConstraint } from '../lib/dragActivation'
 import { useCalendarUrlState } from '../model/useCalendarUrlState'
 import { useCalendarFilters } from '../model/useCalendarFilters'
 import { useSwipePeriod } from '../model/useSwipePeriod'
@@ -75,7 +77,7 @@ function CalendarPageContent() {
   // scrollable and swipeable while its chips are still draggable.
   const pointerIsFine = usePointerIsFine()
   const sensors = useSensors(useSensor(PointerSensor, {
-    activationConstraint: pointerIsFine ? undefined : { delay: 250, tolerance: 5 },
+    activationConstraint: dragActivationConstraint(pointerIsFine),
   }))
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -83,17 +85,7 @@ function CalendarPageContent() {
     const dragged = event.active.data.current?.occurrence as CalendarOccurrence | undefined
     if (!targetDay || !dragged || targetDay === dragged.startDate) return
     if (dragged.source !== 'EVENT') return
-    // A multi-day event keeps its length: dragging moves it, it does not resize it.
-    const span = daysBetween(dragged.startDate, dragged.endDate)
-    updateEvent.mutate({
-      eventId: dragged.sourceId,
-      input: {
-        title: dragged.title, description: null, location: null, allDay: dragged.allDay,
-        startDate: targetDay, startTime: dragged.startTime,
-        endDate: addDays(targetDay, span), endTime: dragged.endTime,
-        color: dragged.color, participantIds: dragged.participantIds,
-      },
-    })
+    updateEvent.mutate({ eventId: dragged.sourceId, input: rescheduledInput(dragged, targetDay) })
   }
 
   const swipe = useSwipePeriod(shiftPeriod)
@@ -229,9 +221,9 @@ function CalendarPageContent() {
       {isPending && <div className="flex justify-center py-10"><Spinner /></div>}
 
       {!isPending && !isError && (
-        <div className="rounded-2xl border border-border bg-bg-1 p-1 md:p-2" {...swipe}>
+        <div className="rounded-2xl border border-border bg-bg-1 p-1 md:p-2" {...swipe.handlers}>
           {view === 'month' && (
-            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensors} onDragStart={swipe.cancel} onDragEnd={handleDragEnd}>
               <MonthGrid date={date} occurrences={occurrences} today={today} canWrite={canWriteHere}
                 onSelectDay={setSelectedDay} onSelectOccurrence={setSelectedOccurrence} />
             </DndContext>

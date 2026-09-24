@@ -29,6 +29,11 @@ const MAX_LABELS = 3
  * query read in JavaScript is wrong on the first paint and untestable without stubbing, whereas
  * this is correct before hydration and lets a test assert on both layouts at once.
  *
+ * The whole cell opens its day, not just the number in its corner: the day button's ::after is
+ * stretched over the cell, and the chips sit above it so they keep their own click. That pattern
+ * keeps one real button per day — a click handler on the cell div would have no keyboard path,
+ * and a cell that was itself a button could not contain the chips' buttons.
+ *
  * On a phone a cell is about 45px wide — too narrow for any label — so it shows one dot per
  * source present, never one per occurrence. A busy Saturday is then still legible at a glance,
  * and the dots line up column to column because their order is fixed.
@@ -67,6 +72,7 @@ export function MonthGrid({
                 data-today={isToday || undefined}
                 aria-label={t('open_day', { date: day })}
                 className={`mb-1 grid size-6 place-items-center rounded-full text-xs font-semibold
+                  after:absolute after:inset-0 after:content-['']
                   ${isToday ? 'bg-accent text-white' : isOutside ? 'text-fg-4' : 'text-fg-1'}`}
               >
                 {Number(day.slice(8, 10))}
@@ -98,7 +104,7 @@ export function MonthGrid({
                   <button
                     type="button"
                     onClick={(event) => { event.stopPropagation(); onSelectDay(day) }}
-                    className="px-1 text-left text-[11px] font-semibold text-fg-3 hover:text-fg-1"
+                    className="relative z-10 px-1 text-left text-[11px] font-semibold text-fg-3 hover:text-fg-1"
                   >
                     +{dayOccurrences.length - MAX_LABELS}
                   </button>
@@ -117,7 +123,7 @@ function DayCell({ day, canWrite, children }: { day: string; canWrite: boolean; 
   const { setNodeRef, isOver } = useDroppable({ id: `day:${day}`, disabled: !canWrite })
   return (
     <div ref={canWrite ? setNodeRef : undefined}
-      className={`min-h-[68px] border-b border-r border-border p-1 md:min-h-[116px] md:p-1.5
+      className={`relative min-h-[68px] border-b border-r border-border p-1 md:min-h-[116px] md:p-1.5
         ${isOver ? 'bg-accent-dim' : ''}`}>
       {children}
     </div>
@@ -156,7 +162,7 @@ function OccurrenceChip({ occurrence, canWrite, onSelect }: ChipProps) {
         event.stopPropagation()
         onSelect()
       }}
-      className={`flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] text-fg-1 hover:bg-bg-2
+      className={`relative z-10 flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] text-fg-1 hover:bg-bg-2
         ${draggable ? 'touch-none cursor-grab active:cursor-grabbing' : ''}`}
     >
       <span className={`size-1.5 shrink-0 rounded-full ${dotClassFor(occurrence)}`} />
