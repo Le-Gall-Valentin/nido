@@ -10,4 +10,10 @@ public record UpdateRecurringEventSeriesCommand(
     boolean allDay, LocalTime startTime, LocalTime endTime, int durationDays, String color,
     RecurrenceInterval intervalType, int intervalCount, LocalDate anchorDate, LocalDate endDate,
     List<UUID> participantIds
-) {}
+) {
+    /** The same edit with the participants its space's rule settled on. */
+    public UpdateRecurringEventSeriesCommand withParticipants(List<UUID> participants) {
+        return new UpdateRecurringEventSeriesCommand(seriesId, title, description, location, allDay, startTime, endTime,
+            durationDays, color, intervalType, intervalCount, anchorDate, endDate, participants);
+    }
+}

@@ -252,12 +252,57 @@ class CalendarEventControllerIT {
         return "/api/spaces/" + spaceId + "/calendar/occurrences";
     }
 
+    @Test
+    void in_a_personal_space_its_owner_takes_part_in_every_event_and_cannot_join_or_leave() throws Exception {
+        UUID personal = savePersonalSpace(aliceId);
+        saveMembership(personal, aliceId, SpaceRole.OWNER);
+        String base = "/api/spaces/" + personal + "/calendar/events";
+
+        String created = mockMvc.perform(post(base)
+                .cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Dentiste","allDay":true,"startDate":"2026-03-02","endDate":"2026-03-02"}"""))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.participantIds.length()").value(1))
+            .andExpect(jsonPath("$.participantIds[0]").value(aliceId.toString()))
+            .andReturn().getResponse().getContentAsString();
+        String eventId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(post(base + "/" + eventId + "/participants/me").cookie(tokenFor(aliceId)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("ParticipantsFixedInPersonalSpace"));
+        mockMvc.perform(delete(base + "/" + eventId + "/participants/me").cookie(tokenFor(aliceId)))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void in_a_shared_space_the_participants_are_the_ones_picked() throws Exception {
+        mockMvc.perform(post(events())
+                .cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Réunion","allDay":true,"startDate":"2026-03-02","endDate":"2026-03-02",
+                     "participantIds":["%s"]}""".formatted(bobId)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.participantIds.length()").value(1))
+            .andExpect(jsonPath("$.participantIds[0]").value(bobId.toString()));
+    }
+
     private UUID saveUser(String username) {
         UserIdentityEntity user = new UserIdentityEntity();
         user.setUsername(username);
         user.setEmail(username + "@test.com");
         user.setRole(Role.USER);
         return users.saveAndFlush(user).getId();
+    }
+
+    private UUID savePersonalSpace(UUID ownerId) {
+        SpaceEntity space = new SpaceEntity();
+        space.setType(SpaceType.PERSONAL);
+        space.setName("Perso");
+        space.setAccent("#8a7d6b");
+        space.setGlyph("👤");
+        space.setPersonalOwnerId(ownerId);
+        return spaces.saveAndFlush(space).getId();
     }
 
     private UUID saveSharedSpace(String name) {

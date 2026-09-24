@@ -4,7 +4,8 @@ public abstract sealed class CalendarException extends RuntimeException
     permits CalendarException.EventNotFound, CalendarException.RecurringEventSeriesNotFound,
             CalendarException.OccurrenceNotInSeries, CalendarException.SameSpaceTransfer,
             CalendarException.InvalidTimeRange, CalendarException.InvalidEndDate,
-            CalendarException.MemberNotInSpace, CalendarException.WindowTooLarge {
+            CalendarException.MemberNotInSpace, CalendarException.WindowTooLarge,
+            CalendarException.ParticipantsFixedInPersonalSpace {
 
     private CalendarException(String message) { super(message); }
 
@@ -41,6 +42,14 @@ public abstract sealed class CalendarException extends RuntimeException
 
     public static final class MemberNotInSpace extends CalendarException {
         public MemberNotInSpace() { super("Member is not part of this space"); }
+    }
+
+    /**
+     * Thrown when someone joins or leaves an event of a personal space. Its owner is always the one
+     * participant of everything in it, so there is nothing to join and nothing to leave.
+     */
+    public static final class ParticipantsFixedInPersonalSpace extends CalendarException {
+        public ParticipantsFixedInPersonalSpace() { super("In a personal space, its owner always takes part"); }
     }
 
     /**

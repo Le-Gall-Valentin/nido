@@ -1,5 +1,6 @@
 package com.nido.api.calendar.application.handler;
 
+import com.nido.api.calendar.application.service.CalendarSpaceMemberValidator;
 import com.nido.api.calendar.application.port.in.CopyEventUseCase;
 import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CalendarException;
@@ -28,10 +29,13 @@ public class CopyEventHandler implements CopyEventUseCase {
 
     private final CalendarEventRepository events;
     private final ResolveMembershipUseCase resolveMembershipUseCase;
+    private final CalendarSpaceMemberValidator memberValidator;
 
-    public CopyEventHandler(CalendarEventRepository events, ResolveMembershipUseCase resolveMembershipUseCase) {
+    public CopyEventHandler(CalendarEventRepository events, ResolveMembershipUseCase resolveMembershipUseCase,
+                            CalendarSpaceMemberValidator memberValidator) {
         this.events = events;
         this.resolveMembershipUseCase = resolveMembershipUseCase;
+        this.memberValidator = memberValidator;
     }
 
     @Override
@@ -43,7 +47,8 @@ public class CopyEventHandler implements CopyEventUseCase {
         }
         SpaceMembership destination = resolveMembershipUseCase.resolve(destinationSpaceId, caller.userId());
         destination.ensureCanWrite();
-        return events.create(commandFor(source, destinationSpaceId, caller.userId()));
+        return events.create(commandFor(source, destinationSpaceId, caller.userId())
+            .withParticipants(memberValidator.participantsFor(destination, List.of())));
     }
 
     static CalendarEvent readInCallersSpace(CalendarEventRepository events, UUID eventId, SpaceMembership caller) {

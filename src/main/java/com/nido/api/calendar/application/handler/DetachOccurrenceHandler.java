@@ -17,6 +17,7 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -56,7 +57,7 @@ public class DetachOccurrenceHandler implements DetachOccurrenceUseCase {
         }
         EventScheduleValidator.validateEvent(
             content.allDay(), content.startDate(), content.startTime(), content.endDate(), content.endTime());
-        memberValidator.ensureMembers(found.spaceId(), content.participantIds());
+        List<UUID> participants = memberValidator.participantsFor(caller, content.participantIds());
 
         // Unconditional, and it matters: cancelling an occurrence and then editing it instead
         // would otherwise leave the new event hidden behind the exclusion that is still standing.
@@ -67,11 +68,11 @@ public class DetachOccurrenceHandler implements DetachOccurrenceUseCase {
             return events.update(new UpdateEventCommand(
                 existing.get().id(), content.title(), content.description(), content.location(), content.allDay(),
                 content.startDate(), content.startTime(), content.endDate(), content.endTime(),
-                content.color(), content.participantIds()));
+                content.color(), participants));
         }
         return events.create(new CreateEventCommand(
             found.spaceId(), content.title(), content.description(), content.location(), content.allDay(),
             content.startDate(), content.startTime(), content.endDate(), content.endTime(),
-            content.color(), content.participantIds(), seriesId, originalDate, caller.userId()));
+            content.color(), participants, seriesId, originalDate, caller.userId()));
     }
 }

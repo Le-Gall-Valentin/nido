@@ -1,5 +1,6 @@
 package com.nido.api.calendar.application.handler;
 
+import com.nido.api.calendar.application.service.CalendarSpaceMemberValidator;
 import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
@@ -21,8 +22,9 @@ import static org.mockito.Mockito.when;
 class JoinAndLeaveEventHandlerTest {
 
     private final CalendarEventRepository events = mock(CalendarEventRepository.class);
-    private final JoinEventHandler join = new JoinEventHandler(events);
-    private final LeaveEventHandler leave = new LeaveEventHandler(events);
+    private final CalendarSpaceMemberValidator participants = mock(CalendarSpaceMemberValidator.class);
+    private final JoinEventHandler join = new JoinEventHandler(events, participants);
+    private final LeaveEventHandler leave = new LeaveEventHandler(events, participants);
 
     private final UUID spaceId = UUID.randomUUID();
     private final SpaceMembership caller =

@@ -18,10 +18,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class CreateEventHandlerTest {
 
@@ -70,7 +70,8 @@ class CreateEventHandlerTest {
 
     @Test
     void refusesAParticipantWhoIsNotAMemberOfTheSpace() {
-        doThrow(new CalendarException.MemberNotInSpace()).when(members).ensureMembers(any(), any());
+        // The membership check itself is the rule's (CalendarSpaceMemberValidatorTest); here, a refusal writes nothing.
+        when(members.participantsFor(any(), any())).thenThrow(new CalendarException.MemberNotInSpace());
 
         assertThatThrownBy(() -> handler.create(new CreateEventCommand(
             spaceId, "x", null, null, true,

@@ -30,7 +30,6 @@ public class CreateRecurringEventSeriesHandler implements CreateRecurringEventSe
         // far in the past costs a projection over the requested window and nothing else.
         EventScheduleValidator.validateSeries(command.allDay(), command.startTime(), command.endTime(),
             command.durationDays(), command.anchorDate(), command.endDate());
-        memberValidator.ensureMembers(command.spaceId(), command.participantIds());
-        return series.create(command);
+        return series.create(command.withParticipants(memberValidator.participantsFor(caller, command.participantIds())));
     }
 }

@@ -1,5 +1,6 @@
 package com.nido.api.calendar.application.handler;
 
+import com.nido.api.calendar.application.service.CalendarSpaceMemberValidator;
 import com.nido.api.calendar.application.port.in.DeleteEventUseCase;
 import com.nido.api.calendar.application.port.in.MoveEventUseCase;
 import com.nido.api.calendar.domain.model.CalendarEvent;
@@ -10,6 +11,7 @@ import com.nido.api.space.application.port.in.ResolveMembershipUseCase;
 import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -27,12 +29,14 @@ public class MoveEventHandler implements MoveEventUseCase {
     private final CalendarEventRepository events;
     private final ResolveMembershipUseCase resolveMembershipUseCase;
     private final DeleteEventUseCase deleteEventUseCase;
+    private final CalendarSpaceMemberValidator memberValidator;
 
     public MoveEventHandler(CalendarEventRepository events, ResolveMembershipUseCase resolveMembershipUseCase,
-                            DeleteEventUseCase deleteEventUseCase) {
+                            DeleteEventUseCase deleteEventUseCase, CalendarSpaceMemberValidator memberValidator) {
         this.events = events;
         this.resolveMembershipUseCase = resolveMembershipUseCase;
         this.deleteEventUseCase = deleteEventUseCase;
+        this.memberValidator = memberValidator;
     }
 
     @Override
@@ -45,8 +49,8 @@ public class MoveEventHandler implements MoveEventUseCase {
         }
         SpaceMembership destination = resolveMembershipUseCase.resolve(destinationSpaceId, caller.userId());
         destination.ensureCanWrite();
-        CalendarEvent created = events.create(
-            CopyEventHandler.commandFor(source, destinationSpaceId, caller.userId()));
+        CalendarEvent created = events.create(CopyEventHandler.commandFor(source, destinationSpaceId, caller.userId())
+            .withParticipants(memberValidator.participantsFor(destination, List.of())));
         deleteEventUseCase.delete(eventId, caller);
         return created;
     }

@@ -1,5 +1,6 @@
 package com.nido.api.calendar.application.handler;
 
+import com.nido.api.calendar.application.service.CalendarSpaceMemberValidator;
 import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.CreateEventCommand;
@@ -32,8 +33,9 @@ class TransferEventHandlerTest {
     private final ResolveMembershipUseCase resolveMembership = mock(ResolveMembershipUseCase.class);
     private final DeleteEventUseCase deleteEvent = mock(DeleteEventUseCase.class);
 
-    private final CopyEventHandler copy = new CopyEventHandler(events, resolveMembership);
-    private final MoveEventHandler move = new MoveEventHandler(events, resolveMembership, deleteEvent);
+    private final CalendarSpaceMemberValidator participants = mock(CalendarSpaceMemberValidator.class);
+    private final CopyEventHandler copy = new CopyEventHandler(events, resolveMembership, participants);
+    private final MoveEventHandler move = new MoveEventHandler(events, resolveMembership, deleteEvent, participants);
 
     private final UUID spaceId = UUID.randomUUID();
     private final UUID destinationSpaceId = UUID.randomUUID();

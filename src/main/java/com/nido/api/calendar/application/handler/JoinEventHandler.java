@@ -1,5 +1,6 @@
 package com.nido.api.calendar.application.handler;
 
+import com.nido.api.calendar.application.service.CalendarSpaceMemberValidator;
 import com.nido.api.calendar.application.port.in.JoinEventUseCase;
 import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CalendarException;
@@ -19,9 +20,11 @@ import java.util.UUID;
 public class JoinEventHandler implements JoinEventUseCase {
 
     private final CalendarEventRepository events;
+    private final CalendarSpaceMemberValidator memberValidator;
 
-    public JoinEventHandler(CalendarEventRepository events) {
+    public JoinEventHandler(CalendarEventRepository events, CalendarSpaceMemberValidator memberValidator) {
         this.events = events;
+        this.memberValidator = memberValidator;
     }
 
     @Override
@@ -31,6 +34,8 @@ public class JoinEventHandler implements JoinEventUseCase {
         if (!event.spaceId().equals(caller.spaceId())) {
             throw new CalendarException.EventNotFound();
         }
+        // In a personal space its owner always takes part: nothing to join, nothing to leave.
+        memberValidator.ensureParticipationOpen(caller);
         // Idempotent: joining twice is not an error, so a double tap is harmless.
         events.addParticipant(eventId, caller.userId());
     }

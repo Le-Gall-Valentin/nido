@@ -27,7 +27,6 @@ public class CreateEventHandler implements CreateEventUseCase {
         caller.ensureSameSpace(command.spaceId());
         EventScheduleValidator.validateEvent(
             command.allDay(), command.startDate(), command.startTime(), command.endDate(), command.endTime());
-        memberValidator.ensureMembers(command.spaceId(), command.participantIds());
-        return events.create(command);
+        return events.create(command.withParticipants(memberValidator.participantsFor(caller, command.participantIds())));
     }
 }

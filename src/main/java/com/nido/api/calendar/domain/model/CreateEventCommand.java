@@ -14,4 +14,10 @@ public record CreateEventCommand(
     boolean allDay, LocalDate startDate, LocalTime startTime, LocalDate endDate, LocalTime endTime,
     String color, List<UUID> participantIds,
     UUID recurringSeriesId, LocalDate recurringOriginalDate, UUID createdBy
-) {}
+) {
+    /** The same event with the participants its space's rule settled on. */
+    public CreateEventCommand withParticipants(List<UUID> participants) {
+        return new CreateEventCommand(spaceId, title, description, location, allDay, startDate, startTime,
+            endDate, endTime, color, participants, recurringSeriesId, recurringOriginalDate, createdBy);
+    }
+}

@@ -28,6 +28,8 @@ public class CalendarExceptionHandler {
                 new CalendarErrorResponse(404, "Recurring event series not found.");
             case CalendarException.MemberNotInSpace ignored ->
                 new CalendarErrorResponse(404, "Member is not part of this space.");
+            case CalendarException.ParticipantsFixedInPersonalSpace ignored ->
+                new CalendarErrorResponse(400, "In a personal context you always take part in your events.");
             case CalendarException.OccurrenceNotInSeries ignored ->
                 new CalendarErrorResponse(400, "That date is not an occurrence of this series.");
             case CalendarException.SameSpaceTransfer ignored ->
