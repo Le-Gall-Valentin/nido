@@ -14,9 +14,9 @@ const concert: CalendarOccurrence = {
   endDate: '2026-09-23', endTime: '22:30:00', color: null, participantIds: [],
 }
 
-function renderDetail(occurrence: CalendarOccurrence) {
+function renderDetail(occurrence: CalendarOccurrence, isPersonal = false) {
   return render(
-    <EventDetailModal occurrence={occurrence} members={[]} currentUserId="u1" canWrite
+    <EventDetailModal occurrence={occurrence} members={[]} currentUserId="u1" canWrite isPersonal={isPersonal}
       onEdit={vi.fn()} onDelete={vi.fn()} onCopy={vi.fn()} onMove={vi.fn()}
       onJoin={vi.fn()} onLeave={vi.fn()} onClose={vi.fn()} />)
 }
@@ -43,5 +43,18 @@ describe('EventDetailModal', () => {
     renderDetail({ ...concert, location: null, description: null })
     expect(screen.queryByTestId('event-location')).toBeNull()
     expect(screen.queryByTestId('event-description')).toBeNull()
+  })
+
+  it('offers joining and shows who takes part in a shared context', () => {
+    renderDetail(concert)
+    expect(screen.getByText('detail.participants')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'detail.join' })).toBeTruthy()
+  })
+
+  it('says nothing of participants in a personal context — its owner always takes part', () => {
+    renderDetail({ ...concert, participantIds: ['u1'] }, true)
+    expect(screen.queryByText('detail.participants')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'detail.join' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'detail.leave' })).toBeNull()
   })
 })

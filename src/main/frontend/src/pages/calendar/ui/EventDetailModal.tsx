@@ -14,6 +14,8 @@ interface EventDetailModalProps {
   /** The signed-in user, so "join" and "leave" can be offered as the right one of the two. */
   currentUserId: string
   canWrite: boolean
+  /** A personal context: its owner always takes part, so there is no one to show, join or leave. */
+  isPersonal?: boolean
   /** Copying needs write access at the destination only, so a viewer may still copy. */
   onEdit: () => void
   onDelete: () => void
@@ -34,7 +36,7 @@ function formatWhen(occurrence: CalendarOccurrence, allDayLabel: string, locale:
 }
 
 export function EventDetailModal({
-  occurrence, members, currentUserId, canWrite,
+  occurrence, members, currentUserId, canWrite, isPersonal = false,
   onEdit, onDelete, onCopy, onMove, onJoin, onLeave, onClose,
 }: EventDetailModalProps) {
   const { t } = useTranslation('calendar')
@@ -68,29 +70,31 @@ export function EventDetailModal({
           </p>
         )}
 
-        <div>
-          <h3 className="mb-1 text-xs font-semibold text-fg-2">{t('detail.participants')}</h3>
-          {occurrence.participantIds.length === 0 ? (
-            <p className="text-sm text-fg-3">{t('detail.no_participants')}</p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {occurrence.participantIds.map((userId) => {
-                const member = members.find((m) => m.userId === userId)
-                return (
-                  <UserAvatar key={userId} username={member?.username ?? '?'} role="USER"
-                    className="size-7 rounded-full text-[11px]" />
-                )
-              })}
-            </div>
-          )}
-        </div>
+        {!isPersonal && (
+          <div>
+            <h3 className="mb-1 text-xs font-semibold text-fg-2">{t('detail.participants')}</h3>
+            {occurrence.participantIds.length === 0 ? (
+              <p className="text-sm text-fg-3">{t('detail.no_participants')}</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {occurrence.participantIds.map((userId) => {
+                  const member = members.find((m) => m.userId === userId)
+                  return (
+                    <UserAvatar key={userId} username={member?.username ?? '?'} role="USER"
+                      className="size-7 rounded-full text-[11px]" />
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           {/* Copy is offered to everyone: reading an event is enough to justify reproducing it in a
               context where the caller can write. Move and the destructive actions are not. */}
           <Button type="button" onClick={onCopy}>{t('detail.copy')}</Button>
           {canWrite && <Button type="button" onClick={onMove}>{t('detail.move')}</Button>}
-          {canWrite && (
+          {canWrite && !isPersonal && (
             isParticipant
               ? <Button type="button" onClick={onLeave}>{t('detail.leave')}</Button>
               : <Button type="button" onClick={onJoin}>{t('detail.join')}</Button>

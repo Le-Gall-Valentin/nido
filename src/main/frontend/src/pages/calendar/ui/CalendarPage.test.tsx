@@ -4,7 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import { SpacesApiProvider, type ISpacesApi } from '@/features/space-switcher'
-import { SpaceMembersApiProvider, type ISpaceMembersApi, type SpaceSummary } from '@/entities/space'
+import { SpaceMembersApiProvider, type ISpaceMembersApi, type SpaceMember, type SpaceSummary } from '@/entities/space'
 import type { CalendarApi, CalendarOccurrence } from '@/entities/calendar'
 import type { IFinanceApi } from '@/entities/finance'
 import type { IKitchenApi } from '@/entities/kitchen'
@@ -41,12 +41,13 @@ function occurrence(overrides: Partial<CalendarOccurrence> & { title: string }):
 function renderPage(feed: CalendarOccurrence[], apis: {
   calendar?: Partial<CalendarApi>; finance?: Partial<IFinanceApi>; kitchen?: Partial<IKitchenApi>; role?: SpaceSummary['myRole']
   view?: 'month' | 'week' | 'day'
+  members?: SpaceMember[]
 } = {}) {
   const calendar = { listOccurrences: vi.fn().mockResolvedValue(feed), listRecurringEventSeries: vi.fn().mockResolvedValue([]), ...apis.calendar } as unknown as CalendarApi
   const finance = { listSavingsGoals: vi.fn().mockResolvedValue([]), listRecurringSeries: vi.fn().mockResolvedValue([]), listCategories: vi.fn().mockResolvedValue([]), ...apis.finance } as unknown as IFinanceApi
   const kitchen = { listRecipes: vi.fn().mockResolvedValue([]), listMenuEntries: vi.fn().mockResolvedValue([]), ...apis.kitchen } as unknown as IKitchenApi
   const spaces: ISpacesApi = { listMySpaces: vi.fn().mockResolvedValue([{ ...SPACE, myRole: apis.role ?? 'MEMBER' }]), getSpace: vi.fn() }
-  const members: ISpaceMembersApi = { listMembers: vi.fn().mockResolvedValue([]) }
+  const members: ISpaceMembersApi = { listMembers: vi.fn().mockResolvedValue(apis.members ?? []) }
   // The app mounts the tasks API above every page; dropping a task writes through it.
   const tasks = { listTasks: vi.fn().mockResolvedValue([]), updateTask: vi.fn() } as unknown as TasksApi
   render(
@@ -129,5 +130,16 @@ describe('CalendarPage', () => {
     expect(value('form.end_date')).toBe('2026-09-22')
     expect(value('form.end_time')).toBe('11:00')
     expect((screen.getByRole('checkbox', { name: 'form.all_day' }) as HTMLInputElement).checked).toBe(false)
+  })
+
+  it('picks the creator as a participant by default when adding an event in a shared context', async () => {
+    renderPage([], { members: [
+      { userId: 'u-1', username: 'alice', email: null, role: 'OWNER', joinedAt: '2026-01-01T00:00:00Z' },
+      { userId: 'u-2', username: 'bob', email: null, role: 'MEMBER', joinedAt: '2026-01-01T00:00:00Z' },
+    ] })
+    fireEvent.click(await screen.findByRole('button', { name: 'new_event' }))
+    const pick = async (name: string) => (await screen.findByRole('button', { name })).getAttribute('aria-pressed')
+    expect(await pick('alice')).toBe('true')
+    expect(await pick('bob')).toBe('false')
   })
 })

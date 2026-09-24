@@ -266,6 +266,7 @@ function CalendarPageContent() {
           members={members ?? []}
           currentUserId={currentUserId}
           canWrite={canWriteHere}
+          isPersonal={spaceIsPersonal}
           onEdit={() => { const o = selectedOccurrence; setSelectedOccurrence(null); startScopedAction(o, 'edit') }}
           onDelete={() => { const o = selectedOccurrence; setSelectedOccurrence(null); startScopedAction(o, 'delete') }}
           onCopy={() => { setTransferring({ occurrence: selectedOccurrence, operation: 'copy' }); setSelectedOccurrence(null) }}
@@ -304,6 +305,7 @@ function CalendarPageContent() {
           detachSlot={editing?.detachSlot ?? null}
           defaultDate={creating?.date ?? date}
           defaultSchedule={creating?.schedule ?? null}
+          currentUserId={currentUserId}
           members={members ?? []}
           isPersonal={spaceIsPersonal}
           onClose={() => {
@@ -332,7 +334,8 @@ function CalendarPageContent() {
       )}
 
       {managingSeries && (
-        <RecurringEventSeriesPanel spaceId={spaceId} onClose={() => setManagingSeries(false)} />
+        <RecurringEventSeriesPanel spaceId={spaceId} members={members ?? []} currentUserId={currentUserId}
+          isPersonal={spaceIsPersonal} onClose={() => setManagingSeries(false)} />
       )}
     </div>
   )

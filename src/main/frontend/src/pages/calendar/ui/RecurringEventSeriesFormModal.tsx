@@ -2,22 +2,29 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { RecurrenceInterval, RecurringEventSeries, RecurringEventSeriesInput } from '@/entities/calendar'
+import type { SpaceMember } from '@/entities/space'
+import { ParticipantPicker } from './ParticipantPicker'
 
 const INTERVALS: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
 
 interface RecurringEventSeriesFormModalProps {
   series: RecurringEventSeries | null
+  members: SpaceMember[]
+  /** Who is creating: they take part in a new series by default. */
+  currentUserId: string
+  /** Hides the participant picker: in a personal context its owner always takes part. */
+  isPersonal: boolean
   submitError?: string | null
   isPending?: boolean
   onSubmit: (input: RecurringEventSeriesInput) => void
   onCancel: () => void
 }
 
-function blank(): RecurringEventSeriesInput {
+function blank(creatorId: string): RecurringEventSeriesInput {
   return {
     title: '', description: null, location: null, allDay: true,
     startTime: null, endTime: null, durationDays: 0, color: null,
-    intervalType: 'WEEKLY', intervalCount: 1, anchorDate: '', endDate: null, participantIds: [],
+    intervalType: 'WEEKLY', intervalCount: 1, anchorDate: '', endDate: null, participantIds: [creatorId],
   }
 }
 
@@ -35,10 +42,10 @@ function toInput(series: RecurringEventSeries): RecurringEventSeriesInput {
 }
 
 export function RecurringEventSeriesFormModal({
-  series, submitError, isPending, onSubmit, onCancel,
+  series, members, currentUserId, isPersonal, submitError, isPending, onSubmit, onCancel,
 }: RecurringEventSeriesFormModalProps) {
   const { t } = useTranslation('calendar')
-  const [form, setForm] = useState<RecurringEventSeriesInput>(series ? toInput(series) : blank())
+  const [form, setForm] = useState<RecurringEventSeriesInput>(series ? toInput(series) : blank(currentUserId))
   const [error, setError] = useState<string | null>(null)
 
   const patch = (changes: Partial<RecurringEventSeriesInput>) =>
@@ -104,6 +111,11 @@ export function RecurringEventSeriesFormModal({
           <Input label={t('series.end_date')} type="date" value={form.endDate ?? ''}
             onChange={(e) => patch({ endDate: e.target.value || null })} />
         </div>
+
+        {!isPersonal && members.length > 0 && (
+          <ParticipantPicker members={members} selected={form.participantIds}
+            onChange={(participantIds) => patch({ participantIds })} />
+        )}
 
         {(error ?? submitError) && <p role="alert" className="text-sm text-status-red">{error ?? submitError}</p>}
 

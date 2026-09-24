@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { SpaceMember } from '@/entities/space'
-import { UserAvatar } from '@/entities/user'
 import type { EventInput } from '@/entities/calendar'
 import { SOURCE_TOKEN } from '../lib/sourceAppearance'
+import { ParticipantPicker } from './ParticipantPicker'
 
 export interface EventFormModalProps {
   /** Pre-filled values. When creating, these are the blanks the caller wants (e.g. the clicked day). */
@@ -103,25 +103,8 @@ export function EventFormModal({
         </div>
 
         {!isPersonal && members.length > 0 && (
-          <div>
-            <span className="mb-1 block text-xs font-semibold text-fg-2">{t('form.participants')}</span>
-            <div className="flex flex-wrap gap-1.5">
-              {members.map((member) => {
-                const selected = form.participantIds.includes(member.userId)
-                return (
-                  <button key={member.userId} type="button" aria-pressed={selected} aria-label={member.username ?? '?'}
-                    onClick={() => patch({
-                      participantIds: selected
-                        ? form.participantIds.filter((id) => id !== member.userId)
-                        : [...form.participantIds, member.userId],
-                    })}
-                    className={`rounded-full border p-0.5 ${selected ? 'border-accent' : 'border-transparent opacity-50'}`}>
-                    <UserAvatar username={member.username ?? '?'} role="USER" className="size-7 rounded-full text-[11px]" />
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          <ParticipantPicker members={members} selected={form.participantIds}
+            onChange={(participantIds) => patch({ participantIds })} />
         )}
 
         {(error ?? submitError) && (

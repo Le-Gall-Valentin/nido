@@ -6,10 +6,14 @@ import {
   useRecurringEventSeries, useCreateRecurringEventSeries, useUpdateRecurringEventSeries,
   useDeleteRecurringEventSeries, type RecurringEventSeries, type RecurringEventSeriesInput,
 } from '@/entities/calendar'
+import type { SpaceMember } from '@/entities/space'
 import { RecurringEventSeriesFormModal } from './RecurringEventSeriesFormModal'
 
 interface RecurringEventSeriesPanelProps {
   spaceId: string
+  members: SpaceMember[]
+  currentUserId: string
+  isPersonal: boolean
   onClose: () => void
 }
 
@@ -19,7 +23,9 @@ interface RecurringEventSeriesPanelProps {
  * Deleting one takes its exclusions and its edited occurrences with it, by cascade — which is why
  * the confirmation says so rather than showing the generic warning.
  */
-export function RecurringEventSeriesPanel({ spaceId, onClose }: RecurringEventSeriesPanelProps) {
+export function RecurringEventSeriesPanel({
+  spaceId, members, currentUserId, isPersonal, onClose,
+}: RecurringEventSeriesPanelProps) {
   const { t } = useTranslation('calendar')
   const { data: series, isPending } = useRecurringEventSeries(spaceId)
   const createSeries = useCreateRecurringEventSeries(spaceId)
@@ -41,6 +47,9 @@ export function RecurringEventSeriesPanel({ spaceId, onClose }: RecurringEventSe
     return (
       <RecurringEventSeriesFormModal
         series={editing.series}
+        members={members}
+        currentUserId={currentUserId}
+        isPersonal={isPersonal}
         submitError={error}
         isPending={createSeries.isPending || updateSeries.isPending}
         onSubmit={submit}

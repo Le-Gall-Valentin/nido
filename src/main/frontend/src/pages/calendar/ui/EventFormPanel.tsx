@@ -22,6 +22,8 @@ interface EventFormPanelProps {
   defaultDate: string
   /** Pre-fills the whole when — times included — for a time picked out in the week or day grid. */
   defaultSchedule?: ScheduleChange | null
+  /** Who is creating: they take part by default, and may untick themselves in a shared context. */
+  currentUserId?: string
   members: SpaceMember[]
   isPersonal: boolean
   onClose: () => void
@@ -32,7 +34,7 @@ interface EventFormPanelProps {
  * fails. Keeping the decision next to the form is what lets EventFormModal stay presentational.
  */
 export function EventFormPanel({
-  spaceId, occurrence, detachSlot, defaultDate, defaultSchedule = null, members, isPersonal, onClose,
+  spaceId, occurrence, detachSlot, defaultDate, defaultSchedule = null, currentUserId, members, isPersonal, onClose,
 }: EventFormPanelProps) {
   const { t } = useTranslation('calendar')
   const [error, setError] = useState<string | null>(null)
@@ -46,7 +48,7 @@ export function EventFormPanel({
   const blank: EventInput = {
     title: '', description: null, location: null, allDay: true,
     startDate: defaultDate, startTime: null, endDate: defaultDate, endTime: null,
-    color: null, participantIds: [], ...defaultSchedule,
+    color: null, participantIds: currentUserId ? [currentUserId] : [], ...defaultSchedule,
   }
   // Editing one occurrence of a series starts from what that occurrence looks like today, but is
   // written through the slot's endpoint — so the form is pre-filled even though no event row exists.
