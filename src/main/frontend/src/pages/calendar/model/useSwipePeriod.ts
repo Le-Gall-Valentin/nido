@@ -7,36 +7,42 @@ const MAX_DURATION_MS = 250
 /** A gesture more vertical than this belongs to the scroller. */
 const MAX_VERTICAL_RATIO = 0.6
 
-interface Pointer { x: number; y: number; at: number }
+interface Touchdown { x: number; y: number; at: number }
 
 /**
  * Flick left or right to change period — on touch only.
  *
- * Three gestures share the same surface: a short flick changes the period, a drag reschedules a
- * chip, and anything else scrolls. Keeping them apart takes three rules:
+ * Read from touch events, not pointer events: a flick is a pan to the browser, and Chrome answers a
+ * pan with pointercancel, so a swipe built on pointers never fired on a real phone. Touches end
+ * normally. A mouse sends no touches, so it can never swipe — it has the arrows, and a fast mouse
+ * drag of a chip is exactly the shape of a flick.
  *
- * - A mouse never swipes. It has the arrows, nobody flicks with one, and a fast mouse drag of a
- *   chip is exactly the shape of a flick — it used to page the month away in the middle of a drop.
+ * Three gestures share the same surface: a short flick changes the period, a drag reschedules an
+ * item, and anything else scrolls. Keeping them apart takes three rules:
+ *
+ * - One finger only: two are a pinch.
  * - A drag that starts takes the gesture over: the page calls `cancel` from dnd-kit's drag start,
- *   which always comes before the pointer is released, so no listener-order assumption is needed.
+ *   which always comes before the finger lifts, so no listener-order assumption is needed.
  * - Duration and direction caps separate a flick from a long press or a diagonal scroll.
  */
 export function useSwipePeriod(onShift: (direction: -1 | 1) => void) {
-  const start = useRef<Pointer | null>(null)
+  const start = useRef<Touchdown | null>(null)
 
-  const onPointerDown = useCallback((event: React.PointerEvent) => {
-    start.current = event.pointerType === 'mouse'
-      ? null
-      : { x: event.clientX, y: event.clientY, at: Date.now() }
+  const onTouchStart = useCallback((event: React.TouchEvent) => {
+    const touch = event.touches[0]
+    start.current = event.touches.length === 1 && touch
+      ? { x: touch.clientX, y: touch.clientY, at: Date.now() }
+      : null
   }, [])
 
-  const onPointerUp = useCallback((event: React.PointerEvent) => {
+  const onTouchEnd = useCallback((event: React.TouchEvent) => {
     const from = start.current
     start.current = null
-    if (!from) return
+    const touch = event.changedTouches[0]
+    if (!from || !touch) return
 
-    const dx = event.clientX - from.x
-    const dy = event.clientY - from.y
+    const dx = touch.clientX - from.x
+    const dy = touch.clientY - from.y
     const elapsed = Date.now() - from.at
 
     if (elapsed > MAX_DURATION_MS) return
@@ -49,8 +55,8 @@ export function useSwipePeriod(onShift: (direction: -1 | 1) => void) {
   const cancel = useCallback(() => { start.current = null }, [])
 
   const handlers = useMemo(
-    () => ({ onPointerDown, onPointerUp, onPointerCancel: cancel }),
-    [onPointerDown, onPointerUp, cancel])
+    () => ({ onTouchStart, onTouchEnd, onTouchCancel: cancel }),
+    [onTouchStart, onTouchEnd, cancel])
 
   return { handlers, cancel }
 }
