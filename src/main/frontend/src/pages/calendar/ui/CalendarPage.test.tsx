@@ -40,6 +40,7 @@ function occurrence(overrides: Partial<CalendarOccurrence> & { title: string }):
  */
 function renderPage(feed: CalendarOccurrence[], apis: {
   calendar?: Partial<CalendarApi>; finance?: Partial<IFinanceApi>; kitchen?: Partial<IKitchenApi>; role?: SpaceSummary['myRole']
+  view?: 'month' | 'week' | 'day'
 } = {}) {
   const calendar = { listOccurrences: vi.fn().mockResolvedValue(feed), listRecurringEventSeries: vi.fn().mockResolvedValue([]), ...apis.calendar } as unknown as CalendarApi
   const finance = { listSavingsGoals: vi.fn().mockResolvedValue([]), listRecurringSeries: vi.fn().mockResolvedValue([]), listCategories: vi.fn().mockResolvedValue([]), ...apis.finance } as unknown as IFinanceApi
@@ -53,7 +54,7 @@ function renderPage(feed: CalendarOccurrence[], apis: {
       <SpacesApiProvider api={spaces}>
         <SpaceMembersApiProvider api={members}>
           <TasksApiProvider api={tasks}>
-          <MemoryRouter initialEntries={['/s/space-1/organisation/calendar?view=month&date=2026-09-23']}>
+          <MemoryRouter initialEntries={[`/s/space-1/organisation/calendar?view=${apis.view ?? 'month'}&date=2026-09-23`]}>
             <Routes>
               <Route path="/s/:spaceId/organisation/calendar"
                 element={<CalendarPage api={calendar} financeApi={finance} kitchenApi={kitchen} />} />
@@ -106,5 +107,27 @@ describe('CalendarPage', () => {
     renderPage([occurrence({ title: 'Concert' })], { role: 'VIEWER' })
     const chip = (await screen.findByText('Concert')).closest('button')
     expect(chip?.getAttribute('data-draggable')).toBeNull()
+  })
+
+  it('opens the new-event form on the time picked out in the week grid', async () => {
+    renderPage([], { view: 'week' })
+    // The role resolves asynchronously: the grid only picks once the member is known to write.
+    const column = await vi.waitFor(() => {
+      const found = document.querySelectorAll<HTMLElement>('[data-testid="hour-column"]')[1]
+      if (!found) throw new Error('no grid yet')
+      return found
+    })
+    // A column's top is 0 in jsdom: clientY 600 is 10:00, on Tuesday the 22nd.
+    await vi.waitFor(() => {
+      fireEvent.pointerDown(column, { pointerType: 'mouse', button: 0, clientY: 600 })
+      fireEvent.pointerUp(window, { pointerType: 'mouse', button: 0, clientY: 600 })
+      expect(screen.getByRole('dialog')).toBeTruthy()
+    })
+    const value = (label: string) => (screen.getByLabelText(label) as HTMLInputElement).value
+    expect(value('form.start_date')).toBe('2026-09-22')
+    expect(value('form.start_time')).toBe('10:00')
+    expect(value('form.end_date')).toBe('2026-09-22')
+    expect(value('form.end_time')).toBe('11:00')
+    expect((screen.getByRole('checkbox', { name: 'form.all_day' }) as HTMLInputElement).checked).toBe(false)
   })
 })

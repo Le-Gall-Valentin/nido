@@ -4,17 +4,20 @@ import { DAY_MINUTES, timeToMinutes } from './timeMath'
 
 export interface Segment { startMinutes: number; endMinutes: number; isStart: boolean; isEnd: boolean }
 
-function endsAtMidnight(o: CalendarOccurrence): boolean {
+/** Just the when of an occurrence — also what a drop or a picked-out time produces. */
+export type Schedule = Pick<CalendarOccurrence, 'allDay' | 'startDate' | 'startTime' | 'endDate' | 'endTime'>
+
+function endsAtMidnight(o: Schedule): boolean {
   return !o.allDay && o.endTime !== null && timeToMinutes(o.endTime) === 0 && o.endDate > o.startDate
 }
 
 /** The last day an occurrence actually occupies. An end at 00:00 belongs to the day before. */
-export function effectiveEndDate(o: CalendarOccurrence): string {
+export function effectiveEndDate(o: Schedule): string {
   return endsAtMidnight(o) ? addDays(o.endDate, -1) : o.endDate
 }
 
 /** Whether an occurrence is shown on `day` — the same days the month, the band and the lists use. */
-export function covers(o: CalendarOccurrence, day: string): boolean {
+export function covers(o: Schedule, day: string): boolean {
   return day >= o.startDate && day <= effectiveEndDate(o)
 }
 
@@ -23,7 +26,7 @@ export function covers(o: CalendarOccurrence, day: string): boolean {
  * time. A timed event lasting several days stays in the grid, one piece per day — it has hours,
  * and the band is where "all day" goes.
  */
-export function isBandOccurrence(o: CalendarOccurrence): boolean {
+export function isBandOccurrence(o: Schedule): boolean {
   return o.allDay
 }
 
@@ -32,7 +35,7 @@ export function isBandOccurrence(o: CalendarOccurrence): boolean {
  * first day and 00:00 → 02:00 on the next. Every day's copy used to be drawn from the event's own
  * start and end, which put that second piece at 22:00 with the minimum height.
  */
-export function segmentFor(o: CalendarOccurrence, day: string): Segment | null {
+export function segmentFor(o: Schedule, day: string): Segment | null {
   if (isBandOccurrence(o) || !o.startTime || !o.endTime) return null
   const last = effectiveEndDate(o)
   if (day < o.startDate || day > last) return null

@@ -21,6 +21,14 @@ export function snap(minutes: number): number {
 }
 
 /**
+ * The time under the pointer, unrounded and kept inside the day — for picking out the quarter hour
+ * it falls in, where rounding to the nearest would pick the next one half the time.
+ */
+export function exactMinutesAt(pointerY: number, columnTop: number): number {
+  return Math.min(DAY_MINUTES - 1, Math.max(0, ((pointerY - columnTop) / HOUR_HEIGHT) * 60))
+}
+
+/**
  * The time under the pointer in an hour column. `columnTop` must be the live top of the full-height
  * column, which moves with its scroller — so scrolling needs no separate correction here.
  */

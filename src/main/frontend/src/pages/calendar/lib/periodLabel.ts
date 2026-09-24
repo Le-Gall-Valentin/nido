@@ -63,3 +63,24 @@ export function formatSpan(from: string, to: string, locale: string): string {
   const start = format(from, locale, { day: 'numeric', month: 'short', year: 'numeric' })
   return `${start} – ${format(to, locale, { day: 'numeric', month: 'short', year: 'numeric' })}`
 }
+
+/** "Lun. 19" — a day short enough to sit next to a time. */
+function formatShortDay(iso: string, locale: string): string {
+  return asHeading(format(iso, locale, { weekday: 'short', day: 'numeric' }))
+}
+
+/**
+ * The times of a block, written on the block. A range over several days names them — "13:00 – 10:30"
+ * reads backwards — except an end at midnight, which is just the end of the first day.
+ */
+export function formatTimeRange(
+  range: { startDate: string; startTime: string | null; endDate: string; endTime: string | null }, locale: string,
+): string {
+  const start = range.startTime?.slice(0, 5) ?? ''
+  const end = range.endTime?.slice(0, 5) ?? ''
+  if (range.startDate === range.endDate) return `${start} – ${end}`
+  if (end === '00:00' && addDays(range.startDate, 1) === range.endDate) return `${start} – 24:00`
+  // Each end kept on one line, so a narrow column wraps at the arrow and never inside "Mer. 21".
+  const unbroken = (day: string, time: string) => `${formatShortDay(day, locale)} ${time}`.replace(/\s/g, '\u00a0')
+  return `${unbroken(range.startDate, start)} → ${unbroken(range.endDate, end)}`
+}

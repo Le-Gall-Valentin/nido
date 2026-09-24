@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay, weekDates } from '../lib/calendarWindow'
-import type { DragData, DropData } from '../lib/dragTypes'
+import type { DragData, DropData, ScheduleChange } from '../lib/dragTypes'
 import { isDraggable } from '../lib/isDraggable'
 import { covers, isBandOccurrence } from '../lib/segments'
+import { useGridSelection } from '../model/useGridSelection'
 import { fadeClassFor, useDragPreview } from '../model/dragPreview'
 import { tintClassFor } from '../lib/sourceAppearance'
 import { AllDayBand } from './AllDayBand'
@@ -19,6 +20,8 @@ interface WeekGridProps {
   onSelectOccurrence: (occurrence: CalendarOccurrence) => void
   /** Off for a viewer: nothing they drag could be saved. */
   canWrite?: boolean
+  /** A time picked out in the grid, to add an event over it. Left out for a viewer. */
+  onCreateRange?: (range: ScheduleChange) => void
 }
 
 function dayLabel(day: string): string {
@@ -34,11 +37,16 @@ function dayLabel(day: string): string {
  * same thing at different sizes, and it is deliberate: a thumb reads a list far better than a
  * forty-pixel column.
  */
-export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurrence, canWrite = false }: WeekGridProps) {
+export function WeekGrid({
+  date, occurrences, today, onSelectDay, onSelectOccurrence, canWrite = false, onCreateRange,
+}: WeekGridProps) {
   const { t } = useTranslation('calendar')
   const days = weekDates(date)
   const byDay = groupByDay(occurrences, days)
   const landing = useDragPreview()?.occurrence
+  const picking = useGridSelection(onCreateRange)
+  const pickedHours = picking.shown?.kind === 'hours' ? picking.shown.range : null
+  const pickedDays = picking.shown?.kind === 'band' ? picking.shown.range : null
   const labelFor = (occurrence: CalendarOccurrence) =>
     occurrence.allDay ? t('all_day_short') : occurrence.startTime?.slice(0, 5) ?? ''
 
@@ -116,7 +124,8 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
             {days.map((day) => (
               <div key={day} className="min-w-0 border-l border-border">
                 <AllDayBand day={day} occurrences={(byDay.get(day) ?? []).filter(isBandOccurrence)}
-                  canWrite={canWrite} onSelectOccurrence={onSelectOccurrence} />
+                  canWrite={canWrite} onSelectOccurrence={onSelectOccurrence}
+                  picked={pickedDays !== null && covers(pickedDays, day)} onPickStart={picking.startBand} />
               </div>
             ))}
           </div>
@@ -129,6 +138,8 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
               <HourColumn
                 day={day}
                 canWrite={canWrite}
+                picked={pickedHours}
+                onPickStart={picking.startHours}
                 occurrences={(byDay.get(day) ?? []).filter((o) => !isBandOccurrence(o))}
                 onSelectOccurrence={onSelectOccurrence}
               />

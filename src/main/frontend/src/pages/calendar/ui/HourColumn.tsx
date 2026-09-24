@@ -1,10 +1,12 @@
 import { useRef } from 'react'
+import i18next from 'i18next'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { CalendarOccurrence } from '@/entities/calendar'
-import { usePointerIsFine } from '@/shared/lib'
-import type { DragData, DropData } from '../lib/dragTypes'
+import { resolveLocale, usePointerIsFine } from '@/shared/lib'
+import type { DragData, DropData, ScheduleChange } from '../lib/dragTypes'
 import { isDraggable } from '../lib/isDraggable'
 import { tintClassFor } from '../lib/sourceAppearance'
+import { formatTimeRange } from '../lib/periodLabel'
 import { isBandOccurrence, segmentFor, type Segment } from '../lib/segments'
 import { fadeClassFor, useDragPreview } from '../model/dragPreview'
 import { HOUR_HEIGHT } from '../lib/timeMath'
@@ -22,6 +24,10 @@ interface HourColumnProps {
   /** Off for a viewer: nothing they drag could be saved. */
   canWrite: boolean
   onSelectOccurrence: (occurrence: CalendarOccurrence) => void
+  /** A time being picked out to add an event — drawn in each column it covers. */
+  picked?: ScheduleChange | null
+  /** A press on empty grid here, which may start picking out a time. */
+  onPickStart?: (event: React.PointerEvent<HTMLElement>, day: string) => void
 }
 
 /**
@@ -29,19 +35,21 @@ interface HourColumnProps {
  * height into a time. The layer reads the column's live top through `column`, which already moves
  * with the scroller, so a scrolled grid needs no correction.
  */
-export function HourColumn({ day, occurrences, canWrite, onSelectOccurrence }: HourColumnProps) {
+export function HourColumn({ day, occurrences, canWrite, onSelectOccurrence, picked, onPickStart }: HourColumnProps) {
   const element = useRef<HTMLDivElement | null>(null)
   // While an item is dragged, its landing slot is drawn here, by the same segment rules as a saved
   // block — an overnight landing shows its piece on each day.
   const landing = useDragPreview()?.occurrence
   const landingSegment = landing && !isBandOccurrence(landing) ? segmentFor(landing, day) : null
+  const pickedSegment = picked ? segmentFor(picked, day) : null
   const { setNodeRef } = useDroppable({
     id: `hours:${day}`, disabled: !canWrite,
     data: { target: { kind: 'hours', day }, column: () => element.current } satisfies DropData,
   })
   return (
-    <div ref={(node) => { element.current = node; setNodeRef(node) }} data-testid="hour-column" className="relative"
-      style={{ height: `${24 * HOUR_HEIGHT}px` }}>
+    <div ref={(node) => { element.current = node; setNodeRef(node) }} data-testid="hour-column" data-day={day}
+      className="relative select-none" style={{ height: `${24 * HOUR_HEIGHT}px` }}
+      onPointerDown={onPickStart && ((event) => onPickStart(event, day))}>
       {Array.from({ length: 24 }, (_, hour) => (
         <div key={hour} className="border-b border-border/60" style={{ height: `${HOUR_HEIGHT}px` }} />
       ))}
@@ -54,6 +62,17 @@ export function HourColumn({ day, occurrences, canWrite, onSelectOccurrence }: H
         )
       })}
       {landing && landingSegment && <LandingBlock occurrence={landing} segment={landingSegment} />}
+      {picked && pickedSegment && <PickedBlock range={picked} segment={pickedSegment} />}
+    </div>
+  )
+}
+
+/** A time being picked out to add an event, with the times it would get. Inert, like a landing. */
+function PickedBlock({ range, segment }: { range: ScheduleChange; segment: Segment }) {
+  return (
+    <div data-testid="grid-selection" style={boxOf(segment)}
+      className="pointer-events-none absolute inset-x-0.5 z-20 overflow-clip rounded bg-accent-dim px-1 py-0.5 text-[11px] font-semibold text-accent ring-2 ring-accent">
+      <div className="sticky top-0 tabular-nums">{formatTimeRange(range, resolveLocale(i18next.language))}</div>
     </div>
   )
 }
@@ -76,9 +95,7 @@ function LandingBlock({ occurrence, segment }: { occurrence: CalendarOccurrence;
       <div className={`h-full overflow-clip rounded px-1 py-0.5 text-[11px] font-medium ${tintClassFor(occurrence)}`}>
         <div className="sticky top-0">
           <div className="truncate">{occurrence.title}</div>
-          <div className="tabular-nums opacity-80">
-            {occurrence.startTime?.slice(0, 5)} – {occurrence.endTime?.slice(0, 5)}
-          </div>
+          <div className="tabular-nums opacity-80">{formatTimeRange(occurrence, resolveLocale(i18next.language))}</div>
         </div>
       </div>
     </div>

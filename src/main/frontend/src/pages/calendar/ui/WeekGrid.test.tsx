@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import { DndContext } from '@dnd-kit/core'
 import { WeekGrid } from './WeekGrid'
 import { DayAgenda } from './DayAgenda'
@@ -273,6 +273,124 @@ describe('WeekGrid', () => {
   it('never makes finance or savings draggable', () => {
     renderWeek([allDayFrom('Loyer', 'FINANCE'), allDayFrom('Vacances', 'SAVINGS')])
     expect(document.querySelectorAll('[data-draggable]')).toHaveLength(0)
+  })
+})
+
+describe('picking out a time to add an event', () => {
+  const mouse = { pointerType: 'mouse', button: 0 }
+
+  function renderPicking(options: { canWrite?: boolean; occurrences?: CalendarOccurrence[] } = {}) {
+    const onCreateRange = vi.fn()
+    const canWrite = options.canWrite ?? true
+    const view = render(
+      <DndContext>
+        <WeekGrid date="2026-01-08" occurrences={options.occurrences ?? []} today="2026-01-06" canWrite={canWrite}
+          onSelectDay={vi.fn()} onSelectOccurrence={vi.fn()} onCreateRange={canWrite ? onCreateRange : undefined} />
+      </DndContext>)
+    const bands = [...view.container.querySelectorAll<HTMLElement>('[data-testid="all-day-band"]')]
+    return { ...view, onCreateRange, columns: columnsOf(view.container), bands }
+  }
+
+  /** jsdom has no elementsFromPoint: say what the pointer is over once it leaves the first column. */
+  function pointerOver(element: HTMLElement) {
+    Object.defineProperty(document, 'elementsFromPoint', { value: () => [element], configurable: true })
+  }
+  afterEach(() => { Reflect.deleteProperty(document, 'elementsFromPoint') })
+
+  // A column's top is 0 in jsdom, so a clientY is a number of minutes past midnight.
+  it('opens a new event for an hour from the quarter hour clicked', () => {
+    const { columns, onCreateRange } = renderPicking()
+    fireEvent.pointerDown(columns[1], { ...mouse, clientY: 14 * 60 + 20 })
+    fireEvent.pointerUp(window, { ...mouse, clientY: 14 * 60 + 20 })
+    expect(onCreateRange).toHaveBeenCalledWith({
+      allDay: false, startDate: '2026-01-06', startTime: '14:15', endDate: '2026-01-06', endTime: '15:15',
+    })
+  })
+
+  it('draws the time being picked out, by quarter hours, and hands it over on release', () => {
+    const { columns, onCreateRange } = renderPicking()
+    fireEvent.pointerDown(columns[1], { ...mouse, clientY: 600 })
+    fireEvent.pointerMove(window, { ...mouse, clientY: 700 })
+    const picked = within(columns[1]).getByTestId('grid-selection')
+    expect(picked.style.top).toBe('600px')
+    expect(picked.style.height).toBe('105px')
+    expect(picked.textContent).toContain('10:00 – 11:45')
+    fireEvent.pointerUp(window, { ...mouse, clientY: 700 })
+    expect(onCreateRange).toHaveBeenCalledWith({
+      allDay: false, startDate: '2026-01-06', startTime: '10:00', endDate: '2026-01-06', endTime: '11:45',
+    })
+    expect(screen.queryByTestId('grid-selection')).toBeNull()
+  })
+
+  it('spans the days a drag crosses', () => {
+    const { columns, onCreateRange } = renderPicking()
+    fireEvent.pointerDown(columns[1], { ...mouse, clientY: 600 })
+    pointerOver(columns[3])
+    fireEvent.pointerMove(window, { ...mouse, clientY: 700 })
+    expect(within(columns[2]).getByTestId('grid-selection').style.height).toBe('1440px')
+    expect(within(columns[1]).getByTestId('grid-selection').textContent).toContain('→')
+    fireEvent.pointerUp(window, { ...mouse, clientY: 700 })
+    expect(onCreateRange).toHaveBeenCalledWith({
+      allDay: false, startDate: '2026-01-06', startTime: '10:00', endDate: '2026-01-08', endTime: '11:45',
+    })
+  })
+
+  it('starts nothing from an event — pressing an event is how it is dragged', () => {
+    const { columns, onCreateRange } = renderPicking({ occurrences: [timed('Piano', '18:00', '19:00')] })
+    fireEvent.pointerDown(within(columns[1]).getByRole('button', { name: /Piano/ }), { ...mouse, clientY: 1090 })
+    fireEvent.pointerUp(window, { ...mouse, clientY: 1090 })
+    expect(onCreateRange).not.toHaveBeenCalled()
+  })
+
+  it('lets a viewer pick nothing', () => {
+    const { columns, onCreateRange } = renderPicking({ canWrite: false })
+    fireEvent.pointerDown(columns[1], { ...mouse, clientY: 600 })
+    fireEvent.pointerMove(window, { ...mouse, clientY: 700 })
+    // Not even drawn while pressed: nothing is promised that could not be added.
+    expect(screen.queryByTestId('grid-selection')).toBeNull()
+    fireEvent.pointerUp(window, { ...mouse, clientY: 700 })
+    expect(onCreateRange).not.toHaveBeenCalled()
+  })
+
+  it('leaves a finger alone — on a touch screen the grid scrolls', () => {
+    const { columns, onCreateRange } = renderPicking()
+    fireEvent.pointerDown(columns[1], { pointerType: 'touch', button: 0, clientY: 600 })
+    fireEvent.pointerUp(window, { pointerType: 'touch', button: 0, clientY: 600 })
+    expect(onCreateRange).not.toHaveBeenCalled()
+  })
+
+  it('drops the selection on Escape', () => {
+    const { columns, onCreateRange } = renderPicking()
+    fireEvent.pointerDown(columns[1], { ...mouse, clientY: 600 })
+    fireEvent.pointerMove(window, { ...mouse, clientY: 700 })
+    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.pointerUp(window, { ...mouse, clientY: 700 })
+    expect(onCreateRange).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('grid-selection')).toBeNull()
+  })
+
+  it('picks whole days in the all-day band', () => {
+    const { bands, onCreateRange } = renderPicking()
+    fireEvent.pointerDown(bands[0], mouse)
+    pointerOver(bands[2])
+    fireEvent.pointerMove(window, mouse)
+    expect(bands.map((band) => band.hasAttribute('data-selected'))).toEqual([true, true, true, false, false, false, false])
+    fireEvent.pointerUp(window, mouse)
+    expect(onCreateRange).toHaveBeenCalledWith({
+      allDay: true, startDate: '2026-01-05', startTime: null, endDate: '2026-01-07', endTime: null,
+    })
+  })
+
+  it('works the same in the day view', () => {
+    const onCreateRange = vi.fn()
+    const { container } = render(
+      <DayAgenda date="2026-01-06" occurrences={[]} canWrite onSelectOccurrence={vi.fn()} onCreateRange={onCreateRange} />)
+    const column = container.querySelector('[data-testid="hour-column"]') as HTMLElement
+    fireEvent.pointerDown(column, { ...mouse, clientY: 9 * 60 })
+    fireEvent.pointerUp(window, { ...mouse, clientY: 9 * 60 })
+    expect(onCreateRange).toHaveBeenCalledWith({
+      allDay: false, startDate: '2026-01-06', startTime: '09:00', endDate: '2026-01-06', endTime: '10:00',
+    })
   })
 })
 

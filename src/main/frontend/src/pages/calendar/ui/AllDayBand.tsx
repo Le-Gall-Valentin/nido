@@ -13,6 +13,10 @@ interface AllDayBandProps {
   /** Off for a viewer: nothing they drag could be saved. */
   canWrite: boolean
   onSelectOccurrence: (occurrence: CalendarOccurrence) => void
+  /** Part of the days being picked out to add an all-day event. */
+  picked?: boolean
+  /** A press on empty band here, which may start picking out days. */
+  onPickStart?: (event: React.PointerEvent<HTMLElement>, day: string) => void
 }
 
 /**
@@ -25,7 +29,7 @@ interface AllDayBandProps {
  * It renders even when empty — an empty band is still where a timed event is dropped to become
  * all-day, so it must stay a target.
  */
-export function AllDayBand({ day, occurrences, canWrite, onSelectOccurrence }: AllDayBandProps) {
+export function AllDayBand({ day, occurrences, canWrite, onSelectOccurrence, picked = false, onPickStart }: AllDayBandProps) {
   const { t } = useTranslation('calendar')
   const { setNodeRef, isOver } = useDroppable({
     id: `all-day:${day}`, disabled: !canWrite, data: { target: { kind: 'all-day', day } } satisfies DropData,
@@ -34,8 +38,10 @@ export function AllDayBand({ day, occurrences, canWrite, onSelectOccurrence }: A
   const landing = useDragPreview()?.occurrence
   const landsHere = landing && isBandOccurrence(landing) && covers(landing, day)
   return (
-    <div ref={setNodeRef} data-testid="all-day-band"
-      className={`flex min-h-7 flex-wrap gap-1 border-b border-border px-1 py-1 ${isOver ? 'bg-accent-dim' : ''}`}>
+    <div ref={setNodeRef} data-testid="all-day-band" data-day={day} data-selected={picked || undefined}
+      onPointerDown={onPickStart && ((event) => onPickStart(event, day))}
+      className={`flex min-h-7 select-none flex-wrap gap-1 border-b border-border px-1 py-1
+        ${isOver || picked ? 'bg-accent-dim' : ''} ${picked ? 'ring-2 ring-inset ring-accent' : ''}`}>
       <span className="sr-only">{t('all_day_band')}</span>
       {occurrences.map((occurrence) => (
         <BandItem key={`${occurrence.sourceId}-${day}`} occurrence={occurrence} day={day} canWrite={canWrite}

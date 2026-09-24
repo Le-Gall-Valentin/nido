@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { minutesAt, minutesToTime, snap, timeToMinutes } from './timeMath'
+import { exactMinutesAt, minutesAt, minutesToTime, snap, timeToMinutes } from './timeMath'
 
 describe('timeMath', () => {
   it('reads a time with or without seconds', () => {
@@ -28,5 +28,14 @@ describe('timeMath', () => {
   it('never reads a time outside the day, even with the pointer off the column', () => {
     expect(minutesAt(900, 1000)).toBe(0)
     expect(minutesAt(1000 + 2000, 1000)).toBe(1440)
+  })
+})
+
+describe('exactMinutesAt', () => {
+  it('reads the time under the pointer without rounding, kept inside the day', () => {
+    expect(exactMinutesAt(1000 + 870, 1000)).toBe(870)
+    expect(exactMinutesAt(1000 + 874, 1000)).toBe(874)
+    expect(exactMinutesAt(900, 1000)).toBe(0)
+    expect(exactMinutesAt(1000 + 5000, 1000)).toBeLessThan(1440)
   })
 })

@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay } from '../lib/calendarWindow'
-import { isBandOccurrence } from '../lib/segments'
+import type { ScheduleChange } from '../lib/dragTypes'
+import { covers, isBandOccurrence } from '../lib/segments'
+import { useGridSelection } from '../model/useGridSelection'
 import { AllDayBand } from './AllDayBand'
 import { HourColumn, HourGutter } from './HourColumn'
 
@@ -11,22 +13,28 @@ interface DayAgendaProps {
   onSelectOccurrence: (occurrence: CalendarOccurrence) => void
   /** Off for a viewer: nothing they drag could be saved. */
   canWrite?: boolean
+  /** A time picked out in the grid, to add an event over it. Left out for a viewer. */
+  onCreateRange?: (range: ScheduleChange) => void
 }
 
 /**
  * One day, one column — the same at every width. A single hour column is already the shape a
  * phone wants, so this is the one view that needs no responsive branch.
  */
-export function DayAgenda({ date, occurrences, onSelectOccurrence, canWrite = false }: DayAgendaProps) {
+export function DayAgenda({ date, occurrences, onSelectOccurrence, canWrite = false, onCreateRange }: DayAgendaProps) {
   const { t } = useTranslation('calendar')
   const dayOccurrences = groupByDay(occurrences, [date]).get(date) ?? []
   const timed = dayOccurrences.filter((o) => !isBandOccurrence(o))
+  const picking = useGridSelection(onCreateRange)
+  const pickedDays = picking.shown?.kind === 'band' ? picking.shown.range : null
 
   return (
     <div className="rounded-2xl border border-border bg-bg-1">
       <AllDayBand
         day={date}
         canWrite={canWrite}
+        picked={pickedDays !== null && covers(pickedDays, date)}
+        onPickStart={picking.startBand}
         occurrences={dayOccurrences.filter(isBandOccurrence)}
         onSelectOccurrence={onSelectOccurrence}
       />
@@ -41,7 +49,8 @@ export function DayAgenda({ date, occurrences, onSelectOccurrence, canWrite = fa
         <div className="flex items-start max-h-[65vh] overflow-y-auto">
           <HourGutter />
           <div className="flex-1 border-l border-border">
-            <HourColumn day={date} occurrences={timed} canWrite={canWrite} onSelectOccurrence={onSelectOccurrence} />
+            <HourColumn day={date} occurrences={timed} canWrite={canWrite} onSelectOccurrence={onSelectOccurrence}
+            picked={picking.shown?.kind === 'hours' ? picking.shown.range : null} onPickStart={picking.startHours} />
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@ import {
   type CalendarOccurrence, type EventInput,
 } from '@/entities/calendar'
 import { toEventInput } from '../lib/eventInput'
+import type { ScheduleChange } from '../lib/dragTypes'
 import { EventFormModal } from './EventFormModal'
 
 interface EventFormPanelProps {
@@ -19,6 +20,8 @@ interface EventFormPanelProps {
   detachSlot: { seriesId: string; date: string } | null
   /** Pre-fills the dates when creating from a day cell. */
   defaultDate: string
+  /** Pre-fills the whole when — times included — for a time picked out in the week or day grid. */
+  defaultSchedule?: ScheduleChange | null
   members: SpaceMember[]
   isPersonal: boolean
   onClose: () => void
@@ -29,7 +32,7 @@ interface EventFormPanelProps {
  * fails. Keeping the decision next to the form is what lets EventFormModal stay presentational.
  */
 export function EventFormPanel({
-  spaceId, occurrence, detachSlot, defaultDate, members, isPersonal, onClose,
+  spaceId, occurrence, detachSlot, defaultDate, defaultSchedule = null, members, isPersonal, onClose,
 }: EventFormPanelProps) {
   const { t } = useTranslation('calendar')
   const [error, setError] = useState<string | null>(null)
@@ -43,7 +46,7 @@ export function EventFormPanel({
   const blank: EventInput = {
     title: '', description: null, location: null, allDay: true,
     startDate: defaultDate, startTime: null, endDate: defaultDate, endTime: null,
-    color: null, participantIds: [],
+    color: null, participantIds: [], ...defaultSchedule,
   }
   // Editing one occurrence of a series starts from what that occurrence looks like today, but is
   // written through the slot's endpoint — so the form is pre-filled even though no event row exists.

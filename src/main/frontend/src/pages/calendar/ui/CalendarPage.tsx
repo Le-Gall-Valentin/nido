@@ -15,6 +15,7 @@ import {
 import { FinanceApiProvider, financeApi as defaultFinanceApi, type IFinanceApi } from '@/entities/finance'
 import { KitchenApiProvider, kitchenApi as defaultKitchenApi, type IKitchenApi } from '@/entities/kitchen'
 import { windowFor, type CalendarView } from '../lib/calendarWindow'
+import type { ScheduleChange } from '../lib/dragTypes'
 import { useCalendarUrlState } from '../model/useCalendarUrlState'
 import { useCalendarFilters } from '../model/useCalendarFilters'
 import { useSwipePeriod } from '../model/useSwipePeriod'
@@ -102,7 +103,9 @@ function CalendarPageContent() {
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
   // Where a new event starts, and whether closing its form should hand back to the day it was
   // opened from — so an event added from a day's detail is seen landing in that day.
-  const [creating, setCreating] = useState<{ date: string; returnToDay: boolean } | null>(null)
+  // `schedule` when a time was picked out in the week or day grid: the form opens on exactly it.
+  const [creating, setCreating] = useState<{ date: string; returnToDay: boolean; schedule?: ScheduleChange } | null>(null)
+  const createOver = (schedule: ScheduleChange) => setCreating({ date: schedule.startDate, returnToDay: false, schedule })
   const [managingSeries, setManagingSeries] = useState(false)
   const [editing, setEditing] = useState<{ occurrence: CalendarOccurrence; detachSlot: { seriesId: string; date: string } | null } | null>(null)
   const [deleting, setDeleting] = useState<CalendarOccurrence | null>(null)
@@ -235,11 +238,12 @@ function CalendarPageContent() {
             )}
             {view === 'week' && (
               <WeekGrid date={date} occurrences={occurrences} today={today} canWrite={canWriteHere}
-                onSelectDay={setSelectedDay} onSelectOccurrence={setSelectedOccurrence} />
+                onSelectDay={setSelectedDay} onSelectOccurrence={setSelectedOccurrence}
+                onCreateRange={canWriteHere ? createOver : undefined} />
             )}
             {view === 'day' && (
               <DayAgenda date={date} occurrences={occurrences} canWrite={canWriteHere}
-                onSelectOccurrence={setSelectedOccurrence} />
+                onSelectOccurrence={setSelectedOccurrence} onCreateRange={canWriteHere ? createOver : undefined} />
             )}
           </CalendarDragLayer>
         </div>
@@ -299,6 +303,7 @@ function CalendarPageContent() {
           occurrence={editing?.occurrence ?? null}
           detachSlot={editing?.detachSlot ?? null}
           defaultDate={creating?.date ?? date}
+          defaultSchedule={creating?.schedule ?? null}
           members={members ?? []}
           isPersonal={spaceIsPersonal}
           onClose={() => {

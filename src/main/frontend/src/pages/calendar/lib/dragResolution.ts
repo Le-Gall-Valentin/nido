@@ -29,7 +29,7 @@ function absolute(startDate: string, date: string, time: string): number {
  * A date and time from minutes past `day`'s midnight, either way: exactly 24:00 reads as the next
  * day at 00:00, and -60 as the day before at 23:00.
  */
-function at(day: string, minutes: number): { date: string; time: string } {
+export function dateTimeAt(day: string, minutes: number): { date: string; time: string } {
   const rest = ((minutes % DAY_MINUTES) + DAY_MINUTES) % DAY_MINUTES
   return { date: addDays(day, Math.floor(minutes / DAY_MINUTES)), time: minutesToTime(rest) }
 }
@@ -45,8 +45,8 @@ function dayShift(intent: DragIntent, target: DropTarget): number {
 }
 
 function timedFrom(day: string, startMinutes: number, duration: number): ScheduleChange {
-  const start = at(day, startMinutes)
-  const end = at(day, startMinutes + duration)
+  const start = dateTimeAt(day, startMinutes)
+  const end = dateTimeAt(day, startMinutes + duration)
   return { allDay: false, startDate: start.date, startTime: start.time, endDate: end.date, endTime: end.time }
 }
 
@@ -119,13 +119,13 @@ function decide(intent: DragIntent, target: DropTarget, pointerMinutes: number |
     // pulled back into an earlier day, or pushed into a later one.
     const dayOffset = daysBetween(o.startDate, target.day) * DAY_MINUTES
     const newStart = Math.min(dayOffset + pointerMinutes, endAbs - MIN_DURATION_MINUTES)
-    const start = at(o.startDate, newStart)
+    const start = dateTimeAt(o.startDate, newStart)
     return { ...scheduleOf(o), startTime: start.time, startDate: start.date }
   }
 
   // resize-end: the handle lives on the last piece, so the pointer is read against that day.
   const dayOffset = daysBetween(o.startDate, target.day) * DAY_MINUTES
   const newEnd = Math.max(dayOffset + pointerMinutes, startAbs + MIN_DURATION_MINUTES)
-  const end = at(o.startDate, newEnd)
+  const end = dateTimeAt(o.startDate, newEnd)
   return { ...scheduleOf(o), endDate: end.date, endTime: end.time }
 }

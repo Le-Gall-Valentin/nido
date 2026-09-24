@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatPeriodLabel } from './periodLabel'
+import { formatPeriodLabel, formatTimeRange } from './periodLabel'
 
 const FR = 'fr-FR'
 const EN = 'en-GB'
@@ -49,5 +49,24 @@ describe('formatPeriodLabel — week', () => {
     const monday = formatPeriodLabel('week', '2026-09-14', FR)
     const sunday = formatPeriodLabel('week', '2026-09-20', FR)
     expect(sunday).toBe(monday)
+  })
+})
+
+describe('formatTimeRange', () => {
+  const range = (startDate: string, startTime: string, endDate: string, endTime: string) =>
+    ({ startDate, startTime, endDate, endTime })
+
+  it('writes the two times of a single day', () => {
+    expect(formatTimeRange(range('2026-10-19', '13:00:00', '2026-10-19', '14:30'), 'fr-FR')).toBe('13:00 – 14:30')
+  })
+
+  it('writes an end at midnight as 24:00, not as the next day', () => {
+    expect(formatTimeRange(range('2026-10-20', '22:00', '2026-10-21', '00:00'), 'fr-FR')).toBe('22:00 – 24:00')
+  })
+
+  it('names the days when the range runs over several — "13:00 – 10:30" reads backwards', () => {
+    // Non-breaking inside each end, so a narrow column wraps at the arrow, never inside "Mer. 21".
+    expect(formatTimeRange(range('2026-10-19', '13:00', '2026-10-21', '10:30'), 'fr-FR'))
+      .toBe('Lun.\u00a019\u00a013:00 → Mer.\u00a021\u00a010:30')
   })
 })
