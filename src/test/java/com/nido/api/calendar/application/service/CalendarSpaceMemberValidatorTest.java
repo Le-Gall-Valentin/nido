@@ -68,6 +68,27 @@ class CalendarSpaceMemberValidatorTest {
     }
 
     @Test
+    void keepsAParticipantWhoHasSinceLeftTheSpace() {
+        // Who took part stays on record: someone who left the space no longer blocks editing the event.
+        spaceIs(SpaceType.SHARED);
+        UUID leaver = UUID.randomUUID();
+        when(memberships.find(spaceId, leaver)).thenReturn(Optional.empty());
+
+        assertThat(validator.participantsFor(owner, List.of(leaver), List.of(leaver))).containsExactly(leaver);
+    }
+
+    @Test
+    void stillRefusesAStrangerAddedNextToAParticipantWhoLeft() {
+        spaceIs(SpaceType.SHARED);
+        UUID leaver = UUID.randomUUID();
+        UUID stranger = UUID.randomUUID();
+        when(memberships.find(eq(spaceId), any())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> validator.participantsFor(owner, List.of(leaver, stranger), List.of(leaver)))
+            .isInstanceOf(CalendarException.MemberNotInSpace.class);
+    }
+
+    @Test
     void closesJoiningAndLeavingInAPersonalSpace() {
         spaceIs(SpaceType.PERSONAL);
 

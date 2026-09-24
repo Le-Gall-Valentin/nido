@@ -150,6 +150,27 @@ class CalendarEventControllerIT {
     }
 
     @Test
+    void a_participant_who_left_the_space_stays_on_record_and_does_not_block_editing_the_event() throws Exception {
+        UUID carolId = saveUser("carol");
+        saveMembership(spaceId, carolId, SpaceRole.MEMBER);
+        String created = mockMvc.perform(post(events()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Concert","allDay":true,"startDate":"2026-03-10","endDate":"2026-03-10",
+                     "participantIds":["%s","%s"]}""".formatted(aliceId, carolId)))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String eventId = objectMapper.readTree(created).get("id").asText();
+        jdbc.update("DELETE FROM space_members WHERE space_id = ? AND user_id = ?", spaceId, carolId);
+
+        // The form sends back everyone taking part, including whoever has left since.
+        mockMvc.perform(patch(events() + "/" + eventId).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Concert (reporté)","allDay":true,"startDate":"2026-03-11","endDate":"2026-03-11",
+                     "participantIds":["%s","%s"]}""".formatted(aliceId, carolId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.participantIds.length()").value(2));
+    }
+
+    @Test
     void a_viewer_cannot_create_an_event() throws Exception {
         mockMvc.perform(post(events())
                 .cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)

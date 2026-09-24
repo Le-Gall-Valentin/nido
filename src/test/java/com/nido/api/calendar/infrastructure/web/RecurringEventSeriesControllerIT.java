@@ -244,6 +244,25 @@ class RecurringEventSeriesControllerIT {
     }
 
     @Test
+    void a_participant_who_left_the_space_does_not_block_editing_the_series() throws Exception {
+        UUID carolId = saveUser("carol");
+        saveMembership(spaceId, carolId, SpaceRole.MEMBER);
+        String body = """
+            {"title":"%s","allDay":true,"intervalType":"WEEKLY","intervalCount":1,"anchorDate":"2026-01-06",
+             "participantIds":["%s"]}""";
+        String created = mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content(body.formatted("Piano", carolId)))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String seriesId = objectMapper.readTree(created).get("id").asText();
+        jdbc.update("DELETE FROM space_members WHERE space_id = ? AND user_id = ?", spaceId, carolId);
+
+        mockMvc.perform(patch(series() + "/" + seriesId).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content(body.formatted("Piano (salle 3)", carolId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.participantIds[0]").value(carolId.toString()));
+    }
+
+    @Test
     void a_viewer_cannot_create_a_series() throws Exception {
         mockMvc.perform(post(series())
                 .cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)

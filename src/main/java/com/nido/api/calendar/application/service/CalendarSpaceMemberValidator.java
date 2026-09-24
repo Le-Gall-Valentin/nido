@@ -19,10 +19,11 @@ import java.util.UUID;
  * so no path (a form, a series, a single occurrence, a copy or a move into the space) can leave an
  * event of a personal space without its owner.
  *
- * <p>Elsewhere, every participant id a caller submitted must be an actual member of the space.
- * Nothing else constrains those ids, so without this check an unknown or foreign UUID reaches the
- * database as a foreign key value and blows up with a raw DataIntegrityViolationException (500)
- * instead of a clean 404.
+ * <p>Elsewhere, every participant a caller adds must be an actual member of the space. Nothing else
+ * constrains those ids, so without this check an unknown or foreign UUID reaches the database as a
+ * foreign key value and blows up with a raw DataIntegrityViolationException (500) instead of a clean
+ * 404. Whoever already takes part stays, even after leaving the space: who took part is kept on
+ * record, and checking them again made every event they had joined impossible to edit.
  *
  * <p>Prefixed with {@code Calendar} for the same reason Tasks prefixes its own: Spring's default
  * bean naming ignores the package, so two validators sharing a simple name collide at startup.
@@ -39,14 +40,22 @@ public class CalendarSpaceMemberValidator {
     }
 
     /**
-     * The participants to store for an event or series written by {@code writer} into their space:
+     * The participants to store for a new event or series written by {@code writer} into their space:
      * its owner alone in a personal space, the members requested — each checked — anywhere else.
      */
     public List<UUID> participantsFor(SpaceMembership writer, List<UUID> requested) {
+        return participantsFor(writer, requested, List.of());
+    }
+
+    /**
+     * The same for an edit, where {@code alreadyTakingPart} are the ones taking part so far: they stay
+     * without being checked again, so someone who has left the space since remains on record.
+     */
+    public List<UUID> participantsFor(SpaceMembership writer, List<UUID> requested, Collection<UUID> alreadyTakingPart) {
         if (isPersonal(writer)) {
             return List.of(writer.userId());
         }
-        ensureMembers(writer.spaceId(), requested);
+        ensureMembers(writer.spaceId(), requested.stream().filter(id -> !alreadyTakingPart.contains(id)).toList());
         return requested;
     }
 

@@ -21,6 +21,7 @@ import org.mockito.ArgumentCaptor;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -50,6 +51,8 @@ class ParticipantsOnEveryWriteTest {
         new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.OWNER, Instant.now());
     private final List<UUID> asked = List.of(UUID.randomUUID());
     private final List<UUID> resolved = List.of(owner.userId());
+    /** Who takes part in what is edited already — handed to the rule, which lets them stay. */
+    private final List<UUID> takingPart = List.of(UUID.randomUUID());
     private final LocalDate day = LocalDate.of(2026, 10, 7);
 
     @Test
@@ -68,7 +71,7 @@ class ParticipantsOnEveryWriteTest {
     void editingAnEventStoresTheResolvedParticipants() {
         UUID eventId = UUID.randomUUID();
         when(events.findById(eventId)).thenReturn(Optional.of(event(eventId)));
-        when(rule.participantsFor(owner, asked)).thenReturn(resolved);
+        when(rule.participantsFor(owner, asked, takingPart)).thenReturn(resolved);
 
         new UpdateEventHandler(events, rule).update(new UpdateEventCommand(eventId, "Dentiste", null, null, true,
             day, null, day, null, null, asked), owner);
@@ -83,7 +86,7 @@ class ParticipantsOnEveryWriteTest {
         RecurringEventSeries weekly = weekly();
         when(series.findById(weekly.id())).thenReturn(Optional.of(weekly));
         when(events.findBySeriesAndOriginalDate(weekly.id(), day)).thenReturn(Optional.empty());
-        when(rule.participantsFor(owner, asked)).thenReturn(resolved);
+        when(rule.participantsFor(eq(owner), eq(asked), any())).thenReturn(resolved);
 
         new DetachOccurrenceHandler(series, events, mock(EventExclusionRepository.class), rule).detach(
             weekly.id(), day, new UpdateEventCommand(null, "Piano", null, null, true, day, null, day, null, null, asked), owner);
@@ -91,6 +94,29 @@ class ParticipantsOnEveryWriteTest {
         ArgumentCaptor<CreateEventCommand> stored = ArgumentCaptor.forClass(CreateEventCommand.class);
         verify(events).create(stored.capture());
         assertThat(stored.getValue().participantIds()).isEqualTo(resolved);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<UUID>> alreadyTakingPart = ArgumentCaptor.forClass(Collection.class);
+        verify(rule).participantsFor(eq(owner), eq(asked), alreadyTakingPart.capture());
+        assertThat(alreadyTakingPart.getValue()).containsExactlyInAnyOrderElementsOf(takingPart);
+    }
+
+    @Test
+    void editingAnOccurrenceEditedBeforeCountsItsOwnParticipantsAndTheSeriesOnes() {
+        RecurringEventSeries weekly = weekly();
+        UUID editedAlone = UUID.randomUUID();
+        CalendarEvent detached = new CalendarEvent(UUID.randomUUID(), spaceId, "Piano", null, null, true, day, null, day,
+            null, null, List.of(editedAlone), weekly.id(), day, owner.userId(), Instant.now());
+        when(series.findById(weekly.id())).thenReturn(Optional.of(weekly));
+        when(events.findBySeriesAndOriginalDate(weekly.id(), day)).thenReturn(Optional.of(detached));
+        when(rule.participantsFor(eq(owner), eq(asked), any())).thenReturn(resolved);
+
+        new DetachOccurrenceHandler(series, events, mock(EventExclusionRepository.class), rule).detach(
+            weekly.id(), day, new UpdateEventCommand(null, "Piano", null, null, true, day, null, day, null, null, asked), owner);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<UUID>> alreadyTakingPart = ArgumentCaptor.forClass(Collection.class);
+        verify(rule).participantsFor(eq(owner), eq(asked), alreadyTakingPart.capture());
+        assertThat(alreadyTakingPart.getValue()).containsExactlyInAnyOrder(takingPart.get(0), editedAlone);
     }
 
     @Test
@@ -109,7 +135,7 @@ class ParticipantsOnEveryWriteTest {
     void editingASeriesStoresTheResolvedParticipants() {
         RecurringEventSeries weekly = weekly();
         when(series.findById(weekly.id())).thenReturn(Optional.of(weekly));
-        when(rule.participantsFor(owner, asked)).thenReturn(resolved);
+        when(rule.participantsFor(owner, asked, takingPart)).thenReturn(resolved);
 
         new UpdateRecurringEventSeriesHandler(series, rule).update(new UpdateRecurringEventSeriesCommand(weekly.id(), "Piano",
             null, null, true, null, null, 0, null, RecurrenceInterval.WEEKLY, 1, day, null, asked), owner);
@@ -154,11 +180,11 @@ class ParticipantsOnEveryWriteTest {
 
     private CalendarEvent event(UUID id) {
         return new CalendarEvent(id, spaceId, "Dentiste", null, null, true, day, null, day, null, null,
-            List.of(), null, null, owner.userId(), Instant.now());
+            takingPart, null, null, owner.userId(), Instant.now());
     }
 
     private RecurringEventSeries weekly() {
         return new RecurringEventSeries(UUID.randomUUID(), spaceId, "Piano", null, null, true, null, null, 0, null,
-            RecurrenceInterval.WEEKLY, 1, day, null, List.of(), owner.userId(), Instant.now());
+            RecurrenceInterval.WEEKLY, 1, day, null, takingPart, owner.userId(), Instant.now());
     }
 }

@@ -34,7 +34,7 @@ public class UpdateRecurringEventSeriesHandler implements UpdateRecurringEventSe
         EventScheduleValidator.validateSeries(command.allDay(), command.startTime(), command.endTime(),
             command.durationDays(), command.intervalType(), command.intervalCount(), command.anchorDate(), command.endDate());
         UpdateRecurringEventSeriesCommand stored =
-            command.withParticipants(memberValidator.participantsFor(caller, command.participantIds()));
+            command.withParticipants(memberValidator.participantsFor(caller, command.participantIds(), existing.participantIds()));
         // Moving the anchor re-dates every slot, so exclusions and detached instances keyed on the
         // old slots stop matching. They are deliberately left alone rather than migrated: guessing
         // which new slot a cancellation was "really" about would be inventing the user's intent.

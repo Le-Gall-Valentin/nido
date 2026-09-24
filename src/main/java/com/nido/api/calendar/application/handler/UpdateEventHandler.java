@@ -32,6 +32,7 @@ public class UpdateEventHandler implements UpdateEventUseCase {
         }
         EventScheduleValidator.validateEvent(
             command.allDay(), command.startDate(), command.startTime(), command.endDate(), command.endTime());
-        return events.update(command.withParticipants(memberValidator.participantsFor(caller, command.participantIds())));
+        return events.update(command.withParticipants(
+            memberValidator.participantsFor(caller, command.participantIds(), existing.participantIds())));
     }
 }
