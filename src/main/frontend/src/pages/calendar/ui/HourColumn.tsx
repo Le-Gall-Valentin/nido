@@ -169,23 +169,22 @@ const LINE_PX = 15
 const PADDING_PX = 4
 
 /**
- * What a block says, by how tall it is: under 45 minutes, the title and its start on one line;
- * then the times under it; from an hour and a half the place; from two hours as much of the
- * description as fits in whole lines. It sticks to the top while a long piece scrolls past.
+ * What a block says: everything that fits, in whole lines. With one line, its title and its start;
+ * with two, its times under the title; then its place, then as much of its description as the lines
+ * left can hold. It sticks to the top while a long piece scrolls past.
  */
 function BlockDetails({ occurrence, minutes }: { occurrence: CalendarOccurrence; minutes: number }) {
-  const start = occurrence.startTime?.slice(0, 5)
-  if (minutes < 45) {
+  const lines = Math.floor(((minutes / 60) * HOUR_HEIGHT - PADDING_PX) / LINE_PX)
+  if (lines < 2) {
     return (
       <span className="sticky top-0 max-w-full truncate leading-[15px]">
-        {occurrence.title}<span className="opacity-80"> · {start}</span>
+        {occurrence.title}<span className="opacity-80"> · {occurrence.startTime?.slice(0, 5)}</span>
       </span>
     )
   }
-  const height = (minutes / 60) * HOUR_HEIGHT
-  const place = minutes >= 90 ? occurrence.location : null
-  const linesLeft = Math.floor((height - PADDING_PX - LINE_PX * (place ? 3 : 2)) / LINE_PX)
-  const description = minutes >= 120 && linesLeft > 0 ? occurrence.description : null
+  const place = lines >= 3 ? occurrence.location : null
+  const linesLeft = lines - 2 - (place ? 1 : 0)
+  const description = linesLeft > 0 ? occurrence.description : null
   return (
     <div className="sticky top-0 flex w-full min-w-0 flex-col leading-[15px]">
       <span className="truncate">{occurrence.title}</span>

@@ -305,39 +305,44 @@ describe('WeekGrid', () => {
   })
 })
 
-describe('what a block says, by how tall it is', () => {
-  const concert = (endTime: string) => occurrence({ title: 'Concert', allDay: false, startTime: '18:00', endTime,
-    location: 'Salle Pleyel', description: 'Apporter les billets' })
+describe('what a block says: everything that fits, in whole lines', () => {
+  const concert = (endTime: string, details: Partial<CalendarOccurrence> = { location: 'Salle Pleyel', description: 'Apporter les billets' }) =>
+    occurrence({ title: 'Concert', allDay: false, startTime: '18:00', endTime, location: null, description: null, ...details })
   const blockOf = (container: HTMLElement) => within(columnsOf(container)[1]).getByRole('button', { name: /Concert/ })
 
-  it('fits the title and the start on one line under 45 minutes', () => {
+  it('fits the title and the start on one line when only one line fits', () => {
+    // 30 minutes: 30px, less 4px of padding, holds one 15px line.
     const { container } = renderWeek([concert('18:30')])
     expect(blockOf(container).textContent).toBe('Concert · 18:00')
   })
 
-  it('writes the times under the title from 45 minutes', () => {
-    const { container } = renderWeek([concert('19:00')])
+  it('writes the times under the title once two lines fit', () => {
+    const { container } = renderWeek([concert('18:45')])
     const block = blockOf(container)
-    expect(within(block).getByText('18:00 – 19:00')).toBeTruthy()
+    expect(within(block).getByText('18:00 – 18:45')).toBeTruthy()
     expect(within(block).queryByText('Salle Pleyel')).toBeNull()
   })
 
-  it('adds the place from an hour and a half', () => {
-    const { container } = renderWeek([concert('19:30')])
+  it('adds the place as soon as a third line fits — an hour is enough', () => {
+    const { container } = renderWeek([concert('19:00')])
     const block = blockOf(container)
     expect(within(block).getByText('Salle Pleyel')).toBeTruthy()
     expect(within(block).queryByText('Apporter les billets')).toBeNull()
   })
 
-  it('adds the start of the description from two hours, cut at a whole line', () => {
+  it('gives the third line to the description when there is no place', () => {
+    const { container } = renderWeek([concert('19:00', { description: 'Apporter les billets' })])
+    expect(within(blockOf(container)).getByText('Apporter les billets').style.maxHeight).toBe('15px')
+  })
+
+  it('gives the description every whole line left', () => {
     const { container } = renderWeek([concert('20:30')])
-    const description = within(blockOf(container)).getByText('Apporter les billets')
-    // 150px tall: 4px of padding and three 15px lines above leave six whole lines.
-    expect(description.style.maxHeight).toBe('90px')
+    // 150px: 4px of padding leaves nine 15px lines; title, times and place take three.
+    expect(within(blockOf(container)).getByText('Apporter les billets').style.maxHeight).toBe('90px')
   })
 
   it('says only what an event has — no empty place line', () => {
-    const { container } = renderWeek([occurrence({ title: 'Concert', allDay: false, startTime: '18:00', endTime: '21:00' })])
+    const { container } = renderWeek([concert('21:00', {})])
     expect(blockOf(container).textContent).toBe('Concert18:00 – 21:00')
   })
 })
