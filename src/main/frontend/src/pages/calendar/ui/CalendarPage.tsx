@@ -13,6 +13,8 @@ import {
   calendarApi, CalendarApiProvider, useOccurrences, useJoinEvent, useLeaveEvent, useUpdateEvent,
   type CalendarApi, type CalendarOccurrence,
 } from '@/entities/calendar'
+import { FinanceApiProvider, financeApi as defaultFinanceApi, type IFinanceApi } from '@/entities/finance'
+import { KitchenApiProvider, kitchenApi as defaultKitchenApi, type IKitchenApi } from '@/entities/kitchen'
 import { windowFor, type CalendarView } from '../lib/calendarWindow'
 import { rescheduledInput } from '../lib/eventInput'
 import { dragActivationConstraint } from '../lib/dragActivation'
@@ -38,12 +40,25 @@ const VIEWS: CalendarView[] = ['month', 'week', 'day']
 
 interface CalendarPageProps {
   api?: CalendarApi
+  /**
+   * The calendar opens other modules' editors — a savings goal, a finance series, a meal — so it
+   * needs their APIs too. Every module page mounts its own provider; this one mounts three, and
+   * forgetting one crashed the whole page the first time such an item was clicked.
+   */
+  financeApi?: IFinanceApi
+  kitchenApi?: IKitchenApi
 }
 
-export function CalendarPage({ api = calendarApi }: CalendarPageProps = {}) {
+export function CalendarPage({
+  api = calendarApi, financeApi = defaultFinanceApi, kitchenApi = defaultKitchenApi,
+}: CalendarPageProps = {}) {
   return (
     <CalendarApiProvider api={api}>
-      <CalendarPageContent />
+      <FinanceApiProvider api={financeApi}>
+        <KitchenApiProvider api={kitchenApi}>
+          <CalendarPageContent />
+        </KitchenApiProvider>
+      </FinanceApiProvider>
     </CalendarApiProvider>
   )
 }
