@@ -1,6 +1,10 @@
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay, weekDates } from '../lib/calendarWindow'
+import type { DragData, DropData } from '../lib/dragTypes'
+import { isDraggable } from '../lib/isDraggable'
 import { isBandOccurrence } from '../lib/segments'
 import { tintClassFor } from '../lib/sourceAppearance'
 import { AllDayBand } from './AllDayBand'
@@ -41,7 +45,7 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
         {days.map((day) => {
           const dayOccurrences = byDay.get(day) ?? []
           return (
-            <section key={day} data-testid="week-day-section" className="rounded-2xl border border-border bg-bg-1 p-3">
+            <PhoneDaySection key={day} day={day} canWrite={canWrite}>
               <button
                 type="button"
                 onClick={() => onSelectDay(day)}
@@ -59,21 +63,14 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
                 <ul className="flex flex-col gap-1">
                   {dayOccurrences.map((occurrence) => (
                     <li key={`${occurrence.sourceId}-${day}`}>
-                      <button
-                        type="button"
-                        onClick={() => onSelectOccurrence(occurrence)}
-                        className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs font-medium ${tintClassFor(occurrence)}`}
-                      >
-                        <span className="shrink-0 tabular-nums">
-                          {occurrence.allDay ? t('all_day_short') : occurrence.startTime?.slice(0, 5)}
-                        </span>
-                        <span className="truncate">{occurrence.title}</span>
-                      </button>
+                      <PhoneRow occurrence={occurrence} day={day} canWrite={canWrite}
+                        label={occurrence.allDay ? t('all_day_short') : occurrence.startTime?.slice(0, 5) ?? ''}
+                        onSelect={() => onSelectOccurrence(occurrence)} />
                     </li>
                   ))}
                 </ul>
               )}
-            </section>
+            </PhoneDaySection>
           )
         })}
       </div>
@@ -129,5 +126,39 @@ export function WeekGrid({ date, occurrences, today, onSelectDay, onSelectOccurr
         </div>
       </div>
     </>
+  )
+}
+
+/** A phone day section is a drop target for the whole day: a row moves day to day, keeping its time. */
+function PhoneDaySection({ day, canWrite, children }: { day: string; canWrite: boolean; children: ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `day:${day}`, disabled: !canWrite, data: { target: { kind: 'day', day } } satisfies DropData,
+  })
+  return (
+    <section ref={setNodeRef} data-testid="week-day-section"
+      className={`rounded-2xl border border-border bg-bg-1 p-3 ${isOver ? 'ring-2 ring-accent' : ''}`}>
+      {children}
+    </section>
+  )
+}
+
+function PhoneRow({ occurrence, day, canWrite, label, onSelect }: {
+  occurrence: CalendarOccurrence; day: string; canWrite: boolean; label: string; onSelect: () => void
+}) {
+  const draggable = canWrite && isDraggable(occurrence)
+  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
+    id: `row:${occurrence.sourceId}:${day}`, disabled: !draggable,
+    data: { intent: { kind: 'move', occurrence, from: 'row' } } satisfies DragData,
+  })
+  return (
+    <button ref={draggable ? setNodeRef : undefined} {...(draggable ? listeners : {})} {...(draggable ? attributes : {})}
+      type="button" data-draggable={draggable || undefined} data-drag-origin="row" onClick={onSelect}
+      // touch-manipulation, never touch-none: the list must keep scrolling under a finger that
+      // touches a row. TouchSensor blocks the scroll itself, once the long press has started a drag.
+      className={`flex w-full touch-manipulation items-center gap-2 rounded px-2 py-1.5 text-left text-xs font-medium ${tintClassFor(occurrence)}
+        ${isDragging ? 'opacity-40' : ''}`}>
+      <span className="shrink-0 tabular-nums">{label}</span>
+      <span className="truncate">{occurrence.title}</span>
+    </button>
   )
 }

@@ -132,6 +132,14 @@ describe('WeekGrid', () => {
     expect(document.querySelectorAll('[data-draggable]')).toHaveLength(0)
   })
 
+  it('lets a phone-week row be long-pressed and dropped on another day', () => {
+    mockPointerIsFine = false
+    const { container } = renderWeek([allDayFrom('Anniversaire', 'EVENT')])
+    const rows = [...container.querySelectorAll('[data-testid="week-day-section"] [data-draggable]')]
+    expect(rows).toHaveLength(1)
+    expect(rows[0].getAttribute('data-drag-origin')).toBe('row')
+  })
+
   it('never makes finance or savings draggable', () => {
     renderWeek([allDayFrom('Loyer', 'FINANCE'), allDayFrom('Vacances', 'SAVINGS')])
     expect(document.querySelectorAll('[data-draggable]')).toHaveLength(0)
