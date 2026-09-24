@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
@@ -98,10 +98,29 @@ describe('useApplyDrop', () => {
 
     let pending: Promise<void> = Promise.resolve()
     act(() => { pending = hook.result.current.apply(occurrence({}), change) })
-    expect(queryClient.getQueryData<CalendarOccurrence[]>(key)?.[0].startDate).toBe('2026-09-25')
+    // Before the server has answered: the write is still pending.
+    await waitFor(() => expect(queryClient.getQueryData<CalendarOccurrence[]>(key)?.[0].startDate).toBe('2026-09-25'))
 
     await act(async () => { reject(new Error('refused')); await pending })
     expect(queryClient.getQueryData<CalendarOccurrence[]>(key)?.[0].startDate).toBe('2026-09-23')
     expect(hook.result.current.failed).toBe(true)
+  })
+
+  it('keeps the move on screen when a refetch of that window was already on its way', async () => {
+    // Paging away and back, or a second drop right after a first, starts a refetch; its stale
+    // answer used to land after the optimistic move and put the item back where it was.
+    const { hook, queryClient } = setup({ calendar: { updateEvent: vi.fn().mockReturnValue(new Promise(() => {})) } })
+    const key = occurrencesKey('space-1', '2026-09-21', '2026-09-27')
+    queryClient.setQueryDefaults(key, { gcTime: Infinity })
+    queryClient.setQueryData(key, [occurrence({})])
+    let answer: (data: CalendarOccurrence[]) => void = () => {}
+    const inFlight = queryClient.fetchQuery({ queryKey: key, queryFn: () => new Promise<CalendarOccurrence[]>((r) => { answer = r }) })
+    inFlight.catch(() => {})
+
+    act(() => { void hook.result.current.apply(occurrence({}), change) })
+    await waitFor(() => expect(queryClient.getQueryData<CalendarOccurrence[]>(key)?.[0].startDate).toBe('2026-09-25'))
+    await act(async () => { answer([occurrence({})]); await Promise.resolve() })
+
+    expect(queryClient.getQueryData<CalendarOccurrence[]>(key)?.[0].startDate).toBe('2026-09-25')
   })
 })

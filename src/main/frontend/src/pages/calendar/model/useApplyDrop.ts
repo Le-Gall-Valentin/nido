@@ -57,6 +57,9 @@ export function useApplyDrop(spaceId: string) {
 
   const apply = useCallback(async (o: CalendarOccurrence, change: ScheduleChange) => {
     const windows = { queryKey: [...calendarKey(spaceId), 'occurrences'] }
+    // A refetch already on its way would answer with the item where it was, after the move is
+    // shown. Cancelled first — and awaited, since a cancelled fetch restores its old state.
+    await queryClient.cancelQueries(windows)
     const snapshot = queryClient.getQueriesData<CalendarOccurrence[]>(windows)
     queryClient.setQueriesData<CalendarOccurrence[]>(windows, (list) =>
       list?.map((candidate) => (candidate.sourceId === o.sourceId ? { ...candidate, ...change } : candidate)))
