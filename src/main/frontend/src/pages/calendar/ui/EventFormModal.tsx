@@ -5,6 +5,7 @@ import type { SpaceMember } from '@/entities/space'
 import type { EventInput, RecurrenceInterval } from '@/entities/calendar'
 import { SOURCE_TOKEN } from '../lib/sourceAppearance'
 import type { Recurrence } from '../lib/seriesInput'
+import { MAX_EVENT_DAYS, coversTooManyDays, occurrenceOutlastsInterval } from '../lib/scheduleLimits'
 import { ParticipantPicker } from './ParticipantPicker'
 
 export interface EventFormModalProps {
@@ -64,7 +65,9 @@ export function EventFormModal({
       // Only comparable on a single day — across days an "earlier" end time is an overnight event.
       return setError(t('form.end_before_start'))
     }
+    if (coversTooManyDays(form)) return setError(t('form.too_long', { days: MAX_EVENT_DAYS }))
     if (recurring && !(recurrence.intervalCount >= 1)) return setError(t('series.interval_invalid'))
+    if (recurring && occurrenceOutlastsInterval(form, recurrence)) return setError(t('series.occurrence_too_long'))
     if (recurring && recurrence.until && recurrence.until < form.startDate) return setError(t('series.until_before_start'))
     setError(null)
     onSubmit({ ...form, title: form.title.trim() }, recurring ? recurrence : null)

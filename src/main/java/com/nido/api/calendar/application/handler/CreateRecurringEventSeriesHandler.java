@@ -29,7 +29,7 @@ public class CreateRecurringEventSeriesHandler implements CreateRecurringEventSe
         // No backlog check, unlike Tasks and Finance: nothing is materialized here, so an anchor
         // far in the past costs a projection over the requested window and nothing else.
         EventScheduleValidator.validateSeries(command.allDay(), command.startTime(), command.endTime(),
-            command.durationDays(), command.anchorDate(), command.endDate());
+            command.durationDays(), command.intervalType(), command.intervalCount(), command.anchorDate(), command.endDate());
         return series.create(command.withParticipants(memberValidator.participantsFor(caller, command.participantIds())));
     }
 }

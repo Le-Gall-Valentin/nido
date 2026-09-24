@@ -32,7 +32,7 @@ public class UpdateRecurringEventSeriesHandler implements UpdateRecurringEventSe
             throw new CalendarException.RecurringEventSeriesNotFound();
         }
         EventScheduleValidator.validateSeries(command.allDay(), command.startTime(), command.endTime(),
-            command.durationDays(), command.anchorDate(), command.endDate());
+            command.durationDays(), command.intervalType(), command.intervalCount(), command.anchorDate(), command.endDate());
         UpdateRecurringEventSeriesCommand stored =
             command.withParticipants(memberValidator.participantsFor(caller, command.participantIds()));
         // Moving the anchor re-dates every slot, so exclusions and detached instances keyed on the

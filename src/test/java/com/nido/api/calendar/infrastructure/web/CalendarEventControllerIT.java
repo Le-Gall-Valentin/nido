@@ -141,6 +141,15 @@ class CalendarEventControllerIT {
     }
 
     @Test
+    void an_event_covering_more_days_than_a_calendar_read_shows_is_refused() throws Exception {
+        mockMvc.perform(post(events()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Sans fin","allDay":true,"startDate":"0001-01-01","endDate":"9999-12-31"}"""))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("EventTooLong"));
+    }
+
+    @Test
     void a_viewer_cannot_create_an_event() throws Exception {
         mockMvc.perform(post(events())
                 .cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)

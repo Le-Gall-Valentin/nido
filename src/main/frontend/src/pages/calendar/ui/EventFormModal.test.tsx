@@ -23,6 +23,17 @@ function renderForm(props: Partial<EventFormModalProps> = {}) {
 const save = () => fireEvent.click(screen.getByRole('button', { name: 'form.save' }))
 const field = (label: string) => screen.getByLabelText(label) as HTMLInputElement
 
+describe('EventFormModal — length', () => {
+  it('refuses an event covering more days than the calendar allows', () => {
+    const { onSubmit } = renderForm({ initial: { ...initial, allDay: true, startTime: null, endTime: null, endDate: '2027-10-03' } })
+
+    save()
+
+    expect(screen.getByRole('alert').textContent).toBe('form.too_long')
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+})
+
 describe('EventFormModal — recurrence', () => {
   it('saves a plain event while the recurring box is left unticked', () => {
     const { onSubmit } = renderForm()
@@ -77,6 +88,16 @@ describe('EventFormModal — recurrence', () => {
     save()
 
     expect(screen.getByRole('alert').textContent).toBe('series.interval_invalid')
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('refuses an occurrence lasting longer than the time between two of them', () => {
+    const { onSubmit } = renderForm({ initial: { ...initial, endDate: '2026-10-10' } })
+    fireEvent.click(field('form.recurring'))
+
+    save()
+
+    expect(screen.getByRole('alert').textContent).toBe('series.occurrence_too_long')
     expect(onSubmit).not.toHaveBeenCalled()
   })
 

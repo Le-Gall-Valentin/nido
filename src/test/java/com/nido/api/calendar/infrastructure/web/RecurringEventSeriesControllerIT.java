@@ -231,6 +231,19 @@ class RecurringEventSeriesControllerIT {
     }
 
     @Test
+    void an_occurrence_lasting_longer_than_its_interval_is_refused() throws Exception {
+        // A daily series whose occurrences last a million days projected 739,901 of them into every
+        // read of a single month.
+        mockMvc.perform(post(series())
+                .cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Sans fin","allDay":true,"durationDays":1000000,"intervalType":"DAILY",
+                     "intervalCount":1,"anchorDate":"0001-01-01"}"""))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("OccurrenceLongerThanInterval"));
+    }
+
+    @Test
     void a_viewer_cannot_create_a_series() throws Exception {
         mockMvc.perform(post(series())
                 .cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)

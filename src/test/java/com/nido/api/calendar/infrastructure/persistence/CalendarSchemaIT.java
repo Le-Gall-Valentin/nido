@@ -71,6 +71,16 @@ class CalendarSchemaIT {
     }
 
     @Test
+    void rejectsAnEventCoveringMoreThan366Days() {
+        assertThatCode(() -> insertEvent(
+            "true", "'2026-01-01'", "NULL", "'2027-01-01'", "NULL", "NULL", "NULL"))
+            .doesNotThrowAnyException();
+        assertThatThrownBy(() -> insertEvent(
+            "true", "'2026-01-01'", "NULL", "'2027-01-02'", "NULL", "NULL", "NULL"))
+            .hasMessageContaining("chk_ce_span");
+    }
+
+    @Test
     void rejectsHalfADetachment() {
         UUID seriesId = insertSeries();
         assertThatThrownBy(() -> insertEvent(
@@ -103,6 +113,16 @@ class CalendarSchemaIT {
             VALUES (?, 'x', true, 0, 'WEEKLY', 1, '2026-02-01', '2026-01-01', ?)
             """, spaceId, aliceId))
             .hasMessageContaining("chk_cres_end_date");
+    }
+
+    @Test
+    void rejectsAnOccurrenceLastingLongerThanItsInterval() {
+        assertThatThrownBy(() -> jdbc.update("""
+            INSERT INTO calendar_recurring_event_series
+              (space_id, title_encrypted, all_day, duration_days, interval_type, interval_count, anchor_date, created_by)
+            VALUES (?, 'x', true, 1000000, 'DAILY', 1, '0001-01-01', ?)
+            """, spaceId, aliceId))
+            .hasMessageContaining("chk_cres_duration_within_interval");
     }
 
     @Test

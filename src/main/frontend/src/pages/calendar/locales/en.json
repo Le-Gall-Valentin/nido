@@ -84,6 +84,7 @@
     "dates_required": "Start and end dates are required.",
     "times_required": "An event that is not all day has a start and an end time.",
     "end_before_start": "The end cannot precede the start.",
+    "too_long": "An event lasts at most {{days}} days.",
     "save_failed": "Saving failed.",
     "color_name": {
       "accent": "Green",
@@ -122,6 +123,7 @@
     "until": "Until (optional)",
     "from": "from {{date}}",
     "interval_invalid": "The frequency must be at least 1.",
+    "occurrence_too_long": "An occurrence cannot last longer than the time between two occurrences.",
     "until_before_start": "The repetition cannot stop before the start date."
   },
   "meal": {

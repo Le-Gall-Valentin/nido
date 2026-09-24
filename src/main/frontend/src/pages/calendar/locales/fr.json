@@ -84,6 +84,7 @@
     "dates_required": "Les dates de début et de fin sont obligatoires.",
     "times_required": "Un événement qui n'est pas sur la journée entière a une heure de début et de fin.",
     "end_before_start": "La fin ne peut pas précéder le début.",
+    "too_long": "Un événement dure au plus {{days}} jours.",
     "save_failed": "L'enregistrement a échoué.",
     "color_name": {
       "accent": "Vert",
@@ -122,6 +123,7 @@
     "until": "Jusqu'au (facultatif)",
     "from": "à partir du {{date}}",
     "interval_invalid": "La fréquence doit être d'au moins 1.",
+    "occurrence_too_long": "Une occurrence ne peut pas durer plus longtemps que l'écart entre deux occurrences.",
     "until_before_start": "La répétition ne peut pas s'arrêter avant la date de début."
   },
   "meal": {

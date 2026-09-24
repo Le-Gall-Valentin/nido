@@ -5,7 +5,8 @@ public abstract sealed class CalendarException extends RuntimeException
             CalendarException.OccurrenceNotInSeries, CalendarException.SameSpaceTransfer,
             CalendarException.InvalidTimeRange, CalendarException.InvalidEndDate,
             CalendarException.MemberNotInSpace, CalendarException.WindowTooLarge,
-            CalendarException.ParticipantsFixedInPersonalSpace {
+            CalendarException.ParticipantsFixedInPersonalSpace, CalendarException.EventTooLong,
+            CalendarException.OccurrenceLongerThanInterval {
 
     private CalendarException(String message) { super(message); }
 
@@ -34,6 +35,30 @@ public abstract sealed class CalendarException extends RuntimeException
     /** Thrown when all-day and the times disagree, or an end falls before its start. */
     public static final class InvalidTimeRange extends CalendarException {
         public InvalidTimeRange() { super("Invalid time range"); }
+    }
+
+    /**
+     * Thrown when an event spans more days than a calendar read may show. Beyond being no calendar's
+     * business, an event spanning centuries froze every view that drew it, day by day.
+     */
+    public static final class EventTooLong extends CalendarException {
+        private final int maximumDays;
+
+        public EventTooLong(int maximumDays) {
+            super("An event lasts at most " + maximumDays + " days");
+            this.maximumDays = maximumDays;
+        }
+
+        public int maximumDays() { return maximumDays; }
+    }
+
+    /**
+     * Thrown when each occurrence of a series would last longer than the time between two of them,
+     * so that one runs into the next. Besides meaning nothing, it is what let a series last a million
+     * days and project hundreds of thousands of occurrences into every read.
+     */
+    public static final class OccurrenceLongerThanInterval extends CalendarException {
+        public OccurrenceLongerThanInterval() { super("An occurrence cannot last longer than the time between two occurrences"); }
     }
 
     public static final class InvalidEndDate extends CalendarException {

@@ -36,6 +36,10 @@ public class CalendarExceptionHandler {
                 new CalendarErrorResponse(400, "Cannot transfer an event into its own context.");
             case CalendarException.InvalidTimeRange ignored ->
                 new CalendarErrorResponse(400, "An all-day event carries no times, a timed event carries both, and an event never ends before it starts.");
+            case CalendarException.EventTooLong ex ->
+                new CalendarErrorResponse(400, "An event lasts at most " + ex.maximumDays() + " days.");
+            case CalendarException.OccurrenceLongerThanInterval ignored ->
+                new CalendarErrorResponse(400, "An occurrence cannot last longer than the time between two occurrences.");
             case CalendarException.InvalidEndDate ignored ->
                 new CalendarErrorResponse(400, "The end date must be on or after the anchor date.");
             case CalendarException.WindowTooLarge ex -> new CalendarErrorResponse(400,
