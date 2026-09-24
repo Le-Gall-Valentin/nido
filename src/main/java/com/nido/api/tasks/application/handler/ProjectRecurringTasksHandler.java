@@ -30,11 +30,13 @@ public class ProjectRecurringTasksHandler implements ProjectRecurringTasksUseCas
     public List<ProjectedTaskOccurrence> project(SpaceMembership caller, LocalDate from, LocalDate to) {
         List<ProjectedTaskOccurrence> projected = new ArrayList<>();
         for (RecurringTaskSeries s : series.findBySpaceId(caller.spaceId())) {
-            // Occurrences 0..occurrenceCount-1 already exist as real tasks and come back from the
-            // ordinary task read. Projecting them too would show every recurring task twice, so the
-            // projection starts at the first index that has not been materialized yet.
+            // occurrenceCount is the number of the last occurrence generated: creating the series
+            // generates occurrence 0 with a count of 0, and the materializer stores the last number it
+            // generated. Occurrences 0..occurrenceCount therefore all exist as real tasks and come back
+            // from the ordinary task read; the projection starts at the one after, or the most recent
+            // task shows twice.
             LocalDate firstUnmaterialized = RecurrenceScheduler.nextDueDate(
-                s.anchorDate(), s.intervalType(), s.intervalCount(), s.occurrenceCount());
+                s.anchorDate(), s.intervalType(), s.intervalCount(), s.occurrenceCount() + 1);
             LocalDate windowStart = from.isAfter(firstUnmaterialized) ? from : firstUnmaterialized;
             if (windowStart.isAfter(to)) {
                 continue;

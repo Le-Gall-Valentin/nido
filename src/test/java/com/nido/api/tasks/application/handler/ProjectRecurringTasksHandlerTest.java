@@ -27,15 +27,30 @@ class ProjectRecurringTasksHandlerTest {
     private final SpaceMembership caller =
         new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.MEMBER, Instant.now());
 
+    // occurrenceCount is the number of the last occurrence generated, not how many were: creating a
+    // series generates occurrence 0 (the anchor) with a count of 0, and the materializer generates
+    // count+1 onwards and stores the last one it generated. So occurrences 0..count all exist as
+    // real tasks — the calendar lists them from the task read, and projecting any of them again
+    // shows it twice.
+
     @Test
-    void doesNotProjectASlotThatIsAlreadyAMaterializedTask() {
-        // Weekly from Jan 1; two occurrences already generated (Jan 1 and Jan 8), so only the
-        // 15th, 22nd and 29th are still in the future as far as this series is concerned.
+    void neverProjectsTheTaskCreatedWithTheSeries() {
+        when(series.findBySpaceId(spaceId)).thenReturn(List.of(weekly(LocalDate.of(2026, 1, 1), 0, null)));
+
+        assertThat(handler.project(caller, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)))
+            .extracting(ProjectedTaskOccurrence::dueDate)
+            .containsExactly(LocalDate.of(2026, 1, 8), LocalDate.of(2026, 1, 15),
+                LocalDate.of(2026, 1, 22), LocalDate.of(2026, 1, 29));
+    }
+
+    @Test
+    void neverProjectsAnOccurrenceAlreadyGenerated() {
+        // Weekly from Jan 1, last generated occurrence number 2: Jan 1, 8 and 15 are real tasks.
         when(series.findBySpaceId(spaceId)).thenReturn(List.of(weekly(LocalDate.of(2026, 1, 1), 2, null)));
 
         assertThat(handler.project(caller, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)))
             .extracting(ProjectedTaskOccurrence::dueDate)
-            .containsExactly(LocalDate.of(2026, 1, 15), LocalDate.of(2026, 1, 22), LocalDate.of(2026, 1, 29));
+            .containsExactly(LocalDate.of(2026, 1, 22), LocalDate.of(2026, 1, 29));
     }
 
     @Test
@@ -52,14 +67,14 @@ class ProjectRecurringTasksHandlerTest {
 
         assertThat(handler.project(caller, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)))
             .extracting(ProjectedTaskOccurrence::dueDate)
-            .containsExactly(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 8));
+            .containsExactly(LocalDate.of(2026, 1, 8));
     }
 
     @Test
     void carriesTheSeriesTitleAndPriority() {
         when(series.findBySpaceId(spaceId)).thenReturn(List.of(weekly(LocalDate.of(2026, 1, 1), 0, null)));
 
-        assertThat(handler.project(caller, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 2)))
+        assertThat(handler.project(caller, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 8)))
             .singleElement()
             .extracting(ProjectedTaskOccurrence::title, ProjectedTaskOccurrence::priority)
             .containsExactly("Sortir les poubelles", TaskPriority.MED);

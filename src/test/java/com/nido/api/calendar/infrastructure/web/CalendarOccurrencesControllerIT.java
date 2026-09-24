@@ -1,5 +1,6 @@
 package com.nido.api.calendar.infrastructure.web;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
@@ -27,7 +28,11 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -122,6 +127,67 @@ class CalendarOccurrencesControllerIT {
 
         mockMvc.perform(get(occurrences() + "?from=2026-01-01&to=2026-12-31").cookie(tokenFor(aliceId)))
             .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    // A recurring operation or task is shown from its real rows for what has happened, and from the
+    // projection for what is still to come. Each date must come out exactly once — the past, today
+    // and the future — once the finance or tasks page has turned what was due into real rows.
+
+    @Test
+    void a_recurring_operation_shows_once_on_its_past_days_today_and_after() throws Exception {
+        LocalDate start = LocalDate.now().minusWeeks(2);
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/recurring-series")
+                .cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"label":"Abonnement","amount":9.99,"type":"EXPENSE","categoryId":"%s",
+                     "recurrence":{"intervalType":"WEEKLY","intervalCount":1,"anchorDate":"%s"}}"""
+                    .formatted(firstCategoryId(), start)))
+            .andExpect(status().isCreated());
+        // Opening the finance page materializes every occurrence due so far, today's included.
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/transactions?month="
+                + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"))).cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk());
+
+        List<LocalDate> shown = datesOf("FINANCE", start, start.plusWeeks(5));
+
+        assertThat(shown).doesNotHaveDuplicates().hasSize(6);
+    }
+
+    @Test
+    void a_recurring_task_shows_once_on_its_past_days_today_and_after() throws Exception {
+        LocalDate start = LocalDate.now().minusWeeks(2);
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
+                .cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Poubelles","priority":"MED","recurrence":{"intervalType":"WEEKLY","intervalCount":1,
+                     "leadIntervalType":"DAILY","leadIntervalCount":0,"anchorDate":"%s"}}""".formatted(start)))
+            .andExpect(status().isCreated());
+        // Opening the tasks page materializes every occurrence due so far.
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/tasks").cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk());
+
+        List<LocalDate> shown = datesOf("TASK", start, start.plusWeeks(5));
+
+        assertThat(shown).doesNotHaveDuplicates().hasSize(6);
+    }
+
+    private List<LocalDate> datesOf(String source, LocalDate from, LocalDate to) throws Exception {
+        String body = mockMvc.perform(get(occurrences() + "?from=" + from + "&to=" + to).cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        List<LocalDate> dates = new ArrayList<>();
+        for (JsonNode occurrence : objectMapper.readTree(body)) {
+            if (occurrence.get("source").asText().equals(source)) {
+                dates.add(LocalDate.parse(occurrence.get("startDate").asText()));
+            }
+        }
+        return dates;
+    }
+
+    private String firstCategoryId() throws Exception {
+        String categories = mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/categories")
+                .cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(categories).get(0).get("id").asText();
     }
 
     private void seedEvent() throws Exception {
