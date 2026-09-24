@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SpaceMember } from '@/entities/space'
 import {
-  useCreateEvent, useUpdateEvent, useDetachOccurrence,
-  type CalendarOccurrence, type EventInput,
+  useCreateEvent, useUpdateEvent, useDetachOccurrence, useCreateRecurringEventSeries, useUpdateRecurringEventSeries,
+  type CalendarOccurrence, type EventInput, type RecurringEventSeries,
 } from '@/entities/calendar'
 import { toEventInput } from '../lib/eventInput'
+import { fromSeries, toSeriesInput, type Recurrence } from '../lib/seriesInput'
 import type { ScheduleChange } from '../lib/dragTypes'
 import { EventFormModal } from './EventFormModal'
 
@@ -13,6 +14,8 @@ interface EventFormPanelProps {
   spaceId: string
   /** The occurrence being edited, or null when creating. */
   occurrence: CalendarOccurrence | null
+  /** The series being edited as a whole: the form opens on its first occurrence and how it repeats. */
+  series?: RecurringEventSeries | null
   /**
    * Set when editing exactly one occurrence of a series: the write then goes to the slot's
    * upsert endpoint instead of to the event, so the rest of the series is untouched.
@@ -30,11 +33,11 @@ interface EventFormPanelProps {
 }
 
 /**
- * Writing an event: which of the three calls a submission turns into, and what to say when one
- * fails. Keeping the decision next to the form is what lets EventFormModal stay presentational.
+ * Writing an event or a series: which of the five calls a submission turns into, and what to say
+ * when one fails. Keeping the decision next to the form is what lets EventFormModal stay presentational.
  */
 export function EventFormPanel({
-  spaceId, occurrence, detachSlot, defaultDate, defaultSchedule = null, currentUserId, members, isPersonal, onClose,
+  spaceId, occurrence, series = null, detachSlot, defaultDate, defaultSchedule = null, currentUserId, members, isPersonal, onClose,
 }: EventFormPanelProps) {
   const { t } = useTranslation('calendar')
   const [error, setError] = useState<string | null>(null)
@@ -42,8 +45,11 @@ export function EventFormPanel({
   const createEvent = useCreateEvent(spaceId)
   const updateEvent = useUpdateEvent(spaceId)
   const detachOccurrence = useDetachOccurrence(spaceId)
+  const createSeries = useCreateRecurringEventSeries(spaceId)
+  const updateSeries = useUpdateRecurringEventSeries(spaceId)
 
   const isPending = createEvent.isPending || updateEvent.isPending || detachOccurrence.isPending
+    || createSeries.isPending || updateSeries.isPending
 
   const blank: EventInput = {
     title: '', description: null, location: null, allDay: true,
@@ -53,12 +59,21 @@ export function EventFormPanel({
   // Editing one occurrence of a series starts from what that occurrence looks like today, but is
   // written through the slot's endpoint — so the form is pre-filled even though no event row exists.
   const initial = occurrence ? toEventInput(occurrence) : null
+  const editedSeries = series ? fromSeries(series) : null
 
-  const handleSubmit = (input: EventInput) => {
+  const handleSubmit = (input: EventInput, recurrence: Recurrence | null) => {
     setError(null)
     const onError = () => setError(t('form.save_failed'))
     const onSuccess = () => onClose()
 
+    if (series && recurrence) {
+      updateSeries.mutate({ seriesId: series.id, input: toSeriesInput(input, recurrence) }, { onSuccess, onError })
+      return
+    }
+    if (recurrence) {
+      createSeries.mutate(toSeriesInput(input, recurrence), { onSuccess, onError })
+      return
+    }
     if (detachSlot) {
       detachOccurrence.mutate(
         { seriesId: detachSlot.seriesId, date: detachSlot.date, input }, { onSuccess, onError })
@@ -74,8 +89,9 @@ export function EventFormPanel({
 
   return (
     <EventFormModal
-      initial={initial ?? blank}
-      mode={occurrence ? 'edit' : 'create'}
+      initial={editedSeries?.event ?? initial ?? blank}
+      mode={series ? 'edit-series' : occurrence ? 'edit' : 'create'}
+      initialRecurrence={editedSeries?.recurrence ?? null}
       members={members}
       isPersonal={isPersonal}
       submitError={error}

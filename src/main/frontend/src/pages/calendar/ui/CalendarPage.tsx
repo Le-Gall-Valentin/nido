@@ -9,7 +9,7 @@ import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
 import { useAuth } from '@/features/auth'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
 import {
-  calendarApi, CalendarApiProvider, useOccurrences, useJoinEvent, useLeaveEvent,
+  calendarApi, CalendarApiProvider, useOccurrences, useJoinEvent, useLeaveEvent, useRecurringEventSeries,
   type CalendarApi, type CalendarOccurrence,
 } from '@/entities/calendar'
 import { FinanceApiProvider, financeApi as defaultFinanceApi, type IFinanceApi } from '@/entities/finance'
@@ -31,6 +31,7 @@ import { OccurrenceRouter } from './OccurrenceRouter'
 import { EventDetailModal } from './EventDetailModal'
 import { EventFormPanel } from './EventFormPanel'
 import { DeleteEventPanel } from './DeleteEventPanel'
+import { DeleteSeriesPanel } from './DeleteSeriesPanel'
 import { TransferEventPanel } from './TransferEventPanel'
 import { MealEntryModal } from './MealEntryModal'
 import { OccurrenceScopeDialog, type OccurrenceScope } from './OccurrenceScopeDialog'
@@ -113,6 +114,11 @@ function CalendarPageContent() {
   const [planningMeal, setPlanningMeal] = useState<string | null>(null)
   // Set when an action landed on an occurrence of a series and the scope question is still open.
   const [pendingScope, setPendingScope] = useState<{ occurrence: CalendarOccurrence; action: 'edit' | 'delete' } | null>(null)
+  // Set when "the whole series" was the answer: the series is edited in the event form, or deleted.
+  const [seriesAction, setSeriesAction] = useState<{ seriesId: string; action: 'edit' | 'delete' } | null>(null)
+  // Loaded only once a series is acted on: the feed carries its id, the form needs all of it.
+  const { data: seriesList } = useRecurringEventSeries(seriesAction ? spaceId : undefined)
+  const actedSeries = seriesAction ? seriesList?.find((candidate) => candidate.id === seriesAction.seriesId) : undefined
 
   /** An occurrence of a series must be asked about before it is edited or deleted. */
   const startScopedAction = (occurrence: CalendarOccurrence, action: 'edit' | 'delete') => {
@@ -129,9 +135,7 @@ function CalendarPageContent() {
     const { occurrence, action } = pendingScope
     setPendingScope(null)
     if (scope === 'series') {
-      // Editing or deleting the template is what the series manager is for.
-      setSelectedOccurrence(null)
-      setManagingSeries(true)
+      if (occurrence.seriesId) setSeriesAction({ seriesId: occurrence.seriesId, action })
       return
     }
     const slot = occurrence.seriesId && occurrence.originalDate
@@ -320,6 +324,16 @@ function CalendarPageContent() {
         <DeleteEventPanel spaceId={spaceId} occurrence={deleting} onClose={() => setDeleting(null)} />
       )}
 
+      {seriesAction?.action === 'edit' && actedSeries && (
+        <EventFormPanel spaceId={spaceId} occurrence={null} series={actedSeries} detachSlot={null}
+          defaultDate={date} currentUserId={currentUserId} members={members ?? []} isPersonal={spaceIsPersonal}
+          onClose={() => setSeriesAction(null)} />
+      )}
+
+      {seriesAction?.action === 'delete' && actedSeries && (
+        <DeleteSeriesPanel spaceId={spaceId} series={actedSeries} onClose={() => setSeriesAction(null)} />
+      )}
+
       {transferring && (
         <TransferEventPanel
           spaceId={spaceId}
@@ -335,7 +349,7 @@ function CalendarPageContent() {
 
       {managingSeries && (
         <RecurringEventSeriesPanel spaceId={spaceId} members={members ?? []} currentUserId={currentUserId}
-          isPersonal={spaceIsPersonal} defaultDate={date} onClose={() => setManagingSeries(false)} />
+          isPersonal={spaceIsPersonal} onClose={() => setManagingSeries(false)} />
       )}
     </div>
   )

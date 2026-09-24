@@ -2,35 +2,46 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { SpaceMember } from '@/entities/space'
-import type { EventInput } from '@/entities/calendar'
+import type { EventInput, RecurrenceInterval } from '@/entities/calendar'
 import { SOURCE_TOKEN } from '../lib/sourceAppearance'
+import type { Recurrence } from '../lib/seriesInput'
 import { ParticipantPicker } from './ParticipantPicker'
 
 export interface EventFormModalProps {
   /** Pre-filled values. When creating, these are the blanks the caller wants (e.g. the clicked day). */
   initial: EventInput
-  /** Chooses the title and nothing else — the fields are the same either way. */
-  mode: 'create' | 'edit'
+  /**
+   * Chooses the title, and whether the event may repeat: a new event may be made recurring, an
+   * existing one may not — as in finance. A series being edited always shows how it repeats.
+   */
+  mode: 'create' | 'edit' | 'edit-series'
+  /** How the series being edited repeats. */
+  initialRecurrence?: Recurrence | null
   members: SpaceMember[]
   /** Hides the participant picker: a personal context has nobody to invite. */
   isPersonal: boolean
   submitError?: string | null
   isPending?: boolean
-  onSubmit: (input: EventInput) => void
+  /** The event, and how it repeats when it is a series — null for a plain event. */
+  onSubmit: (input: EventInput, recurrence: Recurrence | null) => void
   onCancel: () => void
 }
 
 const COLOR_CHOICES = Object.values(SOURCE_TOKEN)
+const INTERVALS: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
+const NO_RECURRENCE_YET: Recurrence = { intervalType: 'WEEKLY', intervalCount: 1, until: null }
 
 /**
  * Pure presentation: it validates what it can see and hands a well-formed input upward. The
  * mutations live in EventFormPanel, which is what lets this be tested without a query client.
  */
 export function EventFormModal({
-  initial, mode, members, isPersonal, submitError, isPending, onSubmit, onCancel,
+  initial, mode, initialRecurrence = null, members, isPersonal, submitError, isPending, onSubmit, onCancel,
 }: EventFormModalProps) {
   const { t } = useTranslation('calendar')
   const [form, setForm] = useState<EventInput>(initial)
+  const [recurring, setRecurring] = useState(mode === 'edit-series')
+  const [recurrence, setRecurrence] = useState<Recurrence>(initialRecurrence ?? NO_RECURRENCE_YET)
   const [error, setError] = useState<string | null>(null)
 
   const patch = (changes: Partial<EventInput>) => setForm((current) => ({ ...current, ...changes }))
@@ -53,12 +64,14 @@ export function EventFormModal({
       // Only comparable on a single day — across days an "earlier" end time is an overnight event.
       return setError(t('form.end_before_start'))
     }
+    if (recurring && !(recurrence.intervalCount >= 1)) return setError(t('series.interval_invalid'))
+    if (recurring && recurrence.until && recurrence.until < form.startDate) return setError(t('series.until_before_start'))
     setError(null)
-    onSubmit({ ...form, title: form.title.trim() })
+    onSubmit({ ...form, title: form.title.trim() }, recurring ? recurrence : null)
   }
 
   return (
-    <Dialog open onClose={onCancel} title={t(`form.${mode}_title`)} maxWidth="max-w-lg">
+    <Dialog open onClose={onCancel} title={t(mode === 'edit-series' ? 'series.edit_title' : `form.${mode}_title`)} maxWidth="max-w-lg">
       <div className="flex flex-col gap-3">
         <Input label={t('form.title')} value={form.title} autoFocus
           onChange={(e) => patch({ title: e.target.value })} />
@@ -88,6 +101,35 @@ export function EventFormModal({
             </>
           )}
         </div>
+
+        {mode === 'create' && (
+          <label className="flex items-center gap-2 text-sm text-fg-1">
+            <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} />
+            {t('form.recurring')}
+          </label>
+        )}
+        {recurring && (
+          // The event above is the first occurrence; this says when the next ones come.
+          <div className="flex flex-col gap-3 rounded-lg bg-bg-2 p-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Input label={t('series.interval_count')} type="number" min={1} value={String(recurrence.intervalCount)}
+                onChange={(e) => setRecurrence({ ...recurrence, intervalCount: Number(e.target.value) })} />
+              {/* Set like the Input beside it, so the two fields sit on one line. */}
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[13px] font-semibold text-fg-1">{t('series.interval_type')}</span>
+                <select value={recurrence.intervalType}
+                  onChange={(e) => setRecurrence({ ...recurrence, intervalType: e.target.value as RecurrenceInterval })}
+                  className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent">
+                  {INTERVALS.map((interval) => (
+                    <option key={interval} value={interval}>{t(`series.interval.${interval}`)}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <Input label={t('series.until')} type="date" value={recurrence.until ?? ''}
+              onChange={(e) => setRecurrence({ ...recurrence, until: e.target.value || null })} />
+          </div>
+        )}
 
         <div>
           <span className="mb-1 block text-xs font-semibold text-fg-2">{t('form.color')}</span>

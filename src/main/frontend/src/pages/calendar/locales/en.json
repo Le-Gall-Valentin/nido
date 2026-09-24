@@ -71,6 +71,7 @@
     "description": "Description",
     "location": "Location",
     "all_day": "All day",
+    "recurring": "Recurring event",
     "start_date": "Start date",
     "end_date": "End date",
     "start_time": "Start time",
@@ -105,9 +106,7 @@
     "whole_series": "The whole series"
   },
   "series": {
-    "create_title": "New series",
     "edit_title": "Edit series",
-    "new": "New series",
     "empty": "No recurring events.",
     "edit": "Edit {{name}}",
     "delete": "Delete {{name}}",
@@ -120,13 +119,10 @@
       "MONTHLY": "month(s)",
       "YEARLY": "year(s)"
     },
-    "duration_days": "Duration (days past the start)",
-    "anchor_date": "Starting",
-    "end_date": "End date (optional)",
+    "until": "Until (optional)",
     "from": "from {{date}}",
-    "anchor_required": "A start date is required.",
     "interval_invalid": "The frequency must be at least 1.",
-    "end_before_anchor": "The end date must follow the start date."
+    "until_before_start": "The repetition cannot stop before the start date."
   },
   "meal": {
     "title": "Meals on {{date}}",

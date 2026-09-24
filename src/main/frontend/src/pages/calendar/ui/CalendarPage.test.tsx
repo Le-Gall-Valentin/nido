@@ -5,7 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import { SpacesApiProvider, type ISpacesApi } from '@/features/space-switcher'
 import { SpaceMembersApiProvider, type ISpaceMembersApi, type SpaceMember, type SpaceSummary } from '@/entities/space'
-import type { CalendarApi, CalendarOccurrence } from '@/entities/calendar'
+import type { CalendarApi, CalendarOccurrence, RecurringEventSeries } from '@/entities/calendar'
 import type { IFinanceApi } from '@/entities/finance'
 import type { IKitchenApi } from '@/entities/kitchen'
 import { TasksApiProvider, type TasksApi } from '@/entities/tasks'
@@ -143,10 +143,108 @@ describe('CalendarPage', () => {
     expect(await pick('bob')).toBe('false')
   })
 
-  it('starts a new recurring series on the day the calendar shows', async () => {
-    renderPage([], {})
+})
+
+/** A weekly series and one of its occurrences, as the feed projects it on the page's day. */
+const PIANO_SERIES: RecurringEventSeries = {
+  id: 's-1', title: 'Piano', description: 'Salle 3', location: 'Conservatoire', allDay: false,
+  startTime: '18:00', endTime: '19:00', durationDays: 0, color: null,
+  intervalType: 'MONTHLY', intervalCount: 1, anchorDate: '2026-09-02', endDate: null,
+  participantIds: [], createdBy: 'u-1', createdAt: '2026-01-01T00:00:00Z',
+}
+const PIANO_OCCURRENCE = occurrence({
+  title: 'Piano', sourceId: 's-1:2026-09-23', seriesId: 's-1', originalDate: '2026-09-23', materialized: false,
+  allDay: false, startTime: '18:00', endTime: '19:00',
+})
+
+const value = (label: string) => (screen.getByLabelText(label) as HTMLInputElement).value
+
+describe('CalendarPage — recurring events in the event form', () => {
+  it('starts a series from the new-event button, on the day the calendar shows', async () => {
+    const createRecurringEventSeries = vi.fn().mockResolvedValue(PIANO_SERIES)
+    const createEvent = vi.fn()
+    renderPage([], { calendar: { createRecurringEventSeries, createEvent } })
+    fireEvent.click(await screen.findByRole('button', { name: 'new_event' }))
+    fireEvent.change(screen.getByLabelText('form.title'), { target: { value: 'Piano' } })
+    fireEvent.change(screen.getByLabelText('form.location'), { target: { value: 'Conservatoire' } })
+    fireEvent.click(screen.getByLabelText('form.recurring'))
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }))
+
+    await vi.waitFor(() => expect(createRecurringEventSeries).toHaveBeenCalledWith('space-1', expect.objectContaining({
+      title: 'Piano', location: 'Conservatoire', allDay: true, anchorDate: '2026-09-23', durationDays: 0,
+      intervalType: 'WEEKLY', intervalCount: 1, endDate: null,
+    })))
+    expect(createEvent).not.toHaveBeenCalled()
+  })
+
+  it('turns a time picked out in the week grid into a series at that time', async () => {
+    const createRecurringEventSeries = vi.fn().mockResolvedValue(PIANO_SERIES)
+    renderPage([], { view: 'week', calendar: { createRecurringEventSeries } })
+    const column = await vi.waitFor(() => {
+      const found = document.querySelectorAll<HTMLElement>('[data-testid="hour-column"]')[1]
+      if (!found) throw new Error('no grid yet')
+      return found
+    })
+    await vi.waitFor(() => {
+      fireEvent.pointerDown(column, { pointerType: 'mouse', button: 0, clientY: 600 })
+      fireEvent.pointerUp(window, { pointerType: 'mouse', button: 0, clientY: 600 })
+      expect(screen.getByRole('dialog')).toBeTruthy()
+    })
+    fireEvent.change(screen.getByLabelText('form.title'), { target: { value: 'Piano' } })
+    fireEvent.click(screen.getByLabelText('form.recurring'))
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }))
+
+    await vi.waitFor(() => expect(createRecurringEventSeries).toHaveBeenCalledWith('space-1', expect.objectContaining({
+      allDay: false, anchorDate: '2026-09-22', startTime: '10:00', endTime: '11:00', durationDays: 0,
+    })))
+  })
+
+  it('edits the whole series from one of its occurrences in the same form, place and description included', async () => {
+    const updateRecurringEventSeries = vi.fn().mockResolvedValue(PIANO_SERIES)
+    renderPage([PIANO_OCCURRENCE], { calendar: {
+      listRecurringEventSeries: vi.fn().mockResolvedValue([PIANO_SERIES]), updateRecurringEventSeries,
+    } })
+    fireEvent.click(await screen.findByText('Piano'))
+    fireEvent.click(await screen.findByRole('button', { name: 'detail.edit' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'scope.whole_series' }))
+
+    expect(await screen.findByText('series.edit_title')).toBeTruthy()
+    expect(value('form.description')).toBe('Salle 3')
+    expect(value('form.location')).toBe('Conservatoire')
+    expect(value('form.start_date')).toBe('2026-09-02')
+    expect(value('series.interval_type')).toBe('MONTHLY')
+    expect(screen.queryByLabelText('form.recurring')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }))
+
+    await vi.waitFor(() => expect(updateRecurringEventSeries).toHaveBeenCalledWith('space-1', 's-1', expect.objectContaining({
+      description: 'Salle 3', location: 'Conservatoire', anchorDate: '2026-09-02', intervalType: 'MONTHLY',
+    })))
+  })
+
+  it('deletes the whole series from one of its occurrences without a detour through the list', async () => {
+    const deleteRecurringEventSeries = vi.fn().mockResolvedValue(undefined)
+    renderPage([PIANO_OCCURRENCE], { calendar: {
+      listRecurringEventSeries: vi.fn().mockResolvedValue([PIANO_SERIES]), deleteRecurringEventSeries,
+    } })
+    fireEvent.click(await screen.findByText('Piano'))
+    fireEvent.click(await screen.findByRole('button', { name: 'detail.delete' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'scope.whole_series' }))
+
+    expect(await screen.findByText('series.delete_message')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'delete_confirm.confirm' }))
+
+    await vi.waitFor(() => expect(deleteRecurringEventSeries).toHaveBeenCalledWith('space-1', 's-1'))
+  })
+
+  it('lists the series to manage them, and edits one in the same form', async () => {
+    renderPage([], { calendar: { listRecurringEventSeries: vi.fn().mockResolvedValue([PIANO_SERIES]) } })
     fireEvent.click(await screen.findByRole('button', { name: 'recurring_series.manage' }))
-    fireEvent.click(await screen.findByRole('button', { name: /series\.new/ }))
-    expect((await screen.findByLabelText('series.anchor_date') as HTMLInputElement).value).toBe('2026-09-23')
+    const edit = await screen.findByRole('button', { name: 'series.edit:{"name":"Piano"}' })
+    // Series are created from the new-event button now, never from here.
+    expect(screen.queryByRole('button', { name: /series\.new/ })).toBeNull()
+    fireEvent.click(edit)
+
+    expect(await screen.findByText('series.edit_title')).toBeTruthy()
+    expect(value('form.description')).toBe('Salle 3')
   })
 })
