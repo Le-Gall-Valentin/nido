@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import i18next from 'i18next'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
+import { MapPin } from 'lucide-react'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { resolveLocale, usePointerIsFine } from '@/shared/lib'
 import type { DragData, DropData, ScheduleChange } from '../lib/dragTypes'
@@ -155,9 +156,53 @@ function GridBlock({ occurrence, day, segment, placement, canWrite, column, onSe
         // overflow-hidden: hidden would make the block its own scroller and pin the title to it.
         // Among overlapping events, each is edged in the page's colour: two of the same colour stay two.
         className={`flex h-full w-full touch-manipulation flex-col justify-start overflow-clip rounded px-1 py-0.5 text-left text-[11px] font-medium ${tintClassFor(occurrence)} ${draggable ? 'cursor-grab' : ''} ${placement.lanes > 1 ? 'ring-2 ring-bg-1' : ''}`}>
-        <span className="sticky top-0 max-w-full truncate">{occurrence.title}</span>
+        <BlockDetails occurrence={occurrence} minutes={Math.max(MIN_BLOCK_MINUTES, segment.endMinutes - segment.startMinutes)} />
       </button>
       {resizable && segment.isEnd && <ResizeHandle occurrence={occurrence} edge="end" />}
+    </div>
+  )
+}
+
+/** One line of a block's text, in pixels — every line is set to it, so lines can be counted. */
+const LINE_PX = 15
+/** The block's vertical padding (py-0.5), top and bottom. */
+const PADDING_PX = 4
+
+/**
+ * What a block says, by how tall it is: under 45 minutes, the title and its start on one line;
+ * then the times under it; from an hour and a half the place; from two hours as much of the
+ * description as fits in whole lines. It sticks to the top while a long piece scrolls past.
+ */
+function BlockDetails({ occurrence, minutes }: { occurrence: CalendarOccurrence; minutes: number }) {
+  const start = occurrence.startTime?.slice(0, 5)
+  if (minutes < 45) {
+    return (
+      <span className="sticky top-0 max-w-full truncate leading-[15px]">
+        {occurrence.title}<span className="opacity-80"> · {start}</span>
+      </span>
+    )
+  }
+  const height = (minutes / 60) * HOUR_HEIGHT
+  const place = minutes >= 90 ? occurrence.location : null
+  const linesLeft = Math.floor((height - PADDING_PX - LINE_PX * (place ? 3 : 2)) / LINE_PX)
+  const description = minutes >= 120 && linesLeft > 0 ? occurrence.description : null
+  return (
+    <div className="sticky top-0 flex w-full min-w-0 flex-col leading-[15px]">
+      <span className="truncate">{occurrence.title}</span>
+      <span className="truncate tabular-nums opacity-80">{formatTimeRange(occurrence, resolveLocale(i18next.language))}</span>
+      {place && (
+        <span className="flex min-w-0 items-center gap-1 opacity-80">
+          <MapPin aria-hidden className="size-3 shrink-0" />
+          <span className="truncate">{place}</span>
+        </span>
+      )}
+      {description && (
+        // Whole lines only: the height is a number of lines, never a line cut in half.
+        <span className="overflow-hidden whitespace-pre-line break-words font-normal opacity-80"
+          style={{ maxHeight: `${linesLeft * LINE_PX}px` }}>
+          {description}
+        </span>
+      )}
     </div>
   )
 }

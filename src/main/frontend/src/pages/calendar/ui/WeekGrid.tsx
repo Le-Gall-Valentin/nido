@@ -5,7 +5,8 @@ import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay, weekDates } from '../lib/calendarWindow'
 import type { DragData, DropData, ScheduleChange } from '../lib/dragTypes'
 import { isDraggable } from '../lib/isDraggable'
-import { covers, isBandOccurrence } from '../lib/segments'
+import { covers, isBandOccurrence, segmentFor } from '../lib/segments'
+import { useOpeningScroll } from '../model/useOpeningScroll'
 import { useGridSelection } from '../model/useGridSelection'
 import { fadeClassFor, useDragPreview } from '../model/dragPreview'
 import { tintClassFor } from '../lib/sourceAppearance'
@@ -43,8 +44,13 @@ export function WeekGrid({
   const { t } = useTranslation('calendar')
   const days = weekDates(date)
   const byDay = groupByDay(occurrences, days)
-  const landing = useDragPreview()?.occurrence
+  const drag = useDragPreview()
+  const landing = drag?.occurrence
   const picking = useGridSelection(onCreateRange)
+  // The grid opens on the week's busiest stretch; only true starts count, not continued pieces.
+  const starts = days.flatMap((day) => (byDay.get(day) ?? []).filter((o) => !isBandOccurrence(o))
+    .flatMap((o) => { const segment = segmentFor(o, day); return segment?.isStart ? [segment.startMinutes] : [] }))
+  const gridScroller = useOpeningScroll(days[0] ?? date, starts, drag !== null)
   const pickedHours = picking.shown?.kind === 'hours' ? picking.shown.range : null
   const pickedDays = picking.shown?.kind === 'band' ? picking.shown.range : null
   const labelFor = (occurrence: CalendarOccurrence) =>
@@ -131,7 +137,7 @@ export function WeekGrid({
           </div>
         </div>
 
-        <div className="flex items-start max-h-[60vh] overflow-y-auto">
+        <div ref={gridScroller} className="flex items-start max-h-[60vh] overflow-y-auto">
           <HourGutter />
           {days.map((day) => (
             <div key={day} className="flex-1 border-l border-border">

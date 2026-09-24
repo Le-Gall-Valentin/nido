@@ -139,7 +139,7 @@ describe('WeekGrid', () => {
     // overflow: clip, not hidden — hidden would make the block its own scroller and pin the title to it.
     expect(block.className).toContain('overflow-clip')
     expect(block.className).not.toContain('overflow-hidden')
-    expect(within(block).getByText('Congrès').className).toContain('sticky')
+    expect(within(block).getByText('Congrès').closest('.sticky')).toBeTruthy()
   })
 
   it('offsets two overlapping events so they stay told apart, even in the same colour', () => {
@@ -302,6 +302,109 @@ describe('WeekGrid', () => {
   it('never makes finance or savings draggable', () => {
     renderWeek([allDayFrom('Loyer', 'FINANCE'), allDayFrom('Vacances', 'SAVINGS')])
     expect(document.querySelectorAll('[data-draggable]')).toHaveLength(0)
+  })
+})
+
+describe('what a block says, by how tall it is', () => {
+  const concert = (endTime: string) => occurrence({ title: 'Concert', allDay: false, startTime: '18:00', endTime,
+    location: 'Salle Pleyel', description: 'Apporter les billets' })
+  const blockOf = (container: HTMLElement) => within(columnsOf(container)[1]).getByRole('button', { name: /Concert/ })
+
+  it('fits the title and the start on one line under 45 minutes', () => {
+    const { container } = renderWeek([concert('18:30')])
+    expect(blockOf(container).textContent).toBe('Concert · 18:00')
+  })
+
+  it('writes the times under the title from 45 minutes', () => {
+    const { container } = renderWeek([concert('19:00')])
+    const block = blockOf(container)
+    expect(within(block).getByText('18:00 – 19:00')).toBeTruthy()
+    expect(within(block).queryByText('Salle Pleyel')).toBeNull()
+  })
+
+  it('adds the place from an hour and a half', () => {
+    const { container } = renderWeek([concert('19:30')])
+    const block = blockOf(container)
+    expect(within(block).getByText('Salle Pleyel')).toBeTruthy()
+    expect(within(block).queryByText('Apporter les billets')).toBeNull()
+  })
+
+  it('adds the start of the description from two hours, cut at a whole line', () => {
+    const { container } = renderWeek([concert('20:30')])
+    const description = within(blockOf(container)).getByText('Apporter les billets')
+    // 150px tall: 4px of padding and three 15px lines above leave six whole lines.
+    expect(description.style.maxHeight).toBe('90px')
+  })
+
+  it('says only what an event has — no empty place line', () => {
+    const { container } = renderWeek([occurrence({ title: 'Concert', allDay: false, startTime: '18:00', endTime: '21:00' })])
+    expect(blockOf(container).textContent).toBe('Concert18:00 – 21:00')
+  })
+})
+
+describe('where the hour grid opens', () => {
+  // jsdom lays nothing out: the grid's visible height is given, nine hours as on a desktop.
+  beforeEach(() => { vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(540) })
+  afterEach(() => { vi.restoreAllMocks() })
+
+  const on = (title: string, startDate: string, startTime: string, endTime: string) =>
+    occurrence({ title, allDay: false, startDate, startTime, endDate: startDate, endTime })
+  const week = (date: string, occurrences: CalendarOccurrence[], drag: DragPreviewState | null = null) => (
+    <DndContext>
+      <DragPreviewProvider value={drag}>
+        <WeekGrid date={date} occurrences={occurrences} today="2026-01-06" canWrite
+          onSelectDay={vi.fn()} onSelectOccurrence={vi.fn()} />
+      </DragPreviewProvider>
+    </DndContext>)
+  const scrollerOf = (container: HTMLElement) =>
+    columnsOf(container)[0].parentElement?.parentElement as HTMLElement
+
+  const busyMorning = [on('A', '2026-01-06', '09:00', '10:00'), on('B', '2026-01-07', '10:00', '11:00'),
+    on('C', '2026-01-08', '11:00', '12:00'), on('D', '2026-01-09', '19:00', '20:00')]
+
+  it('opens on the busiest stretch of the week, not at midnight', () => {
+    const { container } = render(week('2026-01-08', busyMorning))
+    expect(scrollerOf(container).scrollTop).toBe(510)   // 08:30, half an hour before the first
+  })
+
+  it('opens at 08:00 on a week with nothing timed', () => {
+    const { container } = render(week('2026-01-08', []))
+    expect(scrollerOf(container).scrollTop).toBe(480)
+  })
+
+  it('never moves a grid the reader has scrolled, even when the week\'s events arrive after', () => {
+    const { container, rerender } = render(week('2026-01-08', []))
+    const scroller = scrollerOf(container)
+    fireEvent.wheel(scroller)
+    scroller.scrollTop = 900
+    rerender(week('2026-01-08', busyMorning))
+    expect(scroller.scrollTop).toBe(900)
+  })
+
+  it('opens the next week on its own busiest stretch', () => {
+    const { container, rerender } = render(week('2026-01-08', busyMorning))
+    const scroller = scrollerOf(container)
+    fireEvent.wheel(scroller)
+    rerender(week('2026-01-15', [on('E', '2026-01-13', '18:00', '19:00')]))
+    expect(scroller.scrollTop).toBe(17.5 * 60)
+  })
+
+  it('does not move the grid when a drag carries an item into the next week', () => {
+    const piano = on('Piano', '2026-01-06', '09:00', '10:00')
+    const drag = { intent: { kind: 'move' as const, occurrence: piano, from: 'grid' as const, day: '2026-01-06' }, change: null }
+    const { container, rerender } = render(week('2026-01-08', [piano], drag))
+    const scroller = scrollerOf(container)
+    scroller.scrollTop = 700
+    rerender(week('2026-01-15', [on('E', '2026-01-13', '18:00', '19:00')], drag))
+    rerender(week('2026-01-15', [on('E', '2026-01-13', '18:00', '19:00')]))
+    expect(scroller.scrollTop).toBe(700)
+  })
+
+  it('opens the day view the same way', () => {
+    const { container } = render(<DayAgenda date="2026-01-06" occurrences={[on('A', '2026-01-06', '14:00', '15:00')]}
+      onSelectOccurrence={vi.fn()} />)
+    const column = container.querySelector('[data-testid="hour-column"]') as HTMLElement
+    expect((column.parentElement?.parentElement as HTMLElement).scrollTop).toBe(13.5 * 60)
   })
 })
 

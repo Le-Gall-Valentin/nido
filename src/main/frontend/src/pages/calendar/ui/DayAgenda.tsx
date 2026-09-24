@@ -2,7 +2,9 @@ import { useTranslation } from 'react-i18next'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay } from '../lib/calendarWindow'
 import type { ScheduleChange } from '../lib/dragTypes'
-import { covers, isBandOccurrence } from '../lib/segments'
+import { covers, isBandOccurrence, segmentFor } from '../lib/segments'
+import { useDragPreview } from '../model/dragPreview'
+import { useOpeningScroll } from '../model/useOpeningScroll'
 import { useGridSelection } from '../model/useGridSelection'
 import { AllDayBand } from './AllDayBand'
 import { HourColumn, HourGutter } from './HourColumn'
@@ -26,6 +28,8 @@ export function DayAgenda({ date, occurrences, onSelectOccurrence, canWrite = fa
   const dayOccurrences = groupByDay(occurrences, [date]).get(date) ?? []
   const timed = dayOccurrences.filter((o) => !isBandOccurrence(o))
   const picking = useGridSelection(onCreateRange)
+  const starts = timed.flatMap((o) => { const segment = segmentFor(o, date); return segment?.isStart ? [segment.startMinutes] : [] })
+  const gridScroller = useOpeningScroll(date, starts, useDragPreview() !== null)
   const pickedDays = picking.shown?.kind === 'band' ? picking.shown.range : null
 
   return (
@@ -46,7 +50,7 @@ export function DayAgenda({ date, occurrences, onSelectOccurrence, canWrite = fa
         {dayOccurrences.length === 0 && (
           <p className="pointer-events-none absolute inset-x-0 top-4 z-10 text-center text-sm text-fg-3">{t('empty_day')}</p>
         )}
-        <div className="flex items-start max-h-[65vh] overflow-y-auto">
+        <div ref={gridScroller} className="flex items-start max-h-[65vh] overflow-y-auto">
           <HourGutter />
           <div className="flex-1 border-l border-border">
             <HourColumn day={date} occurrences={timed} canWrite={canWrite} onSelectOccurrence={onSelectOccurrence}
