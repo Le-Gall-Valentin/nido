@@ -157,6 +157,22 @@ describe('DayAgenda', () => {
     expect(screen.getByText('empty_day')).toBeTruthy()
   })
 
+  it('keeps the hour grid on a day with no timed event, so a drag carried there still lands on a time', () => {
+    // Without it, an event dragged across the edge to an empty day could only land in the band —
+    // and silently become all-day. Its unmounting also reset the scroll to midnight mid-drag.
+    const { container } = renderDay([allDayFrom('Poubelles', 'TASK')])
+    expect(container.querySelector('[style*="height: 1440px"]')).toBeTruthy()
+  })
+
+  it('says a day is empty over its grid, never above it — the grid must not jump under a drag', () => {
+    // Paging to an empty day mid-drag used to insert the message above the grid, shifting every
+    // time under the pointer by about an hour.
+    renderDay([])
+    const message = screen.getByText('empty_day')
+    expect(message.closest('[data-testid="day-grid"]')).toBeTruthy()
+    expect(message.className).toContain('absolute')
+  })
+
   it('shows the all-day band and the hour grid together', () => {
     const { container } = renderDay([
       allDayFrom('Poubelles', 'TASK'),

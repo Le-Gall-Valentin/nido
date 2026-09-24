@@ -30,17 +30,21 @@ export function DayAgenda({ date, occurrences, onSelectOccurrence, canWrite = fa
         occurrences={dayOccurrences.filter(isBandOccurrence)}
         onSelectOccurrence={onSelectOccurrence}
       />
-      {dayOccurrences.length === 0 && (
-        <p className="px-3 py-6 text-center text-sm text-fg-3">{t('empty_day')}</p>
-      )}
-      {timed.length > 0 && (
+      {/* Always rendered, even on a day with no timed event: it is where a dragged event lands on
+          a time, and a drag carried across the edge to an empty day would otherwise have only the
+          band to land in. Keeping it mounted also keeps its scroll while the next day loads. */}
+      <div data-testid="day-grid" className="relative">
+        {/* Over the grid, not above it: paging to an empty day mid-drag must not shift the grid. */}
+        {dayOccurrences.length === 0 && (
+          <p className="pointer-events-none absolute inset-x-0 top-4 z-10 text-center text-sm text-fg-3">{t('empty_day')}</p>
+        )}
         <div className="flex max-h-[65vh] overflow-y-auto">
           <HourGutter />
           <div className="flex-1 border-l border-border">
             <HourColumn day={date} occurrences={timed} canWrite={canWrite} onSelectOccurrence={onSelectOccurrence} />
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
