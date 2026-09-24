@@ -4,7 +4,7 @@ import com.nido.api.calendar.domain.model.CalendarOccurrence;
 import com.nido.api.calendar.domain.model.CalendarSourceType;
 import com.nido.api.calendar.domain.port.out.CalendarSource;
 import com.nido.api.space.domain.model.SpaceMembership;
-import com.nido.api.tasks.application.port.in.ListTasksUseCase;
+import com.nido.api.tasks.application.port.in.ListTasksDueBetweenUseCase;
 import com.nido.api.tasks.application.port.in.ProjectRecurringTasksUseCase;
 import com.nido.api.tasks.domain.model.ProjectedTaskOccurrence;
 import com.nido.api.tasks.domain.model.Task;
@@ -20,14 +20,18 @@ import java.util.List;
  * <p>A task has no time of day, so every entry is all-day and lands in the day's banner rather
  * than at an invented hour. Tasks without a due date are skipped: they belong on the board, not
  * on a calendar.
+ *
+ * <p>Only reads. The due occurrences of a recurring series are created by the tasks page; until then
+ * the projection shows them, once. Creating them from here, inside the calendar's read-only
+ * transaction, failed the whole calendar with a 500.
  */
 @Component
 public class TaskCalendarSource implements CalendarSource {
 
-    private final ListTasksUseCase listTasksUseCase;
+    private final ListTasksDueBetweenUseCase listTasksUseCase;
     private final ProjectRecurringTasksUseCase projectRecurringTasksUseCase;
 
-    public TaskCalendarSource(ListTasksUseCase listTasksUseCase,
+    public TaskCalendarSource(ListTasksDueBetweenUseCase listTasksUseCase,
                               ProjectRecurringTasksUseCase projectRecurringTasksUseCase) {
         this.listTasksUseCase = listTasksUseCase;
         this.projectRecurringTasksUseCase = projectRecurringTasksUseCase;
@@ -41,11 +45,8 @@ public class TaskCalendarSource implements CalendarSource {
     @Override
     public List<CalendarOccurrence> occurrencesBetween(SpaceMembership caller, LocalDate from, LocalDate to) {
         List<CalendarOccurrence> produced = new ArrayList<>();
-        for (Task task : listTasksUseCase.list(caller)) {
+        for (Task task : listTasksUseCase.list(caller, from, to)) {
             LocalDate dueDate = task.dueDate();
-            if (dueDate == null || dueDate.isBefore(from) || dueDate.isAfter(to)) {
-                continue;
-            }
             produced.add(new CalendarOccurrence(
                 CalendarSourceType.TASK, task.id().toString(), task.recurringSeriesId(), null, true,
                 task.title(), null, null, true, dueDate, null, dueDate, null, null, task.assigneeIds()));

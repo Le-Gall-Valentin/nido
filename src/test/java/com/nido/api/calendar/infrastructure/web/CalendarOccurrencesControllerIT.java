@@ -171,6 +171,27 @@ class CalendarOccurrencesControllerIT {
         assertThat(shown).doesNotHaveDuplicates().hasSize(6);
     }
 
+    // The calendar may well be the first page opened once a recurring task has fallen due. Its read
+    // used to create the due tasks inside a read-only transaction, which failed the whole calendar with
+    // a 500 until someone opened the tasks page. A read shows what is due and writes nothing.
+    @Test
+    void the_calendar_opened_first_shows_a_due_recurring_task_once_and_writes_nothing() throws Exception {
+        LocalDate start = LocalDate.now().minusWeeks(2);
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
+                .cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Poubelles","priority":"MED","recurrence":{"intervalType":"WEEKLY","intervalCount":1,
+                     "leadIntervalType":"DAILY","leadIntervalCount":0,"anchorDate":"%s"}}""".formatted(start)))
+            .andExpect(status().isCreated());
+        Integer tasksBefore = jdbc.queryForObject("SELECT count(*) FROM tasks WHERE space_id = ?", Integer.class, spaceId);
+
+        List<LocalDate> shown = datesOf("TASK", start, start.plusWeeks(5));
+
+        assertThat(shown).doesNotHaveDuplicates().hasSize(6);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM tasks WHERE space_id = ?", Integer.class, spaceId))
+            .isEqualTo(tasksBefore);
+    }
+
     private List<LocalDate> datesOf(String source, LocalDate from, LocalDate to) throws Exception {
         String body = mockMvc.perform(get(occurrences() + "?from=" + from + "&to=" + to).cookie(tokenFor(aliceId)))
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();

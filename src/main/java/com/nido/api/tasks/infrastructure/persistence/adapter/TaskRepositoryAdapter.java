@@ -17,6 +17,7 @@ import com.nido.api.tasks.infrastructure.persistence.repository.TaskSubtaskJpaRe
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -46,6 +47,11 @@ public class TaskRepositoryAdapter implements TaskRepository {
     @Override
     public List<Task> findBySpaceId(UUID spaceId) {
         return toDomainList(tasks.findBySpaceId(spaceId));
+    }
+
+    @Override
+    public List<Task> findBySpaceIdAndDueDateBetween(UUID spaceId, LocalDate from, LocalDate to) {
+        return toDomainList(tasks.findBySpaceIdAndDueDateBetween(spaceId, from, to));
     }
 
     @Override

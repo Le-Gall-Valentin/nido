@@ -16,7 +16,7 @@ import com.nido.api.kitchen.domain.model.MenuEntry;
 import com.nido.api.kitchen.domain.model.MenuEntryView;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
-import com.nido.api.tasks.application.port.in.ListTasksUseCase;
+import com.nido.api.tasks.application.port.in.ListTasksDueBetweenUseCase;
 import com.nido.api.tasks.application.port.in.ProjectRecurringTasksUseCase;
 import com.nido.api.tasks.domain.model.ProjectedTaskOccurrence;
 import com.nido.api.tasks.domain.model.Task;
@@ -45,13 +45,10 @@ class ExternalCalendarSourcesTest {
     private final LocalDate to = LocalDate.of(2026, 1, 31);
 
     @Test
-    void taskSourceSkipsTasksWithoutADueDateAndThoseOutsideTheWindow() {
-        ListTasksUseCase tasks = mock(ListTasksUseCase.class);
+    void taskSourceReadsOnlyTheTasksDueInTheWindow() {
+        ListTasksDueBetweenUseCase tasks = mock(ListTasksDueBetweenUseCase.class);
         ProjectRecurringTasksUseCase projection = mock(ProjectRecurringTasksUseCase.class);
-        when(tasks.list(caller)).thenReturn(List.of(
-            task("Sans échéance", null),
-            task("Hors fenêtre", LocalDate.of(2026, 3, 1)),
-            task("Dans la fenêtre", LocalDate.of(2026, 1, 15))));
+        when(tasks.list(caller, from, to)).thenReturn(List.of(task("Dans la fenêtre", LocalDate.of(2026, 1, 15))));
         when(projection.project(caller, from, to)).thenReturn(List.of());
 
         assertThat(new TaskCalendarSource(tasks, projection).occurrencesBetween(caller, from, to))
@@ -60,10 +57,10 @@ class ExternalCalendarSourcesTest {
 
     @Test
     void taskSourceMarksTasksAllDayAndCarriesTheirAssignees() {
-        ListTasksUseCase tasks = mock(ListTasksUseCase.class);
+        ListTasksDueBetweenUseCase tasks = mock(ListTasksDueBetweenUseCase.class);
         ProjectRecurringTasksUseCase projection = mock(ProjectRecurringTasksUseCase.class);
         UUID assignee = UUID.randomUUID();
-        when(tasks.list(caller)).thenReturn(List.of(new Task(
+        when(tasks.list(caller, from, to)).thenReturn(List.of(new Task(
             UUID.randomUUID(), spaceId, "Poubelles", TaskStatus.TODO, TaskPriority.MED,
             LocalDate.of(2026, 1, 15), List.of(assignee), List.of(), null, UUID.randomUUID(), Instant.now())));
         when(projection.project(caller, from, to)).thenReturn(List.of());
@@ -80,9 +77,9 @@ class ExternalCalendarSourcesTest {
 
     @Test
     void taskSourceMarksProjectedOccurrencesAsNotMaterialized() {
-        ListTasksUseCase tasks = mock(ListTasksUseCase.class);
+        ListTasksDueBetweenUseCase tasks = mock(ListTasksDueBetweenUseCase.class);
         ProjectRecurringTasksUseCase projection = mock(ProjectRecurringTasksUseCase.class);
-        when(tasks.list(caller)).thenReturn(List.of());
+        when(tasks.list(caller, from, to)).thenReturn(List.of());
         when(projection.project(caller, from, to)).thenReturn(List.of(new ProjectedTaskOccurrence(
             UUID.randomUUID(), "Poubelles", TaskPriority.MED, LocalDate.of(2026, 1, 22))));
 
