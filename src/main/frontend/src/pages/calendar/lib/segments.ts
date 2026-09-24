@@ -1,5 +1,5 @@
 import type { CalendarOccurrence } from '@/entities/calendar'
-import { addDays, daysBetween } from './calendarWindow'
+import { addDays } from './calendarWindow'
 import { DAY_MINUTES, timeToMinutes } from './timeMath'
 
 export interface Segment { startMinutes: number; endMinutes: number; isStart: boolean; isEnd: boolean }
@@ -18,17 +18,13 @@ export function covers(o: CalendarOccurrence, day: string): boolean {
   return day >= o.startDate && day <= effectiveEndDate(o)
 }
 
-function totalMinutes(o: CalendarOccurrence): number {
-  if (o.allDay || !o.startTime || !o.endTime) return 0
-  return daysBetween(o.startDate, o.endDate) * DAY_MINUTES + timeToMinutes(o.endTime) - timeToMinutes(o.startTime)
-}
-
 /**
- * Whether an occurrence belongs in the all-day band rather than the hour grid: everything without a
- * time, and any timed event longer than a day, which would otherwise fill whole columns.
+ * Whether an occurrence belongs in the all-day band rather than the hour grid: exactly what has no
+ * time. A timed event lasting several days stays in the grid, one piece per day — it has hours,
+ * and the band is where "all day" goes.
  */
 export function isBandOccurrence(o: CalendarOccurrence): boolean {
-  return o.allDay || totalMinutes(o) > DAY_MINUTES
+  return o.allDay
 }
 
 /**

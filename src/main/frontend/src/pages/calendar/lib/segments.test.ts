@@ -39,10 +39,24 @@ describe('segmentFor', () => {
   })
 })
 
+describe('segmentFor — an event lasting several days', () => {
+  const conference = timed('2026-09-23', '09:00', '2026-09-25', '17:00')
+
+  it('runs from its start to midnight on the first day, the whole day in between, from midnight to its end on the last', () => {
+    expect(segmentFor(conference, '2026-09-23')).toEqual({ startMinutes: 540, endMinutes: 1440, isStart: true, isEnd: false })
+    expect(segmentFor(conference, '2026-09-24')).toEqual({ startMinutes: 0, endMinutes: 1440, isStart: false, isEnd: false })
+    expect(segmentFor(conference, '2026-09-25')).toEqual({ startMinutes: 0, endMinutes: 1020, isStart: false, isEnd: true })
+  })
+})
+
 describe('isBandOccurrence', () => {
-  it('sends all-day items and timed events longer than a day to the band', () => {
+  it('sends only all-day items to the band', () => {
     expect(isBandOccurrence({ ...timed('2026-09-23', '09:00', '2026-09-23', '10:00'), allDay: true })).toBe(true)
-    expect(isBandOccurrence(timed('2026-09-23', '09:00', '2026-09-25', '10:00'))).toBe(true)
+    expect(isBandOccurrence({ ...timed('2026-09-23', '09:00', '2026-09-25', '10:00'), allDay: true })).toBe(true)
+  })
+
+  it('keeps a timed event lasting several days in the grid — it has hours, it is not "all day"', () => {
+    expect(isBandOccurrence(timed('2026-09-23', '09:00', '2026-09-25', '17:00'))).toBe(false)
   })
 
   it('keeps an overnight event under 24 hours in the grid', () => {

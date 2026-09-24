@@ -115,8 +115,11 @@ function decide(intent: DragIntent, target: DropTarget, pointerMinutes: number |
   const endAbs = absolute(o.startDate, o.endDate, o.endTime)
 
   if (intent.kind === 'resize-start') {
-    const newStart = Math.min(pointerMinutes, endAbs - MIN_DURATION_MINUTES)
-    const start = at(o.startDate, Math.max(0, newStart))
+    // Read against the day it is dropped on: the start of an event lasting several days can be
+    // pulled back into an earlier day, or pushed into a later one.
+    const dayOffset = daysBetween(o.startDate, target.day) * DAY_MINUTES
+    const newStart = Math.min(dayOffset + pointerMinutes, endAbs - MIN_DURATION_MINUTES)
+    const start = at(o.startDate, newStart)
     return { ...scheduleOf(o), startTime: start.time, startDate: start.date }
   }
 

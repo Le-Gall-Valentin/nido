@@ -51,7 +51,7 @@ function renderWeek(occurrences: CalendarOccurrence[], canWrite = true, drag: Dr
 
 /** The seven hour columns of the desktop grid, Monday first. */
 function columnsOf(container: HTMLElement): HTMLElement[] {
-  return [...container.querySelectorAll<HTMLElement>('[style*="height: 1440px"]')]
+  return [...container.querySelectorAll<HTMLElement>('[data-testid="hour-column"]')]
 }
 
 /** A grid block is positioned on its wrapper, which also holds its resize handles. */
@@ -114,6 +114,34 @@ describe('WeekGrid', () => {
     expect(tops).toEqual(['0px', '1320px'])
   })
 
+  it('draws a timed event lasting several days in the grid, one piece per day, never in the bands', () => {
+    const conference = occurrence({ title: 'Congrès', allDay: false, startDate: '2026-01-05', startTime: '09:00',
+      endDate: '2026-01-07', endTime: '17:00' })
+    const { container } = renderWeek([conference])
+    const columns = columnsOf(container)
+    const pieceIn = (column: HTMLElement) => positionOf(within(column).getByRole('button', { name: /Congrès/ }))
+    expect([0, 1, 2].map((i) => `${pieceIn(columns[i])?.style.top}/${pieceIn(columns[i])?.style.height}`))
+      .toEqual(['540px/900px', '0px/1440px', '0px/1020px'])
+    expect(container.querySelectorAll('[data-testid="all-day-band"] button')).toHaveLength(0)
+    // Stretched from its true start and its true end only.
+    expect(within(columns[0]).queryAllByTestId('resize-start')).toHaveLength(1)
+    expect(within(columns[2]).queryAllByTestId('resize-end')).toHaveLength(1)
+    expect(screen.getAllByTestId('resize-start')).toHaveLength(1)
+    expect(screen.getAllByTestId('resize-end')).toHaveLength(1)
+  })
+
+  it('keeps a title at the top of its piece, and in view while a long piece scrolls past', () => {
+    // Centred in a fifteen-hour piece, the title sat hours away from what was on screen.
+    const { container } = renderWeek([occurrence({ title: 'Congrès', allDay: false, startDate: '2026-01-05',
+      startTime: '09:00', endDate: '2026-01-07', endTime: '17:00' })])
+    const block = within(columnsOf(container)[0]).getByRole('button', { name: /Congrès/ })
+    expect(block.className).toContain('justify-start')
+    // overflow: clip, not hidden — hidden would make the block its own scroller and pin the title to it.
+    expect(block.className).toContain('overflow-clip')
+    expect(block.className).not.toContain('overflow-hidden')
+    expect(within(block).getByText('Congrès').className).toContain('sticky')
+  })
+
   it('puts resize handles on a timed event block, on a mouse', () => {
     renderWeek([timed('Piano', '18:00', '19:00')])
     expect(screen.getAllByTestId('resize-start')).toHaveLength(1)
@@ -169,6 +197,8 @@ describe('WeekGrid', () => {
     expect(landing.style.top).toBe('540px')
     expect(landing.style.height).toBe('60px')
     expect(landing.textContent).toContain('09:00 – 10:00')
+    // Title and times stick in view over a long landing piece too.
+    expect(within(landing).getByText('Piano').parentElement?.className).toContain('sticky')
     expect(within(columns[1]).queryByTestId('drag-preview')).toBeNull()
     expect(positionOf(within(columns[1]).getByRole('button', { name: /Piano/ }))?.className).toContain('opacity-40')
   })
@@ -275,7 +305,7 @@ describe('DayAgenda', () => {
 
   it('draws the day\'s divider down the whole day', () => {
     const { container } = renderDay([])
-    const column = container.querySelector('[style*="height: 1440px"]') as HTMLElement
+    const column = container.querySelector('[data-testid="hour-column"]') as HTMLElement
     const scroller = column.parentElement?.parentElement as HTMLElement
     expect(scroller.className).toContain('overflow-y-auto')
     expect(scroller.className).toContain('items-start')

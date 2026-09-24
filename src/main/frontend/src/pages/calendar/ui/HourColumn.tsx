@@ -40,7 +40,7 @@ export function HourColumn({ day, occurrences, canWrite, onSelectOccurrence }: H
     data: { target: { kind: 'hours', day }, column: () => element.current } satisfies DropData,
   })
   return (
-    <div ref={(node) => { element.current = node; setNodeRef(node) }} className="relative"
+    <div ref={(node) => { element.current = node; setNodeRef(node) }} data-testid="hour-column" className="relative"
       style={{ height: `${24 * HOUR_HEIGHT}px` }}>
       {Array.from({ length: 24 }, (_, hour) => (
         <div key={hour} className="border-b border-border/60" style={{ height: `${HOUR_HEIGHT}px` }} />
@@ -73,10 +73,12 @@ function LandingBlock({ occurrence, segment }: { occurrence: CalendarOccurrence;
   return (
     <div data-testid="drag-preview" style={boxOf(segment)}
       className="pointer-events-none absolute inset-x-0.5 z-20 rounded bg-bg-1 shadow-lg ring-2 ring-accent">
-      <div className={`h-full overflow-hidden rounded px-1 py-0.5 text-[11px] font-medium ${tintClassFor(occurrence)}`}>
-        <div className="truncate">{occurrence.title}</div>
-        <div className="tabular-nums opacity-80">
-          {occurrence.startTime?.slice(0, 5)} – {occurrence.endTime?.slice(0, 5)}
+      <div className={`h-full overflow-clip rounded px-1 py-0.5 text-[11px] font-medium ${tintClassFor(occurrence)}`}>
+        <div className="sticky top-0">
+          <div className="truncate">{occurrence.title}</div>
+          <div className="tabular-nums opacity-80">
+            {occurrence.startTime?.slice(0, 5)} – {occurrence.endTime?.slice(0, 5)}
+          </div>
         </div>
       </div>
     </div>
@@ -114,8 +116,10 @@ function GridBlock({ occurrence, day, segment, canWrite, column, onSelect }: Gri
       <button ref={draggable ? move.setNodeRef : undefined}
         {...(draggable ? move.listeners : {})} {...(draggable ? move.attributes : {})}
         type="button" data-draggable={draggable || undefined} onClick={onSelect}
-        className={`h-full w-full touch-manipulation overflow-hidden rounded px-1 py-0.5 text-left text-[11px] font-medium ${tintClassFor(occurrence)} ${draggable ? 'cursor-grab' : ''}`}>
-        <span className="truncate">{occurrence.title}</span>
+        // The title sits at the top and sticks while a long piece scrolls past. overflow-clip, not
+        // overflow-hidden: hidden would make the block its own scroller and pin the title to it.
+        className={`flex h-full w-full touch-manipulation flex-col justify-start overflow-clip rounded px-1 py-0.5 text-left text-[11px] font-medium ${tintClassFor(occurrence)} ${draggable ? 'cursor-grab' : ''}`}>
+        <span className="sticky top-0 max-w-full truncate">{occurrence.title}</span>
       </button>
       {resizable && segment.isEnd && <ResizeHandle occurrence={occurrence} edge="end" />}
     </div>

@@ -66,12 +66,11 @@ describe('resolveDrop — the all-day band', () => {
     })
   })
 
-  it('only changes the days of a long timed event that was already in the band', () => {
-    // Shown in the band because it lasts more than a day — moving it along the band must not
-    // silently make it all-day.
+  it('turns a timed event lasting several days, dropped on a band, into all-day over as many days', () => {
+    // Grabbed by its first piece and dropped on the next day's band.
     const conference = base({ startDate: '2026-09-23', startTime: '09:00', endDate: '2026-09-25', endTime: '17:00' })
-    expect(resolveDrop(move(conference, 'band'), { kind: 'all-day', day: '2026-09-24' }, null)).toEqual({
-      allDay: false, startDate: '2026-09-24', startTime: '09:00', endDate: '2026-09-26', endTime: '17:00',
+    expect(resolveDrop(move(conference, 'grid'), { kind: 'all-day', day: '2026-09-24' }, null)).toEqual({
+      allDay: true, startDate: '2026-09-24', startTime: null, endDate: '2026-09-26', endTime: null,
     })
   })
 })
@@ -104,6 +103,16 @@ describe('resolveDrop — resizing', () => {
       .toMatchObject({ startTime: '14:00', endTime: '14:15' })
     expect(resolveDrop({ kind: 'resize-start', occurrence: meeting }, { kind: 'hours', day: '2026-09-23' }, 16 * 60))
       .toMatchObject({ startTime: '15:15', endTime: '15:30' })
+  })
+
+  it('moves the start into an earlier day when its handle is dropped on that day\'s column', () => {
+    // An event lasting several days: its start handle can be pulled back a day.
+    const conference = base({ startDate: '2026-09-23', startTime: '09:00', endDate: '2026-09-25', endTime: '17:00' })
+    expect(resolveDrop({ kind: 'resize-start', occurrence: conference }, { kind: 'hours', day: '2026-09-22' }, 22 * 60))
+      .toMatchObject({ startDate: '2026-09-22', startTime: '22:00', endDate: '2026-09-25', endTime: '17:00' })
+    // …and pushed forward into a later day, still stopping 15 minutes before the end.
+    expect(resolveDrop({ kind: 'resize-start', occurrence: conference }, { kind: 'hours', day: '2026-09-25' }, 17 * 60))
+      .toMatchObject({ startDate: '2026-09-25', startTime: '16:45' })
   })
 
   it('writes an end stretched to midnight as the next day at 00:00', () => {
