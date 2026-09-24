@@ -142,4 +142,11 @@ describe('CalendarPage', () => {
     expect(await pick('alice')).toBe('true')
     expect(await pick('bob')).toBe('false')
   })
+
+  it('starts a new recurring series on the day the calendar shows', async () => {
+    renderPage([], {})
+    fireEvent.click(await screen.findByRole('button', { name: 'recurring_series.manage' }))
+    fireEvent.click(await screen.findByRole('button', { name: /series\.new/ }))
+    expect((await screen.findByLabelText('series.anchor_date') as HTMLInputElement).value).toBe('2026-09-23')
+  })
 })

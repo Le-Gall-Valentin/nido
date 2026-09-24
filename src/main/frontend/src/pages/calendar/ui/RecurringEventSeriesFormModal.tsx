@@ -14,17 +14,19 @@ interface RecurringEventSeriesFormModalProps {
   currentUserId: string
   /** Hides the participant picker: in a personal context its owner always takes part. */
   isPersonal: boolean
+  /** The day the calendar shows: a new series starts on it. */
+  defaultDate: string
   submitError?: string | null
   isPending?: boolean
   onSubmit: (input: RecurringEventSeriesInput) => void
   onCancel: () => void
 }
 
-function blank(creatorId: string): RecurringEventSeriesInput {
+function blank(creatorId: string, anchorDate: string): RecurringEventSeriesInput {
   return {
     title: '', description: null, location: null, allDay: true,
     startTime: null, endTime: null, durationDays: 0, color: null,
-    intervalType: 'WEEKLY', intervalCount: 1, anchorDate: '', endDate: null, participantIds: [creatorId],
+    intervalType: 'WEEKLY', intervalCount: 1, anchorDate, endDate: null, participantIds: [creatorId],
   }
 }
 
@@ -42,10 +44,10 @@ function toInput(series: RecurringEventSeries): RecurringEventSeriesInput {
 }
 
 export function RecurringEventSeriesFormModal({
-  series, members, currentUserId, isPersonal, submitError, isPending, onSubmit, onCancel,
+  series, members, currentUserId, isPersonal, defaultDate, submitError, isPending, onSubmit, onCancel,
 }: RecurringEventSeriesFormModalProps) {
   const { t } = useTranslation('calendar')
-  const [form, setForm] = useState<RecurringEventSeriesInput>(series ? toInput(series) : blank(currentUserId))
+  const [form, setForm] = useState<RecurringEventSeriesInput>(series ? toInput(series) : blank(currentUserId, defaultDate))
   const [error, setError] = useState<string | null>(null)
 
   const patch = (changes: Partial<RecurringEventSeriesInput>) =>

@@ -14,6 +14,8 @@ interface RecurringEventSeriesPanelProps {
   members: SpaceMember[]
   currentUserId: string
   isPersonal: boolean
+  /** The day the calendar shows: a new series starts on it. */
+  defaultDate: string
   onClose: () => void
 }
 
@@ -24,7 +26,7 @@ interface RecurringEventSeriesPanelProps {
  * the confirmation says so rather than showing the generic warning.
  */
 export function RecurringEventSeriesPanel({
-  spaceId, members, currentUserId, isPersonal, onClose,
+  spaceId, members, currentUserId, isPersonal, defaultDate, onClose,
 }: RecurringEventSeriesPanelProps) {
   const { t } = useTranslation('calendar')
   const { data: series, isPending } = useRecurringEventSeries(spaceId)
@@ -50,6 +52,7 @@ export function RecurringEventSeriesPanel({
         members={members}
         currentUserId={currentUserId}
         isPersonal={isPersonal}
+        defaultDate={defaultDate}
         submitError={error}
         isPending={createSeries.isPending || updateSeries.isPending}
         onSubmit={submit}

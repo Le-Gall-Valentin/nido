@@ -335,7 +335,7 @@ function CalendarPageContent() {
 
       {managingSeries && (
         <RecurringEventSeriesPanel spaceId={spaceId} members={members ?? []} currentUserId={currentUserId}
-          isPersonal={spaceIsPersonal} onClose={() => setManagingSeries(false)} />
+          isPersonal={spaceIsPersonal} defaultDate={date} onClose={() => setManagingSeries(false)} />
       )}
     </div>
   )
