@@ -6,6 +6,7 @@ import { resolveLocale, usePointerIsFine } from '@/shared/lib'
 import type { DragData, DropData, ScheduleChange } from '../lib/dragTypes'
 import { isDraggable } from '../lib/isDraggable'
 import { tintClassFor } from '../lib/sourceAppearance'
+import { layoutOverlaps, type Placed } from '../lib/overlapLayout'
 import { formatTimeRange } from '../lib/periodLabel'
 import { isBandOccurrence, segmentFor, type Segment } from '../lib/segments'
 import { fadeClassFor, useDragPreview } from '../model/dragPreview'
@@ -15,6 +16,13 @@ export { HOUR_HEIGHT } from '../lib/timeMath'
 
 /** Never let a block collapse to nothing: a zero-length event must still be tappable. */
 const MIN_BLOCK_HEIGHT = 20
+/** The same floor in minutes: what a block covers on screen is what it overlaps. */
+const MIN_BLOCK_MINUTES = (MIN_BLOCK_HEIGHT / HOUR_HEIGHT) * 60
+
+/** A share of the column's width, as CSS. Rounded, so a third does not print sixteen decimals. */
+function percent(fraction: number): string {
+  return `${+(fraction * 100).toFixed(4)}%`
+}
 
 interface HourColumnProps {
   /** The day this column draws: an overnight event shows only its own piece of it. */
@@ -42,6 +50,15 @@ export function HourColumn({ day, occurrences, canWrite, onSelectOccurrence, pic
   const landing = useDragPreview()?.occurrence
   const landingSegment = landing && !isBandOccurrence(landing) ? segmentFor(landing, day) : null
   const pickedSegment = picked ? segmentFor(picked, day) : null
+  // Overlapping events are cascaded across the column, each a little right of the last.
+  const placed = layoutOverlaps(occurrences.flatMap((occurrence) => {
+    const segment = segmentFor(occurrence, day)
+    return segment ? [{
+      item: { occurrence, segment },
+      start: segment.startMinutes,
+      end: Math.max(segment.endMinutes, segment.startMinutes + MIN_BLOCK_MINUTES),
+    }] : []
+  }))
   const { setNodeRef } = useDroppable({
     id: `hours:${day}`, disabled: !canWrite,
     data: { target: { kind: 'hours', day }, column: () => element.current } satisfies DropData,
@@ -53,14 +70,11 @@ export function HourColumn({ day, occurrences, canWrite, onSelectOccurrence, pic
       {Array.from({ length: 24 }, (_, hour) => (
         <div key={hour} className="border-b border-border/60" style={{ height: `${HOUR_HEIGHT}px` }} />
       ))}
-      {occurrences.map((occurrence) => {
-        const segment = segmentFor(occurrence, day)
-        return segment && (
-          <GridBlock key={`${occurrence.sourceId}-${day}`} occurrence={occurrence} day={day}
-            segment={segment} canWrite={canWrite} column={() => element.current}
-            onSelect={() => onSelectOccurrence(occurrence)} />
-        )
-      })}
+      {placed.map(({ item: { occurrence, segment }, ...placement }) => (
+        <GridBlock key={`${occurrence.sourceId}-${day}`} occurrence={occurrence} day={day}
+          segment={segment} placement={placement} canWrite={canWrite} column={() => element.current}
+          onSelect={() => onSelectOccurrence(occurrence)} />
+      ))}
       {landing && landingSegment && <LandingBlock occurrence={landing} segment={landingSegment} />}
       {picked && pickedSegment && <PickedBlock range={picked} segment={pickedSegment} />}
     </div>
@@ -106,6 +120,8 @@ interface GridBlockProps {
   occurrence: CalendarOccurrence
   day: string
   segment: Segment
+  /** Where across the column it sits, among the events it overlaps. */
+  placement: Omit<Placed<unknown>, 'item'>
   canWrite: boolean
   /** The column this piece sits in: the layer reads the grab time against its live top. */
   column: () => HTMLElement | null
@@ -117,7 +133,7 @@ interface GridBlockProps {
  * handles share its box; they sit only on the event's true start and true end, so an overnight
  * event is stretched from its first piece's top and its last piece's bottom — never from midnight.
  */
-function GridBlock({ occurrence, day, segment, canWrite, column, onSelect }: GridBlockProps) {
+function GridBlock({ occurrence, day, segment, placement, canWrite, column, onSelect }: GridBlockProps) {
   const pointerIsFine = usePointerIsFine()
   const draggable = canWrite && isDraggable(occurrence)
   const fade = fadeClassFor(useDragPreview(), occurrence)
@@ -128,14 +144,17 @@ function GridBlock({ occurrence, day, segment, canWrite, column, onSelect }: Gri
   // A six-pixel strip is a mouse target; a finger resizes through the edit form instead.
   const resizable = draggable && pointerIsFine && occurrence.source === 'EVENT'
   return (
-    <div style={boxOf(segment)} className={`absolute inset-x-0.5 ${fade}`}>
+    // A later lane is drawn over an earlier one; the position is on the wrapper, the 2px inset in its padding.
+    <div style={{ ...boxOf(segment), left: percent(placement.left), width: percent(placement.width), zIndex: placement.lane + 1 }}
+      className={`absolute px-0.5 ${fade}`}>
       {resizable && segment.isStart && <ResizeHandle occurrence={occurrence} edge="start" />}
       <button ref={draggable ? move.setNodeRef : undefined}
         {...(draggable ? move.listeners : {})} {...(draggable ? move.attributes : {})}
         type="button" data-draggable={draggable || undefined} onClick={onSelect}
         // The title sits at the top and sticks while a long piece scrolls past. overflow-clip, not
         // overflow-hidden: hidden would make the block its own scroller and pin the title to it.
-        className={`flex h-full w-full touch-manipulation flex-col justify-start overflow-clip rounded px-1 py-0.5 text-left text-[11px] font-medium ${tintClassFor(occurrence)} ${draggable ? 'cursor-grab' : ''}`}>
+        // Among overlapping events, each is edged in the page's colour: two of the same colour stay two.
+        className={`flex h-full w-full touch-manipulation flex-col justify-start overflow-clip rounded px-1 py-0.5 text-left text-[11px] font-medium ${tintClassFor(occurrence)} ${draggable ? 'cursor-grab' : ''} ${placement.lanes > 1 ? 'ring-2 ring-bg-1' : ''}`}>
         <span className="sticky top-0 max-w-full truncate">{occurrence.title}</span>
       </button>
       {resizable && segment.isEnd && <ResizeHandle occurrence={occurrence} edge="end" />}

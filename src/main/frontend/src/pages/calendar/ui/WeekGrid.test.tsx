@@ -142,6 +142,35 @@ describe('WeekGrid', () => {
     expect(within(block).getByText('Congrès').className).toContain('sticky')
   })
 
+  it('offsets two overlapping events so they stay told apart, even in the same colour', () => {
+    const { container } = renderWeek([timed('Piano', '18:00', '19:30'), timed('Chorale', '18:30', '20:00')])
+    const tuesday = columnsOf(container)[1]
+    const box = (name: RegExp) => positionOf(within(tuesday).getByRole('button', { name })) as HTMLElement
+    expect([box(/Piano/).style.left, box(/Piano/).style.width]).toEqual(['0%', '80%'])
+    expect([box(/Chorale/).style.left, box(/Chorale/).style.width]).toEqual(['50%', '50%'])
+    // The later one is drawn over the earlier, edged in the page's colour so the two never merge.
+    expect(Number(box(/Chorale/).style.zIndex)).toBeGreaterThan(Number(box(/Piano/).style.zIndex))
+    expect(within(box(/Chorale/)).getByRole('button', { name: /Chorale/ }).className).toContain('ring-bg-1')
+  })
+
+  it('keeps an event that overlaps nothing at the full width of its column', () => {
+    const { container } = renderWeek([timed('Piano', '18:00', '19:00'), timed('Chorale', '19:00', '20:00')])
+    const tuesday = columnsOf(container)[1]
+    for (const name of [/Piano/, /Chorale/]) {
+      const box = positionOf(within(tuesday).getByRole('button', { name })) as HTMLElement
+      expect([box.style.left, box.style.width]).toEqual(['0%', '100%'])
+      expect(within(box).getByRole('button', { name }).className).not.toContain('ring-bg-1')
+    }
+  })
+
+  it('counts a very short event by the room it takes on screen', () => {
+    // Drawn 20 minutes tall, a zero-length reminder at 18:00 would hide under an 18:10 event.
+    const { container } = renderWeek([timed('Rappel', '18:00', '18:00'), timed('Piano', '18:10', '19:00')])
+    const tuesday = columnsOf(container)[1]
+    const left = (name: RegExp) => (positionOf(within(tuesday).getByRole('button', { name })) as HTMLElement).style.left
+    expect([left(/Rappel/), left(/Piano/)]).toEqual(['0%', '50%'])
+  })
+
   it('puts resize handles on a timed event block, on a mouse', () => {
     renderWeek([timed('Piano', '18:00', '19:00')])
     expect(screen.getAllByTestId('resize-start')).toHaveLength(1)
