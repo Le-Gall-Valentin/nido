@@ -139,5 +139,8 @@
     "recipe_required": "Pick a recipe.",
     "portions_invalid": "Portions must be a positive whole number.",
     "save_failed": "Adding failed."
+  },
+  "drag": {
+    "failed": "The move could not be saved."
   }
 }

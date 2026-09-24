@@ -139,5 +139,8 @@
     "recipe_required": "Choisissez une recette.",
     "portions_invalid": "Le nombre de portions doit être un entier positif.",
     "save_failed": "L'ajout a échoué."
+  },
+  "drag": {
+    "failed": "Le déplacement n'a pas pu être enregistré."
   }
 }
