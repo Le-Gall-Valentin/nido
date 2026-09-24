@@ -102,7 +102,9 @@ function CalendarPageContent() {
   // refetches the window would leave the open modal showing what was true before the write —
   // joining an event and watching "Nobody" stay on screen is how that shows up.
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
-  const [creatingEvent, setCreatingEvent] = useState(false)
+  // Where a new event starts, and whether closing its form should hand back to the day it was
+  // opened from — so an event added from a day's detail is seen landing in that day.
+  const [creating, setCreating] = useState<{ date: string; returnToDay: boolean } | null>(null)
   const [managingSeries, setManagingSeries] = useState(false)
   const [editing, setEditing] = useState<{ occurrence: CalendarOccurrence; detachSlot: { seriesId: string; date: string } | null } | null>(null)
   const [deleting, setDeleting] = useState<CalendarOccurrence | null>(null)
@@ -148,13 +150,13 @@ function CalendarPageContent() {
   const paletteEntries = useMemo(
     () => (canWriteHere
       ? [
-          { id: 'calendar:new-event', label: t('new_event'), icon: Plus, action: () => setCreatingEvent(true) },
+          { id: 'calendar:new-event', label: t('new_event'), icon: Plus, action: () => setCreating({ date, returnToDay: false }) },
           { id: 'calendar:today', label: t('palette.today'), icon: Calendar, action: goToToday },
         ]
       : []),
     // Must be memoised: usePaletteItems re-registers whenever this array changes identity, and an
     // inline literal would loop forever.
-    [canWriteHere, t, goToToday])
+    [canWriteHere, t, goToToday, date])
   usePaletteItems('calendar', paletteEntries)
 
   return (
@@ -167,7 +169,7 @@ function CalendarPageContent() {
               className="text-center text-sm font-semibold text-accent sm:text-left">
               {t('recurring_series.manage')}
             </button>
-            <button type="button" onClick={() => setCreatingEvent(true)}
+            <button type="button" onClick={() => setCreating({ date, returnToDay: false })}
               className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-accent px-4 py-2.5 text-sm font-semibold text-white sm:w-auto">
               <Plus className="size-4" /> {t('new_event')}
             </button>
@@ -242,6 +244,8 @@ function CalendarPageContent() {
         <DayDetailModal
           date={selectedDay}
           occurrences={occurrences}
+          canWrite={canWriteHere}
+          onCreateEvent={(day) => { setSelectedDay(null); setCreating({ date: day, returnToDay: true }) }}
           onSelectOccurrence={(occurrence) => { setSelectedDay(null); setSelectedOccurrence(occurrence) }}
           onClose={() => setSelectedDay(null)}
         />
@@ -284,15 +288,19 @@ function CalendarPageContent() {
         />
       )}
 
-      {(creatingEvent || editing) && (
+      {(creating || editing) && (
         <EventFormPanel
           spaceId={spaceId}
           occurrence={editing?.occurrence ?? null}
           detachSlot={editing?.detachSlot ?? null}
-          defaultDate={selectedDay ?? date}
+          defaultDate={creating?.date ?? date}
           members={members ?? []}
           isPersonal={spaceIsPersonal}
-          onClose={() => { setCreatingEvent(false); setEditing(null) }}
+          onClose={() => {
+            if (creating?.returnToDay) setSelectedDay(creating.date)
+            setCreating(null)
+            setEditing(null)
+          }}
         />
       )}
 

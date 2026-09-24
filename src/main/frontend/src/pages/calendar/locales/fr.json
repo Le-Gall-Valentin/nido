@@ -41,7 +41,7 @@
     "today": "Calendrier — aujourd'hui"
   },
   "day_detail": {
-    "title": "Journée du {{date}}"
+    "add_event": "Ajouter un événement ce jour"
   },
   "detail": {
     "title": "Détail",

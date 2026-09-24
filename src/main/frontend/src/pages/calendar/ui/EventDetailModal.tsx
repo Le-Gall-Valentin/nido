@@ -1,9 +1,12 @@
 import { useTranslation } from 'react-i18next'
-import { Repeat } from 'lucide-react'
+import i18next from 'i18next'
+import { MapPin, Repeat } from 'lucide-react'
 import { Dialog, Button } from '@/shared/ui'
+import { resolveLocale } from '@/shared/lib'
 import type { SpaceMember } from '@/entities/space'
 import { UserAvatar } from '@/entities/user'
 import type { CalendarOccurrence } from '@/entities/calendar'
+import { formatPeriodLabel, formatSpan } from '../lib/periodLabel'
 
 interface EventDetailModalProps {
   occurrence: CalendarOccurrence
@@ -21,9 +24,11 @@ interface EventDetailModalProps {
   onClose: () => void
 }
 
-function formatWhen(occurrence: CalendarOccurrence, allDayLabel: string): string {
-  const sameDay = occurrence.startDate === occurrence.endDate
-  const days = sameDay ? occurrence.startDate : `${occurrence.startDate} → ${occurrence.endDate}`
+/** The same wording as the calendar's own headings: a day in full, a span shortened only as it can be. */
+function formatWhen(occurrence: CalendarOccurrence, allDayLabel: string, locale: string): string {
+  const days = occurrence.startDate === occurrence.endDate
+    ? formatPeriodLabel('day', occurrence.startDate, locale)
+    : formatSpan(occurrence.startDate, occurrence.endDate, locale)
   if (occurrence.allDay) return `${days} · ${allDayLabel}`
   return `${days} · ${occurrence.startTime?.slice(0, 5)} – ${occurrence.endTime?.slice(0, 5)}`
 }
@@ -44,8 +49,24 @@ export function EventDetailModal({
             {occurrence.title}
             {belongsToSeries && <Repeat aria-label={t('detail.recurring')} className="size-3.5 shrink-0 text-fg-3" />}
           </p>
-          <p className="text-sm text-fg-2">{formatWhen(occurrence, t('all_day_short'))}</p>
+          <p className="text-sm text-fg-2">
+            {formatWhen(occurrence, t('all_day_short'), resolveLocale(i18next.language))}
+          </p>
         </div>
+
+        {occurrence.location && (
+          <p data-testid="event-location" className="flex items-center gap-1.5 text-sm text-fg-1">
+            <MapPin aria-hidden className="size-4 shrink-0 text-fg-3" />
+            {occurrence.location}
+          </p>
+        )}
+
+        {occurrence.description && (
+          // In full here, unlike the day overview: this is where the reader came to read it.
+          <p data-testid="event-description" className="whitespace-pre-line text-sm text-fg-1">
+            {occurrence.description}
+          </p>
+        )}
 
         <div>
           <h3 className="mb-1 text-xs font-semibold text-fg-2">{t('detail.participants')}</h3>

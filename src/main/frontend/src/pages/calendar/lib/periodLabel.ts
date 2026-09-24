@@ -29,7 +29,7 @@ function asHeading(value: string): string {
  *
  * The week's span is spelled out only as far as it has to be — the month is written once when
  * both ends share it, and the year once when both ends share that — so the common case stays
- * short and only a week straddling a boundary pays for the extra words.
+ * short and only a week straddling a boundary pays for the extra words. See formatSpan.
  */
 export function formatPeriodLabel(view: CalendarView, iso: string, locale: string): string {
   if (view === 'month') {
@@ -41,7 +41,14 @@ export function formatPeriodLabel(view: CalendarView, iso: string, locale: strin
   }
 
   const from = startOfWeek(iso)
-  const to = addDays(from, 6)
+  return formatSpan(from, addDays(from, 6), locale)
+}
+
+/**
+ * A span of days, spelled out only as far as it has to be — shared by the week heading and by any
+ * occurrence that runs over several days, so both read the same way.
+ */
+export function formatSpan(from: string, to: string, locale: string): string {
   const sameMonth = from.slice(0, 7) === to.slice(0, 7)
   const sameYear = from.slice(0, 4) === to.slice(0, 4)
 
