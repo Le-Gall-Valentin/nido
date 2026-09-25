@@ -54,16 +54,23 @@ export function useGridSelection(onPick: ((range: ScheduleChange) => void) | und
     const onMove = (event: PointerEvent) => { latest = next(event); show(latest) }
     const onUp = () => { end(); onPickRef.current?.(rangeOf(latest)) }
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') end() }
+    // Given up like Escape, never picked: a release that happens in another window never comes
+    // back, and the next click here would create an event over a time nobody chose.
+    const onLost = () => end()
     function end() {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('keydown', onKey)
+      window.removeEventListener('pointercancel', onLost)
+      window.removeEventListener('blur', onLost)
       stop.current = null
       setShown(null)
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('keydown', onKey)
+    window.addEventListener('pointercancel', onLost)
+    window.addEventListener('blur', onLost)
     stop.current = end
     show(first)
   }, [])
