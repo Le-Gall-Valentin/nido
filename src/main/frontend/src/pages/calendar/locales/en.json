@@ -87,11 +87,12 @@
     "too_long": "An event lasts at most {{days}} days.",
     "save_failed": "Saving failed.",
     "color_name": {
-      "accent": "Green",
-      "status-blue": "Blue",
-      "status-orange": "Orange",
-      "status-green": "Dark green",
-      "status-red": "Red"
+      "event-violet": "Violet",
+      "event-magenta": "Magenta",
+      "event-cyan": "Cyan",
+      "event-graphite": "Graphite",
+      "event-indigo": "Indigo",
+      "event-brique": "Brick"
     }
   },
   "delete": {

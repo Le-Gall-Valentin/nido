@@ -23,6 +23,26 @@ function renderForm(props: Partial<EventFormModalProps> = {}) {
 const save = () => fireEvent.click(screen.getByRole('button', { name: 'form.save' }))
 const field = (label: string) => screen.getByLabelText(label) as HTMLInputElement
 
+describe('EventFormModal — colour', () => {
+  const swatches = () => screen.getAllByRole('button', { name: /^form\.color_name\./ })
+
+  it('offers the six colours of events, and none of the sources\' colours', () => {
+    renderForm()
+    expect(swatches().map((swatch) => swatch.getAttribute('aria-label'))).toEqual([
+      'form.color_name.event-violet', 'form.color_name.event-magenta', 'form.color_name.event-cyan',
+      'form.color_name.event-graphite', 'form.color_name.event-indigo', 'form.color_name.event-brique',
+    ])
+    expect(swatches()[2].className).toContain('bg-event-cyan')
+  })
+
+  it('saves the colour picked', () => {
+    const { onSubmit } = renderForm()
+    fireEvent.click(screen.getByRole('button', { name: 'form.color_name.event-cyan' }))
+    save()
+    expect(onSubmit).toHaveBeenCalledWith({ ...initial, color: 'event-cyan' }, null)
+  })
+})
+
 describe('EventFormModal — length', () => {
   it('refuses an event covering more days than the calendar allows', () => {
     const { onSubmit } = renderForm({ initial: { ...initial, allDay: true, startTime: null, endTime: null, endDate: '2027-10-03' } })

@@ -23,6 +23,19 @@
   --color-status-orange-dim: #f7efe0;
   --color-status-blue: #44618a;
   --color-status-blue-dim: #e7ecf3;
+  /* Events' own colours: none is one a source wears, so an event never passes for a meal or a task */
+  --color-event-violet: #7b5c93;
+  --color-event-violet-dim: #f1ebf5;
+  --color-event-magenta: #a14a7a;
+  --color-event-magenta-dim: #f7e8f0;
+  --color-event-cyan: #1f7a82;
+  --color-event-cyan-dim: #e3f2f3;
+  --color-event-graphite: #5b5750;
+  --color-event-graphite-dim: #eeece8;
+  --color-event-indigo: #4a4f9e;
+  --color-event-indigo-dim: #e9eaf6;
+  --color-event-brique: #9c5a3c;
+  --color-event-brique-dim: #f6ebe5;
   --font-family-sans: "Hanken Grotesk", system-ui, -apple-system, sans-serif;
   --font-family-display: "Bricolage Grotesque", "Hanken Grotesk", system-ui, sans-serif;
   --font-family-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
@@ -88,6 +101,18 @@
     --color-status-orange-dim: #362c1e;
     --color-status-blue: #8fb3d9;
     --color-status-blue-dim: #1e2a36;
+    --color-event-violet: #c3a6dc;
+    --color-event-violet-dim: #2f2638;
+    --color-event-magenta: #e59bc2;
+    --color-event-magenta-dim: #3a2230;
+    --color-event-cyan: #6fcdd4;
+    --color-event-cyan-dim: #1c3336;
+    --color-event-graphite: #b8b2a6;
+    --color-event-graphite-dim: #302e2a;
+    --color-event-indigo: #a9adeb;
+    --color-event-indigo-dim: #25273d;
+    --color-event-brique: #e0a283;
+    --color-event-brique-dim: #3a2a22;
 
     --color-accent-ring: rgba(130, 194, 141, 0.2);
   }
@@ -116,6 +141,18 @@
   --color-status-orange-dim: #362c1e;
   --color-status-blue: #8fb3d9;
   --color-status-blue-dim: #1e2a36;
+  --color-event-violet: #c3a6dc;
+  --color-event-violet-dim: #2f2638;
+  --color-event-magenta: #e59bc2;
+  --color-event-magenta-dim: #3a2230;
+  --color-event-cyan: #6fcdd4;
+  --color-event-cyan-dim: #1c3336;
+  --color-event-graphite: #b8b2a6;
+  --color-event-graphite-dim: #302e2a;
+  --color-event-indigo: #a9adeb;
+  --color-event-indigo-dim: #25273d;
+  --color-event-brique: #e0a283;
+  --color-event-brique-dim: #3a2a22;
 
   --color-accent-ring: rgba(130, 194, 141, 0.2);
 }

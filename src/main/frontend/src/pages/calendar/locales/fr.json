@@ -87,11 +87,12 @@
     "too_long": "Un événement dure au plus {{days}} jours.",
     "save_failed": "L'enregistrement a échoué.",
     "color_name": {
-      "accent": "Vert",
-      "status-blue": "Bleu",
-      "status-orange": "Orange",
-      "status-green": "Vert foncé",
-      "status-red": "Rouge"
+      "event-violet": "Violet",
+      "event-magenta": "Magenta",
+      "event-cyan": "Cyan",
+      "event-graphite": "Graphite",
+      "event-indigo": "Indigo",
+      "event-brique": "Brique"
     }
   },
   "delete": {

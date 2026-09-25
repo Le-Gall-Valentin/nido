@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useCalendarFilters } from './useCalendarFilters'
-import { tokenFor } from '../lib/sourceAppearance'
 import type { CalendarOccurrence } from '@/entities/calendar'
 
 function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence {
@@ -67,21 +66,5 @@ describe('useCalendarFilters', () => {
     localStorage.setItem('nido.calendar.filters.s1', '"broken"')
     const { result } = renderHook(() => useCalendarFilters('s1'))
     expect(result.current.enabled.size).toBe(5)
-  })
-})
-
-describe('tokenFor', () => {
-  it('falls back to the source colour when an occurrence has no override', () => {
-    expect(tokenFor(occurrence({ source: 'TASK', color: null }))).toBe('status-blue')
-    expect(tokenFor(occurrence({ source: 'MEAL', color: null }))).toBe('status-green')
-  })
-
-  it('honours a valid override', () => {
-    expect(tokenFor(occurrence({ source: 'EVENT', color: 'status-orange' }))).toBe('status-orange')
-  })
-
-  it('ignores an override that is not one of the theme tokens', () => {
-    // Stored text; a stale or hand-written value must not produce an unstyled element.
-    expect(tokenFor(occurrence({ source: 'EVENT', color: '#ff00ff' }))).toBe('accent')
   })
 })

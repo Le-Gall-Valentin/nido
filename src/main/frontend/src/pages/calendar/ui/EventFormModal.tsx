@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { SpaceMember } from '@/entities/space'
 import type { EventInput, RecurrenceInterval } from '@/entities/calendar'
-import { SOURCE_TOKEN } from '../lib/sourceAppearance'
+import { DOT_CLASS, EVENT_COLORS } from '../lib/sourceAppearance'
 import type { Recurrence } from '../lib/seriesInput'
 import { MAX_EVENT_DAYS, coversTooManyDays, occurrenceOutlastsInterval } from '../lib/scheduleLimits'
 import { ParticipantPicker } from './ParticipantPicker'
@@ -30,7 +30,6 @@ export interface EventFormModalProps {
   onCancel: () => void
 }
 
-const COLOR_CHOICES = Object.values(SOURCE_TOKEN)
 const INTERVALS: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
 const NO_RECURRENCE_YET: Recurrence = { intervalType: 'WEEKLY', intervalCount: 1, until: null }
 
@@ -140,12 +139,12 @@ export function EventFormModal({
         <div>
           <span className="mb-1 block text-xs font-semibold text-fg-2">{t('form.color')}</span>
           <div className="flex gap-1.5">
-            {COLOR_CHOICES.map((token) => (
+            {EVENT_COLORS.map((token) => (
               <button key={token} type="button" aria-label={t(`form.color_name.${token}`)}
                 aria-pressed={form.color === token}
                 onClick={() => patch({ color: form.color === token ? null : token })}
                 className={`size-6 rounded-full border-2 ${form.color === token ? 'border-fg-1' : 'border-transparent'}
-                  ${COLOR_SWATCH[token]}`} />
+                  ${DOT_CLASS[token]}`} />
             ))}
           </div>
         </div>
@@ -168,13 +167,4 @@ export function EventFormModal({
       </div>
     </Dialog>
   )
-}
-
-/** Literal class names, for the same Tailwind-purge reason as the dots. */
-const COLOR_SWATCH: Record<string, string> = {
-  'accent': 'bg-accent',
-  'status-blue': 'bg-status-blue',
-  'status-orange': 'bg-status-orange',
-  'status-green': 'bg-status-green',
-  'status-red': 'bg-status-red',
 }
