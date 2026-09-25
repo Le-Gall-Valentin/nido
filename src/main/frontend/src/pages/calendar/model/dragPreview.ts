@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react'
-import type { CalendarOccurrence } from '@/entities/calendar'
+import type { CalendarOccurrence, ScheduleChange } from '@/entities/calendar'
 import { isUnchanged } from '../lib/dragResolution'
-import type { DragIntent, ScheduleChange } from '../lib/dragTypes'
+import type { DragIntent } from '../lib/dragTypes'
 
 /** What the drag layer knows during a drag: what is dragged, and where it would land now. */
 export interface DragPreviewState { intent: DragIntent; change: ScheduleChange | null }

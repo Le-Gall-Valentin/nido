@@ -1,18 +1,21 @@
 import { useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { calendarKey, useCalendarApi, useRecurringEventSeriesApi, type CalendarOccurrence } from '@/entities/calendar'
+import {
+  calendarKey, toEventInput, useCalendarApi, useRecurringEventSeriesApi,
+  type CalendarOccurrence, type ScheduleChange,
+} from '@/entities/calendar'
 import { tasksKey, useTasksApi } from '@/entities/tasks'
 import { useKitchenApi } from '@/entities/kitchen'
-import { toEventInput } from '../lib/eventInput'
-import type { ScheduleChange } from '../lib/dragTypes'
 
 /**
- * Writes a drop through whichever API owns the item, showing the result before the server answers.
+ * Moves an item of the calendar to another day or time, through whichever module owns it — an event,
+ * one occurrence of a series, a task or a meal — showing the result before the server answers.
+ * `canReschedule` says which items this can move.
  *
  * The cached windows are rewritten at once so the item stays where it was released, restored if the
  * write fails, and refetched either way — the same prefix every calendar mutation invalidates.
  */
-export function useApplyDrop(spaceId: string) {
+export function useRescheduleOccurrence(spaceId: string) {
   const queryClient = useQueryClient()
   const calendarApi = useCalendarApi()
   const seriesApi = useRecurringEventSeriesApi()
@@ -55,7 +58,7 @@ export function useApplyDrop(spaceId: string) {
     throw new Error(`${o.source} is not draggable`)
   }, [calendarApi, seriesApi, tasksApi, kitchenApi, queryClient, spaceId])
 
-  const apply = useCallback(async (o: CalendarOccurrence, change: ScheduleChange) => {
+  const reschedule = useCallback(async (o: CalendarOccurrence, change: ScheduleChange) => {
     const windows = { queryKey: [...calendarKey(spaceId), 'occurrences'] }
     // A refetch already on its way would answer with the item where it was, after the move is
     // shown. Cancelled first — and awaited, since a cancelled fetch restores its old state.
@@ -76,5 +79,5 @@ export function useApplyDrop(spaceId: string) {
 
   const dismissFailure = useCallback(() => setFailed(false), [])
 
-  return { apply, failed, dismissFailure }
+  return { reschedule, failed, dismissFailure }
 }

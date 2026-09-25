@@ -1,7 +1,8 @@
 import type { CalendarOccurrence } from '@/entities/calendar'
 
 /**
- * Whether an occurrence can be dragged to another day or time.
+ * Whether an occurrence can be moved to another day or time — the twin of what
+ * `useRescheduleOccurrence` knows how to write, which is why the two live together.
  *
  * It must have something to rewrite: a row, or — for an event series — a slot, which a drop
  * detaches through the same upsert as "edit this occurrence". A projected recurring task has
@@ -10,7 +11,7 @@ import type { CalendarOccurrence } from '@/entities/calendar'
  * deadline belongs to its goal, not to whoever is looking at the month. Hence the explicit source
  * list rather than relying on `materialized` alone.
  */
-export function isDraggable(occurrence: CalendarOccurrence): boolean {
+export function canReschedule(occurrence: CalendarOccurrence): boolean {
   if (occurrence.source === 'EVENT') {
     // A projected occurrence of a series has no row, but it has a slot: a drop detaches just that
     // one through the same upsert as "edit this occurrence".

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import type { DragData, DropData } from '../lib/dragTypes'
-import { isDraggable } from '../lib/isDraggable'
+import { canReschedule } from '@/features/reschedule-occurrence'
 import { covers, isBandOccurrence } from '../lib/segments'
 import { fadeClassFor, useDragPreview } from '../model/dragPreview'
 import { tintClassFor } from '../lib/sourceAppearance'
@@ -60,7 +60,7 @@ export function AllDayBand({ day, occurrences, canWrite, onSelectOccurrence, pic
 function BandItem({ occurrence, day, canWrite, onSelect }: {
   occurrence: CalendarOccurrence; day: string; canWrite: boolean; onSelect: () => void
 }) {
-  const draggable = canWrite && isDraggable(occurrence)
+  const draggable = canWrite && canReschedule(occurrence)
   const fade = fadeClassFor(useDragPreview(), occurrence)
   const { setNodeRef, listeners, attributes } = useDraggable({
     id: `band:${occurrence.sourceId}:${day}`, disabled: !draggable,

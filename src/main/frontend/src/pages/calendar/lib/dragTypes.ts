@@ -14,10 +14,6 @@ export type DragIntent =
 export type DropTarget =
   | { kind: 'day'; day: string } | { kind: 'all-day'; day: string } | { kind: 'hours'; day: string }
 
-export interface ScheduleChange {
-  allDay: boolean; startDate: string; startTime: string | null; endDate: string; endTime: string | null
-}
-
 /** What a droppable carries in dnd-kit `data`: its target and, for an hour column, its live element. */
 export interface DropData { target: DropTarget; column?: () => HTMLElement | null }
 

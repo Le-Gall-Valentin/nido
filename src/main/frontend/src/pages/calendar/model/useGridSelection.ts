@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { sameSchedule } from '../lib/dragResolution'
-import type { ScheduleChange } from '../lib/dragTypes'
+import type { ScheduleChange } from '@/entities/calendar'
 import { bandRange, selectionRange, type GridPoint } from '../lib/gridSelection'
 import { exactMinutesAt } from '../lib/timeMath'
 

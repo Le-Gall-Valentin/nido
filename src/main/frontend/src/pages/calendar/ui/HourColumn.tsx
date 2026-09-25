@@ -2,10 +2,10 @@ import { useRef } from 'react'
 import i18next from 'i18next'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { MapPin } from 'lucide-react'
-import type { CalendarOccurrence } from '@/entities/calendar'
+import type { CalendarOccurrence, ScheduleChange } from '@/entities/calendar'
 import { resolveLocale, usePointerIsFine } from '@/shared/lib'
-import type { DragData, DropData, ScheduleChange } from '../lib/dragTypes'
-import { isDraggable } from '../lib/isDraggable'
+import type { DragData, DropData } from '../lib/dragTypes'
+import { canReschedule } from '@/features/reschedule-occurrence'
 import { tintClassFor } from '../lib/sourceAppearance'
 import { layoutOverlaps, type Placed } from '../lib/overlapLayout'
 import { formatTimeRange } from '../lib/periodLabel'
@@ -136,7 +136,7 @@ interface GridBlockProps {
  */
 function GridBlock({ occurrence, day, segment, placement, canWrite, column, onSelect }: GridBlockProps) {
   const pointerIsFine = usePointerIsFine()
-  const draggable = canWrite && isDraggable(occurrence)
+  const draggable = canWrite && canReschedule(occurrence)
   const fade = fadeClassFor(useDragPreview(), occurrence)
   const move = useDraggable({
     id: `grid:${occurrence.sourceId}:${day}`, disabled: !draggable,

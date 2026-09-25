@@ -9,18 +9,17 @@ import { ROUTES } from '@/shared/config'
 import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
 import { useAuth } from '@/features/auth'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
+import { useRescheduleOccurrence } from '@/features/reschedule-occurrence'
 import {
   calendarApi, CalendarApiProvider, useOccurrences, useJoinEvent, useLeaveEvent, useRecurringEventSeries,
-  type CalendarApi, type CalendarOccurrence,
+  type CalendarApi, type CalendarOccurrence, type ScheduleChange,
 } from '@/entities/calendar'
 import { FinanceApiProvider, financeApi as defaultFinanceApi, type IFinanceApi } from '@/entities/finance'
 import { KitchenApiProvider, kitchenApi as defaultKitchenApi, type IKitchenApi } from '@/entities/kitchen'
 import { windowFor, type CalendarView } from '../lib/calendarWindow'
-import type { ScheduleChange } from '../lib/dragTypes'
 import { useCalendarUrlState } from '../model/useCalendarUrlState'
 import { useCalendarFilters } from '../model/useCalendarFilters'
 import { useSwipePeriod } from '../model/useSwipePeriod'
-import { useApplyDrop } from '../model/useApplyDrop'
 import { useRefreshAfterWrites } from '../model/useRefreshAfterWrites'
 import { formatPeriodLabel } from '../lib/periodLabel'
 import { CalendarDragLayer } from './CalendarDragLayer'
@@ -89,7 +88,7 @@ function CalendarPageContent() {
   const currentUserId = useAuth((state) => state.user?.id) ?? ''
   const joinEvent = useJoinEvent(spaceId)
   const leaveEvent = useLeaveEvent(spaceId)
-  const { apply: applyDrop, failed: dropFailed, dismissFailure } = useApplyDrop(spaceId)
+  const { reschedule, failed: dropFailed, dismissFailure } = useRescheduleOccurrence(spaceId)
   useRefreshAfterWrites(spaceId)
 
   const swipe = useSwipePeriod(shiftPeriod)
@@ -239,7 +238,7 @@ function CalendarPageContent() {
       {!isPending && !isError && (
         <div className="rounded-2xl border border-border bg-bg-1 p-1 md:p-2" {...swipe.handlers}>
           <CalendarDragLayer enabled={canWriteHere} view={view} onShift={shiftPeriod}
-            onDragStart={swipe.cancel} onApply={(o, change) => { void applyDrop(o, change) }}>
+            onDragStart={swipe.cancel} onApply={(o, change) => { void reschedule(o, change) }}>
             {view === 'month' && (
               <MonthGrid date={date} occurrences={occurrences} today={today} canWrite={canWriteHere}
                 onSelectDay={setSelectedDay} onSelectOccurrence={setSelectedOccurrence} />

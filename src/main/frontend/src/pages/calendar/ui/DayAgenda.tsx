@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import type { CalendarOccurrence } from '@/entities/calendar'
+import type { CalendarOccurrence, ScheduleChange } from '@/entities/calendar'
 import { groupByDay } from '../lib/calendarWindow'
-import type { ScheduleChange } from '../lib/dragTypes'
 import { covers, isBandOccurrence, segmentFor } from '../lib/segments'
 import { useDragPreview } from '../model/dragPreview'
 import { useOpeningScroll } from '../model/useOpeningScroll'

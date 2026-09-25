@@ -1,6 +1,6 @@
 import { daysBetween } from './calendarWindow'
 import { dateTimeAt } from './dragResolution'
-import type { ScheduleChange } from './dragTypes'
+import type { ScheduleChange } from '@/entities/calendar'
 import { DAY_MINUTES, SNAP_MINUTES } from './timeMath'
 
 /** A place in the hour grid: a day, and the unrounded time under the pointer on it. */

@@ -6,7 +6,7 @@ import { createTestQueryClient } from '@/shared/test'
 import { CalendarApiProvider, occurrencesKey, type CalendarApi, type CalendarOccurrence } from '@/entities/calendar'
 import { TasksApiProvider, type TasksApi } from '@/entities/tasks'
 import { KitchenApiProvider, type IKitchenApi } from '@/entities/kitchen'
-import { useApplyDrop } from './useApplyDrop'
+import { useRescheduleOccurrence } from './useRescheduleOccurrence'
 
 const change = { allDay: false, startDate: '2026-09-25', startTime: '09:00', endDate: '2026-09-25', endTime: '10:00' }
 
@@ -32,14 +32,14 @@ function setup(apis: { calendar?: Partial<CalendarApi>; tasks?: Partial<TasksApi
         </TasksApiProvider>
       </CalendarApiProvider>
     </QueryClientProvider>)
-  const hook = renderHook(() => useApplyDrop('space-1'), { wrapper })
+  const hook = renderHook(() => useRescheduleOccurrence('space-1'), { wrapper })
   return { hook, calendar, tasks, kitchen, queryClient }
 }
 
-describe('useApplyDrop', () => {
+describe('useRescheduleOccurrence', () => {
   it('patches a one-off event and keeps its description and location', async () => {
     const { hook, calendar } = setup()
-    await act(() => hook.result.current.apply(occurrence({}), change))
+    await act(() => hook.result.current.reschedule(occurrence({}), change))
     expect(calendar.updateEvent).toHaveBeenCalledWith('space-1', 'e1', expect.objectContaining({
       startDate: '2026-09-25', startTime: '09:00', description: 'Billets', location: 'Salle',
     }))
@@ -47,7 +47,7 @@ describe('useApplyDrop', () => {
 
   it('moves only one occurrence of a series, through its original slot', async () => {
     const { hook, calendar } = setup()
-    await act(() => hook.result.current.apply(
+    await act(() => hook.result.current.reschedule(
       occurrence({ materialized: false, sourceId: 's-1:2026-09-23', seriesId: 's-1', originalDate: '2026-09-23' }), change))
     expect(calendar.detachOccurrence).toHaveBeenCalledWith('space-1', 's-1', '2026-09-23', expect.objectContaining({ startDate: '2026-09-25' }))
     expect(calendar.updateEvent).not.toHaveBeenCalled()
@@ -58,7 +58,7 @@ describe('useApplyDrop', () => {
       { id: 't1', title: 'Poubelles', status: 'TODO', priority: 'HIGH', dueDate: '2026-09-23', assigneeIds: ['u1'],
         subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null },
     ]) } })
-    await act(() => hook.result.current.apply(occurrence({ source: 'TASK', sourceId: 't1', allDay: true, startTime: null, endTime: null }),
+    await act(() => hook.result.current.reschedule(occurrence({ source: 'TASK', sourceId: 't1', allDay: true, startTime: null, endTime: null }),
       { ...change, allDay: true, startTime: null, endTime: null }))
     expect(tasks.updateTask).toHaveBeenCalledWith('space-1', 't1', 'Poubelles', 'HIGH', '2026-09-25', ['u1'])
   })
@@ -70,7 +70,7 @@ describe('useApplyDrop', () => {
       addMenuEntry: vi.fn().mockImplementation(async () => { calls.push('add') }),
       removeMenuEntry: vi.fn().mockImplementation(async () => { calls.push('remove') }),
     } })
-    await act(() => hook.result.current.apply(occurrence({ source: 'MEAL', sourceId: 'm1', allDay: true, startTime: null, endTime: null }),
+    await act(() => hook.result.current.reschedule(occurrence({ source: 'MEAL', sourceId: 'm1', allDay: true, startTime: null, endTime: null }),
       { ...change, allDay: true, startTime: null, endTime: null }))
     expect(kitchen.addMenuEntry).toHaveBeenCalledWith('space-1', '2026-09-25', 'r1', 4)
     expect(calls).toEqual(['add', 'remove'])
@@ -81,7 +81,7 @@ describe('useApplyDrop', () => {
       listMenuEntries: vi.fn().mockResolvedValue([{ id: 'm1', date: '2026-09-23', recipeId: 'r1', recipeName: 'Gratin', recipeCategory: 'PLAT', portions: 4, position: 0 }]),
       addMenuEntry: vi.fn().mockRejectedValue(new Error('nope')),
     } })
-    await act(() => hook.result.current.apply(occurrence({ source: 'MEAL', sourceId: 'm1', allDay: true, startTime: null, endTime: null }),
+    await act(() => hook.result.current.reschedule(occurrence({ source: 'MEAL', sourceId: 'm1', allDay: true, startTime: null, endTime: null }),
       { ...change, allDay: true, startTime: null, endTime: null }))
     expect(kitchen.removeMenuEntry).not.toHaveBeenCalled()
     expect(hook.result.current.failed).toBe(true)
@@ -97,7 +97,7 @@ describe('useApplyDrop', () => {
     queryClient.setQueryData(key, [occurrence({})])
 
     let pending: Promise<void> = Promise.resolve()
-    act(() => { pending = hook.result.current.apply(occurrence({}), change) })
+    act(() => { pending = hook.result.current.reschedule(occurrence({}), change) })
     // Before the server has answered: the write is still pending.
     await waitFor(() => expect(queryClient.getQueryData<CalendarOccurrence[]>(key)?.[0].startDate).toBe('2026-09-25'))
 
@@ -117,7 +117,7 @@ describe('useApplyDrop', () => {
     const inFlight = queryClient.fetchQuery({ queryKey: key, queryFn: () => new Promise<CalendarOccurrence[]>((r) => { answer = r }) })
     inFlight.catch(() => {})
 
-    act(() => { void hook.result.current.apply(occurrence({}), change) })
+    act(() => { void hook.result.current.reschedule(occurrence({}), change) })
     await waitFor(() => expect(queryClient.getQueryData<CalendarOccurrence[]>(key)?.[0].startDate).toBe('2026-09-25'))
     await act(async () => { answer([occurrence({})]); await Promise.resolve() })
 

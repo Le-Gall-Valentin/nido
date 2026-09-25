@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import type { CalendarOccurrence } from '@/entities/calendar'
+import type { CalendarOccurrence, ScheduleChange } from '@/entities/calendar'
 import { groupByDay, weekDates } from '../lib/calendarWindow'
-import type { DragData, DropData, ScheduleChange } from '../lib/dragTypes'
-import { isDraggable } from '../lib/isDraggable'
+import type { DragData, DropData } from '../lib/dragTypes'
+import { canReschedule } from '@/features/reschedule-occurrence'
 import { covers, isBandOccurrence, segmentFor } from '../lib/segments'
 import { useOpeningScroll } from '../model/useOpeningScroll'
 import { useGridSelection } from '../model/useGridSelection'
@@ -173,7 +173,7 @@ function PhoneDaySection({ day, canWrite, children }: { day: string; canWrite: b
 function PhoneRow({ occurrence, day, canWrite, label, onSelect }: {
   occurrence: CalendarOccurrence; day: string; canWrite: boolean; label: string; onSelect: () => void
 }) {
-  const draggable = canWrite && isDraggable(occurrence)
+  const draggable = canWrite && canReschedule(occurrence)
   const fade = fadeClassFor(useDragPreview(), occurrence)
   const { setNodeRef, listeners, attributes } = useDraggable({
     id: `row:${occurrence.sourceId}:${day}`, disabled: !draggable,

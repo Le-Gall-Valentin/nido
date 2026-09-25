@@ -2,12 +2,10 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SpaceMember } from '@/entities/space'
 import {
-  useCreateEvent, useUpdateEvent, useDetachOccurrence, useCreateRecurringEventSeries, useUpdateRecurringEventSeries,
-  type CalendarOccurrence, type EventInput, type RecurringEventSeries,
+  toEventInput, useCreateEvent, useUpdateEvent, useDetachOccurrence, useCreateRecurringEventSeries,
+  useUpdateRecurringEventSeries, type CalendarOccurrence, type EventInput, type RecurringEventSeries, type ScheduleChange,
 } from '@/entities/calendar'
-import { toEventInput } from '../lib/eventInput'
 import { fromSeries, runsAcross, toSeriesInput, type Recurrence } from '../lib/seriesInput'
-import type { ScheduleChange } from '../lib/dragTypes'
 import { EventFormModal } from './EventFormModal'
 
 interface EventFormPanelProps {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { toEventInput } from './eventInput'
-import type { CalendarOccurrence } from '@/entities/calendar'
+import { toEventInput } from './toEventInput'
+import type { CalendarOccurrence } from '../model/types'
 
 const concert: CalendarOccurrence = {
   source: 'EVENT', sourceId: 'e1', seriesId: null, originalDate: null, materialized: true,

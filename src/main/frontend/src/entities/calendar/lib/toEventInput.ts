@@ -1,4 +1,4 @@
-import type { CalendarOccurrence, EventInput } from '@/entities/calendar'
+import type { CalendarOccurrence, EventInput } from '../model/types'
 
 /**
  * The writable half of an occurrence, field for field.

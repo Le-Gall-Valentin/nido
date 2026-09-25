@@ -1,7 +1,8 @@
 export type {
   CalendarOccurrence, CalendarSourceType, CalendarEvent, RecurringEventSeries,
-  RecurrenceInterval, EventInput, RecurringEventSeriesInput,
+  RecurrenceInterval, EventInput, RecurringEventSeriesInput, ScheduleChange,
 } from './model/types'
+export { toEventInput } from './lib/toEventInput'
 export type { ICalendarApi } from './model/ICalendarApi'
 export type { IRecurringEventSeriesApi } from './model/IRecurringEventSeriesApi'
 export type { CalendarApi } from './model/calendarApiContext'

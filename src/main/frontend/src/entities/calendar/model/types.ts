@@ -105,3 +105,8 @@ export interface RecurringEventSeriesInput {
   endDate: string | null
   participantIds: string[]
 }
+
+/** When something runs: what a drag, a resize or a selection in the grid decides, before it is written. */
+export interface ScheduleChange {
+  allDay: boolean; startDate: string; startTime: string | null; endDate: string; endTime: string | null
+}

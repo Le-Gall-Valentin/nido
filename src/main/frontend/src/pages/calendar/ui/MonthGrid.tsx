@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay, monthGridDates } from '../lib/calendarWindow'
-import { isDraggable } from '../lib/isDraggable'
+import { canReschedule } from '@/features/reschedule-occurrence'
 import type { DragData, DropData } from '../lib/dragTypes'
 import { covers } from '../lib/segments'
 import { fadeClassFor, useDragPreview } from '../model/dragPreview'
@@ -149,11 +149,11 @@ interface ChipProps {
 
 /**
  * One occurrence inside a month cell. Draggable only when it has a row whose date the calendar may
- * rewrite — see isDraggable. Everything else keeps a normal cursor, so the affordance never
+ * rewrite — see canReschedule. Everything else keeps a normal cursor, so the affordance never
  * promises something the drop would refuse.
  */
 function OccurrenceChip({ occurrence, day, canWrite, onSelect }: ChipProps) {
-  const draggable = canWrite && isDraggable(occurrence)
+  const draggable = canWrite && canReschedule(occurrence)
   const fade = fadeClassFor(useDragPreview(), occurrence)
   // Keyed by day too: dnd-kit needs one id per handle, and a trip shows a chip on every day.
   const { attributes, listeners, setNodeRef } = useDraggable({

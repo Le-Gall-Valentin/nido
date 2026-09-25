@@ -3,9 +3,9 @@ import {
   DndContext, DragOverlay, MouseSensor, TouchSensor, pointerWithin, useSensor, useSensors,
   type DragEndEvent, type DragMoveEvent, type DragOverEvent, type DragStartEvent,
 } from '@dnd-kit/core'
-import type { CalendarOccurrence } from '@/entities/calendar'
+import type { CalendarOccurrence, ScheduleChange } from '@/entities/calendar'
 import type { CalendarView } from '../lib/calendarWindow'
-import type { DragData, DragIntent, DropData, ScheduleChange } from '../lib/dragTypes'
+import type { DragData, DragIntent, DropData } from '../lib/dragTypes'
 import { previewDrop, resolveDrop, sameSchedule } from '../lib/dragResolution'
 import { dragZone, type Zone } from '../lib/edgeDwell'
 import { minutesAt } from '../lib/timeMath'

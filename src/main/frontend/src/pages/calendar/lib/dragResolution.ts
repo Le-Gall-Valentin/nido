@@ -1,8 +1,8 @@
-import type { CalendarOccurrence } from '@/entities/calendar'
+import type { CalendarOccurrence, ScheduleChange } from '@/entities/calendar'
 import { addDays, daysBetween } from './calendarWindow'
 import { effectiveEndDate } from './segments'
 import { DAY_MINUTES, minutesToTime, timeToMinutes } from './timeMath'
-import type { DragIntent, DropTarget, ScheduleChange } from './dragTypes'
+import type { DragIntent, DropTarget } from './dragTypes'
 
 export const MIN_DURATION_MINUTES = 15
 const ONE_HOUR = 60
