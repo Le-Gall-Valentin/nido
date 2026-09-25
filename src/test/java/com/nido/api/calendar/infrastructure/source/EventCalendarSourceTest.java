@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -23,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class EventCalendarSourceTest {
@@ -43,8 +46,8 @@ class EventCalendarSourceTest {
         CalendarEvent detached = event(LocalDate.of(2026, 1, 15), seriesId, LocalDate.of(2026, 1, 13));
         when(events.findBySpaceIdOverlapping(eq(spaceId), any(), any())).thenReturn(List.of(detached));
         when(series.findBySpaceId(spaceId)).thenReturn(List.of(weekly()));
-        when(exclusions.findSlots(eq(seriesId), any(), any())).thenReturn(Set.of());
-        when(events.findDetachedSlots(eq(seriesId), any(), any())).thenReturn(Set.of(LocalDate.of(2026, 1, 13)));
+        when(exclusions.findSlotsOfEach(any(), any(), any())).thenReturn(Map.of());
+        when(events.findDetachedSlotsOfEach(any(), any(), any())).thenReturn(Map.of(seriesId, Set.of(LocalDate.of(2026, 1, 13))));
 
         List<CalendarOccurrence> produced =
             source.occurrencesBetween(caller, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 20));
@@ -61,8 +64,8 @@ class EventCalendarSourceTest {
     void dropsAnExcludedSlotEntirely() {
         when(events.findBySpaceIdOverlapping(eq(spaceId), any(), any())).thenReturn(List.of());
         when(series.findBySpaceId(spaceId)).thenReturn(List.of(weekly()));
-        when(exclusions.findSlots(eq(seriesId), any(), any())).thenReturn(Set.of(LocalDate.of(2026, 1, 13)));
-        when(events.findDetachedSlots(eq(seriesId), any(), any())).thenReturn(Set.of());
+        when(exclusions.findSlotsOfEach(any(), any(), any())).thenReturn(Map.of(seriesId, Set.of(LocalDate.of(2026, 1, 13))));
+        when(events.findDetachedSlotsOfEach(any(), any(), any())).thenReturn(Map.of());
 
         assertThat(source.occurrencesBetween(caller, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 20)))
             .extracting(CalendarOccurrence::startDate)
@@ -74,8 +77,8 @@ class EventCalendarSourceTest {
         when(events.findBySpaceIdOverlapping(eq(spaceId), any(), any()))
             .thenReturn(List.of(event(LocalDate.of(2026, 1, 2), null, null)));
         when(series.findBySpaceId(spaceId)).thenReturn(List.of(weekly()));
-        when(exclusions.findSlots(eq(seriesId), any(), any())).thenReturn(Set.of());
-        when(events.findDetachedSlots(eq(seriesId), any(), any())).thenReturn(Set.of());
+        when(exclusions.findSlotsOfEach(any(), any(), any())).thenReturn(Map.of());
+        when(events.findDetachedSlotsOfEach(any(), any(), any())).thenReturn(Map.of());
 
         List<CalendarOccurrence> produced =
             source.occurrencesBetween(caller, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 7));
@@ -110,8 +113,9 @@ class EventCalendarSourceTest {
         LocalDate cancelled = LocalDate.of(2026, 1, 16);
         when(events.findBySpaceIdOverlapping(eq(spaceId), any(), any())).thenReturn(List.of());
         when(series.findBySpaceId(spaceId)).thenReturn(List.of(weekend()));
-        when(exclusions.findSlots(eq(seriesId), any(), any())).thenAnswer(ask -> slotsIn(ask.getArgument(1), ask.getArgument(2), cancelled));
-        when(events.findDetachedSlots(eq(seriesId), any(), any())).thenReturn(Set.of());
+        when(exclusions.findSlotsOfEach(any(), any(), any()))
+            .thenAnswer(ask -> Map.of(seriesId, slotsIn(ask.getArgument(1), ask.getArgument(2), cancelled)));
+        when(events.findDetachedSlotsOfEach(any(), any(), any())).thenReturn(Map.of());
 
         assertThat(source.occurrencesBetween(caller, LocalDate.of(2026, 1, 17), LocalDate.of(2026, 1, 25)))
             .extracting(CalendarOccurrence::startDate)
@@ -127,8 +131,9 @@ class EventCalendarSourceTest {
             null, List.of(), seriesId, slot, UUID.randomUUID(), Instant.now());
         when(events.findBySpaceIdOverlapping(eq(spaceId), any(), any())).thenReturn(List.of(moved));
         when(series.findBySpaceId(spaceId)).thenReturn(List.of(weekend()));
-        when(exclusions.findSlots(eq(seriesId), any(), any())).thenReturn(Set.of());
-        when(events.findDetachedSlots(eq(seriesId), any(), any())).thenAnswer(ask -> slotsIn(ask.getArgument(1), ask.getArgument(2), slot));
+        when(exclusions.findSlotsOfEach(any(), any(), any())).thenReturn(Map.of());
+        when(events.findDetachedSlotsOfEach(any(), any(), any()))
+            .thenAnswer(ask -> Map.of(seriesId, slotsIn(ask.getArgument(1), ask.getArgument(2), slot)));
 
         assertThat(source.occurrencesBetween(caller, LocalDate.of(2026, 1, 17), LocalDate.of(2026, 1, 25)))
             .extracting(CalendarOccurrence::startDate)
@@ -144,6 +149,25 @@ class EventCalendarSourceTest {
             seriesId, spaceId, "Week-end", null, null, true,
             null, null, 2, null,
             RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 1, 9), null, List.of(), UUID.randomUUID(), Instant.now());
+    }
+
+    @Test
+    void readsTheCancelledAndEditedSlotsOfEverySeriesInOneQueryEach() {
+        // Two queries per series per read, before: a space's every series cost a pair on every page.
+        RecurringEventSeries solfege = new RecurringEventSeries(UUID.randomUUID(), spaceId, "Solfège", null, null, false,
+            LocalTime.of(17, 0), LocalTime.of(18, 0), 0, null, RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 1, 7),
+            null, List.of(), UUID.randomUUID(), Instant.now());
+        when(events.findBySpaceIdOverlapping(eq(spaceId), any(), any())).thenReturn(List.of());
+        when(series.findBySpaceId(spaceId)).thenReturn(List.of(weekly(), solfege));
+        when(exclusions.findSlotsOfEach(any(), any(), any())).thenReturn(Map.of(solfege.id(), Set.of(LocalDate.of(2026, 1, 14))));
+        when(events.findDetachedSlotsOfEach(any(), any(), any())).thenReturn(Map.of());
+
+        List<CalendarOccurrence> produced = source.occurrencesBetween(caller, LocalDate.of(2026, 1, 12), LocalDate.of(2026, 1, 18));
+
+        // Each series' own cancellations apply to it alone: Solfège's 14th is gone, Piano's 13th stays.
+        assertThat(produced).extracting(CalendarOccurrence::title).containsExactly("Piano");
+        verify(exclusions, times(1)).findSlotsOfEach(any(), any(), any());
+        verify(events, times(1)).findDetachedSlotsOfEach(any(), any(), any());
     }
 
     @Test

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,17 +27,26 @@ public interface CalendarEventJpaRepository extends JpaRepository<CalendarEventE
     List<CalendarEventEntity> findOverlapping(
         @Param("spaceId") UUID spaceId, @Param("from") LocalDate from, @Param("to") LocalDate to);
 
-    /** Queried on the ORIGINAL date, so a slot stays freed even when its instance moved away. */
-    @Query("""
-        SELECT e.recurringOriginalDate FROM CalendarEventEntity e
-        WHERE e.recurringSeriesId = :seriesId AND e.recurringOriginalDate BETWEEN :from AND :to
-        """)
-    List<LocalDate> findDetachedSlots(
-        @Param("seriesId") UUID seriesId, @Param("from") LocalDate from, @Param("to") LocalDate to);
-
     Optional<CalendarEventEntity> findByRecurringSeriesIdAndRecurringOriginalDate(UUID seriesId, LocalDate originalDate);
 
     List<CalendarEventEntity> findByRecurringSeriesId(UUID seriesId);
+
+    /**
+     * The slot each detached instance takes over, series by series. Queried on the ORIGINAL date, so a
+     * slot stays freed even when its instance moved away; and on the two columns, not the whole rows.
+     */
+    @Query("""
+        SELECT e.recurringSeriesId AS seriesId, e.recurringOriginalDate AS originalDate FROM CalendarEventEntity e
+        WHERE e.recurringSeriesId IN :seriesIds AND e.recurringOriginalDate BETWEEN :from AND :to
+        """)
+    List<SeriesSlot> findDetachedSlotsOfEach(
+        @Param("seriesIds") Collection<UUID> seriesIds, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    interface SeriesSlot {
+        UUID getSeriesId();
+
+        LocalDate getOriginalDate();
+    }
 
     /** Run at once, not at the next flush: the next relink may claim the slot this one frees. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)

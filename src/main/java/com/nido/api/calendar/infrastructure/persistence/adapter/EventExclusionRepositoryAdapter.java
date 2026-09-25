@@ -7,7 +7,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -22,10 +24,10 @@ public class EventExclusionRepositoryAdapter implements EventExclusionRepository
     }
 
     @Override
-    public Set<LocalDate> findSlots(UUID seriesId, LocalDate from, LocalDate to) {
-        return exclusions.findBySeriesIdAndOriginalDateBetween(seriesId, from, to).stream()
-            .map(CalendarEventExclusionEntity::getOriginalDate)
-            .collect(Collectors.toCollection(LinkedHashSet::new));
+    public Map<UUID, Set<LocalDate>> findSlotsOfEach(Collection<UUID> seriesIds, LocalDate from, LocalDate to) {
+        return exclusions.findBySeriesIdInAndOriginalDateBetween(seriesIds, from, to).stream()
+            .collect(Collectors.groupingBy(CalendarEventExclusionEntity::getSeriesId,
+                Collectors.mapping(CalendarEventExclusionEntity::getOriginalDate, Collectors.toSet())));
     }
 
     @Override

@@ -7,19 +7,20 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
 public interface CalendarEventExclusionJpaRepository extends JpaRepository<CalendarEventExclusionEntity, UUID> {
-
-    List<CalendarEventExclusionEntity> findBySeriesIdAndOriginalDateBetween(
-        UUID seriesId, LocalDate from, LocalDate to);
 
     boolean existsBySeriesIdAndOriginalDate(UUID seriesId, LocalDate originalDate);
 
     void deleteBySeriesIdAndOriginalDate(UUID seriesId, LocalDate originalDate);
 
     List<CalendarEventExclusionEntity> findBySeriesId(UUID seriesId);
+
+    List<CalendarEventExclusionEntity> findBySeriesIdInAndOriginalDateBetween(
+        Collection<UUID> seriesIds, LocalDate from, LocalDate to);
 
     /** Run at once, not at the next flush: the same slots may be cancelled again right after. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)

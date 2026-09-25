@@ -14,7 +14,11 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * The calendar's own events: the stored rows, plus every series expanded over the window.
@@ -53,16 +57,23 @@ public class EventCalendarSource implements CalendarSource {
                 event.startDate(), event.startTime(), event.endDate(), event.endTime(),
                 event.color(), event.participantIds()));
         }
-        for (RecurringEventSeries s : series.findBySpaceId(caller.spaceId())) {
-            // Looked up as far back as the projector scans: an occurrence lasting several days that
-            // began before the window is still projected, so its cancellation or its detached
-            // instance must be found too.
-            LocalDate scanFrom = EventRecurrenceProjector.scanFrom(s, from);
+        List<RecurringEventSeries> all = series.findBySpaceId(caller.spaceId());
+        if (all.isEmpty()) {
+            return produced;
+        }
+        // One read for every series' cancelled slots and one for their detached ones, rather than a pair
+        // per series. Looked up as far back as the series reaching furthest: an occurrence lasting
+        // several days that began before the window is still projected, so its cancellation or its
+        // detached instance must be found too. A slot found earlier than a series scans is never one of
+        // its occurrences, so it changes nothing.
+        LocalDate scanFrom = all.stream().map(s -> EventRecurrenceProjector.scanFrom(s, from))
+            .min(Comparator.naturalOrder()).orElse(from);
+        List<UUID> ids = all.stream().map(RecurringEventSeries::id).toList();
+        Map<UUID, Set<LocalDate>> cancelled = exclusions.findSlotsOfEach(ids, scanFrom, to);
+        Map<UUID, Set<LocalDate>> takenOver = events.findDetachedSlotsOfEach(ids, scanFrom, to);
+        for (RecurringEventSeries s : all) {
             produced.addAll(EventRecurrenceProjector.project(
-                s,
-                exclusions.findSlots(s.id(), scanFrom, to),
-                events.findDetachedSlots(s.id(), scanFrom, to),
-                from, to));
+                s, cancelled.getOrDefault(s.id(), Set.of()), takenOver.getOrDefault(s.id(), Set.of()), from, to));
         }
         return produced;
     }

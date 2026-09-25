@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -61,8 +62,10 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
     }
 
     @Override
-    public Set<LocalDate> findDetachedSlots(UUID seriesId, LocalDate from, LocalDate to) {
-        return new LinkedHashSet<>(events.findDetachedSlots(seriesId, from, to));
+    public Map<UUID, Set<LocalDate>> findDetachedSlotsOfEach(Collection<UUID> seriesIds, LocalDate from, LocalDate to) {
+        return events.findDetachedSlotsOfEach(seriesIds, from, to).stream()
+            .collect(Collectors.groupingBy(CalendarEventJpaRepository.SeriesSlot::getSeriesId,
+                Collectors.mapping(CalendarEventJpaRepository.SeriesSlot::getOriginalDate, Collectors.toSet())));
     }
 
     @Override

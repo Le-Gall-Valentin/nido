@@ -23,6 +23,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -120,8 +122,8 @@ class CalendarEventRepositoryAdapterIT {
             null, List.of(), seriesId, LocalDate.of(2026, 2, 3), aliceId));
 
         // The window covers the ORIGINAL slot but not the new date — the slot must still be freed.
-        assertThat(events.findDetachedSlots(seriesId, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 4)))
-            .containsExactly(LocalDate.of(2026, 2, 3));
+        assertThat(events.findDetachedSlotsOfEach(List.of(seriesId), LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 4)))
+            .containsExactly(Map.entry(seriesId, Set.of(LocalDate.of(2026, 2, 3))));
         assertThat(events.findBySeriesAndOriginalDate(seriesId, LocalDate.of(2026, 2, 3)))
             .get().extracting(CalendarEvent::title).isEqualTo("Piano (décalé)");
     }
@@ -156,11 +158,11 @@ class CalendarEventRepositoryAdapterIT {
         UUID seriesId = weeklySeries();
         exclusions.exclude(seriesId, LocalDate.of(2026, 2, 10));
         exclusions.exclude(seriesId, LocalDate.of(2026, 2, 10));
-        assertThat(exclusions.findSlots(seriesId, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28)))
-            .containsExactly(LocalDate.of(2026, 2, 10));
+        assertThat(exclusions.findSlotsOfEach(List.of(seriesId), LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28)))
+            .containsExactly(Map.entry(seriesId, Set.of(LocalDate.of(2026, 2, 10))));
 
         exclusions.clear(seriesId, LocalDate.of(2026, 2, 10));
-        assertThat(exclusions.findSlots(seriesId, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28))).isEmpty();
+        assertThat(exclusions.findSlotsOfEach(List.of(seriesId), LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28))).isEmpty();
     }
 
     @Test

@@ -1,13 +1,16 @@
 package com.nido.api.calendar.domain.port.out;
 
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 /** Cancelled occurrences of a series. A cancellation carries no content beyond its slot. */
 public interface EventExclusionRepository {
 
-    Set<LocalDate> findSlots(UUID seriesId, LocalDate from, LocalDate to);
+    /** The cancelled slots inside {@code [from, to]} of each series, in one read: a series with none is absent. */
+    Map<UUID, Set<LocalDate>> findSlotsOfEach(Collection<UUID> seriesIds, LocalDate from, LocalDate to);
 
     /** Idempotent: excluding an already-excluded slot is not an error. */
     void exclude(UUID seriesId, LocalDate originalDate);

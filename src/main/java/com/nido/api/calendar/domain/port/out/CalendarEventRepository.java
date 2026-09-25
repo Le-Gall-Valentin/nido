@@ -5,7 +5,9 @@ import com.nido.api.calendar.domain.model.CreateEventCommand;
 import com.nido.api.calendar.domain.model.UpdateEventCommand;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -21,11 +23,12 @@ public interface CalendarEventRepository {
     List<CalendarEvent> findBySpaceIdOverlapping(UUID spaceId, LocalDate from, LocalDate to);
 
     /**
-     * Slots of {@code seriesId} taken over by a detached instance, keyed on the slot they replace
-     * and never on where the instance now sits. An occurrence moved out of the window must still
-     * free its original slot, or the series re-emits it and the same event appears twice.
+     * The slots inside {@code [from, to]} taken over by a detached instance, series by series, in one
+     * read — a series with none is absent. Keyed on the slot each replaces, never on where the instance
+     * now sits: an occurrence moved out of the window must still free its original slot, or the series
+     * re-emits it and the same event appears twice.
      */
-    Set<LocalDate> findDetachedSlots(UUID seriesId, LocalDate from, LocalDate to);
+    Map<UUID, Set<LocalDate>> findDetachedSlotsOfEach(Collection<UUID> seriesIds, LocalDate from, LocalDate to);
 
     Optional<CalendarEvent> findBySeriesAndOriginalDate(UUID seriesId, LocalDate originalDate);
 
