@@ -42,9 +42,7 @@ public class ListCalendarOccurrencesHandler implements ListCalendarOccurrencesUs
     @Transactional(readOnly = true)
     public List<CalendarOccurrence> list(SpaceMembership caller, LocalDate from, LocalDate to) {
         if (from.isAfter(to)) {
-            // Reported as the same error: both mean "this window is not one a view could render",
-            // and a reversed range is a client bug rather than a case worth its own vocabulary.
-            throw new CalendarException.WindowTooLarge(0, EventRecurrenceProjector.MAX_WINDOW_DAYS);
+            throw new CalendarException.ReversedWindow();
         }
         long days = ChronoUnit.DAYS.between(from, to) + 1;
         if (days > EventRecurrenceProjector.MAX_WINDOW_DAYS) {

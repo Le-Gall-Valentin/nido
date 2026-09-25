@@ -114,8 +114,10 @@ class CalendarOccurrencesControllerIT {
 
     @Test
     void a_reversed_window_is_rejected_with_400() throws Exception {
+        // Named for what it is: it used to say "this window covers 0 days", as if it were too long.
         mockMvc.perform(get(occurrences() + "?from=2026-03-31&to=2026-03-01").cookie(tokenFor(aliceId)))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("ReversedWindow"));
     }
 
     @Test

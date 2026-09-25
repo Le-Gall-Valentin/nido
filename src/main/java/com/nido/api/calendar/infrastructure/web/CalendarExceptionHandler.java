@@ -42,6 +42,8 @@ public class CalendarExceptionHandler {
                 new CalendarErrorResponse(400, "An occurrence cannot last longer than the time between two occurrences.");
             case CalendarException.InvalidEndDate ignored ->
                 new CalendarErrorResponse(400, "The end date must be on or after the anchor date.");
+            case CalendarException.ReversedWindow ignored ->
+                new CalendarErrorResponse(400, "The window starts after it ends: 'from' must be on or before 'to'.");
             case CalendarException.WindowTooLarge ex -> new CalendarErrorResponse(400,
                 "This window covers " + ex.requestedDays() + " days (maximum " + ex.maximum()
                     + "). Ask for a shorter period.");

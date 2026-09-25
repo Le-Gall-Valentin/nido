@@ -6,7 +6,7 @@ public abstract sealed class CalendarException extends RuntimeException
             CalendarException.InvalidTimeRange, CalendarException.InvalidEndDate,
             CalendarException.MemberNotInSpace, CalendarException.WindowTooLarge,
             CalendarException.ParticipantsFixedInPersonalSpace, CalendarException.EventTooLong,
-            CalendarException.OccurrenceLongerThanInterval {
+            CalendarException.OccurrenceLongerThanInterval, CalendarException.ReversedWindow {
 
     private CalendarException(String message) { super(message); }
 
@@ -75,6 +75,11 @@ public abstract sealed class CalendarException extends RuntimeException
      */
     public static final class ParticipantsFixedInPersonalSpace extends CalendarException {
         public ParticipantsFixedInPersonalSpace() { super("In a personal space, its owner always takes part"); }
+    }
+
+    /** Thrown when a read's window starts after it ends: a client bug, named as such. */
+    public static final class ReversedWindow extends CalendarException {
+        public ReversedWindow() { super("The window starts after it ends"); }
     }
 
     /**

@@ -66,7 +66,7 @@ class ListCalendarOccurrencesHandlerTest {
         var handler = new ListCalendarOccurrencesHandler(List.of());
 
         assertThatThrownBy(() -> handler.list(caller, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 1, 1)))
-            .isInstanceOf(CalendarException.WindowTooLarge.class);
+            .isInstanceOf(CalendarException.ReversedWindow.class);
     }
 
     @Test
