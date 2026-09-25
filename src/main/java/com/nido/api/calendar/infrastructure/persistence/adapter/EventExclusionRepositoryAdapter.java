@@ -50,13 +50,7 @@ public class EventExclusionRepositoryAdapter implements EventExclusionRepository
     @Override
     @Transactional
     public void exclude(UUID seriesId, LocalDate originalDate) {
-        if (exclusions.existsBySeriesIdAndOriginalDate(seriesId, originalDate)) {
-            return;
-        }
-        CalendarEventExclusionEntity row = new CalendarEventExclusionEntity();
-        row.setSeriesId(seriesId);
-        row.setOriginalDate(originalDate);
-        exclusions.save(row);
+        exclusions.insertIfAbsent(seriesId, originalDate);
     }
 
     @Override

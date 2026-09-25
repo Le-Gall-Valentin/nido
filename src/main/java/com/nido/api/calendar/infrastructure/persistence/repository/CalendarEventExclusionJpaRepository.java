@@ -13,7 +13,13 @@ import java.util.UUID;
 
 public interface CalendarEventExclusionJpaRepository extends JpaRepository<CalendarEventExclusionEntity, UUID> {
 
-    boolean existsBySeriesIdAndOriginalDate(UUID seriesId, LocalDate originalDate);
+    /** One statement, for the same reason as a participant: two cancellations at once must not collide. */
+    @Modifying
+    @Query(value = """
+        INSERT INTO calendar_event_exclusions (series_id, original_date) VALUES (:seriesId, :originalDate)
+        ON CONFLICT (series_id, original_date) DO NOTHING
+        """, nativeQuery = true)
+    void insertIfAbsent(@Param("seriesId") UUID seriesId, @Param("originalDate") LocalDate originalDate);
 
     void deleteBySeriesIdAndOriginalDate(UUID seriesId, LocalDate originalDate);
 

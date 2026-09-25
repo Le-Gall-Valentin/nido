@@ -145,13 +145,7 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
     @Override
     @Transactional
     public void addParticipant(UUID eventId, UUID userId) {
-        if (participants.existsByEventIdAndUserId(eventId, userId)) {
-            return;
-        }
-        CalendarEventParticipantEntity row = new CalendarEventParticipantEntity();
-        row.setEventId(eventId);
-        row.setUserId(userId);
-        participants.save(row);
+        participants.insertIfAbsent(eventId, userId);
     }
 
     @Override

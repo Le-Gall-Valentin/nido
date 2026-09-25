@@ -19,6 +19,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -26,6 +28,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,6 +47,7 @@ class CalendarEventRepositoryAdapterIT {
     @Autowired SpaceJpaRepository spaces;
     @Autowired UserIdentityJpaRepository users;
     @Autowired JdbcTemplate jdbc;
+    @Autowired PlatformTransactionManager transactionManager;
 
     private UUID spaceId;
     private UUID aliceId;
@@ -163,6 +173,68 @@ class CalendarEventRepositoryAdapterIT {
 
         exclusions.clear(seriesId, LocalDate.of(2026, 2, 10));
         assertThat(exclusions.findSlotsOfEach(List.of(seriesId), LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28))).isEmpty();
+    }
+
+    // A double click sends the same request twice at once. The second used to check, find nothing yet,
+    // insert, and fail on the unique constraint once the first committed — a 500 for a harmless repeat.
+
+    @Test
+    void joiningTwiceAtTheSameMomentAddsOneParticipantAndFailsNeither() throws Exception {
+        CalendarEvent created = events.create(plainEvent("Apéro", LocalDate.of(2026, 3, 2)));
+
+        assertThat(atTheSameMoment(() -> events.addParticipant(created.id(), aliceId))).isEmpty();
+        assertThat(events.findById(created.id())).get()
+            .extracting(CalendarEvent::participantIds).isEqualTo(List.of(aliceId));
+    }
+
+    @Test
+    void cancellingOneOccurrenceTwiceAtTheSameMomentCancelsItOnceAndFailsNeither() throws Exception {
+        UUID seriesId = weeklySeries();
+
+        assertThat(atTheSameMoment(() -> exclusions.exclude(seriesId, LocalDate.of(2026, 2, 10)))).isEmpty();
+        assertThat(exclusions.findAllSlots(seriesId)).containsExactly(LocalDate.of(2026, 2, 10));
+    }
+
+    /**
+     * Runs {@code write} in two transactions overlapping the way two requests do: the second starts
+     * while the first has written and not committed yet, then the first commits. Returns what failed.
+     */
+    private List<Throwable> atTheSameMoment(Runnable write) throws Exception {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        CountDownLatch firstWrote = new CountDownLatch(1);
+        CountDownLatch firstMayCommit = new CountDownLatch(1);
+        List<Throwable> failures = new CopyOnWriteArrayList<>();
+        ExecutorService threads = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> first = threads.submit(() -> transaction.executeWithoutResult(status -> {
+                write.run();
+                firstWrote.countDown();
+                awaitQuietly(firstMayCommit);
+            }));
+            assertThat(firstWrote.await(10, TimeUnit.SECONDS)).isTrue();
+            Future<?> second = threads.submit(() -> transaction.executeWithoutResult(status -> write.run()));
+            // Long enough for the second to have checked and started writing, which then waits on the first.
+            Thread.sleep(500);
+            firstMayCommit.countDown();
+            for (Future<?> request : List.of(first, second)) {
+                try {
+                    request.get(10, TimeUnit.SECONDS);
+                } catch (ExecutionException e) {
+                    failures.add(e.getCause());
+                }
+            }
+        } finally {
+            threads.shutdownNow();
+        }
+        return failures;
+    }
+
+    private static void awaitQuietly(CountDownLatch latch) {
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Test
