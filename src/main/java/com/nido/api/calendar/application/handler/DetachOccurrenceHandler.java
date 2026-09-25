@@ -47,6 +47,7 @@ public class DetachOccurrenceHandler implements DetachOccurrenceUseCase {
     @Transactional
     public CalendarEvent detach(UUID seriesId, LocalDate originalDate, UpdateEventCommand content,
                                 SpaceMembership caller) {
+        caller.ensureCanWrite();
         RecurringEventSeries found = series.findById(seriesId)
             .orElseThrow(CalendarException.RecurringEventSeriesNotFound::new);
         if (!found.spaceId().equals(caller.spaceId())) {

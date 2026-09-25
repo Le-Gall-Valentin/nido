@@ -33,6 +33,7 @@ public class ExcludeOccurrenceHandler implements ExcludeOccurrenceUseCase {
     @Override
     @Transactional
     public void exclude(UUID seriesId, LocalDate originalDate, SpaceMembership caller) {
+        caller.ensureCanWrite();
         RecurringEventSeries found = series.findById(seriesId)
             .orElseThrow(CalendarException.RecurringEventSeriesNotFound::new);
         if (!found.spaceId().equals(caller.spaceId())) {

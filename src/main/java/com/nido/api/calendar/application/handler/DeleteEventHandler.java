@@ -25,6 +25,7 @@ public class DeleteEventHandler implements DeleteEventUseCase {
     @Override
     @Transactional
     public void delete(UUID eventId, SpaceMembership caller) {
+        caller.ensureCanWrite();
         CalendarEvent event = events.findById(eventId).orElseThrow(CalendarException.EventNotFound::new);
         if (!event.spaceId().equals(caller.spaceId())) {
             // Not a 403: revealing that an id exists in some other context is itself a leak.

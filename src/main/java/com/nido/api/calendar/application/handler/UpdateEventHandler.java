@@ -25,6 +25,7 @@ public class UpdateEventHandler implements UpdateEventUseCase {
     @Override
     @Transactional
     public CalendarEvent update(UpdateEventCommand command, SpaceMembership caller) {
+        caller.ensureCanWrite();
         CalendarEvent existing = events.findById(command.eventId())
             .orElseThrow(CalendarException.EventNotFound::new);
         if (!existing.spaceId().equals(caller.spaceId())) {

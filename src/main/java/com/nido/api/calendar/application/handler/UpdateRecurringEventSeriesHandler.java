@@ -26,6 +26,7 @@ public class UpdateRecurringEventSeriesHandler implements UpdateRecurringEventSe
     @Override
     @Transactional
     public RecurringEventSeries update(UpdateRecurringEventSeriesCommand command, SpaceMembership caller) {
+        caller.ensureCanWrite();
         RecurringEventSeries existing = series.findById(command.seriesId())
             .orElseThrow(CalendarException.RecurringEventSeriesNotFound::new);
         if (!existing.spaceId().equals(caller.spaceId())) {

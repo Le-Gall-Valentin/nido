@@ -25,6 +25,7 @@ public class CreateEventHandler implements CreateEventUseCase {
     @Transactional
     public CalendarEvent create(CreateEventCommand command, SpaceMembership caller) {
         caller.ensureSameSpace(command.spaceId());
+        caller.ensureCanWrite();
         EventScheduleValidator.validateEvent(
             command.allDay(), command.startDate(), command.startTime(), command.endDate(), command.endTime());
         return events.create(command.withParticipants(memberValidator.participantsFor(caller, command.participantIds())));

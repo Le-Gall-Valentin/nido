@@ -26,6 +26,7 @@ public class CreateRecurringEventSeriesHandler implements CreateRecurringEventSe
     @Transactional
     public RecurringEventSeries create(CreateRecurringEventSeriesCommand command, SpaceMembership caller) {
         caller.ensureSameSpace(command.spaceId());
+        caller.ensureCanWrite();
         // No backlog check, unlike Tasks and Finance: nothing is materialized here, so an anchor
         // far in the past costs a projection over the requested window and nothing else.
         EventScheduleValidator.validateSeries(command.allDay(), command.startTime(), command.endTime(),

@@ -22,6 +22,7 @@ public class DeleteRecurringEventSeriesHandler implements DeleteRecurringEventSe
     @Override
     @Transactional
     public void delete(UUID seriesId, SpaceMembership caller) {
+        caller.ensureCanWrite();
         RecurringEventSeries existing = series.findById(seriesId)
             .orElseThrow(CalendarException.RecurringEventSeriesNotFound::new);
         if (!existing.spaceId().equals(caller.spaceId())) {

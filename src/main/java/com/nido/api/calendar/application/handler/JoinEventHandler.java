@@ -30,6 +30,7 @@ public class JoinEventHandler implements JoinEventUseCase {
     @Override
     @Transactional
     public void join(UUID eventId, SpaceMembership caller) {
+        caller.ensureCanWrite();
         CalendarEvent event = events.findById(eventId).orElseThrow(CalendarException.EventNotFound::new);
         if (!event.spaceId().equals(caller.spaceId())) {
             throw new CalendarException.EventNotFound();
