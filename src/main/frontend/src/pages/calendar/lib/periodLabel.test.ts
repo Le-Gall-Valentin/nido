@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatPeriodLabel, formatTimeRange } from './periodLabel'
+import { formatDay, formatPeriodLabel, formatTimeRange } from './periodLabel'
 
 const FR = 'fr-FR'
 const EN = 'en-GB'
@@ -25,6 +25,14 @@ describe('formatPeriodLabel — day', () => {
     // both come from the locale, and neither is ours to normalise.
     expect(formatPeriodLabel('day', '2026-09-15', FR)).toBe('Mardi 15 septembre 2026')
     expect(formatPeriodLabel('day', '2026-09-15', EN)).toBe('Tuesday, 15 September 2026')
+  })
+})
+
+describe('formatDay', () => {
+  it('writes a day in full as it reads inside a sentence, lower case kept', () => {
+    // "Ouvrir le mardi 15 septembre 2026" — the heading's capital would read wrong mid-sentence.
+    expect(formatDay('2026-09-15', FR)).toBe('mardi 15 septembre 2026')
+    expect(formatDay('2026-09-15', EN)).toBe('Tuesday, 15 September 2026')
   })
 })
 

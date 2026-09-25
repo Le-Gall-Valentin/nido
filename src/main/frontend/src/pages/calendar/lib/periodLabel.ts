@@ -37,11 +37,16 @@ export function formatPeriodLabel(view: CalendarView, iso: string, locale: strin
   }
 
   if (view === 'day') {
-    return asHeading(format(iso, locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
+    return asHeading(formatDay(iso, locale))
   }
 
   const from = startOfWeek(iso)
   return formatSpan(from, addDays(from, 6), locale)
+}
+
+/** "jeudi 24 septembre 2026" — a day in full, written as it reads inside a sentence. */
+export function formatDay(iso: string, locale: string): string {
+  return format(iso, locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 /**

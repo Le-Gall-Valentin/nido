@@ -1,12 +1,15 @@
 import { useTranslation } from 'react-i18next'
+import i18next from 'i18next'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { CalendarOccurrence } from '@/entities/calendar'
+import { resolveLocale } from '@/shared/lib'
 import { groupByDay, monthGridDates } from '../lib/calendarWindow'
 import { canReschedule } from '@/features/reschedule-occurrence'
 import type { DragData, DropData } from '../lib/dragTypes'
 import { covers } from '../lib/segments'
 import { fadeClassFor, useDragPreview } from '../model/dragPreview'
 import { SOURCE_ORDER, dotClassFor, dotClassForSource } from '../lib/sourceAppearance'
+import { formatDay } from '../lib/periodLabel'
 
 interface MonthGridProps {
   /** ISO date anchoring the month shown. */
@@ -45,6 +48,7 @@ export function MonthGrid({
   date, occurrences, today, onSelectDay, onSelectOccurrence, canWrite = false,
 }: MonthGridProps) {
   const { t } = useTranslation('calendar')
+  const locale = resolveLocale(i18next.language)
   const days = monthGridDates(date)
   const byDay = groupByDay(occurrences, days)
   const landing = useDragPreview()?.occurrence
@@ -74,7 +78,7 @@ export function MonthGrid({
                 type="button"
                 onClick={() => onSelectDay(day)}
                 data-today={isToday || undefined}
-                aria-label={t('open_day', { date: day })}
+                aria-label={t('open_day', { date: formatDay(day, locale) })}
                 className={`mb-1 grid size-6 place-items-center rounded-full text-xs font-semibold
                   after:absolute after:inset-0 after:content-['']
                   ${isToday ? 'bg-accent text-white' : isOutside ? 'text-fg-4' : 'text-fg-1'}`}
