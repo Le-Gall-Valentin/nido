@@ -28,7 +28,8 @@ public record UpdateEventRequest(
     @NotNull LocalDate endDate,
     LocalTime endTime,
     @Size(max = 30) String color,
-    List<UUID> participantIds
+    // No household holds a hundred members; each id is looked up, so the list is bounded before that.
+    @Size(max = 100) List<UUID> participantIds
 ) {
     public boolean allDayOrDefault() {
         return Boolean.TRUE.equals(allDay);

@@ -29,7 +29,8 @@ public record RecurringEventSeriesRequest(
     @NotNull @Min(1) Integer intervalCount,
     @NotNull LocalDate anchorDate,
     LocalDate endDate,
-    List<UUID> participantIds
+    // No household holds a hundred members; each id is looked up, so the list is bounded before that.
+    @Size(max = 100) List<UUID> participantIds
 ) {
     public boolean allDayOrDefault() {
         return Boolean.TRUE.equals(allDay);

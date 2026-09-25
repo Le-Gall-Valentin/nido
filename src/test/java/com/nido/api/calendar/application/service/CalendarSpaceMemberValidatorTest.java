@@ -58,6 +58,16 @@ class CalendarSpaceMemberValidatorTest {
     }
 
     @Test
+    void takesAParticipantNamedTwiceOnce() {
+        spaceIs(SpaceType.SHARED);
+        UUID partner = UUID.randomUUID();
+        when(memberships.find(spaceId, partner)).thenReturn(Optional.of(
+            new SpaceMembership(UUID.randomUUID(), spaceId, partner, SpaceRole.MEMBER, Instant.now())));
+
+        assertThat(validator.participantsFor(owner, List.of(partner, partner))).containsExactly(partner);
+    }
+
+    @Test
     void stillRefusesAStrangerInASharedSpace() {
         spaceIs(SpaceType.SHARED);
         UUID stranger = UUID.randomUUID();

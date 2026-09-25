@@ -29,6 +29,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -168,6 +170,15 @@ class CalendarEventControllerIT {
                      "participantIds":["%s","%s"]}""".formatted(aliceId, carolId)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.participantIds.length()").value(2));
+    }
+
+    @Test
+    void more_participants_than_a_household_holds_are_refused_before_anything_is_looked_up() throws Exception {
+        String ids = IntStream.range(0, 101)
+            .mapToObj(i -> "\"" + UUID.randomUUID() + "\"").collect(Collectors.joining(","));
+        mockMvc.perform(post(events()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Fête\",\"allDay\":true,\"startDate\":\"2026-03-10\",\"endDate\":\"2026-03-10\",\"participantIds\":[" + ids + "]}"))
+            .andExpect(status().isBadRequest());
     }
 
     @Test

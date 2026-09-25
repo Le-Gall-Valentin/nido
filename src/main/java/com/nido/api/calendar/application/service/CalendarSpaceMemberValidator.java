@@ -55,8 +55,9 @@ public class CalendarSpaceMemberValidator {
         if (isPersonal(writer)) {
             return List.of(writer.userId());
         }
-        ensureMembers(writer.spaceId(), requested.stream().filter(id -> !alreadyTakingPart.contains(id)).toList());
-        return requested;
+        List<UUID> distinct = requested.stream().distinct().toList();
+        ensureMembers(writer.spaceId(), distinct.stream().filter(id -> !alreadyTakingPart.contains(id)).toList());
+        return distinct;
     }
 
     /** Refuses joining or leaving an event of a personal space: its owner always takes part. */
