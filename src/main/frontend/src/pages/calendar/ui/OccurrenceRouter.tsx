@@ -193,6 +193,7 @@ function SavingsOccurrence({
         updateGoal.mutate({ goalId: goal.id, ...input }, { onSuccess: onClose })
       }}
       onCancel={onClose}
+      submitError={updateGoal.isError ? t('form.save_failed') : null}
     />
   )
 }

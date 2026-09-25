@@ -15,7 +15,7 @@ const state = vi.hoisted(() => ({
   financeSeries: { data: undefined as unknown[] | undefined, isPending: true },
   categories: { data: undefined as unknown[] | undefined, isPending: true },
   goals: { data: undefined as unknown[] | undefined, isPending: true },
-  updateGoal: { mutate: (() => {}) as (input: unknown, options?: { onSuccess?: () => void }) => void },
+  updateGoal: { mutate: (() => {}) as (input: unknown, options?: { onSuccess?: () => void }) => void, isError: false },
 }))
 
 vi.mock('@/entities/tasks', () => ({
@@ -36,8 +36,14 @@ vi.mock('@/widgets/finance-recurring-series', () => ({
   FinanceRecurringSeriesPanel: ({ series }: { series: unknown[] }) => <p>finance panel with {series.length} series</p>,
 }))
 vi.mock('@/widgets/savings-goal', () => ({
-  SavingsGoalFormModal: ({ goal, onSubmit }: { goal: { name: string }; onSubmit: (input: object) => void }) =>
-    <button type="button" onClick={() => onSubmit({ targetDate: '2026-10-22' })}>save {goal.name}</button>,
+  SavingsGoalFormModal: ({ goal, onSubmit, submitError }: {
+    goal: { name: string }; onSubmit: (input: object) => void; submitError?: string | null
+  }) => (
+    <>
+      <button type="button" onClick={() => onSubmit({ targetDate: '2026-10-22' })}>save {goal.name}</button>
+      {submitError && <p>{submitError}</p>}
+    </>
+  ),
 }))
 
 const base: CalendarOccurrence = {
@@ -61,7 +67,7 @@ describe('OccurrenceRouter', () => {
     state.financeSeries = { data: undefined, isPending: true }
     state.categories = { data: undefined, isPending: true }
     state.goals = { data: undefined, isPending: true }
-    state.updateGoal = { mutate: vi.fn() }
+    state.updateGoal = { mutate: vi.fn(), isError: false }
   })
 
   describe('a task', () => {
@@ -118,11 +124,19 @@ describe('OccurrenceRouter', () => {
 
     it('opens the goal and moves it from here, closing once saved', () => {
       state.goals = { data: [{ id: 'g1', name: 'Vacances' }], isPending: false }
-      state.updateGoal = { mutate: vi.fn((_input: unknown, options?: { onSuccess?: () => void }) => options?.onSuccess?.()) }
+      state.updateGoal = { mutate: vi.fn((_input: unknown, options?: { onSuccess?: () => void }) => options?.onSuccess?.()), isError: false }
       const { onClose } = route(deadline)
       fireEvent.click(screen.getByRole('button', { name: 'save Vacances' }))
       expect(state.updateGoal.mutate).toHaveBeenCalledWith({ goalId: 'g1', targetDate: '2026-10-22' }, expect.anything())
       expect(onClose).toHaveBeenCalled()
+    })
+
+    it('says so and stays open when the goal could not be saved', () => {
+      state.goals = { data: [{ id: 'g1', name: 'Vacances' }], isPending: false }
+      state.updateGoal = { mutate: vi.fn(), isError: true }
+      const { onClose } = route(deadline)
+      expect(screen.getByText('form.save_failed')).toBeTruthy()
+      expect(onClose).not.toHaveBeenCalled()
     })
 
     it('waits for the goals', () => {

@@ -139,7 +139,8 @@
     "remove": "Retirer {{name}}",
     "recipe_required": "Choisissez une recette.",
     "portions_invalid": "Le nombre de portions doit être un entier positif.",
-    "save_failed": "L'ajout a échoué."
+    "save_failed": "L'ajout a échoué.",
+    "remove_failed": "Le retrait a échoué."
   },
   "drag": {
     "failed": "Le déplacement n'a pas pu être enregistré.",

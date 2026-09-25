@@ -53,7 +53,10 @@ export function MealEntryModal({ spaceId, date, onClose }: MealEntryModalProps) 
                   <span className="flex-1 truncate text-sm text-fg-1">{entry.recipeName}</span>
                   <span className="text-xs text-fg-3">{t('meal.portions_short', { count: entry.portions })}</span>
                   <button type="button" aria-label={t('meal.remove', { name: entry.recipeName })}
-                    onClick={() => removeEntry.mutate(entry.id)}
+                    onClick={() => {
+                      setError(null)
+                      removeEntry.mutate(entry.id, { onError: () => setError(t('meal.remove_failed')) })
+                    }}
                     className="grid size-7 place-items-center rounded-md text-fg-3 hover:text-status-red">
                     <Trash2 className="size-4" />
                   </button>

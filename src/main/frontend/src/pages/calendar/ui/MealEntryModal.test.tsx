@@ -17,12 +17,14 @@ const planned: MenuEntry = {
   id: 'm1', date: '2026-10-06', recipeId: 'r2', recipeName: 'Soupe', recipeCategory: 'SOUP', portions: 2, position: 0,
 }
 
-function renderModal({ entries = [] as MenuEntry[], addFails = false, recipes = Promise.resolve([gratin, soup]) } = {}) {
+function renderModal({
+  entries = [] as MenuEntry[], addFails = false, removeFails = false, recipes = Promise.resolve([gratin, soup]),
+} = {}) {
   const api = {
     listRecipes: vi.fn(() => recipes),
     listMenuEntries: vi.fn().mockResolvedValue(entries),
     addMenuEntry: vi.fn(() => (addFails ? Promise.reject(new Error('down')) : Promise.resolve(planned))),
-    removeMenuEntry: vi.fn().mockResolvedValue(undefined),
+    removeMenuEntry: vi.fn(() => (removeFails ? Promise.reject(new Error('down')) : Promise.resolve())),
   }
   renderWithQuery(
     <KitchenApiProvider api={api as unknown as IKitchenApi}>
@@ -86,5 +88,11 @@ describe('MealEntryModal', () => {
     expect(api.listMenuEntries).toHaveBeenCalledWith('space-1', '2026-10-06', '2026-10-06')
     fireEvent.click(await screen.findByRole('button', { name: 'meal.remove:Soupe' }))
     await waitFor(() => expect(api.removeMenuEntry).toHaveBeenCalledWith('space-1', 'm1'))
+  })
+
+  it('says so when a meal could not be taken off the day', async () => {
+    renderModal({ entries: [planned], removeFails: true })
+    fireEvent.click(await screen.findByRole('button', { name: 'meal.remove:Soupe' }))
+    expect(await screen.findByText('meal.remove_failed')).toBeTruthy()
   })
 })
