@@ -70,7 +70,7 @@ class ListCalendarOccurrencesHandlerTest {
     }
 
     @Test
-    void doesNotLetOneFailingSourceHideTheOthers() {
+    void failsTheWholeReadWhenOneSourceFailsRatherThanShowingTheOthersAlone() {
         // A calendar that quietly drops your dentist appointment because one source broke is worse
         // than an error: the user cannot tell the difference between "nothing" and "not shown".
         CalendarSource broken = new CalendarSource() {
