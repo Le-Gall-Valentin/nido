@@ -14,6 +14,7 @@ import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +69,7 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
         entity.setLocationEncrypted(encryptOrNull(encryptor, command.location()));
         apply(entity, command.allDay(), command.startTime(), command.endTime(), command.durationDays(),
             command.color(), command.intervalType(), command.intervalCount(), command.anchorDate(), command.endDate());
+        entity.setStartsOn(command.startsOn());
         entity.setCreatedBy(command.createdBy());
         CalendarRecurringEventSeriesEntity saved = series.saveAndFlush(entity);
         replaceParticipants(saved.getId(), command.participantIds());
@@ -88,6 +90,15 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
         CalendarRecurringEventSeriesEntity saved = series.saveAndFlush(entity);
         replaceParticipants(saved.getId(), command.participantIds());
         return toDomain(saved, List.copyOf(command.participantIds()));
+    }
+
+    @Override
+    @Transactional
+    public void endOn(UUID seriesId, LocalDate lastDay) {
+        CalendarRecurringEventSeriesEntity entity = series.findById(seriesId)
+            .orElseThrow(CalendarException.RecurringEventSeriesNotFound::new);
+        entity.setEndDate(lastDay);
+        series.saveAndFlush(entity);
     }
 
     @Override
@@ -144,7 +155,7 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
             decryptOrNull(encryptor, e.getDescriptionEncrypted()),
             decryptOrNull(encryptor, e.getLocationEncrypted()),
             e.isAllDay(), e.getStartTime(), e.getEndTime(), e.getDurationDays(), e.getColor(),
-            e.getIntervalType(), e.getIntervalCount(), e.getAnchorDate(), e.getEndDate(),
+            e.getIntervalType(), e.getIntervalCount(), e.getAnchorDate(), e.getEndDate(), e.getStartsOn(),
             participantIds, e.getCreatedBy(), e.getCreatedAt());
     }
 }

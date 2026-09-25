@@ -29,6 +29,15 @@ public interface CalendarEventRepository {
 
     Optional<CalendarEvent> findBySeriesAndOriginalDate(UUID seriesId, LocalDate originalDate);
 
+    /** Every occurrence of the series edited on its own, wherever each now sits. */
+    List<CalendarEvent> findDetachedOf(UUID seriesId);
+
+    /**
+     * Ties an edited occurrence to the slot it takes over, in the series given — or to none, when both
+     * are null, which leaves it an event of its own. Nothing else about the event changes.
+     */
+    void relink(UUID eventId, UUID seriesId, LocalDate originalDate);
+
     CalendarEvent create(CreateEventCommand command);
 
     CalendarEvent update(UpdateEventCommand command);

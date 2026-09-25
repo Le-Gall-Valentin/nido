@@ -138,6 +138,69 @@ class EventRecurrenceProjectorTest {
         assertThat(first.location()).isEqualTo("Conservatoire");
     }
 
+    @Test
+    void showsNothingBeforeTheDayASeriesCarriedOnFrom() {
+        RecurringEventSeries series = carriedOn(RecurrenceInterval.WEEKLY, LocalDate.of(2026, 1, 6), LocalDate.of(2026, 1, 20));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)))
+            .containsExactly(LocalDate.of(2026, 1, 20), LocalDate.of(2026, 1, 27));
+    }
+
+    @Test
+    void keepsTheRhythmOfAMonthlySeriesCarriedOnInFebruary() {
+        // The 31st of each month, carried on from February 10: February's is the 28th, March's the 31st again.
+        RecurringEventSeries series = carriedOn(RecurrenceInterval.MONTHLY, LocalDate.of(2026, 1, 31), LocalDate.of(2026, 2, 10));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31)))
+            .containsExactly(LocalDate.of(2026, 2, 28), LocalDate.of(2026, 3, 31));
+    }
+
+    @Test
+    void firstOccurrenceIsTheFirstOneShown() {
+        assertThat(EventRecurrenceProjector.firstOccurrence(weekly(LocalDate.of(2026, 1, 6), null, 0)))
+            .contains(LocalDate.of(2026, 1, 6));
+        assertThat(EventRecurrenceProjector.firstOccurrence(
+            carriedOn(RecurrenceInterval.WEEKLY, LocalDate.of(2026, 1, 6), LocalDate.of(2026, 1, 15))))
+            .contains(LocalDate.of(2026, 1, 20));
+    }
+
+    @Test
+    void aSeriesEndingBeforeItsFirstOccurrenceHasNone() {
+        RecurringEventSeries ended = new RecurringEventSeries(SERIES_ID, UUID.randomUUID(), "Piano", null, null,
+            true, null, null, 0, null, RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 1, 6), LocalDate.of(2026, 1, 10),
+            LocalDate.of(2026, 1, 8), List.of(), UUID.randomUUID(), Instant.now());
+        assertThat(EventRecurrenceProjector.firstOccurrence(ended)).isEmpty();
+    }
+
+    @Test
+    void theNearestSlotOfATuesdaySeriesToAMondayIsTheNextDay() {
+        RecurringEventSeries tuesdays = weekly(LocalDate.of(2026, 10, 6), null, 0);
+        assertThat(EventRecurrenceProjector.nearestSlot(tuesdays, LocalDate.of(2026, 10, 12)))
+            .contains(LocalDate.of(2026, 10, 13));
+    }
+
+    @Test
+    void twoSlotsAtTheSameDistanceGiveTheLaterOne() {
+        RecurringEventSeries everyOtherDay = new RecurringEventSeries(SERIES_ID, UUID.randomUUID(), "Piano", null, null,
+            true, null, null, 0, null, RecurrenceInterval.DAILY, 2, LocalDate.of(2026, 10, 1), null,
+            List.of(), UUID.randomUUID(), Instant.now());
+        assertThat(EventRecurrenceProjector.nearestSlot(everyOtherDay, LocalDate.of(2026, 10, 4)))
+            .contains(LocalDate.of(2026, 10, 5));
+    }
+
+    @Test
+    void theNearestSlotIsNeverOneTheSeriesDoesNotShow() {
+        RecurringEventSeries fromThe20th = carriedOn(RecurrenceInterval.WEEKLY, LocalDate.of(2026, 1, 6), LocalDate.of(2026, 1, 20));
+        // Jan 13 is a slot of the rhythm, but before the series shows anything: Jan 20 is the one.
+        assertThat(EventRecurrenceProjector.nearestSlot(fromThe20th, LocalDate.of(2026, 1, 14)))
+            .contains(LocalDate.of(2026, 1, 20));
+        RecurringEventSeries ended = weekly(LocalDate.of(2026, 1, 6), LocalDate.of(2026, 1, 13), 0);
+        assertThat(EventRecurrenceProjector.nearestSlot(ended, LocalDate.of(2026, 3, 2))).isEmpty();
+    }
+
+    private RecurringEventSeries carriedOn(RecurrenceInterval interval, LocalDate anchor, LocalDate startsOn) {
+        return new RecurringEventSeries(SERIES_ID, UUID.randomUUID(), "Piano", null, null,
+            true, null, null, 0, null, interval, 1, anchor, null, startsOn, List.of(), UUID.randomUUID(), Instant.now());
+    }
+
     private RecurringEventSeries weekly(LocalDate anchor, LocalDate end, int durationDays) {
         return series(RecurrenceInterval.WEEKLY, anchor, end, durationDays);
     }

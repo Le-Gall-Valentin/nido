@@ -6,7 +6,7 @@ import {
   type CalendarOccurrence, type EventInput, type RecurringEventSeries,
 } from '@/entities/calendar'
 import { toEventInput } from '../lib/eventInput'
-import { fromSeries, toSeriesInput, type Recurrence } from '../lib/seriesInput'
+import { fromSeries, runsAcross, toSeriesInput, type Recurrence } from '../lib/seriesInput'
 import type { ScheduleChange } from '../lib/dragTypes'
 import { EventFormModal } from './EventFormModal'
 
@@ -29,6 +29,8 @@ interface EventFormPanelProps {
   currentUserId?: string
   members: SpaceMember[]
   isPersonal: boolean
+  /** The household's today: an edit to a series begun before it leaves the series' past as it was. */
+  today: string
   onClose: () => void
 }
 
@@ -37,7 +39,8 @@ interface EventFormPanelProps {
  * when one fails. Keeping the decision next to the form is what lets EventFormModal stay presentational.
  */
 export function EventFormPanel({
-  spaceId, occurrence, series = null, detachSlot, defaultDate, defaultSchedule = null, currentUserId, members, isPersonal, onClose,
+  spaceId, occurrence, series = null, detachSlot, defaultDate, defaultSchedule = null, currentUserId, members, isPersonal,
+  today, onClose,
 }: EventFormPanelProps) {
   const { t } = useTranslation('calendar')
   const [error, setError] = useState<string | null>(null)
@@ -67,7 +70,7 @@ export function EventFormPanel({
     const onSuccess = () => onClose()
 
     if (series && recurrence) {
-      updateSeries.mutate({ seriesId: series.id, input: toSeriesInput(input, recurrence) }, { onSuccess, onError })
+      updateSeries.mutate({ seriesId: series.id, input: toSeriesInput(input, recurrence, series) }, { onSuccess, onError })
       return
     }
     if (recurrence) {
@@ -92,6 +95,7 @@ export function EventFormPanel({
       initial={editedSeries?.event ?? initial ?? blank}
       mode={series ? 'edit-series' : occurrence ? 'edit' : 'create'}
       initialRecurrence={editedSeries?.recurrence ?? null}
+      notice={series && runsAcross(series, today) ? t('series.split_notice') : null}
       members={members}
       isPersonal={isPersonal}
       submitError={error}

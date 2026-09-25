@@ -2,6 +2,7 @@ package com.nido.api.calendar.application.handler;
 
 import com.nido.api.calendar.application.port.in.DeleteEventUseCase;
 import com.nido.api.calendar.application.service.CalendarSpaceMemberValidator;
+import com.nido.api.calendar.application.service.SeriesExceptionsMover;
 import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.CreateEventCommand;
@@ -13,6 +14,7 @@ import com.nido.api.calendar.domain.model.UpdateRecurringEventSeriesCommand;
 import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
 import com.nido.api.calendar.domain.port.out.EventExclusionRepository;
 import com.nido.api.calendar.domain.port.out.RecurringEventSeriesRepository;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.space.application.port.in.ResolveMembershipUseCase;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
@@ -136,8 +138,11 @@ class ParticipantsOnEveryWriteTest {
         RecurringEventSeries weekly = weekly();
         when(series.findById(weekly.id())).thenReturn(Optional.of(weekly));
         when(rule.participantsFor(owner, asked, takingPart)).thenReturn(resolved);
+        // Not begun yet, so edited in place.
+        GetSpaceTodayUseCase spaceToday = mock(GetSpaceTodayUseCase.class);
+        when(spaceToday.today(spaceId)).thenReturn(day.minusWeeks(1));
 
-        new UpdateRecurringEventSeriesHandler(series, rule).update(new UpdateRecurringEventSeriesCommand(weekly.id(), "Piano",
+        new UpdateRecurringEventSeriesHandler(series, rule, spaceToday, mock(SeriesExceptionsMover.class)).update(new UpdateRecurringEventSeriesCommand(weekly.id(), "Piano",
             null, null, true, null, null, 0, null, RecurrenceInterval.WEEKLY, 1, day, null, asked), owner);
 
         ArgumentCaptor<UpdateRecurringEventSeriesCommand> stored = ArgumentCaptor.forClass(UpdateRecurringEventSeriesCommand.class);

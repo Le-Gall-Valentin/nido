@@ -1,5 +1,6 @@
 package com.nido.api.calendar.infrastructure.web;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
@@ -26,8 +27,14 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.nio.charset.StandardCharsets;
+import java.time.DayOfWeek;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -196,8 +203,14 @@ class RecurringEventSeriesControllerIT {
     }
 
     @Test
-    void deleting_a_series_cascades_to_its_exclusions_and_detached_instances() throws Exception {
-        String seriesId = createWeeklySeries();
+    void deleting_a_series_that_is_over_cascades_to_its_exclusions_and_detached_instances() throws Exception {
+        String created = mockMvc.perform(post(series())
+                .cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Piano","allDay":false,"startTime":"18:00","endTime":"19:00","durationDays":0,
+                     "intervalType":"WEEKLY","intervalCount":1,"anchorDate":"2026-01-06","endDate":"2026-02-24"}"""))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String seriesId = objectMapper.readTree(created).get("id").asText();
         mockMvc.perform(delete(series() + "/" + seriesId + "/occurrences/2026-01-06").cookie(tokenFor(aliceId)));
         mockMvc.perform(put(series() + "/" + seriesId + "/occurrences/2026-01-13")
                 .cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
@@ -260,6 +273,161 @@ class RecurringEventSeriesControllerIT {
                 .content(body.formatted("Piano (salle 3)", carolId)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.participantIds[0]").value(carolId.toString()));
+    }
+
+    // Editing or deleting a series that has begun leaves its past as it was, and what was edited or
+    // cancelled on its own stays as chosen. "Today" is the household's: Paris, by default.
+
+    @Test
+    void editing_a_series_that_has_begun_keeps_its_past_and_what_was_chosen_on_its_own() throws Exception {
+        LocalDate today = LocalDate.now(HOUSEHOLD);
+        LocalDate firstMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(2);
+        LocalDate pastMonday = firstMonday.plusWeeks(1);
+        LocalDate nextMonday = today.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+        String seriesId = createSeries("Piano", firstMonday);
+        detach(seriesId, pastMonday, "Piano (déjà modifié)");
+        detach(seriesId, nextMonday, "Piano (modifié)");
+        mockMvc.perform(delete(series() + "/" + seriesId + "/occurrences/" + nextMonday.plusWeeks(1)).cookie(tokenFor(aliceId)))
+            .andExpect(status().isNoContent());
+
+        // Moved to Tuesdays, and renamed.
+        mockMvc.perform(patch(series() + "/" + seriesId).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content(seriesBody("Piano (mardi)", firstMonday.plusDays(1))))
+            .andExpect(status().isOk());
+
+        List<String> shown = shownBetween(firstMonday, nextMonday.plusWeeks(3));
+        assertThat(shown).doesNotHaveDuplicates()
+            // The past, as it was: on Mondays, under its old name, the occurrence edited then included.
+            .contains(firstMonday + " Piano", pastMonday + " Piano (déjà modifié)")
+            // The week of the occurrence edited on its own keeps it, and only it.
+            .contains(nextMonday + " Piano (modifié)")
+            .noneMatch(entry -> entry.startsWith(nextMonday.plusDays(1).toString()))
+            // The week cancelled stays cancelled; the one after is a Tuesday, renamed.
+            .noneMatch(entry -> entry.startsWith(nextMonday.plusWeeks(1).toString()))
+            .noneMatch(entry -> entry.startsWith(nextMonday.plusWeeks(1).plusDays(1).toString()))
+            .contains(nextMonday.plusWeeks(2).plusDays(1) + " Piano (mardi)");
+        assertThat(shown).filteredOn(entry -> LocalDate.parse(entry.substring(0, 10)).isBefore(today))
+            .allMatch(entry -> LocalDate.parse(entry.substring(0, 10)).getDayOfWeek() == DayOfWeek.MONDAY);
+
+        // The series as it was ends yesterday; the edit carries on from today in a series of its own.
+        JsonNode list = listSeries();
+        assertThat(list).hasSize(2);
+        assertThat(list.findValuesAsText("endDate")).contains(today.minusDays(1).toString());
+        assertThat(list.findValuesAsText("firstDate")).contains(firstMonday.toString());
+    }
+
+    @Test
+    void a_series_not_begun_yet_changes_whole_and_its_edited_occurrence_takes_the_nearest_one() throws Exception {
+        LocalDate firstMonday = LocalDate.now(HOUSEHOLD).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(1);
+        String seriesId = createSeries("Piano", firstMonday);
+        detach(seriesId, firstMonday, "Piano (modifié)");
+
+        mockMvc.perform(patch(series() + "/" + seriesId).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content(seriesBody("Piano (mardi)", firstMonday.plusDays(1))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(seriesId));
+
+        assertThat(listSeries()).hasSize(1);
+        assertThat(shownBetween(firstMonday, firstMonday.plusWeeks(2)))
+            .containsExactly(firstMonday + " Piano (modifié)", firstMonday.plusWeeks(1).plusDays(1) + " Piano (mardi)");
+    }
+
+    @Test
+    void deleting_a_series_that_has_begun_keeps_its_past() throws Exception {
+        LocalDate today = LocalDate.now(HOUSEHOLD);
+        LocalDate firstMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(2);
+        LocalDate nextMonday = today.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+        String seriesId = createSeries("Piano", firstMonday);
+        detach(seriesId, nextMonday, "Piano (modifié)");
+
+        mockMvc.perform(delete(series() + "/" + seriesId).cookie(tokenFor(aliceId)))
+            .andExpect(status().isNoContent());
+
+        List<String> shown = shownBetween(firstMonday, nextMonday.plusWeeks(2));
+        assertThat(shown).contains(firstMonday + " Piano", firstMonday.plusWeeks(1) + " Piano");
+        // Everything to come is gone, the occurrence edited on its own included.
+        assertThat(shown).noneMatch(entry -> !LocalDate.parse(entry.substring(0, 10)).isBefore(today));
+        assertThat(listSeries().findValuesAsText("endDate")).containsExactly(today.minusDays(1).toString());
+    }
+
+    @Test
+    void ending_a_begun_series_before_today_keeps_its_edited_occurrences_as_events_of_their_own() throws Exception {
+        LocalDate today = LocalDate.now(HOUSEHOLD);
+        LocalDate firstMonday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(2);
+        LocalDate nextMonday = today.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+        String seriesId = createSeries("Piano", firstMonday);
+        detach(seriesId, nextMonday, "Piano (modifié)");
+
+        mockMvc.perform(patch(series() + "/" + seriesId).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Piano","allDay":false,"startTime":"10:00","endTime":"11:00","durationDays":0,
+                     "intervalType":"WEEKLY","intervalCount":1,"anchorDate":"%s","endDate":"%s"}"""
+                    .formatted(firstMonday, firstMonday.plusWeeks(1))))
+            .andExpect(status().isOk());
+
+        assertThat(listSeries()).hasSize(1);
+        assertThat(shownBetween(today, nextMonday.plusWeeks(2))).containsExactly(nextMonday + " Piano (modifié)");
+    }
+
+    @Test
+    void a_series_that_is_over_changes_whole() throws Exception {
+        String created = mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Piano","allDay":true,"intervalType":"WEEKLY","intervalCount":1,
+                     "anchorDate":"2026-01-06","endDate":"2026-01-20"}"""))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String seriesId = objectMapper.readTree(created).get("id").asText();
+
+        mockMvc.perform(patch(series() + "/" + seriesId).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Piano (renommé)","allDay":true,"intervalType":"WEEKLY","intervalCount":1,
+                     "anchorDate":"2026-01-06","endDate":"2026-01-20"}"""))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(seriesId));
+
+        assertThat(listSeries()).hasSize(1);
+        assertThat(shownBetween(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31))).containsExactly(
+            "2026-01-06 Piano (renommé)", "2026-01-13 Piano (renommé)", "2026-01-20 Piano (renommé)");
+    }
+
+    private static final ZoneId HOUSEHOLD = ZoneId.of("Europe/Paris");
+
+    private String createSeries(String title, LocalDate anchor) throws Exception {
+        String created = mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content(seriesBody(title, anchor)))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(created).get("id").asText();
+    }
+
+    private static String seriesBody(String title, LocalDate anchor) {
+        return """
+            {"title":"%s","allDay":false,"startTime":"10:00","endTime":"11:00","durationDays":0,
+             "intervalType":"WEEKLY","intervalCount":1,"anchorDate":"%s"}""".formatted(title, anchor);
+    }
+
+    private void detach(String seriesId, LocalDate slot, String title) throws Exception {
+        mockMvc.perform(put(series() + "/" + seriesId + "/occurrences/" + slot).cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"%s","allDay":false,"startDate":"%s","startTime":"14:00","endDate":"%s","endTime":"15:00"}"""
+                    .formatted(title, slot, slot)))
+            .andExpect(status().isOk());
+    }
+
+    /** "date title" for every occurrence of the window, in order. */
+    private List<String> shownBetween(LocalDate from, LocalDate to) throws Exception {
+        String body = mockMvc.perform(get(occurrences() + "?from=" + from + "&to=" + to).cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        List<String> shown = new ArrayList<>();
+        for (JsonNode occurrence : objectMapper.readTree(body)) {
+            shown.add(occurrence.get("startDate").asText() + " " + occurrence.get("title").asText());
+        }
+        return shown;
+    }
+
+    private JsonNode listSeries() throws Exception {
+        return objectMapper.readTree(mockMvc.perform(get(series()).cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
     }
 
     @Test

@@ -18,6 +18,8 @@ export interface EventFormModalProps {
   mode: 'create' | 'edit' | 'edit-series'
   /** How the series being edited repeats. */
   initialRecurrence?: Recurrence | null
+  /** Said under how the event repeats — what an edit to a series will leave as it was. */
+  notice?: string | null
   members: SpaceMember[]
   /** Hides the participant picker: a personal context has nobody to invite. */
   isPersonal: boolean
@@ -37,7 +39,7 @@ const NO_RECURRENCE_YET: Recurrence = { intervalType: 'WEEKLY', intervalCount: 1
  * mutations live in EventFormPanel, which is what lets this be tested without a query client.
  */
 export function EventFormModal({
-  initial, mode, initialRecurrence = null, members, isPersonal, submitError, isPending, onSubmit, onCancel,
+  initial, mode, initialRecurrence = null, notice = null, members, isPersonal, submitError, isPending, onSubmit, onCancel,
 }: EventFormModalProps) {
   const { t } = useTranslation('calendar')
   const [form, setForm] = useState<EventInput>(initial)
@@ -131,6 +133,7 @@ export function EventFormModal({
             </div>
             <Input label={t('series.until')} type="date" value={recurrence.until ?? ''}
               onChange={(e) => setRecurrence({ ...recurrence, until: e.target.value || null })} />
+            {notice && <p className="text-xs text-fg-2">{notice}</p>}
           </div>
         )}
 

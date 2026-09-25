@@ -150,6 +150,7 @@ const PIANO_SERIES: RecurringEventSeries = {
   id: 's-1', title: 'Piano', description: 'Salle 3', location: 'Conservatoire', allDay: false,
   startTime: '18:00', endTime: '19:00', durationDays: 0, color: null,
   intervalType: 'MONTHLY', intervalCount: 1, anchorDate: '2026-09-02', endDate: null,
+  startsOn: null, firstDate: '2026-09-02',
   participantIds: [], createdBy: 'u-1', createdAt: '2026-01-01T00:00:00Z',
 }
 const PIANO_OCCURRENCE = occurrence({
@@ -209,6 +210,8 @@ describe('CalendarPage — recurring events in the event form', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'scope.whole_series' }))
 
     expect(await screen.findByText('series.edit_title')).toBeTruthy()
+    // Begun on September 2 and never ending: the edit carries on from today, and says so.
+    expect(screen.getByText('series.split_notice')).toBeTruthy()
     expect(value('form.description')).toBe('Salle 3')
     expect(value('form.location')).toBe('Conservatoire')
     expect(value('form.start_date')).toBe('2026-09-02')
@@ -230,18 +233,21 @@ describe('CalendarPage — recurring events in the event form', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'detail.delete' }))
     fireEvent.click(await screen.findByRole('button', { name: 'scope.whole_series' }))
 
-    expect(await screen.findByText('series.delete_message')).toBeTruthy()
+    expect(await screen.findByText('series.stop_message')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'delete_confirm.confirm' }))
 
     await vi.waitFor(() => expect(deleteRecurringEventSeries).toHaveBeenCalledWith('space-1', 's-1'))
   })
 
   it('lists the series to manage them, and edits one in the same form', async () => {
-    renderPage([], { calendar: { listRecurringEventSeries: vi.fn().mockResolvedValue([PIANO_SERIES]) } })
+    const ended = { ...PIANO_SERIES, id: 's-0', title: 'Solfège', endDate: '2026-09-01', firstDate: '2026-01-07' }
+    renderPage([], { calendar: { listRecurringEventSeries: vi.fn().mockResolvedValue([ended, PIANO_SERIES]) } })
     fireEvent.click(await screen.findByRole('button', { name: 'recurring_series.manage' }))
     const edit = await screen.findByRole('button', { name: 'series.edit:{"name":"Piano"}' })
     // Series are created from the new-event button now, never from here.
     expect(screen.queryByRole('button', { name: /series\.new/ })).toBeNull()
+    // Each says from when it shows, and until when for one that ends.
+    expect(screen.getByText(/series\.from:\{"date":"2026-01-07"\}/).textContent).toContain('series.until_date:{"date":"2026-09-01"}')
     fireEvent.click(edit)
 
     expect(await screen.findByText('series.edit_title')).toBeTruthy()

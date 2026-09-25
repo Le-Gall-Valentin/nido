@@ -72,6 +72,25 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
     }
 
     @Override
+    public List<CalendarEvent> findDetachedOf(UUID seriesId) {
+        List<CalendarEventEntity> found = events.findByRecurringSeriesId(seriesId);
+        if (found.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, List<UUID>> byEvent = participants
+            .findByEventIdIn(found.stream().map(CalendarEventEntity::getId).toList()).stream()
+            .collect(Collectors.groupingBy(CalendarEventParticipantEntity::getEventId,
+                Collectors.mapping(CalendarEventParticipantEntity::getUserId, Collectors.toList())));
+        return found.stream().map(e -> toDomain(e, byEvent.getOrDefault(e.getId(), List.of()))).toList();
+    }
+
+    @Override
+    @Transactional
+    public void relink(UUID eventId, UUID seriesId, LocalDate originalDate) {
+        events.relink(eventId, seriesId, originalDate);
+    }
+
+    @Override
     @Transactional
     public CalendarEvent create(CreateEventCommand command) {
         TextEncryptor encryptor = encryptorFactory.forSpace(command.spaceId());

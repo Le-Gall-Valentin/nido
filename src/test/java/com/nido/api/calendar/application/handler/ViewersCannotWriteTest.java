@@ -1,6 +1,7 @@
 package com.nido.api.calendar.application.handler;
 
 import com.nido.api.calendar.application.service.CalendarSpaceMemberValidator;
+import com.nido.api.calendar.application.service.SeriesExceptionsMover;
 import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CreateEventCommand;
 import com.nido.api.calendar.domain.model.CreateRecurringEventSeriesCommand;
@@ -11,6 +12,7 @@ import com.nido.api.calendar.domain.model.UpdateRecurringEventSeriesCommand;
 import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
 import com.nido.api.calendar.domain.port.out.EventExclusionRepository;
 import com.nido.api.calendar.domain.port.out.RecurringEventSeriesRepository;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
@@ -40,6 +42,8 @@ class ViewersCannotWriteTest {
     private final RecurringEventSeriesRepository series = mock(RecurringEventSeriesRepository.class);
     private final EventExclusionRepository exclusions = mock(EventExclusionRepository.class);
     private final CalendarSpaceMemberValidator rule = mock(CalendarSpaceMemberValidator.class);
+    private final GetSpaceTodayUseCase spaceToday = mock(GetSpaceTodayUseCase.class);
+    private final SeriesExceptionsMover mover = mock(SeriesExceptionsMover.class);
 
     private final UUID spaceId = UUID.randomUUID();
     private final SpaceMembership viewer =
@@ -93,14 +97,14 @@ class ViewersCannotWriteTest {
 
     @Test
     void editingASeries() {
-        refused(() -> new UpdateRecurringEventSeriesHandler(series, rule).update(new UpdateRecurringEventSeriesCommand(
+        refused(() -> new UpdateRecurringEventSeriesHandler(series, rule, spaceToday, mover).update(new UpdateRecurringEventSeriesCommand(
             weekly.id(), "Piano", null, null, true, null, null, 0, null, RecurrenceInterval.WEEKLY, 1, day, null,
             List.of()), viewer));
     }
 
     @Test
     void deletingASeries() {
-        refused(() -> new DeleteRecurringEventSeriesHandler(series).delete(weekly.id(), viewer));
+        refused(() -> new DeleteRecurringEventSeriesHandler(series, spaceToday, mover).delete(weekly.id(), viewer));
     }
 
     @Test
@@ -117,6 +121,6 @@ class ViewersCannotWriteTest {
     /** Refused for its role — and refused before anything was read, checked or written. */
     private void refused(ThrowingCallable write) {
         assertThatThrownBy(write).isInstanceOf(SpaceException.InsufficientRole.class);
-        verifyNoInteractions(rule, exclusions);
+        verifyNoInteractions(rule, exclusions, mover);
     }
 }

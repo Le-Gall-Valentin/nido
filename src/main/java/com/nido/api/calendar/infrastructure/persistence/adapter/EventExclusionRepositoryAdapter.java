@@ -29,6 +29,23 @@ public class EventExclusionRepositoryAdapter implements EventExclusionRepository
     }
 
     @Override
+    public Set<LocalDate> findAllSlots(UUID seriesId) {
+        return exclusions.findBySeriesId(seriesId).stream()
+            .map(CalendarEventExclusionEntity::getOriginalDate)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    @Override
+    @Transactional
+    public void clearFrom(UUID seriesId, LocalDate from) {
+        if (from == null) {
+            exclusions.deleteAllOf(seriesId);
+        } else {
+            exclusions.deleteFrom(seriesId, from);
+        }
+    }
+
+    @Override
     @Transactional
     public void exclude(UUID seriesId, LocalDate originalDate) {
         if (exclusions.existsBySeriesIdAndOriginalDate(seriesId, originalDate)) {

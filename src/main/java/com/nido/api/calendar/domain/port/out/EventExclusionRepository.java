@@ -18,4 +18,10 @@ public interface EventExclusionRepository {
      * invisible.
      */
     void clear(UUID seriesId, LocalDate originalDate);
+
+    /** Every slot of the series cancelled so far. */
+    Set<LocalDate> findAllSlots(UUID seriesId);
+
+    /** Lifts every cancellation of the series from {@code from} on — all of them when it is null. */
+    void clearFrom(UUID seriesId, LocalDate from);
 }

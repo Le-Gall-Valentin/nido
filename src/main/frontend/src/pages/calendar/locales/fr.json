@@ -112,6 +112,7 @@
     "edit": "Modifier {{name}}",
     "delete": "Supprimer {{name}}",
     "delete_message": "La série et toutes ses occurrences seront supprimées, y compris celles que vous avez modifiées ou annulées.",
+    "stop_message": "Les occurrences passées restent. Toutes celles à venir seront supprimées, y compris celles que vous avez modifiées.",
     "interval_count": "Tous les",
     "interval_type": "Fréquence",
     "interval": {
@@ -121,7 +122,9 @@
       "YEARLY": "an(s)"
     },
     "until": "Jusqu'au (facultatif)",
+    "split_notice": "Les occurrences passées et celles que vous avez modifiées restent telles quelles : la modification s'applique à partir d'aujourd'hui.",
     "from": "à partir du {{date}}",
+    "until_date": "jusqu'au {{date}}",
     "interval_invalid": "La fréquence doit être d'au moins 1.",
     "occurrence_too_long": "Une occurrence ne peut pas durer plus longtemps que l'écart entre deux occurrences.",
     "until_before_start": "La répétition ne peut pas s'arrêter avant la date de début."

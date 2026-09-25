@@ -164,3 +164,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/055-bound-calendar-durations.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/056-add-calendar-series-starts-on.yaml
+      relativeToChangelogFile: false

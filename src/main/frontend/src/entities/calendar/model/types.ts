@@ -64,8 +64,13 @@ export interface RecurringEventSeries {
   color: string | null
   intervalType: RecurrenceInterval
   intervalCount: number
+  /** Sets the rhythm. The first occurrence shown is `firstDate`, later once the series carries on an edit. */
   anchorDate: string
   endDate: string | null
+  /** Set when the series carries on an edit made after the series it replaces began: it shows from then. */
+  startsOn: string | null
+  /** Its first occurrence shown, or null when it has none left. */
+  firstDate: string | null
   participantIds: string[]
   createdBy: string
   createdAt: string

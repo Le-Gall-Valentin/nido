@@ -1,5 +1,6 @@
 package com.nido.api.calendar.infrastructure.web.dto;
 
+import com.nido.api.calendar.domain.model.EventRecurrenceProjector;
 import com.nido.api.calendar.domain.model.RecurrenceInterval;
 import com.nido.api.calendar.domain.model.RecurringEventSeries;
 
@@ -13,6 +14,7 @@ public record RecurringEventSeriesResponse(
     UUID id, String title, String description, String location,
     boolean allDay, LocalTime startTime, LocalTime endTime, int durationDays, String color,
     RecurrenceInterval intervalType, int intervalCount, LocalDate anchorDate, LocalDate endDate,
+    LocalDate startsOn, LocalDate firstDate,
     List<UUID> participantIds, UUID createdBy, Instant createdAt
 ) {
     public static RecurringEventSeriesResponse from(RecurringEventSeries s) {
@@ -20,6 +22,7 @@ public record RecurringEventSeriesResponse(
             s.id(), s.title(), s.description(), s.location(),
             s.allDay(), s.startTime(), s.endTime(), s.durationDays(), s.color(),
             s.intervalType(), s.intervalCount(), s.anchorDate(), s.endDate(),
+            s.startsOn(), EventRecurrenceProjector.firstOccurrence(s).orElse(null),
             s.participantIds(), s.createdBy(), s.createdAt());
     }
 }

@@ -71,7 +71,7 @@ public final class EventScheduleValidator {
      * The shortest time between two occurrences, in days. A month counts as 28 days and a year as
      * 365, their shortest: an occurrence that fits then fits between any two of them, February's included.
      */
-    private static long shortestIntervalDays(RecurrenceInterval intervalType, int intervalCount) {
+    static long shortestIntervalDays(RecurrenceInterval intervalType, int intervalCount) {
         long unit = switch (intervalType) {
             case DAILY -> 1;
             case WEEKLY -> 7;

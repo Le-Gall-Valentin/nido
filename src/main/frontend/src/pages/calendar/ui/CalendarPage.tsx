@@ -312,6 +312,7 @@ function CalendarPageContent() {
           currentUserId={currentUserId}
           members={members ?? []}
           isPersonal={spaceIsPersonal}
+          today={today}
           onClose={() => {
             if (creating?.returnToDay) setSelectedDay(creating.date)
             setCreating(null)
@@ -327,11 +328,11 @@ function CalendarPageContent() {
       {seriesAction?.action === 'edit' && actedSeries && (
         <EventFormPanel spaceId={spaceId} occurrence={null} series={actedSeries} detachSlot={null}
           defaultDate={date} currentUserId={currentUserId} members={members ?? []} isPersonal={spaceIsPersonal}
-          onClose={() => setSeriesAction(null)} />
+          today={today} onClose={() => setSeriesAction(null)} />
       )}
 
       {seriesAction?.action === 'delete' && actedSeries && (
-        <DeleteSeriesPanel spaceId={spaceId} series={actedSeries} onClose={() => setSeriesAction(null)} />
+        <DeleteSeriesPanel spaceId={spaceId} series={actedSeries} today={today} onClose={() => setSeriesAction(null)} />
       )}
 
       {transferring && (
@@ -349,7 +350,7 @@ function CalendarPageContent() {
 
       {managingSeries && (
         <RecurringEventSeriesPanel spaceId={spaceId} members={members ?? []} currentUserId={currentUserId}
-          isPersonal={spaceIsPersonal} onClose={() => setManagingSeries(false)} />
+          isPersonal={spaceIsPersonal} today={today} onClose={() => setManagingSeries(false)} />
       )}
     </div>
   )

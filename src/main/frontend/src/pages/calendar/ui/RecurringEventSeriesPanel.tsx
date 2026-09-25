@@ -12,6 +12,8 @@ interface RecurringEventSeriesPanelProps {
   members: SpaceMember[]
   currentUserId: string
   isPersonal: boolean
+  /** The household's today, which decides what an edit or a deletion leaves as it was. */
+  today: string
   onClose: () => void
 }
 
@@ -20,7 +22,7 @@ interface RecurringEventSeriesPanelProps {
  * from the new-event form, by ticking "recurring" — and edited in that same form.
  */
 export function RecurringEventSeriesPanel({
-  spaceId, members, currentUserId, isPersonal, onClose,
+  spaceId, members, currentUserId, isPersonal, today, onClose,
 }: RecurringEventSeriesPanelProps) {
   const { t } = useTranslation('calendar')
   const { data: series, isPending } = useRecurringEventSeries(spaceId)
@@ -32,12 +34,12 @@ export function RecurringEventSeriesPanel({
     return (
       <EventFormPanel spaceId={spaceId} occurrence={null} series={editing} detachSlot={null}
         defaultDate={editing.anchorDate} currentUserId={currentUserId} members={members} isPersonal={isPersonal}
-        onClose={() => setEditing(null)} />
+        today={today} onClose={() => setEditing(null)} />
     )
   }
 
   if (deleting) {
-    return <DeleteSeriesPanel spaceId={spaceId} series={deleting} onClose={() => setDeleting(null)} />
+    return <DeleteSeriesPanel spaceId={spaceId} series={deleting} today={today} onClose={() => setDeleting(null)} />
   }
 
   return (
@@ -53,7 +55,8 @@ export function RecurringEventSeriesPanel({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-fg-1">{candidate.title}</p>
                 <p className="text-[11px] text-fg-3">
-                  {t(`series.interval.${candidate.intervalType}`)} · {t('series.from', { date: candidate.anchorDate })}
+                  {t(`series.interval.${candidate.intervalType}`)} · {t('series.from', { date: candidate.firstDate ?? candidate.anchorDate })}
+                  {candidate.endDate && <> · {t('series.until_date', { date: candidate.endDate })}</>}
                 </p>
               </div>
               <button type="button" aria-label={t('series.edit', { name: candidate.title })}

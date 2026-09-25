@@ -4,7 +4,9 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -69,9 +71,44 @@ public final class EventRecurrenceProjector {
         return from.minusDays(series.durationDays());
     }
 
+    /** The series' first occurrence, if it has any: on or after the day it is shown from. */
+    public static Optional<LocalDate> firstOccurrence(RecurringEventSeries series) {
+        LocalDate first = occurrenceDate(series.anchorDate(), series.intervalType(), series.intervalCount(),
+            firstIndexOnOrAfter(series, series.shownFrom()));
+        return series.endDate() != null && first.isAfter(series.endDate()) ? Optional.empty() : Optional.of(first);
+    }
+
+    /**
+     * Whether the series lies on both sides of {@code day}: it has an occurrence before it and is not
+     * over by then. Editing or deleting such a series leaves what came before {@code day} as it was.
+     */
+    public static boolean runsAcross(RecurringEventSeries series, LocalDate day) {
+        boolean begun = firstOccurrence(series).filter(first -> first.isBefore(day)).isPresent();
+        boolean over = series.endDate() != null && series.endDate().isBefore(day);
+        return begun && !over;
+    }
+
+    /**
+     * The occurrence of {@code series} nearest to {@code date} — the later of two at the same distance —
+     * among those less than one interval away; none if the series has no occurrence that close.
+     */
+    public static Optional<LocalDate> nearestSlot(RecurringEventSeries series, LocalDate date) {
+        long within = EventScheduleValidator.shortestIntervalDays(series.intervalType(), series.intervalCount()) - 1;
+        LocalDate from = date.minusDays(within);
+        return slotsBetween(series, from, date.plusDays(within)).stream()
+            .filter(slot -> !slot.isBefore(from))
+            .min(Comparator.comparingLong((LocalDate slot) -> Math.abs(ChronoUnit.DAYS.between(date, slot)))
+                .thenComparing(Comparator.reverseOrder()));
+    }
+
     /** Every slot of {@code series} overlapping {@code [from, to]}, in ascending order. */
     public static List<LocalDate> slotsBetween(RecurringEventSeries series, LocalDate from, LocalDate to) {
+        // Nothing before the day the series is shown from: those occurrences belong to the series it
+        // carried on from, which shows them itself.
         LocalDate scanFrom = scanFrom(series, from);
+        if (scanFrom.isBefore(series.shownFrom())) {
+            scanFrom = series.shownFrom();
+        }
         LocalDate lastAllowed = series.endDate() == null || series.endDate().isAfter(to) ? to : series.endDate();
 
         List<LocalDate> slots = new ArrayList<>();

@@ -73,6 +73,9 @@ public class CalendarRecurringEventSeriesEntity {
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    @Column(name = "starts_on")
+    private LocalDate startsOn;
+
     @Column(name = "created_by", nullable = false)
     private UUID createdBy;
 

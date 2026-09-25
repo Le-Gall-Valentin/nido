@@ -2,6 +2,7 @@ package com.nido.api.calendar.infrastructure.persistence.repository;
 
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarEventEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -34,4 +35,15 @@ public interface CalendarEventJpaRepository extends JpaRepository<CalendarEventE
         @Param("seriesId") UUID seriesId, @Param("from") LocalDate from, @Param("to") LocalDate to);
 
     Optional<CalendarEventEntity> findByRecurringSeriesIdAndRecurringOriginalDate(UUID seriesId, LocalDate originalDate);
+
+    List<CalendarEventEntity> findByRecurringSeriesId(UUID seriesId);
+
+    /** Run at once, not at the next flush: the next relink may claim the slot this one frees. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+        UPDATE CalendarEventEntity e SET e.recurringSeriesId = :seriesId, e.recurringOriginalDate = :originalDate
+        WHERE e.id = :eventId
+        """)
+    void relink(@Param("eventId") UUID eventId, @Param("seriesId") UUID seriesId,
+                @Param("originalDate") LocalDate originalDate);
 }
