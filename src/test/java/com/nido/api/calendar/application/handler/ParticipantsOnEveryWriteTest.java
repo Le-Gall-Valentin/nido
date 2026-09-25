@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -165,7 +166,7 @@ class ParticipantsOnEveryWriteTest {
         new MoveEventHandler(events, memberships, mock(DeleteEventUseCase.class), rule).move(eventId, personalSpace, owner);
 
         ArgumentCaptor<CreateEventCommand> stored = ArgumentCaptor.forClass(CreateEventCommand.class);
-        verify(events, org.mockito.Mockito.times(2)).create(stored.capture());
+        verify(events, times(2)).create(stored.capture());
         assertThat(stored.getAllValues()).allSatisfy(command -> assertThat(command.participantIds()).isEqualTo(resolved));
     }
 

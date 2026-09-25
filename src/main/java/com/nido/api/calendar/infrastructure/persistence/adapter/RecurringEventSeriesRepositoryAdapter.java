@@ -2,6 +2,7 @@ package com.nido.api.calendar.infrastructure.persistence.adapter;
 
 import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.CreateRecurringEventSeriesCommand;
+import com.nido.api.calendar.domain.model.RecurrenceInterval;
 import com.nido.api.calendar.domain.model.RecurringEventSeries;
 import com.nido.api.calendar.domain.model.UpdateRecurringEventSeriesCommand;
 import com.nido.api.calendar.domain.port.out.RecurringEventSeriesRepository;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -109,9 +111,9 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
     }
 
     private static void apply(CalendarRecurringEventSeriesEntity entity, boolean allDay,
-                              java.time.LocalTime startTime, java.time.LocalTime endTime, int durationDays,
-                              String color, com.nido.api.calendar.domain.model.RecurrenceInterval intervalType,
-                              int intervalCount, java.time.LocalDate anchorDate, java.time.LocalDate endDate) {
+                              LocalTime startTime, LocalTime endTime, int durationDays,
+                              String color, RecurrenceInterval intervalType,
+                              int intervalCount, LocalDate anchorDate, LocalDate endDate) {
         entity.setAllDay(allDay);
         entity.setStartTime(startTime);
         entity.setEndTime(endTime);

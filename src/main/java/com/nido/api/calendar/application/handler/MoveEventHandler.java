@@ -43,13 +43,13 @@ public class MoveEventHandler implements MoveEventUseCase {
     @Transactional
     public CalendarEvent move(UUID eventId, UUID destinationSpaceId, SpaceMembership caller) {
         caller.ensureCanWrite();
-        CalendarEvent source = CopyEventHandler.readInCallersSpace(events, eventId, caller);
+        CalendarEvent source = EventTransfer.readInCallersSpace(events, eventId, caller);
         if (destinationSpaceId.equals(caller.spaceId())) {
             throw new CalendarException.SameSpaceTransfer();
         }
         SpaceMembership destination = resolveMembershipUseCase.resolve(destinationSpaceId, caller.userId());
         destination.ensureCanWrite();
-        CalendarEvent created = events.create(CopyEventHandler.commandFor(source, destinationSpaceId, caller.userId())
+        CalendarEvent created = events.create(EventTransfer.arrivingIn(source, destinationSpaceId, caller.userId())
             .withParticipants(memberValidator.participantsFor(destination, List.of())));
         deleteEventUseCase.delete(eventId, caller);
         return created;

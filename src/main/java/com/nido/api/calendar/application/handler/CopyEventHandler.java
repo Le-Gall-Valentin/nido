@@ -4,7 +4,6 @@ import com.nido.api.calendar.application.service.CalendarSpaceMemberValidator;
 import com.nido.api.calendar.application.port.in.CopyEventUseCase;
 import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CalendarException;
-import com.nido.api.calendar.domain.model.CreateEventCommand;
 import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.application.port.in.ResolveMembershipUseCase;
@@ -41,28 +40,13 @@ public class CopyEventHandler implements CopyEventUseCase {
     @Override
     @Transactional
     public CalendarEvent copy(UUID eventId, UUID destinationSpaceId, SpaceMembership caller) {
-        CalendarEvent source = readInCallersSpace(events, eventId, caller);
+        CalendarEvent source = EventTransfer.readInCallersSpace(events, eventId, caller);
         if (destinationSpaceId.equals(caller.spaceId())) {
             throw new CalendarException.SameSpaceTransfer();
         }
         SpaceMembership destination = resolveMembershipUseCase.resolve(destinationSpaceId, caller.userId());
         destination.ensureCanWrite();
-        return events.create(commandFor(source, destinationSpaceId, caller.userId())
+        return events.create(EventTransfer.arrivingIn(source, destinationSpaceId, caller.userId())
             .withParticipants(memberValidator.participantsFor(destination, List.of())));
-    }
-
-    static CalendarEvent readInCallersSpace(CalendarEventRepository events, UUID eventId, SpaceMembership caller) {
-        CalendarEvent source = events.findById(eventId).orElseThrow(CalendarException.EventNotFound::new);
-        if (!source.spaceId().equals(caller.spaceId())) {
-            throw new CalendarException.EventNotFound();
-        }
-        return source;
-    }
-
-    static CreateEventCommand commandFor(CalendarEvent source, UUID destinationSpaceId, UUID createdBy) {
-        return new CreateEventCommand(
-            destinationSpaceId, source.title(), source.description(), source.location(), source.allDay(),
-            source.startDate(), source.startTime(), source.endDate(), source.endTime(), source.color(),
-            List.of(), null, null, createdBy);
     }
 }

@@ -14,6 +14,8 @@ import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.kitchen.application.port.in.ListMenuEntriesUseCase;
 import com.nido.api.kitchen.domain.model.MenuEntry;
 import com.nido.api.kitchen.domain.model.MenuEntryView;
+import com.nido.api.kitchen.domain.model.Recipe;
+import com.nido.api.kitchen.domain.model.RecipeCategory;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.tasks.application.port.in.ListTasksDueBetweenUseCase;
@@ -161,9 +163,9 @@ class ExternalCalendarSourcesTest {
             new BigDecimal("1000.00"), targetDate, "#5c7a58", "🎯"), List.of());
     }
 
-    private com.nido.api.kitchen.domain.model.Recipe recipe(String name) {
-        return new com.nido.api.kitchen.domain.model.Recipe(
-            UUID.randomUUID(), spaceId, name, null, com.nido.api.kitchen.domain.model.RecipeCategory.PLAT,
+    private Recipe recipe(String name) {
+        return new Recipe(
+            UUID.randomUUID(), spaceId, name, null, RecipeCategory.PLAT,
             30, 4, false, List.of(), List.of(), null, Instant.now(), Instant.now());
     }
 }
