@@ -83,11 +83,13 @@ export function windowFor(view: CalendarView, iso: string): { from: string; to: 
  * Groups occurrences by every ISO day they occupy — a multi-day one appears on each day it spans,
  * not only on its first. A naive group-by-start puts a fortnight's holiday on July 1 and nowhere
  * else, which is the bug this function exists to prevent.
+ *
+ * It walks the days shown, not the days an occurrence lasts: a month costs 42 steps per occurrence
+ * however long that occurrence runs.
  */
 export function groupByDay(
   occurrences: CalendarOccurrence[], days: string[],
 ): Map<string, CalendarOccurrence[]> {
-  const inWindow = new Set(days)
   const grouped = new Map<string, CalendarOccurrence[]>()
   for (const occurrence of occurrences) {
     // An end at exactly 00:00 belongs to the day before — the same rule as segments.ts, inlined
@@ -95,10 +97,9 @@ export function groupByDay(
     const endsAtMidnight = !occurrence.allDay && occurrence.endTime !== null
       && occurrence.endTime.startsWith('00:00') && occurrence.endDate > occurrence.startDate
     const lastDay = endsAtMidnight ? addDays(occurrence.endDate, -1) : occurrence.endDate
-    const span = Math.max(0, daysBetween(occurrence.startDate, lastDay))
-    for (let i = 0; i <= span; i++) {
-      const day = addDays(occurrence.startDate, i)
-      if (!inWindow.has(day)) continue
+    for (const day of days) {
+      // ISO days compare as strings. An occurrence ending before it starts still shows on its first day.
+      if (day < occurrence.startDate || (day > lastDay && day !== occurrence.startDate)) continue
       const bucket = grouped.get(day)
       if (bucket) bucket.push(occurrence)
       else grouped.set(day, [occurrence])

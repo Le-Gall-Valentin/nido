@@ -121,6 +121,17 @@ describe('groupByDay', () => {
     expect(groupByDay([], ['2026-01-05']).get('2026-01-05')).toBeUndefined()
   })
 
+  it('costs the days shown, not the days an occurrence lasts', () => {
+    // An event may no longer cover more than 366 days, but one written before that rule, or by
+    // anything else than the form, must still not freeze the month: this took 3 s per render.
+    const forever = occurrence({ startDate: '0001-01-01', endDate: '9999-12-31' })
+    const month = monthGridDates('2026-09-15')
+    const started = performance.now()
+    const grouped = groupByDay([forever], month)
+    expect(performance.now() - started).toBeLessThan(100)
+    expect([...grouped.keys()]).toEqual(month)
+  })
+
   it('does not show an event ending at exactly midnight on the day after', () => {
     // A 22:00 → 00:00 evening used to appear on two days in the month view.
     const evening = occurrence({ allDay: false, startDate: '2026-09-23', startTime: '22:00',
