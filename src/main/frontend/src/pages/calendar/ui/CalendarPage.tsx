@@ -21,6 +21,7 @@ import { useCalendarUrlState } from '../model/useCalendarUrlState'
 import { useCalendarFilters } from '../model/useCalendarFilters'
 import { useSwipePeriod } from '../model/useSwipePeriod'
 import { useApplyDrop } from '../model/useApplyDrop'
+import { useRefreshAfterWrites } from '../model/useRefreshAfterWrites'
 import { formatPeriodLabel } from '../lib/periodLabel'
 import { CalendarDragLayer } from './CalendarDragLayer'
 import { MonthGrid } from './MonthGrid'
@@ -89,6 +90,7 @@ function CalendarPageContent() {
   const joinEvent = useJoinEvent(spaceId)
   const leaveEvent = useLeaveEvent(spaceId)
   const { apply: applyDrop, failed: dropFailed, dismissFailure } = useApplyDrop(spaceId)
+  useRefreshAfterWrites(spaceId)
 
   const swipe = useSwipePeriod(shiftPeriod)
 

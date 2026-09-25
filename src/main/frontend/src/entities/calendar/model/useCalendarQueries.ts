@@ -16,6 +16,9 @@ export function useOccurrences(spaceId: string | undefined, from: string, to: st
     queryKey: occurrencesKey(spaceId ?? '', from, to),
     queryFn: () => api.listOccurrences(spaceId as string, from, to),
     enabled: !!spaceId,
+    // Read afresh every time the calendar is opened: it shows what every other module writes, and none
+    // of those writes refreshes it — a task edited on the tasks page moments before came back unchanged.
+    staleTime: 0,
     // Paging back and forth through months would otherwise blank the grid on every step. Keeping
     // the previous window on screen while the next one loads is what makes navigation feel solid.
     placeholderData: (previous) => previous,

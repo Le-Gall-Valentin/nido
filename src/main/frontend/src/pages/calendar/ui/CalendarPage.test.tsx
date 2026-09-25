@@ -82,6 +82,26 @@ describe('CalendarPage', () => {
     expect(finance.listSavingsGoals).toHaveBeenCalledWith('space-1')
   })
 
+  it('refreshes itself once a savings deadline is moved from it', async () => {
+    // A write made through another module's editor knows nothing of the calendar: the old date stayed.
+    const goal = { id: 'goal-1', name: 'Vacances', targetAmount: 1200, targetDate: '2026-09-23', color: '#5c7a58',
+      glyph: '🎯', totalContributed: 0, contributions: [] }
+    const listOccurrences = vi.fn().mockResolvedValue([occurrence({ title: 'Vacances', source: 'SAVINGS', sourceId: 'goal-1' })])
+    const updateSavingsGoal = vi.fn().mockResolvedValue({ ...goal, targetDate: '2026-09-25' })
+    renderPage([], {
+      calendar: { listOccurrences },
+      finance: { listSavingsGoals: vi.fn().mockResolvedValue([goal]), updateSavingsGoal },
+    })
+    fireEvent.click(await screen.findByText('Vacances'))
+    fireEvent.change(await screen.findByLabelText('savings.target_date_label'), { target: { value: '2026-09-25' } })
+    const readsBefore = listOccurrences.mock.calls.length
+
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }))
+
+    await vi.waitFor(() => expect(updateSavingsGoal).toHaveBeenCalled())
+    await vi.waitFor(() => expect(listOccurrences.mock.calls.length).toBeGreaterThan(readsBefore))
+  })
+
   it('opens a finance occurrence instead of crashing', async () => {
     const { finance } = renderPage([occurrence({ title: 'Loyer', source: 'FINANCE', sourceId: 't-1', seriesId: 's-1' })])
     fireEvent.click(await screen.findByText('Loyer'))
