@@ -2,7 +2,10 @@ package com.nido.api.infrastructure.config;
 
 import com.nido.api.IntegrationTestConfig;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.health.contributor.HealthContributor;
+import org.springframework.boot.health.contributor.HealthContributors;
+import org.springframework.boot.health.contributor.ReactiveHealthContributors;
+import org.springframework.boot.health.registry.HealthContributorRegistry;
+import org.springframework.boot.health.registry.ReactiveHealthContributorRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalManagementPort;
@@ -13,7 +16,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,7 +41,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestPropertySource(properties = "management.server.port=0")
 class HealthProbeIT {
 
-    @Autowired Map<String, HealthContributor> healthContributors;
+    @Autowired HealthContributorRegistry blockingContributors;
+    @Autowired ReactiveHealthContributorRegistry reactiveContributors;
 
     @LocalServerPort int applicationPort;
     @LocalManagementPort int managementPort;
@@ -99,7 +102,7 @@ class HealthProbeIT {
         // test: pausing the container does not close the port, it swallows the packets, so the
         // health check sat waiting on a network timeout and the suite hung past ten minutes.
         // Whether Boot folds a failing contributor into a 503 is Boot's own test suite's business.
-        assertThat(healthContributors.keySet())
+        assertThat(blockingContributors.stream().map(HealthContributors.Entry::name))
             .anySatisfy(name -> assertThat(name).containsIgnoringCase("db"));
     }
 
@@ -112,9 +115,13 @@ class HealthProbeIT {
         // trades a partly working application for a crash loop. Losing Redis is something to be
         // paged about, not something to restart into.
         //
-        // Pinned rather than left implicit: it is absent today because nothing registers it, and
-        // an upgrade that starts registering one would change what a restart means here.
-        assertThat(healthContributors.keySet())
+        //
+        // Asked of both registries the probe reads. Spring registers Redis's indicator as a
+        // *reactive* one whenever Reactor is on the classpath, and a check of the blocking beans
+        // alone passed while production answered DOWN: its Redis user may not run INFO.
+        assertThat(blockingContributors.stream().map(HealthContributors.Entry::name))
+            .noneSatisfy(name -> assertThat(name).containsIgnoringCase("redis"));
+        assertThat(reactiveContributors.stream().map(ReactiveHealthContributors.Entry::name))
             .noneSatisfy(name -> assertThat(name).containsIgnoringCase("redis"));
     }
 

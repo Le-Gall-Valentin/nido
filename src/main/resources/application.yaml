@@ -59,6 +59,14 @@ management:
     health:
       show-details: never
       show-components: never
+  # Redis stays out of the verdict. It is a hard dependency, but this probe's consequence is a
+  # restart, and restarting does not bring Redis back — a crash loop for a partly working app.
+  # Its indicator also runs INFO, which the production Redis user may not: left on, it answered
+  # DOWN every time. Switched off here rather than merely left out, since Spring registers it on
+  # its own whenever Reactor is on the classpath.
+  health:
+    redis:
+      enabled: false
 
 springdoc:
   api-docs:
