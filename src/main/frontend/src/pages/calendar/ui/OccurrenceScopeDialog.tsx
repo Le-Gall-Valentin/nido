@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Dialog } from '@/shared/ui'
-
-export type OccurrenceScope = 'occurrence' | 'series'
+import type { OccurrenceScope } from '../model/useCalendarDialog'
 
 interface OccurrenceScopeDialogProps {
   /** What the caller is about to do — the wording differs for an edit and a deletion. */

@@ -176,6 +176,73 @@ describe('CalendarPage', () => {
 
 })
 
+describe('CalendarPage — one dialog leading to the next', () => {
+  const concert = occurrence({ title: 'Concert' })
+
+  it('hands back to the day an event was being added to, once its form is closed', async () => {
+    renderPage([])
+    fireEvent.click(await screen.findByRole('button', { name: /open_day:.*23 septembre 2026/ }))
+    fireEvent.click(await screen.findByRole('button', { name: 'day_detail.add_event' }))
+    expect(await screen.findByLabelText('form.title')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'form.cancel' }))
+
+    expect(await screen.findByRole('button', { name: 'day_detail.add_event' })).toBeTruthy()
+    expect(screen.queryByLabelText('form.title')).toBeNull()
+  })
+
+  it('edits only one occurrence of a series, on its own slot', async () => {
+    const detachOccurrence = vi.fn().mockResolvedValue({})
+    renderPage([PIANO_OCCURRENCE], { calendar: { detachOccurrence } })
+    fireEvent.click(await screen.findByText('Piano'))
+    fireEvent.click(await screen.findByRole('button', { name: 'detail.edit' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'scope.this_occurrence' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'form.save' }))
+
+    await vi.waitFor(() => expect(detachOccurrence).toHaveBeenCalledWith(
+      'space-1', 's-1', '2026-09-23', expect.objectContaining({ title: 'Piano', startTime: '18:00' })))
+  })
+
+  it('cancels only one occurrence of a series, on its own slot', async () => {
+    const excludeOccurrence = vi.fn().mockResolvedValue(undefined)
+    renderPage([PIANO_OCCURRENCE], { calendar: { excludeOccurrence } })
+    fireEvent.click(await screen.findByText('Piano'))
+    fireEvent.click(await screen.findByRole('button', { name: 'detail.delete' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'scope.this_occurrence' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'delete_confirm.confirm' }))
+
+    await vi.waitFor(() => expect(excludeOccurrence).toHaveBeenCalledWith('space-1', 's-1', '2026-09-23'))
+  })
+
+  it('leaves everything closed when the scope question is dismissed', async () => {
+    renderPage([PIANO_OCCURRENCE])
+    fireEvent.click(await screen.findByText('Piano'))
+    fireEvent.click(await screen.findByRole('button', { name: 'detail.edit' }))
+    expect(await screen.findByText('scope.edit_question')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'close' }))
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('offers to copy an event to another context from its detail', async () => {
+    renderPage([concert])
+    fireEvent.click(await screen.findByText('Concert'))
+    fireEvent.click(await screen.findByRole('button', { name: 'detail.copy' }))
+
+    expect(await screen.findByRole('heading', { level: 3, name: 'copy_title:{"name":"Concert"}' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'detail.copy' })).toBeNull()
+  })
+
+  it('joins an event from its detail, which stays open', async () => {
+    const joinEvent = vi.fn().mockResolvedValue(undefined)
+    renderPage([concert], { calendar: { joinEvent } })
+    fireEvent.click(await screen.findByText('Concert'))
+    fireEvent.click(await screen.findByRole('button', { name: 'detail.join' }))
+
+    await vi.waitFor(() => expect(joinEvent).toHaveBeenCalledWith('space-1', 'Concert'))
+    expect(screen.getByRole('button', { name: 'detail.edit' })).toBeTruthy()
+  })
+})
+
 /** A weekly series and one of its occurrences, as the feed projects it on the page's day. */
 const PIANO_SERIES: RecurringEventSeries = {
   id: 's-1', title: 'Piano', description: 'Salle 3', location: 'Conservatoire', allDay: false,
