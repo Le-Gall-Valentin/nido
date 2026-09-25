@@ -95,10 +95,12 @@ export default tseslint.config(
         { type: 'shared',   pattern: ['src/shared/**'] },
         { type: 'entities', pattern: ['src/entities/**'] },
         { type: 'features', pattern: ['src/features/*/**'], capture: ['feature'] },
+        // Compound UI blocks that span several features, so they can be shared between pages.
+        // MoveTaskPanel is the case that forced this layer in: it imports both
+        // features/space-switcher and features/transfer-to-space, which no feature may do.
+        { type: 'widgets',  pattern: ['src/widgets/*/**'],  capture: ['widget'] },
         { type: 'pages',    pattern: ['src/pages/*/**'],    capture: ['page'] },
         { type: 'app',      pattern: ['src/app/**'] },
-        // Note: 'widgets' FSD layer intentionally omitted — project uses 'pages' and 'features' only.
-        // Add 'widgets' here if compound UI blocks spanning multiple features are introduced.
       ],
       'boundaries/ignore': ['src/main.tsx', 'src/vite-env.d.ts'],
     },
@@ -119,15 +121,25 @@ export default tseslint.config(
             ],
           },
           {
+            from: { type: 'widgets' },
+            allow: [
+              { to: { type: 'shared' } },
+              { to: { type: 'entities' } },
+              { to: { type: 'features' } },
+              { to: { type: 'widgets', captured: { widget: '{{ from.captured.widget }}' } } },
+            ],
+          },
+          {
             from: { type: 'pages' },
             allow: [
               { to: { type: 'shared' } },
               { to: { type: 'entities' } },
               { to: { type: 'features' } },
+              { to: { type: 'widgets' } },
               { to: { type: 'pages', captured: { page: '{{ from.captured.page }}' } } },
             ],
           },
-          { from: { type: 'app' }, allow: [{ to: { type: ['shared', 'entities', 'features', 'pages', 'app'] } }] },
+          { from: { type: 'app' }, allow: [{ to: { type: ['shared', 'entities', 'features', 'widgets', 'pages', 'app'] } }] },
           // Replaces the deprecated boundaries/no-private (allowUncles: true): forbids importing
           // another element's private (nested) parts, except internal/child/sibling/uncle deps.
           // Evaluated last so it overrides the layer allows above (last-write-wins).

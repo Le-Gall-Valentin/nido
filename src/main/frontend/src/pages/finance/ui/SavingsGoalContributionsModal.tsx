@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { Dialog } from '@/shared/ui'
 import { UserAvatar } from '@/entities/user'
 import type { SavingsContribution } from '@/entities/finance'
-import { formatAmount } from '../lib/formatAmount'
-import { safeSavingsGoalColor, safeSavingsGoalGlyph } from '../lib/savingsGoalAppearance'
+import { safeSavingsGoalColor, safeSavingsGoalGlyph } from '@/widgets/savings-goal'
+import { formatAmount } from '@/shared/lib'
 
 interface SavingsGoalContributionsModalProps {
   goalName: string

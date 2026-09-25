@@ -9,13 +9,11 @@ import { useSpaceTimezone } from '@/features/space-switcher'
 import { isOverdue } from '../lib/isOverdue'
 import { UserAvatar } from '@/entities/user'
 import { tasksApi, TasksApiProvider, type TasksApi, type Task, type TaskStatus } from '@/entities/tasks'
-import { TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
+import {
+  TaskDetailModal, TaskFormPanel, DeleteTaskPanel, MoveTaskPanel, RecurringSeriesPanel,
+  TASK_PRIORITY_META,
+} from '@/widgets/task-management'
 import { useTasksPageState } from '../model/useTasksPageState'
-import { TaskDetailModal } from './TaskDetailModal'
-import { TaskFormPanel } from './TaskFormPanel'
-import { DeleteTaskPanel } from './DeleteTaskPanel'
-import { MoveTaskPanel } from './MoveTaskPanel'
-import { RecurringSeriesPanel } from './RecurringSeriesPanel'
 
 const COLUMN_ORDER: TaskStatus[] = ['TODO', 'DOING', 'DONE']
 

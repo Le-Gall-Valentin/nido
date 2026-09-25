@@ -4,7 +4,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { Dialog } from '@/shared/ui'
 import type { Category, BudgetLine } from '@/entities/finance'
 import { CategoryIconBadge } from './CategoryIconBadge'
-import { formatAmount } from '../lib/formatAmount'
+import { formatAmount } from '@/shared/lib'
 
 interface BudgetManagerModalProps {
   categories: Category[]

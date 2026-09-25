@@ -5,6 +5,7 @@ import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskStatus;
 import com.nido.api.tasks.domain.model.UpdateTaskCommand;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,6 +13,8 @@ import java.util.UUID;
 public interface TaskRepository {
     Optional<Task> findById(UUID taskId);
     List<Task> findBySpaceId(UUID spaceId);
+    /** The space's tasks due inside {@code [from, to]} — a calendar window, never the whole board. */
+    List<Task> findBySpaceIdAndDueDateBetween(UUID spaceId, LocalDate from, LocalDate to);
     Task create(CreateTaskCommand command);
     /**
      * Persists every command as a single batch instead of one round trip per task —

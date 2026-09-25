@@ -3,6 +3,8 @@ package com.nido.api.tasks.domain.model;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Computes a recurring series' due dates as a fixed calendar sequence
@@ -41,6 +43,35 @@ public final class RecurrenceScheduler {
     }
 
     /**
+     * Every occurrence of a series falling inside {@code [from, to]}, in ascending order, capped
+     * at {@code limit}.
+     *
+     * <p>Exists for the calendar, which shows the future of a recurring task — and that future
+     * exists nowhere else: materialization stops at today, by design. Shaped after Finance's
+     * {@code RecurrenceProjector.occurrencesBetween} so the two read as the pair they are.
+     *
+     * <p>Like that one, it locates its first occurrence arithmetically rather than stepping from
+     * occurrence 0, so the cost depends on how many dates come back and never on how old the
+     * anchor is; {@code limit} is the safety net for a caller asking for an absurd range.
+     */
+    public static List<LocalDate> occurrencesBetween(LocalDate anchorDate, RecurrenceInterval intervalType,
+                                                     int intervalCount, LocalDate endDate,
+                                                     LocalDate from, LocalDate to, int limit) {
+        LocalDate lastAllowed = endDate != null && endDate.isBefore(to) ? endDate : to;
+        List<LocalDate> dates = new ArrayList<>();
+        long index = firstOccurrenceIndexOnOrAfter(anchorDate, intervalType, intervalCount, from);
+        while (dates.size() < limit && index <= Integer.MAX_VALUE) {
+            LocalDate date = nextDueDate(anchorDate, intervalType, intervalCount, (int) index);
+            if (date.isAfter(lastAllowed)) {
+                break;
+            }
+            dates.add(date);
+            index++;
+        }
+        return dates;
+    }
+
+    /**
      * Shifts a concrete date backward by a single interval — used to find where a
      * materialized occurrence's lead-time visibility window opens. Unlike
      * {@link #nextDueDate}, this is a one-off shift of an arbitrary date, not a
@@ -73,6 +104,20 @@ public final class RecurrenceScheduler {
         if (endDate != null && endDate.isBefore(anchorDate)) {
             throw new TaskException.InvalidEndDate();
         }
+    }
+
+    /**
+     * The number of a schedule's last occurrence falling on or before {@code day}, or -1 when the
+     * schedule starts after it — so that the next occurrence, number + 1, is the first one strictly
+     * after {@code day}. What a series' count must be when its start moves: the tasks it already
+     * generated stay put, and the next one must fall after the last of them.
+     */
+    public static int lastOccurrenceNumberOnOrBefore(LocalDate anchorDate, RecurrenceInterval intervalType,
+                                                     int intervalCount, LocalDate day) {
+        if (day.isBefore(anchorDate)) {
+            return -1;
+        }
+        return (int) Math.min(Integer.MAX_VALUE, firstOccurrenceIndexOnOrAfter(anchorDate, intervalType, intervalCount, day.plusDays(1)) - 1);
     }
 
     /**

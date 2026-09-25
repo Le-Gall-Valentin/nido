@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 055-bound-calendar-durations
+      author: nido
+      comment: >
+        An event covers at most 366 days, the most one calendar read shows, and an occurrence of a
+        series never lasts longer than the time between two of them. Unbounded, a series lasting a
+        million days projected hundreds of thousands of occurrences into every read.
+      changes:
+        # end_date - start_date is a number of days: 365 days apart covers 366 of them.
+        - sql:
+            sql: ALTER TABLE calendar_events ADD CONSTRAINT chk_ce_span CHECK (end_date - start_date < 366)
+            splitStatements: false
+        # Coarser than the application's rule, which compares the times of a timed occurrence to the
+        # minute: this one cannot see them, so it lets a duration reach the interval itself. That is
+        # enough to keep a read bounded, and never refuses what the application accepts.
+        - sql:
+            sql: >-
+              ALTER TABLE calendar_recurring_event_series ADD CONSTRAINT chk_cres_duration_within_interval CHECK (
+                duration_days <= (CASE interval_type WHEN 'DAILY' THEN 1 WHEN 'WEEKLY' THEN 7
+                  WHEN 'MONTHLY' THEN 28 ELSE 365 END)::bigint * interval_count)
+            splitStatements: false
+      rollback:
+        - sql:
+            sql: ALTER TABLE calendar_events DROP CONSTRAINT chk_ce_span
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series DROP CONSTRAINT chk_cres_duration_within_interval

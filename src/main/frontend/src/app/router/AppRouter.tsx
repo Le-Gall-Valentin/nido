@@ -25,6 +25,7 @@ const KitchenRecipeDetailPage = lazy(() =>
 const KitchenMenuPage = lazy(() => import('@/pages/kitchen').then((m) => ({ default: m.KitchenMenuPage })))
 const ShoppingListPage = lazy(() => import('@/pages/shopping'))
 const TasksPage = lazy(() => import('@/pages/tasks'))
+const CalendarPage = lazy(() => import('@/pages/calendar'))
 const FinancePage = lazy(() => import('@/pages/finance'))
 
 export function AppRouter() {
@@ -100,6 +101,7 @@ export function AppRouter() {
               <Route index element={<Navigate to="courses" replace />} />
               <Route path="courses" element={<ShoppingListPage />} />
               <Route path="tasks" element={<TasksPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
             </Route>
             <Route path="finance" element={<FinancePage />} />
           </Route>

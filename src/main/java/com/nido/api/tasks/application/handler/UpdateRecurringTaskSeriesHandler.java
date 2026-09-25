@@ -52,6 +52,26 @@ public class UpdateRecurringTaskSeriesHandler implements UpdateRecurringTaskSeri
         }
         boolean frequencyChanged = existing.intervalType() != command.intervalType()
             || existing.intervalCount() != command.intervalCount();
+        // The last day the series has already accounted for: the scheduled date of the last task it
+        // generated — or, when its start was moved past its last task and nothing has been generated
+        // since (a count of -1), the day before that start, since every earlier task falls before it.
+        LocalDate accountedUpTo = existing.occurrenceCount() < 0
+            ? existing.anchorDate().minusDays(1)
+            : RecurrenceScheduler.nextDueDate(
+                existing.anchorDate(), existing.intervalType(), existing.intervalCount(), existing.occurrenceCount());
+        boolean startMoved = !command.anchorDate().equals(existing.anchorDate());
+        if ((!frequencyChanged && startMoved) || (frequencyChanged && existing.occurrenceCount() < 0)) {
+            // The tasks already generated stay where they are, and the count is re-read against the
+            // schedule as submitted: its last occurrence on or before the last day accounted for. The
+            // next task then falls strictly after that day — never on a date that already has a task,
+            // and never back-filling dates of the new schedule that went by before it.
+            int count = RecurrenceScheduler.lastOccurrenceNumberOnOrBefore(
+                command.anchorDate(), command.intervalType(), command.intervalCount(), accountedUpTo);
+            RecurrenceScheduler.validateBacklog(command.anchorDate(), command.intervalType(),
+                command.intervalCount(), command.endDate(), today, count);
+            seriesRepository.update(command);
+            return seriesRepository.advance(command.seriesId(), existing.currentRotationIndex(), count);
+        }
         if (!frequencyChanged) {
             // Anchor and occurrence count both survive this branch, so the backlog is measured
             // against what the series has already generated — renaming a long-running series
@@ -66,8 +86,7 @@ public class UpdateRecurringTaskSeriesHandler implements UpdateRecurringTaskSeri
         // the new interval occurrenceCount times from the old anchor, which could land
         // decades away. occurrenceCount resets to 0 since the new anchor already accounts
         // for every occurrence generated so far.
-        LocalDate lastGeneratedDueDate = RecurrenceScheduler.nextDueDate(
-            existing.anchorDate(), existing.intervalType(), existing.intervalCount(), existing.occurrenceCount());
+        LocalDate lastGeneratedDueDate = accountedUpTo;
         UpdateRecurringTaskSeriesCommand reAnchoredCommand = new UpdateRecurringTaskSeriesCommand(
             command.seriesId(), command.spaceId(), command.title(), command.priority(), command.subtaskTemplates(),
             command.intervalType(), command.intervalCount(), command.leadIntervalType(), command.leadIntervalCount(),

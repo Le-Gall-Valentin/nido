@@ -4,8 +4,7 @@ import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { MAX_PAST_OCCURRENCES, pastOccurrenceCount, todayIso } from '@/shared/lib'
 import type { SpaceMember } from '@/entities/space'
 import type { Category, ContributionInput, RecurrenceInput, Transaction, TransactionType } from '@/entities/finance'
-import { resolveContributorsOrError } from '../lib/resolveContributorsOrError'
-import { ContributorsPicker } from './ContributorsPicker'
+import { ContributorsPicker, resolveContributorsOrError } from '@/widgets/finance-recurring-series'
 
 export interface TransactionFormInput {
   label: string

@@ -1,0 +1,157 @@
+{
+  "title": "Calendar",
+  "new_event": "New event",
+  "loading": "Loading…",
+  "error": "Could not load the calendar.",
+  "today": "Today",
+  "previous_period": "Previous period",
+  "next_period": "Next period",
+  "empty_day": "Nothing planned.",
+  "all_day_band": "All day",
+  "all_day_short": "All day",
+  "open_day": "Open {{date}}",
+  "view": {
+    "month": "Month",
+    "week": "Week",
+    "day": "Day"
+  },
+  "weekday_short": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+  },
+  "source": {
+    "EVENT": "Events",
+    "TASK": "Tasks",
+    "FINANCE": "Finance",
+    "MEAL": "Meals",
+    "SAVINGS": "Savings"
+  },
+  "filters": {
+    "label": "Filter by source"
+  },
+  "recurring_series": {
+    "manage": "Manage recurring events"
+  },
+  "palette": {
+    "today": "Calendar — today"
+  },
+  "day_detail": {
+    "add_event": "Add an event on this day"
+  },
+  "detail": {
+    "title": "Details",
+    "recurring": "Recurring event",
+    "participants": "Participants",
+    "no_participants": "Nobody",
+    "edit": "Edit",
+    "delete": "Delete",
+    "copy": "Copy to…",
+    "move": "Move to…",
+    "join": "Join",
+    "leave": "Leave",
+    "missing": "This item no longer exists.",
+    "projected_hint": "Upcoming occurrence: it does not exist yet, only its series can be changed.",
+    "open_in": {
+      "EVENT": "Open",
+      "TASK": "Open in Tasks",
+      "FINANCE": "Open in Finance",
+      "MEAL": "Plan this meal",
+      "SAVINGS": "Open in Savings"
+    }
+  },
+  "form": {
+    "create_title": "New event",
+    "edit_title": "Edit event",
+    "title": "Title",
+    "description": "Description",
+    "location": "Location",
+    "all_day": "All day",
+    "recurring": "Recurring event",
+    "start_date": "Start date",
+    "end_date": "End date",
+    "start_time": "Start time",
+    "end_time": "End time",
+    "color": "Colour",
+    "participants": "Participants",
+    "cancel": "Cancel",
+    "save": "Save",
+    "title_required": "A title is required.",
+    "dates_required": "Start and end dates are required.",
+    "times_required": "An event that is not all day has a start and an end time.",
+    "end_before_start": "The end cannot precede the start.",
+    "too_long": "An event lasts at most {{days}} days.",
+    "save_failed": "Saving failed.",
+    "color_name": {
+      "event-violet": "Violet",
+      "event-magenta": "Magenta",
+      "event-cyan": "Cyan",
+      "event-graphite": "Graphite",
+      "event-indigo": "Indigo",
+      "event-brique": "Brick"
+    }
+  },
+  "delete": {
+    "failed": "Deleting failed.",
+    "occurrence_message": "This occurrence will be removed from the series. The others are unchanged."
+  },
+  "scope": {
+    "edit_title": "Edit",
+    "delete_title": "Delete",
+    "edit_question": "Edit this occurrence only, or the whole series?",
+    "delete_question": "Delete this occurrence only, or the whole series?",
+    "this_occurrence": "This occurrence",
+    "whole_series": "The whole series"
+  },
+  "series": {
+    "edit_title": "Edit series",
+    "empty": "No recurring events.",
+    "edit": "Edit {{name}}",
+    "delete": "Delete {{name}}",
+    "delete_message": "The series and all its occurrences will be deleted, including the ones you edited or cancelled.",
+    "stop_message": "Past occurrences stay. Every one still to come will be deleted, including the ones you edited.",
+    "interval_count": "Every",
+    "interval_type": "Frequency",
+    "interval": {
+      "DAILY": "day(s)",
+      "WEEKLY": "week(s)",
+      "MONTHLY": "month(s)",
+      "YEARLY": "year(s)"
+    },
+    "until": "Until (optional)",
+    "split_notice": "Past occurrences and the ones you edited stay as they are: the change applies from today on.",
+    "from": "from {{date}}",
+    "until_date": "until {{date}}",
+    "interval_invalid": "The frequency must be at least 1.",
+    "occurrence_too_long": "An occurrence cannot last longer than the time between two occurrences.",
+    "until_before_start": "The repetition cannot stop before the start date."
+  },
+  "meal": {
+    "title": "Meals on {{date}}",
+    "recipe": "Recipe",
+    "pick_recipe": "Pick a recipe…",
+    "portions": "Portions",
+    "portions_short": "{{count}} portions",
+    "add": "Add",
+    "remove": "Remove {{name}}",
+    "recipe_required": "Pick a recipe.",
+    "portions_invalid": "Portions must be a positive whole number.",
+    "save_failed": "Adding failed.",
+    "remove_failed": "Removing it failed."
+  },
+  "drag": {
+    "failed": "The move could not be saved.",
+    "next_month": "Next month →",
+    "prev_month": "← Previous month",
+    "next_week": "Next week →",
+    "prev_week": "← Previous week",
+    "next_day": "Next day →",
+    "prev_day": "← Previous day",
+    "next_week_vertical": "Next week ↓",
+    "prev_week_vertical": "↑ Previous week"
+  }
+}

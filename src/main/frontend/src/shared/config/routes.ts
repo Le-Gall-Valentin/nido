@@ -23,6 +23,7 @@ export const ROUTES = {
   spaceKitchenMenu: (spaceId: string) => `/s/${spaceId}/kitchen/menu`,
   spaceOrganisationCourses: (spaceId: string) => `/s/${spaceId}/organisation/courses`,
   spaceOrganisationTasks: (spaceId: string) => `/s/${spaceId}/organisation/tasks`,
+  spaceOrganisationCalendar: (spaceId: string) => `/s/${spaceId}/organisation/calendar`,
   spaceFinance: (spaceId: string) => `/s/${spaceId}/finance`,
 } as const
 

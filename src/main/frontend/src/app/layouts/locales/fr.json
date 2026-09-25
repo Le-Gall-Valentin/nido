@@ -18,7 +18,8 @@
     "finance": "Finances",
     "pending_invitations": "Invitations en attente",
     "open_tasks_one": "{{count}} tâche ouverte",
-    "open_tasks_other": "{{count}} tâches ouvertes"
+    "open_tasks_other": "{{count}} tâches ouvertes",
+    "organisation_calendar": "Calendrier"
   },
   "topbar": {
     "search_label": "Rechercher",

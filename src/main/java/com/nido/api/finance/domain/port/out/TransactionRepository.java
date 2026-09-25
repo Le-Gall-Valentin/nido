@@ -6,6 +6,7 @@ import com.nido.api.finance.domain.model.SplitTransaction;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +15,13 @@ import java.util.UUID;
 public interface TransactionRepository {
     Optional<Transaction> findById(UUID transactionId);
     List<Transaction> findBySpaceIdAndMonth(UUID spaceId, YearMonth month);
+
+    /**
+     * Same read over an arbitrary range. A calendar window is not aligned to months — a week can
+     * straddle two, a month view straddles three — so the month-based read above cannot serve it
+     * without being called several times and stitched back together.
+     */
+    List<Transaction> findBySpaceIdAndDateBetween(UUID spaceId, LocalDate from, LocalDate to);
     /** Every transaction ever recorded in the space — balances/settlements span all time, not just one month. */
     List<Transaction> findAllBySpaceId(UUID spaceId);
 

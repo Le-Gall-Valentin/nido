@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 056-add-calendar-series-starts-on
+      author: nido
+      comment: >
+        The first day a series shows, when it is not its anchor. A series edited after it began stops
+        the day before, keeping its past; the edit carries on from that day in a series of its own,
+        whose anchor still sets the rhythm — the 31st of each month stays the 31st — while this column
+        says where it picks up.
+      changes:
+        - addColumn:
+            tableName: calendar_recurring_event_series
+            columns:
+              - column:
+                  name: starts_on
+                  type: DATE
+      rollback:
+        - dropColumn:
+            tableName: calendar_recurring_event_series
+            columnName: starts_on

@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Collection;
 import java.util.List;
@@ -45,6 +46,11 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     @Override
     public Optional<Transaction> findById(UUID transactionId) {
         return transactions.findById(transactionId).map(e -> toDomain(e, contributors.findByTransactionId(e.getId())));
+    }
+
+    @Override
+    public List<Transaction> findBySpaceIdAndDateBetween(UUID spaceId, LocalDate from, LocalDate to) {
+        return toDomainList(transactions.findBySpaceIdAndDateBetween(spaceId, from, to));
     }
 
     @Override

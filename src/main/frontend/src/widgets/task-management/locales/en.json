@@ -1,0 +1,73 @@
+{
+  "detail": {
+    "title": "Task details",
+    "status_label": "Status",
+    "due_date_label": "Due date",
+    "no_due_date": "No due date",
+    "assignees_label": "Assigned to",
+    "no_assignee": "No one",
+    "created_by_label": "Created by",
+    "unknown_creator": "Unknown",
+    "rotation_participants_label": "Rotation participants",
+    "this_occurrence_label": "This time",
+    "close": "Close"
+  },
+  "form": {
+    "create_title": "New task",
+    "edit_title": "Edit task",
+    "title_label": "Title",
+    "title_required": "Title is required.",
+    "priority_label": "Priority",
+    "due_date_label": "Due date",
+    "assignees_label": "Assigned to",
+    "subtasks_title": "Subtasks",
+    "subtask_placeholder": "New subtask…",
+    "remove": "Remove",
+    "recurring_label": "Recurring task",
+    "recurrence_interval_type_label": "Frequency",
+    "recurrence_interval_count_label": "Every",
+    "recurrence_anchor_date_label": "Starting on",
+    "recurrence_anchor_date_required": "The start date is required.",
+    "recurrence_rotation_label": "Rotate between",
+    "interval": {
+      "DAILY": "day(s)",
+      "WEEKLY": "week(s)",
+      "MONTHLY": "month(s)",
+      "YEARLY": "year(s)"
+    },
+    "cancel": "Cancel",
+    "save": "Save",
+    "lead_time_exceeds_interval": "The lead time cannot exceed the recurrence interval.",
+    "too_many_past_occurrences": "This series would create {{occurrences}} past occurrences at once (maximum {{maximum}}). Move its start date closer, or use a longer interval.",
+    "submit_error": "Something went wrong. Please try again."
+  },
+  "delete_confirm": {
+    "title": "Delete \"{{title}}\"?",
+    "error": "Something went wrong. Please try again."
+  },
+  "column": {
+    "TODO": "To do",
+    "DOING": "In progress",
+    "DONE": "Done"
+  },
+  "recurring_series": {
+    "manage": "Manage recurring tasks",
+    "title": "Manage recurring tasks",
+    "detail_title": "Recurring task details",
+    "empty": "No recurring tasks.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "edit_title": "Edit recurring task",
+    "lead_time_label": "Appears",
+    "lead_time_before_due_date": "before the due date",
+    "lead_time_count_label": "Lead time",
+    "lead_time_type_label": "Lead time unit",
+    "end_date_label": "End date (optional)",
+    "end_date_before_start": "The end date must be after the start date."
+  },
+  "priority": {
+    "HIGH": "High",
+    "MED": "Medium",
+    "LOW": "Low"
+  }
+}

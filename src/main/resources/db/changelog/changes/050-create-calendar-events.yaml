@@ -1,0 +1,130 @@
+databaseChangeLog:
+  - changeSet:
+      id: 050-create-calendar-events
+      author: nido
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: calendar_events
+      changes:
+        - createTable:
+            tableName: calendar_events
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: space_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title_encrypted
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description_encrypted
+                  type: TEXT
+              - column:
+                  name: location_encrypted
+                  type: TEXT
+              - column:
+                  name: all_day
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_time
+                  type: TIME
+              - column:
+                  name: end_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_time
+                  type: TIME
+              - column:
+                  name: color
+                  type: VARCHAR(30)
+              # Set together, and only when this row takes over one slot of a series.
+              # recurring_original_date is the slot it replaces, NOT where it now sits —
+              # that is what lets the projector skip the slot even when the event moved away.
+              - column:
+                  name: recurring_series_id
+                  type: UUID
+              - column:
+                  name: recurring_original_date
+                  type: DATE
+              - column:
+                  name: created_by
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE calendar_events ADD CONSTRAINT chk_ce_all_day CHECK ((all_day AND start_time IS NULL AND end_time IS NULL) OR (NOT all_day AND start_time IS NOT NULL AND end_time IS NOT NULL))
+            splitStatements: false
+        - sql:
+            sql: ALTER TABLE calendar_events ADD CONSTRAINT chk_ce_dates CHECK (end_date >= start_date)
+            splitStatements: false
+        # Half a detachment is meaningless: a slot without a series, or a series without a slot,
+        # would leave the projector unable to decide whether the slot is taken. Unrepresentable.
+        - sql:
+            sql: ALTER TABLE calendar_events ADD CONSTRAINT chk_ce_detachment CHECK ((recurring_series_id IS NULL AND recurring_original_date IS NULL) OR (recurring_series_id IS NOT NULL AND recurring_original_date IS NOT NULL))
+            splitStatements: false
+        - addUniqueConstraint:
+            tableName: calendar_events
+            columnNames: recurring_series_id, recurring_original_date
+            constraintName: uq_calendar_events_series_slot
+        - createIndex:
+            tableName: calendar_events
+            indexName: idx_calendar_events_space_start
+            columns:
+              - column:
+                  name: space_id
+              - column:
+                  name: start_date
+        - createIndex:
+            tableName: calendar_events
+            indexName: idx_calendar_events_series_slot
+            columns:
+              - column:
+                  name: recurring_series_id
+              - column:
+                  name: recurring_original_date
+        - addForeignKeyConstraint:
+            baseTableName: calendar_events
+            baseColumnNames: space_id
+            referencedTableName: spaces
+            referencedColumnNames: id
+            constraintName: fk_calendar_events_space
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: calendar_events
+            baseColumnNames: recurring_series_id
+            referencedTableName: calendar_recurring_event_series
+            referencedColumnNames: id
+            constraintName: fk_calendar_events_series
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: calendar_events
+            cascadeConstraints: true

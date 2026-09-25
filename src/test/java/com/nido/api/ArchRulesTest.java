@@ -252,6 +252,58 @@ class ArchRulesTest {
     }
 
     // -------------------------------------------------------------------------
+    // The calendar reads the scoped modules — from its sources, and one way only
+    //
+    // Every source of the calendar lives in calendar.infrastructure.source and calls the inbound use
+    // cases of the module it reads. None of those modules may learn the calendar exists; the rest of
+    // the calendar may not name them; and even the sources may reach only what a module publishes —
+    // its use cases and the domain types they return — never its persistence, web layer or handlers.
+    // -------------------------------------------------------------------------
+
+    private static final String CALENDAR = BASE + "calendar..";
+    private static final String CALENDAR_SOURCES = BASE + "calendar.infrastructure.source..";
+
+    private static String[] scopedModulePackages() {
+        return SCOPED_MODULES.stream().map(module -> BASE + module + "..").toArray(String[]::new);
+    }
+
+    @Test
+    void no_module_the_calendar_reads_depends_on_the_calendar() {
+        noClasses()
+            .that().resideInAnyPackage(scopedModulePackages())
+            .and(excludeTests())
+            .should().dependOnClassesThat().resideInAPackage(CALENDAR)
+            .allowEmptyShould(false)
+            .check(classes);
+    }
+
+    @Test
+    void the_calendar_names_the_modules_it_reads_only_from_its_sources() {
+        noClasses()
+            .that().resideInAPackage(CALENDAR)
+            .and().resideOutsideOfPackage(CALENDAR_SOURCES)
+            .and(excludeTests())
+            .should().dependOnClassesThat().resideInAnyPackage(scopedModulePackages())
+            .allowEmptyShould(false)
+            .check(classes);
+    }
+
+    @Test
+    void the_calendar_sources_use_only_what_the_modules_they_read_publish() {
+        DescribedPredicate<JavaClass> unpublished = DescribedPredicate.describe(
+            "a scoped module's class outside its application.port.in and domain.model",
+            c -> SCOPED_MODULES.stream().anyMatch(module -> c.getPackageName().startsWith(BASE + module + "."))
+                && !c.getPackageName().contains(".application.port.in")
+                && !c.getPackageName().contains(".domain.model"));
+        noClasses()
+            .that().resideInAPackage(CALENDAR_SOURCES)
+            .and(excludeTests())
+            .should().dependOnClassesThat(unpublished)
+            .allowEmptyShould(false)
+            .check(classes);
+    }
+
+    // -------------------------------------------------------------------------
     // Global infra isolation
     // -------------------------------------------------------------------------
 

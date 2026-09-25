@@ -1,0 +1,157 @@
+{
+  "title": "Calendrier",
+  "new_event": "Nouvel événement",
+  "loading": "Chargement…",
+  "error": "Impossible de charger le calendrier.",
+  "today": "Aujourd'hui",
+  "previous_period": "Période précédente",
+  "next_period": "Période suivante",
+  "empty_day": "Rien de prévu.",
+  "all_day_band": "Sur la journée",
+  "all_day_short": "Journée",
+  "open_day": "Ouvrir le {{date}}",
+  "view": {
+    "month": "Mois",
+    "week": "Semaine",
+    "day": "Jour"
+  },
+  "weekday_short": {
+    "mon": "Lun",
+    "tue": "Mar",
+    "wed": "Mer",
+    "thu": "Jeu",
+    "fri": "Ven",
+    "sat": "Sam",
+    "sun": "Dim"
+  },
+  "source": {
+    "EVENT": "Événements",
+    "TASK": "Tâches",
+    "FINANCE": "Finances",
+    "MEAL": "Repas",
+    "SAVINGS": "Épargne"
+  },
+  "filters": {
+    "label": "Filtrer par source"
+  },
+  "recurring_series": {
+    "manage": "Gérer les événements récurrents"
+  },
+  "palette": {
+    "today": "Calendrier — aujourd'hui"
+  },
+  "day_detail": {
+    "add_event": "Ajouter un événement ce jour"
+  },
+  "detail": {
+    "title": "Détail",
+    "recurring": "Événement récurrent",
+    "participants": "Participants",
+    "no_participants": "Personne",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "copy": "Copier vers…",
+    "move": "Déplacer vers…",
+    "join": "Me joindre",
+    "leave": "Me retirer",
+    "missing": "Cet élément n'existe plus.",
+    "projected_hint": "Occurrence à venir : elle n'existe pas encore, seule sa série peut être modifiée.",
+    "open_in": {
+      "EVENT": "Ouvrir",
+      "TASK": "Ouvrir dans Tâches",
+      "FINANCE": "Ouvrir dans Finances",
+      "MEAL": "Planifier ce repas",
+      "SAVINGS": "Ouvrir dans Épargne"
+    }
+  },
+  "form": {
+    "create_title": "Nouvel événement",
+    "edit_title": "Modifier l'événement",
+    "title": "Libellé",
+    "description": "Description",
+    "location": "Lieu",
+    "all_day": "Journée entière",
+    "recurring": "Événement récurrent",
+    "start_date": "Date de début",
+    "end_date": "Date de fin",
+    "start_time": "Heure de début",
+    "end_time": "Heure de fin",
+    "color": "Couleur",
+    "participants": "Participants",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "title_required": "Le libellé est obligatoire.",
+    "dates_required": "Les dates de début et de fin sont obligatoires.",
+    "times_required": "Un événement qui n'est pas sur la journée entière a une heure de début et de fin.",
+    "end_before_start": "La fin ne peut pas précéder le début.",
+    "too_long": "Un événement dure au plus {{days}} jours.",
+    "save_failed": "L'enregistrement a échoué.",
+    "color_name": {
+      "event-violet": "Violet",
+      "event-magenta": "Magenta",
+      "event-cyan": "Cyan",
+      "event-graphite": "Graphite",
+      "event-indigo": "Indigo",
+      "event-brique": "Brique"
+    }
+  },
+  "delete": {
+    "failed": "La suppression a échoué.",
+    "occurrence_message": "Cette occurrence sera retirée de la série. Les autres ne changent pas."
+  },
+  "scope": {
+    "edit_title": "Modifier",
+    "delete_title": "Supprimer",
+    "edit_question": "Modifier cette occurrence seulement, ou toute la série ?",
+    "delete_question": "Supprimer cette occurrence seulement, ou toute la série ?",
+    "this_occurrence": "Cette occurrence",
+    "whole_series": "Toute la série"
+  },
+  "series": {
+    "edit_title": "Modifier la série",
+    "empty": "Aucun événement récurrent.",
+    "edit": "Modifier {{name}}",
+    "delete": "Supprimer {{name}}",
+    "delete_message": "La série et toutes ses occurrences seront supprimées, y compris celles que vous avez modifiées ou annulées.",
+    "stop_message": "Les occurrences passées restent. Toutes celles à venir seront supprimées, y compris celles que vous avez modifiées.",
+    "interval_count": "Tous les",
+    "interval_type": "Fréquence",
+    "interval": {
+      "DAILY": "jour(s)",
+      "WEEKLY": "semaine(s)",
+      "MONTHLY": "mois",
+      "YEARLY": "an(s)"
+    },
+    "until": "Jusqu'au (facultatif)",
+    "split_notice": "Les occurrences passées et celles que vous avez modifiées restent telles quelles : la modification s'applique à partir d'aujourd'hui.",
+    "from": "à partir du {{date}}",
+    "until_date": "jusqu'au {{date}}",
+    "interval_invalid": "La fréquence doit être d'au moins 1.",
+    "occurrence_too_long": "Une occurrence ne peut pas durer plus longtemps que l'écart entre deux occurrences.",
+    "until_before_start": "La répétition ne peut pas s'arrêter avant la date de début."
+  },
+  "meal": {
+    "title": "Repas du {{date}}",
+    "recipe": "Recette",
+    "pick_recipe": "Choisir une recette…",
+    "portions": "Portions",
+    "portions_short": "{{count}} portions",
+    "add": "Ajouter",
+    "remove": "Retirer {{name}}",
+    "recipe_required": "Choisissez une recette.",
+    "portions_invalid": "Le nombre de portions doit être un entier positif.",
+    "save_failed": "L'ajout a échoué.",
+    "remove_failed": "Le retrait a échoué."
+  },
+  "drag": {
+    "failed": "Le déplacement n'a pas pu être enregistré.",
+    "next_month": "Mois suivant →",
+    "prev_month": "← Mois précédent",
+    "next_week": "Semaine suivante →",
+    "prev_week": "← Semaine précédente",
+    "next_day": "Jour suivant →",
+    "prev_day": "← Jour précédent",
+    "next_week_vertical": "Semaine suivante ↓",
+    "prev_week_vertical": "↑ Semaine précédente"
+  }
+}

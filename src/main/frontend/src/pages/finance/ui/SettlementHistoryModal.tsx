@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Dialog } from '@/shared/ui'
 import type { SettlementRecord } from '@/entities/finance'
-import { formatAmount } from '../lib/formatAmount'
+import { formatAmount } from '@/shared/lib'
 
 interface SettlementHistoryModalProps {
   settlements: SettlementRecord[]
