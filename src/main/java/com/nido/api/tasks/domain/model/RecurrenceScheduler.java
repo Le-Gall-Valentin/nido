@@ -107,16 +107,6 @@ public final class RecurrenceScheduler {
     }
 
     /**
-     * Index of the first occurrence falling on or after {@code target}, computed
-     * arithmetically instead of by stepping through every occurrence since the anchor.
-     *
-     * <p>The division gives an estimate that can be off by one — month-end clamping means
-     * an occurrence's calendar month, not its exact date, is what the estimate captures —
-     * so two bounded correction steps settle it. Returns {@link Integer#MAX_VALUE} when the
-     * estimate overflows an {@code int}, which callers read as "further away than anything
-     * worth producing".
-     */
-    /**
      * The number of a schedule's last occurrence falling on or before {@code day}, or -1 when the
      * schedule starts after it — so that the next occurrence, number + 1, is the first one strictly
      * after {@code day}. What a series' count must be when its start moves: the tasks it already
@@ -130,6 +120,16 @@ public final class RecurrenceScheduler {
         return (int) Math.min(Integer.MAX_VALUE, firstOccurrenceIndexOnOrAfter(anchorDate, intervalType, intervalCount, day.plusDays(1)) - 1);
     }
 
+    /**
+     * Index of the first occurrence falling on or after {@code target}, computed
+     * arithmetically instead of by stepping through every occurrence since the anchor.
+     *
+     * <p>The division gives an estimate that can be off by one — month-end clamping means
+     * an occurrence's calendar month, not its exact date, is what the estimate captures —
+     * so two bounded correction steps settle it. Returns {@link Integer#MAX_VALUE} when the
+     * estimate overflows an {@code int}, which callers read as "further away than anything
+     * worth producing".
+     */
     static long firstOccurrenceIndexOnOrAfter(LocalDate anchorDate, RecurrenceInterval intervalType,
                                               int intervalCount, LocalDate target) {
         if (intervalCount < 1) {
