@@ -1,10 +1,12 @@
 package com.nido.api.calendar.infrastructure.web;
 
+import com.nido.api.calendar.application.port.in.CopyOccurrenceUseCase;
 import com.nido.api.calendar.application.port.in.CreateRecurringEventSeriesUseCase;
 import com.nido.api.calendar.application.port.in.DeleteRecurringEventSeriesUseCase;
 import com.nido.api.calendar.application.port.in.DetachOccurrenceUseCase;
 import com.nido.api.calendar.application.port.in.ExcludeOccurrenceUseCase;
 import com.nido.api.calendar.application.port.in.ListRecurringEventSeriesUseCase;
+import com.nido.api.calendar.application.port.in.MoveOccurrenceUseCase;
 import com.nido.api.calendar.application.port.in.UpdateRecurringEventSeriesUseCase;
 import com.nido.api.calendar.domain.model.CreateRecurringEventSeriesCommand;
 import com.nido.api.calendar.domain.model.UpdateEventCommand;
@@ -12,6 +14,7 @@ import com.nido.api.calendar.domain.model.UpdateRecurringEventSeriesCommand;
 import com.nido.api.calendar.infrastructure.web.dto.EventResponse;
 import com.nido.api.calendar.infrastructure.web.dto.RecurringEventSeriesRequest;
 import com.nido.api.calendar.infrastructure.web.dto.RecurringEventSeriesResponse;
+import com.nido.api.calendar.infrastructure.web.dto.TransferEventRequest;
 import com.nido.api.calendar.infrastructure.web.dto.UpdateEventRequest;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import com.nido.api.infrastructure.web.CurrentMembership;
@@ -51,19 +54,25 @@ public class RecurringEventSeriesController {
     private final DeleteRecurringEventSeriesUseCase deleteUseCase;
     private final DetachOccurrenceUseCase detachUseCase;
     private final ExcludeOccurrenceUseCase excludeUseCase;
+    private final CopyOccurrenceUseCase copyOccurrenceUseCase;
+    private final MoveOccurrenceUseCase moveOccurrenceUseCase;
 
     public RecurringEventSeriesController(ListRecurringEventSeriesUseCase listUseCase,
                                           CreateRecurringEventSeriesUseCase createUseCase,
                                           UpdateRecurringEventSeriesUseCase updateUseCase,
                                           DeleteRecurringEventSeriesUseCase deleteUseCase,
                                           DetachOccurrenceUseCase detachUseCase,
-                                          ExcludeOccurrenceUseCase excludeUseCase) {
+                                          ExcludeOccurrenceUseCase excludeUseCase,
+                                          CopyOccurrenceUseCase copyOccurrenceUseCase,
+                                          MoveOccurrenceUseCase moveOccurrenceUseCase) {
         this.listUseCase = listUseCase;
         this.createUseCase = createUseCase;
         this.updateUseCase = updateUseCase;
         this.deleteUseCase = deleteUseCase;
         this.detachUseCase = detachUseCase;
         this.excludeUseCase = excludeUseCase;
+        this.copyOccurrenceUseCase = copyOccurrenceUseCase;
+        this.moveOccurrenceUseCase = moveOccurrenceUseCase;
     }
 
     @GetMapping
@@ -142,5 +151,33 @@ public class RecurringEventSeriesController {
             @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
         excludeUseCase.exclude(seriesId, date, membership);
         return ResponseEntity.noContent().build();
+    }
+
+    // Same floors as copying and moving an event: copying only reads the route's space, so it keeps
+    // the default VIEWER floor and CopyOccurrenceHandler checks the destination; moving also cancels
+    // the occurrence here, so it declares MEMBER.
+
+    @PostMapping("/{seriesId}/occurrences/{date}/copy")
+    @RateLimiting(max = 20)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<EventResponse> copyOccurrence(
+            @PathVariable UUID spaceId, @PathVariable UUID seriesId,
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @Valid @RequestBody TransferEventRequest request,
+            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(EventResponse.from(
+            copyOccurrenceUseCase.copy(seriesId, date, request.destinationSpaceId(), membership)));
+    }
+
+    @PostMapping("/{seriesId}/occurrences/{date}/move")
+    @RateLimiting(max = 20)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<EventResponse> moveOccurrence(
+            @PathVariable UUID spaceId, @PathVariable UUID seriesId,
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @Valid @RequestBody TransferEventRequest request,
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(EventResponse.from(
+            moveOccurrenceUseCase.move(seriesId, date, request.destinationSpaceId(), membership)));
     }
 }

@@ -1,5 +1,7 @@
 package com.nido.api.calendar.application.handler;
 
+import com.nido.api.calendar.application.port.in.CopyOccurrenceUseCase;
+import com.nido.api.calendar.application.port.in.ExcludeOccurrenceUseCase;
 import com.nido.api.calendar.application.service.CalendarSpaceMemberValidator;
 import com.nido.api.calendar.application.service.SeriesExceptionsMover;
 import com.nido.api.calendar.domain.model.CalendarEvent;
@@ -116,6 +118,14 @@ class ViewersCannotWriteTest {
     @Test
     void cancellingOneOccurrence() {
         refused(() -> new ExcludeOccurrenceHandler(series, events, exclusions).exclude(weekly.id(), day, viewer));
+    }
+
+    @Test
+    void movingOneOccurrenceAway() {
+        CopyOccurrenceUseCase copy = mock(CopyOccurrenceUseCase.class);
+        ExcludeOccurrenceUseCase exclude = mock(ExcludeOccurrenceUseCase.class);
+        refused(() -> new MoveOccurrenceHandler(copy, exclude).move(weekly.id(), day, UUID.randomUUID(), viewer));
+        verifyNoInteractions(copy, exclude);
     }
 
     /** Refused for its role — and refused before anything was read, checked or written. */

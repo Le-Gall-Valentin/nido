@@ -113,4 +113,20 @@ export const calendarApi: ICalendarApi & IRecurringEventSeriesApi = {
       await client.delete(`${base(spaceId)}/recurring-event-series/${seriesId}/occurrences/${date}`)
     } catch (error) { handleError(error) }
   },
+
+  async copyOccurrence(spaceId, seriesId, date, destinationSpaceId) {
+    try {
+      const res = await client.post<CalendarEvent>(
+        `${base(spaceId)}/recurring-event-series/${seriesId}/occurrences/${date}/copy`, { destinationSpaceId })
+      return res.data
+    } catch (error) { handleError(error) }
+  },
+
+  async moveOccurrence(spaceId, seriesId, date, destinationSpaceId) {
+    try {
+      const res = await client.post<CalendarEvent>(
+        `${base(spaceId)}/recurring-event-series/${seriesId}/occurrences/${date}/move`, { destinationSpaceId })
+      return res.data
+    } catch (error) { handleError(error) }
+  },
 }

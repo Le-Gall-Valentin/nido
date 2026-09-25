@@ -430,6 +430,105 @@ class RecurringEventSeriesControllerIT {
             .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
     }
 
+    // An occurrence the series projects has no row of its own: copying or moving it used to send its
+    // "seriesId:date" key where an event id belongs, and every attempt failed with a 400.
+
+    @Test
+    void copying_an_occurrence_creates_it_in_the_other_space_on_its_own_day() throws Exception {
+        String seriesId = createWeeklySeries();
+        UUID elsewhere = spaceAliceWritesIn();
+
+        mockMvc.perform(post(series() + "/" + seriesId + "/occurrences/2026-01-13/copy").cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"destinationSpaceId\":\"" + elsewhere + "\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.title").value("Piano"))
+            .andExpect(jsonPath("$.startDate").value("2026-01-13"))
+            .andExpect(jsonPath("$.startTime").value("18:00:00"))
+            .andExpect(jsonPath("$.recurringSeriesId").doesNotExist());
+
+        // Copied, not moved: the series still has it.
+        assertThat(shownBetween(LocalDate.of(2026, 1, 13), LocalDate.of(2026, 1, 13))).containsExactly("2026-01-13 Piano");
+        assertThat(shownIn(elsewhere, LocalDate.of(2026, 1, 13))).containsExactly("2026-01-13 Piano");
+    }
+
+    @Test
+    void moving_an_occurrence_takes_it_out_of_its_series() throws Exception {
+        String seriesId = createWeeklySeries();
+        UUID elsewhere = spaceAliceWritesIn();
+
+        mockMvc.perform(post(series() + "/" + seriesId + "/occurrences/2026-01-13/move").cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"destinationSpaceId\":\"" + elsewhere + "\"}"))
+            .andExpect(status().isCreated());
+
+        assertThat(shownBetween(LocalDate.of(2026, 1, 6), LocalDate.of(2026, 1, 20)))
+            .containsExactly("2026-01-06 Piano", "2026-01-20 Piano");
+        assertThat(shownIn(elsewhere, LocalDate.of(2026, 1, 13))).containsExactly("2026-01-13 Piano");
+    }
+
+    @Test
+    void an_occurrence_edited_on_its_own_travels_as_edited() throws Exception {
+        String seriesId = createWeeklySeries();
+        UUID elsewhere = spaceAliceWritesIn();
+        mockMvc.perform(put(series() + "/" + seriesId + "/occurrences/2026-01-13").cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Piano (décalé)","allDay":true,"startDate":"2026-01-15","endDate":"2026-01-15"}"""))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post(series() + "/" + seriesId + "/occurrences/2026-01-13/copy").cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"destinationSpaceId\":\"" + elsewhere + "\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.title").value("Piano (décalé)"))
+            .andExpect(jsonPath("$.startDate").value("2026-01-15"));
+    }
+
+    @Test
+    void a_viewer_may_copy_an_occurrence_into_a_space_of_their_own_but_not_move_it() throws Exception {
+        String seriesId = createWeeklySeries();
+        String body = "{\"destinationSpaceId\":\"" + bobsSpaceId + "\"}";
+
+        mockMvc.perform(post(series() + "/" + seriesId + "/occurrences/2026-01-13/copy").cookie(tokenFor(bobId))
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+        mockMvc.perform(post(series() + "/" + seriesId + "/occurrences/2026-01-20/move").cookie(tokenFor(bobId))
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void only_an_occurrence_the_series_shows_can_be_copied() throws Exception {
+        String seriesId = createWeeklySeries();
+        UUID elsewhere = spaceAliceWritesIn();
+        String body = "{\"destinationSpaceId\":\"" + elsewhere + "\"}";
+        mockMvc.perform(delete(series() + "/" + seriesId + "/occurrences/2026-01-20").cookie(tokenFor(aliceId)))
+            .andExpect(status().isNoContent());
+
+        // Not a date of the series, and a date it no longer shows.
+        mockMvc.perform(post(series() + "/" + seriesId + "/occurrences/2026-01-14/copy").cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest());
+        mockMvc.perform(post(series() + "/" + seriesId + "/occurrences/2026-01-20/copy").cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isBadRequest());
+    }
+
+    private UUID spaceAliceWritesIn() {
+        UUID elsewhere = saveSharedSpace("Ailleurs");
+        saveMembership(elsewhere, aliceId, SpaceRole.MEMBER);
+        return elsewhere;
+    }
+
+    private List<String> shownIn(UUID otherSpaceId, LocalDate day) throws Exception {
+        String body = mockMvc.perform(get("/api/spaces/" + otherSpaceId + "/calendar/occurrences?from=" + day + "&to=" + day)
+                .cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        List<String> shown = new ArrayList<>();
+        for (JsonNode occurrence : objectMapper.readTree(body)) {
+            shown.add(occurrence.get("startDate").asText() + " " + occurrence.get("title").asText());
+        }
+        return shown;
+    }
+
     @Test
     void a_viewer_cannot_create_a_series() throws Exception {
         mockMvc.perform(post(series())

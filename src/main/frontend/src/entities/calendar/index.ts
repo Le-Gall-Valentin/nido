@@ -12,6 +12,6 @@ export {
 export {
   useCreateEvent, useUpdateEvent, useDeleteEvent, useJoinEvent, useLeaveEvent,
   useCopyEvent, useMoveEvent, useCreateRecurringEventSeries, useUpdateRecurringEventSeries,
-  useDeleteRecurringEventSeries, useDetachOccurrence, useExcludeOccurrence,
+  useDeleteRecurringEventSeries, useDetachOccurrence, useExcludeOccurrence, useCopyOccurrence, useMoveOccurrence,
 } from './model/useCalendarMutations'
 export { calendarApi } from './api/calendarApi'

@@ -46,6 +46,16 @@ describe('calendarApi', () => {
     expect(client.post).toHaveBeenCalledWith('/spaces/s1/calendar/events/e1/copy', { destinationSpaceId: 's2' })
   })
 
+  it('sends an occurrence still to come by its series and its day', async () => {
+    vi.mocked(client.post).mockResolvedValue({ data: {} })
+    await calendarApi.copyOccurrence('s1', 'series-1', '2026-01-13', 's2')
+    await calendarApi.moveOccurrence('s1', 'series-1', '2026-01-13', 's2')
+    expect(client.post).toHaveBeenCalledWith(
+      '/spaces/s1/calendar/recurring-event-series/series-1/occurrences/2026-01-13/copy', { destinationSpaceId: 's2' })
+    expect(client.post).toHaveBeenCalledWith(
+      '/spaces/s1/calendar/recurring-event-series/series-1/occurrences/2026-01-13/move', { destinationSpaceId: 's2' })
+  })
+
   it('joins and leaves through the participants/me pair', async () => {
     vi.mocked(client.post).mockResolvedValue({ data: undefined })
     vi.mocked(client.delete).mockResolvedValue({ data: undefined })

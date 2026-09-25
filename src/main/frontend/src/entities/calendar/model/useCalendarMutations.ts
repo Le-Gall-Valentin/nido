@@ -61,30 +61,54 @@ export function useLeaveEvent(spaceId: string) {
   })
 }
 
+/** After a transfer: the destination's calendar changed too, and it is cheap to invalidate even if never fetched. */
+function useTransferInvalidation(spaceId: string) {
+  const queryClient = useQueryClient()
+  return (_result: unknown, { destinationSpaceId }: { destinationSpaceId: string }) => Promise.all([
+    queryClient.invalidateQueries({ queryKey: calendarKey(spaceId) }),
+    queryClient.invalidateQueries({ queryKey: calendarKey(destinationSpaceId) }),
+  ])
+}
+
 export function useCopyEvent(spaceId: string) {
   const api = useCalendarApi()
-  const queryClient = useQueryClient()
+  const invalidate = useTransferInvalidation(spaceId)
   return useMutation({
     mutationFn: ({ eventId, destinationSpaceId }: { eventId: string; destinationSpaceId: string }) =>
       api.copyEvent(spaceId, eventId, destinationSpaceId),
-    // The destination's calendar changed too, and it is cheap to invalidate even if never fetched.
-    onSuccess: (_result, { destinationSpaceId }) => Promise.all([
-      queryClient.invalidateQueries({ queryKey: calendarKey(spaceId) }),
-      queryClient.invalidateQueries({ queryKey: calendarKey(destinationSpaceId) }),
-    ]),
+    onSuccess: invalidate,
   })
 }
 
 export function useMoveEvent(spaceId: string) {
   const api = useCalendarApi()
-  const queryClient = useQueryClient()
+  const invalidate = useTransferInvalidation(spaceId)
   return useMutation({
     mutationFn: ({ eventId, destinationSpaceId }: { eventId: string; destinationSpaceId: string }) =>
       api.moveEvent(spaceId, eventId, destinationSpaceId),
-    onSuccess: (_result, { destinationSpaceId }) => Promise.all([
-      queryClient.invalidateQueries({ queryKey: calendarKey(spaceId) }),
-      queryClient.invalidateQueries({ queryKey: calendarKey(destinationSpaceId) }),
-    ]),
+    onSuccess: invalidate,
+  })
+}
+
+interface OccurrenceTransfer { seriesId: string; date: string; destinationSpaceId: string }
+
+export function useCopyOccurrence(spaceId: string) {
+  const api = useRecurringEventSeriesApi()
+  const invalidate = useTransferInvalidation(spaceId)
+  return useMutation({
+    mutationFn: ({ seriesId, date, destinationSpaceId }: OccurrenceTransfer) =>
+      api.copyOccurrence(spaceId, seriesId, date, destinationSpaceId),
+    onSuccess: invalidate,
+  })
+}
+
+export function useMoveOccurrence(spaceId: string) {
+  const api = useRecurringEventSeriesApi()
+  const invalidate = useTransferInvalidation(spaceId)
+  return useMutation({
+    mutationFn: ({ seriesId, date, destinationSpaceId }: OccurrenceTransfer) =>
+      api.moveOccurrence(spaceId, seriesId, date, destinationSpaceId),
+    onSuccess: invalidate,
   })
 }
 
