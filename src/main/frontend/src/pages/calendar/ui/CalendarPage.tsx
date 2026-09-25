@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
 import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { Alert, Spinner } from '@/shared/ui'
 import { todayIso, usePaletteItems, resolveLocale } from '@/shared/lib'
+import { ROUTES } from '@/shared/config'
 import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
 import { useAuth } from '@/features/auth'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
@@ -67,6 +68,7 @@ export function CalendarPage({
 function CalendarPageContent() {
   const { t } = useTranslation('calendar')
   const { spaceId = '' } = useParams<{ spaceId: string }>()
+  const navigate = useNavigate()
 
   // The household's date, not the browser's: a calendar anchored on the reader's timezone would
   // highlight the wrong "today" for anyone travelling.
@@ -287,8 +289,10 @@ function CalendarPageContent() {
           occurrence={selectedOccurrence}
           members={members ?? []}
           onOpenInModule={(occurrence) => {
-            if (occurrence.source === 'MEAL') setPlanningMeal(occurrence.startDate)
             setSelectedOccurrence(null)
+            // A task still to come has no row to open here: its series lives on the tasks page.
+            if (occurrence.source === 'TASK') void navigate(ROUTES.spaceOrganisationTasks(spaceId))
+            if (occurrence.source === 'MEAL') setPlanningMeal(occurrence.startDate)
           }}
           onClose={() => setSelectedOccurrence(null)}
         />

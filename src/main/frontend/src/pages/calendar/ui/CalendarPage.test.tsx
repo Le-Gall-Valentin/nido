@@ -49,7 +49,7 @@ function renderPage(feed: CalendarOccurrence[], apis: {
   const spaces: ISpacesApi = { listMySpaces: vi.fn().mockResolvedValue([{ ...SPACE, myRole: apis.role ?? 'MEMBER' }]), getSpace: vi.fn() }
   const members: ISpaceMembersApi = { listMembers: vi.fn().mockResolvedValue(apis.members ?? []) }
   // The app mounts the tasks API above every page; dropping a task writes through it.
-  const tasks = { listTasks: vi.fn().mockResolvedValue([]), updateTask: vi.fn() } as unknown as TasksApi
+  const tasks = { listTasks: vi.fn().mockResolvedValue([]), listRecurringTaskSeries: vi.fn().mockResolvedValue([]), updateTask: vi.fn() } as unknown as TasksApi
   render(
     <QueryClientProvider client={createTestQueryClient()}>
       <SpacesApiProvider api={spaces}>
@@ -59,6 +59,7 @@ function renderPage(feed: CalendarOccurrence[], apis: {
             <Routes>
               <Route path="/s/:spaceId/organisation/calendar"
                 element={<CalendarPage api={calendar} financeApi={finance} kitchenApi={kitchen} />} />
+              <Route path="/s/:spaceId/organisation/tasks" element={<p>tasks page</p>} />
             </Routes>
           </MemoryRouter>
           </TasksApiProvider>
@@ -96,6 +97,16 @@ describe('CalendarPage', () => {
     fireEvent.click(await screen.findByText('detail.open_in.MEAL'))
     expect(await screen.findByRole('dialog')).toBeTruthy()
     expect(kitchen.listRecipes).toHaveBeenCalledWith('space-1')
+  })
+
+  it('opens the tasks page from a task still to come', async () => {
+    renderPage([occurrence({
+      title: 'Poubelles', source: 'TASK', sourceId: 's-9:2026-09-23', seriesId: 's-9', originalDate: '2026-09-23',
+      materialized: false,
+    })])
+    fireEvent.click(await screen.findByText('Poubelles'))
+    fireEvent.click(await screen.findByRole('button', { name: 'detail.open_in.TASK' }))
+    expect(await screen.findByText('tasks page')).toBeTruthy()
   })
 
   it('offers a drag handle to a member', async () => {
