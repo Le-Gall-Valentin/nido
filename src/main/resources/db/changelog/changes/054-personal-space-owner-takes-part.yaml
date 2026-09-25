@@ -24,3 +24,7 @@ databaseChangeLog:
               JOIN spaces s ON s.id = r.space_id AND s.type = 'PERSONAL'
               JOIN space_members m ON m.space_id = s.id
               ON CONFLICT (series_id, user_id) DO NOTHING
+      # Nothing to undo: the rows it added cannot be told from the ones written since, and the app
+      # now requires every one of them. Rolling the schema back leaves them in place, harmlessly.
+      rollback:
+        empty
