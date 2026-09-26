@@ -57,6 +57,11 @@ public class TaskRepositoryAdapter implements TaskRepository {
     }
 
     @Override
+    public List<Task> findOpenBySpaceId(UUID spaceId) {
+        return toDomainList(tasks.findBySpaceIdAndStatusNot(spaceId, TaskStatus.DONE));
+    }
+
+    @Override
     @Transactional
     public Task create(CreateTaskCommand command) {
         TaskEntity e = new TaskEntity();
