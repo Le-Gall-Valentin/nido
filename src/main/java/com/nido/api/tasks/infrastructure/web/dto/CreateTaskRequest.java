@@ -12,7 +12,7 @@ import java.util.UUID;
 
 public record CreateTaskRequest(
     @NotBlank @Size(max = 200) String title, @NotNull TaskPriority priority, LocalDate dueDate,
-    List<UUID> assigneeIds, List<@NotBlank String> subtasks, @Valid RecurrenceRequest recurrence
+    List<UUID> assigneeIds, List<@NotBlank @Size(max = 200) String> subtasks, @Valid RecurrenceRequest recurrence
 ) {
     public List<UUID> assigneeIds() {
         return assigneeIds == null ? List.of() : assigneeIds;

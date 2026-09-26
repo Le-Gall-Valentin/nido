@@ -10,7 +10,7 @@ import java.util.List;
 
 public record UpdateRecurringTaskSeriesRequest(
     @NotBlank @Size(max = 200) String title, @NotNull TaskPriority priority,
-    List<@NotBlank String> subtasks, @Valid @NotNull RecurrenceRequest recurrence
+    List<@NotBlank @Size(max = 200) String> subtasks, @Valid @NotNull RecurrenceRequest recurrence
 ) {
     public List<String> subtasks() {
         return subtasks == null ? List.of() : subtasks;

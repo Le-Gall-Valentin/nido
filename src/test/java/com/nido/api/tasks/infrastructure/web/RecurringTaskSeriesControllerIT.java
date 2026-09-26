@@ -134,6 +134,27 @@ class RecurringTaskSeriesControllerIT {
     }
 
     @Test
+    void a_subtask_template_longer_than_the_column_is_rejected() throws Exception {
+        // recurring_task_series_subtask_templates.text is 200 wide, like the subtasks it is copied into.
+        String body = "{\"title\":\"Sortir les poubelles\",\"priority\":\"MED\","
+            + "\"recurrence\":{\"intervalType\":\"WEEKLY\",\"intervalCount\":1,"
+            + "\"leadIntervalType\":\"DAILY\",\"leadIntervalCount\":0,\"anchorDate\":\"2026-01-07\"}}";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+        String seriesList = mockMvc.perform(get("/api/spaces/" + spaceId + "/recurring-task-series").cookie(accessTokenFor(aliceId)))
+            .andReturn().getResponse().getContentAsString();
+        String seriesId = objectMapper.readTree(seriesList).get(0).get("id").asText();
+
+        String updateBody = "{\"title\":\"Sortir les poubelles\",\"priority\":\"MED\",\"subtasks\":[\"" + "x".repeat(201) + "\"],"
+            + "\"recurrence\":{\"intervalType\":\"WEEKLY\",\"intervalCount\":1,"
+            + "\"leadIntervalType\":\"DAILY\",\"leadIntervalCount\":0,\"anchorDate\":\"2026-01-07\"}}";
+        mockMvc.perform(patch("/api/spaces/" + spaceId + "/recurring-task-series/" + seriesId)
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(updateBody))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void updating_a_nonexistent_recurring_task_series_is_rejected_cleanly_instead_of_crashing() throws Exception {
         String updateBody = "{\"title\":\"X\",\"priority\":\"MED\",\"subtasks\":[],"
             + "\"recurrence\":{\"intervalType\":\"WEEKLY\",\"intervalCount\":1,"
