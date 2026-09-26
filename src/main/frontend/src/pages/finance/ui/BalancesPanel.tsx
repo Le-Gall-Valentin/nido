@@ -4,7 +4,7 @@ import {
   useBalances, useSettleDebt, useSettlementsBetween, type Transaction,
 } from '@/entities/finance'
 import { BalancesSection } from './BalancesSection'
-import { SettleDebtModal } from './SettleDebtModal'
+import { SettleDebtModal } from '@/features/settle-debt'
 import { MemberTransactionsModal } from './MemberTransactionsModal'
 import { SettlementHistoryModal } from './SettlementHistoryModal'
 

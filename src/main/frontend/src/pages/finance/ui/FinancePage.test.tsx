@@ -308,8 +308,8 @@ describe('FinancePage', () => {
 
     await waitFor(() => expect(screen.getByText('balances.settle')).toBeDefined())
     fireEvent.click(screen.getByText('balances.settle'))
-    fireEvent.change(screen.getByLabelText('balances.settle_amount_label'), { target: { value: '250' } })
-    fireEvent.click(screen.getByText('balances.settle_confirm'))
+    fireEvent.change(screen.getByLabelText('amount_label'), { target: { value: '250' } })
+    fireEvent.click(screen.getByText('confirm'))
 
     await waitFor(() => expect(settleDebt).toHaveBeenCalledWith('space-1', 'u-1', 'u-2', 250, expect.any(String)))
   })

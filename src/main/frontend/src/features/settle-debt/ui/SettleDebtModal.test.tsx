@@ -8,9 +8,9 @@ vi.mock('react-i18next', () => ({
 
 describe('SettleDebtModal', () => {
   it('shows the submit error handed down by the caller when the backend rejected the settlement', () => {
-    render(<SettleDebtModal fromLabel="Bob" toLabel="Alice" amount={20} onConfirm={vi.fn()} onCancel={vi.fn()} isPending={false} submitError="balances.settle_amount_too_high" />)
+    render(<SettleDebtModal fromLabel="Bob" toLabel="Alice" amount={20} onConfirm={vi.fn()} onCancel={vi.fn()} isPending={false} submitError="form.submit_error" />)
 
-    expect(screen.getByText('balances.settle_amount_too_high')).toBeDefined()
+    expect(screen.getByText('form.submit_error')).toBeDefined()
   })
 
   it('confirms the settlement with the prefilled amount and today by default', () => {
@@ -19,7 +19,7 @@ describe('SettleDebtModal', () => {
 
     expect(screen.getByText(/Bob/)).toBeDefined()
     expect(screen.getByText(/Alice/)).toBeDefined()
-    fireEvent.click(screen.getByText('balances.settle_confirm'))
+    fireEvent.click(screen.getByText('confirm'))
 
     expect(onConfirm).toHaveBeenCalledWith(20, expect.any(String))
   })
@@ -28,8 +28,8 @@ describe('SettleDebtModal', () => {
     const onConfirm = vi.fn()
     render(<SettleDebtModal fromLabel="Bob" toLabel="Alice" amount={500} onConfirm={onConfirm} onCancel={vi.fn()} isPending={false} />)
 
-    fireEvent.change(screen.getByLabelText('balances.settle_amount_label'), { target: { value: '250' } })
-    fireEvent.click(screen.getByText('balances.settle_confirm'))
+    fireEvent.change(screen.getByLabelText('amount_label'), { target: { value: '250' } })
+    fireEvent.click(screen.getByText('confirm'))
 
     expect(onConfirm).toHaveBeenCalledWith(250, expect.any(String))
   })
@@ -38,21 +38,21 @@ describe('SettleDebtModal', () => {
     const onConfirm = vi.fn()
     render(<SettleDebtModal fromLabel="Bob" toLabel="Alice" amount={500} onConfirm={onConfirm} onCancel={vi.fn()} isPending={false} />)
 
-    fireEvent.change(screen.getByLabelText('balances.settle_amount_label'), { target: { value: '600' } })
-    fireEvent.click(screen.getByText('balances.settle_confirm'))
+    fireEvent.change(screen.getByLabelText('amount_label'), { target: { value: '600' } })
+    fireEvent.click(screen.getByText('confirm'))
 
     expect(onConfirm).not.toHaveBeenCalled()
-    expect(screen.getByText('balances.settle_amount_too_high')).toBeDefined()
+    expect(screen.getByText('amount_too_high')).toBeDefined()
   })
 
   it('rejects a zero or negative amount', () => {
     const onConfirm = vi.fn()
     render(<SettleDebtModal fromLabel="Bob" toLabel="Alice" amount={500} onConfirm={onConfirm} onCancel={vi.fn()} isPending={false} />)
 
-    fireEvent.change(screen.getByLabelText('balances.settle_amount_label'), { target: { value: '0' } })
-    fireEvent.click(screen.getByText('balances.settle_confirm'))
+    fireEvent.change(screen.getByLabelText('amount_label'), { target: { value: '0' } })
+    fireEvent.click(screen.getByText('confirm'))
 
     expect(onConfirm).not.toHaveBeenCalled()
-    expect(screen.getByText('balances.settle_amount_required')).toBeDefined()
+    expect(screen.getByText('amount_required')).toBeDefined()
   })
 })
