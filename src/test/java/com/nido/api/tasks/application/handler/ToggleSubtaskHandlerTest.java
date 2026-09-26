@@ -78,6 +78,43 @@ class ToggleSubtaskHandlerTest {
         verify(taskRepository, org.mockito.Mockito.never()).toggleSubtask(any(), any());
     }
 
+    // ─── Ce qu'une sous-tâche décochée fait au statut ─────────────────────
+
+    private Task taskWith(TaskStatus status, boolean subtaskDone) {
+        return new Task(taskId, spaceId, "T", status, TaskPriority.LOW, null, List.of(),
+            List.of(new Subtask(subtaskId, "Vérifier", subtaskDone)), null, null, Instant.now());
+    }
+
+    @Test
+    void unticking_a_subtask_of_a_done_task_brings_the_task_back_in_progress() {
+        // A task is done only once every subtask is — the rule ChangeTaskStatusHandler enforces
+        // on the way in, and that an untick on the card would otherwise break on the way out.
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(taskWith(TaskStatus.DONE, true)));
+
+        handler.toggle(taskId, subtaskId, spaceId, membership(SpaceRole.MEMBER));
+
+        verify(taskRepository).toggleSubtask(taskId, subtaskId);
+        verify(taskRepository).updateStatus(taskId, TaskStatus.DOING);
+    }
+
+    @Test
+    void ticking_a_subtask_of_a_done_task_leaves_it_done() {
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(taskWith(TaskStatus.DONE, false)));
+
+        handler.toggle(taskId, subtaskId, spaceId, membership(SpaceRole.MEMBER));
+
+        verify(taskRepository, org.mockito.Mockito.never()).updateStatus(any(), any());
+    }
+
+    @Test
+    void unticking_a_subtask_of_an_open_task_leaves_its_status_alone() {
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(taskWith(TaskStatus.TODO, true)));
+
+        handler.toggle(taskId, subtaskId, spaceId, membership(SpaceRole.MEMBER));
+
+        verify(taskRepository, org.mockito.Mockito.never()).updateStatus(any(), any());
+    }
+
     @Test
     void a_viewer_cannot_toggle_a_subtask() {
         assertThatThrownBy(() -> handler.toggle(taskId, subtaskId, spaceId, membership(SpaceRole.VIEWER)))

@@ -251,6 +251,23 @@ class TaskControllerIT {
             .andExpect(jsonPath("$.dueDate").value("2026-01-07"));
     }
 
+    @Test
+    void unticking_a_subtask_of_a_done_task_brings_it_back_in_progress() throws Exception {
+        var task = createTask("{\"title\":\"Réserver\",\"priority\":\"MED\",\"subtasks\":[\"Comparer les prix\"]}");
+        String taskId = task.get("id").asText();
+        String toggle = "/api/spaces/" + spaceId + "/tasks/" + taskId + "/subtasks/" + task.at("/subtasks/0/id").asText() + "/toggle";
+        mockMvc.perform(post(toggle).cookie(accessTokenFor(aliceId))).andExpect(status().isNoContent());
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks/" + taskId + "/status")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"DONE\"}"))
+            .andExpect(status().isOk());
+
+        mockMvc.perform(post(toggle).cookie(accessTokenFor(aliceId))).andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/tasks").cookie(accessTokenFor(aliceId)))
+            .andExpect(jsonPath("$[0].status").value("DOING"))
+            .andExpect(jsonPath("$[0].subtasks[0].done").value(false));
+    }
+
     private UUID saveUser(String username) {
         UserIdentityEntity user = new UserIdentityEntity();
         user.setUsername(username);
