@@ -13,9 +13,11 @@ interface TaskDetailModalProps {
   series: RecurringTaskSeries | null
   members: SpaceMember[]
   onClose: () => void
+  /** Offered only to someone who may change it — the way to move a task without dragging it. */
+  onChangeStatus?: () => void
 }
 
-export function TaskDetailModal({ task, series, members, onClose }: TaskDetailModalProps) {
+export function TaskDetailModal({ task, series, members, onClose, onChangeStatus }: TaskDetailModalProps) {
   const { t } = useTranslation('tasks')
   const priorityMeta = TASK_PRIORITY_META[task.priority]
 
@@ -114,7 +116,8 @@ export function TaskDetailModal({ task, series, members, onClose }: TaskDetailMo
         </div>
       )}
 
-      <div className="mt-5 flex justify-end">
+      <div className="mt-5 flex justify-end gap-2">
+        {onChangeStatus && <Button type="button" onClick={onChangeStatus}>{t('detail.change_status')}</Button>}
         <Button type="button" onClick={onClose}>{t('detail.close')}</Button>
       </div>
     </Dialog>

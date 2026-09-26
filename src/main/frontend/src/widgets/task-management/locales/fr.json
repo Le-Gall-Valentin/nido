@@ -1,5 +1,6 @@
 {
   "detail": {
+    "change_status": "Changer de statut",
     "title": "Détail de la tâche",
     "status_label": "Statut",
     "due_date_label": "Échéance",
@@ -22,6 +23,16 @@
     "assignees_label": "Assigné à",
     "subtasks_title": "Sous-tâches",
     "subtask_placeholder": "Nouvelle sous-tâche…",
+    "subtask_label": "Sous-tâche {{index}}",
+    "remove_subtask": "Supprimer la sous-tâche {{index}}",
+    "move_subtask": "Déplacer la sous-tâche {{index}}",
+    "move_subtask_instructions": "Pour déplacer une sous-tâche, appuyez sur Espace ou Entrée, puis sur les flèches haut et bas. Appuyez de nouveau sur Espace ou Entrée pour la poser, ou sur Échap pour annuler.",
+    "move_subtask_picked": "Sous-tâche « {{text}} » saisie.",
+    "move_subtask_over": "Sous-tâche « {{text}} » en position {{position}}.",
+    "move_subtask_dropped": "Sous-tâche « {{text}} » posée en position {{position}}.",
+    "move_subtask_cancelled": "Déplacement de « {{text}} » annulé.",
+    "add_subtask": "Ajouter la sous-tâche",
+    "subtask_required": "Une sous-tâche ne peut pas être vide.",
     "remove": "Supprimer",
     "recurring_label": "Tâche récurrente",
     "recurrence_interval_type_label": "Fréquence",

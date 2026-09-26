@@ -14,12 +14,14 @@ import com.nido.api.tasks.application.port.in.ToggleSubtaskUseCase;
 import com.nido.api.tasks.application.port.in.UpdateTaskUseCase;
 import com.nido.api.tasks.domain.model.CreateRecurringTaskSeriesCommand;
 import com.nido.api.tasks.domain.model.CreateTaskCommand;
+import com.nido.api.tasks.domain.model.SubtaskEdit;
 import com.nido.api.tasks.domain.model.SubtaskInput;
 import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.UpdateTaskCommand;
 import com.nido.api.tasks.infrastructure.web.dto.ChangeTaskStatusRequest;
 import com.nido.api.tasks.infrastructure.web.dto.CreateTaskRequest;
 import com.nido.api.tasks.infrastructure.web.dto.MoveTaskRequest;
+import com.nido.api.tasks.infrastructure.web.dto.SubtaskEditRequest;
 import com.nido.api.tasks.infrastructure.web.dto.TaskResponse;
 import com.nido.api.tasks.infrastructure.web.dto.UpdateTaskRequest;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -111,8 +113,10 @@ public class TaskController {
     public ResponseEntity<TaskResponse> update(
             @PathVariable UUID spaceId, @PathVariable UUID taskId, @Valid @RequestBody UpdateTaskRequest request,
             @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
+        List<SubtaskEdit> subtasks = request.subtasks() == null
+            ? null : request.subtasks().stream().map(SubtaskEditRequest::toEdit).toList();
         Task updated = updateTaskUseCase.update(new UpdateTaskCommand(
-            taskId, spaceId, request.title(), request.priority(), request.dueDate(), request.assigneeIds()), membership);
+            taskId, spaceId, request.title(), request.priority(), request.dueDate(), request.assigneeIds(), subtasks), membership);
         return ResponseEntity.ok(TaskResponse.from(updated));
     }
 

@@ -1,5 +1,6 @@
 {
   "detail": {
+    "change_status": "Change status",
     "title": "Task details",
     "status_label": "Status",
     "due_date_label": "Due date",
@@ -22,6 +23,16 @@
     "assignees_label": "Assigned to",
     "subtasks_title": "Subtasks",
     "subtask_placeholder": "New subtask…",
+    "subtask_label": "Subtask {{index}}",
+    "remove_subtask": "Remove subtask {{index}}",
+    "move_subtask": "Move subtask {{index}}",
+    "move_subtask_instructions": "To move a subtask, press Space or Enter, then the up and down arrows. Press Space or Enter again to drop it, or Escape to cancel.",
+    "move_subtask_picked": "Picked up subtask “{{text}}”.",
+    "move_subtask_over": "Subtask “{{text}}” at position {{position}}.",
+    "move_subtask_dropped": "Subtask “{{text}}” dropped at position {{position}}.",
+    "move_subtask_cancelled": "Moving “{{text}}” cancelled.",
+    "add_subtask": "Add subtask",
+    "subtask_required": "A subtask cannot be empty.",
     "remove": "Remove",
     "recurring_label": "Recurring task",
     "recurrence_interval_type_label": "Frequency",

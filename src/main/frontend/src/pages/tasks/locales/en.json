@@ -20,7 +20,6 @@
   "edit": "Edit",
   "delete": "Delete",
   "move": "Move to…",
-  "change_status": "Change status of {{title}} (drag or click)",
   "view_details": "View details of {{title}}",
   "change_status_dialog_title": "Move \"{{title}}\" to…",
   "change_status_target_current": "{{column}} (current column)",

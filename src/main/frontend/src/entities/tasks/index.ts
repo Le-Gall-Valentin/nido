@@ -1,4 +1,4 @@
-export type { Task, Subtask, TaskStatus, TaskPriority, RecurrenceInterval, RecurrenceInput, RecurringTaskSeries } from './model/types'
+export type { Task, Subtask, SubtaskEdit, TaskStatus, TaskPriority, RecurrenceInterval, RecurrenceInput, RecurringTaskSeries } from './model/types'
 export type { ITasksApi } from './model/ITasksApi'
 export type { IRecurringTaskSeriesApi } from './model/IRecurringTaskSeriesApi'
 export type { TasksApi } from './model/tasksApiContext'

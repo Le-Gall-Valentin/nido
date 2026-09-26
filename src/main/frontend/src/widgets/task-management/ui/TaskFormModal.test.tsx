@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import type { SpaceMember } from '@/entities/space'
 import type { Task } from '@/entities/tasks'
@@ -55,11 +55,93 @@ describe('TaskFormModal', () => {
     expect(screen.queryByText('form.assignees_label')).toBeNull()
   })
 
-  it('does not show the recurrence toggle or the subtasks editor when editing', () => {
+  it('does not show the recurrence toggle when editing', () => {
     render(<TaskFormModal open onClose={vi.fn()} onSubmit={vi.fn()} initialTask={TASK} members={MEMBERS} isPersonal={false} />)
 
     expect(screen.queryByText('form.recurring_label')).toBeNull()
-    expect(screen.queryByText('form.subtasks_title')).toBeNull()
+  })
+
+  const WITH_SUBTASKS: Task = {
+    ...TASK,
+    subtasks: [{ id: 's-1', text: 'Acheter les sacs', done: true }, { id: 's-2', text: 'Trier le verre', done: false }],
+  }
+  const subtaskField = (index: number) => screen.getByLabelText(`form.subtask_label:{"index":${index}}`) as HTMLInputElement
+
+  it('shows the subtasks of the task being edited, each in a field of its own', () => {
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={vi.fn()} initialTask={WITH_SUBTASKS} members={MEMBERS} isPersonal={false} />)
+
+    expect(subtaskField(1).value).toBe('Acheter les sacs')
+    expect(subtaskField(2).value).toBe('Trier le verre')
+  })
+
+  it('editing sends back the subtask list, a kept subtask by its id and a new one without', () => {
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={WITH_SUBTASKS} members={MEMBERS} isPersonal={false} />)
+
+    fireEvent.change(subtaskField(1), { target: { value: 'Acheter les grands sacs' } })
+    fireEvent.click(screen.getByLabelText('form.remove_subtask:{"index":2}'))
+    fireEvent.change(screen.getByPlaceholderText('form.subtask_placeholder'), { target: { value: 'Sortir le bac' } })
+    fireEvent.keyDown(screen.getByPlaceholderText('form.subtask_placeholder'), { key: 'Enter' })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      subtasks: [{ id: 's-1', text: 'Acheter les grands sacs' }, { text: 'Sortir le bac' }],
+    }))
+  })
+
+  it('moves a subtask down the list from the keyboard, by its handle', async () => {
+    // jsdom lays nothing out, so every row would sit at the same spot and the keyboard would have
+    // nowhere to go: each row is given the place it takes on screen, one under the other.
+    const layout = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const row = this.closest('[data-subtask-row]')
+      const top = row ? [...row.parentElement!.children].indexOf(row) * 40 : 0
+      return { x: 0, y: top, top, left: 0, right: 300, bottom: top + 40, width: 300, height: 40, toJSON: () => ({}) }
+    })
+    // The keyboard sensor listens for the next key only once the current one has been handled.
+    const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={WITH_SUBTASKS} members={MEMBERS} isPersonal={false} />)
+
+    const handle = screen.getByLabelText('form.move_subtask:{"index":1}')
+    handle.focus()
+    fireEvent.keyDown(handle, { code: 'Space' })
+    await settle()
+    fireEvent.keyDown(handle, { code: 'ArrowDown' })
+    await settle()
+    fireEvent.keyDown(handle, { code: 'Space' })
+    await settle()
+    fireEvent.click(screen.getByText('form.save'))
+    layout.mockRestore()
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      subtasks: [{ id: 's-2', text: 'Trier le verre' }, { id: 's-1', text: 'Acheter les sacs' }],
+    }))
+  })
+
+  it('refuses a subtask whose text was emptied out', () => {
+    // The server refuses a blank subtask outright; saying so here keeps the rest of the edit.
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={WITH_SUBTASKS} members={MEMBERS} isPersonal={false} />)
+
+    fireEvent.change(subtaskField(1), { target: { value: '   ' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText('form.subtask_required')).toBeDefined()
+  })
+
+  it('creating a task sends the subtasks added to it, in order', () => {
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={null} members={MEMBERS} isPersonal={false} />)
+
+    fireEvent.change(screen.getByLabelText('form.title_label'), { target: { value: 'Poubelles' } })
+    for (const text of ['Trier', 'Sortir']) {
+      fireEvent.change(screen.getByPlaceholderText('form.subtask_placeholder'), { target: { value: text } })
+      fireEvent.click(screen.getByLabelText('form.add_subtask'))
+    }
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ subtasks: [{ text: 'Trier' }, { text: 'Sortir' }] }))
   })
 
   it('submits an update with the edited fields when editing', () => {

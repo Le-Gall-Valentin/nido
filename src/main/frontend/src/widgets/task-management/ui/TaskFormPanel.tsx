@@ -30,20 +30,20 @@ export function TaskFormPanel({ spaceId, task, members, isPersonal, onClose }: T
   function handleSubmit(input: TaskFormInput) {
     if (task) {
       updateTask.mutate(
-        { taskId: task.id, title: input.title, priority: input.priority, dueDate: input.dueDate, assigneeIds: input.assigneeIds },
+        { taskId: task.id, title: input.title, priority: input.priority, dueDate: input.dueDate, assigneeIds: input.assigneeIds, subtasks: input.subtasks },
         { onSuccess: onClose }
       )
       return
     }
     if (input.recurrence) {
       createRecurringTask.mutate(
-        { title: input.title, priority: input.priority, subtasks: input.subtasks, recurrence: input.recurrence },
+        { title: input.title, priority: input.priority, subtasks: input.subtasks.map((s) => s.text), recurrence: input.recurrence },
         { onSuccess: onClose }
       )
       return
     }
     createTask.mutate(
-      { title: input.title, priority: input.priority, dueDate: input.dueDate, assigneeIds: input.assigneeIds, subtasks: input.subtasks },
+      { title: input.title, priority: input.priority, dueDate: input.dueDate, assigneeIds: input.assigneeIds, subtasks: input.subtasks.map((s) => s.text) },
       { onSuccess: onClose }
     )
   }

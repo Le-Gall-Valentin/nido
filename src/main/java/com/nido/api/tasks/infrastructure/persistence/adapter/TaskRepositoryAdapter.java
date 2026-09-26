@@ -1,6 +1,7 @@
 package com.nido.api.tasks.infrastructure.persistence.adapter;
 
 import com.nido.api.tasks.domain.model.CreateTaskCommand;
+import com.nido.api.tasks.domain.model.SubtaskEdit;
 import com.nido.api.tasks.domain.model.SubtaskInput;
 import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskException;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component
@@ -137,6 +139,9 @@ public class TaskRepositoryAdapter implements TaskRepository {
             assignees.save(ae);
         }
         assignees.flush();
+        if (command.subtasks() != null) {
+            rewriteSubtasks(e.getId(), command.subtasks());
+        }
         return findById(e.getId()).orElseThrow(TaskException.TaskNotFound::new);
     }
 
@@ -181,6 +186,39 @@ public class TaskRepositoryAdapter implements TaskRepository {
             subtasks.save(se);
         }
         assignees.flush();
+        subtasks.flush();
+    }
+
+    /**
+     * Brings the task's subtask rows in line with the edited list. A row the list names is renamed
+     * and moved in place, so its id and its check survive; a new one is inserted unchecked; a row
+     * the list no longer names is deleted.
+     */
+    private void rewriteSubtasks(UUID taskId, List<SubtaskEdit> edits) {
+        Map<UUID, TaskSubtaskEntity> rows = subtasks.findByTaskIdOrderByPositionAsc(taskId).stream()
+            .collect(Collectors.toMap(TaskSubtaskEntity::getId, Function.identity()));
+        List<TaskSubtaskEntity> kept = new ArrayList<>();
+        for (int position = 0; position < edits.size(); position++) {
+            SubtaskEdit edit = edits.get(position);
+            TaskSubtaskEntity row;
+            if (edit.id() == null) {
+                row = new TaskSubtaskEntity();
+                row.setTaskId(taskId);
+                row.setDone(false);
+            } else {
+                // UpdateTaskHandler has already refused an id that is not one of this task's own;
+                // this is the last line, should a caller ever skip it.
+                row = rows.remove(edit.id());
+                if (row == null) {
+                    throw new TaskException.TaskNotFound();
+                }
+            }
+            row.setText(edit.text());
+            row.setPosition(position);
+            kept.add(row);
+        }
+        subtasks.deleteAll(rows.values());
+        subtasks.saveAll(kept);
         subtasks.flush();
     }
 

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTasksApi, useRecurringTaskSeriesApi } from './tasksApiContext'
 import { tasksKey, recurringTaskSeriesKey } from './useTasks'
-import type { RecurrenceInput, TaskPriority, TaskStatus } from './types'
+import type { RecurrenceInput, SubtaskEdit, TaskPriority, TaskStatus } from './types'
 
 export function useCreateTask(spaceId: string) {
   const api = useTasksApi()
@@ -30,8 +30,8 @@ export function useUpdateTask(spaceId: string) {
   const api = useTasksApi()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: { taskId: string; title: string; priority: TaskPriority; dueDate: string | null; assigneeIds: string[] }) =>
-      api.updateTask(spaceId, input.taskId, input.title, input.priority, input.dueDate, input.assigneeIds),
+    mutationFn: (input: { taskId: string; title: string; priority: TaskPriority; dueDate: string | null; assigneeIds: string[]; subtasks?: SubtaskEdit[] }) =>
+      api.updateTask(spaceId, input.taskId, input.title, input.priority, input.dueDate, input.assigneeIds, input.subtasks),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: tasksKey(spaceId) }),
   })
 }

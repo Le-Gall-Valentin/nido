@@ -20,7 +20,6 @@
   "edit": "Modifier",
   "delete": "Supprimer",
   "move": "Déplacer vers…",
-  "change_status": "Changer le statut de {{title}} (glisser ou cliquer)",
   "view_details": "Voir le détail de {{title}}",
   "change_status_dialog_title": "Déplacer « {{title}} » vers…",
   "change_status_target_current": "{{column}} (colonne actuelle)",

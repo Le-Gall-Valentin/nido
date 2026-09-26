@@ -68,7 +68,17 @@ describe('task mutations', () => {
 
     result.current.mutate({ taskId: 't-1', title: 'T2', priority: 'HIGH', dueDate: '2026-01-07', assigneeIds: ['u-1'] })
 
-    await waitFor(() => expect(api.updateTask).toHaveBeenCalledWith('space-1', 't-1', 'T2', 'HIGH', '2026-01-07', ['u-1']))
+    await waitFor(() => expect(api.updateTask).toHaveBeenCalledWith('space-1', 't-1', 'T2', 'HIGH', '2026-01-07', ['u-1'], undefined))
+  })
+
+  it('useUpdateTask passes the edited subtasks on', async () => {
+    const api = fakeApi()
+    const queryClient = new QueryClient()
+    const { result } = renderHook(() => useUpdateTask('space-1'), { wrapper: wrapperFor(api, queryClient) })
+
+    result.current.mutate({ taskId: 't-1', title: 'T2', priority: 'HIGH', dueDate: null, assigneeIds: [], subtasks: [{ id: 's-1', text: 'A' }] })
+
+    await waitFor(() => expect(api.updateTask).toHaveBeenCalledWith('space-1', 't-1', 'T2', 'HIGH', null, [], [{ id: 's-1', text: 'A' }]))
   })
 
   it('useChangeTaskStatus calls the api', async () => {

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
@@ -13,12 +13,6 @@ import type { TasksApi, Task } from '@/entities/tasks'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),
 }))
-
-let mockPointerIsFine = false
-vi.mock('@/shared/lib', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/shared/lib')>()
-  return { ...actual, usePointerIsFine: () => mockPointerIsFine }
-})
 
 const TASKS: Task[] = [
   { id: 't1', title: 'Prendre RDV', status: 'TODO', priority: 'HIGH', dueDate: null, assigneeIds: [], subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null },
@@ -81,9 +75,14 @@ function setup(api: TasksApi = fakeApi(), spaces: SpaceSummary[] = [CURRENT_SPAC
   return { api }
 }
 
-describe('TasksPage', () => {
-  beforeEach(() => { mockPointerIsFine = false })
+/** The status picker lives in the task's detail view, opened by tapping the task's title. */
+function openStatusPicker(title: string) {
+  fireEvent.click(screen.getAllByLabelText(`view_details:{"title":"${title}"}`)[0])
+  fireEvent.click(screen.getByText('detail.change_status'))
+  return screen.getByRole('dialog')
+}
 
+describe('TasksPage', () => {
   it('renders each task under its status column', async () => {
     setup()
 
@@ -100,6 +99,19 @@ describe('TasksPage', () => {
     fireEvent.click(screen.getByText('form.save'))
 
     await waitFor(() => expect(api.createTask).toHaveBeenCalledWith('space-1', 'Nouvelle tâche', 'MED', null, [], []))
+  })
+
+  it('edits the subtasks of a task from its card', async () => {
+    const withSubtask: Task = { ...TASKS[0], subtasks: [{ id: 'st-1', text: 'Trouver le numéro', done: true }] }
+    const { api } = setup(fakeApi({ listTasks: vi.fn().mockResolvedValue([withSubtask]), updateTask: vi.fn().mockResolvedValue(withSubtask) }))
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByText('edit'))
+    fireEvent.change(screen.getByLabelText('form.subtask_label:{"index":1}'), { target: { value: 'Trouver le bon numéro' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    await waitFor(() => expect(api.updateTask).toHaveBeenCalledWith(
+      'space-1', 't1', 'Prendre RDV', 'HIGH', null, [], [{ id: 'st-1', text: 'Trouver le bon numéro' }]))
   })
 
   it('marking a task done with open subtasks says so instead of doing nothing', async () => {
@@ -221,19 +233,19 @@ describe('TasksPage', () => {
     expect(await screen.findByText('detail.status_label')).toBeDefined()
   })
 
-  it('tapping the drag handle opens the status picker and changes the status', async () => {
+  it('changes the status of a task from its detail view', async () => {
     const { api } = setup()
     await screen.findByText('Prendre RDV')
 
-    fireEvent.click(screen.getByLabelText('change_status:{"title":"Prendre RDV"}'))
-    const dialog = screen.getByRole('dialog')
-    fireEvent.click(within(dialog).getByText('column.DOING'))
+    const picker = openStatusPicker('Prendre RDV')
+    fireEvent.click(within(picker).getByText('column.DOING'))
 
     await waitFor(() => expect(api.changeTaskStatus).toHaveBeenCalledWith('space-1', 't1', 'DOING'))
   })
 
-  it('makes the whole card the drag surface on a mouse (fine pointer)', async () => {
-    mockPointerIsFine = true
+  it('makes the whole card the drag surface, on a touch screen as on a mouse', async () => {
+    // jsdom matches no media query, so this is the coarse pointer a phone reports — where the card
+    // used to hand its drag to a small grip of its own.
     setup()
     await screen.findByText('Prendre RDV')
 
@@ -242,24 +254,13 @@ describe('TasksPage', () => {
     expect(draggableEls.every((el) => el.tagName === 'DIV')).toBe(true)
   })
 
-  it('restricts dragging to the grip handle on touch (coarse pointer)', async () => {
-    mockPointerIsFine = false
-    setup()
-    await screen.findByText('Prendre RDV')
-
-    const draggableEls = Array.from(document.querySelectorAll('[aria-roledescription]'))
-    expect(draggableEls).toHaveLength(2) // one per task
-    expect(draggableEls.every((el) => el.tagName === 'BUTTON')).toBe(true)
-  })
-
   it('disables the current column and disables DONE when subtasks are incomplete', async () => {
     const withSubtask: Task = { ...TASKS[0], subtasks: [{ id: 's1', text: 'A', done: false }] }
     const api = fakeApi({ listTasks: vi.fn().mockResolvedValue([withSubtask]) })
     setup(api)
     await screen.findByText('Prendre RDV')
 
-    fireEvent.click(screen.getByLabelText('change_status:{"title":"Prendre RDV"}'))
-    const dialog = screen.getByRole('dialog')
+    const dialog = openStatusPicker('Prendre RDV')
     const buttons = within(dialog)
       .getAllByRole('button')
       .filter((button) => button.getAttribute('data-testid') !== 'dialog-close-button')
@@ -291,7 +292,7 @@ describe('TasksPage', () => {
     fireEvent.click(screen.getByText('Prendre RDV'))
 
     expect(await screen.findByText('detail.status_label')).toBeDefined()
-    expect(screen.queryByLabelText('change_status:{"title":"Prendre RDV"}')).toBeNull()
+    expect(screen.queryByText('detail.change_status')).toBeNull()
   })
 
   it('opens the recurring series manager and edits a series', async () => {

@@ -1,9 +1,13 @@
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Plus, Pencil, ArrowRightLeft, GripVertical, Repeat } from 'lucide-react'
-import { DndContext, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { Plus, Pencil, ArrowRightLeft, Repeat } from 'lucide-react'
+import {
+  DndContext, DragOverlay, pointerWithin, rectIntersection, useDraggable, useDroppable,
+  type CollisionDetection, type DragEndEvent,
+} from '@dnd-kit/core'
 import { Alert, Dialog, Spinner } from '@/shared/ui'
-import { todayIso, usePointerIsFine } from '@/shared/lib'
+import { todayIso, useDragSensors } from '@/shared/lib'
 import { useSpaceMembers } from '@/entities/space'
 import { useSpaceTimezone } from '@/features/space-switcher'
 import { isOverdue } from '../lib/isOverdue'
@@ -16,6 +20,17 @@ import {
 import { useTasksPageState } from '../model/useTasksPageState'
 
 const COLUMN_ORDER: TaskStatus[] = ['TODO', 'DOING', 'DONE']
+const CARD_CLASSNAME = 'flex flex-col gap-2 rounded-2xl border border-border bg-bg-1 p-3'
+
+/**
+ * The column under the pointer, when there is one — on a phone, where the columns are stacked, that
+ * is where the finger is, not whichever the dragged copy overlaps most. Past a column's end, which
+ * is short while it holds few cards, the one the copy overlaps still takes it.
+ */
+const underThePointerFirst: CollisionDetection = (args) => {
+  const underPointer = pointerWithin(args)
+  return underPointer.length > 0 ? underPointer : rectIntersection(args)
+}
 
 interface TasksPageProps {
   api?: TasksApi
@@ -40,23 +55,38 @@ interface TaskCardProps {
   onEdit: (task: Task) => void
   onMove: (task: Task) => void
   onDelete: (task: Task) => void
-  onChangeStatus: (task: Task) => void
   onView: (task: Task) => void
 }
 
-function TaskCard({ task, today, members, canWriteHere, onToggleDone, onToggleSubtask, onEdit, onMove, onDelete, onChangeStatus, onView }: TaskCardProps) {
+/**
+ * A card on the board, dragged whole to another column — by a mouse that presses and moves, or a
+ * finger held down (see useDragSensors). Every button on it still answers a plain click or tap.
+ */
+function TaskCard(props: TaskCardProps) {
+  const { task, canWriteHere } = props
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
+
+  return (
+    <div
+      ref={canWriteHere ? setNodeRef : undefined}
+      {...(canWriteHere ? listeners : undefined)}
+      {...(canWriteHere ? attributes : undefined)}
+      // touch-manipulation, never touch-none: a column must keep scrolling under a finger that
+      // touches a card — TouchSensor blocks the scroll itself, once the long press has started a
+      // drag. No selection and no callout, so that press neither selects the card's text nor opens
+      // the phone's menu. While dragged, the card stays in place, faded; a copy follows the pointer.
+      className={`${CARD_CLASSNAME} ${canWriteHere ? 'cursor-grab touch-manipulation select-none [-webkit-touch-callout:none] active:cursor-grabbing' : ''} ${isDragging ? 'opacity-40' : ''}`}
+    >
+      <TaskCardContent {...props} />
+    </div>
+  )
+}
+
+function TaskCardContent({ task, today, members, canWriteHere, onToggleDone, onToggleSubtask, onEdit, onMove, onDelete, onView }: TaskCardProps) {
   const { t } = useTranslation('tasks')
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: task.id })
-  const pointerIsFine = usePointerIsFine()
   const meta = TASK_PRIORITY_META[task.priority]
   const doneSubtasks = task.subtasks.filter((s) => s.done).length
-  const changeStatusLabel = t('change_status', { title: task.title })
   const viewDetailsLabel = t('view_details', { title: task.title })
-  // On a mouse (fine pointer), the whole card is the drag surface, mirroring the
-  // pre-mobile-fix behavior. On touch, dragging stays on the small grip handle only —
-  // making the whole card touch-none there broke scrolling a column by touching a card.
-  const canDragCard = canWriteHere && pointerIsFine
-  const canDragHandle = canWriteHere && !pointerIsFine
 
   const priorityRowContent = (
     <>
@@ -77,13 +107,7 @@ function TaskCard({ task, today, members, canWriteHere, onToggleDone, onToggleSu
   )
 
   return (
-    <div
-      ref={canDragCard ? setNodeRef : undefined}
-      {...(canDragCard ? listeners : undefined)}
-      {...(canDragCard ? attributes : undefined)}
-      style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined}
-      className={`flex flex-col gap-2 rounded-2xl border border-border bg-bg-1 p-3 ${canDragCard ? 'touch-none cursor-grab active:cursor-grabbing' : ''}`}
-    >
+    <>
       <div className="flex items-start gap-2.5">
         <button type="button" aria-label={t('toggle_done', { title: task.title })} onClick={() => onToggleDone(task)}
           className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-[6px] border-2 ${task.status === 'DONE' ? 'border-status-green bg-status-green' : 'border-border'}`}>
@@ -94,16 +118,6 @@ function TaskCard({ task, today, members, canWriteHere, onToggleDone, onToggleSu
           {task.title}
         </button>
         {task.recurring && <Repeat className="mt-0.5 size-3.5 shrink-0 text-fg-3" />}
-        {canWriteHere && (
-          <button
-            ref={canDragHandle ? setNodeRef : undefined}
-            {...(canDragHandle ? listeners : undefined)}
-            {...(canDragHandle ? attributes : undefined)}
-            type="button" onClick={() => onChangeStatus(task)} aria-label={changeStatusLabel}
-            className={`grid size-6 shrink-0 place-items-center rounded-md text-fg-3 hover:text-fg-1 active:cursor-grabbing ${canDragHandle ? 'touch-none' : ''}`}>
-            <GripVertical className="size-4" />
-          </button>
-        )}
       </div>
 
       {task.subtasks.length > 0 && (
@@ -139,15 +153,16 @@ function TaskCard({ task, today, members, canWriteHere, onToggleDone, onToggleSu
           </button>
         </div>
       )}
-    </div>
+    </>
   )
 }
 
 function TaskColumn({ status, tasks, ...cardProps }: { status: TaskStatus; tasks: Task[] } & Omit<TaskCardProps, 'task'>) {
   const { t } = useTranslation('tasks')
-  const { setNodeRef } = useDroppable({ id: status })
+  const { setNodeRef, isOver } = useDroppable({ id: status })
   return (
-    <div ref={setNodeRef} className="flex flex-col gap-2.5 rounded-2xl bg-bg-2 p-3">
+    <div ref={setNodeRef}
+      className={`flex flex-col gap-2.5 rounded-2xl p-3 transition-colors ${isOver ? 'bg-accent-dim ring-2 ring-accent' : 'bg-bg-2'}`}>
       <div className="flex items-center gap-2 px-1 pb-1 text-sm font-semibold text-fg-2">
         {t(`column.${status}`)} <span className="ml-auto text-xs text-fg-4">{tasks.length}</span>
       </div>
@@ -181,7 +196,8 @@ function TasksPageContent() {
     seriesForTask,
   } = useTasksPageState(spaceId)
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const sensors = useDragSensors()
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
 
   if (isPending) return <Spinner label={t('loading')} fullscreen={false} />
   if (isError) return <Alert variant="error">{t('error.load_failed')}</Alert>
@@ -193,9 +209,9 @@ function TasksPageContent() {
     onEdit: (task: Task) => setFormState({ mode: 'edit', task }),
     onMove: (task: Task) => setMovingTask(task),
     onDelete: (task: Task) => setDeletingTask(task),
-    onChangeStatus: (task: Task) => setStatusPickerTask(task),
     onView: (task: Task) => setViewingTask(task),
   }
+  const draggedTask = tasks?.find((task) => task.id === draggedTaskId) ?? null
 
   return (
     <div className="mx-auto max-w-[1100px] px-5 py-6 md:px-10 md:py-[34px]">
@@ -226,12 +242,24 @@ function TasksPageContent() {
         </Alert>
       )}
 
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={underThePointerFirst}
+        onDragStart={({ active }) => setDraggedTaskId(String(active.id))}
+        onDragEnd={(event: DragEndEvent) => { setDraggedTaskId(null); handleDragEnd(event) }}
+        onDragCancel={() => setDraggedTaskId(null)}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {COLUMN_ORDER.map((status) => (
             <TaskColumn key={status} status={status} tasks={(tasks ?? []).filter((task) => task.status === status)} {...cardProps} />
           ))}
         </div>
+        {/* No drop animation: it would fly the copy back to the card's old column while the move
+            is still on its way to the server. */}
+        <DragOverlay dropAnimation={null}>
+          {draggedTask && (
+            <div className={`${CARD_CLASSNAME} cursor-grabbing shadow-xl`}>
+              <TaskCardContent task={draggedTask} {...cardProps} />
+            </div>
+          )}
+        </DragOverlay>
       </DndContext>
 
       {formState && (
@@ -281,6 +309,7 @@ function TasksPageContent() {
           series={seriesForTask(viewingTask)}
           members={members ?? []}
           onClose={() => setViewingTask(null)}
+          onChangeStatus={canWriteHere ? () => { setStatusPickerTask(viewingTask); setViewingTask(null) } : undefined}
         />
       )}
 

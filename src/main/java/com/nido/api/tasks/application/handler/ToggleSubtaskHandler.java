@@ -3,8 +3,10 @@ package com.nido.api.tasks.application.handler;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.tasks.application.port.in.ToggleSubtaskUseCase;
+import com.nido.api.tasks.domain.model.Subtask;
 import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskException;
+import com.nido.api.tasks.domain.model.TaskStatus;
 import com.nido.api.tasks.domain.port.out.TaskRepository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,9 +34,13 @@ public class ToggleSubtaskHandler implements ToggleSubtaskUseCase {
         // space could toggle an arbitrary subtask elsewhere — including in a space they aren't
         // even a member of — just by knowing its UUID, since taskRepository.toggleSubtask looks
         // the subtask up by its own id alone.
-        if (existing.subtasks().stream().noneMatch(s -> s.id().equals(subtaskId))) {
-            throw new TaskException.TaskNotFound();
-        }
+        Subtask toggled = existing.subtasks().stream().filter(s -> s.id().equals(subtaskId)).findFirst()
+            .orElseThrow(TaskException.TaskNotFound::new);
         taskRepository.toggleSubtask(taskId, subtaskId);
+        if (existing.status() == TaskStatus.DONE && toggled.done()) {
+            // Unticked: the task has something left to do again, so it is back in progress —
+            // "done" keeps meaning every subtask is, as ChangeTaskStatusHandler requires.
+            taskRepository.updateStatus(taskId, TaskStatus.DOING);
+        }
     }
 }

@@ -8,6 +8,15 @@ export interface Subtask {
   done: boolean
 }
 
+/**
+ * One line of a subtask list sent back by an edit. An `id` names a subtask the task already has,
+ * which keeps its check; a line without one is a new subtask, which starts unchecked.
+ */
+export interface SubtaskEdit {
+  id?: string
+  text: string
+}
+
 export interface Task {
   id: string
   title: string

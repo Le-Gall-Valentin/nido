@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
-  DndContext, DragOverlay, MouseSensor, TouchSensor, pointerWithin, useSensor, useSensors,
+  DndContext, DragOverlay, pointerWithin,
   type DragEndEvent, type DragMoveEvent, type DragOverEvent, type DragStartEvent,
 } from '@dnd-kit/core'
+import { useDragSensors } from '@/shared/lib'
 import type { CalendarOccurrence, ScheduleChange } from '@/entities/calendar'
 import type { CalendarView } from '../lib/calendarWindow'
 import type { DragData, DragIntent, DropData } from '../lib/dragTypes'
@@ -61,12 +62,7 @@ function scrollParentOf(element: HTMLElement | null): HTMLElement | null {
  */
 export function CalendarDragLayer({ enabled, view, onShift, onDragStart, onApply, children }: Props) {
   const wide = useWideLayout()
-  // A mouse after 8px, so a click stays a click; a finger after a 250ms press, so scrolling and
-  // swiping keep the gesture — and TouchSensor blocks the scroll only once the drag has started.
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
-  )
+  const sensors = useDragSensors()
   const container = useRef<HTMLDivElement>(null)
   const [intent, setIntent] = useState<DragIntent | null>(null)
   const [preview, setPreview] = useState<ScheduleChange | null>(null)
