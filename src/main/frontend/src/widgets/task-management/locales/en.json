@@ -1,5 +1,6 @@
 {
   "detail": {
+    "change_status": "Change status",
     "title": "Task details",
     "status_label": "Status",
     "due_date_label": "Due date",

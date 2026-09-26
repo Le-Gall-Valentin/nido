@@ -1,5 +1,6 @@
 {
   "detail": {
+    "change_status": "Changer de statut",
     "title": "Détail de la tâche",
     "status_label": "Statut",
     "due_date_label": "Échéance",
