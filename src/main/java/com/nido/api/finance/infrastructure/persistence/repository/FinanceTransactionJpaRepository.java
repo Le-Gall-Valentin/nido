@@ -10,7 +10,15 @@ import java.util.List;
 import java.util.UUID;
 
 public interface FinanceTransactionJpaRepository extends JpaRepository<FinanceTransactionEntity, UUID> {
-    @Query("SELECT t FROM FinanceTransactionEntity t WHERE t.spaceId = :spaceId AND t.date >= :from AND t.date <= :to")
+    /**
+     * Newest first, the way a bank statement reads; on the same day, the latest entry goes on top.
+     * Without the ORDER BY the order would be whichever the planner happened to read the rows in.
+     */
+    @Query("""
+        SELECT t FROM FinanceTransactionEntity t
+        WHERE t.spaceId = :spaceId AND t.date >= :from AND t.date <= :to
+        ORDER BY t.date DESC, t.createdAt DESC
+        """)
     List<FinanceTransactionEntity> findBySpaceIdAndDateBetween(
         @Param("spaceId") UUID spaceId, @Param("from") LocalDate from, @Param("to") LocalDate to);
 

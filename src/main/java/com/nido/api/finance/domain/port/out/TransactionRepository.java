@@ -14,6 +14,7 @@ import java.util.UUID;
 
 public interface TransactionRepository {
     Optional<Transaction> findById(UUID transactionId);
+    /** Newest first; on the same day, the latest entry first. */
     List<Transaction> findBySpaceIdAndMonth(UUID spaceId, YearMonth month);
 
     /**
