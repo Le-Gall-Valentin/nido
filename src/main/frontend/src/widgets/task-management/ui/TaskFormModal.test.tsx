@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import type { SpaceMember } from '@/entities/space'
 import type { Task } from '@/entities/tasks'
@@ -86,6 +86,35 @@ describe('TaskFormModal', () => {
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
       subtasks: [{ id: 's-1', text: 'Acheter les grands sacs' }, { text: 'Sortir le bac' }],
+    }))
+  })
+
+  it('moves a subtask down the list from the keyboard, by its handle', async () => {
+    // jsdom lays nothing out, so every row would sit at the same spot and the keyboard would have
+    // nowhere to go: each row is given the place it takes on screen, one under the other.
+    const layout = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const row = this.closest('[data-subtask-row]')
+      const top = row ? [...row.parentElement!.children].indexOf(row) * 40 : 0
+      return { x: 0, y: top, top, left: 0, right: 300, bottom: top + 40, width: 300, height: 40, toJSON: () => ({}) }
+    })
+    // The keyboard sensor listens for the next key only once the current one has been handled.
+    const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={WITH_SUBTASKS} members={MEMBERS} isPersonal={false} />)
+
+    const handle = screen.getByLabelText('form.move_subtask:{"index":1}')
+    handle.focus()
+    fireEvent.keyDown(handle, { code: 'Space' })
+    await settle()
+    fireEvent.keyDown(handle, { code: 'ArrowDown' })
+    await settle()
+    fireEvent.keyDown(handle, { code: 'Space' })
+    await settle()
+    fireEvent.click(screen.getByText('form.save'))
+    layout.mockRestore()
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      subtasks: [{ id: 's-2', text: 'Trier le verre' }, { id: 's-1', text: 'Acheter les sacs' }],
     }))
   })
 

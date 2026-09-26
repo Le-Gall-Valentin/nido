@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, X } from 'lucide-react'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { UserAvatar } from '@/entities/user'
 import type { SpaceMember } from '@/entities/space'
@@ -8,6 +7,8 @@ import type { RecurrenceInterval, RecurringTaskSeries, TaskPriority } from '@/en
 import type { RecurringTaskSeriesFormInput } from '../model/types'
 import { TASK_PRIORITY_ORDER, TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
 import { leadTimeExceedsInterval } from '../lib/leadTimeExceedsInterval'
+import { newSubtaskKey } from '../lib/newSubtaskKey'
+import { SubtaskListEditor, type EditableSubtask } from './SubtaskListEditor'
 
 const INTERVAL_ORDER: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
 const SELECT_CLASSNAME = 'flex-1 rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none'
@@ -30,8 +31,9 @@ export function RecurringTaskSeriesFormModal({ series, members, isPersonal, onSu
   const [title, setTitle] = useState(series.title)
   const [priority, setPriority] = useState<TaskPriority>(series.priority)
   const [memberIds, setMemberIds] = useState<string[]>(series.rotationMemberIds)
-  const [subtasks, setSubtasks] = useState<string[]>(series.subtaskTemplates)
-  const [newSubtask, setNewSubtask] = useState('')
+  // A template is only text, with no id of its own: each row gets a key for the screen alone.
+  const [subtasks, setSubtasks] = useState<EditableSubtask[]>(
+    () => series.subtaskTemplates.map((text) => ({ key: newSubtaskKey(), text })))
   const [intervalType, setIntervalType] = useState<RecurrenceInterval>(series.intervalType)
   const [intervalCount, setIntervalCount] = useState(String(series.intervalCount))
   const [leadIntervalType, setLeadIntervalType] = useState<RecurrenceInterval>(series.leadIntervalType)
@@ -44,20 +46,14 @@ export function RecurringTaskSeriesFormModal({ series, members, isPersonal, onSu
     setMemberIds((ids) => (ids.includes(userId) ? ids.filter((id) => id !== userId) : [...ids, userId]))
   }
 
-  function addSubtask() {
-    if (!newSubtask.trim()) return
-    setSubtasks((s) => [...s, newSubtask.trim()])
-    setNewSubtask('')
-  }
-
-  function removeSubtask(index: number) {
-    setSubtasks((s) => s.filter((_, i) => i !== index))
-  }
-
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) {
       setError(t('form.title_required'))
+      return
+    }
+    if (subtasks.some((s) => !s.text.trim())) {
+      setError(t('form.subtask_required'))
       return
     }
     if (!anchorDate) {
@@ -80,7 +76,7 @@ export function RecurringTaskSeriesFormModal({ series, members, isPersonal, onSu
     // series the cursor has long moved past the anchor. Left to the server on purpose.
     setError(null)
     onSubmit({
-      title: title.trim(), priority, subtasks,
+      title: title.trim(), priority, subtasks: subtasks.map((s) => s.text.trim()),
       recurrence: {
         intervalType, intervalCount: mainCount, leadIntervalType, leadIntervalCount: leadCount,
         anchorDate, endDate: endDate || null, rotationMemberIds: memberIds,
@@ -139,25 +135,7 @@ export function RecurringTaskSeriesFormModal({ series, members, isPersonal, onSu
           </div>
         )}
 
-        <div className="flex flex-col gap-2">
-          <span className="text-[13px] font-semibold text-fg-1">{t('form.subtasks_title')}</span>
-          {subtasks.map((subtask, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <span className="flex-1 text-sm text-fg-1">{subtask}</span>
-              <button type="button" onClick={() => removeSubtask(index)} aria-label={t('form.remove')} className="p-1.5 text-fg-3 hover:text-status-red">
-                <X className="size-4" />
-              </button>
-            </div>
-          ))}
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <Input label={t('form.subtask_placeholder')} srOnlyLabel placeholder={t('form.subtask_placeholder')}
-                value={newSubtask} onChange={(e) => setNewSubtask(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }} />
-            </div>
-            <Button type="button" onClick={addSubtask}><Plus className="size-4" /></Button>
-          </div>
-        </div>
+        <SubtaskListEditor subtasks={subtasks} onChange={setSubtasks} />
 
         {(error ?? submitError) && <p className="text-sm font-medium text-status-red">{error ?? submitError}</p>}
 

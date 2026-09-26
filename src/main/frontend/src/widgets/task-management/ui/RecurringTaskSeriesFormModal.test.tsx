@@ -24,7 +24,7 @@ describe('RecurringTaskSeriesFormModal', () => {
     render(<RecurringTaskSeriesFormModal series={SERIES} members={MEMBERS} isPersonal={false} onSubmit={vi.fn()} onCancel={vi.fn()} />)
 
     expect((screen.getByLabelText('form.title_label') as HTMLInputElement).value).toBe('Sortir les poubelles')
-    expect(screen.getByText('Vérifier le tri')).toBeDefined()
+    expect((screen.getByLabelText('form.subtask_label') as HTMLInputElement).value).toBe('Vérifier le tri')
   })
 
   it('submits the edited fields', () => {
@@ -41,6 +41,27 @@ describe('RecurringTaskSeriesFormModal', () => {
         anchorDate: '2026-01-07', endDate: null, rotationMemberIds: ['u-1'],
       },
     })
+  })
+
+  it('renames a subtask template in place', () => {
+    const onSubmit = vi.fn()
+    render(<RecurringTaskSeriesFormModal series={SERIES} members={MEMBERS} isPersonal={false} onSubmit={onSubmit} onCancel={vi.fn()} />)
+
+    fireEvent.change(screen.getByLabelText('form.subtask_label'), { target: { value: 'Vérifier le tri sélectif' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ subtasks: ['Vérifier le tri sélectif'] }))
+  })
+
+  it('refuses a subtask template whose text was emptied out', () => {
+    const onSubmit = vi.fn()
+    render(<RecurringTaskSeriesFormModal series={SERIES} members={MEMBERS} isPersonal={false} onSubmit={onSubmit} onCancel={vi.fn()} />)
+
+    fireEvent.change(screen.getByLabelText('form.subtask_label'), { target: { value: '' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText('form.subtask_required')).toBeDefined()
   })
 
   it('rejects a lead time longer than the recurrence interval', () => {
