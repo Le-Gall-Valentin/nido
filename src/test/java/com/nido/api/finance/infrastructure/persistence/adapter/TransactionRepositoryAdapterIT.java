@@ -121,6 +121,27 @@ class TransactionRepositoryAdapterIT {
     }
 
     @Test
+    void findBySpaceIdAndMonth_lists_the_most_recent_first() {
+        // Saved out of date order on purpose: without an ORDER BY, PostgreSQL returns rows in
+        // whatever order it reads them — insertion order on a small table, ascending date through
+        // the (space_id, date) index on a large one — and neither puts the newest on top. The two
+        // entries of the 20th are saved one after the other: the later one goes first.
+        saveOn("Le 10", LocalDate.of(2026, 1, 10));
+        saveOn("Le 20, saisi en premier", LocalDate.of(2026, 1, 20));
+        saveOn("Le 20, saisi ensuite", LocalDate.of(2026, 1, 20));
+        saveOn("Le 5", LocalDate.of(2026, 1, 5));
+
+        assertThat(adapter.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1)))
+            .extracting(Transaction::label)
+            .containsExactly("Le 20, saisi ensuite", "Le 20, saisi en premier", "Le 10", "Le 5");
+    }
+
+    private void saveOn(String label, LocalDate date) {
+        adapter.create(new CreateTransactionCommand(spaceId, label, new BigDecimal("10.00"),
+            TransactionType.EXPENSE, categoryId, date, null, List.of(), null), List.of());
+    }
+
+    @Test
     void findAllBySpaceId_returns_every_transaction_regardless_of_month() {
         adapter.create(new CreateTransactionCommand(spaceId, "Janvier", new BigDecimal("10.00"),
             TransactionType.EXPENSE, categoryId, LocalDate.of(2026, 1, 15), null, List.of(), null), List.of());
