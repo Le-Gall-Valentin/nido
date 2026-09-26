@@ -27,14 +27,13 @@ export function BudgetSection({ budgetVsActual, categoryById, canWrite, onManage
       <ul className="space-y-4">
         {budgetVsActual.map((line) => {
           const category = categoryById.get(line.categoryId)
-          // A budget of exactly 0€ is a deliberate "spend nothing here" cap, not "no budget" —
-          // any spending against it is an immediate, full overrun (a category with truly no
-          // budget never reaches this list at all, since budgetVsActual only ever contains
-          // categories that have one explicitly set).
-          const ratio = line.monthlyLimit > 0 ? line.spent / line.monthlyLimit : (line.spent > 0 ? Infinity : 0)
-          const percent = Math.min(100, ratio * 100)
-          const over = ratio > 1
-          const warning = ratio >= 0.8 && !over
+          // The server decides the status (BudgetLine.status()), 0 € budgets included: this component
+          // only draws it. A 0 € cap with anything spent is a full bar.
+          const over = line.status === 'OVER'
+          const warning = line.status === 'WARNING'
+          const percent = line.monthlyLimit > 0
+            ? Math.min(100, (line.spent / line.monthlyLimit) * 100)
+            : (line.spent > 0 ? 100 : 0)
           const barColor = over ? 'var(--color-status-red)' : warning ? 'var(--color-status-orange)' : (category?.color ?? 'var(--color-accent)')
           return (
             <li key={line.categoryId}>
@@ -42,7 +41,10 @@ export function BudgetSection({ budgetVsActual, categoryById, canWrite, onManage
                 className="w-full rounded-lg text-left transition-colors hover:bg-bg-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-1.5 font-medium text-fg-1">
-                    {(over || warning) && <AlertTriangle size={13} className={over ? 'text-status-red' : 'text-status-orange'} />}
+                    {(over || warning) && (
+                      <AlertTriangle size={13} data-testid={`budget-warning-${line.categoryId}`}
+                        className={over ? 'text-status-red' : 'text-status-orange'} />
+                    )}
                     {category?.label ?? line.categoryId}
                   </span>
                   <span className="text-fg-2">{formatAmount(line.spent)} / {formatAmount(line.monthlyLimit)}</span>

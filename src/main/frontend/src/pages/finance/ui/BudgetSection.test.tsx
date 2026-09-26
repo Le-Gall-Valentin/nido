@@ -26,32 +26,46 @@ describe('BudgetSection', () => {
     expect(screen.queryByText('budget.manage')).toBeNull()
   })
 
-  it('flags an over-budget line without flagging one still within its limit', () => {
-    const lines: BudgetLine[] = [
-      { categoryId: 'c1', monthlyLimit: 200, spent: 250 },
-    ]
+  it('flags an over-budget line with the overrun amount', () => {
+    const lines: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 200, spent: 250, status: 'OVER' }]
     render(<BudgetSection budgetVsActual={lines} categoryById={categoryById} canWrite onManageBudget={vi.fn()} onSelectCategory={vi.fn()} />)
 
     expect(screen.getByText('budget.over:{"amount":"50,00 €"}')).toBeDefined()
   })
 
-  it('flags a category budgeted at exactly 0€ as over budget as soon as anything is spent in it', () => {
-    const lines: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 0, spent: 10 }]
+  it('flags a category budgeted at exactly 0€ as over budget as soon as the server says so', () => {
+    const lines: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 0, spent: 10, status: 'OVER' }]
     render(<BudgetSection budgetVsActual={lines} categoryById={categoryById} canWrite onManageBudget={vi.fn()} onSelectCategory={vi.fn()} />)
 
     expect(screen.getByText('budget.over:{"amount":"10,00 €"}')).toBeDefined()
   })
 
   it('does not flag a category budgeted at exactly 0€ when nothing has been spent in it yet', () => {
-    const lines: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 0, spent: 0 }]
+    const lines: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 0, spent: 0, status: 'OK' }]
     render(<BudgetSection budgetVsActual={lines} categoryById={categoryById} canWrite onManageBudget={vi.fn()} onSelectCategory={vi.fn()} />)
 
     expect(screen.getByText('budget.remaining:{"amount":"0,00 €"}')).toBeDefined()
   })
 
+  it('takes the status from the server instead of recomputing it from the amounts', () => {
+    // 50 of 200 would be OK by arithmetic: only the server's word can make it a warning here.
+    const lines: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 200, spent: 50, status: 'WARNING' }]
+    render(<BudgetSection budgetVsActual={lines} categoryById={categoryById} canWrite onManageBudget={vi.fn()} onSelectCategory={vi.fn()} />)
+
+    expect(screen.getByTestId('budget-warning-c1')).toBeDefined()
+    expect(screen.getByText('budget.remaining:{"amount":"150,00 €"}')).toBeDefined()
+  })
+
+  it('shows no warning icon on a line the server calls OK', () => {
+    const lines: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 200, spent: 190, status: 'OK' }]
+    render(<BudgetSection budgetVsActual={lines} categoryById={categoryById} canWrite onManageBudget={vi.fn()} onSelectCategory={vi.fn()} />)
+
+    expect(screen.queryByTestId('budget-warning-c1')).toBeNull()
+  })
+
   it('requests the category transactions when a budget line is clicked', () => {
     const onSelectCategory = vi.fn()
-    const lines: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 200, spent: 50 }]
+    const lines: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 200, spent: 50, status: 'OK' }]
     render(<BudgetSection budgetVsActual={lines} categoryById={categoryById} canWrite onManageBudget={vi.fn()} onSelectCategory={onSelectCategory} />)
 
     fireEvent.click(screen.getByText('Alimentation'))
