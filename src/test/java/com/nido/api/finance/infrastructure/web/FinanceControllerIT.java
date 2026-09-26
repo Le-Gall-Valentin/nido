@@ -114,7 +114,8 @@ class FinanceControllerIT {
         mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/stats?month=2026-01").cookie(accessTokenFor(aliceId)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.totalExpense").value(25.00))
-            .andExpect(jsonPath("$.budgetVsActual[0].spent").value(25.00));
+            .andExpect(jsonPath("$.budgetVsActual[0].spent").value(25.00))
+            .andExpect(jsonPath("$.budgetVsActual[0].status").value("OK"));
 
         mockMvc.perform(delete("/api/spaces/" + spaceId + "/finance/transactions/" + transactionId).cookie(accessTokenFor(aliceId)))
             .andExpect(status().isNoContent());
