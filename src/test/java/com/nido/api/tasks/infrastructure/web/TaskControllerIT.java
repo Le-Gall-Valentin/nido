@@ -237,6 +237,16 @@ class TaskControllerIT {
     }
 
     @Test
+    void creating_a_task_with_a_subtask_longer_than_the_column_is_rejected() throws Exception {
+        // task_subtasks.text is 200 wide: past it, the insert fails in the database and the caller
+        // gets a 500 for what is a plain validation error. Recurring creation goes through the same field.
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Réserver\",\"priority\":\"MED\",\"subtasks\":[\"" + "x".repeat(201) + "\"]}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void a_done_task_given_a_new_subtask_comes_back_in_progress_with_its_due_date() throws Exception {
         var task = createTask("{\"title\":\"Réserver\",\"priority\":\"MED\",\"dueDate\":\"2026-01-07\"}");
         String taskId = task.get("id").asText();

@@ -39,7 +39,7 @@
   "form_cancel": "Cancel",
   "form_close": "Close",
   "toggle_done": "Check \"{{name}}\"",
-  "move_item": "Move \"{{name}}\" (drag or click)",
+  "move_item": "Move “{{name}}” to another category",
   "move_item_dialog_title": "Move \"{{name}}\" to…",
   "move_item_target_current": "{{category}} (current category)",
   "delete_item": "Delete \"{{name}}\"",

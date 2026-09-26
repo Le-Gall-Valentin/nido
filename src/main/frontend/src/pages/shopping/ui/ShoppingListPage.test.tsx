@@ -123,6 +123,19 @@ describe('ShoppingListPage', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
+  it('makes the whole line the drag surface, the move button staying a plain button', async () => {
+    // On a phone as on a mouse — the drag used to live on a grip, which a tap also turned into the
+    // move dialog. The dialog now has a button of its own, and a button that drags is no button.
+    setup()
+    await screen.findByText('Pâtes')
+
+    const draggables = Array.from(document.querySelectorAll('[aria-roledescription="draggable"]'))
+    expect(draggables).toHaveLength(1) // one per item
+    expect(draggables[0].tagName).toBe('DIV')
+    expect(draggables[0].contains(screen.getByLabelText('move_item'))).toBe(true)
+    expect(screen.getByLabelText('move_item').hasAttribute('aria-roledescription')).toBe(false)
+  })
+
   it('disables the item\'s current category in the move dialog', async () => {
     setup()
     await screen.findByText('Pâtes')

@@ -39,7 +39,7 @@
   "form_cancel": "Annuler",
   "form_close": "Fermer",
   "toggle_done": "Cocher « {{name}} »",
-  "move_item": "Déplacer « {{name}} » (glisser ou cliquer)",
+  "move_item": "Déplacer « {{name}} » vers une autre catégorie",
   "move_item_dialog_title": "Déplacer « {{name}} » vers…",
   "move_item_target_current": "{{category}} (catégorie actuelle)",
   "delete_item": "Supprimer « {{name}} »",

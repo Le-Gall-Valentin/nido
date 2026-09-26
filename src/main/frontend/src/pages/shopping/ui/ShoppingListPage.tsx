@@ -2,12 +2,9 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Plus, SlidersHorizontal } from 'lucide-react'
-import {
-  DndContext, DragOverlay, useDroppable, PointerSensor, useSensor, useSensors,
-  type DragEndEvent, type DragStartEvent,
-} from '@dnd-kit/core'
+import { DndContext, DragOverlay, useDroppable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import { Alert, Spinner, Dialog } from '@/shared/ui'
-import { MEASUREMENT_UNIT_LABEL_KEY } from '@/shared/lib'
+import { MEASUREMENT_UNIT_LABEL_KEY, underThePointerFirst, useDragSensors } from '@/shared/lib'
 import { useMySpaces } from '@/features/space-switcher'
 import { canWrite } from '@/entities/space'
 import {
@@ -16,7 +13,7 @@ import {
   useAddItem, useUpdateItem, useToggleItemDone, useDeleteItem, useClearDoneItems, useClearAllItems,
   type IShoppingApi, type ShoppingItem,
 } from '@/entities/shopping-list'
-import { ShoppingItemRow } from './ShoppingItemRow'
+import { ShoppingItemPreview, ShoppingItemRow } from './ShoppingItemRow'
 import { AddItemModal } from './AddItemModal'
 import { ManageCategoriesModal } from './ManageCategoriesModal'
 import { resolveItemMove } from './resolveItemMove'
@@ -60,7 +57,7 @@ function ShoppingListPageContent() {
   const [movingItem, setMovingItem] = useState<ShoppingItem | null>(null)
   const [activeDragItem, setActiveDragItem] = useState<ShoppingItem | null>(null)
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const sensors = useDragSensors()
 
   // Stable on purpose: a memoised row compares its props, and a fresh arrow per render would make
   // that comparison fail every time. See ShoppingItemRow for the measurement.
@@ -181,7 +178,8 @@ function ShoppingListPageContent() {
       {(items ?? []).length === 0 ? (
         <p className="text-sm text-fg-3">{t('empty')}</p>
       ) : (
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveDragItem(null)}>
+        <DndContext sensors={sensors} collisionDetection={underThePointerFirst}
+          onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveDragItem(null)}>
           <div className="flex flex-col gap-5">
             {filledCategories.map((category) => {
               const categoryItems = itemsByCategory.get(category.id) ?? []
@@ -207,12 +205,10 @@ function ShoppingListPageContent() {
               )
             })}
           </div>
-          <DragOverlay>
-            {activeDragItem && (
-              <div className="rounded-md border border-accent bg-bg-1 px-3 py-1.5 text-sm text-fg-1 shadow-lg">
-                {activeDragItem.name}
-              </div>
-            )}
+          {/* No drop animation: it would fly the copy back to the old category while the move is
+              still on its way to the server. */}
+          <DragOverlay dropAnimation={null}>
+            {activeDragItem && <ShoppingItemPreview item={activeDragItem} quantityLabel={formatQuantity(activeDragItem)} />}
           </DragOverlay>
         </DndContext>
       )}
@@ -266,7 +262,8 @@ interface CategoryDropZoneProps {
 function CategoryDropZone({ categoryId, children }: CategoryDropZoneProps) {
   const { setNodeRef, isOver } = useDroppable({ id: categoryId })
   return (
-    <div ref={setNodeRef} className={`transition-colors ${isOver ? 'bg-accent/10' : ''}`}>
+    // -m-2 p-2 gives the highlight room around the block without moving anything when it lights up.
+    <div ref={setNodeRef} className={`-m-2 rounded-2xl p-2 transition-colors ${isOver ? 'bg-accent-dim ring-2 ring-accent' : ''}`}>
       {children}
     </div>
   )
