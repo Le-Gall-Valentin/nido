@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useDraggable } from '@dnd-kit/core'
-import { Check, GripVertical, Trash2 } from 'lucide-react'
+import { Check, FolderInput, Trash2 } from 'lucide-react'
 import type { ShoppingItem } from '@/entities/shopping-list'
 
 interface ShoppingItemRowProps {
@@ -32,9 +32,17 @@ export function ShoppingItemRow({
 }: ShoppingItemRowProps) {
   const { t } = useTranslation('shopping')
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: item.id })
+  const moveLabel = t('move_item', { name: item.name })
 
   return (
-    <div className={`flex items-center gap-2 border-b border-border px-4 py-2.5 last:border-b-0 ${isDragging ? 'opacity-40' : ''}`}>
+    <div
+      ref={canWrite ? setNodeRef : undefined}
+      {...(canWrite ? listeners : undefined)}
+      {...(canWrite ? attributes : undefined)}
+      // The whole line drags — a mouse that presses and moves, a finger held down (useDragSensors) —
+      // while its buttons still answer a plain click or tap. touch-manipulation, never touch-none: the
+      // list must keep scrolling under a finger; no selection and no callout on the long press.
+      className={`flex items-center gap-2 border-b border-border px-4 py-2.5 last:border-b-0 ${canWrite ? 'cursor-grab touch-manipulation select-none [-webkit-touch-callout:none] active:cursor-grabbing' : ''} ${isDragging ? 'opacity-40' : ''}`}>
       <button type="button" onClick={() => onToggleDone(item.id)} aria-label={t('toggle_done', { name: item.name })}
         className="grid size-5 place-items-center rounded-md border border-border">
         {item.done && <Check className="size-3.5 text-accent" />}
@@ -42,10 +50,10 @@ export function ShoppingItemRow({
       <span className={`flex-1 text-sm ${item.done ? 'text-fg-4 line-through' : 'text-fg-1'}`}>{item.name}</span>
       {quantityLabel && <span className="text-xs text-fg-3">{quantityLabel}</span>}
       {canWrite && (
-        <button ref={setNodeRef} {...listeners} {...attributes} type="button" onClick={() => onRequestMove(item)}
-          aria-label={t('move_item', { name: item.name })}
-          className="grid size-6 shrink-0 touch-none place-items-center rounded-md text-fg-3 hover:text-fg-1 active:cursor-grabbing">
-          <GripVertical className="size-4" />
+        // The way to a category holding nothing yet, which is no drop target, and the keyboard's way.
+        <button type="button" onClick={() => onRequestMove(item)} aria-label={moveLabel} title={moveLabel}
+          className="p-1 text-fg-3 hover:text-fg-1">
+          <FolderInput className="size-3.5" />
         </button>
       )}
       {canWrite && (
@@ -54,6 +62,24 @@ export function ShoppingItemRow({
           <Trash2 className="size-3.5" />
         </button>
       )}
+    </div>
+  )
+}
+
+interface ShoppingItemPreviewProps {
+  item: ShoppingItem
+  quantityLabel: string | null
+}
+
+/** The copy of a line that follows the pointer while it is dragged — what it shows, none of its buttons. */
+export function ShoppingItemPreview({ item, quantityLabel }: ShoppingItemPreviewProps) {
+  return (
+    <div className="flex cursor-grabbing items-center gap-2 rounded-xl border border-border bg-bg-1 px-4 py-2.5 shadow-xl">
+      <span className="grid size-5 place-items-center rounded-md border border-border">
+        {item.done && <Check className="size-3.5 text-accent" />}
+      </span>
+      <span className={`flex-1 text-sm ${item.done ? 'text-fg-4 line-through' : 'text-fg-1'}`}>{item.name}</span>
+      {quantityLabel && <span className="text-xs text-fg-3">{quantityLabel}</span>}
     </div>
   )
 }

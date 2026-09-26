@@ -2,12 +2,9 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, ArrowRightLeft, Repeat } from 'lucide-react'
-import {
-  DndContext, DragOverlay, pointerWithin, rectIntersection, useDraggable, useDroppable,
-  type CollisionDetection, type DragEndEvent,
-} from '@dnd-kit/core'
+import { DndContext, DragOverlay, useDraggable, useDroppable, type DragEndEvent } from '@dnd-kit/core'
 import { Alert, Dialog, Spinner } from '@/shared/ui'
-import { todayIso, useDragSensors } from '@/shared/lib'
+import { todayIso, underThePointerFirst, useDragSensors } from '@/shared/lib'
 import { useSpaceMembers } from '@/entities/space'
 import { useSpaceTimezone } from '@/features/space-switcher'
 import { isOverdue } from '../lib/isOverdue'
@@ -21,16 +18,6 @@ import { useTasksPageState } from '../model/useTasksPageState'
 
 const COLUMN_ORDER: TaskStatus[] = ['TODO', 'DOING', 'DONE']
 const CARD_CLASSNAME = 'flex flex-col gap-2 rounded-2xl border border-border bg-bg-1 p-3'
-
-/**
- * The column under the pointer, when there is one — on a phone, where the columns are stacked, that
- * is where the finger is, not whichever the dragged copy overlaps most. Past a column's end, which
- * is short while it holds few cards, the one the copy overlaps still takes it.
- */
-const underThePointerFirst: CollisionDetection = (args) => {
-  const underPointer = pointerWithin(args)
-  return underPointer.length > 0 ? underPointer : rectIntersection(args)
-}
 
 interface TasksPageProps {
   api?: TasksApi
