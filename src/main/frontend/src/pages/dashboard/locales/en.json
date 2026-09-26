@@ -1,0 +1,136 @@
+{
+  "loading": "Loading the dashboard…",
+  "member_unknown": "Former member",
+  "error": {
+    "load_failed": "The dashboard could not be loaded.",
+    "retry": "Try again",
+    "action_failed": "That did not go through. Try again.",
+    "dismiss": "Close"
+  },
+  "hero": {
+    "digest_one": "Hello {{name}}, one thing needs your attention.",
+    "digest_other": "Hello {{name}}, {{count}} things need your attention.",
+    "all_clear": "Hello {{name}}, nothing urgent today.",
+    "add": "Add"
+  },
+  "add_menu": {
+    "task": "Task",
+    "transaction": "Expense",
+    "item": "Shopping item",
+    "event": "Event"
+  },
+  "card": {
+    "unavailable": "This block cannot be loaded right now."
+  },
+  "attention": {
+    "title": "To do",
+    "overdue_tasks_one": "{{count}} overdue task",
+    "overdue_tasks_other": "{{count}} overdue tasks",
+    "budget_overrun": "{{label}} budget exceeded",
+    "budget_overrun_detail": "{{spent}} spent of {{limit}}",
+    "debt": "You owe {{name}} {{amount}}",
+    "debt_detail": "Shared expenses",
+    "invitation": "Invitation to {{space}}",
+    "invitation_from": "From {{name}}, role {{role}}, expires {{expires}}",
+    "invitation_detail": "Role {{role}}, expires {{expires}}",
+    "see": "View",
+    "settle": "Settle",
+    "accept": "Accept"
+  },
+  "role": {
+    "OWNER": "owner",
+    "ADMIN": "admin",
+    "MEMBER": "member",
+    "VIEWER": "viewer"
+  },
+  "today": {
+    "title": "Today",
+    "link": "Calendar",
+    "all_day": "All day",
+    "until_day": "Until {{date}}",
+    "until": "Until {{time}}",
+    "now": "Now, {{time}}",
+    "due_today": "Due today",
+    "tomorrow": "Tomorrow",
+    "tomorrow_at": "{{title}} at {{time}}",
+    "empty": "Nothing planned today."
+  },
+  "menu": {
+    "title": "On the menu",
+    "link": "Menu",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "deleted_recipe": "Deleted recipe",
+    "portions_one": "{{count}} serving",
+    "portions_other": "{{count}} servings",
+    "minutes": "{{count}} min",
+    "unplanned": "Nothing planned {{days}}",
+    "range": "from {{from}} to {{to}}",
+    "nothing_this_week": "Nothing on the menu this week",
+    "plan": "Plan",
+    "send_week": "Send the week to the shopping list",
+    "export_empty": "No ingredient to send to the shopping list.",
+    "export_failed": "The shopping list could not be prepared.",
+    "category": {
+      "PLAT": "Main",
+      "EXPRESS": "Quick",
+      "VEGETARIAN": "Vegetarian",
+      "DESSERT": "Dessert",
+      "SOUP": "Soup"
+    }
+  },
+  "finance": {
+    "title": "Finances",
+    "link": "Details",
+    "balance": "Balance",
+    "spent": "Spent",
+    "income": "Income",
+    "remaining_budget": "Budget left",
+    "budgets_to_watch": "Budgets to watch",
+    "upcoming": "Coming up this week",
+    "balances": "Between you",
+    "i_owe": "You owe {{name}} {{amount}}",
+    "owes_me": "{{name}} owes you {{amount}}",
+    "settle": "Settle"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "link": "Board",
+    "filter_label": "Tasks shown",
+    "mine": "Mine",
+    "all": "Everyone",
+    "overdue": "Overdue",
+    "this_week": "This week",
+    "in_progress": "In progress",
+    "due_on": "Due {{date}}",
+    "no_due_date": "No due date",
+    "your_turn": "Your turn",
+    "more_one": "{{count}} other open task",
+    "more_other": "{{count}} other open tasks",
+    "none_mine": "Nothing for you right now.",
+    "mark_done": "Mark “{{title}}” as done",
+    "subtasks_left_one": "{{count}} subtask left",
+    "subtasks_left_other": "{{count}} subtasks left"
+  },
+  "priority": {
+    "HIGH": "High",
+    "MED": "Medium",
+    "LOW": "Low"
+  },
+  "shopping": {
+    "title": "Shopping",
+    "link": "List",
+    "count_one": "{{count}} item",
+    "count_other": "{{count}} items",
+    "and_more": "and {{count}} more"
+  },
+  "savings": {
+    "title": "Savings",
+    "link": "Goals",
+    "reached": "Goal reached",
+    "past_due": "Past its date ({{date}})",
+    "due_soon": "Due soon: {{date}}",
+    "monthly_needed": "{{remaining}} to go, {{monthly}} a month until {{date}}",
+    "no_target_date": "No target date"
+  }
+}
