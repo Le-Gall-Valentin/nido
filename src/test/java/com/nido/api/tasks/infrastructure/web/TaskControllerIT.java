@@ -172,6 +172,85 @@ class TaskControllerIT {
             .andExpect(status().isNotFound()); // Alice has no membership at all in bobsSpaceId — SpaceException.NotAMember maps to 404.
     }
 
+    // ─── Modifier les sous-tâches ─────────────────────
+
+    private com.fasterxml.jackson.databind.JsonNode createTask(String body) throws Exception {
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(created);
+    }
+
+    private org.springframework.test.web.servlet.ResultActions edit(String taskId, String body) throws Exception {
+        return mockMvc.perform(patch("/api/spaces/" + spaceId + "/tasks/" + taskId)
+            .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test
+    void editing_a_task_renames_reorders_adds_and_drops_its_subtasks() throws Exception {
+        var task = createTask("{\"title\":\"Réserver\",\"priority\":\"MED\",\"subtasks\":[\"A\",\"B\",\"C\"]}");
+        String taskId = task.get("id").asText();
+        String a = task.at("/subtasks/0/id").asText();
+        String c = task.at("/subtasks/2/id").asText();
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks/" + taskId + "/subtasks/" + a + "/toggle")
+            .cookie(accessTokenFor(aliceId))).andExpect(status().isNoContent());
+
+        edit(taskId, "{\"title\":\"Réserver\",\"priority\":\"MED\",\"subtasks\":["
+                + "{\"id\":\"" + c + "\",\"text\":\"C renommée\"},{\"id\":\"" + a + "\",\"text\":\"A\"},{\"text\":\"D\"}]}")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.subtasks.length()").value(3))
+            .andExpect(jsonPath("$.subtasks[0].text").value("C renommée"))
+            .andExpect(jsonPath("$.subtasks[0].done").value(false))
+            .andExpect(jsonPath("$.subtasks[1].id").value(a))
+            .andExpect(jsonPath("$.subtasks[1].done").value(true))
+            .andExpect(jsonPath("$.subtasks[2].text").value("D"))
+            .andExpect(jsonPath("$.subtasks[2].done").value(false));
+    }
+
+    @Test
+    void an_edit_that_sends_no_subtasks_keeps_them() throws Exception {
+        // What a tab still running the previous frontend sends during a deployment: reading that
+        // as an empty list would wipe the subtasks of every task it edits.
+        var task = createTask("{\"title\":\"Réserver\",\"priority\":\"MED\",\"subtasks\":[\"A\"]}");
+
+        edit(task.get("id").asText(), "{\"title\":\"Réserver vite\",\"priority\":\"HIGH\"}")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.subtasks.length()").value(1))
+            .andExpect(jsonPath("$.subtasks[0].text").value("A"));
+    }
+
+    @Test
+    void a_blank_subtask_is_rejected() throws Exception {
+        var task = createTask("{\"title\":\"Réserver\",\"priority\":\"MED\"}");
+
+        edit(task.get("id").asText(), "{\"title\":\"Réserver\",\"priority\":\"MED\",\"subtasks\":[{\"text\":\"  \"}]}")
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void a_subtask_longer_than_the_column_is_rejected() throws Exception {
+        var task = createTask("{\"title\":\"Réserver\",\"priority\":\"MED\"}");
+
+        edit(task.get("id").asText(), "{\"title\":\"Réserver\",\"priority\":\"MED\",\"subtasks\":[{\"text\":\"" + "x".repeat(201) + "\"}]}")
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void a_done_task_given_a_new_subtask_comes_back_in_progress_with_its_due_date() throws Exception {
+        var task = createTask("{\"title\":\"Réserver\",\"priority\":\"MED\",\"dueDate\":\"2026-01-07\"}");
+        String taskId = task.get("id").asText();
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks/" + taskId + "/status")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"DONE\"}"))
+            .andExpect(status().isOk());
+
+        // The form never saw the due date of a completed task, so it sends none.
+        edit(taskId, "{\"title\":\"Réserver\",\"priority\":\"MED\",\"subtasks\":[{\"text\":\"Comparer les prix\"}]}")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("DOING"))
+            .andExpect(jsonPath("$.dueDate").value("2026-01-07"));
+    }
+
     private UUID saveUser(String username) {
         UserIdentityEntity user = new UserIdentityEntity();
         user.setUsername(username);

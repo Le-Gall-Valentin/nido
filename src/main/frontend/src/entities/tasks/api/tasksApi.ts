@@ -38,9 +38,10 @@ export const tasksApi: ITasksApi & IRecurringTaskSeriesApi = {
     } catch (error) { handleError(error) }
   },
 
-  async updateTask(spaceId, taskId, title, priority, dueDate, assigneeIds) {
+  async updateTask(spaceId, taskId, title, priority, dueDate, assigneeIds, subtasks) {
     try {
-      const res = await client.patch<Task>(`/spaces/${spaceId}/tasks/${taskId}`, { title, priority, dueDate, assigneeIds })
+      const res = await client.patch<Task>(`/spaces/${spaceId}/tasks/${taskId}`,
+        { title, priority, dueDate, assigneeIds, ...(subtasks && { subtasks }) })
       return res.data
     } catch (error) { handleError(error) }
   },

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, X } from 'lucide-react'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { UserAvatar } from '@/entities/user'
 import type { SpaceMember } from '@/entities/space'
@@ -9,6 +8,7 @@ import type { TaskFormInput } from '../model/types'
 import { TASK_PRIORITY_ORDER, TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
 import { MAX_PAST_OCCURRENCES, pastOccurrenceCount, todayIso } from '@/shared/lib'
 import { leadTimeExceedsInterval } from '../lib/leadTimeExceedsInterval'
+import { SubtaskListEditor, type EditableSubtask } from './SubtaskListEditor'
 
 const INTERVAL_ORDER: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
 
@@ -30,7 +30,7 @@ interface TaskDraft {
   priority: TaskPriority
   dueDate: string
   memberIds: string[]
-  subtasks: string[]
+  subtasks: EditableSubtask[]
   recurring: boolean
   intervalType: RecurrenceInterval
   intervalCount: string
@@ -49,7 +49,8 @@ function draftFrom(task: Task | null): TaskDraft {
     }
   }
   return {
-    title: task.title, priority: task.priority, dueDate: task.dueDate ?? '', memberIds: task.assigneeIds, subtasks: [],
+    title: task.title, priority: task.priority, dueDate: task.dueDate ?? '', memberIds: task.assigneeIds,
+    subtasks: task.subtasks.map((s) => ({ key: s.id, id: s.id, text: s.text })),
     recurring: false, intervalType: 'WEEKLY', intervalCount: '1',
     leadIntervalType: 'DAILY', leadIntervalCount: '0', anchorDate: '', endDate: '',
   }
@@ -58,7 +59,6 @@ function draftFrom(task: Task | null): TaskDraft {
 export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, isPersonal, submitError = null }: TaskFormModalProps) {
   const { t } = useTranslation('tasks')
   const [draft, setDraft] = useState(() => draftFrom(initialTask))
-  const [newSubtask, setNewSubtask] = useState('')
   const [error, setError] = useState('')
   const isEditing = initialTask !== null
 
@@ -72,19 +72,13 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
     }))
   }
 
-  function addSubtask() {
-    if (!newSubtask.trim()) return
-    setDraft((d) => ({ ...d, subtasks: [...d.subtasks, newSubtask.trim()] }))
-    setNewSubtask('')
-  }
-
-  function removeSubtask(index: number) {
-    setDraft((d) => ({ ...d, subtasks: d.subtasks.filter((_, i) => i !== index) }))
-  }
-
   function handleSave() {
     if (!draft.title.trim()) {
       setError(t('form.title_required'))
+      return
+    }
+    if (draft.subtasks.some((s) => !s.text.trim())) {
+      setError(t('form.subtask_required'))
       return
     }
     if (!isEditing && draft.recurring && !draft.anchorDate) {
@@ -109,16 +103,18 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
       }
     }
     setError('')
+    // A kept subtask goes back by its id, which is what keeps its check; a new one without.
+    const subtasks = draft.subtasks.map(({ id, text }) => (id ? { id, text: text.trim() } : { text: text.trim() }))
     if (isEditing) {
       onSubmit({
         title: draft.title.trim(), priority: draft.priority, dueDate: draft.dueDate || null,
-        assigneeIds: draft.memberIds, subtasks: [], recurrence: null,
+        assigneeIds: draft.memberIds, subtasks, recurrence: null,
       })
       return
     }
     if (draft.recurring) {
       onSubmit({
-        title: draft.title.trim(), priority: draft.priority, dueDate: null, assigneeIds: [], subtasks: draft.subtasks,
+        title: draft.title.trim(), priority: draft.priority, dueDate: null, assigneeIds: [], subtasks,
         recurrence: {
           intervalType: draft.intervalType, intervalCount: Number(draft.intervalCount) || 1,
           leadIntervalType: draft.leadIntervalType, leadIntervalCount: Number(draft.leadIntervalCount) || 0,
@@ -129,7 +125,7 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
     }
     onSubmit({
       title: draft.title.trim(), priority: draft.priority, dueDate: draft.dueDate || null,
-      assigneeIds: draft.memberIds, subtasks: draft.subtasks, recurrence: null,
+      assigneeIds: draft.memberIds, subtasks, recurrence: null,
     })
   }
 
@@ -215,27 +211,7 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
           </div>
         )}
 
-        {!isEditing && (
-          <div className="flex flex-col gap-2">
-            <span className="text-[13px] font-semibold text-fg-1">{t('form.subtasks_title')}</span>
-            {draft.subtasks.map((subtask, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <span className="flex-1 text-sm text-fg-1">{subtask}</span>
-                <button type="button" onClick={() => removeSubtask(index)} aria-label={t('form.remove')} className="p-1.5 text-fg-3 hover:text-status-red">
-                  <X className="size-4" />
-                </button>
-              </div>
-            ))}
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <Input label={t('form.subtask_placeholder')} srOnlyLabel placeholder={t('form.subtask_placeholder')}
-                  value={newSubtask} onChange={(e) => setNewSubtask(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addSubtask() } }} />
-              </div>
-              <Button type="button" onClick={addSubtask}><Plus className="size-4" /></Button>
-            </div>
-          </div>
-        )}
+        <SubtaskListEditor subtasks={draft.subtasks} onChange={(subtasks) => setDraft((d) => ({ ...d, subtasks }))} />
 
         {(error || submitError) && <p className="text-sm font-medium text-status-red">{error || submitError}</p>}
 

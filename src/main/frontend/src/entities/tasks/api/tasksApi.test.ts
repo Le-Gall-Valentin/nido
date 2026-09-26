@@ -46,6 +46,22 @@ describe('tasksApi', () => {
     })
   })
 
+  it('sends the edited subtask list with an update, each kept subtask by its id', async () => {
+    vi.mocked(client.patch).mockResolvedValue({ data: TASK })
+    await tasksApi.updateTask('space-1', 't-1', 'T', 'HIGH', null, [], [{ id: 's-1', text: 'A' }, { text: 'B' }])
+    expect(client.patch).toHaveBeenCalledWith('/spaces/space-1/tasks/t-1', {
+      title: 'T', priority: 'HIGH', dueDate: null, assigneeIds: [], subtasks: [{ id: 's-1', text: 'A' }, { text: 'B' }],
+    })
+  })
+
+  it('leaves the subtasks out of an update that does not touch them', async () => {
+    // The server reads a missing list as "leave them alone" and an empty one as "remove them all":
+    // the calendar's reschedule sends no list, and must not wipe anything.
+    vi.mocked(client.patch).mockResolvedValue({ data: TASK })
+    await tasksApi.updateTask('space-1', 't-1', 'T', 'HIGH', '2026-09-25', [])
+    expect(vi.mocked(client.patch).mock.calls.at(-1)?.[1]).not.toHaveProperty('subtasks')
+  })
+
   it('changes task status', async () => {
     vi.mocked(client.post).mockResolvedValue({ data: { ...TASK, status: 'DOING' } })
     await tasksApi.changeTaskStatus('space-1', 't-1', 'DOING')

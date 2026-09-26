@@ -8,6 +8,8 @@ import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import com.nido.api.tasks.domain.model.CreateTaskCommand;
+import com.nido.api.tasks.domain.model.Subtask;
+import com.nido.api.tasks.domain.model.SubtaskEdit;
 import com.nido.api.tasks.domain.model.SubtaskInput;
 import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskPriority;
@@ -22,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 @IntegrationTestConfig
 class TaskRepositoryAdapterIT {
@@ -70,10 +73,40 @@ class TaskRepositoryAdapterIT {
     void update_replaces_the_assignee_list() {
         Task created = adapter.create(new CreateTaskCommand(spaceId, "T", TaskPriority.LOW, null, List.of(aliceId), List.of(), null, null));
 
-        Task updated = adapter.update(new UpdateTaskCommand(created.id(), spaceId, "T modifié", TaskPriority.HIGH, null, List.of()));
+        Task updated = adapter.update(new UpdateTaskCommand(created.id(), spaceId, "T modifié", TaskPriority.HIGH, null, List.of(), null));
 
         assertThat(updated.title()).isEqualTo("T modifié");
         assertThat(updated.assigneeIds()).isEmpty();
+    }
+
+    @Test
+    void update_rewrites_the_subtask_list_in_the_order_given() {
+        // A and C checked, B not. The edit puts C (renamed) before A, drops B and adds one: every
+        // move the form can make, at once, so a check carried by position instead of by id shows.
+        Task created = adapter.create(new CreateTaskCommand(spaceId, "T", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskInput("A", true), new SubtaskInput("B", false), new SubtaskInput("C", true)), null, null));
+        UUID a = created.subtasks().get(0).id();
+        UUID c = created.subtasks().get(2).id();
+
+        Task updated = adapter.update(new UpdateTaskCommand(created.id(), spaceId, "T", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskEdit(c, "C renommée"), new SubtaskEdit(a, "A"), new SubtaskEdit(null, "Nouvelle"))));
+
+        assertThat(updated.subtasks())
+            .extracting(Subtask::text, Subtask::done)
+            .containsExactly(tuple("C renommée", true), tuple("A", true), tuple("Nouvelle", false));
+        assertThat(updated.subtasks().subList(0, 2)).extracting(Subtask::id)
+            .as("a kept subtask keeps its id: a tick sent from another screen still finds it")
+            .containsExactly(c, a);
+    }
+
+    @Test
+    void update_without_a_subtask_list_leaves_the_subtasks_as_they_are() {
+        Task created = adapter.create(new CreateTaskCommand(spaceId, "T", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskInput("A", true), new SubtaskInput("B", false)), null, null));
+
+        Task updated = adapter.update(new UpdateTaskCommand(created.id(), spaceId, "T modifié", TaskPriority.LOW, null, List.of(), null));
+
+        assertThat(updated.subtasks()).isEqualTo(created.subtasks());
     }
 
     @Test

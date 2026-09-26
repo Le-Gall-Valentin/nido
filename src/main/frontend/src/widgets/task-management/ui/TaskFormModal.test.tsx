@@ -55,11 +55,64 @@ describe('TaskFormModal', () => {
     expect(screen.queryByText('form.assignees_label')).toBeNull()
   })
 
-  it('does not show the recurrence toggle or the subtasks editor when editing', () => {
+  it('does not show the recurrence toggle when editing', () => {
     render(<TaskFormModal open onClose={vi.fn()} onSubmit={vi.fn()} initialTask={TASK} members={MEMBERS} isPersonal={false} />)
 
     expect(screen.queryByText('form.recurring_label')).toBeNull()
-    expect(screen.queryByText('form.subtasks_title')).toBeNull()
+  })
+
+  const WITH_SUBTASKS: Task = {
+    ...TASK,
+    subtasks: [{ id: 's-1', text: 'Acheter les sacs', done: true }, { id: 's-2', text: 'Trier le verre', done: false }],
+  }
+  const subtaskField = (index: number) => screen.getByLabelText(`form.subtask_label:{"index":${index}}`) as HTMLInputElement
+
+  it('shows the subtasks of the task being edited, each in a field of its own', () => {
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={vi.fn()} initialTask={WITH_SUBTASKS} members={MEMBERS} isPersonal={false} />)
+
+    expect(subtaskField(1).value).toBe('Acheter les sacs')
+    expect(subtaskField(2).value).toBe('Trier le verre')
+  })
+
+  it('editing sends back the subtask list, a kept subtask by its id and a new one without', () => {
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={WITH_SUBTASKS} members={MEMBERS} isPersonal={false} />)
+
+    fireEvent.change(subtaskField(1), { target: { value: 'Acheter les grands sacs' } })
+    fireEvent.click(screen.getByLabelText('form.remove_subtask:{"index":2}'))
+    fireEvent.change(screen.getByPlaceholderText('form.subtask_placeholder'), { target: { value: 'Sortir le bac' } })
+    fireEvent.keyDown(screen.getByPlaceholderText('form.subtask_placeholder'), { key: 'Enter' })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      subtasks: [{ id: 's-1', text: 'Acheter les grands sacs' }, { text: 'Sortir le bac' }],
+    }))
+  })
+
+  it('refuses a subtask whose text was emptied out', () => {
+    // The server refuses a blank subtask outright; saying so here keeps the rest of the edit.
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={WITH_SUBTASKS} members={MEMBERS} isPersonal={false} />)
+
+    fireEvent.change(subtaskField(1), { target: { value: '   ' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText('form.subtask_required')).toBeDefined()
+  })
+
+  it('creating a task sends the subtasks added to it, in order', () => {
+    const onSubmit = vi.fn()
+    render(<TaskFormModal open onClose={vi.fn()} onSubmit={onSubmit} initialTask={null} members={MEMBERS} isPersonal={false} />)
+
+    fireEvent.change(screen.getByLabelText('form.title_label'), { target: { value: 'Poubelles' } })
+    for (const text of ['Trier', 'Sortir']) {
+      fireEvent.change(screen.getByPlaceholderText('form.subtask_placeholder'), { target: { value: text } })
+      fireEvent.click(screen.getByLabelText('form.add_subtask'))
+    }
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ subtasks: [{ text: 'Trier' }, { text: 'Sortir' }] }))
   })
 
   it('submits an update with the edited fields when editing', () => {

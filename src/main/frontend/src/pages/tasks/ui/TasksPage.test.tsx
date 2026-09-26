@@ -102,6 +102,19 @@ describe('TasksPage', () => {
     await waitFor(() => expect(api.createTask).toHaveBeenCalledWith('space-1', 'Nouvelle tâche', 'MED', null, [], []))
   })
 
+  it('edits the subtasks of a task from its card', async () => {
+    const withSubtask: Task = { ...TASKS[0], subtasks: [{ id: 'st-1', text: 'Trouver le numéro', done: true }] }
+    const { api } = setup(fakeApi({ listTasks: vi.fn().mockResolvedValue([withSubtask]), updateTask: vi.fn().mockResolvedValue(withSubtask) }))
+    await screen.findByText('Prendre RDV')
+
+    fireEvent.click(screen.getByText('edit'))
+    fireEvent.change(screen.getByLabelText('form.subtask_label:{"index":1}'), { target: { value: 'Trouver le bon numéro' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    await waitFor(() => expect(api.updateTask).toHaveBeenCalledWith(
+      'space-1', 't1', 'Prendre RDV', 'HIGH', null, [], [{ id: 'st-1', text: 'Trouver le bon numéro' }]))
+  })
+
   it('marking a task done with open subtasks says so instead of doing nothing', async () => {
     // The checkbox used to be the mute path: no request, no message, no visible reason. The server
     // refuses this with a 409, so there is something to say and the card's checkbox is where the
