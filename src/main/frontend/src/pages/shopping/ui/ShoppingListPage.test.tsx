@@ -51,12 +51,12 @@ function fakeSpacesApi(mySpaces: SpaceSummary[] = [CURRENT_SPACE]): ISpacesApi {
   }
 }
 
-function setup(api: IShoppingApi = fakeApi(), spacesApi: ISpacesApi = fakeSpacesApi()) {
+function setup(api: IShoppingApi = fakeApi(), spacesApi: ISpacesApi = fakeSpacesApi(), path = '/s/space-1/organisation/courses') {
   const queryClient = createTestQueryClient()
   render(
     <QueryClientProvider client={queryClient}>
       <SpacesApiProvider api={spacesApi}>
-        <MemoryRouter initialEntries={['/s/space-1/organisation/courses']}>
+        <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path="/s/:spaceId/organisation/courses" element={<ShoppingListPage api={api} />} />
           </Routes>
@@ -192,6 +192,19 @@ describe('ShoppingListPage', () => {
 
     expect(screen.queryByLabelText('category_rename_for')).toBeNull()
     expect(screen.queryByLabelText('category_delete')).toBeNull()
+  })
+
+  it('opens the add-item form when a link asks for it', async () => {
+    setup(fakeApi(), fakeSpacesApi(), '/s/space-1/organisation/courses?create=item')
+
+    expect(await screen.findByLabelText('add_item_name_label')).toBeDefined()
+  })
+
+  it('does not open it for a viewer', async () => {
+    setup(fakeApi(), fakeSpacesApi([{ ...CURRENT_SPACE, myRole: 'VIEWER' }]), '/s/space-1/organisation/courses?create=item')
+
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByLabelText('add_item_name_label')).toBeNull()
   })
 })
 

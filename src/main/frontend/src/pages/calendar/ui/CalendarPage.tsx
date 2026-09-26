@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
 import { Calendar, Plus } from 'lucide-react'
 import { Alert, Spinner } from '@/shared/ui'
-import { todayIso, usePaletteItems, resolveLocale } from '@/shared/lib'
+import { todayIso, usePaletteItems, resolveLocale, useCreateIntent } from '@/shared/lib'
 import { canWrite, isPersonal } from '@/entities/space'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
 import { useRescheduleOccurrence } from '@/features/reschedule-occurrence'
@@ -81,6 +81,7 @@ function CalendarPageContent() {
 
   const dialog = useCalendarDialog()
   const { show } = dialog
+  useCreateIntent('event', canWriteHere, () => show({ kind: 'create', date: today, returnToDay: false }))
   const showDay = (day: string) => show({ kind: 'day', date: day })
   const showOccurrence = (occurrence: { sourceId: string }) => show({ kind: 'occurrence', sourceId: occurrence.sourceId })
   const createOver = (schedule: ScheduleChange) =>
