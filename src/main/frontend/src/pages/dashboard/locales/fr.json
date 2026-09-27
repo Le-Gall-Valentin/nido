@@ -9,8 +9,8 @@
     "dismiss": "Fermer"
   },
   "hero": {
-    "digest_one": "Bonjour {{name}}, une chose demande ton attention.",
-    "digest_other": "Bonjour {{name}}, {{count}} choses demandent ton attention.",
+    "digest_one": "Bonjour {{name}}, une chose demande votre attention.",
+    "digest_other": "Bonjour {{name}}, {{count}} choses demandent votre attention.",
     "all_clear": "Bonjour {{name}}, rien d'urgent aujourd'hui.",
     "partial": "Bonjour {{name}}, une partie du tableau de bord n'a pas pu être chargée.",
     "add": "Ajouter"
@@ -30,7 +30,7 @@
     "overdue_tasks_other": "{{count}} tâches en retard",
     "budget_overrun": "Budget {{label}} dépassé",
     "budget_overrun_detail": "{{spent}} dépensés sur {{limit}}",
-    "debt": "Tu dois {{amount}} à {{name}}",
+    "debt": "Vous devez {{amount}} à {{name}}",
     "debt_detail": "Dépenses partagées",
     "invitation": "Invitation à {{space}}",
     "invitation_from": "De {{name}}, rôle {{role}}, expire {{expires}}",
@@ -92,8 +92,8 @@
     "budgets_to_watch": "Budgets à surveiller",
     "upcoming": "À venir cette semaine",
     "balances": "Entre vous",
-    "i_owe": "Tu dois {{amount}} à {{name}}",
-    "owes_me": "{{name}} te doit {{amount}}",
+    "i_owe": "Vous devez {{amount}} à {{name}}",
+    "owes_me": "{{name}} vous doit {{amount}}",
     "settle": "Régler"
   },
   "tasks": {
@@ -107,10 +107,10 @@
     "in_progress": "En cours",
     "due_on": "Prévue le {{date}}",
     "no_due_date": "Sans échéance",
-    "your_turn": "C'est ton tour",
+    "your_turn": "C'est votre tour",
     "more_one": "{{count}} autre tâche ouverte",
     "more_other": "{{count}} autres tâches ouvertes",
-    "none_mine": "Rien pour toi en ce moment.",
+    "none_mine": "Rien pour vous en ce moment.",
     "mark_done": "Marquer « {{title}} » comme faite",
     "subtasks_left_one": "{{count}} sous-tâche restante",
     "subtasks_left_other": "{{count}} sous-tâches restantes"
