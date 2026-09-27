@@ -51,6 +51,46 @@ describe('DashboardHero', () => {
     expect(screen.queryByRole('menu')).toBeNull()
   })
 
+  it('moves through the menu with the arrows, Home and End, as a menu does', () => {
+    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} complete username="valentin" onAddTask={() => {}} />)
+    const item = (name: string) => screen.getByRole('menuitem', { name })
+    const press = (key: string) => fireEvent.keyDown(document.activeElement ?? document.body, { key })
+
+    fireEvent.click(screen.getByRole('button', { name: 'hero.add' }))
+    expect(document.activeElement).toBe(item('add_menu.task'))
+
+    press('ArrowDown')
+    expect(document.activeElement).toBe(item('add_menu.transaction'))
+    press('End')
+    expect(document.activeElement).toBe(item('add_menu.event'))
+    press('ArrowDown')
+    expect(document.activeElement).toBe(item('add_menu.task'))
+    press('ArrowUp')
+    expect(document.activeElement).toBe(item('add_menu.event'))
+    press('Home')
+    expect(document.activeElement).toBe(item('add_menu.task'))
+  })
+
+  it('gives the focus back to its button when Escape closes the menu', () => {
+    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} complete username="valentin" onAddTask={() => {}} />)
+    const button = screen.getByRole('button', { name: 'hero.add' })
+    fireEvent.click(button)
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(button)
+  })
+
+  it('closes the menu when Tab leaves it', () => {
+    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} complete username="valentin" onAddTask={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'hero.add' }))
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Tab' })
+
+    expect(screen.queryByRole('menu')).toBeNull()
+  })
+
   it('offers nothing to add to a viewer', () => {
     renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} complete username="valentin" onAddTask={() => {}} />, { actions: { canWrite: false } })
     expect(screen.queryByRole('button', { name: 'hero.add' })).toBeNull()
