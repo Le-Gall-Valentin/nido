@@ -21,6 +21,16 @@ const CARD: TasksCardData = {
 }
 
 describe('TasksCard', () => {
+  it('does not count as "other" the tasks due today that the agenda already shows', () => {
+    const card: TasksCardData = { overdue: [task('t-late', 'En retard', ['u-me'], { dueDate: '2026-09-22' })], thisWeek: [], inProgress: [], openCount: 3, openCountMine: 3 }
+    const dueToday = [task('t-bins', 'Sortir les poubelles', ['u-me'], { dueDate: '2026-09-26' }), task('t-mail', 'Poster le courrier', [], { dueDate: '2026-09-26' })]
+
+    renderWithActions(<TasksCard card={card} dueToday={dueToday} />)
+
+    // 3 open = 1 shown here + 2 shown under "Aujourd'hui": nothing else to point at.
+    expect(screen.queryByText(/tasks\.more/)).toBeNull()
+  })
+
   it('opens on my tasks in a shared space — mine or nobody\'s — and shows everyone\'s on demand', () => {
     renderWithActions(<TasksCard card={CARD} />)
 

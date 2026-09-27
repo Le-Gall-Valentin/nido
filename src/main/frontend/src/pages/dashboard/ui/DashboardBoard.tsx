@@ -56,7 +56,8 @@ export function DashboardBoard({ dashboard, now }: { dashboard: Dashboard; now: 
   const agenda = present(cards.agenda, (data) => <TodayCard card={data} date={date} now={now} />, { icon: Calendar, title: t('today.title') })
   const menu = present(cards.menu, (data) => <MenuCard card={data} date={date} />, { icon: Utensils, title: t('menu.title') })
   const finance = present(cards.finance, (data) => <FinanceCard card={data} />, { icon: Wallet, title: t('finance.title') })
-  const tasks = present(cards.tasks, (data) => <TasksCard card={data} />, { icon: SquareCheck, title: t('tasks.title') })
+  const dueToday = cards.agenda?.status === 'OK' ? cards.agenda.data.dueToday : []
+  const tasks = present(cards.tasks, (data) => <TasksCard card={data} dueToday={dueToday} />, { icon: SquareCheck, title: t('tasks.title') })
   const side = [
     { key: 'shopping', node: present(cards.shopping, (data) => <ShoppingCard card={data} />, { icon: ShoppingCart, title: t('shopping.title') }) },
     { key: 'savings', node: present(cards.savings, (data) => <SavingsCard card={data} />, { icon: PiggyBank, title: t('savings.title') }) },

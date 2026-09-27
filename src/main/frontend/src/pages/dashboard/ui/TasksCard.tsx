@@ -20,7 +20,7 @@ type Mode = 'mine' | 'all'
  * "Aujourd'hui"). In a shared space it opens on the caller's tasks — assigned to them or to nobody —
  * because somebody else's chore does not call for their action; "Tous" shows the household's.
  */
-export function TasksCard({ card }: { card: TasksCardData }) {
+export function TasksCard({ card, dueToday = [] }: { card: TasksCardData; dueToday?: TaskItem[] }) {
   const { t } = useTranslation('dashboard')
   const { spaceId, isShared, currentUserId } = useDashboardActions()
   const [mode, setMode] = useState<Mode>(isShared ? 'mine' : 'all')
@@ -30,7 +30,9 @@ export function TasksCard({ card }: { card: TasksCardData }) {
   const thisWeek = pick(card.thisWeek)
   const inProgress = pick(card.inProgress)
   const shown = overdue.length + thisWeek.length + inProgress.length
-  const more = Math.max(0, (mode === 'mine' ? card.openCountMine : card.openCount) - shown)
+  // Today's to-dos are open tasks too, already on screen under "Aujourd'hui": not "other" ones.
+  const shownToday = (mode === 'mine' ? filterMine(dueToday, currentUserId) : dueToday).length
+  const more = Math.max(0, (mode === 'mine' ? card.openCountMine : card.openCount) - shown - shownToday)
 
   const toggle = isShared ? (
     <div role="group" aria-label={t('tasks.filter_label')} className="flex rounded-[9px] bg-bg-3 p-0.5">
