@@ -123,7 +123,8 @@
     "link": "Liste",
     "count_one": "{{count}} article",
     "count_other": "{{count}} articles",
-    "and_more": "et {{count}} autres"
+    "and_more_one": "et {{count}} autre",
+    "and_more_other": "et {{count}} autres"
   },
   "savings": {
     "title": "Épargne",
