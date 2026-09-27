@@ -3,17 +3,16 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
 import { Alert } from '@/shared/ui'
-import { resolveLocale } from '@/shared/lib'
+import { resolveLocale, useInvalidateOnAnyWrite } from '@/shared/lib'
 import { useAuth } from '@/features/auth'
 import { useSpaceTimezone } from '@/features/space-switcher'
 import { useSpaceMembers } from '@/entities/space'
-import { dashboardApi, DashboardApiProvider, useDashboard, type IDashboardApi } from '@/entities/dashboard'
+import { dashboardApi, dashboardKey, DashboardApiProvider, useDashboard, type IDashboardApi } from '@/entities/dashboard'
 import { FinanceApiProvider, financeApi as defaultFinanceApi, type IFinanceApi } from '@/entities/finance'
 import { KitchenApiProvider, kitchenApi as defaultKitchenApi, type IKitchenApi } from '@/entities/kitchen'
 import { SettleDebtDialog } from '@/features/settle-debt'
 import { TaskFormPanel } from '@/widgets/task-management'
 import { DashboardActionsProvider, type DashboardActions, type PendingSettlement } from '../model/dashboardActions'
-import { useRefreshDashboardAfterWrites } from '../model/useRefreshDashboardAfterWrites'
 import { useNow } from '../lib/useNow'
 import { formatClock } from '../lib/dates'
 import { DashboardSkeleton } from './DashboardSkeleton'
@@ -54,7 +53,8 @@ function DashboardPageContent() {
   const { data: dashboard, isPending, refetch, isRefetchError, dataUpdatedAt } = useDashboard(spaceId)
   const zone = useSpaceTimezone(spaceId)
   const now = useNow(zone)
-  useRefreshDashboardAfterWrites(spaceId)
+  // Accepting an invitation, ticking a task, settling a debt: writes of other modules, true here at once.
+  useInvalidateOnAnyWrite(dashboardKey(spaceId))
 
   const [settling, setSettling] = useState<PendingSettlement | null>(null)
   const [addingTask, setAddingTask] = useState(false)

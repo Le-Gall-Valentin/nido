@@ -4,12 +4,12 @@ import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
 import { Calendar, Plus } from 'lucide-react'
 import { Alert, Spinner } from '@/shared/ui'
-import { todayIso, usePaletteItems, resolveLocale, useCreateIntent } from '@/shared/lib'
+import { todayIso, usePaletteItems, resolveLocale, useCreateIntent, useInvalidateOnAnyWrite } from '@/shared/lib'
 import { canWrite, isPersonal } from '@/entities/space'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
 import { useRescheduleOccurrence } from '@/features/reschedule-occurrence'
 import {
-  calendarApi, CalendarApiProvider, useOccurrences, type CalendarApi, type ScheduleChange,
+  calendarApi, calendarKey, CalendarApiProvider, useOccurrences, type CalendarApi, type ScheduleChange,
 } from '@/entities/calendar'
 import { FinanceApiProvider, financeApi as defaultFinanceApi, type IFinanceApi } from '@/entities/finance'
 import { KitchenApiProvider, kitchenApi as defaultKitchenApi, type IKitchenApi } from '@/entities/kitchen'
@@ -18,7 +18,6 @@ import { useCalendarUrlState } from '../model/useCalendarUrlState'
 import { useCalendarFilters } from '../model/useCalendarFilters'
 import { useCalendarDialog } from '../model/useCalendarDialog'
 import { useSwipePeriod } from '../model/useSwipePeriod'
-import { useRefreshAfterWrites } from '../model/useRefreshAfterWrites'
 import { formatPeriodLabel } from '../lib/periodLabel'
 import { CalendarToolbar } from './CalendarToolbar'
 import { CalendarDragLayer } from './CalendarDragLayer'
@@ -70,7 +69,8 @@ function CalendarPageContent() {
   const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
   const spaceIsPersonal = currentSpace ? isPersonal(currentSpace) : false
   const { reschedule, failed: dropFailed, dismissFailure } = useRescheduleOccurrence(spaceId)
-  useRefreshAfterWrites(spaceId)
+  // Tasks, money, meals, savings: other modules own them and their editors open from here.
+  useInvalidateOnAnyWrite(calendarKey(spaceId))
 
   const swipe = useSwipePeriod(shiftPeriod)
   const periodLabel = formatPeriodLabel(view, date, resolveLocale(i18next.language))
