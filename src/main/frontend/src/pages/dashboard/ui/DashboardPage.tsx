@@ -45,7 +45,7 @@ function DashboardPageContent() {
   const { t } = useTranslation('dashboard')
   const { spaceId = '' } = useParams<{ spaceId: string }>()
   const user = useAuth((s) => s.user)
-  const { data: members } = useSpaceMembers(spaceId)
+  const { data: members, isPending: membersPending } = useSpaceMembers(spaceId)
   const { data: dashboard, isPending, refetch } = useDashboard(spaceId)
   const now = useNow(useSpaceTimezone(spaceId))
   useRefreshDashboardAfterWrites(spaceId)
@@ -54,8 +54,12 @@ function DashboardPageContent() {
   const [addingTask, setAddingTask] = useState(false)
   const [actionFailed, setActionFailed] = useState(false)
 
+  // "Former member" only once the list is known and the id is not in it: a list that could not be
+  // read says nothing about who left, so everyone is then just "a member".
   const memberName = useCallback(
-    (memberId: string) => members?.find((member) => member.userId === memberId)?.username ?? t('member_unknown'),
+    (memberId: string) => members
+      ? members.find((member) => member.userId === memberId)?.username ?? t('member_unknown')
+      : t('member_generic'),
     [members, t])
 
   const actions = useMemo<DashboardActions>(() => ({
@@ -69,7 +73,7 @@ function DashboardPageContent() {
     reportError: () => setActionFailed(true),
   }), [spaceId, dashboard?.canWrite, dashboard?.spaceType, user?.id, memberName])
 
-  if (isPending) return <PageFrame><DashboardSkeleton /></PageFrame>
+  if (isPending || membersPending) return <PageFrame><DashboardSkeleton /></PageFrame>
   if (!dashboard) {
     return (
       <PageFrame>

@@ -1,6 +1,7 @@
 {
   "loading": "Chargement du tableau de bord…",
   "member_unknown": "Ancien membre",
+  "member_generic": "Un membre",
   "error": {
     "load_failed": "Impossible de charger le tableau de bord.",
     "retry": "Réessayer",

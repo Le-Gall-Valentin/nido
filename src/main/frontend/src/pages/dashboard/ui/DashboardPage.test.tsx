@@ -47,7 +47,12 @@ const BUSY: Dashboard = {
   },
 }
 
-function renderPage(result: Dashboard | Error = BUSY) {
+interface RenderOptions {
+  /** The members list as the page receives it: loaded, still on its way, or failed. */
+  members?: SpaceMember[] | Error | 'pending'
+}
+
+function renderPage(result: Dashboard | Error = BUSY, { members = MEMBERS }: RenderOptions = {}) {
   const api: IDashboardApi = {
     getDashboard: result instanceof Error ? vi.fn().mockRejectedValue(result) : vi.fn().mockResolvedValue(result),
   }
@@ -56,7 +61,10 @@ function renderPage(result: Dashboard | Error = BUSY) {
   const financeApi = { settleDebt: vi.fn().mockResolvedValue(undefined) } as unknown as IFinanceApi
   const kitchenApi = { getShoppingList: vi.fn().mockResolvedValue([]) } as unknown as IKitchenApi
   const spacesApi: ISpacesApi = { listMySpaces: vi.fn().mockResolvedValue([SPACE]), getSpace: vi.fn() }
-  const membersApi: ISpaceMembersApi = { listMembers: vi.fn().mockResolvedValue(MEMBERS) }
+  const membersApi: ISpaceMembersApi = {
+    listMembers: members === 'pending' ? vi.fn().mockReturnValue(new Promise(() => {}))
+      : members instanceof Error ? vi.fn().mockRejectedValue(members) : vi.fn().mockResolvedValue(members),
+  }
   render(
     <QueryClientProvider client={createTestQueryClient()}>
       <SpacesApiProvider api={spacesApi}>
@@ -111,6 +119,22 @@ describe('DashboardPage', () => {
 
     expect(await screen.findByText('card.unavailable')).toBeDefined()
     expect(screen.getByRole('region', { name: 'tasks.title' })).toBeDefined()
+  })
+
+  it('names nobody until the members are known — never a passing "former member"', async () => {
+    const { api } = renderPage({ ...BUSY, attention: [{ kind: 'DEBT', severity: 'MEDIUM', toMemberId: 'u-cam', amount: 5 }] }, { members: 'pending' })
+
+    await waitFor(() => expect(api.getDashboard).toHaveBeenCalled())
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(screen.queryByText(/member_unknown/)).toBeNull()
+    expect(screen.getByRole('status', { name: 'loading' })).toBeDefined()
+  })
+
+  it('does not call anyone a former member when the members cannot be read', async () => {
+    renderPage({ ...BUSY, attention: [{ kind: 'DEBT', severity: 'MEDIUM', toMemberId: 'u-cam', amount: 5 }] }, { members: new Error('down') })
+
+    expect(await screen.findByText(/attention\.debt:.*"name":"member_generic"/)).toBeDefined()
+    expect(screen.queryByText(/member_unknown/)).toBeNull()
   })
 
   it('names a member who left as a former member', async () => {
