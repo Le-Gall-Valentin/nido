@@ -53,8 +53,8 @@ public class MenuDashboardSource implements DashboardSource {
             .toList();
 
         return SourceResult.of(new MenuCard(
-            List.copyOf(byDay.getOrDefault(today, List.of())),
-            List.copyOf(byDay.getOrDefault(today.plusDays(1), List.of())),
+            byDay.getOrDefault(today, List.of()),
+            byDay.getOrDefault(today.plusDays(1), List.of()),
             unplanned));
     }
 

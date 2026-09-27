@@ -93,7 +93,7 @@ public class AgendaDashboardSource implements DashboardSource {
             .map(DashboardTaskItems::from)
             .toList();
 
-        return SourceResult.of(new AgendaCard(List.copyOf(allDay), List.copyOf(timed), dueToday, first));
+        return SourceResult.of(new AgendaCard(allDay, timed, dueToday, first));
     }
 
     private static AgendaEvent toEvent(CalendarOccurrence occurrence) {

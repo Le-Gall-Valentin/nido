@@ -16,6 +16,10 @@ public sealed interface AttentionItem {
 
     /** The caller's overdue tasks — theirs or nobody's — as one item: a count and up to three titles. */
     record OverdueTasks(int count, List<String> titles) implements AttentionItem {
+        public OverdueTasks {
+            titles = List.copyOf(titles);
+        }
+
         public AttentionKind kind() { return AttentionKind.OVERDUE_TASKS; }
         public Severity severity() { return Severity.HIGH; }
     }

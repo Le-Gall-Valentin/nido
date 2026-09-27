@@ -9,4 +9,8 @@ import java.util.UUID;
 public record AgendaEvent(String id, String title, String location, String color,
                           LocalDate startDate, LocalDate endDate, LocalTime startTime, LocalTime endTime,
                           List<UUID> participantIds) {
+
+    public AgendaEvent {
+        participantIds = List.copyOf(participantIds);
+    }
 }

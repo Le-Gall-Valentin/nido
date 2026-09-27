@@ -137,7 +137,7 @@ public class FinanceDashboardSource implements DashboardSource {
             }
         }
         balances.sort(BALANCE_ORDER);
-        return List.copyOf(balances);
+        return balances;
     }
 
     /** Only a line worth watching is ever converted: one within its budget never reaches the card. */

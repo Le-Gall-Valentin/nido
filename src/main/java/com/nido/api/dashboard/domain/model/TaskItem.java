@@ -11,6 +11,10 @@ import java.util.UUID;
 public record TaskItem(UUID id, String title, LocalDate dueDate, Priority priority, Status status,
                        List<UUID> assigneeIds, int subtasksDone, int subtasksTotal, boolean recurring) {
 
+    public TaskItem {
+        assigneeIds = List.copyOf(assigneeIds);
+    }
+
     public enum Priority { HIGH, MED, LOW }
 
     public enum Status { TODO, DOING, DONE }
