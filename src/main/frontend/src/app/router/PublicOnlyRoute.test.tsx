@@ -42,16 +42,18 @@ describe('PublicOnlyRoute', () => {
     expect(container.querySelector('[role="status"]')).not.toBeNull()
   })
 
-  it('navigates to /account when authenticated', () => {
+  it('sends a signed-in user home — where the app opens their space\'s dashboard — not to their profile', () => {
     mockUseAuthGuard.mockReturnValue({ isInitializing: false, isAuthenticated: true, t: (k: string) => k })
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <MemoryRouter initialEntries={['/login']}>
         <Routes>
           <Route path="/login" element={<PublicOnlyRoute><div>public</div></PublicOnlyRoute>} />
           <Route path="/account" element={<div>on-account</div>} />
+          <Route path="*" element={<div>home</div>} />
         </Routes>
       </MemoryRouter>
     )
-    expect(getByText('on-account')).toBeDefined()
+    expect(getByText('home')).toBeDefined()
+    expect(queryByText('on-account')).toBeNull()
   })
 })

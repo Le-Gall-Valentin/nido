@@ -1,6 +1,9 @@
 export const ROUTES = {
   LOGIN: '/login',
 
+  // Where the app opens: DefaultRedirect resolves it to the current space's dashboard
+  HOME: '/',
+
   // Section redirect (auto-redirect to first item)
   ADMINISTRATION: '/administration',
 
