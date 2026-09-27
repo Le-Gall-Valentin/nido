@@ -84,6 +84,26 @@ describe('NavList — children disclosure', () => {
     expect(screen.getByText('nav.kitchen_menu')).toBeDefined()
   })
 
+  it('tells assistive technology which entry is the current page, not only the eye', () => {
+    renderList('space-1', '/s/space-1/members')
+
+    expect(screen.getByRole('link', { name: /nav\.members/ }).getAttribute('aria-current')).toBe('page')
+    expect(screen.getByRole('link', { name: /nav\.groups/ }).getAttribute('aria-current')).toBeNull()
+  })
+
+  it('makes the child the current page, never its section, which stays highlighted only', () => {
+    renderList('space-1', '/s/space-1/kitchen/menu')
+
+    expect(screen.getByRole('link', { name: /nav\.kitchen_menu/ }).getAttribute('aria-current')).toBe('page')
+    expect(screen.getByRole('link', { name: /^nav\.kitchen$/ }).getAttribute('aria-current')).toBeNull()
+  })
+
+  it('keeps an entry current on the pages under it, such as one recipe', () => {
+    renderList('space-1', '/s/space-1/kitchen/recipes/r-1')
+
+    expect(screen.getByRole('link', { name: /nav\.kitchen_recipes/ }).getAttribute('aria-current')).toBe('page')
+  })
+
   it('marks the matching child as active', () => {
     renderList('space-1', '/s/space-1/kitchen/menu')
     const menuLink = screen.getByRole('link', { name: /nav\.kitchen_menu/ })

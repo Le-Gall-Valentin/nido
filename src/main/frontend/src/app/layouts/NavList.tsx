@@ -44,6 +44,7 @@ export function NavList({ items, spaceId, pathname, alwaysExpanded, hasPendingIn
               label={t(item.labelKey)}
               pathname={pathname}
               activeOverride={item.children ? onActiveChild : undefined}
+              section={!!item.children}
               hasBadge={item.id === 'nav:spaces' && !!hasPendingInvitations}
             />
             {expanded && (

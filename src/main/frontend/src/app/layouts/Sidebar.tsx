@@ -23,9 +23,14 @@ interface NavItemProps {
   hasBadge?: boolean
   /** Shows a numeric pill instead of a dot — used for the open task count on "Tâches". Ignored when 0 or undefined. */
   badgeCount?: number
+  /**
+   * A parent whose children are the pages ("Cuisine", "Organisation"): it stays highlighted while one of
+   * them is open, but the child is the current page — the section never claims `aria-current` itself.
+   */
+  section?: boolean
 }
 
-export function NavItem({ to, icon: Icon, label, pathname, activeOverride, hasBadge, badgeCount }: NavItemProps) {
+export function NavItem({ to, icon: Icon, label, pathname, activeOverride, hasBadge, badgeCount, section = false }: NavItemProps) {
   const { t } = useTranslation('shell')
   const active = activeOverride ?? (pathname === to || pathname.startsWith(`${to}/`))
   const showCount = !!badgeCount && badgeCount > 0
@@ -33,6 +38,8 @@ export function NavItem({ to, icon: Icon, label, pathname, activeOverride, hasBa
   return (
     <Link
       to={to}
+      // Said to assistive technology as well as shown: the highlight alone reached only the eye.
+      aria-current={active && !section ? 'page' : undefined}
       className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-colors ${
         active
           ? 'bg-accent-dim font-semibold text-status-green'
