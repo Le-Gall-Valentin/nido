@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
 import { ListChecks } from 'lucide-react'
@@ -16,7 +17,7 @@ export type TaskDateStyle = 'none' | 'overdue' | 'weekday' | 'loose'
 /**
  * One task, tickable from the dashboard. A task with open subtasks cannot be done — the server refuses
  * that transition — so the box says so instead of failing: `aria-disabled` rather than `disabled`, so
- * its tooltip still shows on hover.
+ * its tooltip still shows on hover, and a tap — where no tooltip ever shows — spells it out in the row.
  */
 export function TaskRow({ task, dateStyle }: { task: TaskItem; dateStyle: TaskDateStyle }) {
   const { t } = useTranslation('dashboard')
@@ -27,6 +28,7 @@ export function TaskRow({ task, dateStyle }: { task: TaskItem; dateStyle: TaskDa
   const blocked = openSubtasks > 0
   const priority = TASK_PRIORITY_META[task.priority]
   const yourTurn = task.recurring && currentUserId !== null && task.assigneeIds.includes(currentUserId)
+  const [explainBlock, setExplainBlock] = useState(false)
 
   let date = null
   if (dateStyle === 'loose' && !task.dueDate) {
@@ -45,6 +47,7 @@ export function TaskRow({ task, dateStyle }: { task: TaskItem; dateStyle: TaskDa
       aria-disabled={blocked || changeStatus.isPending}
       title={blocked ? t('tasks.subtasks_left', { count: openSubtasks }) : undefined}
       onClick={() => {
+        if (blocked) setExplainBlock(true)
         if (blocked || changeStatus.isPending) return
         changeStatus.mutate({ taskId: task.id, status: 'DONE' }, { onError: reportError })
       }}
@@ -54,6 +57,9 @@ export function TaskRow({ task, dateStyle }: { task: TaskItem; dateStyle: TaskDa
   return (
     <CardRow lead={checkbox} title={task.title}
       meta={<>
+        {blocked && explainBlock && (
+          <span role="status" className="font-semibold text-fg-1">{t('tasks.subtasks_left', { count: openSubtasks })}</span>
+        )}
         {date}
         {yourTurn && <span className="font-semibold text-accent">{t('tasks.your_turn')}</span>}
         <span className={`inline-flex items-center gap-1 font-semibold ${priority.textClassName}`}>

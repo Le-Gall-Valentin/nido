@@ -41,6 +41,15 @@ describe('TaskRow', () => {
     expect(screen.getByText('1/3')).toBeDefined()
   })
 
+  it('says why a blocked task cannot be ticked when tapped, where no tooltip ever shows', () => {
+    renderRow({ ...TASK, subtasksDone: 1, subtasksTotal: 3 })
+    expect(screen.queryByRole('status')).toBeNull()
+
+    fireEvent.click(screen.getByRole('checkbox'))
+
+    expect(screen.getByRole('status').textContent).toBe('tasks.subtasks_left:{"count":2}')
+  })
+
   it('tells me when a rotating chore is my turn', () => {
     renderRow(TASK)
     expect(screen.getByText('tasks.your_turn')).toBeDefined()
