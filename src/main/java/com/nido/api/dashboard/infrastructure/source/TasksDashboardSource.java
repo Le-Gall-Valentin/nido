@@ -9,7 +9,6 @@ import com.nido.api.dashboard.domain.model.TasksCard;
 import com.nido.api.dashboard.domain.port.out.DashboardSource;
 import com.nido.api.tasks.application.port.in.ListOpenTasksUseCase;
 import com.nido.api.tasks.domain.model.Task;
-import com.nido.api.tasks.domain.model.TaskOrdering;
 import com.nido.api.tasks.domain.model.TaskStatus;
 import org.springframework.stereotype.Component;
 
@@ -41,7 +40,8 @@ public class TasksDashboardSource implements DashboardSource {
     public SourceResult read(DashboardContext context) {
         LocalDate today = context.today();
         LocalDate weekEnd = today.plusDays(6);
-        List<Task> open = TaskOrdering.sort(listOpenTasks.list(context.caller()));
+        // Already in board order (ListOpenTasksUseCase): the tasks module decides it, the dashboard keeps it.
+        List<Task> open = listOpenTasks.list(context.caller());
 
         List<Task> overdue = open.stream()
             .filter(task -> task.dueDate() != null && task.dueDate().isBefore(today))

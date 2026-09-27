@@ -58,6 +58,18 @@ class TasksDashboardSourceTest {
     }
 
     @Test
+    void keepsTheBoardOrderTheTasksModuleAlreadyGives() {
+        // ListOpenTasksUseCase answers in board order, and that order is the tasks module's to decide:
+        // whatever it says comes first stays first, even against the due dates.
+        when(listOpenTasks.list(caller)).thenReturn(List.of(
+            task("due yesterday", TaskStatus.TODO, TODAY.minusDays(1), List.of()),
+            task("due last week", TaskStatus.TODO, TODAY.minusDays(7), List.of())));
+
+        assertThat(((TasksCard) read(SpaceType.SHARED).card()).overdue()).extracting(TaskItem::title)
+            .containsExactly("due yesterday", "due last week");
+    }
+
+    @Test
     void theOverdueAttentionCountsOnlyMyTasksAndThoseOfNobody() {
         when(listOpenTasks.list(caller)).thenReturn(List.of(
             task("mine", TaskStatus.TODO, TODAY.minusDays(3), List.of(me)),
