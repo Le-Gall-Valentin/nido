@@ -65,7 +65,7 @@ class DashboardModelTest {
         AgendaEvent event = new AgendaEvent("evt-1", "Marché", null, null, LocalDate.of(2026, 9, 27), LocalDate.of(2026, 9, 27),
             LocalTime.of(10, 0), LocalTime.of(11, 0), ids);
         TaskItem task = new TaskItem(UUID.randomUUID(), "Poubelles", null, TaskItem.Priority.MED, TaskItem.Status.TODO,
-            ids, 0, 0, false);
+            ids, 0, 0, false, true);
         ShoppingGroup group = new ShoppingGroup(UUID.randomUUID(), "Fruits et légumes", 1, names);
         List<AgendaEvent> events = mutable(event);
         List<TaskItem> tasks = mutable(task);
@@ -119,10 +119,10 @@ class DashboardModelTest {
         DashboardContext shared = new DashboardContext(caller, "a@b.c", LocalDate.of(2026, 9, 26), SpaceType.SHARED);
         DashboardContext personal = new DashboardContext(caller, "a@b.c", LocalDate.of(2026, 9, 26), SpaceType.PERSONAL);
 
-        assertThat(shared.isMine(assignedTo(List.of(me, someoneElse)))).isTrue();
-        assertThat(shared.isMine(assignedTo(List.of()))).isTrue();
-        assertThat(shared.isMine(assignedTo(List.of(someoneElse)))).isFalse();
-        assertThat(personal.isMine(assignedTo(List.of(someoneElse)))).isTrue();
+        assertThat(shared.isMine(List.of(me, someoneElse))).isTrue();
+        assertThat(shared.isMine(List.of())).isTrue();
+        assertThat(shared.isMine(List.of(someoneElse))).isFalse();
+        assertThat(personal.isMine(List.of(someoneElse))).isTrue();
     }
 
     @Test
@@ -137,10 +137,6 @@ class DashboardModelTest {
         assertThat(shared.callerId()).isEqualTo(userId);
         assertThat(shared.isShared()).isTrue();
         assertThat(personal.isShared()).isFalse();
-    }
-
-    private static TaskItem assignedTo(List<UUID> assignees) {
-        return new TaskItem(UUID.randomUUID(), "Poubelles", null, TaskItem.Priority.MED, TaskItem.Status.TODO, assignees, 0, 0, false);
     }
 
     @SafeVarargs

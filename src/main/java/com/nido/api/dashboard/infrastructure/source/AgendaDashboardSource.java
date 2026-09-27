@@ -44,7 +44,7 @@ public class AgendaDashboardSource implements DashboardSource {
             .toList();
         // This read has no order of its own; the tasks board's order is the tasks module's rule.
         List<TaskItem> dueToday = TaskOrdering.sort(listTasksDue.list(context.caller(), today, today)).stream()
-            .map(DashboardTaskItems::from)
+            .map(task -> DashboardTaskItems.from(task, context))
             .toList();
         return SourceResult.of(AgendaDay.of(events, dueToday, context));
     }

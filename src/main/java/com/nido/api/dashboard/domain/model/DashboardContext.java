@@ -4,6 +4,7 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceType;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -25,7 +26,7 @@ public record DashboardContext(SpaceMembership caller, String callerEmail, Local
      * is anyone's. In a shared space somebody else's task does not; in a personal space every task is
      * the owner's.
      */
-    public boolean isMine(TaskItem task) {
-        return !isShared() || task.assigneeIds().isEmpty() || task.assigneeIds().contains(callerId());
+    public boolean isMine(List<UUID> assigneeIds) {
+        return !isShared() || assigneeIds.isEmpty() || assigneeIds.contains(callerId());
     }
 }

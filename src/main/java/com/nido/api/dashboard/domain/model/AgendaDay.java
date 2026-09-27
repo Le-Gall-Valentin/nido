@@ -58,8 +58,8 @@ public final class AgendaDay {
             .filter(task -> task.status() != TaskItem.Status.DONE)
             .toList();
         List<TaskItem> dueToday = Stream.concat(
-                open.stream().filter(context::isMine),
-                open.stream().filter(task -> !context.isMine(task)))
+                open.stream().filter(TaskItem::mine),
+                open.stream().filter(task -> !task.mine()))
             .toList();
 
         return new AgendaCard(allDay, timed, dueToday, first);

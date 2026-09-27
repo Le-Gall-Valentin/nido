@@ -17,8 +17,8 @@ class AgendaDayTest {
 
     private static final LocalDate TODAY = LocalDate.of(2026, 9, 26);
     private static final LocalDate TOMORROW = TODAY.plusDays(1);
-    private final UUID me = UUID.randomUUID();
-    private final SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), UUID.randomUUID(), me, SpaceRole.MEMBER, Instant.now());
+    private final SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+        SpaceRole.MEMBER, Instant.now());
 
     @Test
     void splitsTodaysEventsIntoAllDayAndTimedInTimeOrder() {
@@ -85,12 +85,11 @@ class AgendaDayTest {
 
     @Test
     void dueTodayKeepsOpenTasksOnlyMineFirstAndOtherwiseInTheOrderGiven() {
-        UUID someoneElse = UUID.randomUUID();
         List<TaskItem> dueTodayInBoardOrder = List.of(
-            task("someone else's", TaskItem.Status.TODO, List.of(someoneElse)),
-            task("done", TaskItem.Status.DONE, List.of(me)),
-            task("mine", TaskItem.Status.DOING, List.of(me)),
-            task("nobody's", TaskItem.Status.TODO, List.of()));
+            task("someone else's", TaskItem.Status.TODO, false),
+            task("done", TaskItem.Status.DONE, true),
+            task("mine", TaskItem.Status.DOING, true),
+            task("nobody's", TaskItem.Status.TODO, true));
 
         assertThat(AgendaDay.of(List.of(), dueTodayInBoardOrder, context()).dueToday()).extracting(TaskItem::title)
             .containsExactly("mine", "nobody's", "someone else's");
@@ -112,7 +111,7 @@ class AgendaDayTest {
         return new AgendaEvent(UUID.randomUUID().toString(), title, null, null, startDate, endDate, start, end, List.of());
     }
 
-    private static TaskItem task(String title, TaskItem.Status status, List<UUID> assignees) {
-        return new TaskItem(UUID.randomUUID(), title, TODAY, TaskItem.Priority.MED, status, assignees, 0, 0, false);
+    private static TaskItem task(String title, TaskItem.Status status, boolean mine) {
+        return new TaskItem(UUID.randomUUID(), title, TODAY, TaskItem.Priority.MED, status, List.of(), 0, 0, false, mine);
     }
 }

@@ -11,7 +11,7 @@ vi.mock('react-i18next', () => ({
 
 const TASK: TaskItem = {
   id: 't-1', title: 'Sortir les poubelles', dueDate: '2026-09-26', priority: 'MED', status: 'TODO',
-  assigneeIds: ['u-me'], subtasksDone: 0, subtasksTotal: 0, recurring: true,
+  assigneeIds: ['u-me'], subtasksDone: 0, subtasksTotal: 0, recurring: true, mine: true,
 }
 
 function renderRow(task: TaskItem, options: Parameters<typeof renderWithActions>[1] = {}) {

@@ -163,6 +163,8 @@ class DashboardControllerIT {
             .andExpect(jsonPath("$.cards.menu.data.today[0].portions").value(4))
             .andExpect(jsonPath("$.cards.menu.data.unplannedDays.length()").value(6))
             .andExpect(jsonPath("$.cards.tasks.data.overdue[0].title").value("Filtre de la hotte"))
+            .andExpect(jsonPath("$.cards.tasks.data.overdue[0].mine").value(true))
+            .andExpect(jsonPath("$.cards.agenda.data.dueToday[0].mine").value(true))
             .andExpect(jsonPath("$.cards.tasks.data.thisWeek[0].title").value("Payer la cantine"))
             .andExpect(jsonPath("$.cards.tasks.data.openCount").value(3))
             .andExpect(jsonPath("$.cards.finance.data.month").value(YearMonth.from(today).toString()))
@@ -260,6 +262,7 @@ class DashboardControllerIT {
             .andExpect(jsonPath("$.cards.agenda.data.dueToday[0].recurring").value(true))
             // Last week's occurrence was Bob's turn: overdue, but not Alice's to act on.
             .andExpect(jsonPath("$.cards.tasks.data.overdue[0].assigneeIds[0]").value(bobId.toString()))
+            .andExpect(jsonPath("$.cards.tasks.data.overdue[0].mine").value(false))
             .andExpect(jsonPath("$.attention[?(@.kind == 'OVERDUE_TASKS')]").isEmpty());
 
         assertThat(jdbc.queryForObject("SELECT count(*) FROM tasks WHERE space_id = ?", Integer.class, spaceId))

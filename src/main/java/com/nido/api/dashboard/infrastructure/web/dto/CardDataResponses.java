@@ -44,7 +44,8 @@ public final class CardDataResponses {
                                       List<UUID> participantIds) {}
 
     public record TaskItemResponse(UUID id, String title, LocalDate dueDate, String priority, String status,
-                                   List<UUID> assigneeIds, int subtasksDone, int subtasksTotal, boolean recurring) {}
+                                   List<UUID> assigneeIds, int subtasksDone, int subtasksTotal, boolean recurring,
+                                   boolean mine) {}
 
     public record AgendaCardResponse(List<AgendaEventResponse> allDay, List<AgendaEventResponse> timed,
                                      List<TaskItemResponse> dueToday, AgendaEventResponse tomorrow) implements CardData {}
@@ -109,7 +110,7 @@ public final class CardDataResponses {
 
     private static List<TaskItemResponse> tasks(List<TaskItem> tasks) {
         return tasks.stream().map(t -> new TaskItemResponse(t.id(), t.title(), t.dueDate(), t.priority().name(), t.status().name(),
-            t.assigneeIds(), t.subtasksDone(), t.subtasksTotal(), t.recurring())).toList();
+            t.assigneeIds(), t.subtasksDone(), t.subtasksTotal(), t.recurring(), t.mine())).toList();
     }
 
     private static List<MealItemResponse> meals(List<MealItem> meals) {

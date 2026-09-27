@@ -5,7 +5,6 @@ import { CalendarX2, ChevronRight, SquareCheck } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 import type { TaskItem, TasksCard as TasksCardData } from '@/entities/dashboard'
 import { useDashboardActions } from '../model/dashboardActions'
-import { filterMine } from '../lib/filterMine'
 import { DashboardCard } from './DashboardCard'
 import { CardGroup } from './CardGroup'
 import { TaskRow } from './TaskRow'
@@ -22,16 +21,17 @@ type Mode = 'mine' | 'all'
  */
 export function TasksCard({ card, dueToday = [] }: { card: TasksCardData; dueToday?: TaskItem[] }) {
   const { t } = useTranslation('dashboard')
-  const { spaceId, isShared, currentUserId } = useDashboardActions()
+  const { spaceId, isShared } = useDashboardActions()
   const [mode, setMode] = useState<Mode>(isShared ? 'mine' : 'all')
 
-  const pick = (tasks: TaskItem[]) => (mode === 'mine' ? filterMine(tasks, currentUserId) : tasks).slice(0, GROUP_LIMIT)
+  const inMode = (tasks: TaskItem[]) => (mode === 'mine' ? tasks.filter((task) => task.mine) : tasks)
+  const pick = (tasks: TaskItem[]) => inMode(tasks).slice(0, GROUP_LIMIT)
   const overdue = pick(card.overdue)
   const thisWeek = pick(card.thisWeek)
   const inProgress = pick(card.inProgress)
   const shown = overdue.length + thisWeek.length + inProgress.length
   // Today's to-dos are open tasks too, already on screen under "Aujourd'hui": not "other" ones.
-  const shownToday = (mode === 'mine' ? filterMine(dueToday, currentUserId) : dueToday).length
+  const shownToday = inMode(dueToday).length
   const more = Math.max(0, (mode === 'mine' ? card.openCountMine : card.openCount) - shown - shownToday)
 
   const toggle = isShared ? (

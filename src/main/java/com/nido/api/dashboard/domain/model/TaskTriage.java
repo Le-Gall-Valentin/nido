@@ -9,7 +9,8 @@ import java.util.function.Predicate;
  * groups that never overlap and never repeat the agenda: overdue, the next six days, and what is in
  * progress with no date close enough to be in either. Tasks due today live in the agenda only.
  *
- * <p>The order is the one given — the tasks module's board order — and is never decided here.
+ * <p>The order is the one given — the tasks module's board order — and is never decided here; nor is
+ * whose a task is ({@link TaskItem#mine}).
  */
 public final class TaskTriage {
 
@@ -31,7 +32,7 @@ public final class TaskTriage {
         List<TaskItem> inProgress = keep(openInBoardOrder,
             task -> task.status() == TaskItem.Status.DOING && (task.dueDate() == null || task.dueDate().isAfter(weekEnd)));
 
-        List<TaskItem> overdueMine = keep(overdue, context::isMine);
+        List<TaskItem> overdueMine = keep(overdue, TaskItem::mine);
         List<AttentionItem> attention = overdueMine.isEmpty()
             ? List.of()
             : List.of(new AttentionItem.OverdueTasks(overdueMine.size(),
@@ -40,7 +41,7 @@ public final class TaskTriage {
         if (overdue.isEmpty() && thisWeek.isEmpty() && inProgress.isEmpty()) {
             return SourceResult.attentionOnly(attention);
         }
-        int openCountMine = keep(openInBoardOrder, context::isMine).size();
+        int openCountMine = keep(openInBoardOrder, TaskItem::mine).size();
         return SourceResult.of(new TasksCard(capped(overdue), capped(thisWeek), capped(inProgress),
             openInBoardOrder.size(), openCountMine), attention);
     }

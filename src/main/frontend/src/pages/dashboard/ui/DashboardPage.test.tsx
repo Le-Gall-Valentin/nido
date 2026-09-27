@@ -29,8 +29,8 @@ const MEMBERS: SpaceMember[] = [
   { userId: 'u-cam', username: 'camille', email: null, role: 'MEMBER', joinedAt: '2026-01-01T00:00:00Z' },
 ]
 
-const TODAY_TASK: TaskItem = { id: 't-trash', title: 'Sortir les poubelles', dueDate: '2026-09-26', priority: 'MED', status: 'TODO', assigneeIds: ['u-me'], subtasksDone: 0, subtasksTotal: 0, recurring: true }
-const BLOCKED_TASK: TaskItem = { id: 't-hood', title: 'Changer le filtre', dueDate: '2026-09-22', priority: 'HIGH', status: 'TODO', assigneeIds: [], subtasksDone: 1, subtasksTotal: 3, recurring: false }
+const TODAY_TASK: TaskItem = { id: 't-trash', title: 'Sortir les poubelles', dueDate: '2026-09-26', priority: 'MED', status: 'TODO', assigneeIds: ['u-me'], subtasksDone: 0, subtasksTotal: 0, recurring: true, mine: true }
+const BLOCKED_TASK: TaskItem = { id: 't-hood', title: 'Changer le filtre', dueDate: '2026-09-22', priority: 'HIGH', status: 'TODO', assigneeIds: [], subtasksDone: 1, subtasksTotal: 3, recurring: false, mine: true }
 
 const BUSY: Dashboard = {
   date: '2026-09-26', spaceType: 'SHARED', canWrite: true, complete: true,

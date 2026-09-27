@@ -8,8 +8,10 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),
 }))
 
+/** `mine` as the server decides it in a shared space — mine or nobody's — unless a test says otherwise. */
 function task(id: string, title: string, assigneeIds: string[], extra: Partial<TaskItem> = {}): TaskItem {
-  return { id, title, dueDate: '2026-09-29', priority: 'MED', status: 'TODO', assigneeIds, subtasksDone: 0, subtasksTotal: 0, recurring: false, ...extra }
+  const mine = assigneeIds.length === 0 || assigneeIds.includes('u-me')
+  return { id, title, dueDate: '2026-09-29', priority: 'MED', status: 'TODO', assigneeIds, subtasksDone: 0, subtasksTotal: 0, recurring: false, mine, ...extra }
 }
 
 const CARD: TasksCardData = {
@@ -21,6 +23,16 @@ const CARD: TasksCardData = {
 }
 
 describe('TasksCard', () => {
+  it('shows as mine what the server says is mine, not what it would guess from the assignees', () => {
+    // One rule, the server's (DashboardContext#isMine): the card no longer works it out again.
+    const card: TasksCardData = { overdue: [], thisWeek: [task('t-x', 'Décidé par le serveur', [], { mine: false })], inProgress: [], openCount: 1, openCountMine: 0 }
+
+    renderWithActions(<TasksCard card={card} />)
+
+    expect(screen.queryByText('Décidé par le serveur')).toBeNull()
+    expect(screen.getByText('tasks.none_mine')).toBeDefined()
+  })
+
   it('does not count as "other" the tasks due today that the agenda already shows', () => {
     const card: TasksCardData = { overdue: [task('t-late', 'En retard', ['u-me'], { dueDate: '2026-09-22' })], thisWeek: [], inProgress: [], openCount: 3, openCountMine: 3 }
     const dueToday = [task('t-bins', 'Sortir les poubelles', ['u-me'], { dueDate: '2026-09-26' }), task('t-mail', 'Poster le courrier', [], { dueDate: '2026-09-26' })]

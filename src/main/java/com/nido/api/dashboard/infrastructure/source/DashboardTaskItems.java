@@ -1,5 +1,6 @@
 package com.nido.api.dashboard.infrastructure.source;
 
+import com.nido.api.dashboard.domain.model.DashboardContext;
 import com.nido.api.dashboard.domain.model.TaskItem;
 import com.nido.api.tasks.domain.model.Subtask;
 import com.nido.api.tasks.domain.model.Task;
@@ -11,10 +12,12 @@ final class DashboardTaskItems {
 
     private DashboardTaskItems() {}
 
-    static TaskItem from(Task task) {
+    /** Whose it is is the domain's rule ({@link DashboardContext#isMine}), applied here once. */
+    static TaskItem from(Task task, DashboardContext context) {
         int done = (int) task.subtasks().stream().filter(Subtask::done).count();
         return new TaskItem(task.id(), task.title(), task.dueDate(), priorityOf(task.priority()), statusOf(task.status()),
-            task.assigneeIds(), done, task.subtasks().size(), task.recurringSeriesId() != null);
+            task.assigneeIds(), done, task.subtasks().size(), task.recurringSeriesId() != null,
+            context.isMine(task.assigneeIds()));
     }
 
     /** Exhaustive on purpose: a priority the tasks module adds does not compile until the dashboard knows it. */

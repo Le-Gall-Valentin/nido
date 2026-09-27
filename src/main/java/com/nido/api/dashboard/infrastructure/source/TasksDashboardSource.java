@@ -30,7 +30,7 @@ public class TasksDashboardSource implements DashboardSource {
     public SourceResult read(DashboardContext context) {
         // Already in board order (ListOpenTasksUseCase): the tasks module decides it, the dashboard keeps it.
         List<TaskItem> open = listOpenTasks.list(context.caller()).stream()
-            .map(DashboardTaskItems::from)
+            .map(task -> DashboardTaskItems.from(task, context))
             .toList();
         return TaskTriage.of(open, context);
     }

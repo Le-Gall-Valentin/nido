@@ -44,6 +44,11 @@ export interface TaskItem {
   subtasksDone: number
   subtasksTotal: number
   recurring: boolean
+  /**
+   * Whether it calls for the caller's action — assigned to them or to nobody, or any task of their
+   * personal space. The server's rule, decided once; the page never works it out again.
+   */
+  mine: boolean
 }
 
 export interface AgendaCard {

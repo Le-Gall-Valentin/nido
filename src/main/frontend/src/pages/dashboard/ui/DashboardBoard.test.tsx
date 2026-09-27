@@ -14,7 +14,7 @@ const ALL: DashboardCards = {
   agenda: { status: 'OK', data: { allDay: [], timed: [], dueToday: [], tomorrow: null } },
   menu: { status: 'OK', data: { today: [], tomorrow: [], unplannedDays: [] } },
   finance: { status: 'OK', data: { month: '2026-09', balance: 0, totalExpense: 0, totalIncome: 0, remainingBudget: 0, budgetsToWatch: [], upcoming: [], balances: null } },
-  tasks: { status: 'OK', data: { overdue: [], thisWeek: [], inProgress: [{ id: 't-1', title: 'Trier la cave', dueDate: null, priority: 'LOW', status: 'DOING', assigneeIds: [], subtasksDone: 0, subtasksTotal: 0, recurring: false }], openCount: 1, openCountMine: 1 } },
+  tasks: { status: 'OK', data: { overdue: [], thisWeek: [], inProgress: [{ id: 't-1', title: 'Trier la cave', dueDate: null, priority: 'LOW', status: 'DOING', assigneeIds: [], subtasksDone: 0, subtasksTotal: 0, recurring: false, mine: true }], openCount: 1, openCountMine: 1 } },
   shopping: { status: 'OK', data: { remaining: 1, categories: [{ categoryId: 'c-1', name: 'Épicerie', count: 1, preview: ['Café'] }] } },
   savings: { status: 'OK', data: { goals: [] } },
 }

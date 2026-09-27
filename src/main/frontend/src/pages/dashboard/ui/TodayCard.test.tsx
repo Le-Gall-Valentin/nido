@@ -19,7 +19,7 @@ const CARD: AgendaCard = {
     event('e-doctor', 'Rendez-vous chez le pédiatre', '16:00:00', '16:30:00', { location: 'Cabinet du Dr Martin', participantIds: ['u-me', 'u-cam'] }),
     event('e-dinner', 'Dîner chez Paul', '19:30', null),
   ],
-  dueToday: [{ id: 't-trash', title: 'Sortir les poubelles', dueDate: '2026-09-26', priority: 'MED', status: 'TODO', assigneeIds: ['u-me'], subtasksDone: 0, subtasksTotal: 0, recurring: true }],
+  dueToday: [{ id: 't-trash', title: 'Sortir les poubelles', dueDate: '2026-09-26', priority: 'MED', status: 'TODO', assigneeIds: ['u-me'], subtasksDone: 0, subtasksTotal: 0, recurring: true, mine: true }],
   tomorrow: event('e-brunch', 'Brunch chez Mamie', '11:00', null, { startDate: '2026-09-27', endDate: '2026-09-27' }),
 }
 
