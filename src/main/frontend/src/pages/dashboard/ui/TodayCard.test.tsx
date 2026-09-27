@@ -1,0 +1,68 @@
+import { screen, within } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import type { AgendaCard, AgendaEvent } from '@/entities/dashboard'
+import { TodayCard } from './TodayCard'
+import { renderWithActions } from './cardTestHarness'
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),
+}))
+
+function event(id: string, title: string, startTime: string | null, endTime: string | null, extra: Partial<AgendaEvent> = {}): AgendaEvent {
+  return { id, title, location: null, color: 'event-violet', startDate: '2026-09-26', endDate: '2026-09-26', startTime, endTime, participantIds: [], ...extra }
+}
+
+const CARD: AgendaCard = {
+  allDay: [event('e-bday', 'Anniversaire de Léa', null, null, { color: 'event-cyan' })],
+  timed: [
+    event('e-market', 'Marché de la place', '10:30', '12:00'),
+    event('e-doctor', 'Rendez-vous chez le pédiatre', '16:00:00', '16:30:00', { location: 'Cabinet du Dr Martin', participantIds: ['u-me', 'u-cam'] }),
+    event('e-dinner', 'Dîner chez Paul', '19:30', null),
+  ],
+  dueToday: [{ id: 't-trash', title: 'Sortir les poubelles', dueDate: '2026-09-26', priority: 'MED', status: 'TODO', assigneeIds: ['u-me'], subtasksDone: 0, subtasksTotal: 0, recurring: true }],
+  tomorrow: event('e-brunch', 'Brunch chez Mamie', '11:00', null, { startDate: '2026-09-27', endDate: '2026-09-27' }),
+}
+
+const NOW = { date: '2026-09-26', time: '14:32' }
+
+describe('TodayCard', () => {
+  it('draws the now line after what has started and dims what is over', () => {
+    renderWithActions(<TodayCard card={CARD} date="2026-09-26" now={NOW} />)
+
+    const rows = screen.getAllByRole('listitem')
+    const nowAt = rows.findIndex((row) => row.getAttribute('aria-label') === 'today.now:{"time":"14:32"}')
+    expect(nowAt).toBe(1)
+    expect(within(rows[0]).getByText('Marché de la place').closest('li')?.className).toContain('opacity-45')
+    expect(within(rows[2]).getByText('Rendez-vous chez le pédiatre').closest('li')?.className).not.toContain('opacity-45')
+    expect(within(rows[2]).getByText('16:00')).toBeDefined()
+    expect(within(rows[2]).getByText('Cabinet du Dr Martin')).toBeDefined()
+  })
+
+  it('draws no now line on a day that is not today — a page left open past midnight', () => {
+    renderWithActions(<TodayCard card={CARD} date="2026-09-26" now={{ date: '2026-09-27', time: '00:10' }} />)
+
+    expect(screen.queryByLabelText(/today\.now/)).toBeNull()
+    expect(screen.getByText('Marché de la place').closest('li')?.className).not.toContain('opacity-45')
+  })
+
+  it('lists all-day events first, today\'s to-dos, and tomorrow\'s first event', () => {
+    renderWithActions(<TodayCard card={CARD} date="2026-09-26" now={NOW} />)
+
+    expect(screen.getByText('Anniversaire de Léa')).toBeDefined()
+    expect(screen.getByText('today.all_day')).toBeDefined()
+    expect(screen.getByText('today.due_today')).toBeDefined()
+    expect(screen.getByText('Sortir les poubelles')).toBeDefined()
+    expect(screen.getByText('today.tomorrow_at:{"title":"Brunch chez Mamie","time":"11:00"}')).toBeDefined()
+    expect(screen.getByRole('link', { name: 'today.link' }).getAttribute('href')).toBe('/s/space-1/organisation/calendar')
+  })
+
+  it('says until when a multi-day event runs', () => {
+    renderWithActions(<TodayCard card={{ ...CARD, allDay: [event('e-trip', 'Week-end à Annecy', null, null, { endDate: '2026-09-28' })] }} date="2026-09-26" now={NOW} />)
+    expect(screen.getByText('today.until_day:{"date":"28 sept."}')).toBeDefined()
+  })
+
+  it('says so when nothing is planned', () => {
+    renderWithActions(<TodayCard card={{ allDay: [], timed: [], dueToday: [], tomorrow: null }} date="2026-09-26" now={NOW} />)
+    expect(screen.getByText('today.empty')).toBeDefined()
+  })
+})
