@@ -356,6 +356,34 @@ class ArchRulesTest {
             .check(classes);
     }
 
+    // The space module is what every module stands on — the caller's membership, the space's today, the
+    // invitations of an account — so the whole dashboard may use it, not only its sources. Only what it
+    // publishes, though, and without it ever learning the dashboard exists.
+    @Test
+    void the_dashboard_uses_only_what_the_space_module_publishes() {
+        DescribedPredicate<JavaClass> unpublished = DescribedPredicate.describe(
+            "a space class outside its application.port.in and domain.model",
+            c -> c.getPackageName().startsWith(BASE + "space.")
+                && !c.getPackageName().startsWith(BASE + "space.application.port.in")
+                && !c.getPackageName().startsWith(BASE + "space.domain.model"));
+        noClasses()
+            .that().resideInAPackage(DASHBOARD)
+            .and(excludeTests())
+            .should().dependOnClassesThat(unpublished)
+            .allowEmptyShould(false)
+            .check(classes);
+    }
+
+    @Test
+    void the_space_module_does_not_depend_on_the_dashboard() {
+        noClasses()
+            .that().resideInAPackage(BASE + "space..")
+            .and(excludeTests())
+            .should().dependOnClassesThat().resideInAPackage(DASHBOARD)
+            .allowEmptyShould(false)
+            .check(classes);
+    }
+
     @Test
     void the_dashboard_depends_on_no_identity_class() {
         noClasses()
