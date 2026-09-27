@@ -34,6 +34,7 @@ class MenuDashboardSourceTest {
 
     @Test
     void todayAndTomorrowComeInTheirPositionOrder() {
+        // Checks the dates and places reach MenuWeek; its rules are in MenuWeekTest.
         when(listMenuEntries.list(caller, TODAY, TODAY.plusDays(6))).thenReturn(List.of(
             entry(TODAY, 1, recipe("Tarte aux pommes", RecipeCategory.DESSERT, 50)),
             entry(TODAY.plusDays(1), 0, recipe("Soupe de potiron", RecipeCategory.SOUP, 40)),
@@ -61,27 +62,6 @@ class MenuDashboardSourceTest {
         when(listMenuEntries.list(caller, TODAY, TODAY.plusDays(6))).thenReturn(List.of(orphan));
 
         assertThat(read().today()).containsExactly(new MealItem(orphan.entry().id(), null, null, null, null, 6));
-    }
-
-    @Test
-    void unplannedDaysAreTheDatesOfTheSevenDaysWithoutAnyEntry() {
-        when(listMenuEntries.list(caller, TODAY, TODAY.plusDays(6))).thenReturn(List.of(
-            entry(TODAY, 0, recipe("Curry", RecipeCategory.PLAT, 30)),
-            entry(TODAY.plusDays(2), 0, recipe("Gratin", RecipeCategory.PLAT, 60))));
-
-        assertThat(read().unplannedDays()).containsExactly(
-            TODAY.plusDays(1), TODAY.plusDays(3), TODAY.plusDays(4), TODAY.plusDays(5), TODAY.plusDays(6));
-    }
-
-    @Test
-    void anEmptyWeekStillGivesAFullCardWithSevenUnplannedDays() {
-        when(listMenuEntries.list(caller, TODAY, TODAY.plusDays(6))).thenReturn(List.of());
-
-        MenuCard card = read();
-
-        assertThat(card.today()).isEmpty();
-        assertThat(card.tomorrow()).isEmpty();
-        assertThat(card.unplannedDays()).hasSize(7).first().isEqualTo(TODAY);
     }
 
     @ParameterizedTest

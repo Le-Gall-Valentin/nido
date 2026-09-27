@@ -3,7 +3,7 @@ package com.nido.api.dashboard.infrastructure.source;
 import com.nido.api.dashboard.domain.model.CardKind;
 import com.nido.api.dashboard.domain.model.DashboardContext;
 import com.nido.api.dashboard.domain.model.MealItem;
-import com.nido.api.dashboard.domain.model.MenuCard;
+import com.nido.api.dashboard.domain.model.MenuWeek;
 import com.nido.api.dashboard.domain.model.SourceResult;
 import com.nido.api.dashboard.domain.port.out.DashboardSource;
 import com.nido.api.kitchen.application.port.in.ListMenuEntriesUseCase;
@@ -14,17 +14,11 @@ import com.nido.api.kitchen.domain.model.RecipeCategory;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
 
-/** Today's and tomorrow's meals, and the days of the coming week with nothing planned. Always present. */
+/** Reads the week's menu from the kitchen module and lets {@link MenuWeek} decide the card. */
 @Component
 public class MenuDashboardSource implements DashboardSource {
-
-    static final int WINDOW_DAYS = 7;
 
     private final ListMenuEntriesUseCase listMenuEntries;
 
@@ -40,22 +34,15 @@ public class MenuDashboardSource implements DashboardSource {
     @Override
     public SourceResult read(DashboardContext context) {
         LocalDate today = context.today();
-        LocalDate last = today.plusDays(WINDOW_DAYS - 1);
-
-        Map<LocalDate, List<MealItem>> byDay = listMenuEntries.list(context.caller(), today, last).stream()
-            .sorted(Comparator.comparing((MenuEntryView view) -> view.entry().date())
-                .thenComparingInt(view -> view.entry().position()))
-            .collect(Collectors.groupingBy(view -> view.entry().date(), TreeMap::new,
-                Collectors.mapping(MenuDashboardSource::toMeal, Collectors.toList())));
-
-        List<LocalDate> unplanned = today.datesUntil(last.plusDays(1))
-            .filter(day -> !byDay.containsKey(day))
+        List<MenuWeek.PlannedMeal> planned = listMenuEntries.list(context.caller(), today, MenuWeek.lastDay(today)).stream()
+            .map(MenuDashboardSource::toPlanned)
             .toList();
+        return SourceResult.of(MenuWeek.of(planned, context));
+    }
 
-        return SourceResult.of(new MenuCard(
-            byDay.getOrDefault(today, List.of()),
-            byDay.getOrDefault(today.plusDays(1), List.of()),
-            unplanned));
+    private static MenuWeek.PlannedMeal toPlanned(MenuEntryView view) {
+        MenuEntry entry = view.entry();
+        return new MenuWeek.PlannedMeal(entry.date(), entry.position(), toMeal(view));
     }
 
     private static MealItem toMeal(MenuEntryView view) {

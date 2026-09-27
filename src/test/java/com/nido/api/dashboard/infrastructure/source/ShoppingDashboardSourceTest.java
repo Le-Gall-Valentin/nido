@@ -37,6 +37,7 @@ class ShoppingDashboardSourceTest {
 
     @Test
     void groupsFollowTheCategoryOrderWithTheFirstThreeNamesInListOrder() {
+        // Checks items and categories reach ShoppingAisles whole; its rules are in ShoppingAislesTest.
         when(listItems.list(caller)).thenReturn(List.of(
             item(grocery, "Pâtes", 4, false),
             item(fruits, "Pommes", 3, false),
@@ -51,34 +52,6 @@ class ShoppingDashboardSourceTest {
         assertThat(card.categories()).containsExactly(
             new ShoppingGroup(fruits.id(), "Fruits et légumes", 4, List.of("Tomates", "Courgettes", "Poires")),
             new ShoppingGroup(grocery.id(), "Épicerie", 1, List.of("Pâtes")));
-    }
-
-    @Test
-    void doneItemsAreNeitherCountedNorShown() {
-        when(listItems.list(caller)).thenReturn(List.of(
-            item(fruits, "Tomates", 0, true),
-            item(grocery, "Café", 1, false)));
-        when(listCategories.list(caller)).thenReturn(List.of(fruits, grocery, other));
-
-        ShoppingCard card = (ShoppingCard) read().card();
-
-        assertThat(card.remaining()).isEqualTo(1);
-        assertThat(card.categories()).extracting(ShoppingGroup::name).containsExactly("Épicerie");
-    }
-
-    @Test
-    void anItemWhoseCategoryIsGoneFallsIntoTheFallbackCategory() {
-        ShoppingCategory deleted = new ShoppingCategory(UUID.randomUUID(), spaceId, "Supprimée", 5, false);
-        when(listItems.list(caller)).thenReturn(List.of(
-            item(deleted, "Piles", 0, false),
-            item(other, "Ampoules", 1, false)));
-        when(listCategories.list(caller)).thenReturn(List.of(fruits, other));
-
-        ShoppingCard card = (ShoppingCard) read().card();
-
-        assertThat(card.remaining()).isEqualTo(2);
-        assertThat(card.categories()).containsExactly(
-            new ShoppingGroup(other.id(), "Autre", 2, List.of("Piles", "Ampoules")));
     }
 
     @Test
