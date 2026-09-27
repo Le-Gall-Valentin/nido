@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import type { CalendarOccurrence } from '@/entities/calendar'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { DOT_CLASS, EVENT_COLORS, SOURCE_TOKEN, TINT_CLASS, tokenFor } from './sourceAppearance'
+import { EVENT_COLORS, type CalendarOccurrence } from '@/entities/calendar'
+import { DOT_CLASS, SOURCE_TOKEN, TINT_CLASS, tokenFor } from './sourceAppearance'
 
 function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence {
   return {
@@ -11,9 +9,6 @@ function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence 
     endDate: '2026-01-01', endTime: null, color: null, participantIds: [], ...overrides,
   }
 }
-
-// Read from disk: vitest hands CSS imports over empty, `?raw` included.
-const theme = readFileSync(resolve(process.cwd(), 'src/index.css'), 'utf-8')
 
 const OTHER_SOURCES = [SOURCE_TOKEN.TASK, SOURCE_TOKEN.FINANCE, SOURCE_TOKEN.MEAL, SOURCE_TOKEN.SAVINGS] as string[]
 
@@ -31,9 +26,8 @@ describe('source colours', () => {
 })
 
 describe('event colours', () => {
-  it('offers six colours, none of them a colour another source wears', () => {
-    expect(EVENT_COLORS).toEqual(
-      ['event-violet', 'event-magenta', 'event-cyan', 'event-graphite', 'event-indigo', 'event-brique'])
+  it('offers no colour another source wears', () => {
+    // The palette itself lives in entities/calendar (eventPalette.test.ts).
     for (const color of EVENT_COLORS) expect(OTHER_SOURCES).not.toContain(color)
   })
 
@@ -56,13 +50,6 @@ describe('event colours', () => {
     for (const token of [...EVENT_COLORS, ...Object.values(SOURCE_TOKEN)]) {
       expect(DOT_CLASS[token]).toBe(`bg-${token}`)
       expect(TINT_CLASS[token]).toBe(`bg-${token}-dim text-${token}`)
-    }
-  })
-
-  it('defines every event colour for the light theme and for both ways of asking for the dark one', () => {
-    for (const color of EVENT_COLORS) {
-      expect(theme.match(new RegExp(`--color-${color}:`, 'g'))).toHaveLength(3)
-      expect(theme.match(new RegExp(`--color-${color}-dim:`, 'g'))).toHaveLength(3)
     }
   })
 })

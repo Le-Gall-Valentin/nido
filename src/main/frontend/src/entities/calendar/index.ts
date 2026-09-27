@@ -3,6 +3,10 @@ export type {
   RecurrenceInterval, EventInput, RecurringEventSeriesInput, ScheduleChange,
 } from './model/types'
 export { toEventInput } from './lib/toEventInput'
+export {
+  EVENT_COLORS, DEFAULT_EVENT_COLOR, EVENT_DOT_CLASS, EVENT_TINT_CLASS, isEventColor, eventDotClass, eventTintClass,
+  type EventColor,
+} from './lib/eventPalette'
 export type { ICalendarApi } from './model/ICalendarApi'
 export type { IRecurringEventSeriesApi } from './model/IRecurringEventSeriesApi'
 export type { CalendarApi } from './model/calendarApiContext'

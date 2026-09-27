@@ -5,11 +5,11 @@ import { Calendar, CalendarDays, Sunrise } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 import { resolveLocale } from '@/shared/lib'
 import type { AgendaCard, AgendaEvent } from '@/entities/dashboard'
+import { eventDotClass, eventTintClass } from '@/entities/calendar'
 import { useDashboardActions } from '../model/dashboardActions'
 import type { ZonedNow } from '../lib/useNow'
 import { addDaysIso, formatDayMonth, shortTime } from '../lib/dates'
 import { isEventOver, nowLineIndex } from '../lib/nowLine'
-import { eventBarClass, eventTintClass } from '../lib/eventColor'
 import { DashboardCard } from './DashboardCard'
 import { CardList, CardRow, RowLead } from './CardRow'
 import { CardGroup } from './CardGroup'
@@ -60,7 +60,7 @@ function EventRow({ event, date, over, divider }: { event: AgendaEvent; date: st
     <CardRow divider={divider} muted={over}
       lead={<>
         <RowLead>{event.startTime ? shortTime(event.startTime) : ''}</RowLead>
-        <span aria-hidden="true" className={`w-[3px] self-stretch rounded-full ${eventBarClass(event.color)}`} />
+        <span aria-hidden="true" className={`w-[3px] self-stretch rounded-full ${eventDotClass(event.color)}`} />
       </>}
       title={event.title}
       meta={meta}
