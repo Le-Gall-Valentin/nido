@@ -70,6 +70,25 @@ describe('TodayCard', () => {
     expect(screen.queryByText('today.all_day')).toBeNull()
   })
 
+  it('puts an evening that runs past midnight on the timeline at its start, until tomorrow', () => {
+    const party = event('e-party', 'Soirée chez Paul', '22:00:00', '01:00:00', { endDate: '2026-09-27' })
+    renderWithActions(<TodayCard card={{ ...CARD, allDay: [], timed: [party] }} date="2026-09-26" now={{ date: '2026-09-26', time: '23:30' }} />)
+
+    const row = screen.getByText('Soirée chez Paul').closest('li') as HTMLElement
+    expect(within(row).getByText('22:00')).toBeDefined()
+    expect(within(row).getByText('today.until_tomorrow:{"time":"01:00"}')).toBeDefined()
+    // Still going at 23:30: not dimmed as over.
+    expect(row.className).not.toContain('opacity-45')
+  })
+
+  it('says until which day a timed event that lasts several days runs', () => {
+    const seminar = event('e-seminar', 'Séminaire', '09:00:00', '17:00:00', { endDate: '2026-09-28' })
+    renderWithActions(<TodayCard card={{ ...CARD, allDay: [], timed: [seminar] }} date="2026-09-26" now={NOW} />)
+
+    const row = screen.getByText('Séminaire').closest('li') as HTMLElement
+    expect(within(row).getByText('today.until_day:{"date":"28 sept."}')).toBeDefined()
+  })
+
   it('says so when nothing is planned', () => {
     renderWithActions(<TodayCard card={{ allDay: [], timed: [], dueToday: [], tomorrow: null }} date="2026-09-26" now={NOW} />)
     expect(screen.getByText('today.empty')).toBeDefined()

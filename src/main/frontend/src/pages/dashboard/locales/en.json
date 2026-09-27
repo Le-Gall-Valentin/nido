@@ -51,6 +51,7 @@
     "all_day": "All day",
     "until_day": "Until {{date}}",
     "until": "Until {{time}}",
+    "until_tomorrow": "Until {{time}} tomorrow",
     "now": "Now, {{time}}",
     "due_today": "Due today",
     "tomorrow": "Tomorrow",

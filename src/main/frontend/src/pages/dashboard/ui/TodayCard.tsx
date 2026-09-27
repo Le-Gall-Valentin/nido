@@ -7,7 +7,7 @@ import { resolveLocale } from '@/shared/lib'
 import type { AgendaCard, AgendaEvent } from '@/entities/dashboard'
 import { useDashboardActions } from '../model/dashboardActions'
 import type { ZonedNow } from '../lib/useNow'
-import { formatDayMonth, shortTime } from '../lib/dates'
+import { addDaysIso, formatDayMonth, shortTime } from '../lib/dates'
 import { isEventOver, nowLineIndex } from '../lib/nowLine'
 import { eventBarClass, eventTintClass } from '../lib/eventColor'
 import { DashboardCard } from './DashboardCard'
@@ -45,11 +45,17 @@ function NowLine({ time }: { time: string }) {
   )
 }
 
-function EventRow({ event, over, divider }: { event: AgendaEvent; over: boolean; divider: boolean }) {
+/** A timed event that starts today, wherever it ends: tonight, tomorrow night, or days later. */
+function EventRow({ event, date, over, divider }: { event: AgendaEvent; date: string; over: boolean; divider: boolean }) {
   const { t } = useTranslation('dashboard')
   let meta: ReactNode
   if (event.location) meta = <span>{event.location}</span>
-  else if (event.endTime) meta = <span>{t('today.until', { time: shortTime(event.endTime) })}</span>
+  else if (event.endDate > addDaysIso(date, 1)) {
+    meta = <span>{t('today.until_day', { date: formatDayMonth(event.endDate, resolveLocale(i18next.language)) })}</span>
+  } else if (event.endTime) {
+    // An evening past midnight ends "at 01:00 tomorrow", not at an 01:00 that would come before it started.
+    meta = <span>{t(event.endDate > date ? 'today.until_tomorrow' : 'today.until', { time: shortTime(event.endTime) })}</span>
+  }
   return (
     <CardRow divider={divider} muted={over}
       lead={<>
@@ -84,7 +90,7 @@ export function TodayCard({ card, date, now }: TodayCardProps) {
   const rows: ReactNode[] = []
   card.timed.forEach((event, index) => {
     if (index === lineAt) rows.push(<NowLine key="now" time={now.time} />)
-    rows.push(<EventRow key={event.id} event={event} over={isToday && isEventOver(event, date, now.time)}
+    rows.push(<EventRow key={event.id} event={event} date={date} over={isToday && isEventOver(event, date, now.time)}
       divider={index !== 0 && index !== lineAt} />)
   })
   if (lineAt === card.timed.length && lineAt > 0) rows.push(<NowLine key="now" time={now.time} />)

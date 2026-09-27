@@ -51,6 +51,7 @@
     "all_day": "Toute la journée",
     "until_day": "Jusqu'au {{date}}",
     "until": "Jusqu'à {{time}}",
+    "until_tomorrow": "Jusqu'à {{time}} demain",
     "now": "Maintenant, {{time}}",
     "due_today": "À faire aujourd'hui",
     "tomorrow": "Demain",

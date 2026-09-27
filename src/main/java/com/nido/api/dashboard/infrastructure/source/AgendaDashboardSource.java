@@ -66,11 +66,13 @@ public class AgendaDashboardSource implements DashboardSource {
                 continue;
             }
             AgendaEvent event = toEvent(occurrence);
-            // An event spanning several days has no single slot on today's timeline.
-            if (occurrence.allDay() || !occurrence.startDate().equals(occurrence.endDate())) {
-                allDay.add(event);
-            } else {
+            // A timed event that starts today has its slot on today's timeline, however late it ends: an
+            // evening past midnight still starts at 22:00. One that began on an earlier day has no start
+            // today, so it is a banner, like an all-day event.
+            if (!occurrence.allDay() && occurrence.startDate().equals(today)) {
                 timed.add(event);
+            } else {
+                allDay.add(event);
             }
         }
         allDay.sort(ALL_DAY_ORDER);

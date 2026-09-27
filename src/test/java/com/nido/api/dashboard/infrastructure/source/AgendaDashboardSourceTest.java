@@ -69,6 +69,20 @@ class AgendaDashboardSourceTest {
     }
 
     @Test
+    void aTimedEventStartingTodayIsOnTodaysTimelineAtItsStartWheneverItEnds() {
+        // An evening that runs past midnight used to become a banner "until tomorrow", its 22:00 lost.
+        when(listEvents.list(caller, TODAY, TOMORROW)).thenReturn(List.of(
+            timed("Soirée chez Paul", TODAY, LocalTime.of(22, 0), TOMORROW, LocalTime.of(1, 0)),
+            timed("Dîner", TODAY, LocalTime.of(19, 30), TODAY, LocalTime.of(21, 0)),
+            timed("Séminaire", TODAY, LocalTime.of(9, 0), TODAY.plusDays(2), LocalTime.of(17, 0))));
+
+        AgendaCard card = read();
+
+        assertThat(card.timed()).extracting(AgendaEvent::title).containsExactly("Séminaire", "Dîner", "Soirée chez Paul");
+        assertThat(card.allDay()).isEmpty();
+    }
+
+    @Test
     void anEventOnlyTomorrowIsNotToday() {
         when(listEvents.list(caller, TODAY, TOMORROW)).thenReturn(List.of(
             timed("Brunch", TOMORROW, LocalTime.of(11, 0), TOMORROW, LocalTime.of(13, 0))));
