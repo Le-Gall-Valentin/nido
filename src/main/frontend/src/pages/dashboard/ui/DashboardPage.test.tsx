@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { MemoryRouter, Routes, Route, Link } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import { SpacesApiProvider, type ISpacesApi } from '@/features/space-switcher'
@@ -72,6 +72,8 @@ function renderPage(result: Dashboard | Error = BUSY, { members = MEMBERS }: Ren
           <SpaceApiProvider api={spaceApi}>
             <TasksApiProvider api={tasksApi}>
               <MemoryRouter initialEntries={['/s/space-1/dashboard']}>
+                {/* The space switcher's part: the same page, another space. */}
+                <Link to="/s/space-2/dashboard">test:other-space</Link>
                 <Routes>
                   <Route path="/s/:spaceId/dashboard" element={<DashboardPage api={api} financeApi={financeApi} kitchenApi={kitchenApi} />} />
                 </Routes>
@@ -159,6 +161,20 @@ describe('DashboardPage', () => {
     await waitFor(() => expect(tasksApi.changeTaskStatus).toHaveBeenCalledWith('space-1', 't-trash', 'DONE'))
 
     expect(screen.getByRole('checkbox', { name: 'tasks.mark_done:{"title":"Changer le filtre"}' }).getAttribute('aria-disabled')).toBe('true')
+  })
+
+  it('forgets a failed action when switching to another space', async () => {
+    const { api, tasksApi } = renderPage()
+    vi.mocked(tasksApi.changeTaskStatus).mockRejectedValueOnce(new Error('down'))
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'tasks.mark_done:{"title":"Sortir les poubelles"}' }))
+    expect(await screen.findByText('error.action_failed')).toBeDefined()
+
+    fireEvent.click(screen.getByRole('link', { name: 'test:other-space' }))
+    // Past the other space's skeleton, which hides everything for a moment.
+    await waitFor(() => expect(api.getDashboard).toHaveBeenCalledWith('space-2'))
+    expect(await screen.findByRole('checkbox', { name: 'tasks.mark_done:{"title":"Sortir les poubelles"}' })).toBeDefined()
+    expect(screen.queryByText('error.action_failed')).toBeNull()
   })
 
   it('opens the settlement dialog from "À traiter"', async () => {

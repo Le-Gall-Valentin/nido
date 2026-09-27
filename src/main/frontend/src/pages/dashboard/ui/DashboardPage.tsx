@@ -26,11 +26,13 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({ api = dashboardApi, financeApi = defaultFinanceApi, kitchenApi = defaultKitchenApi }: DashboardPageProps = {}) {
+  const { spaceId = '' } = useParams<{ spaceId: string }>()
   return (
     <DashboardApiProvider api={api}>
       <FinanceApiProvider api={financeApi}>
         <KitchenApiProvider api={kitchenApi}>
-          <DashboardPageContent />
+          {/* Keyed by space: an alert or a settlement left open belongs to the space it was raised in. */}
+          <DashboardPageContent key={spaceId} />
         </KitchenApiProvider>
       </FinanceApiProvider>
     </DashboardApiProvider>
