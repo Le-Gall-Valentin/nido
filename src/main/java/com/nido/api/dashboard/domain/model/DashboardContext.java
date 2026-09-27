@@ -19,4 +19,13 @@ public record DashboardContext(SpaceMembership caller, String callerEmail, Local
     public boolean isShared() {
         return spaceType == SpaceType.SHARED;
     }
+
+    /**
+     * Whether a task calls for the caller's action: assigned to them or to nobody — an unassigned chore
+     * is anyone's. In a shared space somebody else's task does not; in a personal space every task is
+     * the owner's.
+     */
+    public boolean isMine(TaskItem task) {
+        return !isShared() || task.assigneeIds().isEmpty() || task.assigneeIds().contains(callerId());
+    }
 }

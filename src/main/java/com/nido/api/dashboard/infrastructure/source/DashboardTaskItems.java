@@ -1,13 +1,12 @@
 package com.nido.api.dashboard.infrastructure.source;
 
-import com.nido.api.dashboard.domain.model.DashboardContext;
 import com.nido.api.dashboard.domain.model.TaskItem;
 import com.nido.api.tasks.domain.model.Subtask;
 import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskPriority;
 import com.nido.api.tasks.domain.model.TaskStatus;
 
-/** How a task reaches the dashboard, and whose it is — shared by the agenda and the tasks sources. */
+/** How a task of the tasks module reaches the dashboard — shared by the agenda and the tasks sources. */
 final class DashboardTaskItems {
 
     private DashboardTaskItems() {}
@@ -33,15 +32,5 @@ final class DashboardTaskItems {
             case DOING -> TaskItem.Status.DOING;
             case DONE -> TaskItem.Status.DONE;
         };
-    }
-
-    /**
-     * Assigned to the caller or to nobody. In a shared space, somebody else's task does not call for
-     * the caller's action; in a personal space every task is the owner's.
-     */
-    static boolean isMine(Task task, DashboardContext context) {
-        return !context.isShared()
-            || task.assigneeIds().isEmpty()
-            || task.assigneeIds().contains(context.callerId());
     }
 }

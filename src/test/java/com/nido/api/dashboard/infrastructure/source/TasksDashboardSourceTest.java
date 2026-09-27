@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,30 +30,20 @@ class TasksDashboardSourceTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 9, 26);
     private final UUID spaceId = UUID.randomUUID();
     private final UUID me = UUID.randomUUID();
-    private final UUID someoneElse = UUID.randomUUID();
     private final SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), spaceId, me, SpaceRole.MEMBER, Instant.now());
     private final ListOpenTasksUseCase listOpenTasks = mock(ListOpenTasksUseCase.class);
     private int created;
 
     @Test
-    void theThreeGroupsNeverOverlapAndLeaveTodaysTasksToTheAgenda() {
+    void readsTheCallersOpenTasksAndLetsTheTriageDecide() {
+        // The rules are TaskTriage's (see TaskTriageTest); this only checks they get the space's open tasks.
         when(listOpenTasks.list(caller)).thenReturn(List.of(
-            task("overdue", TaskStatus.TODO, TODAY.minusDays(1), List.of()),
-            task("today", TaskStatus.TODO, TODAY, List.of()),
-            task("doing today", TaskStatus.DOING, TODAY, List.of()),
-            task("in three days", TaskStatus.TODO, TODAY.plusDays(3), List.of()),
-            task("in six days", TaskStatus.TODO, TODAY.plusDays(6), List.of()),
-            task("next week", TaskStatus.TODO, TODAY.plusDays(7), List.of()),
-            task("doing later", TaskStatus.DOING, TODAY.plusDays(10), List.of()),
-            task("doing undated", TaskStatus.DOING, null, List.of()),
-            task("todo undated", TaskStatus.TODO, null, List.of())));
+            task("Filtre de la hotte", TaskStatus.TODO, TODAY.minusDays(2), List.of(me))));
 
-        TasksCard card = (TasksCard) read(SpaceType.SHARED).card();
+        SourceResult result = read(SpaceType.SHARED);
 
-        assertThat(card.overdue()).extracting(TaskItem::title).containsExactly("overdue");
-        assertThat(card.thisWeek()).extracting(TaskItem::title).containsExactly("in three days", "in six days");
-        assertThat(card.inProgress()).extracting(TaskItem::title).containsExactly("doing later", "doing undated");
-        assertThat(card.openCount()).isEqualTo(9);
+        assertThat(((TasksCard) result.card()).overdue()).extracting(TaskItem::title).containsExactly("Filtre de la hotte");
+        assertThat(result.attention()).containsExactly(new AttentionItem.OverdueTasks(1, List.of("Filtre de la hotte")));
     }
 
     @Test
@@ -67,79 +56,6 @@ class TasksDashboardSourceTest {
 
         assertThat(((TasksCard) read(SpaceType.SHARED).card()).overdue()).extracting(TaskItem::title)
             .containsExactly("due yesterday", "due last week");
-    }
-
-    @Test
-    void theOverdueAttentionCountsOnlyMyTasksAndThoseOfNobody() {
-        when(listOpenTasks.list(caller)).thenReturn(List.of(
-            task("mine", TaskStatus.TODO, TODAY.minusDays(3), List.of(me)),
-            task("nobody's", TaskStatus.TODO, TODAY.minusDays(2), List.of()),
-            task("someone else's", TaskStatus.TODO, TODAY.minusDays(1), List.of(someoneElse))));
-
-        SourceResult result = read(SpaceType.SHARED);
-
-        assertThat(((TasksCard) result.card()).overdue()).hasSize(3);
-        assertThat(result.attention()).containsExactly(new AttentionItem.OverdueTasks(2, List.of("mine", "nobody's")));
-    }
-
-    @Test
-    void inAPersonalSpaceEveryOverdueTaskIsMine() {
-        when(listOpenTasks.list(caller)).thenReturn(List.of(
-            task("assigned elsewhere", TaskStatus.TODO, TODAY.minusDays(1), List.of(someoneElse))));
-
-        assertThat(read(SpaceType.PERSONAL).attention())
-            .containsExactly(new AttentionItem.OverdueTasks(1, List.of("assigned elsewhere")));
-    }
-
-    @Test
-    void theAttentionNamesAtMostThreeTasksButCountsThemAll() {
-        List<Task> overdue = new ArrayList<>();
-        for (int i = 1; i <= 5; i++) {
-            overdue.add(task("late " + i, TaskStatus.TODO, TODAY.minusDays(10 - i), List.of(me)));
-        }
-        when(listOpenTasks.list(caller)).thenReturn(overdue);
-
-        assertThat(read(SpaceType.SHARED).attention())
-            .containsExactly(new AttentionItem.OverdueTasks(5, List.of("late 1", "late 2", "late 3")));
-    }
-
-    @Test
-    void noTaskInAnyGroupMeansNoCardAndNoAttention() {
-        when(listOpenTasks.list(caller)).thenReturn(List.of(
-            task("next week", TaskStatus.TODO, TODAY.plusDays(7), List.of()),
-            task("undated", TaskStatus.TODO, null, List.of()),
-            task("today", TaskStatus.TODO, TODAY, List.of())));
-
-        SourceResult result = read(SpaceType.SHARED);
-
-        assertThat(result.card()).isNull();
-        assertThat(result.attention()).isEmpty();
-    }
-
-    @Test
-    void eachGroupIsCappedAtTwentyWhileTheCountsSeeEveryTask() {
-        List<Task> overdue = new ArrayList<>();
-        for (int i = 0; i < 25; i++) {
-            overdue.add(task("late " + i, TaskStatus.TODO, TODAY.minusDays(1), List.of(me)));
-        }
-        when(listOpenTasks.list(caller)).thenReturn(overdue);
-
-        SourceResult result = read(SpaceType.SHARED);
-
-        assertThat(((TasksCard) result.card()).overdue()).hasSize(20);
-        assertThat(((TasksCard) result.card()).openCount()).isEqualTo(25);
-        assertThat(result.attention()).containsExactly(
-            new AttentionItem.OverdueTasks(25, List.of("late 0", "late 1", "late 2")));
-    }
-
-    @Test
-    void openCountMineCountsMineAndUnassigned() {
-        when(listOpenTasks.list(caller)).thenReturn(List.of(
-            task("mine", TaskStatus.TODO, TODAY.plusDays(1), List.of(me)),
-            task("nobody's", TaskStatus.TODO, null, List.of()),
-            task("someone else's", TaskStatus.TODO, TODAY.plusDays(2), List.of(someoneElse))));
-
-        assertThat(((TasksCard) read(SpaceType.SHARED).card()).openCountMine()).isEqualTo(2);
     }
 
     @Test

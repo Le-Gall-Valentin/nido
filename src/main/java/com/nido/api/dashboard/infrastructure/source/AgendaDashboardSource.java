@@ -2,7 +2,7 @@ package com.nido.api.dashboard.infrastructure.source;
 
 import com.nido.api.calendar.application.port.in.ListCalendarEventsUseCase;
 import com.nido.api.calendar.domain.model.CalendarOccurrence;
-import com.nido.api.dashboard.domain.model.AgendaCard;
+import com.nido.api.dashboard.domain.model.AgendaDay;
 import com.nido.api.dashboard.domain.model.AgendaEvent;
 import com.nido.api.dashboard.domain.model.CardKind;
 import com.nido.api.dashboard.domain.model.DashboardContext;
@@ -10,35 +10,18 @@ import com.nido.api.dashboard.domain.model.SourceResult;
 import com.nido.api.dashboard.domain.model.TaskItem;
 import com.nido.api.dashboard.domain.port.out.DashboardSource;
 import com.nido.api.tasks.application.port.in.ListTasksDueBetweenUseCase;
-import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskOrdering;
-import com.nido.api.tasks.domain.model.TaskStatus;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
- * Today: the household's events, today's to-dos for everyone (the caller's first), and a glance at
- * tomorrow. Always present — it is the anchor of the page, even on an empty day.
+ * Reads today's and tomorrow's events from the calendar and today's tasks from the tasks module, and
+ * lets {@link AgendaDay} decide the card.
  */
 @Component
 public class AgendaDashboardSource implements DashboardSource {
-
-    private static final Comparator<AgendaEvent> ALL_DAY_ORDER =
-        Comparator.comparing(AgendaEvent::startDate).thenComparing(AgendaEvent::title);
-    private static final Comparator<AgendaEvent> TIMED_ORDER =
-        Comparator.comparing(AgendaEvent::startTime, Comparator.nullsFirst(Comparator.naturalOrder()))
-            .thenComparing(AgendaEvent::title);
-    /** All-day first, then the earliest start, then the title. */
-    private static final Comparator<AgendaEvent> TOMORROW_ORDER =
-        Comparator.comparing((AgendaEvent event) -> event.startTime() != null)
-            .thenComparing(event -> event.startTime() == null ? LocalTime.MIN : event.startTime())
-            .thenComparing(AgendaEvent::title);
 
     private final ListCalendarEventsUseCase listEvents;
     private final ListTasksDueBetweenUseCase listTasksDue;
@@ -56,49 +39,22 @@ public class AgendaDashboardSource implements DashboardSource {
     @Override
     public SourceResult read(DashboardContext context) {
         LocalDate today = context.today();
-        LocalDate tomorrow = today.plusDays(1);
-        List<CalendarOccurrence> events = listEvents.list(context.caller(), today, tomorrow);
-
-        List<AgendaEvent> allDay = new ArrayList<>();
-        List<AgendaEvent> timed = new ArrayList<>();
-        for (CalendarOccurrence occurrence : events) {
-            if (occurrence.startDate().isAfter(today) || occurrence.endDate().isBefore(today)) {
-                continue;
-            }
-            AgendaEvent event = toEvent(occurrence);
-            // A timed event that starts today has its slot on today's timeline, however late it ends: an
-            // evening past midnight still starts at 22:00. One that began on an earlier day has no start
-            // today, so it is a banner, like an all-day event.
-            if (!occurrence.allDay() && occurrence.startDate().equals(today)) {
-                timed.add(event);
-            } else {
-                allDay.add(event);
-            }
-        }
-        allDay.sort(ALL_DAY_ORDER);
-        timed.sort(TIMED_ORDER);
-
-        AgendaEvent first = events.stream()
-            .filter(occurrence -> occurrence.startDate().equals(tomorrow))
+        List<AgendaEvent> events = listEvents.list(context.caller(), today, today.plusDays(1)).stream()
             .map(AgendaDashboardSource::toEvent)
-            .min(TOMORROW_ORDER)
-            .orElse(null);
-
-        List<Task> due = TaskOrdering.sort(listTasksDue.list(context.caller(), today, today).stream()
-            .filter(task -> task.status() != TaskStatus.DONE)
-            .toList());
-        List<TaskItem> dueToday = Stream.concat(
-                due.stream().filter(task -> DashboardTaskItems.isMine(task, context)),
-                due.stream().filter(task -> !DashboardTaskItems.isMine(task, context)))
+            .toList();
+        // This read has no order of its own; the tasks board's order is the tasks module's rule.
+        List<TaskItem> dueToday = TaskOrdering.sort(listTasksDue.list(context.caller(), today, today)).stream()
             .map(DashboardTaskItems::from)
             .toList();
-
-        return SourceResult.of(new AgendaCard(allDay, timed, dueToday, first));
+        return SourceResult.of(AgendaDay.of(events, dueToday, context));
     }
 
+    /** An all-day occurrence goes without times, whatever it carries: that is how AgendaEvent tells it apart. */
     private static AgendaEvent toEvent(CalendarOccurrence occurrence) {
+        boolean allDay = occurrence.allDay();
         return new AgendaEvent(occurrence.sourceId(), occurrence.title(), occurrence.location(), occurrence.color(),
-            occurrence.startDate(), occurrence.endDate(), occurrence.startTime(), occurrence.endTime(),
+            occurrence.startDate(), occurrence.endDate(),
+            allDay ? null : occurrence.startTime(), allDay ? null : occurrence.endTime(),
             occurrence.participantIds());
     }
 }

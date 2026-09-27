@@ -112,6 +112,20 @@ class DashboardModelTest {
     }
 
     @Test
+    void aTaskIsMineWhenItIsAssignedToMeOrToNobodyOrWhenTheSpaceIsMyOwn() {
+        UUID me = UUID.randomUUID();
+        UUID someoneElse = UUID.randomUUID();
+        SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), UUID.randomUUID(), me, SpaceRole.MEMBER, Instant.now());
+        DashboardContext shared = new DashboardContext(caller, "a@b.c", LocalDate.of(2026, 9, 26), SpaceType.SHARED);
+        DashboardContext personal = new DashboardContext(caller, "a@b.c", LocalDate.of(2026, 9, 26), SpaceType.PERSONAL);
+
+        assertThat(shared.isMine(assignedTo(List.of(me, someoneElse)))).isTrue();
+        assertThat(shared.isMine(assignedTo(List.of()))).isTrue();
+        assertThat(shared.isMine(assignedTo(List.of(someoneElse)))).isFalse();
+        assertThat(personal.isMine(assignedTo(List.of(someoneElse)))).isTrue();
+    }
+
+    @Test
     void theContextKnowsTheCallerAndWhetherTheSpaceIsShared() {
         UUID userId = UUID.randomUUID();
         SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), UUID.randomUUID(), userId,
@@ -123,6 +137,10 @@ class DashboardModelTest {
         assertThat(shared.callerId()).isEqualTo(userId);
         assertThat(shared.isShared()).isTrue();
         assertThat(personal.isShared()).isFalse();
+    }
+
+    private static TaskItem assignedTo(List<UUID> assignees) {
+        return new TaskItem(UUID.randomUUID(), "Poubelles", null, TaskItem.Priority.MED, TaskItem.Status.TODO, assignees, 0, 0, false);
     }
 
     @SafeVarargs

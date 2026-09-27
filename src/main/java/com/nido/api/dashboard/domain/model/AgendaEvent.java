@@ -13,4 +13,9 @@ public record AgendaEvent(String id, String title, String location, String color
     public AgendaEvent {
         participantIds = List.copyOf(participantIds);
     }
+
+    /** An all-day event has no start time: the calendar's all-day occurrences reach the dashboard without times. */
+    public boolean allDay() {
+        return startTime == null;
+    }
 }
