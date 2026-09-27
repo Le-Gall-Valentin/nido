@@ -29,7 +29,7 @@ const GROUP: SpaceSummary = {
 }
 const INVITATION: ReceivedInvitation = {
   invitationId: 'i-1', spaceId: 'group-9', spaceName: 'La Famille', spaceAccent: '#c17a5c', spaceGlyph: '🏡',
-  role: 'MEMBER', expiresAt: '2999-01-01T00:00:00Z',
+  role: 'MEMBER', expiresAt: '2999-01-01T00:00:00Z', invitedByUsername: 'alice',
 }
 
 function LocationDisplay() {

@@ -13,7 +13,7 @@ const CATEGORIES: Category[] = [
   { id: 'c3', label: 'Revenu', color: '#22c55e', icon: 'Wallet', isDefault: true, type: 'INCOME' },
 ]
 
-const BUDGET_LINES: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 300, spent: 120 }]
+const BUDGET_LINES: BudgetLine[] = [{ categoryId: 'c1', monthlyLimit: 300, spent: 120, status: 'OK' }]
 
 describe('BudgetManagerModal', () => {
   it('shows the submit error handed down by the caller when the backend rejected a save', () => {

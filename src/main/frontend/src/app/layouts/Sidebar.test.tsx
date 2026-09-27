@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -109,6 +109,17 @@ describe('Sidebar — nav items, always visible', () => {
     renderSidebar()
     expect(screen.getByText('nav.administration')).toBeDefined()
   })
+
+  it('lists the dashboard first, pointing at the current space\'s dashboard', async () => {
+    withUser('USER')
+    renderSidebar('/s/space-2/finance')
+
+    const nav = screen.getByRole('navigation')
+    await within(nav).findByText('nav.dashboard')
+    const first = within(nav).getAllByRole('link')[0]
+    expect(first.textContent).toBe('nav.dashboard')
+    expect(first.getAttribute('href')).toBe('/s/space-2/dashboard')
+  })
 })
 
 describe('Sidebar — Membres et groupes is a single entry, matching the mockup', () => {
@@ -168,10 +179,10 @@ describe('Sidebar — pending invitations badge', () => {
 })
 
 describe('Sidebar — brand', () => {
-  it('renders the brand name linking to the account page', () => {
+  it('renders the brand name linking to the current space\'s dashboard, where the app opens', () => {
     withUser('USER')
-    renderSidebar()
+    renderSidebar('/s/space-2/finance')
     const link = screen.getByRole('link', { name: /brand/ })
-    expect(link.getAttribute('href')).toBe('/account')
+    expect(link.getAttribute('href')).toBe('/s/space-2/dashboard')
   })
 })

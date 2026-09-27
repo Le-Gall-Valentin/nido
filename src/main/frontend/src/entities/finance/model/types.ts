@@ -66,10 +66,14 @@ export interface CategoryAmount {
   amount: number
 }
 
+/** Decided by the server (`BudgetLine.status()`): WARNING from 80 % of the limit, OVER past it, and a 0 € budget is OVER from the first cent. */
+export type BudgetStatus = 'OK' | 'WARNING' | 'OVER'
+
 export interface BudgetLine {
   categoryId: string
   monthlyLimit: number
   spent: number
+  status: BudgetStatus
 }
 
 export interface FinanceStats {

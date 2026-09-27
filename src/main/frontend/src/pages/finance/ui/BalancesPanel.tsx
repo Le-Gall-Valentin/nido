@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import {
-  useBalances, useSettleDebt, useSettlementsBetween, type Transaction,
+  useBalances, useSettlementsBetween, type Transaction,
 } from '@/entities/finance'
 import { BalancesSection } from './BalancesSection'
-import { SettleDebtModal } from './SettleDebtModal'
+import { SettleDebtDialog, type DebtToSettle } from '@/features/settle-debt'
 import { MemberTransactionsModal } from './MemberTransactionsModal'
 import { SettlementHistoryModal } from './SettlementHistoryModal'
 
@@ -29,11 +28,9 @@ interface BalancesPanelProps {
 export function BalancesPanel({
   spaceId, spaceTimezone, transactions, currentUserId, memberLabel, onSelectTransaction,
 }: BalancesPanelProps) {
-  const { t } = useTranslation('finance')
   const { data: balances } = useBalances(spaceId)
-  const settleDebt = useSettleDebt(spaceId)
 
-  const [settling, setSettling] = useState<{ fromMemberId: string; toMemberId: string; amount: number } | null>(null)
+  const [settling, setSettling] = useState<DebtToSettle | null>(null)
   const [viewingMemberId, setViewingMemberId] = useState<string | null>(null)
   const [viewingHistoryBetween, setViewingHistoryBetween] = useState<{ memberAId: string; memberBId: string } | null>(null)
 
@@ -63,22 +60,8 @@ export function BalancesPanel({
       />
 
       {settling && (
-        <SettleDebtModal
-          spaceTimezone={spaceTimezone}
-          fromLabel={memberLabel(settling.fromMemberId)}
-          toLabel={memberLabel(settling.toMemberId)}
-          amount={settling.amount}
-          isPending={settleDebt.isPending}
-          onCancel={() => {
-            setSettling(null)
-            settleDebt.reset()
-          }}
-          onConfirm={(amount, date) => settleDebt.mutate(
-            { fromMemberId: settling.fromMemberId, toMemberId: settling.toMemberId, amount, date },
-            { onSuccess: () => setSettling(null) }
-          )}
-          submitError={settleDebt.isError ? t('form.submit_error') : null}
-        />
+        <SettleDebtDialog spaceId={spaceId} spaceTimezone={spaceTimezone} debt={settling} memberLabel={memberLabel}
+          onClose={() => setSettling(null)} />
       )}
 
       {viewingMemberId && (

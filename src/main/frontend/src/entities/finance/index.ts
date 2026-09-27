@@ -1,6 +1,6 @@
 export type {
   Category, Budget, Contribution, ContributionInput, Transaction, TransactionType, RecurrenceInterval, RecurrenceInput,
-  RecurringSeries, CategoryAmount, BudgetLine, FinanceStats, ProjectedOccurrence, Projection, MemberBalance,
+  RecurringSeries, CategoryAmount, BudgetLine, BudgetStatus, FinanceStats, ProjectedOccurrence, Projection, MemberBalance,
   SuggestedTransfer, Balances, SettlementRecord, SavingsContribution, SavingsGoal,
 } from './model/types'
 export type { IFinanceApi } from './model/IFinanceApi'

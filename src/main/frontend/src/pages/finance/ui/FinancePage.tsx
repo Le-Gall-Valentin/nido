@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Alert, Spinner } from '@/shared/ui'
 import { useAuth } from '@/features/auth'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
-import { monthIso } from '@/shared/lib'
+import { monthIso, useCreateIntent } from '@/shared/lib'
 import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
 import {
   financeApi, FinanceApiProvider, useCategories, useTransactions, useFinanceStats, useProjection, useRecurringSeries,
@@ -78,6 +78,7 @@ function FinancePageContent() {
   const currentSpace = mySpaces?.find((s) => s.id === spaceId)
   const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
   const spaceIsPersonal = currentSpace ? isPersonal(currentSpace) : false
+  useCreateIntent('transaction', currentSpace ? canWriteHere : undefined, () => setFormState({ mode: 'create' }))
 
   const categoryById = new Map((categories ?? []).map((c) => [c.id, c]))
 

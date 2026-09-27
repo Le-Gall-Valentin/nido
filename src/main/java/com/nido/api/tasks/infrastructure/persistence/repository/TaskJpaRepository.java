@@ -1,5 +1,6 @@
 package com.nido.api.tasks.infrastructure.persistence.repository;
 
+import com.nido.api.tasks.domain.model.TaskStatus;
 import com.nido.api.tasks.infrastructure.persistence.entity.TaskEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,4 +12,6 @@ public interface TaskJpaRepository extends JpaRepository<TaskEntity, UUID> {
     List<TaskEntity> findBySpaceId(UUID spaceId);
 
     List<TaskEntity> findBySpaceIdAndDueDateBetween(UUID spaceId, LocalDate from, LocalDate to);
+
+    List<TaskEntity> findBySpaceIdAndStatusNot(UUID spaceId, TaskStatus status);
 }

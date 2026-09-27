@@ -58,6 +58,8 @@ export interface ReceivedInvitation {
   spaceGlyph: string
   role: SpaceRole
   expiresAt: string
+  /** Null when the inviter's account was anonymized. */
+  invitedByUsername: string | null
 }
 
 export function isPersonal(space: Pick<SpaceSummary, 'type'>): boolean {

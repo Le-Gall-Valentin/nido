@@ -304,6 +304,97 @@ class ArchRulesTest {
     }
 
     // -------------------------------------------------------------------------
+    // The dashboard reads the scoped modules and the calendar — from its sources, one way only
+    //
+    // Same contract as the calendar's: none of the modules it reads may learn it exists, the rest of
+    // the dashboard may not name them, and its sources reach only what a module publishes. It reads
+    // members' names on the client, so it has no business with identity at all.
+    // -------------------------------------------------------------------------
+
+    private static final String DASHBOARD = BASE + "dashboard..";
+    private static final String DASHBOARD_SOURCES = BASE + "dashboard.infrastructure.source..";
+    private static final List<String> MODULES_THE_DASHBOARD_READS =
+        Stream.concat(SCOPED_MODULES.stream(), Stream.of("calendar")).toList();
+
+    private static String[] modulesTheDashboardReads() {
+        return MODULES_THE_DASHBOARD_READS.stream().map(module -> BASE + module + "..").toArray(String[]::new);
+    }
+
+    @Test
+    void no_module_the_dashboard_reads_depends_on_the_dashboard() {
+        noClasses()
+            .that().resideInAnyPackage(modulesTheDashboardReads())
+            .and(excludeTests())
+            .should().dependOnClassesThat().resideInAPackage(DASHBOARD)
+            .allowEmptyShould(false)
+            .check(classes);
+    }
+
+    @Test
+    void the_dashboard_names_the_modules_it_reads_only_from_its_sources() {
+        noClasses()
+            .that().resideInAPackage(DASHBOARD)
+            .and().resideOutsideOfPackage(DASHBOARD_SOURCES)
+            .and(excludeTests())
+            .should().dependOnClassesThat().resideInAnyPackage(modulesTheDashboardReads())
+            .allowEmptyShould(false)
+            .check(classes);
+    }
+
+    @Test
+    void the_dashboard_sources_use_only_what_the_modules_they_read_publish() {
+        DescribedPredicate<JavaClass> unpublished = DescribedPredicate.describe(
+            "a read module's class outside its application.port.in and domain.model",
+            c -> MODULES_THE_DASHBOARD_READS.stream().anyMatch(module -> c.getPackageName().startsWith(BASE + module + "."))
+                && !c.getPackageName().contains(".application.port.in")
+                && !c.getPackageName().contains(".domain.model"));
+        noClasses()
+            .that().resideInAPackage(DASHBOARD_SOURCES)
+            .and(excludeTests())
+            .should().dependOnClassesThat(unpublished)
+            .allowEmptyShould(false)
+            .check(classes);
+    }
+
+    // The space module is what every module stands on — the caller's membership, the space's today, the
+    // invitations of an account — so the whole dashboard may use it, not only its sources. Only what it
+    // publishes, though, and without it ever learning the dashboard exists.
+    @Test
+    void the_dashboard_uses_only_what_the_space_module_publishes() {
+        DescribedPredicate<JavaClass> unpublished = DescribedPredicate.describe(
+            "a space class outside its application.port.in and domain.model",
+            c -> c.getPackageName().startsWith(BASE + "space.")
+                && !c.getPackageName().startsWith(BASE + "space.application.port.in")
+                && !c.getPackageName().startsWith(BASE + "space.domain.model"));
+        noClasses()
+            .that().resideInAPackage(DASHBOARD)
+            .and(excludeTests())
+            .should().dependOnClassesThat(unpublished)
+            .allowEmptyShould(false)
+            .check(classes);
+    }
+
+    @Test
+    void the_space_module_does_not_depend_on_the_dashboard() {
+        noClasses()
+            .that().resideInAPackage(BASE + "space..")
+            .and(excludeTests())
+            .should().dependOnClassesThat().resideInAPackage(DASHBOARD)
+            .allowEmptyShould(false)
+            .check(classes);
+    }
+
+    @Test
+    void the_dashboard_depends_on_no_identity_class() {
+        noClasses()
+            .that().resideInAPackage(DASHBOARD)
+            .and(excludeTests())
+            .should().dependOnClassesThat().resideInAPackage(BASE + "identity..")
+            .allowEmptyShould(false)
+            .check(classes);
+    }
+
+    // -------------------------------------------------------------------------
     // Global infra isolation
     // -------------------------------------------------------------------------
 

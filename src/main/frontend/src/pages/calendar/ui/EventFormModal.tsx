@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { SpaceMember } from '@/entities/space'
-import type { EventInput, RecurrenceInterval } from '@/entities/calendar'
-import { DOT_CLASS, EVENT_COLORS } from '../lib/sourceAppearance'
+import { EVENT_COLORS, EVENT_DOT_CLASS, type EventInput, type RecurrenceInterval } from '@/entities/calendar'
 import type { Recurrence } from '../lib/seriesInput'
 import { MAX_EVENT_DAYS, coversTooManyDays, occurrenceOutlastsInterval } from '../lib/scheduleLimits'
 import { ParticipantPicker } from './ParticipantPicker'
@@ -144,7 +143,7 @@ export function EventFormModal({
                 aria-pressed={form.color === token}
                 onClick={() => patch({ color: form.color === token ? null : token })}
                 className={`size-6 rounded-full border-2 ${form.color === token ? 'border-fg-1' : 'border-transparent'}
-                  ${DOT_CLASS[token]}`} />
+                  ${EVENT_DOT_CLASS[token]}`} />
             ))}
           </div>
         </div>

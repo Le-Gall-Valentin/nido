@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
+import { todayIso } from '@/shared/lib'
 import { SpacesApiProvider, type ISpacesApi } from '@/features/space-switcher'
 import { SpaceMembersApiProvider, type ISpaceMembersApi, type SpaceMember, type SpaceSummary } from '@/entities/space'
 import type { CalendarApi, CalendarOccurrence, RecurringEventSeries } from '@/entities/calendar'
@@ -42,6 +43,7 @@ function renderPage(feed: CalendarOccurrence[], apis: {
   calendar?: Partial<CalendarApi>; finance?: Partial<IFinanceApi>; kitchen?: Partial<IKitchenApi>; role?: SpaceSummary['myRole']
   view?: 'month' | 'week' | 'day'
   members?: SpaceMember[]
+  search?: string
 } = {}) {
   const calendar = { listOccurrences: vi.fn().mockResolvedValue(feed), listRecurringEventSeries: vi.fn().mockResolvedValue([]), ...apis.calendar } as unknown as CalendarApi
   const finance = { listSavingsGoals: vi.fn().mockResolvedValue([]), listRecurringSeries: vi.fn().mockResolvedValue([]), listCategories: vi.fn().mockResolvedValue([]), ...apis.finance } as unknown as IFinanceApi
@@ -55,7 +57,7 @@ function renderPage(feed: CalendarOccurrence[], apis: {
       <SpacesApiProvider api={spaces}>
         <SpaceMembersApiProvider api={members}>
           <TasksApiProvider api={tasks}>
-          <MemoryRouter initialEntries={[`/s/space-1/organisation/calendar?view=${apis.view ?? 'month'}&date=2026-09-23`]}>
+          <MemoryRouter initialEntries={[`/s/space-1/organisation/calendar?view=${apis.view ?? 'month'}&date=2026-09-23${apis.search ?? ''}`]}>
             <Routes>
               <Route path="/s/:spaceId/organisation/calendar"
                 element={<CalendarPage api={calendar} financeApi={finance} kitchenApi={kitchen} />} />
@@ -174,6 +176,13 @@ describe('CalendarPage', () => {
     expect(await pick('bob')).toBe('false')
   })
 
+
+  it('opens the new-event form on the space\'s today when a link asks for it', async () => {
+    renderPage([], { view: 'week', search: '&create=event' })
+
+    await vi.waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy())
+    expect((screen.getByLabelText('form.start_date') as HTMLInputElement).value).toBe(todayIso(new Date(), 'Europe/Paris'))
+  })
 })
 
 describe('CalendarPage — one dialog leading to the next', () => {

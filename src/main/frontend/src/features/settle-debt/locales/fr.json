@@ -1,0 +1,11 @@
+{
+  "title": "Régler cette dette",
+  "message": "{{from}} doit {{amount}} à {{to}}.",
+  "amount_label": "Montant remboursé",
+  "amount_required": "Le montant doit être supérieur à zéro.",
+  "amount_too_high": "Le montant ne peut pas dépasser la dette restante.",
+  "date_label": "Date du règlement",
+  "confirm": "Confirmer",
+  "cancel": "Annuler",
+  "submit_error": "Le règlement n'a pas été enregistré. Réessayez."
+}

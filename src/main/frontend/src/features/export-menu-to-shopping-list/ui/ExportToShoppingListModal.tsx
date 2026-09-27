@@ -104,7 +104,11 @@ function ExportToShoppingListModalContent({
   }
 
   return (
-    <Dialog open onClose={onClose} title={t('title')}>
+    // Wide enough for an ingredient on one line on a computer; each line lays itself out by the room the
+    // dialog actually gives it (@container), not by the screen — a 448 px dialog on a wide screen used to
+    // force the one-line layout into too little room and scroll sideways.
+    <Dialog open onClose={onClose} title={t('title')} maxWidth="max-w-2xl">
+      <h3 className="mb-1 text-[19px] font-semibold text-fg-0">{t('title')}</h3>
       <p className="mb-4 text-xs text-fg-3">{t('subtitle')}</p>
 
       {quantityError && <Alert variant="error" className="mb-3">{t('quantity_invalid')}</Alert>}
@@ -120,26 +124,26 @@ function ExportToShoppingListModalContent({
         </div>
       )}
 
-      <div className="mb-4 flex max-h-[320px] flex-col gap-2 overflow-y-auto">
+      <div className="@container mb-4 flex max-h-[320px] flex-col gap-2 overflow-y-auto">
         {shoppingList.map((line, i) => (
-          <div key={line.name} className="flex flex-col gap-2 border-b border-border pb-2 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-2 sm:flex-1">
+          <div key={line.name} className="flex flex-col gap-2 border-b border-border pb-2 @xl:flex-row @xl:items-center">
+            <div className="flex min-w-0 items-center gap-2 @xl:flex-1">
               <input type="checkbox" checked={checked[i]} aria-label={t('include_line', { name: line.name })}
                 onChange={(e) => setChecked((c) => c.map((v, idx) => (idx === i ? e.target.checked : v)))} />
               <span className="flex-1 text-sm text-fg-1">{line.name}</span>
             </div>
-            <div className="flex flex-col gap-2 pl-6 sm:flex-row sm:items-center sm:pl-0">
+            <div className="flex flex-col gap-2 pl-6 @xl:flex-row @xl:items-center @xl:pl-0">
               <div className="flex gap-2">
                 <Input label={t('quantity_for', { name: line.name })} srOnlyLabel type="number" min={0} value={quantityDrafts[i]} className="w-20 shrink-0 text-xs"
                   onChange={(e) => setQuantityDrafts((d) => d.map((v, idx) => (idx === i ? e.target.value : v)))} />
                 <select value={unitDrafts[i]} onChange={(e) => setRowUnit(i, e.target.value as MeasurementUnit | '')}
-                  aria-label={t('unit_for', { name: line.name })} className="flex-1 rounded-md border border-border bg-bg-1 px-2 py-1 text-xs sm:flex-none">
+                  aria-label={t('unit_for', { name: line.name })} className="flex-1 rounded-md border border-border bg-bg-1 px-2 py-1 text-xs @xl:flex-none">
                   <option value="">{t('unit_none')}</option>
                   {MEASUREMENT_UNITS.map((u) => <option key={u} value={u}>{tCommon(MEASUREMENT_UNIT_LABEL_KEY[u])}</option>)}
                 </select>
               </div>
               <select value={rowCategoryId[i]} onChange={(e) => setRowCategory(i, e.target.value)}
-                aria-label={t('category_for', { name: line.name })} className="w-full rounded-md border border-border bg-bg-1 px-2 py-1 text-xs sm:w-auto sm:flex-1">
+                aria-label={t('category_for', { name: line.name })} className="w-full rounded-md border border-border bg-bg-1 px-2 py-1 text-xs @xl:w-auto @xl:min-w-0 @xl:flex-1">
                 {(categories ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>

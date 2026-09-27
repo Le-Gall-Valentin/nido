@@ -91,7 +91,8 @@ class MyInvitationControllerIT {
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].spaceId").value(sharedSpaceId.toString()))
             .andExpect(jsonPath("$[0].spaceName").value("Chez Valentin"))
-            .andExpect(jsonPath("$[0].role").value("MEMBER"));
+            .andExpect(jsonPath("$[0].role").value("MEMBER"))
+            .andExpect(jsonPath("$[0].invitedByUsername").value("alice"));
     }
 
     @Test

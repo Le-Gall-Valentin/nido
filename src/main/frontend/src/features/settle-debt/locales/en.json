@@ -1,0 +1,11 @@
+{
+  "title": "Settle this debt",
+  "message": "{{from}} owes {{to}} {{amount}}.",
+  "amount_label": "Amount repaid",
+  "amount_required": "The amount must be greater than zero.",
+  "amount_too_high": "The amount cannot exceed the remaining debt.",
+  "date_label": "Settlement date",
+  "confirm": "Confirm",
+  "cancel": "Cancel",
+  "submit_error": "The settlement was not saved. Try again."
+}

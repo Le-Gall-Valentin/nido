@@ -51,13 +51,13 @@ function fakeSpacesApi(mySpaces: SpaceSummary[] = [CURRENT_SPACE]): ISpacesApi {
   return { listMySpaces: vi.fn().mockResolvedValue(mySpaces), getSpace: vi.fn() }
 }
 
-function renderPage(api: IFinanceApi, space: SpaceSummary = CURRENT_SPACE) {
+function renderPage(api: IFinanceApi, space: SpaceSummary = CURRENT_SPACE, path = '/s/space-1/finance') {
   const queryClient = createTestQueryClient()
   return render(
     <QueryClientProvider client={queryClient}>
       <SpacesApiProvider api={fakeSpacesApi([space])}>
         <SpaceMembersApiProvider api={fakeMembersApi()}>
-          <MemoryRouter initialEntries={['/s/space-1/finance']}>
+          <MemoryRouter initialEntries={[path]}>
             <Routes>
               <Route path="/s/:spaceId/finance" element={<FinancePage api={api} />} />
             </Routes>
@@ -308,8 +308,8 @@ describe('FinancePage', () => {
 
     await waitFor(() => expect(screen.getByText('balances.settle')).toBeDefined())
     fireEvent.click(screen.getByText('balances.settle'))
-    fireEvent.change(screen.getByLabelText('balances.settle_amount_label'), { target: { value: '250' } })
-    fireEvent.click(screen.getByText('balances.settle_confirm'))
+    fireEvent.change(screen.getByLabelText('amount_label'), { target: { value: '250' } })
+    fireEvent.click(screen.getByText('confirm'))
 
     await waitFor(() => expect(settleDebt).toHaveBeenCalledWith('space-1', 'u-1', 'u-2', 250, expect.any(String)))
   })
@@ -420,5 +420,18 @@ describe('FinancePage', () => {
     fireEvent.click(screen.getByText('form.save'))
 
     await waitFor(() => expect(screen.getByText('form.submit_error')).toBeDefined())
+  })
+
+  it('opens the new-operation form when a link asks for it', async () => {
+    renderPage(fakeApi(), CURRENT_SPACE, '/s/space-1/finance?create=transaction')
+
+    expect(await screen.findByLabelText('form.label_label')).toBeDefined()
+  })
+
+  it('does not open it for a viewer', async () => {
+    renderPage(fakeApi(), { ...CURRENT_SPACE, myRole: 'VIEWER' }, '/s/space-1/finance?create=transaction')
+
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByLabelText('form.label_label')).toBeNull()
   })
 })

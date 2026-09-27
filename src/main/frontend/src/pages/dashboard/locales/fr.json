@@ -1,0 +1,141 @@
+{
+  "loading": "Chargement du tableau de bord…",
+  "member_unknown": "Ancien membre",
+  "member_generic": "Un membre",
+  "error": {
+    "load_failed": "Impossible de charger le tableau de bord.",
+    "retry": "Réessayer",
+    "action_failed": "L'action n'a pas abouti. Réessayez.",
+    "stale": "Données de {{time}} : la mise à jour a échoué.",
+    "dismiss": "Fermer"
+  },
+  "hero": {
+    "digest_one": "Bonjour {{name}}, une chose demande votre attention.",
+    "digest_other": "Bonjour {{name}}, {{count}} choses demandent votre attention.",
+    "all_clear": "Bonjour {{name}}, rien d'urgent aujourd'hui.",
+    "partial": "Bonjour {{name}}, une partie du tableau de bord n'a pas pu être chargée.",
+    "add": "Ajouter"
+  },
+  "add_menu": {
+    "task": "Tâche",
+    "transaction": "Dépense",
+    "item": "Article de courses",
+    "event": "Événement"
+  },
+  "card": {
+    "unavailable": "Impossible de charger ce bloc pour le moment."
+  },
+  "attention": {
+    "title": "À traiter",
+    "overdue_tasks_one": "{{count}} tâche en retard",
+    "overdue_tasks_other": "{{count}} tâches en retard",
+    "budget_overrun": "Budget {{label}} dépassé",
+    "budget_overrun_detail": "{{spent}} dépensés sur {{limit}}",
+    "debt": "Vous devez {{amount}} à {{name}}",
+    "debt_detail": "Dépenses partagées",
+    "invitation": "Invitation à {{space}}",
+    "invitation_from": "De {{name}}, rôle {{role}}, expire {{expires}}",
+    "invitation_detail": "Rôle {{role}}, expire {{expires}}",
+    "see": "Voir",
+    "settle": "Régler",
+    "accept": "Accepter"
+  },
+  "role": {
+    "OWNER": "propriétaire",
+    "ADMIN": "administrateur",
+    "MEMBER": "membre",
+    "VIEWER": "lecteur"
+  },
+  "today": {
+    "title": "Aujourd'hui",
+    "link": "Calendrier",
+    "all_day": "Toute la journée",
+    "until_day": "Jusqu'au {{date}}",
+    "until": "Jusqu'à {{time}}",
+    "until_tomorrow": "Jusqu'à {{time}} demain",
+    "now": "Maintenant, {{time}}",
+    "due_today": "À faire aujourd'hui",
+    "tomorrow": "Demain",
+    "tomorrow_at": "{{title}} à {{time}}",
+    "empty": "Rien de prévu aujourd'hui."
+  },
+  "menu": {
+    "title": "Au menu",
+    "link": "Menu",
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "deleted_recipe": "Recette supprimée",
+    "portions_one": "{{count}} personne",
+    "portions_other": "{{count}} personnes",
+    "minutes": "{{count}} min",
+    "unplanned": "Rien de prévu {{days}}",
+    "range": "de {{from}} à {{to}}",
+    "nothing_this_week": "Rien au menu cette semaine",
+    "plan": "Planifier",
+    "send_week": "Envoyer la semaine aux courses",
+    "export_empty": "Aucun ingrédient à envoyer aux courses.",
+    "export_failed": "Impossible de préparer la liste de courses.",
+    "category": {
+      "PLAT": "Plat",
+      "EXPRESS": "Express",
+      "VEGETARIAN": "Végétarien",
+      "DESSERT": "Dessert",
+      "SOUP": "Soupe"
+    }
+  },
+  "finance": {
+    "title": "Finances",
+    "link": "Détails",
+    "balance": "Solde",
+    "spent": "Dépensé",
+    "income": "Revenus",
+    "remaining_budget": "Budget restant",
+    "budgets_to_watch": "Budgets à surveiller",
+    "upcoming": "À venir cette semaine",
+    "balances": "Entre vous",
+    "i_owe": "Vous devez {{amount}} à {{name}}",
+    "owes_me": "{{name}} vous doit {{amount}}",
+    "settle": "Régler"
+  },
+  "tasks": {
+    "title": "Tâches",
+    "link": "Tableau",
+    "filter_label": "Tâches affichées",
+    "mine": "À moi",
+    "all": "Tous",
+    "overdue": "En retard",
+    "this_week": "Cette semaine",
+    "in_progress": "En cours",
+    "due_on": "Prévue le {{date}}",
+    "no_due_date": "Sans échéance",
+    "your_turn": "C'est votre tour",
+    "more_one": "{{count}} autre tâche ouverte",
+    "more_other": "{{count}} autres tâches ouvertes",
+    "none_mine": "Rien pour vous en ce moment.",
+    "mark_done": "Marquer « {{title}} » comme faite",
+    "subtasks_left_one": "{{count}} sous-tâche restante",
+    "subtasks_left_other": "{{count}} sous-tâches restantes"
+  },
+  "priority": {
+    "HIGH": "Haute",
+    "MED": "Moyenne",
+    "LOW": "Basse"
+  },
+  "shopping": {
+    "title": "Courses",
+    "link": "Liste",
+    "count_one": "{{count}} article",
+    "count_other": "{{count}} articles",
+    "and_more_one": "et {{count}} autre",
+    "and_more_other": "et {{count}} autres"
+  },
+  "savings": {
+    "title": "Épargne",
+    "link": "Objectifs",
+    "reached": "Objectif atteint",
+    "past_due": "Échéance dépassée ({{date}})",
+    "due_soon": "Échéance proche : {{date}}",
+    "monthly_needed": "Encore {{remaining}}, soit {{monthly}} par mois d'ici {{date}}",
+    "no_target_date": "Pas d'échéance"
+  }
+}

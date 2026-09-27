@@ -15,6 +15,8 @@ public interface TaskRepository {
     List<Task> findBySpaceId(UUID spaceId);
     /** The space's tasks due inside {@code [from, to]} — a calendar window, never the whole board. */
     List<Task> findBySpaceIdAndDueDateBetween(UUID spaceId, LocalDate from, LocalDate to);
+    /** The space's tasks that are not done, whatever their due date — including none. Unordered. */
+    List<Task> findOpenBySpaceId(UUID spaceId);
     Task create(CreateTaskCommand command);
     /**
      * Persists every command as a single batch instead of one round trip per task —

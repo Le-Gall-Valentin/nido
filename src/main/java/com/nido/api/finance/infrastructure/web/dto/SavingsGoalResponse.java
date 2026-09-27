@@ -12,11 +12,8 @@ public record SavingsGoalResponse(
     List<SavingsContributionResponse> contributions
 ) {
     public static SavingsGoalResponse from(SavingsGoalDetail detail) {
-        BigDecimal total = detail.contributions().stream()
-            .map(com.nido.api.finance.domain.model.SavingsContribution::amount)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
         return new SavingsGoalResponse(detail.goal().id(), detail.goal().name(), detail.goal().targetAmount(),
-            detail.goal().targetDate(), detail.goal().color(), detail.goal().glyph(), total,
+            detail.goal().targetDate(), detail.goal().color(), detail.goal().glyph(), detail.totalContributed(),
             detail.contributions().stream().map(SavingsContributionResponse::from).toList());
     }
 }

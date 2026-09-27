@@ -9,7 +9,7 @@ import { SpaceApiProvider } from './spaceApiContext'
 import { useHasPendingInvitations } from './useHasPendingInvitations'
 
 const RECEIVED: ReceivedInvitation[] = [
-  { invitationId: 'i-1', spaceId: 's-2', spaceName: 'Chez Bob', spaceAccent: '#4a7fa0', spaceGlyph: '🌿', role: 'MEMBER', expiresAt: '2024-01-08T00:00:00Z' },
+  { invitationId: 'i-1', spaceId: 's-2', spaceName: 'Chez Bob', spaceAccent: '#4a7fa0', spaceGlyph: '🌿', role: 'MEMBER', expiresAt: '2024-01-08T00:00:00Z', invitedByUsername: 'alice' },
 ]
 
 function fakeApi(overrides: Partial<ISpaceApi> = {}): ISpaceApi {

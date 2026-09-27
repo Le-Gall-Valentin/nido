@@ -23,9 +23,14 @@ interface NavItemProps {
   hasBadge?: boolean
   /** Shows a numeric pill instead of a dot — used for the open task count on "Tâches". Ignored when 0 or undefined. */
   badgeCount?: number
+  /**
+   * A parent whose children are the pages ("Cuisine", "Organisation"): it stays highlighted while one of
+   * them is open, but the child is the current page — the section never claims `aria-current` itself.
+   */
+  section?: boolean
 }
 
-export function NavItem({ to, icon: Icon, label, pathname, activeOverride, hasBadge, badgeCount }: NavItemProps) {
+export function NavItem({ to, icon: Icon, label, pathname, activeOverride, hasBadge, badgeCount, section = false }: NavItemProps) {
   const { t } = useTranslation('shell')
   const active = activeOverride ?? (pathname === to || pathname.startsWith(`${to}/`))
   const showCount = !!badgeCount && badgeCount > 0
@@ -33,6 +38,8 @@ export function NavItem({ to, icon: Icon, label, pathname, activeOverride, hasBa
   return (
     <Link
       to={to}
+      // Said to assistive technology as well as shown: the highlight alone reached only the eye.
+      aria-current={active && !section ? 'page' : undefined}
       className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm transition-colors ${
         active
           ? 'bg-accent-dim font-semibold text-status-green'
@@ -82,8 +89,8 @@ export function Sidebar({ hasPendingInvitations, openTaskCount }: SidebarProps =
 
   return (
     <aside className="hidden shrink-0 flex-col border-r border-border bg-bg-2 md:sticky md:top-0 md:flex md:h-screen md:w-[236px]">
-      {/* Brand */}
-      <Link to={ROUTES.ACCOUNT} className="flex shrink-0 items-center gap-[11px] px-[18px] pb-4 pt-5">
+      {/* Brand — home: the current space's dashboard, the page the app opens on */}
+      <Link to={spaceId ? ROUTES.spaceDashboard(spaceId) : ROUTES.HOME} className="flex shrink-0 items-center gap-[11px] px-[18px] pb-4 pt-5">
         <div
           className="grid size-[34px] shrink-0 place-items-center rounded-[10px] text-white"
           style={{ background: BRAND_LOGO_GRADIENT }}

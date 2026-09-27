@@ -15,10 +15,12 @@ public record ReceivedInvitationResponse(
     @Schema(description = "Couleur d'accent du contexte") String spaceAccent,
     @Schema(description = "Glyphe du contexte") String spaceGlyph,
     @Schema(description = "Rôle proposé par l'invitation") SpaceRole role,
-    @Schema(description = "Date d'expiration") Instant expiresAt
+    @Schema(description = "Date d'expiration") Instant expiresAt,
+    @Schema(description = "Nom d'utilisateur de la personne qui a invité, null si son compte a été anonymisé", nullable = true)
+    String invitedByUsername
 ) {
     public static ReceivedInvitationResponse from(ReceivedInvitationView view) {
         return new ReceivedInvitationResponse(view.invitationId(), view.spaceId(), view.spaceName(),
-            view.spaceAccent(), view.spaceGlyph(), view.role(), view.expiresAt());
+            view.spaceAccent(), view.spaceGlyph(), view.role(), view.expiresAt(), view.invitedByUsername());
     }
 }

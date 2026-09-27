@@ -148,6 +148,27 @@ class TaskRepositoryAdapterIT {
     }
 
     @Test
+    void findOpenBySpaceId_returns_the_todo_and_doing_tasks_of_the_space_but_not_the_done_ones() {
+        Task todo = adapter.create(new CreateTaskCommand(spaceId, "À faire", TaskPriority.LOW, null, List.of(), List.of(), null, null));
+        Task doing = adapter.create(new CreateTaskCommand(spaceId, "En cours", TaskPriority.LOW, LocalDate.of(2026, 1, 7), List.of(), List.of(), null, null));
+        adapter.updateStatus(doing.id(), TaskStatus.DOING);
+        Task done = adapter.create(new CreateTaskCommand(spaceId, "Fait", TaskPriority.LOW, null, List.of(), List.of(), null, null));
+        adapter.updateStatus(done.id(), TaskStatus.DONE);
+
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        other.setName("Ailleurs");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        UUID otherSpaceId = spaceJpaRepository.saveAndFlush(other).getId();
+        adapter.create(new CreateTaskCommand(otherSpaceId, "Pas ici", TaskPriority.LOW, null, List.of(), List.of(), null, null));
+
+        assertThat(adapter.findOpenBySpaceId(spaceId))
+            .extracting(Task::id)
+            .containsExactlyInAnyOrder(todo.id(), doing.id());
+    }
+
+    @Test
     void createAll_persists_every_task_with_its_own_assignees_subtasks_and_creator_in_one_batch() {
         adapter.createAll(List.of(
             new CreateTaskCommand(spaceId, "T1", TaskPriority.LOW, LocalDate.of(2026, 1, 7),

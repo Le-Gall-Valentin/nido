@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Plus, SlidersHorizontal } from 'lucide-react'
 import { DndContext, DragOverlay, useDroppable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import { Alert, Spinner, Dialog } from '@/shared/ui'
-import { MEASUREMENT_UNIT_LABEL_KEY, underThePointerFirst, useDragSensors } from '@/shared/lib'
+import { MEASUREMENT_UNIT_LABEL_KEY, underThePointerFirst, useCreateIntent, useDragSensors } from '@/shared/lib'
 import { useMySpaces } from '@/features/space-switcher'
 import { canWrite } from '@/entities/space'
 import {
@@ -56,6 +56,7 @@ function ShoppingListPageContent() {
   const [managingCategories, setManagingCategories] = useState(false)
   const [movingItem, setMovingItem] = useState<ShoppingItem | null>(null)
   const [activeDragItem, setActiveDragItem] = useState<ShoppingItem | null>(null)
+  useCreateIntent('item', currentSpace ? canWriteHere : undefined, () => setAddingItem(true))
 
   const sensors = useDragSensors()
 

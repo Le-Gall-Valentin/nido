@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setSessionExpiredCallback, hasSessionHint } from '@/shared/lib'
 import { AuthStoreProvider } from './AuthStoreProvider'
+import { useAuth } from '../model/authStoreContext'
 
 vi.mock('@/shared/lib', () => ({
   setSessionExpiredCallback: vi.fn(),
@@ -96,6 +97,24 @@ describe('AuthStoreProvider', () => {
     })
 
     expect(api.getMe).not.toHaveBeenCalled()
+  })
+
+  it('ends an expired session without counting it as a sign-out by the user', async () => {
+    // So the login page can bring the user back where the expired session left them.
+    const api = createApiMock()
+    mockedHasSessionHint.mockReturnValue(false)
+    let capturedCallback: (() => void) | null = null
+    mockedSetSessionExpiredCallback.mockImplementation((cb) => { capturedCallback = cb })
+    function SignedOut() {
+      return <div>{`signedOut:${String(useAuth((s) => s.signedOut))}`}</div>
+    }
+
+    render(<AuthStoreProvider api={api}><SignedOut /></AuthStoreProvider>)
+    await waitFor(() => { expect(capturedCallback).not.toBeNull() })
+    capturedCallback!()
+
+    await waitFor(() => { expect(api.logout).toHaveBeenCalled() })
+    expect(await screen.findByText('signedOut:false')).toBeDefined()
   })
 
   it('does not call logout when session expired fires after unmount', async () => {
