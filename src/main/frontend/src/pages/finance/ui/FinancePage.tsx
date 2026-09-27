@@ -78,7 +78,7 @@ function FinancePageContent() {
   const currentSpace = mySpaces?.find((s) => s.id === spaceId)
   const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
   const spaceIsPersonal = currentSpace ? isPersonal(currentSpace) : false
-  useCreateIntent('transaction', canWriteHere, () => setFormState({ mode: 'create' }))
+  useCreateIntent('transaction', currentSpace ? canWriteHere : undefined, () => setFormState({ mode: 'create' }))
 
   const categoryById = new Map((categories ?? []).map((c) => [c.id, c]))
 

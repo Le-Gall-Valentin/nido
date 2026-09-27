@@ -81,7 +81,7 @@ function CalendarPageContent() {
 
   const dialog = useCalendarDialog()
   const { show } = dialog
-  useCreateIntent('event', canWriteHere, () => show({ kind: 'create', date: today, returnToDay: false }))
+  useCreateIntent('event', currentSpace ? canWriteHere : undefined, () => show({ kind: 'create', date: today, returnToDay: false }))
   const showDay = (day: string) => show({ kind: 'day', date: day })
   const showOccurrence = (occurrence: { sourceId: string }) => show({ kind: 'occurrence', sourceId: occurrence.sourceId })
   const createOver = (schedule: ScheduleChange) =>

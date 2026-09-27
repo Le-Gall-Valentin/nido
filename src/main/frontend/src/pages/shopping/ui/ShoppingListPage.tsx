@@ -56,7 +56,7 @@ function ShoppingListPageContent() {
   const [managingCategories, setManagingCategories] = useState(false)
   const [movingItem, setMovingItem] = useState<ShoppingItem | null>(null)
   const [activeDragItem, setActiveDragItem] = useState<ShoppingItem | null>(null)
-  useCreateIntent('item', canWriteHere, () => setAddingItem(true))
+  useCreateIntent('item', currentSpace ? canWriteHere : undefined, () => setAddingItem(true))
 
   const sensors = useDragSensors()
 
