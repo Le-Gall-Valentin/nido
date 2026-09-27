@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { todayIso } from '@/shared/lib'
+import { formatAmount, todayIso } from '@/shared/lib'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { HandCoins } from 'lucide-react'
 
@@ -43,7 +43,7 @@ export function SettleDebtModal({ spaceTimezone, fromLabel, toLabel, amount, onC
         <HandCoins className="size-6" />
       </div>
       <h3 className="mb-2 text-[19px] font-semibold text-fg-0">{t('title')}</h3>
-      <p className="mb-4 text-sm leading-relaxed text-fg-2">{t('message', { from: fromLabel, to: toLabel, amount })}</p>
+      <p className="mb-4 text-sm leading-relaxed text-fg-2">{t('message', { from: fromLabel, to: toLabel, amount: formatAmount(amount) })}</p>
 
       <div className="flex flex-col gap-4">
         <Input label={t('amount_label')} type="number" step="0.01" min={0} max={amount}

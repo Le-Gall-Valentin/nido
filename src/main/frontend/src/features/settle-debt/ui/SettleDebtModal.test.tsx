@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { formatAmount } from '@/shared/lib'
 import { SettleDebtModal } from './SettleDebtModal'
 
 vi.mock('react-i18next', () => ({
@@ -7,6 +8,14 @@ vi.mock('react-i18next', () => ({
 }))
 
 describe('SettleDebtModal', () => {
+  it('states the debt as an amount of money, not as a raw number', () => {
+    render(<SettleDebtModal fromLabel="Bob" toLabel="Alice" amount={42.5} onConfirm={vi.fn()} onCancel={vi.fn()} isPending={false} />)
+
+    // Testing Library collapses the rendered text's non-breaking spaces, not the expected string's.
+    const expected = `message:${JSON.stringify({ from: 'Bob', to: 'Alice', amount: formatAmount(42.5) })}`.replace(/\s+/g, ' ')
+    expect(screen.getByText(expected)).toBeDefined()
+  })
+
   it('shows the submit error handed down by the caller when the backend rejected the settlement', () => {
     render(<SettleDebtModal fromLabel="Bob" toLabel="Alice" amount={20} onConfirm={vi.fn()} onCancel={vi.fn()} isPending={false} submitError="form.submit_error" />)
 
