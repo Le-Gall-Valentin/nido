@@ -34,7 +34,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -78,48 +77,34 @@ class FinanceDashboardSourceTest {
     }
 
     @Test
-    void budgetsToWatchKeepWarningAndOverLinesMostConsumedFirst() {
+    void aBudgetLineWorthWatchingCarriesItsCategoryAndTheOthersAreLeftOut() {
+        // The order and the overruns are FinanceReview's (see FinanceReviewTest); this is the translation.
         stats(List.of(
             new BudgetLine(leisure.id(), new BigDecimal("100.00"), new BigDecimal("10.00")),
-            new BudgetLine(groceries.id(), new BigDecimal("500.00"), new BigDecimal("430.00")),
-            new BudgetLine(restaurants.id(), new BigDecimal("180.00"), new BigDecimal("212.00"))));
+            new BudgetLine(restaurants.id(), new BigDecimal("180.00"), new BigDecimal("212.00")),
+            new BudgetLine(UUID.randomUUID(), new BigDecimal("50.00"), new BigDecimal("80.00"))));
         noUpcoming(TODAY);
         noBalances();
 
         FinanceCard card = (FinanceCard) read(TODAY, SpaceType.SHARED).card();
 
-        assertThat(card.budgetsToWatch()).containsExactly(
-            new BudgetWatch(restaurants.id(), "Restaurants", "#a3463a", new BigDecimal("212.00"), new BigDecimal("180.00"), BudgetWatch.Status.OVER),
-            new BudgetWatch(groceries.id(), "Courses alimentaires", "#8a6d2e", new BigDecimal("430.00"), new BigDecimal("500.00"), BudgetWatch.Status.WARNING));
+        assertThat(card.budgetsToWatch()).containsExactly(new BudgetWatch(restaurants.id(), "Restaurants", "#a3463a",
+            new BigDecimal("212.00"), new BigDecimal("180.00"), BudgetWatch.Status.OVER));
     }
 
     @Test
-    void onlyOverBudgetsRaiseAnOverrun() {
-        stats(List.of(
-            new BudgetLine(groceries.id(), new BigDecimal("500.00"), new BigDecimal("430.00")),
-            new BudgetLine(restaurants.id(), new BigDecimal("180.00"), new BigDecimal("212.00"))));
+    void aSharedSpaceReadsItsSuggestedTransfers() {
+        stats(List.of());
         noUpcoming(TODAY);
-        noBalances();
-
-        assertThat(read(TODAY, SpaceType.SHARED).attention()).containsExactly(
-            new AttentionItem.BudgetOverrun(restaurants.id(), "Restaurants", new BigDecimal("212.00"), new BigDecimal("180.00")));
-    }
-
-    @Test
-    void aZeroEuroBudgetIsOverFromTheFirstEuroAndSortsFirst() {
-        stats(List.of(
-            new BudgetLine(restaurants.id(), new BigDecimal("180.00"), new BigDecimal("400.00")),
-            new BudgetLine(gifts.id(), new BigDecimal("0.00"), new BigDecimal("5.00")),
-            new BudgetLine(leisure.id(), new BigDecimal("0.00"), new BigDecimal("0.00"))));
-        noUpcoming(TODAY);
-        noBalances();
+        UUID camille = UUID.randomUUID();
+        when(getBalances.getBalances(caller)).thenReturn(new Balances(List.of(), List.of(
+            new SuggestedTransfer(me, camille, new BigDecimal("42.50")))));
 
         SourceResult result = read(TODAY, SpaceType.SHARED);
 
-        assertThat(((FinanceCard) result.card()).budgetsToWatch()).extracting(BudgetWatch::label)
-            .containsExactly("Cadeaux", "Restaurants");
-        assertThat(result.attention()).extracting(item -> ((AttentionItem.BudgetOverrun) item).label())
-            .containsExactly("Cadeaux", "Restaurants");
+        assertThat(((FinanceCard) result.card()).balances()).containsExactly(
+            new BalanceWithMember(camille, new BigDecimal("42.50"), BalanceDirection.I_OWE));
+        assertThat(result.attention()).containsExactly(new AttentionItem.Debt(camille, new BigDecimal("42.50")));
     }
 
     @Test
@@ -146,45 +131,6 @@ class FinanceDashboardSourceTest {
                 org.assertj.core.groups.Tuple.tuple("Netflix", LocalDate.of(2026, 10, 3)));
         assertThat(card.upcoming().get(1)).isEqualTo(
             new UpcomingOperation(LocalDate.of(2026, 10, 1), "Loyer", new BigDecimal("850.00"), UpcomingOperation.Type.EXPENSE, rent));
-    }
-
-    @Test
-    void upcomingKeepsTheFiveEarliest() {
-        stats(List.of());
-        when(listTransactions.list(caller, TODAY.plusDays(1), TODAY.plusDays(7))).thenReturn(List.of());
-        List<ProjectedOccurrence> seven = new ArrayList<>();
-        for (int day = 7; day >= 1; day--) {
-            seven.add(new ProjectedOccurrence(UUID.randomUUID(), "J+" + day, BigDecimal.ONE, TransactionType.EXPENSE, TODAY.plusDays(day)));
-        }
-        when(projectSeries.project(caller, TODAY.plusDays(1), TODAY.plusDays(7))).thenReturn(seven);
-        noBalances();
-
-        assertThat(((FinanceCard) read(TODAY, SpaceType.SHARED).card()).upcoming()).extracting(UpcomingOperation::label)
-            .containsExactly("J+1", "J+2", "J+3", "J+4", "J+5");
-    }
-
-    @Test
-    void balancesShowWhatTheCallerOwesAndIsOwedAndRaiseADebtPerCreditor() {
-        stats(List.of());
-        noUpcoming(TODAY);
-        UUID camille = UUID.randomUUID();
-        UUID paul = UUID.randomUUID();
-        UUID lea = UUID.randomUUID();
-        when(getBalances.getBalances(caller)).thenReturn(new Balances(List.of(), List.of(
-            new SuggestedTransfer(paul, me, new BigDecimal("18.00")),
-            new SuggestedTransfer(me, camille, new BigDecimal("42.50")),
-            new SuggestedTransfer(lea, paul, new BigDecimal("10.00")),
-            new SuggestedTransfer(me, lea, new BigDecimal("60.00")))));
-
-        SourceResult result = read(TODAY, SpaceType.SHARED);
-
-        assertThat(((FinanceCard) result.card()).balances()).containsExactly(
-            new BalanceWithMember(lea, new BigDecimal("60.00"), BalanceDirection.I_OWE),
-            new BalanceWithMember(camille, new BigDecimal("42.50"), BalanceDirection.I_OWE),
-            new BalanceWithMember(paul, new BigDecimal("18.00"), BalanceDirection.OWES_ME));
-        assertThat(result.attention()).containsExactly(
-            new AttentionItem.Debt(lea, new BigDecimal("60.00")),
-            new AttentionItem.Debt(camille, new BigDecimal("42.50")));
     }
 
     @Test
