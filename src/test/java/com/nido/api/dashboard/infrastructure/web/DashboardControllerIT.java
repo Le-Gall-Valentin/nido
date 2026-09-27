@@ -214,6 +214,30 @@ class DashboardControllerIT {
             .andExpect(jsonPath("$.cards.shopping").doesNotExist());
     }
 
+    // The handler's unit test fails a stub; this one fails a real source, end to end: the other cards
+    // still answer, and the dashboard owns up to being incomplete instead of claiming all is clear.
+    @Test
+    void a_source_that_fails_leaves_its_card_unavailable_and_the_rest_readable() throws Exception {
+        seedTask("""
+            {"title":"Payer la cantine","priority":"MED","dueDate":"%s"}""".formatted(today.plusDays(2)));
+        String categoryId = firstExpenseCategory().get("id").asText();
+        createAndReadId(post(space() + "/finance/transactions"), """
+            {"label":"Restaurant","amount":50.00,"type":"EXPENSE","categoryId":"%s","date":"%s"}"""
+            .formatted(categoryId, today));
+        // A value the space's key cannot read: what corrupted data or a botched key rotation would leave.
+        jdbc.update("UPDATE finance_transactions SET amount_encrypted = 'not-a-ciphertext' WHERE space_id = ?", spaceId);
+
+        mockMvc.perform(get(dashboard()).cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.complete").value(false))
+            .andExpect(jsonPath("$.cards.finance.status").value("UNAVAILABLE"))
+            .andExpect(jsonPath("$.cards.finance.data").doesNotExist())
+            .andExpect(jsonPath("$.cards.agenda.status").value("OK"))
+            .andExpect(jsonPath("$.cards.menu.status").value("OK"))
+            .andExpect(jsonPath("$.cards.tasks.status").value("OK"))
+            .andExpect(jsonPath("$.cards.tasks.data.thisWeek[0].title").value("Payer la cantine"));
+    }
+
     // Commit 83fa623: the calendar, opened before the tasks page, created the due recurring tasks inside
     // its read-only transaction and answered 500. The dashboard is the page the app now opens on, so it
     // is the first reader of a due occurrence far more often than not: it must create it, in its own
