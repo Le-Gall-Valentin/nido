@@ -88,6 +88,32 @@ describe('authStore', () => {
     expect(store.getState().user).toBeNull()
   })
 
+  it('a sign-out by the user is remembered as one', async () => {
+    const store = createAuthStore(createApiMock())
+
+    await store.getState().logout()
+
+    expect(store.getState().signedOut).toBe(true)
+  })
+
+  it('an expired session is not a sign-out by the user', async () => {
+    const store = createAuthStore(createApiMock())
+
+    await store.getState().logout({ expired: true })
+
+    expect(store.getState().user).toBeNull()
+    expect(store.getState().signedOut).toBe(false)
+  })
+
+  it('signing in again forgets the last sign-out', async () => {
+    const store = createAuthStore(createApiMock())
+    await store.getState().logout()
+
+    store.getState().finalizeLogin({ id: 'u-1', username: 'alice', role: 'USER' } as never)
+
+    expect(store.getState().signedOut).toBe(false)
+  })
+
   describe('initialize', () => {
     it('skips getMe and sets isInitializing=false when no session hint', async () => {
       const api = createApiMock()

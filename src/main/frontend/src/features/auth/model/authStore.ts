@@ -8,11 +8,17 @@ import { CredentialsError } from './errors'
 export interface AuthState {
   user: User | null
   isInitializing: boolean
+  /**
+   * True once the user signed themselves out. The login page then starts afresh; after an expired
+   * session, or on a link opened signed out, it sends them on to the page they were going to.
+   */
+  signedOut: boolean
 }
 
 export interface AuthActions {
   login: (credentials: LoginCredentials) => Promise<LoginOutcome>
-  logout: () => Promise<void>
+  /** `expired`: the session ended by itself — not a sign-out by the user. */
+  logout: (options?: { expired?: boolean }) => Promise<void>
   initialize: (signal?: AbortSignal) => Promise<void>
   finalizeLogin: (user: User) => void
   patchUser: (partial: Partial<User>) => void
@@ -25,6 +31,7 @@ export function createAuthStore(api: IAuthApi) {
   return create<AuthState & AuthActions>((set) => ({
     user: null,
     isInitializing: true,
+    signedOut: false,
 
     async login(credentials: LoginCredentials): Promise<LoginOutcome> {
       const result = await api.login(credentials)
@@ -38,7 +45,7 @@ export function createAuthStore(api: IAuthApi) {
     finalizeLogin(user: User): void {
       notifyLoginSuccess()
       setSessionHint()
-      set({ user })
+      set({ user, signedOut: false })
     },
 
     patchUser(partial: Partial<User>): void {
@@ -47,12 +54,12 @@ export function createAuthStore(api: IAuthApi) {
       }))
     },
 
-    async logout(): Promise<void> {
+    async logout(options?: { expired?: boolean }): Promise<void> {
       try {
         await api.logout()
       } finally {
         clearSessionHint()
-        set({ user: null })
+        set({ user: null, signedOut: !options?.expired })
       }
     },
 

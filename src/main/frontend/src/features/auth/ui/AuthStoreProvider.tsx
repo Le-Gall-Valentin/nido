@@ -25,7 +25,7 @@ export function AuthStoreProvider({ api, children }: Props) {
     const abortController = new AbortController()
     setSessionExpiredCallback(() => {
       const s = store.getState()
-      if (mounted && !s.isInitializing) void s.logout()
+      if (mounted && !s.isInitializing) void s.logout({ expired: true })
     })
     void store.getState().initialize(abortController.signal)
     return () => {

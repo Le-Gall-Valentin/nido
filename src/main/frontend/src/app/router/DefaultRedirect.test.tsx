@@ -77,20 +77,20 @@ afterEach(() => {
 
 describe('DefaultRedirect', () => {
   it('shows spinner while initializing instead of redirecting', () => {
-    mockUseAuthGuard.mockReturnValue({ isInitializing: true, isAuthenticated: false, t: (k: string) => k })
+    mockUseAuthGuard.mockReturnValue({ isInitializing: true, isAuthenticated: false, signedOut: false, t: (k: string) => k })
     const { container } = renderAt('/', fakeApi())
     expect(container.querySelector('[role="status"]')).not.toBeNull()
   })
 
   it('navigates to /login when not authenticated, without waiting on the space list', () => {
-    mockUseAuthGuard.mockReturnValue({ isInitializing: false, isAuthenticated: false, t: (k: string) => k })
+    mockUseAuthGuard.mockReturnValue({ isInitializing: false, isAuthenticated: false, signedOut: false, t: (k: string) => k })
     const api = fakeApi(new Promise(() => {}))
     const { getByText } = renderAt('/', api)
     expect(getByText('on-login')).toBeDefined()
   })
 
   it('shows a spinner while the space list is loading, without redirecting', () => {
-    mockUseAuthGuard.mockReturnValue({ isInitializing: false, isAuthenticated: true, t: (k: string) => k })
+    mockUseAuthGuard.mockReturnValue({ isInitializing: false, isAuthenticated: true, signedOut: false, t: (k: string) => k })
     const api = fakeApi(new Promise(() => {}))
     const { container, queryByText } = renderAt('/', api)
     expect(container.querySelector('[role="status"]')).not.toBeNull()
@@ -98,7 +98,7 @@ describe('DefaultRedirect', () => {
   })
 
   it('restores the remembered context when it is still in the caller\'s list', async () => {
-    mockUseAuthGuard.mockReturnValue({ isInitializing: false, isAuthenticated: true, t: (k: string) => k })
+    mockUseAuthGuard.mockReturnValue({ isInitializing: false, isAuthenticated: true, signedOut: false, t: (k: string) => k })
     activeSpaceStore.getState().remember('space-2')
     const { findByText, getByTestId } = renderAt('/', fakeApi())
     await findByText('on-space')
@@ -106,7 +106,7 @@ describe('DefaultRedirect', () => {
   })
 
   it('falls back to the personal space when the remembered context is no longer in the list', async () => {
-    mockUseAuthGuard.mockReturnValue({ isInitializing: false, isAuthenticated: true, t: (k: string) => k })
+    mockUseAuthGuard.mockReturnValue({ isInitializing: false, isAuthenticated: true, signedOut: false, t: (k: string) => k })
     activeSpaceStore.getState().remember('space-9-gone')
     const { findByText, getByTestId } = renderAt('/', fakeApi([PERSONAL]))
     await findByText('on-space')
@@ -115,7 +115,7 @@ describe('DefaultRedirect', () => {
   })
 
   it('falls back to the personal space when nothing is remembered', async () => {
-    mockUseAuthGuard.mockReturnValue({ isInitializing: false, isAuthenticated: true, t: (k: string) => k })
+    mockUseAuthGuard.mockReturnValue({ isInitializing: false, isAuthenticated: true, signedOut: false, t: (k: string) => k })
     const { findByText, getByTestId } = renderAt('/', fakeApi([PERSONAL, FAMILY]))
     await findByText('on-space')
     expect(getByTestId('location').textContent).toBe('/s/personal-1')
