@@ -61,6 +61,15 @@ describe('TodayCard', () => {
     expect(screen.getByText('today.until_day:{"date":"28 sept."}')).toBeDefined()
   })
 
+  it('says until what time a timed event that began on an earlier day ends today', () => {
+    // A night shift, 22:00 yesterday to 06:00 today: it is not "all day" today, it ends at 06:00.
+    const shift = event('e-shift', 'Garde de nuit', '22:00:00', '06:00:00', { startDate: '2026-09-25', endDate: '2026-09-26' })
+    renderWithActions(<TodayCard card={{ ...CARD, allDay: [shift] }} date="2026-09-26" now={NOW} />)
+
+    expect(screen.getByText('today.until:{"time":"06:00"}')).toBeDefined()
+    expect(screen.queryByText('today.all_day')).toBeNull()
+  })
+
   it('says so when nothing is planned', () => {
     renderWithActions(<TodayCard card={{ allDay: [], timed: [], dueToday: [], tomorrow: null }} date="2026-09-26" now={NOW} />)
     expect(screen.getByText('today.empty')).toBeDefined()

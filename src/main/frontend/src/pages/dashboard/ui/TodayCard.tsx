@@ -24,7 +24,10 @@ function AllDayBanner({ event, date }: { event: AgendaEvent; date: string }) {
       <CalendarDays className="size-4 shrink-0" aria-hidden="true" />
       <span className="min-w-0 truncate">{event.title}</span>
       <span className="ml-auto shrink-0 text-[12.5px] font-medium opacity-80">
-        {event.endDate > date ? t('today.until_day', { date: formatDayMonth(event.endDate, locale) }) : t('today.all_day')}
+        {event.endDate > date
+          ? t('today.until_day', { date: formatDayMonth(event.endDate, locale) })
+          // A timed event that began on an earlier day (a night shift) ends at a time today, not "all day".
+          : event.endTime ? t('today.until', { time: shortTime(event.endTime) }) : t('today.all_day')}
       </span>
     </div>
   )
