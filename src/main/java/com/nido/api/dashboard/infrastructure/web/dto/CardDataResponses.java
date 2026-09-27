@@ -99,21 +99,22 @@ public final class CardDataResponses {
     }
 
     private static List<TaskItemResponse> tasks(List<TaskItem> tasks) {
-        return tasks.stream().map(t -> new TaskItemResponse(t.id(), t.title(), t.dueDate(), t.priority(), t.status(),
+        return tasks.stream().map(t -> new TaskItemResponse(t.id(), t.title(), t.dueDate(), t.priority().name(), t.status().name(),
             t.assigneeIds(), t.subtasksDone(), t.subtasksTotal(), t.recurring())).toList();
     }
 
     private static List<MealItemResponse> meals(List<MealItem> meals) {
-        return meals.stream().map(m -> new MealItemResponse(m.entryId(), m.recipeId(), m.recipeName(), m.category(),
+        return meals.stream().map(m -> new MealItemResponse(m.entryId(), m.recipeId(), m.recipeName(),
+            m.category() == null ? null : m.category().name(),
             m.minutes(), m.portions())).toList();
     }
 
     private static BudgetWatchResponse budget(BudgetWatch b) {
-        return new BudgetWatchResponse(b.categoryId(), b.label(), b.color(), b.spent(), b.limit(), b.status());
+        return new BudgetWatchResponse(b.categoryId(), b.label(), b.color(), b.spent(), b.limit(), b.status().name());
     }
 
     private static UpcomingOperationResponse upcoming(UpcomingOperation u) {
-        return new UpcomingOperationResponse(u.date(), u.label(), u.amount(), u.type(), u.seriesId());
+        return new UpcomingOperationResponse(u.date(), u.label(), u.amount(), u.type().name(), u.seriesId());
     }
 
     private static MemberBalanceResponse balance(BalanceWithMember b) {

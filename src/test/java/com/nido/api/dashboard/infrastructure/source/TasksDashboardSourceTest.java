@@ -142,7 +142,7 @@ class TasksDashboardSourceTest {
 
         TaskItem item = ((TasksCard) read(SpaceType.SHARED).card()).thisWeek().getFirst();
 
-        assertThat(item).isEqualTo(new TaskItem(recurring.id(), "Poubelles", TODAY.plusDays(2), "HIGH", "TODO",
+        assertThat(item).isEqualTo(new TaskItem(recurring.id(), "Poubelles", TODAY.plusDays(2), TaskItem.Priority.HIGH, TaskItem.Status.TODO,
             List.of(me), 1, 3, true));
     }
 

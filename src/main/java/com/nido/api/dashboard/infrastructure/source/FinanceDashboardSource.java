@@ -20,6 +20,7 @@ import com.nido.api.finance.domain.model.BudgetStatus;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.FinanceStats;
 import com.nido.api.finance.domain.model.SuggestedTransfer;
+import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.stereotype.Component;
 
@@ -88,7 +89,7 @@ public class FinanceDashboardSource implements DashboardSource {
             .map(line -> {
                 Category category = categoryById.get(line.categoryId());
                 return new BudgetWatch(line.categoryId(), category.label(), category.color(),
-                    line.spent(), line.monthlyLimit(), line.status().name());
+                    line.spent(), line.monthlyLimit(), statusOf(line.status()));
             })
             .toList();
 
@@ -119,10 +120,10 @@ public class FinanceDashboardSource implements DashboardSource {
         Stream<UpcomingOperation> created = listTransactions.list(caller, from, to).stream()
             .filter(transaction -> transaction.recurringSeriesId() != null)
             .map(transaction -> new UpcomingOperation(transaction.date(), transaction.label(), transaction.amount(),
-                transaction.type().name(), transaction.recurringSeriesId()));
+                typeOf(transaction.type()), transaction.recurringSeriesId()));
         Stream<UpcomingOperation> projected = projectSeries.project(caller, from, to).stream()
             .map(occurrence -> new UpcomingOperation(occurrence.date(), occurrence.label(), occurrence.amount(),
-                occurrence.type().name(), occurrence.seriesId()));
+                typeOf(occurrence.type()), occurrence.seriesId()));
         return Stream.concat(created, projected).sorted(UPCOMING_ORDER).limit(UPCOMING_CAP).toList();
     }
 
@@ -137,6 +138,22 @@ public class FinanceDashboardSource implements DashboardSource {
         }
         balances.sort(BALANCE_ORDER);
         return List.copyOf(balances);
+    }
+
+    /** Only a line worth watching is ever converted: one within its budget never reaches the card. */
+    static BudgetWatch.Status statusOf(BudgetStatus status) {
+        return switch (status) {
+            case WARNING -> BudgetWatch.Status.WARNING;
+            case OVER -> BudgetWatch.Status.OVER;
+            case OK -> throw new IllegalArgumentException("A budget within its limit is not watched");
+        };
+    }
+
+    static UpcomingOperation.Type typeOf(TransactionType type) {
+        return switch (type) {
+            case EXPENSE -> UpcomingOperation.Type.EXPENSE;
+            case INCOME -> UpcomingOperation.Type.INCOME;
+        };
     }
 
     /** spent ÷ limit. A 0 € budget ("spend nothing here") with spending outranks every other line. */

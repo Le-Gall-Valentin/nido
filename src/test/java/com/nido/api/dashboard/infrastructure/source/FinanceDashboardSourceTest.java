@@ -16,6 +16,7 @@ import com.nido.api.finance.application.port.in.ListTransactionsInRangeUseCase;
 import com.nido.api.finance.application.port.in.ProjectRecurringSeriesUseCase;
 import com.nido.api.finance.domain.model.Balances;
 import com.nido.api.finance.domain.model.BudgetLine;
+import com.nido.api.finance.domain.model.BudgetStatus;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.FinanceStats;
 import com.nido.api.finance.domain.model.ProjectedOccurrence;
@@ -26,6 +27,8 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -36,6 +39,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -85,8 +89,8 @@ class FinanceDashboardSourceTest {
         FinanceCard card = (FinanceCard) read(TODAY, SpaceType.SHARED).card();
 
         assertThat(card.budgetsToWatch()).containsExactly(
-            new BudgetWatch(restaurants.id(), "Restaurants", "#a3463a", new BigDecimal("212.00"), new BigDecimal("180.00"), "OVER"),
-            new BudgetWatch(groceries.id(), "Courses alimentaires", "#8a6d2e", new BigDecimal("430.00"), new BigDecimal("500.00"), "WARNING"));
+            new BudgetWatch(restaurants.id(), "Restaurants", "#a3463a", new BigDecimal("212.00"), new BigDecimal("180.00"), BudgetWatch.Status.OVER),
+            new BudgetWatch(groceries.id(), "Courses alimentaires", "#8a6d2e", new BigDecimal("430.00"), new BigDecimal("500.00"), BudgetWatch.Status.WARNING));
     }
 
     @Test
@@ -141,7 +145,7 @@ class FinanceDashboardSourceTest {
                 org.assertj.core.groups.Tuple.tuple("Loyer", LocalDate.of(2026, 10, 1)),
                 org.assertj.core.groups.Tuple.tuple("Netflix", LocalDate.of(2026, 10, 3)));
         assertThat(card.upcoming().get(1)).isEqualTo(
-            new UpcomingOperation(LocalDate.of(2026, 10, 1), "Loyer", new BigDecimal("850.00"), "EXPENSE", rent));
+            new UpcomingOperation(LocalDate.of(2026, 10, 1), "Loyer", new BigDecimal("850.00"), UpcomingOperation.Type.EXPENSE, rent));
     }
 
     @Test
@@ -192,6 +196,23 @@ class FinanceDashboardSourceTest {
 
         assertThat(card.balances()).isNull();
         verifyNoInteractions(getBalances);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = BudgetStatus.class, names = {"WARNING", "OVER"})
+    void everyWatchedBudgetStatusKeepsTheNameTheClientReads(BudgetStatus status) {
+        assertThat(FinanceDashboardSource.statusOf(status).name()).isEqualTo(status.name());
+    }
+
+    @Test
+    void aBudgetWithinItsLimitIsNeverWatched() {
+        assertThatThrownBy(() -> FinanceDashboardSource.statusOf(BudgetStatus.OK)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @EnumSource(TransactionType.class)
+    void everyOperationTypeKeepsTheNameTheClientReads(TransactionType type) {
+        assertThat(FinanceDashboardSource.typeOf(type).name()).isEqualTo(type.name());
     }
 
     @Test

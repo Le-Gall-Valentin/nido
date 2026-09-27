@@ -13,6 +13,8 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -50,7 +52,7 @@ class MenuDashboardSourceTest {
         when(listMenuEntries.list(caller, TODAY, TODAY.plusDays(6))).thenReturn(List.of(view));
 
         assertThat(read().today()).containsExactly(
-            new MealItem(view.entry().id(), curry.id(), "Curry de lentilles", "VEGETARIAN", 35, 6));
+            new MealItem(view.entry().id(), curry.id(), "Curry de lentilles", MealItem.Category.VEGETARIAN, 35, 6));
     }
 
     @Test
@@ -80,6 +82,12 @@ class MenuDashboardSourceTest {
         assertThat(card.today()).isEmpty();
         assertThat(card.tomorrow()).isEmpty();
         assertThat(card.unplannedDays()).hasSize(7).first().isEqualTo(TODAY);
+    }
+
+    @ParameterizedTest
+    @EnumSource(RecipeCategory.class)
+    void everyRecipeCategoryKeepsTheNameTheClientReads(RecipeCategory category) {
+        assertThat(MenuDashboardSource.categoryOf(category).name()).isEqualTo(category.name());
     }
 
     @Test
