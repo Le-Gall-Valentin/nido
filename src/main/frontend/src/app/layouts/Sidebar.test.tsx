@@ -179,10 +179,10 @@ describe('Sidebar — pending invitations badge', () => {
 })
 
 describe('Sidebar — brand', () => {
-  it('renders the brand name linking to the account page', () => {
+  it('renders the brand name linking to the current space\'s dashboard, where the app opens', () => {
     withUser('USER')
-    renderSidebar()
+    renderSidebar('/s/space-2/finance')
     const link = screen.getByRole('link', { name: /brand/ })
-    expect(link.getAttribute('href')).toBe('/account')
+    expect(link.getAttribute('href')).toBe('/s/space-2/dashboard')
   })
 })

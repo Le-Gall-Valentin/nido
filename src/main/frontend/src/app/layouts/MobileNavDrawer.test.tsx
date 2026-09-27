@@ -78,4 +78,9 @@ describe('MobileNavDrawer', () => {
     setup(vi.fn(), false)
     expect(screen.queryByText('nav.pending_invitations')).toBeNull()
   })
+
+  it('links the brand to the current space\'s dashboard, where the app opens', () => {
+    setup()
+    expect(screen.getByRole('link', { name: /brand/ }).getAttribute('href')).toBe('/s/space-1/dashboard')
+  })
 })

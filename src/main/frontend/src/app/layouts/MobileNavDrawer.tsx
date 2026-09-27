@@ -52,7 +52,7 @@ export function MobileNavDrawer({ items, spaceId, pathname, onClose, hasPendingI
         className="fixed inset-y-0 left-0 flex w-[280px] max-w-[85vw] flex-col bg-bg-2 shadow-[0_0_40px_rgba(44,42,38,0.24)]"
       >
         <div className="flex shrink-0 items-center justify-between gap-2 px-[18px] pb-4 pt-5">
-          <Link to={ROUTES.ACCOUNT} onClick={onClose} className="flex min-w-0 items-center gap-[11px]">
+          <Link to={spaceId ? ROUTES.spaceDashboard(spaceId) : ROUTES.HOME} onClick={onClose} className="flex min-w-0 items-center gap-[11px]">
             <div
               className="grid size-[34px] shrink-0 place-items-center rounded-[10px] text-white"
               style={{ background: BRAND_LOGO_GRADIENT }}

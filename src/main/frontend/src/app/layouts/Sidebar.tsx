@@ -82,8 +82,8 @@ export function Sidebar({ hasPendingInvitations, openTaskCount }: SidebarProps =
 
   return (
     <aside className="hidden shrink-0 flex-col border-r border-border bg-bg-2 md:sticky md:top-0 md:flex md:h-screen md:w-[236px]">
-      {/* Brand */}
-      <Link to={ROUTES.ACCOUNT} className="flex shrink-0 items-center gap-[11px] px-[18px] pb-4 pt-5">
+      {/* Brand — home: the current space's dashboard, the page the app opens on */}
+      <Link to={spaceId ? ROUTES.spaceDashboard(spaceId) : ROUTES.HOME} className="flex shrink-0 items-center gap-[11px] px-[18px] pb-4 pt-5">
         <div
           className="grid size-[34px] shrink-0 place-items-center rounded-[10px] text-white"
           style={{ background: BRAND_LOGO_GRADIENT }}
