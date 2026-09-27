@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AxiosError } from 'axios'
 import { client } from '@/shared/api'
-import { NetworkError, NotFoundError, RateLimitError } from '@/shared/lib'
+import { ForbiddenError, NetworkError, NotFoundError, RateLimitError, ServerError } from '@/shared/lib'
 import { dashboardApi } from './dashboardApi'
 import type { Dashboard } from '../model/types'
 
@@ -29,6 +29,16 @@ describe('dashboardApi', () => {
   it('translates a 429 into RateLimitError', async () => {
     vi.mocked(client.get).mockRejectedValueOnce(new AxiosError('Too many', undefined, undefined, undefined, { status: 429 } as never))
     await expect(dashboardApi.getDashboard('space-1')).rejects.toBeInstanceOf(RateLimitError)
+  })
+
+  it('translates a 403 into ForbiddenError', async () => {
+    vi.mocked(client.get).mockRejectedValueOnce(new AxiosError('Forbidden', undefined, undefined, undefined, { status: 403 } as never))
+    await expect(dashboardApi.getDashboard('space-1')).rejects.toBeInstanceOf(ForbiddenError)
+  })
+
+  it('translates any other answer of the server — a 500 — into ServerError', async () => {
+    vi.mocked(client.get).mockRejectedValueOnce(new AxiosError('Boom', undefined, undefined, undefined, { status: 500 } as never))
+    await expect(dashboardApi.getDashboard('space-1')).rejects.toBeInstanceOf(ServerError)
   })
 
   it('translates a missing response into NetworkError', async () => {
