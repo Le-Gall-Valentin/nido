@@ -11,6 +11,7 @@ import { AdminRoute } from './AdminRoute'
 import { SpaceRoute } from './SpaceRoute'
 import { PublicOnlyRoute } from './PublicOnlyRoute'
 import { DefaultRedirect } from './DefaultRedirect'
+import { SpaceIndexRedirect } from './SpaceIndexRedirect'
 
 const AdminUsersPage = lazy(() => import('@/pages/admin-users'))
 const AccountProfilePage = lazy(() => import('@/pages/account'))
@@ -19,6 +20,7 @@ const AccountPreferencesPage = lazy(() => import('@/pages/account').then((m) => 
 const AccountPersonalSpacePage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountPersonalSpacePage })))
 const SpacesPage = lazy(() => import('@/pages/spaces'))
 const SpaceMembersPage = lazy(() => import('@/pages/spaces').then((m) => ({ default: m.SpaceMembersPage })))
+const DashboardPage = lazy(() => import('@/pages/dashboard'))
 const KitchenRecipesPage = lazy(() => import('@/pages/kitchen'))
 const KitchenRecipeDetailPage = lazy(() =>
   import('@/pages/kitchen').then((m) => ({ default: m.KitchenRecipeDetailPage })))
@@ -79,8 +81,9 @@ export function AppRouter() {
           {/* Scoped context subtree: the guard resolves the caller's contexts
               before anything renders, and the layout carries the context's
               accent down to the pages mounted under its outlet. The index
-              route redirects to `members` so a context switch from the
-              topbar always lands on a real page, never an empty outlet. */}
+              route opens the space's dashboard, so opening the app, a link to
+              a space or the personal-space fallback always lands on the page
+              that says what matters there — never an empty outlet. */}
           <Route
             path={ROUTES.space(':spaceId')}
             element={
@@ -89,7 +92,8 @@ export function AppRouter() {
               </SpaceRoute>
             }
           >
-            <Route index element={<Navigate to="members" replace />} />
+            <Route index element={<SpaceIndexRedirect />} />
+            <Route path="dashboard" element={<DashboardPage />} />
             <Route path="members" element={<SpaceMembersPage />} />
             <Route path="kitchen">
               <Route index element={<Navigate to="recipes" replace />} />

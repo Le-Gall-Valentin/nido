@@ -17,6 +17,7 @@ export const ROUTES = {
   // Spaces (contexts)
   SPACES: '/spaces',
   space: (spaceId: string) => `/s/${spaceId}`,
+  spaceDashboard: (spaceId: string) => `/s/${spaceId}/dashboard`,
   spaceMembers: (spaceId: string) => `/s/${spaceId}/members`,
   spaceKitchenRecipes: (spaceId: string) => `/s/${spaceId}/kitchen/recipes`,
   spaceKitchenRecipe: (spaceId: string, recipeId: string) => `/s/${spaceId}/kitchen/recipes/${recipeId}`,
