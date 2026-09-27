@@ -15,6 +15,7 @@ import com.nido.api.dashboard.domain.model.ShoppingGroup;
 import com.nido.api.dashboard.domain.model.TaskItem;
 import com.nido.api.dashboard.domain.model.TasksCard;
 import com.nido.api.dashboard.domain.model.UpcomingOperation;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,6 +31,14 @@ public final class CardDataResponses {
 
     private CardDataResponses() {}
 
+    /** One card's data: exactly one of the six shapes — the one its key in {@code cards} names. */
+    @Schema(oneOf = {AgendaCardResponse.class, MenuCardResponse.class, TasksCardResponse.class, FinanceCardResponse.class,
+        SavingsCardResponse.class, ShoppingCardResponse.class})
+    public sealed interface CardData
+        permits AgendaCardResponse, MenuCardResponse, TasksCardResponse, FinanceCardResponse, SavingsCardResponse,
+            ShoppingCardResponse {
+    }
+
     public record AgendaEventResponse(String id, String title, String location, String color, LocalDate startDate,
                                       LocalDate endDate, LocalTime startTime, LocalTime endTime,
                                       List<UUID> participantIds) {}
@@ -38,16 +47,16 @@ public final class CardDataResponses {
                                    List<UUID> assigneeIds, int subtasksDone, int subtasksTotal, boolean recurring) {}
 
     public record AgendaCardResponse(List<AgendaEventResponse> allDay, List<AgendaEventResponse> timed,
-                                     List<TaskItemResponse> dueToday, AgendaEventResponse tomorrow) {}
+                                     List<TaskItemResponse> dueToday, AgendaEventResponse tomorrow) implements CardData {}
 
     public record MealItemResponse(UUID entryId, UUID recipeId, String recipeName, String category, Integer minutes,
                                    int portions) {}
 
     public record MenuCardResponse(List<MealItemResponse> today, List<MealItemResponse> tomorrow,
-                                   List<LocalDate> unplannedDays) {}
+                                   List<LocalDate> unplannedDays) implements CardData {}
 
     public record TasksCardResponse(List<TaskItemResponse> overdue, List<TaskItemResponse> thisWeek,
-                                    List<TaskItemResponse> inProgress, int openCount, int openCountMine) {}
+                                    List<TaskItemResponse> inProgress, int openCount, int openCountMine) implements CardData {}
 
     public record BudgetWatchResponse(UUID categoryId, String label, String color, BigDecimal spent, BigDecimal limit,
                                       String status) {}
@@ -59,19 +68,19 @@ public final class CardDataResponses {
     /** {@code month} is "yyyy-MM"; {@code balances} is null in a personal space. */
     public record FinanceCardResponse(String month, BigDecimal balance, BigDecimal totalExpense, BigDecimal totalIncome,
                                       BigDecimal remainingBudget, List<BudgetWatchResponse> budgetsToWatch,
-                                      List<UpcomingOperationResponse> upcoming, List<MemberBalanceResponse> balances) {}
+                                      List<UpcomingOperationResponse> upcoming, List<MemberBalanceResponse> balances) implements CardData {}
 
     public record SavingsGoalItemResponse(UUID goalId, String name, String glyph, String color, BigDecimal target,
                                           BigDecimal contributed, LocalDate targetDate, String state,
                                           BigDecimal monthlyNeeded) {}
 
-    public record SavingsCardResponse(List<SavingsGoalItemResponse> goals) {}
+    public record SavingsCardResponse(List<SavingsGoalItemResponse> goals) implements CardData {}
 
     public record ShoppingGroupResponse(UUID categoryId, String name, int count, List<String> preview) {}
 
-    public record ShoppingCardResponse(int remaining, List<ShoppingGroupResponse> categories) {}
+    public record ShoppingCardResponse(int remaining, List<ShoppingGroupResponse> categories) implements CardData {}
 
-    public static Object from(DashboardCard card) {
+    public static CardData from(DashboardCard card) {
         return switch (card) {
             case AgendaCard agenda -> new AgendaCardResponse(events(agenda.allDay()), events(agenda.timed()),
                 tasks(agenda.dueToday()), agenda.tomorrow() == null ? null : event(agenda.tomorrow()));

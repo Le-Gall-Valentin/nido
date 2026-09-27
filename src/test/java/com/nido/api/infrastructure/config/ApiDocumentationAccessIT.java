@@ -1,5 +1,7 @@
 package com.nido.api.infrastructure.config;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.shared.model.Role;
 import io.jsonwebtoken.Jwts;
@@ -112,5 +114,25 @@ class ApiDocumentationAccessIT {
 
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body()).contains("\"openapi\"", "/api/spaces");
+    }
+
+    @Test
+    void the_dashboard_documents_what_each_of_its_cards_carries() throws Exception {
+        // A card's data used to be a bare object here: the client mirrors six shapes by hand, and the
+        // document it could check them against described none of them.
+        JsonNode schemas = new ObjectMapper().readTree(get("/api/docs", sessionCookie()).body())
+            .path("components").path("schemas");
+        JsonNode data = schemas.path("CardResultResponse").path("properties").path("data");
+        String dataRef = data.path("$ref").asText();
+        JsonNode dataSchema = dataRef.isEmpty() ? data : schemas.path(dataRef.substring(dataRef.lastIndexOf('/') + 1));
+
+        assertThat(dataSchema.path("oneOf").findValuesAsText("$ref"))
+            .map(ref -> ref.substring(ref.lastIndexOf('/') + 1))
+            .containsExactlyInAnyOrder("AgendaCardResponse", "MenuCardResponse", "TasksCardResponse",
+                "FinanceCardResponse", "SavingsCardResponse", "ShoppingCardResponse");
+        assertThat(schemas.path("AgendaCardResponse").path("properties").fieldNames()).toIterable()
+            .contains("allDay", "timed", "dueToday", "tomorrow");
+        Iterable<JsonNode> statuses = schemas.path("CardResultResponse").path("properties").path("status").path("enum");
+        assertThat(statuses).extracting(JsonNode::asText).containsExactlyInAnyOrder("OK", "UNAVAILABLE");
     }
 }
