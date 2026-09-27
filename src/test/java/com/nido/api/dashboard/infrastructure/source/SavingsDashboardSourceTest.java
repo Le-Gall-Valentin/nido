@@ -34,91 +34,18 @@ class SavingsDashboardSourceTest {
     private final ListSavingsGoalsUseCase listGoals = mock(ListSavingsGoalsUseCase.class);
 
     @Test
-    void goalsComeMostPressingFirst() {
-        when(listGoals.list(caller)).thenReturn(List.of(
-            goal("Canapé", "900.00", "900.00", TODAY.plusDays(90)),
-            goal("Vélo", "1000.00", "100.00", null),
-            goal("Vacances", "3000.00", "1450.00", LocalDate.of(2027, 6, 30)),
-            goal("Anniversaire", "200.00", "50.00", TODAY.plusDays(20))));
+    void aGoalReachesTheCardWithEverythingPutTowardIt() {
+        // The states, the monthly amount and the order are SavingsOutlook's (see SavingsOutlookTest).
+        UUID goalId = UUID.randomUUID();
+        when(listGoals.list(caller)).thenReturn(List.of(new SavingsGoalDetail(
+            new SavingsGoal(goalId, spaceId, "Vacances", new BigDecimal("3000.00"), LocalDate.of(2027, 6, 30), "#44618a", "🎯"),
+            List.of(
+                new SavingsContribution(UUID.randomUUID(), goalId, caller.userId(), new BigDecimal("1000.00"), TODAY),
+                new SavingsContribution(UUID.randomUUID(), goalId, caller.userId(), new BigDecimal("450.00"), TODAY)))));
 
-        assertThat(card().goals()).extracting(SavingsGoalItem::name, SavingsGoalItem::state)
-            .containsExactly(
-                org.assertj.core.groups.Tuple.tuple("Anniversaire", GoalState.DUE_SOON),
-                org.assertj.core.groups.Tuple.tuple("Vacances", GoalState.IN_PROGRESS),
-                org.assertj.core.groups.Tuple.tuple("Vélo", GoalState.IN_PROGRESS),
-                org.assertj.core.groups.Tuple.tuple("Canapé", GoalState.REACHED));
-    }
-
-    @Test
-    void aGoalWhoseDateHasPassedComesFirst() {
-        when(listGoals.list(caller)).thenReturn(List.of(
-            goal("Anniversaire", "200.00", "50.00", TODAY.plusDays(20)),
-            goal("Voiture", "5000.00", "4000.00", TODAY.minusDays(3))));
-
-        assertThat(card().goals()).extracting(SavingsGoalItem::state)
-            .containsExactly(GoalState.PAST_DUE, GoalState.DUE_SOON);
-    }
-
-    @Test
-    void dueSoonMeansAtMostThirtyDaysAway() {
-        when(listGoals.list(caller)).thenReturn(List.of(
-            goal("À trente jours", "100.00", "0.00", TODAY.plusDays(30)),
-            goal("À trente et un jours", "100.00", "0.00", TODAY.plusDays(31))));
-
-        assertThat(card().goals()).extracting(SavingsGoalItem::name, SavingsGoalItem::state)
-            .containsExactly(
-                org.assertj.core.groups.Tuple.tuple("À trente jours", GoalState.DUE_SOON),
-                org.assertj.core.groups.Tuple.tuple("À trente et un jours", GoalState.IN_PROGRESS));
-    }
-
-    @Test
-    void theMonthlyAmountSpreadsTheRemainderOverTheMonthsLeftRoundedUp() {
-        SavingsGoalDetail holidays = goal("Vacances", "3000.00", "1450.00", LocalDate.of(2027, 6, 30));
-        when(listGoals.list(caller)).thenReturn(List.of(holidays));
-
-        SavingsGoalItem item = card().goals().getFirst();
-
-        assertThat(item).isEqualTo(new SavingsGoalItem(holidays.goal().id(), "Vacances", "🎯", "#44618a",
+        assertThat(card().goals()).containsExactly(new SavingsGoalItem(goalId, "Vacances", "🎯", "#44618a",
             new BigDecimal("3000.00"), new BigDecimal("1450.00"), LocalDate.of(2027, 6, 30),
             GoalState.IN_PROGRESS, new BigDecimal("172.23")));
-    }
-
-    @Test
-    void aTargetInTheCurrentMonthOrAlreadyPastAsksForTheWholeRemainder() {
-        when(listGoals.list(caller)).thenReturn(List.of(
-            goal("Ce mois-ci", "500.00", "200.00", LocalDate.of(2026, 9, 30)),
-            goal("Dépassé", "800.00", "100.00", LocalDate.of(2026, 8, 1))));
-
-        assertThat(card().goals()).extracting(SavingsGoalItem::name, SavingsGoalItem::monthlyNeeded)
-            .containsExactly(
-                org.assertj.core.groups.Tuple.tuple("Dépassé", new BigDecimal("700.00")),
-                org.assertj.core.groups.Tuple.tuple("Ce mois-ci", new BigDecimal("300.00")));
-    }
-
-    @Test
-    void noTargetDateOrAReachedGoalAsksForNoMonthlyAmount() {
-        when(listGoals.list(caller)).thenReturn(List.of(
-            goal("Vélo", "1000.00", "100.00", null),
-            goal("Canapé", "900.00", "950.00", TODAY.plusDays(90))));
-
-        assertThat(card().goals()).extracting(SavingsGoalItem::monthlyNeeded).containsOnlyNulls();
-    }
-
-    @Test
-    void keepsAtMostFourGoals() {
-        when(listGoals.list(caller)).thenReturn(List.of(
-            goal("A", "100", "0", TODAY.plusDays(100)), goal("B", "100", "0", TODAY.plusDays(101)),
-            goal("C", "100", "0", TODAY.plusDays(102)), goal("D", "100", "0", TODAY.plusDays(103)),
-            goal("E", "100", "0", TODAY.plusDays(104))));
-
-        assertThat(card().goals()).extracting(SavingsGoalItem::name).containsExactly("A", "B", "C", "D");
-    }
-
-    @Test
-    void noGoalMeansNoCard() {
-        when(listGoals.list(caller)).thenReturn(List.of());
-
-        assertThat(read(SpaceType.SHARED).card()).isNull();
     }
 
     @Test
@@ -140,13 +67,5 @@ class SavingsDashboardSourceTest {
 
     private SourceResult read(SpaceType type) {
         return new SavingsDashboardSource(listGoals).read(new DashboardContext(caller, "me@test.com", TODAY, type));
-    }
-
-    /** One contribution carrying the whole amount already saved. */
-    private SavingsGoalDetail goal(String name, String target, String contributed, LocalDate targetDate) {
-        UUID goalId = UUID.randomUUID();
-        return new SavingsGoalDetail(
-            new SavingsGoal(goalId, spaceId, name, new BigDecimal(target), targetDate, "#44618a", "🎯"),
-            List.of(new SavingsContribution(UUID.randomUUID(), goalId, caller.userId(), new BigDecimal(contributed), TODAY)));
     }
 }
