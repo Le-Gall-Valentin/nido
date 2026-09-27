@@ -10,6 +10,7 @@ import { useSpaceMembers } from '@/entities/space'
 import { dashboardApi, DashboardApiProvider, useDashboard, type IDashboardApi } from '@/entities/dashboard'
 import { FinanceApiProvider, financeApi as defaultFinanceApi, type IFinanceApi } from '@/entities/finance'
 import { KitchenApiProvider, kitchenApi as defaultKitchenApi, type IKitchenApi } from '@/entities/kitchen'
+import { SettleDebtDialog } from '@/features/settle-debt'
 import { TaskFormPanel } from '@/widgets/task-management'
 import { DashboardActionsProvider, type DashboardActions, type PendingSettlement } from '../model/dashboardActions'
 import { useRefreshDashboardAfterWrites } from '../model/useRefreshDashboardAfterWrites'
@@ -18,7 +19,6 @@ import { formatClock } from '../lib/dates'
 import { DashboardSkeleton } from './DashboardSkeleton'
 import { DashboardHero } from './DashboardHero'
 import { DashboardBoard } from './DashboardBoard'
-import { SettleDebtFlow } from './SettleDebtFlow'
 
 interface DashboardPageProps {
   api?: IDashboardApi
@@ -116,7 +116,11 @@ function DashboardPageContent() {
         )}
         <DashboardBoard dashboard={dashboard} now={now} />
       </PageFrame>
-      {settling && <SettleDebtFlow debt={settling} onClose={() => setSettling(null)} />}
+      {settling && user && (
+        <SettleDebtDialog spaceId={spaceId} spaceTimezone={zone} memberLabel={memberName}
+          debt={{ fromMemberId: user.id, toMemberId: settling.toMemberId, amount: settling.amount }}
+          onClose={() => setSettling(null)} />
+      )}
       {addingTask && (
         <TaskFormPanel spaceId={spaceId} task={null} members={members ?? []} isPersonal={dashboard.spaceType === 'PERSONAL'}
           onClose={() => setAddingTask(false)} />

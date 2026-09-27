@@ -1,2 +1,2 @@
 import './locales'
-export { SettleDebtModal } from './ui/SettleDebtModal'
+export { SettleDebtDialog, type DebtToSettle } from './ui/SettleDebtDialog'
