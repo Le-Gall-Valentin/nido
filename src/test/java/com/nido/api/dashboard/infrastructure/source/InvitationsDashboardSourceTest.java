@@ -26,19 +26,16 @@ class InvitationsDashboardSourceTest {
     private final ListMyInvitationsUseCase listMine = mock(ListMyInvitationsUseCase.class);
 
     @Test
-    void everyPendingInvitationBecomesAnItemSoonestExpiryFirst() {
-        ReceivedInvitationView later = view("Coloc Lyon", "camille", Instant.parse("2026-10-05T09:00:00Z"));
-        ReceivedInvitationView sooner = view("Club de lecture", "paul", Instant.parse("2026-09-28T09:00:00Z"));
-        when(listMine.listMine("alice@test.com")).thenReturn(List.of(later, sooner));
+    void anInvitationSentToTheCallersAddressBecomesAnItem() {
+        // The order is PendingInvitations' (see PendingInvitationsTest); this is the translation.
+        ReceivedInvitationView invitation = view("Club de lecture", "paul", Instant.parse("2026-09-28T09:00:00Z"));
+        when(listMine.listMine("alice@test.com")).thenReturn(List.of(invitation));
 
         SourceResult result = read("alice@test.com");
 
         assertThat(result.card()).isNull();
-        assertThat(result.attention()).containsExactly(
-            new AttentionItem.Invitation(sooner.invitationId(), "Club de lecture", "🏠", "#c17a5c",
-                SpaceRole.MEMBER, "paul", Instant.parse("2026-09-28T09:00:00Z")),
-            new AttentionItem.Invitation(later.invitationId(), "Coloc Lyon", "🏠", "#c17a5c",
-                SpaceRole.MEMBER, "camille", Instant.parse("2026-10-05T09:00:00Z")));
+        assertThat(result.attention()).containsExactly(new AttentionItem.Invitation(invitation.invitationId(),
+            "Club de lecture", "🏠", "#c17a5c", SpaceRole.MEMBER, "paul", Instant.parse("2026-09-28T09:00:00Z")));
     }
 
     @Test
@@ -49,13 +46,6 @@ class InvitationsDashboardSourceTest {
         assertThat(read("alice@test.com").attention())
             .extracting(item -> ((AttentionItem.Invitation) item).invitedByUsername())
             .containsOnlyNulls();
-    }
-
-    @Test
-    void noInvitationNoItem() {
-        when(listMine.listMine("alice@test.com")).thenReturn(List.of());
-
-        assertThat(read("alice@test.com").attention()).isEmpty();
     }
 
     @Test

@@ -3,18 +3,19 @@ package com.nido.api.dashboard.infrastructure.source;
 import com.nido.api.dashboard.domain.model.AttentionItem;
 import com.nido.api.dashboard.domain.model.CardKind;
 import com.nido.api.dashboard.domain.model.DashboardContext;
+import com.nido.api.dashboard.domain.model.PendingInvitations;
 import com.nido.api.dashboard.domain.model.SourceResult;
 import com.nido.api.dashboard.domain.port.out.DashboardSource;
 import com.nido.api.space.application.port.in.ListMyInvitationsUseCase;
 import com.nido.api.space.domain.model.ReceivedInvitationView;
 import org.springframework.stereotype.Component;
 
-import java.util.Comparator;
 import java.util.List;
 
 /**
- * The invitations waiting for the caller. They belong to the account, not to the space being read,
- * which is why they are found by the caller's e-mail — the address invitations are sent to.
+ * Reads the invitations waiting for the caller and lets {@link PendingInvitations} order them. They belong
+ * to the account, not to the space being read, which is why they are found by the caller's e-mail — the
+ * address invitations are sent to.
  */
 @Component
 public class InvitationsDashboardSource implements DashboardSource {
@@ -32,11 +33,14 @@ public class InvitationsDashboardSource implements DashboardSource {
 
     @Override
     public SourceResult read(DashboardContext context) {
-        List<AttentionItem> invitations = listMine.listMine(context.callerEmail()).stream()
-            .sorted(Comparator.comparing(ReceivedInvitationView::expiresAt))
-            .<AttentionItem>map(view -> new AttentionItem.Invitation(view.invitationId(), view.spaceName(),
-                view.spaceGlyph(), view.spaceAccent(), view.role(), view.invitedByUsername(), view.expiresAt()))
+        List<AttentionItem.Invitation> invitations = listMine.listMine(context.callerEmail()).stream()
+            .map(InvitationsDashboardSource::toItem)
             .toList();
-        return SourceResult.attentionOnly(invitations);
+        return PendingInvitations.of(invitations);
+    }
+
+    private static AttentionItem.Invitation toItem(ReceivedInvitationView view) {
+        return new AttentionItem.Invitation(view.invitationId(), view.spaceName(), view.spaceGlyph(), view.spaceAccent(),
+            view.role(), view.invitedByUsername(), view.expiresAt());
     }
 }
