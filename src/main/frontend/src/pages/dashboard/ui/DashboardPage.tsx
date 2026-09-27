@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import i18next from 'i18next'
 import { Alert } from '@/shared/ui'
+import { resolveLocale } from '@/shared/lib'
 import { useAuth } from '@/features/auth'
 import { useSpaceTimezone } from '@/features/space-switcher'
 import { useSpaceMembers } from '@/entities/space'
@@ -12,6 +14,7 @@ import { TaskFormPanel } from '@/widgets/task-management'
 import { DashboardActionsProvider, type DashboardActions, type PendingSettlement } from '../model/dashboardActions'
 import { useRefreshDashboardAfterWrites } from '../model/useRefreshDashboardAfterWrites'
 import { useNow } from '../lib/useNow'
+import { formatClock } from '../lib/dates'
 import { DashboardSkeleton } from './DashboardSkeleton'
 import { DashboardHero } from './DashboardHero'
 import { DashboardBoard } from './DashboardBoard'
@@ -48,8 +51,9 @@ function DashboardPageContent() {
   const { spaceId = '' } = useParams<{ spaceId: string }>()
   const user = useAuth((s) => s.user)
   const { data: members, isPending: membersPending } = useSpaceMembers(spaceId)
-  const { data: dashboard, isPending, refetch } = useDashboard(spaceId)
-  const now = useNow(useSpaceTimezone(spaceId))
+  const { data: dashboard, isPending, refetch, isRefetchError, dataUpdatedAt } = useDashboard(spaceId)
+  const zone = useSpaceTimezone(spaceId)
+  const now = useNow(zone)
   useRefreshDashboardAfterWrites(spaceId)
 
   const [settling, setSettling] = useState<PendingSettlement | null>(null)
@@ -93,6 +97,18 @@ function DashboardPageContent() {
       <PageFrame>
         <DashboardHero date={dashboard.date} attentionCount={dashboard.attention.length} complete={dashboard.complete} username={user?.username ?? ''}
           onAddTask={() => setAddingTask(true)} />
+        {isRefetchError && (
+          // A refresh that fails keeps the last day on screen: say how old it is, rather than let it
+          // pass for now — "rien d'urgent" from hours ago is not a promise about now.
+          <Alert variant="warning" className="mb-4">
+            <span>
+              {t('error.stale', { time: formatClock(dataUpdatedAt, resolveLocale(i18next.language), zone) })}{' '}
+              <button type="button" onClick={() => void refetch()} className="font-semibold underline underline-offset-2">
+                {t('error.retry')}
+              </button>
+            </span>
+          </Alert>
+        )}
         {actionFailed && (
           <Alert variant="error" className="mb-4" onDismiss={() => setActionFailed(false)} dismissLabel={t('error.dismiss')}>
             {t('error.action_failed')}

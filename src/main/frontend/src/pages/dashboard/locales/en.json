@@ -6,6 +6,7 @@
     "load_failed": "The dashboard could not be loaded.",
     "retry": "Try again",
     "action_failed": "That did not go through. Try again.",
+    "stale": "Showing the data from {{time}}: the update failed.",
     "dismiss": "Close"
   },
   "hero": {

@@ -6,6 +6,7 @@
     "load_failed": "Impossible de charger le tableau de bord.",
     "retry": "Réessayer",
     "action_failed": "L'action n'a pas abouti. Réessayez.",
+    "stale": "Données de {{time}} : la mise à jour a échoué.",
     "dismiss": "Fermer"
   },
   "hero": {

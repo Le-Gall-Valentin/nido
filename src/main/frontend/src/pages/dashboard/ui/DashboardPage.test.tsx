@@ -163,6 +163,22 @@ describe('DashboardPage', () => {
     expect(screen.getByRole('checkbox', { name: 'tasks.mark_done:{"title":"Changer le filtre"}' }).getAttribute('aria-disabled')).toBe('true')
   })
 
+  it('says the day on screen is stale when refreshing it fails, and retries on demand', async () => {
+    const { api } = renderPage()
+    const box = await screen.findByRole('checkbox', { name: 'tasks.mark_done:{"title":"Sortir les poubelles"}' })
+    vi.mocked(api.getDashboard).mockRejectedValueOnce(new Error('down'))
+
+    // A write that succeeds refreshes the page; that refresh is the one that fails.
+    fireEvent.click(box)
+
+    expect(await screen.findByText(/^error\.stale:/)).toBeDefined()
+    expect(screen.getByRole('checkbox', { name: 'tasks.mark_done:{"title":"Sortir les poubelles"}' })).toBeDefined()
+
+    fireEvent.click(screen.getByRole('button', { name: 'error.retry' }))
+
+    await waitFor(() => expect(screen.queryByText(/^error\.stale:/)).toBeNull())
+  })
+
   it('forgets a failed action when switching to another space', async () => {
     const { api, tasksApi } = renderPage()
     vi.mocked(tasksApi.changeTaskStatus).mockRejectedValueOnce(new Error('down'))

@@ -51,6 +51,12 @@ export function addDaysIso(iso: string, days: number): string {
   return date.toISOString().slice(0, 10)
 }
 
+/** "14:32" — an instant on the space's clock (the viewer's own when `zone` is omitted). */
+export function formatClock(epochMs: number, locale: string, zone?: string): string {
+  return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: zone })
+    .format(new Date(epochMs))
+}
+
 /** The calendar sends `HH:mm` or `HH:mm:ss`; the dashboard shows `HH:mm`. */
 export function shortTime(time: string): string {
   return time.slice(0, 5)
