@@ -59,6 +59,13 @@ function setup(api: IShoppingApi = fakeApi(), onClose = vi.fn(), onImported = vi
 // instead, in the same order as LINES (Poulet = index 0, Riz = index 1).
 
 describe('ExportToShoppingListModal', () => {
+  it('shows its title on screen, not only to assistive technology', async () => {
+    // Dialog keeps its own heading for screen readers; a window names itself on screen, as the others do.
+    setup()
+    const titles = await screen.findAllByText('title')
+    expect(titles.some((el) => !el.classList.contains('sr-only'))).toBe(true)
+  })
+
   it('lists every suggested ingredient, checked by default, with its quantity and unit prefilled', async () => {
     setup()
 

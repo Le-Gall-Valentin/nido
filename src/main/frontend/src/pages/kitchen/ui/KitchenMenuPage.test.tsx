@@ -126,7 +126,7 @@ describe('KitchenMenuPage', () => {
     await screen.findByText('Pâtes')
 
     fireEvent.click(screen.getByText('menu.export_to_shopping_list'))
-    expect(await screen.findByText('title')).toBeDefined() // ExportToShoppingListModal's own (mocked) i18n
+    expect(await screen.findByRole('heading', { level: 3, name: 'title' })).toBeDefined() // ExportToShoppingListModal's own (mocked) i18n
 
     fireEvent.click(await screen.findByText('confirm'))
 
