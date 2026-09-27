@@ -41,6 +41,11 @@ describe('dashboardApi', () => {
     await expect(dashboardApi.getDashboard('space-1')).rejects.toBeInstanceOf(ServerError)
   })
 
+  it('translates a request that got no answer at all — what axios throws offline — into NetworkError', async () => {
+    vi.mocked(client.get).mockRejectedValueOnce(new AxiosError('Network Error', AxiosError.ERR_NETWORK))
+    await expect(dashboardApi.getDashboard('space-1')).rejects.toBeInstanceOf(NetworkError)
+  })
+
   it('translates a missing response into NetworkError', async () => {
     vi.mocked(client.get).mockRejectedValueOnce(new Error('offline'))
     await expect(dashboardApi.getDashboard('space-1')).rejects.toBeInstanceOf(NetworkError)
