@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { AvatarStack } from './AvatarStack'
-import { renderWithActions } from './cardTestHarness'
+import { renderWithActions } from '../test/renderWithActions'
 
 describe('AvatarStack', () => {
   it('shows three avatars and a "+n" for the rest, naming everyone for assistive tech', () => {

@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { formatAmount } from '@/shared/lib'
 import type { SavingsGoalItem } from '@/entities/dashboard'
 import { SavingsCard } from './SavingsCard'
-import { renderWithActions } from './cardTestHarness'
+import { renderWithActions } from '../test/renderWithActions'
 
 /** Testing Library normalizes the DOM's no-break spaces, not an exact matcher: normalize it the same way. */
 const plain = (text: string) => text.replace(/\s+/g, ' ')

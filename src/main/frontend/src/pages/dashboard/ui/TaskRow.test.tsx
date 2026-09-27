@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import type { TaskItem } from '@/entities/dashboard'
 import { TaskRow } from './TaskRow'
 import { CardList } from './CardRow'
-import { renderWithActions } from './cardTestHarness'
+import { renderWithActions } from '../test/renderWithActions'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),

@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { formatAmount } from '@/shared/lib'
 import type { AttentionItem } from '@/entities/dashboard'
 import { AttentionCard } from './AttentionCard'
-import { renderWithActions } from './cardTestHarness'
+import { renderWithActions } from '../test/renderWithActions'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),

@@ -9,9 +9,12 @@ import { KitchenApiProvider, type IKitchenApi } from '@/entities/kitchen'
 import { DashboardActionsProvider, type DashboardActions } from '../model/dashboardActions'
 
 /**
- * Renders one dashboard block the way the page mounts it — router, query client, the two APIs the
- * blocks write through, and the actions context — for the component tests of this page. Callers pass
+ * Renders one dashboard block the way the page mounts it — router, query client, the APIs the blocks
+ * write through, and the actions context — for the component tests of this page. Callers pass
  * `vi.fn()`s for whatever they assert on; everything else is a harmless no-op.
+ *
+ * Test code only: it lives in this page's `test/` segment, out of `ui/`, and out of the coverage figure
+ * (vitest.config.ts), as the shared harness in `shared/test` does.
  */
 const NAMES: Record<string, string> = { 'u-me': 'valentin', 'u-cam': 'camille', 'u-paul': 'paul', 'u-lea': 'lea' }
 

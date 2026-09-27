@@ -16,7 +16,7 @@ export default mergeConfig(
           'src/**/*.test.{ts,tsx}',
           'src/**/locales/**',       // JSON re-exported through a one-line module
           'src/test-setup.ts',
-          'src/shared/test/**',      // the harness the tests run on
+          'src/**/test/**',          // the harnesses the tests run on: shared/test, and a slice's own test/ segment
           'src/**/*.d.ts',
           /*
            * The composition root, and only it: the files whose entire content is wiring — building

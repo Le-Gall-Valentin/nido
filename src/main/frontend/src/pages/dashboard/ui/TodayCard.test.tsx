@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import type { AgendaCard, AgendaEvent } from '@/entities/dashboard'
 import { TodayCard } from './TodayCard'
-import { renderWithActions } from './cardTestHarness'
+import { renderWithActions } from '../test/renderWithActions'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),

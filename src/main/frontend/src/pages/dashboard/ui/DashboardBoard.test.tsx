@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import type { Dashboard, DashboardCards } from '@/entities/dashboard'
 import { DashboardBoard } from './DashboardBoard'
-import { renderWithActions } from './cardTestHarness'
+import { renderWithActions } from '../test/renderWithActions'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),

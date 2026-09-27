@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { DashboardHero } from './DashboardHero'
-import { renderWithActions } from './cardTestHarness'
+import { renderWithActions } from '../test/renderWithActions'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),

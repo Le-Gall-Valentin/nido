@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { Wallet } from 'lucide-react'
 import { DashboardCard } from './DashboardCard'
-import { renderWithActions } from './cardTestHarness'
+import { renderWithActions } from '../test/renderWithActions'
 
 describe('DashboardCard', () => {
   it('is a region named by its title, with its "see all" link and its footer', () => {
