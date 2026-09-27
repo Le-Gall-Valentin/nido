@@ -7,7 +7,7 @@ import { useDashboard, dashboardKey } from './useDashboard'
 import type { IDashboardApi } from './IDashboardApi'
 import type { Dashboard } from './types'
 
-const DASHBOARD: Dashboard = { date: '2026-09-26', spaceType: 'SHARED', canWrite: true, attention: [], cards: {} }
+const DASHBOARD: Dashboard = { date: '2026-09-26', spaceType: 'SHARED', canWrite: true, complete: true, attention: [], cards: {} }
 
 /** The app's own defaults (app/App.tsx): data kept fresh for 30 s, no refetch on focus. */
 function appLikeClient() {

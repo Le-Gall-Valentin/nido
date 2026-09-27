@@ -9,12 +9,14 @@ import { AddMenu } from './AddMenu'
 interface DashboardHeroProps {
   date: string
   attentionCount: number
+  /** Whether every source answered; without it, an empty "À traiter" is not a promise that all is clear. */
+  complete: boolean
   username: string
   onAddTask: () => void
 }
 
 /** The day as the page title, one sentence of digest, and "Ajouter" for those who may write. */
-export function DashboardHero({ date, attentionCount, username, onAddTask }: DashboardHeroProps) {
+export function DashboardHero({ date, attentionCount, complete, username, onAddTask }: DashboardHeroProps) {
   const { t } = useTranslation('dashboard')
   const { canWrite } = useDashboardActions()
   return (
@@ -24,7 +26,9 @@ export function DashboardHero({ date, attentionCount, username, onAddTask }: Das
         <p className="mt-1.5 flex items-center gap-1.5 text-sm text-fg-2 md:text-[15px]">
           {attentionCount > 0
             ? t('hero.digest', { count: attentionCount, name: username })
-            : <><CircleCheck className="size-4 shrink-0 text-accent" aria-hidden="true" />{t('hero.all_clear', { name: username })}</>}
+            : complete
+              ? <><CircleCheck className="size-4 shrink-0 text-accent" aria-hidden="true" />{t('hero.all_clear', { name: username })}</>
+              : t('hero.partial', { name: username })}
         </p>
       </div>
       {canWrite && <AddMenu onAddTask={onAddTask} />}

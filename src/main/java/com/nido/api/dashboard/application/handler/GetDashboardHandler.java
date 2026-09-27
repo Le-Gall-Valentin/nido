@@ -84,9 +84,9 @@ public class GetDashboardHandler implements GetDashboardUseCase {
                 result = source.read(context);
             } catch (RuntimeException e) {
                 log.warn("Dashboard source {} failed in space {}", source.kind(), caller.spaceId(), e);
-                if (source.kind().hasCard()) {
-                    cards.put(source.kind(), new CardResult.Unavailable());
-                }
+                // Recorded even for a kind without a card: the response hides it from the cards but
+                // reports the dashboard incomplete (Dashboard#complete).
+                cards.put(source.kind(), new CardResult.Unavailable());
                 continue;
             }
             if (result.card() != null) {

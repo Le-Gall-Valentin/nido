@@ -11,6 +11,7 @@
     "digest_one": "Hello {{name}}, one thing needs your attention.",
     "digest_other": "Hello {{name}}, {{count}} things need your attention.",
     "all_clear": "Hello {{name}}, nothing urgent today.",
+    "partial": "Hello {{name}}, part of the dashboard could not be loaded.",
     "add": "Add"
   },
   "add_menu": {

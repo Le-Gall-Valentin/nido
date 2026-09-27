@@ -7,7 +7,7 @@ import type { Dashboard } from '../model/types'
 
 vi.mock('@/shared/api', () => ({ client: { get: vi.fn() } }))
 
-const DASHBOARD: Dashboard = { date: '2026-09-26', spaceType: 'SHARED', canWrite: true, attention: [], cards: {} }
+const DASHBOARD: Dashboard = { date: '2026-09-26', spaceType: 'SHARED', canWrite: true, complete: true, attention: [], cards: {} }
 
 describe('dashboardApi', () => {
   beforeEach(() => vi.clearAllMocks())

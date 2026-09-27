@@ -138,6 +138,7 @@ class DashboardControllerIT {
             .andExpect(jsonPath("$.date").value(today.toString()))
             .andExpect(jsonPath("$.spaceType").value("SHARED"))
             .andExpect(jsonPath("$.canWrite").value(true))
+            .andExpect(jsonPath("$.complete").value(true))
             .andExpect(jsonPath("$.attention.length()").value(3))
             .andExpect(jsonPath("$.attention[0].kind").value("OVERDUE_TASKS"))
             .andExpect(jsonPath("$.attention[0].severity").value("HIGH"))

@@ -20,7 +20,7 @@ const ALL: DashboardCards = {
 }
 
 function dashboard(cards: DashboardCards, attention: Dashboard['attention'] = []): Dashboard {
-  return { date: '2026-09-26', spaceType: 'SHARED', canWrite: true, attention, cards }
+  return { date: '2026-09-26', spaceType: 'SHARED', canWrite: true, complete: true, attention, cards }
 }
 
 function layouts(container: HTMLElement) {

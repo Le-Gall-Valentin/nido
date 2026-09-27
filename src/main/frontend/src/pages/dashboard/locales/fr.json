@@ -11,6 +11,7 @@
     "digest_one": "Bonjour {{name}}, une chose demande ton attention.",
     "digest_other": "Bonjour {{name}}, {{count}} choses demandent ton attention.",
     "all_clear": "Bonjour {{name}}, rien d'urgent aujourd'hui.",
+    "partial": "Bonjour {{name}}, une partie du tableau de bord n'a pas pu être chargée.",
     "add": "Ajouter"
   },
   "add_menu": {

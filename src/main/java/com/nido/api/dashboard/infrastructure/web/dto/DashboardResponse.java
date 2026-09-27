@@ -13,9 +13,10 @@ import java.util.Map;
 
 /**
  * The dashboard as the client reads it. {@code cards} omits a card with nothing relevant; its keys are
- * the lowercase card kinds, in card order.
+ * the lowercase card kinds, in card order. {@code complete} is false when a source failed — even the
+ * card-less invitations — so the client never reads an empty "À traiter" as "all clear".
  */
-public record DashboardResponse(LocalDate date, SpaceType spaceType, boolean canWrite,
+public record DashboardResponse(LocalDate date, SpaceType spaceType, boolean canWrite, boolean complete,
                                 List<AttentionItemResponse> attention, Map<String, CardResultResponse> cards) {
 
     public static DashboardResponse from(Dashboard dashboard) {
@@ -26,7 +27,7 @@ public record DashboardResponse(LocalDate date, SpaceType spaceType, boolean can
                 cards.put(kind.name().toLowerCase(Locale.ROOT), CardResultResponse.from(result));
             }
         }
-        return new DashboardResponse(dashboard.date(), dashboard.spaceType(), dashboard.canWrite(),
+        return new DashboardResponse(dashboard.date(), dashboard.spaceType(), dashboard.canWrite(), dashboard.complete(),
             dashboard.attention().stream().map(AttentionItemResponse::from).toList(), cards);
     }
 }

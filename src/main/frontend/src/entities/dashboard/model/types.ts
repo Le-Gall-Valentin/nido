@@ -157,6 +157,8 @@ export interface Dashboard {
   date: string
   spaceType: DashboardSpaceType
   canWrite: boolean
+  /** False when a source failed — even the card-less invitations: an empty `attention` then does not mean "all clear". */
+  complete: boolean
   attention: AttentionItem[]
   cards: DashboardCards
 }

@@ -9,20 +9,28 @@ vi.mock('react-i18next', () => ({
 
 describe('DashboardHero', () => {
   it('titles the page with the day and counts what needs attention', () => {
-    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={4} username="valentin" onAddTask={() => {}} />)
+    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={4} complete username="valentin" onAddTask={() => {}} />)
 
     expect(screen.getByRole('heading', { level: 1, name: 'Samedi 26 septembre' })).toBeDefined()
     expect(screen.getByText('hero.digest:{"count":4,"name":"valentin"}')).toBeDefined()
   })
 
+  it('never says all is clear when part of the dashboard could not be read', () => {
+    // A failed source (the invitations have no card to say so) may have kept items out of "À traiter".
+    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} complete={false} username="valentin" onAddTask={() => {}} />)
+
+    expect(screen.getByText('hero.partial:{"name":"valentin"}')).toBeDefined()
+    expect(screen.queryByText('hero.all_clear:{"name":"valentin"}')).toBeNull()
+  })
+
   it('says all is clear when nothing needs attention', () => {
-    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} username="valentin" onAddTask={() => {}} />)
+    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} complete username="valentin" onAddTask={() => {}} />)
     expect(screen.getByText('hero.all_clear:{"name":"valentin"}')).toBeDefined()
   })
 
   it('adds a task here and sends the other creations to the page that owns them', () => {
     const onAddTask = vi.fn()
-    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} username="valentin" onAddTask={onAddTask} />)
+    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} complete username="valentin" onAddTask={onAddTask} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'hero.add' }))
     expect(screen.getByRole('menuitem', { name: 'add_menu.transaction' }).getAttribute('href')).toBe('/s/space-1/finance?create=transaction')
@@ -35,7 +43,7 @@ describe('DashboardHero', () => {
   })
 
   it('closes the menu on Escape', () => {
-    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} username="valentin" onAddTask={() => {}} />)
+    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} complete username="valentin" onAddTask={() => {}} />)
     fireEvent.click(screen.getByRole('button', { name: 'hero.add' }))
 
     fireEvent.keyDown(document, { key: 'Escape' })
@@ -44,7 +52,7 @@ describe('DashboardHero', () => {
   })
 
   it('offers nothing to add to a viewer', () => {
-    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} username="valentin" onAddTask={() => {}} />, { actions: { canWrite: false } })
+    renderWithActions(<DashboardHero date="2026-09-26" attentionCount={0} complete username="valentin" onAddTask={() => {}} />, { actions: { canWrite: false } })
     expect(screen.queryByRole('button', { name: 'hero.add' })).toBeNull()
   })
 })

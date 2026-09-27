@@ -33,7 +33,7 @@ const TODAY_TASK: TaskItem = { id: 't-trash', title: 'Sortir les poubelles', due
 const BLOCKED_TASK: TaskItem = { id: 't-hood', title: 'Changer le filtre', dueDate: '2026-09-22', priority: 'HIGH', status: 'TODO', assigneeIds: [], subtasksDone: 1, subtasksTotal: 3, recurring: false }
 
 const BUSY: Dashboard = {
-  date: '2026-09-26', spaceType: 'SHARED', canWrite: true,
+  date: '2026-09-26', spaceType: 'SHARED', canWrite: true, complete: true,
   attention: [
     { kind: 'OVERDUE_TASKS', severity: 'HIGH', count: 1, titles: ['Changer le filtre'] },
     { kind: 'DEBT', severity: 'MEDIUM', toMemberId: 'u-cam', amount: 42.5 },

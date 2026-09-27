@@ -39,6 +39,8 @@ class DashboardResponseTest {
         assertThat(response.cards().get("finance")).isEqualTo(new CardResultResponse("UNAVAILABLE", null));
         assertThat(response.cards().get("agenda").status()).isEqualTo("OK");
         assertThat(response.cards().get("agenda").data()).isInstanceOf(CardDataResponses.AgendaCardResponse.class);
+        // The failed invitations show no card, but the client must still learn the answer is incomplete.
+        assertThat(response.complete()).isFalse();
     }
 
     @Test
@@ -75,5 +77,6 @@ class DashboardResponseTest {
 
         assertThat(data.month()).isEqualTo("2026-09");
         assertThat(data.balances()).isNull();
+        assertThat(DashboardResponse.from(dashboard).complete()).isTrue();
     }
 }

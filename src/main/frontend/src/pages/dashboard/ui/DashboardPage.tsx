@@ -85,7 +85,7 @@ function DashboardPageContent() {
   return (
     <DashboardActionsProvider value={actions}>
       <PageFrame>
-        <DashboardHero date={dashboard.date} attentionCount={dashboard.attention.length} username={user?.username ?? ''}
+        <DashboardHero date={dashboard.date} attentionCount={dashboard.attention.length} complete={dashboard.complete} username={user?.username ?? ''}
           onAddTask={() => setAddingTask(true)} />
         {actionFailed && (
           <Alert variant="error" className="mb-4" onDismiss={() => setActionFailed(false)} dismissLabel={t('error.dismiss')}>

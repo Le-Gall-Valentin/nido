@@ -77,11 +77,27 @@ class GetDashboardHandlerTest {
     }
 
     @Test
-    void aFailingSourceWithoutACardLeavesNoEntry() {
+    void aFailingSourceWithoutACardStillMarksTheDashboardIncomplete() {
+        // The invitations have no card to say "unavailable": the dashboard itself must know its
+        // "À traiter" list is short of them, or the page would claim all is clear.
         var handler = handler(SpaceType.SHARED, List.of(), List.of(
-            source(CardKind.INVITATIONS, context -> { throw new IllegalStateException("down"); })));
+            source(CardKind.INVITATIONS, context -> { throw new IllegalStateException("down"); }),
+            source(CardKind.AGENDA, context -> SourceResult.of(EMPTY_AGENDA))));
 
-        assertThat(handler.get(member, "a@b.c").cards()).doesNotContainKey(CardKind.INVITATIONS);
+        Dashboard dashboard = handler.get(member, "a@b.c");
+
+        assertThat(dashboard.cards().get(CardKind.INVITATIONS)).isInstanceOf(CardResult.Unavailable.class);
+        assertThat(dashboard.complete()).isFalse();
+    }
+
+    @Test
+    void aDashboardWhoseSourcesAllAnsweredIsComplete() {
+        var handler = handler(SpaceType.SHARED, List.of(caller -> { throw new IllegalStateException("lock timeout"); }), List.of(
+            source(CardKind.INVITATIONS, context -> SourceResult.nothing()),
+            source(CardKind.AGENDA, context -> SourceResult.of(EMPTY_AGENDA))));
+
+        // A failed preparation is not a missing answer: the sources still read what exists.
+        assertThat(handler.get(member, "a@b.c").complete()).isTrue();
     }
 
     @Test
