@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -154,8 +154,9 @@ describe('CalendarPage', () => {
   })
 
   it('moves the now line with the household clock, over midnight onto the next day', async () => {
-    // Only the clock and its minute tick are faked: the queries and the page's waits keep real timeouts.
-    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    // The clock and its timeouts are faked, so time only moves when the test says so — the page's
+    // queries settle within the first second, long before the minute turns.
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] })
     try {
       // 21:59 UTC is 23:59 in Paris in September, on Wednesday the 23rd.
       vi.setSystemTime(new Date('2026-09-23T21:59:00Z'))
@@ -163,11 +164,11 @@ describe('CalendarPage', () => {
       const lineIn = (day: string) =>
         document.querySelector<HTMLElement>(`[data-testid="hour-column"][data-day="${day}"] [data-testid="now-line"]`)
 
-      await waitFor(() => expect(lineIn('2026-09-23')?.style.top).toBe('1439px'))
+      await act(() => vi.advanceTimersByTimeAsync(1_000))
+      expect(lineIn('2026-09-23')?.style.top).toBe('1439px')
 
-      act(() => { vi.advanceTimersByTime(60_000) })
-
-      await waitFor(() => expect(lineIn('2026-09-24')?.style.top).toBe('0px'))
+      await act(() => vi.advanceTimersByTimeAsync(59_000))
+      expect(lineIn('2026-09-24')?.style.top).toBe('0px')
       expect(lineIn('2026-09-23')).toBeNull()
     } finally {
       vi.useRealTimers()

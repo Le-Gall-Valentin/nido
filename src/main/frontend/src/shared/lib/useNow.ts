@@ -16,15 +16,26 @@ export function nowInZone(now: Date, zone?: string): ZonedNow {
   return { date: `${part('year')}-${part('month')}-${part('day')}`, time: `${part('hour')}:${part('minute')}` }
 }
 
-/** The space's current date and minute, ticking every minute — what moves the now line. */
-export function useNow(zone?: string, intervalMs = 60_000): ZonedNow {
+const MINUTE_MS = 60_000
+
+/**
+ * The space's current date and minute — what moves the now line. It turns when the clock turns:
+ * each wait runs to the next whole minute, measured afresh every time, so a page opened at 10:15:40
+ * reads 10:16 at 10:16:00, not at 10:16:40, and a timer that fires late never carries its delay over.
+ * Whole minutes are the same instants in every zone, whose offsets are whole minutes too.
+ */
+export function useNow(zone?: string): ZonedNow {
   const [now, setNow] = useState(() => nowInZone(new Date(), zone))
 
   useEffect(() => {
-    setNow(nowInZone(new Date(), zone))
-    const id = window.setInterval(() => setNow(nowInZone(new Date(), zone)), intervalMs)
-    return () => window.clearInterval(id)
-  }, [zone, intervalMs])
+    let id: number
+    const tick = () => {
+      setNow(nowInZone(new Date(), zone))
+      id = window.setTimeout(tick, MINUTE_MS - (Date.now() % MINUTE_MS))
+    }
+    tick()
+    return () => window.clearTimeout(id)
+  }, [zone])
 
   return now
 }
