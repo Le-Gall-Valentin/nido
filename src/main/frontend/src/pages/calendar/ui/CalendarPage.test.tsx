@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -141,6 +141,38 @@ describe('CalendarPage', () => {
     renderPage([occurrence({ title: 'Concert' })], { role: 'VIEWER' })
     const chip = (await screen.findByText('Concert')).closest('button')
     expect(chip?.getAttribute('data-draggable')).toBeNull()
+  })
+
+  it('turns to the month of a day outside the one shown, instead of opening that day', async () => {
+    // September 2026's grid runs from Monday Aug 31 to Sunday Oct 4; October's from Sep 28 to Nov 1.
+    const { calendar } = renderPage([])
+    fireEvent.click(await screen.findByRole('button', { name: /show_month:.*3 octobre 2026/ }))
+
+    expect(await screen.findByRole('heading', { name: 'Octobre 2026' })).toBeTruthy()
+    await vi.waitFor(() => expect(calendar.listOccurrences).toHaveBeenCalledWith('space-1', '2026-09-28', '2026-11-01'))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('moves the now line with the household clock, over midnight onto the next day', async () => {
+    // The clock and its timeouts are faked, so time only moves when the test says so — the page's
+    // queries settle within the first second, long before the minute turns.
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] })
+    try {
+      // 21:59 UTC is 23:59 in Paris in September, on Wednesday the 23rd.
+      vi.setSystemTime(new Date('2026-09-23T21:59:00Z'))
+      renderPage([], { view: 'week' })
+      const lineIn = (day: string) =>
+        document.querySelector<HTMLElement>(`[data-testid="hour-column"][data-day="${day}"] [data-testid="now-line"]`)
+
+      await act(() => vi.advanceTimersByTimeAsync(1_000))
+      expect(lineIn('2026-09-23')?.style.top).toBe('1439px')
+
+      await act(() => vi.advanceTimersByTimeAsync(59_000))
+      expect(lineIn('2026-09-24')?.style.top).toBe('0px')
+      expect(lineIn('2026-09-23')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('opens the new-event form on the time picked out in the week grid', async () => {

@@ -10,6 +10,7 @@
   "all_day_band": "Sur la journée",
   "all_day_short": "Journée",
   "open_day": "Ouvrir le {{date}}",
+  "show_month": "Afficher le mois du {{date}}",
   "view": {
     "month": "Mois",
     "week": "Semaine",

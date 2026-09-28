@@ -2,7 +2,9 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import type { CalendarOccurrence, ScheduleChange } from '@/entities/calendar'
+import type { ZonedNow } from '@/shared/lib'
 import { groupByDay, weekDates } from '../lib/calendarWindow'
+import { timeToMinutes } from '../lib/timeMath'
 import type { DragData, DropData } from '../lib/dragTypes'
 import { canReschedule } from '@/features/reschedule-occurrence'
 import { covers, isBandOccurrence, segmentFor } from '../lib/segments'
@@ -23,6 +25,8 @@ interface WeekGridProps {
   canWrite?: boolean
   /** A time picked out in the grid, to add an event over it. Left out for a viewer. */
   onCreateRange?: (range: ScheduleChange) => void
+  /** The household's date and minute: the now line is drawn on today's column, if the week holds it. */
+  now?: ZonedNow
 }
 
 function dayLabel(day: string): string {
@@ -39,7 +43,7 @@ function dayLabel(day: string): string {
  * forty-pixel column.
  */
 export function WeekGrid({
-  date, occurrences, today, onSelectDay, onSelectOccurrence, canWrite = false, onCreateRange,
+  date, occurrences, today, onSelectDay, onSelectOccurrence, canWrite = false, onCreateRange, now,
 }: WeekGridProps) {
   const { t } = useTranslation('calendar')
   const days = weekDates(date)
@@ -55,6 +59,7 @@ export function WeekGrid({
   const pickedDays = picking.shown?.kind === 'band' ? picking.shown.range : null
   const labelFor = (occurrence: CalendarOccurrence) =>
     occurrence.allDay ? t('all_day_short') : occurrence.startTime?.slice(0, 5) ?? ''
+  const showsNow = now !== undefined && days.includes(now.date)
 
   return (
     <>
@@ -138,7 +143,7 @@ export function WeekGrid({
         </div>
 
         <div ref={gridScroller} className="flex items-start max-h-[60vh] overflow-y-auto">
-          <HourGutter />
+          <HourGutter nowTime={showsNow ? now.time : null} />
           {days.map((day) => (
             <div key={day} className="flex-1 border-l border-border">
               <HourColumn
@@ -148,6 +153,7 @@ export function WeekGrid({
                 onPickStart={picking.startHours}
                 occurrences={(byDay.get(day) ?? []).filter((o) => !isBandOccurrence(o))}
                 onSelectOccurrence={onSelectOccurrence}
+                nowMinutes={showsNow && now.date === day ? timeToMinutes(now.time) : null}
               />
             </div>
           ))}

@@ -580,3 +580,52 @@ describe('DayAgenda', () => {
     expect(screen.getByRole('button', { name: /Vacances/ })).toBeTruthy()
   })
 })
+
+describe('the time now', () => {
+  // The week of Monday January 5 to Sunday January 11, 2026, shown from Thursday the 8th.
+  function renderWeekAt(now: { date: string; time: string }) {
+    return render(
+      <DndContext>
+        <WeekGrid date="2026-01-08" occurrences={[]} today={now.date} now={now} canWrite
+          onSelectDay={vi.fn()} onSelectOccurrence={vi.fn()} />
+      </DndContext>)
+  }
+
+  it('draws the now line on today\'s column only, at the minute', () => {
+    // 14:37 is 877 minutes past midnight, and an hour is 60px tall.
+    const { container } = renderWeekAt({ date: '2026-01-07', time: '14:37' })
+    const lines = columnsOf(container).map((column) => column.querySelector<HTMLElement>('[data-testid="now-line"]'))
+    expect(lines.map((line) => line !== null)).toEqual([false, false, true, false, false, false, false])
+    expect(lines[2]?.style.top).toBe('877px')
+  })
+
+  it('writes the time now in the hour gutter, level with the line', () => {
+    renderWeekAt({ date: '2026-01-07', time: '14:37' })
+    const label = screen.getByTestId('now-time')
+    expect(label.textContent).toBe('14:37')
+    expect(label.style.top).toBe('877px')
+  })
+
+  it('draws nothing of the clock on a week that does not hold today', () => {
+    const { container } = renderWeekAt({ date: '2026-01-14', time: '14:37' })
+    expect(container.querySelector('[data-testid="now-line"]')).toBeNull()
+    expect(screen.queryByTestId('now-time')).toBeNull()
+  })
+
+  it('leaves the clicks, the drags and the picking to the grid under the line', () => {
+    const { container } = renderWeekAt({ date: '2026-01-07', time: '14:37' })
+    expect(container.querySelector<HTMLElement>('[data-testid="now-line"]')?.className).toContain('pointer-events-none')
+  })
+
+  it('draws the now line on today in the day view, and nothing on another day', () => {
+    const { container, rerender } = render(
+      <DayAgenda date="2026-01-06" occurrences={[]} now={{ date: '2026-01-06', time: '09:05' }} onSelectOccurrence={vi.fn()} />)
+    expect(container.querySelector<HTMLElement>('[data-testid="now-line"]')?.style.top).toBe('545px')
+    expect(screen.getByTestId('now-time').textContent).toBe('09:05')
+
+    rerender(
+      <DayAgenda date="2026-01-07" occurrences={[]} now={{ date: '2026-01-06', time: '09:05' }} onSelectOccurrence={vi.fn()} />)
+    expect(container.querySelector('[data-testid="now-line"]')).toBeNull()
+    expect(screen.queryByTestId('now-time')).toBeNull()
+  })
+})

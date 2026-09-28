@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
 import { Calendar, Plus } from 'lucide-react'
 import { Alert, Spinner } from '@/shared/ui'
-import { todayIso, usePaletteItems, resolveLocale, useCreateIntent, useInvalidateOnAnyWrite } from '@/shared/lib'
+import { useNow, usePaletteItems, resolveLocale, useCreateIntent, useInvalidateOnAnyWrite } from '@/shared/lib'
 import { canWrite, isPersonal } from '@/entities/space'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
 import { useRescheduleOccurrence } from '@/features/reschedule-occurrence'
@@ -55,11 +55,13 @@ function CalendarPageContent() {
   const { t } = useTranslation('calendar')
   const { spaceId = '' } = useParams<{ spaceId: string }>()
 
-  // The household's date, not the browser's: a calendar anchored on the reader's timezone would
-  // highlight the wrong "today" for anyone travelling.
-  const today = todayIso(new Date(), useSpaceTimezone(spaceId))
+  // The household's date and minute, not the browser's: a calendar anchored on the reader's timezone
+  // would highlight the wrong "today" for anyone travelling. It ticks every minute, which moves the now
+  // line — and carries a page left open past midnight on to the next day.
+  const now = useNow(useSpaceTimezone(spaceId))
+  const today = now.date
 
-  const { view, date, setView, goToToday, shiftPeriod } = useCalendarUrlState(today)
+  const { view, date, setView, setDate, goToToday, shiftPeriod } = useCalendarUrlState(today)
   const { isEnabled, toggle, filter } = useCalendarFilters(spaceId)
 
   const { data: mySpaces } = useMySpaces()
@@ -120,15 +122,15 @@ function CalendarPageContent() {
             onDragStart={swipe.cancel} onApply={(o, change) => { void reschedule(o, change) }}>
             {view === 'month' && (
               <MonthGrid date={date} occurrences={occurrences} today={today} canWrite={canWriteHere}
-                onSelectDay={showDay} onSelectOccurrence={showOccurrence} />
+                onSelectDay={showDay} onSelectMonth={setDate} onSelectOccurrence={showOccurrence} />
             )}
             {view === 'week' && (
-              <WeekGrid date={date} occurrences={occurrences} today={today} canWrite={canWriteHere}
+              <WeekGrid date={date} occurrences={occurrences} today={today} now={now} canWrite={canWriteHere}
                 onSelectDay={showDay} onSelectOccurrence={showOccurrence}
                 onCreateRange={canWriteHere ? createOver : undefined} />
             )}
             {view === 'day' && (
-              <DayAgenda date={date} occurrences={occurrences} canWrite={canWriteHere}
+              <DayAgenda date={date} occurrences={occurrences} now={now} canWrite={canWriteHere}
                 onSelectOccurrence={showOccurrence} onCreateRange={canWriteHere ? createOver : undefined} />
             )}
           </CalendarDragLayer>

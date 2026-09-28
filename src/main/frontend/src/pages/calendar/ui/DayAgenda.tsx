@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import type { CalendarOccurrence, ScheduleChange } from '@/entities/calendar'
+import type { ZonedNow } from '@/shared/lib'
 import { groupByDay } from '../lib/calendarWindow'
+import { timeToMinutes } from '../lib/timeMath'
 import { covers, isBandOccurrence, segmentFor } from '../lib/segments'
 import { useDragPreview } from '../model/dragPreview'
 import { useOpeningScroll } from '../model/useOpeningScroll'
@@ -16,13 +18,15 @@ interface DayAgendaProps {
   canWrite?: boolean
   /** A time picked out in the grid, to add an event over it. Left out for a viewer. */
   onCreateRange?: (range: ScheduleChange) => void
+  /** The household's date and minute: the now line is drawn when the day shown is today. */
+  now?: ZonedNow
 }
 
 /**
  * One day, one column — the same at every width. A single hour column is already the shape a
  * phone wants, so this is the one view that needs no responsive branch.
  */
-export function DayAgenda({ date, occurrences, onSelectOccurrence, canWrite = false, onCreateRange }: DayAgendaProps) {
+export function DayAgenda({ date, occurrences, onSelectOccurrence, canWrite = false, onCreateRange, now }: DayAgendaProps) {
   const { t } = useTranslation('calendar')
   const dayOccurrences = groupByDay(occurrences, [date]).get(date) ?? []
   const timed = dayOccurrences.filter((o) => !isBandOccurrence(o))
@@ -30,6 +34,7 @@ export function DayAgenda({ date, occurrences, onSelectOccurrence, canWrite = fa
   const starts = timed.flatMap((o) => { const segment = segmentFor(o, date); return segment?.isStart ? [segment.startMinutes] : [] })
   const gridScroller = useOpeningScroll(date, starts, useDragPreview() !== null)
   const pickedDays = picking.shown?.kind === 'band' ? picking.shown.range : null
+  const nowTime = now?.date === date ? now.time : null
 
   return (
     <div className="rounded-2xl border border-border bg-bg-1">
@@ -50,10 +55,11 @@ export function DayAgenda({ date, occurrences, onSelectOccurrence, canWrite = fa
           <p className="pointer-events-none absolute inset-x-0 top-4 z-10 text-center text-sm text-fg-3">{t('empty_day')}</p>
         )}
         <div ref={gridScroller} className="flex items-start max-h-[65vh] overflow-y-auto">
-          <HourGutter />
+          <HourGutter nowTime={nowTime} />
           <div className="flex-1 border-l border-border">
             <HourColumn day={date} occurrences={timed} canWrite={canWrite} onSelectOccurrence={onSelectOccurrence}
-            picked={picking.shown?.kind === 'hours' ? picking.shown.range : null} onPickStart={picking.startHours} />
+            picked={picking.shown?.kind === 'hours' ? picking.shown.range : null} onPickStart={picking.startHours}
+            nowMinutes={nowTime === null ? null : timeToMinutes(nowTime)} />
           </div>
         </div>
       </div>
