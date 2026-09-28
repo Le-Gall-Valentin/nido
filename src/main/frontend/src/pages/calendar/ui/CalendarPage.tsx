@@ -59,7 +59,7 @@ function CalendarPageContent() {
   // highlight the wrong "today" for anyone travelling.
   const today = todayIso(new Date(), useSpaceTimezone(spaceId))
 
-  const { view, date, setView, goToToday, shiftPeriod } = useCalendarUrlState(today)
+  const { view, date, setView, setDate, goToToday, shiftPeriod } = useCalendarUrlState(today)
   const { isEnabled, toggle, filter } = useCalendarFilters(spaceId)
 
   const { data: mySpaces } = useMySpaces()
@@ -120,7 +120,7 @@ function CalendarPageContent() {
             onDragStart={swipe.cancel} onApply={(o, change) => { void reschedule(o, change) }}>
             {view === 'month' && (
               <MonthGrid date={date} occurrences={occurrences} today={today} canWrite={canWriteHere}
-                onSelectDay={showDay} onSelectOccurrence={showOccurrence} />
+                onSelectDay={showDay} onSelectMonth={setDate} onSelectOccurrence={showOccurrence} />
             )}
             {view === 'week' && (
               <WeekGrid date={date} occurrences={occurrences} today={today} canWrite={canWriteHere}

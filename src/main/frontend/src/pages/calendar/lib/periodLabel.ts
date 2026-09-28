@@ -49,6 +49,11 @@ export function formatDay(iso: string, locale: string): string {
   return format(iso, locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+/** "1 oct." — a day and its month, short enough to fit where a day number sits. */
+export function formatDayAndMonth(iso: string, locale: string): string {
+  return format(iso, locale, { day: 'numeric', month: 'short' })
+}
+
 /**
  * A span of days, spelled out only as far as it has to be — shared by the week heading and by any
  * occurrence that runs over several days, so both read the same way.

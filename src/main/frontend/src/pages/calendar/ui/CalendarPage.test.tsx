@@ -143,6 +143,16 @@ describe('CalendarPage', () => {
     expect(chip?.getAttribute('data-draggable')).toBeNull()
   })
 
+  it('turns to the month of a day outside the one shown, instead of opening that day', async () => {
+    // September 2026's grid runs from Monday Aug 31 to Sunday Oct 11; October's from Sep 28 to Nov 8.
+    const { calendar } = renderPage([])
+    fireEvent.click(await screen.findByRole('button', { name: /show_month:.*3 octobre 2026/ }))
+
+    expect(await screen.findByRole('heading', { name: 'Octobre 2026' })).toBeTruthy()
+    await vi.waitFor(() => expect(calendar.listOccurrences).toHaveBeenCalledWith('space-1', '2026-09-28', '2026-11-08'))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('opens the new-event form on the time picked out in the week grid', async () => {
     renderPage([], { view: 'week' })
     // The role resolves asynchronously: the grid only picks once the member is known to write.
