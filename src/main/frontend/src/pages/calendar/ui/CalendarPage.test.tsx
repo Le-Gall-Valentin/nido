@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -151,6 +151,27 @@ describe('CalendarPage', () => {
     expect(await screen.findByRole('heading', { name: 'Octobre 2026' })).toBeTruthy()
     await vi.waitFor(() => expect(calendar.listOccurrences).toHaveBeenCalledWith('space-1', '2026-09-28', '2026-11-01'))
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('moves the now line with the household clock, over midnight onto the next day', async () => {
+    // Only the clock and its minute tick are faked: the queries and the page's waits keep real timeouts.
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    try {
+      // 21:59 UTC is 23:59 in Paris in September, on Wednesday the 23rd.
+      vi.setSystemTime(new Date('2026-09-23T21:59:00Z'))
+      renderPage([], { view: 'week' })
+      const lineIn = (day: string) =>
+        document.querySelector<HTMLElement>(`[data-testid="hour-column"][data-day="${day}"] [data-testid="now-line"]`)
+
+      await waitFor(() => expect(lineIn('2026-09-23')?.style.top).toBe('1439px'))
+
+      act(() => { vi.advanceTimersByTime(60_000) })
+
+      await waitFor(() => expect(lineIn('2026-09-24')?.style.top).toBe('0px'))
+      expect(lineIn('2026-09-23')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('opens the new-event form on the time picked out in the week grid', async () => {

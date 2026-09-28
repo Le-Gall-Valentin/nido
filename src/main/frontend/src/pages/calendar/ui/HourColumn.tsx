@@ -11,7 +11,7 @@ import { layoutOverlaps, type Placed } from '../lib/overlapLayout'
 import { formatTimeRange } from '../lib/periodLabel'
 import { isBandOccurrence, segmentFor, type Segment } from '../lib/segments'
 import { fadeClassFor, useDragPreview } from '../model/dragPreview'
-import { HOUR_HEIGHT } from '../lib/timeMath'
+import { HOUR_HEIGHT, timeToMinutes } from '../lib/timeMath'
 
 export { HOUR_HEIGHT } from '../lib/timeMath'
 
@@ -37,6 +37,8 @@ interface HourColumnProps {
   picked?: ScheduleChange | null
   /** A press on empty grid here, which may start picking out a time. */
   onPickStart?: (event: React.PointerEvent<HTMLElement>, day: string) => void
+  /** Minutes past midnight on the household's clock, when this column is today. */
+  nowMinutes?: number | null
 }
 
 /**
@@ -44,7 +46,9 @@ interface HourColumnProps {
  * height into a time. The layer reads the column's live top through `column`, which already moves
  * with the scroller, so a scrolled grid needs no correction.
  */
-export function HourColumn({ day, occurrences, canWrite, onSelectOccurrence, picked, onPickStart }: HourColumnProps) {
+export function HourColumn({
+  day, occurrences, canWrite, onSelectOccurrence, picked, onPickStart, nowMinutes = null,
+}: HourColumnProps) {
   const element = useRef<HTMLDivElement | null>(null)
   // While an item is dragged, its landing slot is drawn here, by the same segment rules as a saved
   // block — an overnight landing shows its piece on each day.
@@ -76,9 +80,22 @@ export function HourColumn({ day, occurrences, canWrite, onSelectOccurrence, pic
           segment={segment} placement={placement} canWrite={canWrite} column={() => element.current}
           onSelect={() => onSelectOccurrence(occurrence)} />
       ))}
+      {nowMinutes !== null && <NowLine minutes={nowMinutes} />}
       {landing && landingSegment && <LandingBlock occurrence={landing} segment={landingSegment} />}
       {picked && pickedSegment && <PickedBlock range={picked} segment={pickedSegment} />}
     </div>
+  )
+}
+
+/**
+ * Where the day stands, drawn as the dashboard draws it: a line with a dot at its start. Over the
+ * events, under what a drag or a pick draws, and inert — the grid beneath keeps every gesture.
+ */
+function NowLine({ minutes }: { minutes: number }) {
+  return (
+    <div data-testid="now-line" aria-hidden="true" style={{ top: `${(minutes / 60) * HOUR_HEIGHT}px` }}
+      className="pointer-events-none absolute inset-x-0 z-10 h-0.5 -translate-y-1/2 bg-accent
+        before:absolute before:-left-1 before:-top-[3px] before:size-2 before:rounded-full before:bg-accent" />
   )
 }
 
@@ -219,10 +236,13 @@ function ResizeHandle({ occurrence, edge }: { occurrence: CalendarOccurrence; ed
   )
 }
 
-/** The hour labels running down the left of a grid. */
-export function HourGutter() {
+/**
+ * The hour labels running down the left of a grid — and the time now, level with its line, while
+ * the grid shows today. Its own ground hides the hour label it lands on.
+ */
+export function HourGutter({ nowTime = null }: { nowTime?: string | null }) {
   return (
-    <div className="w-10 shrink-0">
+    <div className="relative w-10 shrink-0">
       {Array.from({ length: 24 }, (_, hour) => (
         <div key={hour} className="relative border-b border-transparent" style={{ height: `${HOUR_HEIGHT}px` }}>
           <span className="absolute -top-1.5 right-1 text-[10px] tabular-nums text-fg-3">
@@ -230,6 +250,12 @@ export function HourGutter() {
           </span>
         </div>
       ))}
+      {nowTime !== null && (
+        <span data-testid="now-time" aria-hidden="true" style={{ top: `${(timeToMinutes(nowTime) / 60) * HOUR_HEIGHT}px` }}
+          className="absolute right-0.5 z-10 -translate-y-1/2 bg-bg-1 px-0.5 text-[10px] font-bold tabular-nums text-accent">
+          {nowTime}
+        </span>
+      )}
     </div>
   )
 }
