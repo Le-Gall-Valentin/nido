@@ -57,15 +57,23 @@ export function weekDates(iso: string): string[] {
   return Array.from({ length: 7 }, (_, i) => addDays(monday, i))
 }
 
+/** From the Monday of the week holding the month's first day to the Sunday of the one holding its last. */
+function monthGridSpan(iso: string): { from: string; to: string } {
+  const first = startOfMonth(iso)
+  const last = addDays(addMonths(first, 1), -1)
+  return { from: startOfWeek(first), to: addDays(startOfWeek(last), 6) }
+}
+
 /**
- * Exactly 42 dates: six Monday-started weeks covering the anchor's month.
+ * The Monday-started weeks the anchor's month touches: four, five or six of them.
  *
- * Always six rows, never five, so the grid's height does not jump between months — a shifting
- * layout under the thumb is what makes a month view feel unstable.
+ * A week made only of the next month is left out — it shows nothing of the month being read, and
+ * padding every month to six weeks ran September on to October 11. The grid's height follows the
+ * month instead of staying the same.
  */
 export function monthGridDates(iso: string): string[] {
-  const first = startOfWeek(startOfMonth(iso))
-  return Array.from({ length: 42 }, (_, i) => addDays(first, i))
+  const { from, to } = monthGridSpan(iso)
+  return Array.from({ length: daysBetween(from, to) + 1 }, (_, i) => addDays(from, i))
 }
 
 /** The [from, to] the feed must be asked for — the whole visible grid, not just the month. */
@@ -75,8 +83,7 @@ export function windowFor(view: CalendarView, iso: string): { from: string; to: 
     const monday = startOfWeek(iso)
     return { from: monday, to: addDays(monday, 6) }
   }
-  const first = startOfWeek(startOfMonth(iso))
-  return { from: first, to: addDays(first, 41) }
+  return monthGridSpan(iso)
 }
 
 /**
@@ -84,8 +91,8 @@ export function windowFor(view: CalendarView, iso: string): { from: string; to: 
  * not only on its first. A naive group-by-start puts a fortnight's holiday on July 1 and nowhere
  * else, which is the bug this function exists to prevent.
  *
- * It walks the days shown, not the days an occurrence lasts: a month costs 42 steps per occurrence
- * however long that occurrence runs.
+ * It walks the days shown, not the days an occurrence lasts: a month costs at most 42 steps per
+ * occurrence however long that occurrence runs.
  */
 export function groupByDay(
   occurrences: CalendarOccurrence[], days: string[],

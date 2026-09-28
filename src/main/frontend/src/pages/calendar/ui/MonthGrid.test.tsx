@@ -48,29 +48,30 @@ function dayButton(inWords: string) {
   return screen.getByRole('button', { name: `open_day:${inWords}` })
 }
 
-/** The button of a day outside the month shown — January 2026 runs from Dec 29 to Feb 8 here. */
+/** The button of a day outside the month shown — January 2026 runs from Dec 29 to Feb 1 here. */
 function monthButton(inWords: string) {
   return screen.getByRole('button', { name: `show_month:${inWords}` })
 }
 
 describe('MonthGrid', () => {
-  it('renders 42 day cells, so the grid height never jumps between months', () => {
+  it('renders a cell for each day of the weeks the month touches, and none for a week of the next', () => {
+    // January 2026 runs from Thursday 1 to Saturday 31: five weeks, Monday Dec 29 to Sunday Feb 1.
     const { container } = renderGrid([])
-    expect(container.querySelectorAll('[aria-label^="open_day:"], [aria-label^="show_month:"]')).toHaveLength(42)
+    expect(container.querySelectorAll('[aria-label^="open_day:"], [aria-label^="show_month:"]')).toHaveLength(35)
   })
 
   it('opens the month of a day outside the one shown, rather than that day', () => {
     const { onSelectDay, onSelectMonth } = renderGrid([])
-    fireEvent.click(monthButton('mardi 3 février 2026'))
-    expect(onSelectMonth).toHaveBeenCalledWith('2026-02-03')
+    fireEvent.click(monthButton('mercredi 31 décembre 2025'))
+    expect(onSelectMonth).toHaveBeenCalledWith('2025-12-31')
     expect(onSelectDay).not.toHaveBeenCalled()
   })
 
   it('opens the month, not the day, from the count of a busy day outside the month shown', () => {
-    const busy = ['A', 'B', 'C', 'D', 'E'].map((title) => occurrence({ title, startDate: '2026-02-03', endDate: '2026-02-03' }))
+    const busy = ['A', 'B', 'C', 'D', 'E'].map((title) => occurrence({ title, startDate: '2025-12-31', endDate: '2025-12-31' }))
     const { onSelectDay, onSelectMonth } = renderGrid(busy)
     fireEvent.click(screen.getByText('+2'))
-    expect(onSelectMonth).toHaveBeenCalledWith('2026-02-03')
+    expect(onSelectMonth).toHaveBeenCalledWith('2025-12-31')
     expect(onSelectDay).not.toHaveBeenCalled()
   })
 
@@ -91,10 +92,10 @@ describe('MonthGrid', () => {
   // jsdom has no stylesheet: these pin the classes, and the browser shows what they look like.
   it('sets the days outside the month back: a recessed cell, a paler number, faded items', () => {
     renderGrid([
-      occurrence({ title: 'Dehors', startDate: '2026-02-02', endDate: '2026-02-02' }),
+      occurrence({ title: 'Dehors', startDate: '2025-12-30', endDate: '2025-12-30' }),
       occurrence({ title: 'Dedans', startDate: '2026-01-30', endDate: '2026-01-30' }),
     ])
-    const outside = monthButton('lundi 2 février 2026')
+    const outside = monthButton('mardi 30 décembre 2025')
     const inside = dayButton('vendredi 30 janvier 2026')
     expect(outside.parentElement?.className).toContain('bg-bg-0')
     expect(inside.parentElement?.className).not.toContain('bg-bg-0')
@@ -107,8 +108,8 @@ describe('MonthGrid', () => {
   it('lets a tap on the faded dots reach the day behind them', () => {
     // Faded, the row of dots is drawn over the stretched day button: a finger landing on a dot hit
     // the dot, and the day never turned to its month — measured in the browser.
-    renderGrid([occurrence({ title: 'Dehors', startDate: '2026-02-02', endDate: '2026-02-02' })])
-    const dots = monthButton('lundi 2 février 2026').parentElement?.querySelector('[data-testid="day-dot"]')?.parentElement
+    renderGrid([occurrence({ title: 'Dehors', startDate: '2025-12-30', endDate: '2025-12-30' })])
+    const dots = monthButton('mardi 30 décembre 2025').parentElement?.querySelector('[data-testid="day-dot"]')?.parentElement
     expect(dots?.className).toContain('pointer-events-none')
   })
 

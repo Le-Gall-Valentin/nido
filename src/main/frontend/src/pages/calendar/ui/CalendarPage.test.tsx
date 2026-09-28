@@ -144,12 +144,12 @@ describe('CalendarPage', () => {
   })
 
   it('turns to the month of a day outside the one shown, instead of opening that day', async () => {
-    // September 2026's grid runs from Monday Aug 31 to Sunday Oct 11; October's from Sep 28 to Nov 8.
+    // September 2026's grid runs from Monday Aug 31 to Sunday Oct 4; October's from Sep 28 to Nov 1.
     const { calendar } = renderPage([])
     fireEvent.click(await screen.findByRole('button', { name: /show_month:.*3 octobre 2026/ }))
 
     expect(await screen.findByRole('heading', { name: 'Octobre 2026' })).toBeTruthy()
-    await vi.waitFor(() => expect(calendar.listOccurrences).toHaveBeenCalledWith('space-1', '2026-09-28', '2026-11-08'))
+    await vi.waitFor(() => expect(calendar.listOccurrences).toHaveBeenCalledWith('space-1', '2026-09-28', '2026-11-01'))
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 

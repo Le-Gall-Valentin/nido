@@ -13,21 +13,33 @@ function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence 
 }
 
 describe('monthGridDates', () => {
-  it('covers a month with six Monday-started weeks, always 42 days', () => {
-    const dates = monthGridDates('2026-02-14')
+  it('stops at the Sunday of the week holding the last day: five weeks for September 2026', () => {
+    // September 30 is a Wednesday: the grid ends on Sunday October 4, and October 5 to 11 go.
+    const dates = monthGridDates('2026-09-23')
+    expect(dates).toHaveLength(35)
+    expect(dates[0]).toBe('2026-08-31')
+    expect(dates.at(-1)).toBe('2026-10-04')
+  })
+
+  it('keeps a sixth week while it still holds a day of the month', () => {
+    // August 31, 2026 is a Monday: the last week is all September but that one day.
+    const dates = monthGridDates('2026-08-15')
     expect(dates).toHaveLength(42)
-    expect(dates[0]).toBe('2026-01-26')
-    expect(dates).toContain('2026-02-28')
+    expect(dates[0]).toBe('2026-07-27')
+    expect(dates.at(-1)).toBe('2026-09-06')
+  })
+
+  it('drops every week of the next month, down to four for a February that fits exactly', () => {
+    // February 2027 starts on a Monday and ends on a Sunday: not one day of March is shown.
+    const dates = monthGridDates('2027-02-10')
+    expect(dates).toHaveLength(28)
+    expect(dates[0]).toBe('2027-02-01')
+    expect(dates.at(-1)).toBe('2027-02-28')
   })
 
   it('starts on the Monday on or before the first of the month', () => {
     // 2026-03-01 is a Sunday, so the grid opens on the Monday of the week containing it.
     expect(monthGridDates('2026-03-15')[0]).toBe('2026-02-23')
-  })
-
-  it('keeps a constant height so the grid never jumps between months', () => {
-    expect(monthGridDates('2026-02-01')).toHaveLength(42)
-    expect(monthGridDates('2026-08-01')).toHaveLength(42)
   })
 })
 
@@ -44,8 +56,8 @@ describe('weekDates', () => {
 })
 
 describe('windowFor', () => {
-  it('asks the feed for the whole month grid, not just the month', () => {
-    expect(windowFor('month', '2026-02-14')).toEqual({ from: '2026-01-26', to: '2026-03-08' })
+  it('asks the feed for the weeks the month grid shows — no more, and not just the month', () => {
+    expect(windowFor('month', '2026-09-23')).toEqual({ from: '2026-08-31', to: '2026-10-04' })
   })
 
   it('asks for exactly the week in week view and the single day in day view', () => {
