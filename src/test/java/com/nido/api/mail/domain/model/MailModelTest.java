@@ -26,7 +26,7 @@ class MailModelTest {
     void an_app_path_starts_with_a_slash() {
         assertThatThrownBy(() -> new AppPath("reset-password")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new AppPath("https://evil.example/")).isInstanceOf(IllegalArgumentException.class);
-        assertThat(new AppPath("/reset-password#token=abc")).hasToString("/reset-password#token=abc");
+        assertThat(new AppPath("/reset-password#token=abc").value()).isEqualTo("/reset-password#token=abc");
     }
 
     @Test
