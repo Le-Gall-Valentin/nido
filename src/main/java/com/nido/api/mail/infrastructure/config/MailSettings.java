@@ -29,6 +29,9 @@ public record MailSettings(String host, int port, Security security, String user
         if (port < 1 || port > 65_535) {
             problems.add("NIDO_SMTP_PORT must be between 1 and 65535");
         }
+        if ((blankToNull(properties.username()) == null) != (blankToNull(properties.password()) == null)) {
+            problems.add("NIDO_SMTP_USERNAME and NIDO_SMTP_PASSWORD go together");
+        }
         if (!problems.isEmpty()) {
             throw new IllegalStateException("Mail is switched on (NIDO_SMTP_HOST is set) but its configuration is incomplete: "
                 + String.join("; ", problems));

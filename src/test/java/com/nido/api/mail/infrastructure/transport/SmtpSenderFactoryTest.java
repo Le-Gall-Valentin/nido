@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SmtpSenderFactoryTest {
 
     private static MailSettings settings(Security security, String username) {
-        return MailSettings.from(new MailProperties("smtp.example.com", 587, security, username, "pw",
+        return MailSettings.from(new MailProperties("smtp.example.com", 587, security, username, username == null ? null : "pw",
             "nido@example.com", "https://nido.example.com"));
     }
 
@@ -39,6 +39,17 @@ class SmtpSenderFactoryTest {
         assertThat(SmtpSenderFactory.create(settings(Security.TLS, null)).getJavaMailProperties())
             .containsEntry("mail.smtp.ssl.enable", "true")
             .doesNotContainKey("mail.smtp.starttls.enable");
+    }
+
+    @Test
+    void the_server_identity_is_checked_explicitly_whenever_tls_is_used() {
+        // Angus checks by default today; pinned here so a change of the library default cannot open the door.
+        assertThat(SmtpSenderFactory.create(settings(Security.STARTTLS, null)).getJavaMailProperties())
+            .containsEntry("mail.smtp.ssl.checkserveridentity", "true");
+        assertThat(SmtpSenderFactory.create(settings(Security.TLS, null)).getJavaMailProperties())
+            .containsEntry("mail.smtp.ssl.checkserveridentity", "true");
+        assertThat(SmtpSenderFactory.create(settings(Security.NONE, null)).getJavaMailProperties())
+            .doesNotContainKey("mail.smtp.ssl.checkserveridentity");
     }
 
     @Test

@@ -82,4 +82,31 @@ class MailSettingsTest {
             "nido@example.com", "https://nido.example.com")))
             .hasMessageContaining("NIDO_SMTP_PORT must be between 1 and 65535");
     }
+
+    private static MailProperties withCredentials(String username, String password) {
+        return new MailProperties("smtp.example.com", 587, null, username, password,
+            "nido@example.com", "https://nido.example.com");
+    }
+
+    @Test
+    void a_username_without_a_password_is_refused() {
+        assertThatThrownBy(() -> MailSettings.from(withCredentials("user", null)))
+            .hasMessageContaining("NIDO_SMTP_USERNAME and NIDO_SMTP_PASSWORD go together");
+        assertThatThrownBy(() -> MailSettings.from(withCredentials("user", " ")))
+            .hasMessageContaining("NIDO_SMTP_USERNAME and NIDO_SMTP_PASSWORD go together");
+    }
+
+    @Test
+    void a_password_without_a_username_is_refused() {
+        assertThatThrownBy(() -> MailSettings.from(withCredentials(null, "s3cret")))
+            .hasMessageContaining("NIDO_SMTP_USERNAME and NIDO_SMTP_PASSWORD go together");
+        assertThatThrownBy(() -> MailSettings.from(withCredentials("", "s3cret")))
+            .hasMessageContaining("NIDO_SMTP_USERNAME and NIDO_SMTP_PASSWORD go together");
+    }
+
+    @Test
+    void both_credentials_or_none_start() {
+        assertThat(MailSettings.from(withCredentials("user", "s3cret")).username()).isEqualTo("user");
+        assertThat(MailSettings.from(withCredentials(null, null)).username()).isNull();
+    }
 }

@@ -12,6 +12,7 @@ import java.util.Properties;
  *
  * <p>STARTTLS is <i>required</i>, not merely enabled: enabled alone lets a server that does not
  * offer it — or a network that strips the offer — carry the password and the mail in clear.
+ * The certificate must name the host (checked explicitly, whatever the library's default becomes).
  * Every wait is bounded, because JavaMail's default is to wait forever.
  */
 public final class SmtpSenderFactory {
@@ -45,8 +46,12 @@ public final class SmtpSenderFactory {
             case STARTTLS -> {
                 properties.setProperty("mail.smtp.starttls.enable", "true");
                 properties.setProperty("mail.smtp.starttls.required", "true");
+                properties.setProperty("mail.smtp.ssl.checkserveridentity", "true");
             }
-            case TLS -> properties.setProperty("mail.smtp.ssl.enable", "true");
+            case TLS -> {
+                properties.setProperty("mail.smtp.ssl.enable", "true");
+                properties.setProperty("mail.smtp.ssl.checkserveridentity", "true");
+            }
             case NONE -> { }
         }
         return sender;
