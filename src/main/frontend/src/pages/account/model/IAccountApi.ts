@@ -4,6 +4,7 @@
  * injected (defaulting to accountApi), never imported as a hard dependency.
  */
 export interface IAccountApi {
-  updateProfile(username: string, email: string): Promise<void>
+  /** `currentPassword` is required by the server when the address changes (letter case aside). */
+  updateProfile(username: string, email: string, currentPassword?: string): Promise<void>
   changePassword(currentPassword: string, newPassword: string): Promise<void>
 }

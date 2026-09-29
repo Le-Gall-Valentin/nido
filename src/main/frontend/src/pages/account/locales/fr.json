@@ -29,7 +29,10 @@
     "save": "Enregistrer",
     "cancel": "Annuler",
     "success": "Profil mis à jour.",
+    "current_password": "Mot de passe actuel",
+    "current_password_hint": "Votre adresse sert à récupérer votre compte : confirmez avec votre mot de passe.",
     "error": {
+      "wrong_password": "Mot de passe actuel incorrect.",
       "conflict": "Ce nom d'utilisateur ou cette adresse e-mail est déjà utilisé(e).",
       "username_too_short": "Minimum 3 caractères.",
       "username_too_long": "Maximum 50 caractères.",
