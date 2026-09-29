@@ -44,7 +44,7 @@ class DispatchPendingMailsHandlerTest {
 
     private static OutboxEntry entry(int attempts, Instant expiresAt) {
         return new OutboxEntry(UUID.randomUUID(), "test/kit-sample",
-            new OutgoingMail(new Recipient("jane@example.com", null), new RenderedMail("s", "h", "t")), attempts, expiresAt);
+            new OutgoingMail(new Recipient(UUID.randomUUID() + "@example.com", null), new RenderedMail("s", "h", "t")), attempts, expiresAt);
     }
 
     @Test
