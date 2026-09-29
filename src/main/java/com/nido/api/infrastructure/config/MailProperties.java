@@ -10,11 +10,14 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * <p>Checking that a switched-on configuration is complete belongs to the mail context, which owns
  * the parsing of an address and of the app URL (MailSettings); this record only carries the values,
  * so that the switch can be read from any context without reaching into mail's infrastructure.
+ *
+ * <p>{@code port} is nullable on purpose: a variable set to empty binds {@code null}, which an
+ * {@code int} would refuse at startup even with mail off. MailSettings defaults it to 587.
  */
 @ConfigurationProperties(prefix = "nido.mail")
 public record MailProperties(
     String host,
-    @DefaultValue("587") int port,
+    Integer port,
     @DefaultValue("starttls") Security security,
     String username,
     String password,

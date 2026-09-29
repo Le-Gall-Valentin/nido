@@ -3,6 +3,7 @@ package com.nido.api.infrastructure.config;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,5 +55,31 @@ class MailSwitchTest {
 
         assertThat(properties.toString()).doesNotContain("s3cret").contains("***");
         assertThat(properties.enabled()).isTrue();
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(MailProperties.class)
+    static class Binding {
+    }
+
+    @Test
+    void an_empty_port_binds_and_leaves_mail_off_when_there_is_no_host() {
+        // A compose line `NIDO_SMTP_PORT: ${NIDO_SMTP_PORT}` with nothing in .env hands the app "".
+        new ApplicationContextRunner().withUserConfiguration(Binding.class)
+            .withPropertyValues("nido.mail.host=", "nido.mail.port=")
+            .run(context -> {
+                assertThat(context).hasNotFailed();
+                assertThat(context.getBean(MailProperties.class).enabled()).isFalse();
+            });
+    }
+
+    @Test
+    void an_empty_port_and_an_empty_security_bind_when_there_is_a_host() {
+        new ApplicationContextRunner().withUserConfiguration(Binding.class)
+            .withPropertyValues("nido.mail.host=smtp.example.com", "nido.mail.port=", "nido.mail.security=")
+            .run(context -> {
+                assertThat(context).hasNotFailed();
+                assertThat(context.getBean(MailProperties.class).port()).isNull();
+            });
     }
 }

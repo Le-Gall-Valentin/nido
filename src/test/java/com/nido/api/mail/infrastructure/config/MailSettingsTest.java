@@ -67,4 +67,19 @@ class MailSettingsTest {
         assertThat(MailSettings.from(properties("nido@example.com", "https://nido.example.com")).toString())
             .doesNotContain("s3cret");
     }
+
+    @Test
+    void no_port_given_means_587_and_a_given_port_is_kept() {
+        assertThat(MailSettings.from(new MailProperties("smtp.example.com", null, null, null, null,
+            "nido@example.com", "https://nido.example.com")).port()).isEqualTo(587);
+        assertThat(MailSettings.from(new MailProperties("smtp.example.com", 2525, null, null, null,
+            "nido@example.com", "https://nido.example.com")).port()).isEqualTo(2525);
+    }
+
+    @Test
+    void a_port_out_of_range_is_refused() {
+        assertThatThrownBy(() -> MailSettings.from(new MailProperties("smtp.example.com", 70_000, null, null, null,
+            "nido@example.com", "https://nido.example.com")))
+            .hasMessageContaining("NIDO_SMTP_PORT must be between 1 and 65535");
+    }
 }

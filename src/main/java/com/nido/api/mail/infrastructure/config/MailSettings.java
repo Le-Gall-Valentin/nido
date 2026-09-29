@@ -18,20 +18,22 @@ import java.util.Set;
 public record MailSettings(String host, int port, Security security, String username, String password,
                            InternetAddress from, URI appUrl) {
 
+    private static final int DEFAULT_PORT = 587;
     private static final Set<String> LOCAL_HOSTS = Set.of("localhost", "127.0.0.1");
 
     public static MailSettings from(MailProperties properties) {
         List<String> problems = new ArrayList<>();
         InternetAddress from = parseFrom(properties.from(), problems);
         URI appUrl = parseAppUrl(properties.appUrl(), problems);
-        if (properties.port() < 1 || properties.port() > 65_535) {
+        int port = properties.port() == null ? DEFAULT_PORT : properties.port();
+        if (port < 1 || port > 65_535) {
             problems.add("NIDO_SMTP_PORT must be between 1 and 65535");
         }
         if (!problems.isEmpty()) {
             throw new IllegalStateException("Mail is switched on (NIDO_SMTP_HOST is set) but its configuration is incomplete: "
                 + String.join("; ", problems));
         }
-        return new MailSettings(properties.host().strip(), properties.port(),
+        return new MailSettings(properties.host().strip(), port,
             properties.security() == null ? Security.STARTTLS : properties.security(),
             blankToNull(properties.username()), blankToNull(properties.password()), from, appUrl);
     }
