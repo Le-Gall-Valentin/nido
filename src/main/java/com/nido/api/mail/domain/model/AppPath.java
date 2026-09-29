@@ -13,8 +13,10 @@ public record AppPath(String value) {
         }
     }
 
+    /** Without the fragment: it can carry a live token, and a record holding this path may end up in a log line. */
     @Override
     public String toString() {
-        return value;
+        int fragment = value.indexOf('#');
+        return fragment < 0 ? value : value.substring(0, fragment) + "#…";
     }
 }
