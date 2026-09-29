@@ -47,6 +47,9 @@ public class IdentityExceptionHandler {
             case IdentityException.EmailAlreadyExists ex ->
                     response(409, ex, "Email already registered.");
 
+            case IdentityException.CurrentPasswordRequired ex ->
+                    response(400, ex, "The current password is required to change the email address.");
+
             case IdentityException.InvalidCurrentPassword ex ->
                     response(422, ex, "Current password is incorrect.");
 

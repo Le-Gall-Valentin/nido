@@ -169,7 +169,7 @@ class SpaceInvitationControllerIT {
     @Test
     void inviting_an_account_whose_email_was_updated_to_mixed_case_still_succeeds() throws Exception {
         String updatePayload = objectMapper.writeValueAsString(
-            new UpdateProfileRequest("carol", "Carol@TEST.com"));
+            new UpdateProfileRequest("carol", "Carol@TEST.com", null));
         mockMvc.perform(patch("/api/users/me")
                 .cookie(accessTokenFor(carolId))
                 .contentType(MediaType.APPLICATION_JSON)

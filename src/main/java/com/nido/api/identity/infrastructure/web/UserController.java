@@ -525,13 +525,15 @@ public class UserController {
 
             Double rate limit : 20 req/fenêtre globalement, et 5 req/fenêtre par utilisateur.
             Retourne `409` si le nouveau nom d'utilisateur ou la nouvelle adresse email est déjà pris.
+            Changer l'adresse (hors casse) exige `currentPassword` (`400` s'il manque, `422` s'il est faux) ;
+            l'ancienne adresse en est prévenue par mail.
             """
     )
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Profil mis à jour", content = @Content),
         @ApiResponse(
             responseCode = "400",
-            description = "Corps invalide (champs manquants ou non conformes aux contraintes)",
+            description = "Corps invalide (champs manquants ou non conformes aux contraintes), ou adresse changée sans le mot de passe actuel (`CurrentPasswordRequired`)",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
         ),
         @ApiResponse(
@@ -555,6 +557,11 @@ public class UserController {
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
         ),
         @ApiResponse(
+            responseCode = "422",
+            description = "Mot de passe actuel incorrect",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
+        ),
+        @ApiResponse(
             responseCode = "429",
             description = "Trop de requêtes (global ou par utilisateur)",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
@@ -567,7 +574,7 @@ public class UserController {
     public ResponseEntity<Void> updateProfile(@Valid @RequestBody UpdateProfileRequest request,
                                               @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
         updateMyProfileUseCase.updateProfile(
-            new UpdateProfileCommand(caller.userId(), request.username(), request.email()));
+            new UpdateProfileCommand(caller.userId(), request.username(), request.email(), request.currentPassword()));
         return ResponseEntity.noContent().build();
     }
 

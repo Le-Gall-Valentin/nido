@@ -393,11 +393,46 @@ class UserControllerIT {
         mockMvc.perform(patch("/api/users/me")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"updated\",\"email\":\"updated@test.com\"}"))
+                .content("{\"username\":\"updated\",\"email\":\"updated@test.com\",\"currentPassword\":\"password\"}"))
             .andExpect(status().isNoContent());
 
         assertThat(userIdentityJpaRepository.findByUsername("updated")).isPresent();
         assertThat(userIdentityJpaRepository.findByEmail("updated@test.com")).isPresent();
+    }
+
+    @Test
+    void updateProfile_newEmailWithoutPassword_returns400() throws Exception {
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"testuser\",\"email\":\"elsewhere@test.com\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("CurrentPasswordRequired"));
+
+        assertThat(userIdentityJpaRepository.findByEmail("testuser@test.com")).isPresent();
+    }
+
+    @Test
+    void updateProfile_newEmailWithWrongPassword_returns422() throws Exception {
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"testuser\",\"email\":\"elsewhere@test.com\",\"currentPassword\":\"wrong\"}"))
+            .andExpect(status().isUnprocessableEntity());
+
+        assertThat(userIdentityJpaRepository.findByEmail("testuser@test.com")).isPresent();
+    }
+
+    @Test
+    void updateProfile_usernameOnly_needsNoPassword() throws Exception {
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"renamed\",\"email\":\"testuser@test.com\"}"))
+            .andExpect(status().isNoContent());
     }
 
     @Test
@@ -407,7 +442,7 @@ class UserControllerIT {
         mockMvc.perform(patch("/api/users/me")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"superadmin\",\"email\":\"unique@test.com\"}"))
+                .content("{\"username\":\"superadmin\",\"email\":\"unique@test.com\",\"currentPassword\":\"password\"}"))
             .andExpect(status().isConflict());
     }
 
@@ -418,7 +453,7 @@ class UserControllerIT {
         mockMvc.perform(patch("/api/users/me")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"uniqueuser\",\"email\":\"superadmin@test.com\"}"))
+                .content("{\"username\":\"uniqueuser\",\"email\":\"superadmin@test.com\",\"currentPassword\":\"password\"}"))
             .andExpect(status().isConflict());
     }
 
