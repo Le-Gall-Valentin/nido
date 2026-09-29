@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -66,15 +67,18 @@ class AfterCommitDispatchTriggerTest {
     @Test
     void a_failing_dispatch_does_not_stop_the_next_one() throws Exception {
         AtomicInteger calls = new AtomicInteger();
+        CountDownLatch firstRunStarted = new CountDownLatch(1);
         AfterCommitDispatchTrigger failingOnce = new AfterCommitDispatchTrigger(() -> {
             if (calls.incrementAndGet() == 1) {
+                firstRunStarted.countDown();
                 throw new IllegalStateException("database away");
             }
             return 0;
         }, executor);
 
         failingOnce.wakeUp();
-        Thread.sleep(200);
+        // A wake-up that arrives before the first run starts is merged into it; wait until it has started.
+        assertThat(firstRunStarted.await(5, TimeUnit.SECONDS)).isTrue();
         failingOnce.wakeUp();
         executor.shutdown();
         assertThat(executor.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
