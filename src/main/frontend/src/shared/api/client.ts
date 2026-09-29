@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { attachLanguageHeader } from './languageHeader'
 import { attachRefreshInterceptor } from './refreshInterceptor'
 
 // CSRF: no token header needed. Two complementary protections apply:
@@ -16,4 +17,5 @@ export const client = axios.create({
   timeout: API_TIMEOUT_MS,
 })
 
+attachLanguageHeader(client)
 attachRefreshInterceptor(client)
