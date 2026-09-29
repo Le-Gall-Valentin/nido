@@ -10,3 +10,5 @@ export {
   useCreateUser, useUpdateUserRole, useDeleteUser, useResetTotp, useToggleUserActive,
 } from './model/useUserMutations'
 export { adminUsersApi, ConflictError, RoleAlreadyAssignedError } from './api/adminUsersApi'
+export type { IAccountLanguageApi } from './model/IAccountLanguageApi'
+export { accountLanguageApi } from './api/accountLanguageApi'
