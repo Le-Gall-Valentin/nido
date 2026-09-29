@@ -1,10 +1,14 @@
 package com.nido.api.mail.infrastructure.render;
 
+import com.nido.api.infrastructure.config.ConditionalOnMailEnabled;
 import com.nido.api.mail.domain.model.MailContent;
 import com.nido.api.mail.domain.model.RenderedMail;
 import com.nido.api.mail.domain.port.out.MailRendererPort;
+import com.nido.api.mail.infrastructure.config.MailSettings;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.dialect.SpringStandardDialect;
@@ -26,6 +30,8 @@ import java.util.Set;
  * caller's transaction then fails with it, which is where a broken template should surface — in a
  * test, not in someone's inbox.
  */
+@Component
+@ConditionalOnMailEnabled
 public class ThymeleafMailRenderer implements MailRendererPort {
 
     private static final Set<String> LANGUAGES = Set.of("fr", "en");
@@ -33,6 +39,11 @@ public class ThymeleafMailRenderer implements MailRendererPort {
     private final TemplateEngine engine = createEngine();
     private final HtmlToTextConverter toText = new HtmlToTextConverter();
     private final String appUrl;
+
+    @Autowired
+    public ThymeleafMailRenderer(MailSettings settings) {
+        this(settings.appUrl().toString());
+    }
 
     /** @param appUrl the app's public address, without a trailing slash */
     public ThymeleafMailRenderer(String appUrl) {
