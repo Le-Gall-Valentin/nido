@@ -24,5 +24,8 @@ public record UserInfoResponse(
     Instant createdAt,
 
     @Schema(description = "Indique si l'authentification à deux facteurs est activée", example = "false")
-    boolean totpEnabled
+    boolean totpEnabled,
+
+    @Schema(description = "Langue du compte (fr, en), ou null tant qu'aucune n'a été enregistrée", example = "fr", nullable = true)
+    String language
 ) {}

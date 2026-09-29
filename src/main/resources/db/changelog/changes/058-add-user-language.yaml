@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 058-add-user-language
+      author: nido
+      comment: >
+        The language a person reads Nido in, so that a mail — sent when nobody is in front of the app
+        to ask — speaks it. Null until the first signed-in session records the language that session
+        detected. Also an index for the case-insensitive address lookup of "forgot password": new
+        addresses are stored lower-cased, but nothing guarantees every existing row is.
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: language
+                  type: VARCHAR(2)
+        - sql:
+            sql: ALTER TABLE users ADD CONSTRAINT ck_users_language CHECK (language IN ('fr', 'en'))
+        - sql:
+            sql: CREATE INDEX idx_users_email_lower ON users (lower(email)) WHERE is_deleted = false
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_users_email_lower
+        - sql:
+            sql: ALTER TABLE users DROP CONSTRAINT IF EXISTS ck_users_language
+        - dropColumn:
+            tableName: users
+            columnName: language

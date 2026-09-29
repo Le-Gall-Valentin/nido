@@ -11,8 +11,14 @@ public record User(
     String email,
     Role role,
     boolean isActive,
-    Instant createdAt
+    Instant createdAt,
+    Language language
 ) {
+    /** Without a language: an account that never recorded one, and every construction predating it. */
+    public User(UUID id, String username, String email, Role role, boolean isActive, Instant createdAt) {
+        this(id, username, email, role, isActive, createdAt, null);
+    }
+
     public void ensureActive() {
         if (!isActive) throw new IdentityException.UserAlreadyInactive();
     }

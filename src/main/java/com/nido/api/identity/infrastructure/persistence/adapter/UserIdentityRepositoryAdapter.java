@@ -3,6 +3,7 @@ package com.nido.api.identity.infrastructure.persistence.adapter;
 import com.nido.api.identity.domain.model.CreateUserProfileCommand;
 import com.nido.api.identity.domain.model.UpdateProfileCommand;
 import com.nido.api.identity.domain.model.IdentityException;
+import com.nido.api.identity.domain.model.Language;
 import com.nido.api.shared.model.Role;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.UserAdminPort;
@@ -46,6 +47,16 @@ public class UserIdentityRepositoryAdapter implements UserRepository, UserComman
     @Override
     public Optional<User> findByEmail(String email) {
         return jpa.findByEmail(email).map(this::toDomain);
+    }
+
+    @Override
+    public List<User> findByEmailIgnoreCase(String email) {
+        return jpa.findNotDeletedByEmailIgnoreCase(email).stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public void updateLanguage(UUID userId, Language language) {
+        jpa.updateLanguage(userId, language.code());
     }
 
     @Override
@@ -140,6 +151,7 @@ public class UserIdentityRepositoryAdapter implements UserRepository, UserComman
     }
 
     private User toDomain(UserIdentityEntity e) {
-        return new User(e.getId(), e.getUsername(), e.getEmail(), e.getRole(), e.isActive(), e.getCreatedAt());
+        return new User(e.getId(), e.getUsername(), e.getEmail(), e.getRole(), e.isActive(), e.getCreatedAt(),
+            Language.fromCode(e.getLanguage()).orElse(null));
     }
 }

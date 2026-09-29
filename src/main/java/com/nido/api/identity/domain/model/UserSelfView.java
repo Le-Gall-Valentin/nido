@@ -10,5 +10,10 @@ public record UserSelfView(
     String email,
     Role role,
     Instant createdAt,
-    boolean totpEnabled
-) {}
+    boolean totpEnabled,
+    Language language
+) {
+    public UserSelfView(UUID id, String username, String email, Role role, Instant createdAt, boolean totpEnabled) {
+        this(id, username, email, role, createdAt, totpEnabled, null);
+    }
+}

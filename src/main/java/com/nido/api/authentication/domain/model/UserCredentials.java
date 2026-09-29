@@ -11,12 +11,18 @@ public record UserCredentials(
     String passwordHash,
     boolean isActive,
     Role role,
-    Instant createdAt
+    Instant createdAt,
+    String language
 ) {
+    public UserCredentials(UUID id, String username, String email, String passwordHash, boolean isActive,
+                           Role role, Instant createdAt) {
+        this(id, username, email, passwordHash, isActive, role, createdAt, null);
+    }
+
     @Override
     public String toString() {
         return "UserCredentials[id=" + id + ", username=" + username +
                ", email=" + email + ", isActive=" + isActive +
-               ", role=" + role + "]";
+               ", role=" + role + ", language=" + language + "]";
     }
 }
