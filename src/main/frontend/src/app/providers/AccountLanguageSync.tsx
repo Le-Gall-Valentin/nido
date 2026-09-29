@@ -17,7 +17,9 @@ interface Props {
  * - a change made while signed in (Preferences) is recorded on the account.
  *
  * The account's language is also what the server writes mails in, when nobody is there to ask.
- * A failed save keeps the language on this device and is not retried: the next session records it.
+ * A failed save keeps the language on this device and is not retried. An account with no recorded
+ * language gets it recorded at the next sign-in; an account that already has one has that language
+ * applied again at the next sign-in, so the choice made on the failed save is lost.
  * Renders nothing; lives inside AuthProvider, which it reads, and under LanguageProvider.
  */
 export function AccountLanguageSync({ api = accountLanguageApi }: Props) {
@@ -43,7 +45,7 @@ export function AccountLanguageSync({ api = accountLanguageApi }: Props) {
     }
     void api.saveLanguage(language).then(
       () => patchUser({ language }),
-      () => { /* kept on this device; the next session records it */ },
+      () => { /* kept on this device only; not retried, and lost at the next sign-in if the account already has a language */ },
     )
   }, [user, language, api, patchUser, setLanguage])
 
