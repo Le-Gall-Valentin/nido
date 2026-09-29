@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:fragment="mail(title, preheader, content)"
+      th:lang="${#locale.language}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title th:text="${title}">Nido</title>
+  <!-- Loaded where clients allow it (Apple Mail, iOS). Every font-family below falls back to the
+       system font elsewhere (Gmail, Outlook). -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=Hanken+Grotesk:wght@400;600&amp;display=swap">
+  <style>
+    @media only screen and (max-width: 620px) {
+      .nido-card { padding: 24px 18px 8px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#efeae1;-webkit-text-size-adjust:100%;">
+  <!-- The preheader: the line clients show after the subject, hidden in the mail itself. -->
+  <div data-text-skip th:text="${preheader}"
+       style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">Preheader</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#efeae1" style="background-color:#efeae1;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;">
+          <tr>
+            <td style="padding:0 6px 16px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <img th:src="|cid:${logoCid}|" src="cid:nido-mark" width="28" height="28" alt=""
+                         style="display:block;border:0;outline:none;">
+                  </td>
+                  <td data-text-line
+                      style="vertical-align:middle;padding-left:9px;font-family:'Bricolage Grotesque','Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:17px;font-weight:700;letter-spacing:-0.02em;color:#2c2a26;">Nido</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="nido-card" bgcolor="#fffdfb"
+                style="background-color:#fffdfb;border:1px solid #e4ded3;border-radius:14px;padding:28px 26px 10px;">
+              <th:block th:replace="${content}">Content</th:block>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 6px 0;text-align:center;font-family:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11.5px;line-height:1.55;color:#9a948a;">
+              <span data-text-line th:text="#{footer.tagline}">Tagline</span><br>
+              <span data-text-line th:text="#{footer.why}">Why</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
