@@ -97,6 +97,27 @@ class UpdateMyProfileHandlerTest {
     }
 
     @Test
+    void a_look_alike_address_is_an_address_change_not_a_case_change() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(
+            new User(userId, "jane", "jane@gmail.com", Role.USER, true, Instant.now())));
+
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "jane@gma\u0131l.com")))
+            .isInstanceOf(IdentityException.CurrentPasswordRequired.class);
+        verify(userCommandPort, never()).updateProfile(any());
+        verifyNoInteractions(profileMail);
+    }
+
+    @Test
+    void an_account_without_an_address_needs_the_password_to_set_one() {
+        User noAddress = new User(userId, "jane", null, Role.USER, true, Instant.now());
+        when(userRepository.findById(userId)).thenReturn(Optional.of(noAddress));
+
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com")))
+            .isInstanceOf(IdentityException.CurrentPasswordRequired.class);
+        verify(userCommandPort, never()).updateProfile(any());
+    }
+
+    @Test
     void a_deactivated_account_changes_nothing() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(
             new User(userId, "jane", "jane@test.com", Role.USER, false, Instant.now())));
