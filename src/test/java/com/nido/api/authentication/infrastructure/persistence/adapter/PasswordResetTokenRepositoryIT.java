@@ -15,7 +15,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,6 +68,37 @@ class PasswordResetTokenRepositoryIT {
         assertThat(first).isPresent();
         assertThat(second).isEmpty();
         assertThat(jpa.count()).isZero();
+    }
+
+    @Test
+    void two_confirmations_racing_with_one_link_get_it_once() throws Exception {
+        String hash = "a".repeat(64);
+        tokens.save(userId, hash, now, now.plus(Duration.ofMinutes(30)));
+        CountDownLatch aHasConsumed = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<Optional<PasswordResetToken>> a = pool.submit(() -> transactions.execute(status -> {
+                Optional<PasswordResetToken> result = tokens.consumeByHash(hash);
+                aHasConsumed.countDown();
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                return result;
+            }));
+            Future<Optional<PasswordResetToken>> b = pool.submit(() -> {
+                assertThat(aHasConsumed.await(10, TimeUnit.SECONDS)).isTrue();
+                return transactions.execute(status -> tokens.consumeByHash(hash));
+            });
+
+            List<Optional<PasswordResetToken>> results = List.of(a.get(10, TimeUnit.SECONDS), b.get(10, TimeUnit.SECONDS));
+
+            assertThat(results.stream().filter(Optional::isPresent).count()).isEqualTo(1);
+            assertThat(jpa.count()).isZero();
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     @Test
