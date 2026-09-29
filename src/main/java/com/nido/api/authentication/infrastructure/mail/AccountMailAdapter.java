@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -25,14 +26,18 @@ import java.time.Instant;
 public class AccountMailAdapter implements AccountMailPort {
 
     private static final Logger log = LoggerFactory.getLogger(AccountMailAdapter.class);
+    /** An alert that outlives its moment is worse than none: a queue kept while mail was off must not deliver it weeks late. */
+    private static final Duration ALERT_VALIDITY = Duration.ofHours(24);
     private static final AppPath LOGIN = new AppPath("/login");
 
     private final SendMailUseCase sendMail;
     private final MailAvailabilityQuery availability;
+    private final Clock clock;
 
-    public AccountMailAdapter(SendMailUseCase sendMail, MailAvailabilityQuery availability) {
+    public AccountMailAdapter(SendMailUseCase sendMail, MailAvailabilityQuery availability, Clock clock) {
         this.sendMail = sendMail;
         this.availability = availability;
+        this.clock = clock;
     }
 
     @Override
@@ -48,7 +53,8 @@ public class AccountMailAdapter implements AccountMailPort {
 
     @Override
     public void passwordChanged(AccountContact account) {
-        send(account, new PasswordChangedMail(account.username(), LOGIN), null);
+        send(account, new PasswordChangedMail(account.username(), LOGIN),
+            clock.instant().plus(ALERT_VALIDITY));
     }
 
     private void send(AccountContact account, MailContent content, Instant expiresAt) {
