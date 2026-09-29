@@ -1,6 +1,6 @@
 import { lazy } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
-import { LoginPage } from '@/pages/login'
+import { ForgotPasswordPage, LoginPage, ResetPasswordPage } from '@/pages/login'
 import { ROUTES } from '@/shared/config'
 import { AppLayout, SpaceLayout } from '@/app/layouts'
 import { SpaceApiProvider, SpaceMembersApiProvider, spaceApi } from '@/entities/space'
@@ -10,6 +10,7 @@ import { ProtectedRoute } from './ProtectedRoute'
 import { AdminRoute } from './AdminRoute'
 import { SpaceRoute } from './SpaceRoute'
 import { PublicOnlyRoute } from './PublicOnlyRoute'
+import { RequirePasswordReset } from './RequirePasswordReset'
 import { DefaultRedirect } from './DefaultRedirect'
 import { SpaceIndexRedirect } from './SpaceIndexRedirect'
 
@@ -40,6 +41,26 @@ export function AppRouter() {
           element={
             <PublicOnlyRoute>
               <LoginPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path={ROUTES.FORGOT_PASSWORD}
+          element={
+            <PublicOnlyRoute>
+              <RequirePasswordReset>
+                <ForgotPasswordPage />
+              </RequirePasswordReset>
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path={ROUTES.RESET_PASSWORD}
+          element={
+            <PublicOnlyRoute>
+              <RequirePasswordReset>
+                <ResetPasswordPage />
+              </RequirePasswordReset>
             </PublicOnlyRoute>
           }
         />
