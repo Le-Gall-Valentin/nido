@@ -34,7 +34,12 @@ public class PasswordResetTokenRepositoryAdapter implements PasswordResetTokenRe
     @Transactional
     public Optional<PasswordResetToken> consumeByHash(String tokenHash) {
         Optional<PasswordResetTokenEntity> found = jpa.findByTokenHashForUpdate(tokenHash);
-        found.ifPresent(jpa::delete);
+        // Flushed at once: a clearing bulk update later in the caller's transaction (the new password
+        // hash) would otherwise discard the pending delete and leave the link usable again.
+        found.ifPresent(entity -> {
+            jpa.delete(entity);
+            jpa.flush();
+        });
         return found.map(PasswordResetTokenRepositoryAdapter::toDomain);
     }
 

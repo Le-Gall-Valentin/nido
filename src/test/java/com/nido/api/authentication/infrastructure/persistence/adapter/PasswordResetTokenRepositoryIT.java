@@ -4,6 +4,7 @@ import com.nido.api.IntegrationTestConfig;
 import com.nido.api.authentication.domain.model.PasswordResetToken;
 import com.nido.api.authentication.domain.port.out.PasswordResetTokenRepository;
 import com.nido.api.authentication.infrastructure.persistence.repository.PasswordResetTokenJpaRepository;
+import com.nido.api.authentication.infrastructure.persistence.repository.UserCredentialJpaRepository;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.shared.model.Role;
@@ -32,6 +33,7 @@ class PasswordResetTokenRepositoryIT {
     @Autowired PasswordResetTokenRepository tokens;
     @Autowired PasswordResetTokenJpaRepository jpa;
     @Autowired UserIdentityJpaRepository users;
+    @Autowired UserCredentialJpaRepository credentials;
     @Autowired TransactionTemplate transactions;
 
     private final Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
@@ -67,6 +69,20 @@ class PasswordResetTokenRepositoryIT {
 
         assertThat(first).isPresent();
         assertThat(second).isEmpty();
+        assertThat(jpa.count()).isZero();
+    }
+
+    @Test
+    void a_consumed_token_stays_deleted_when_a_clearing_update_follows_in_the_same_transaction() {
+        tokens.save(userId, "a".repeat(64), now, now.plus(Duration.ofMinutes(30)));
+
+        // What the confirmation does: updatePasswordHash clears the persistence context without flushing
+        // first, so the delete must already have gone out — nothing else here deletes the row.
+        transactions.executeWithoutResult(status -> {
+            tokens.consumeByHash("a".repeat(64));
+            credentials.updatePasswordHash(userId, "new-hash");
+        });
+
         assertThat(jpa.count()).isZero();
     }
 
