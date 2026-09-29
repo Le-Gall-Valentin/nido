@@ -60,6 +60,9 @@ public class AuthenticationExceptionHandler {
             case AuthenticationException.InvalidCurrentPassword ignored ->
                     response(422, "Current password is incorrect.");
 
+            case AuthenticationException.InvalidResetToken ignored ->
+                    response(410, "This password reset link is no longer valid.", "reset_link_invalid");
+
             case AuthenticationException.DataIntegrityError ex -> {
                 log.error("Data integrity violation on {}", request.getRequestURI(), ex);
                 yield response(500, "An unexpected error occurred. Please try again later.");

@@ -11,6 +11,7 @@ public abstract sealed class AuthenticationException extends RuntimeException
             AuthenticationException.TotpChallengeExpired,
             AuthenticationException.TotpMaxAttemptsExceeded,
             AuthenticationException.InvalidCurrentPassword,
+            AuthenticationException.InvalidResetToken,
             AuthenticationException.DataIntegrityError {
 
     private AuthenticationException(String message) {
@@ -55,6 +56,11 @@ public abstract sealed class AuthenticationException extends RuntimeException
 
     public static final class InvalidCurrentPassword extends AuthenticationException {
         public InvalidCurrentPassword() { super("Current password is incorrect"); }
+    }
+
+    /** Expired, already used, replaced by a newer one, or never issued: one answer for all of them. */
+    public static final class InvalidResetToken extends AuthenticationException {
+        public InvalidResetToken() { super("Password reset link is no longer valid"); }
     }
 
     public static final class DataIntegrityError extends AuthenticationException {

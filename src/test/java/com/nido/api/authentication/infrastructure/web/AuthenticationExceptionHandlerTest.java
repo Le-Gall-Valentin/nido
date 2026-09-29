@@ -130,4 +130,13 @@ class AuthenticationExceptionHandlerTest {
         assertThat(response.getBody().getInstance()).isNotNull();
         assertThat(response.getBody().getInstance().toString()).isEqualTo("/api/auth/login");
     }
+
+    @Test
+    void handle_invalidResetToken_returns410WithStableErrorCode() {
+        var response = handler.handle(new AuthenticationException.InvalidResetToken(), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.GONE);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getProperties()).containsEntry("error_code", "reset_link_invalid");
+    }
 }
