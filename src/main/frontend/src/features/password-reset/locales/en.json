@@ -1,0 +1,23 @@
+{
+  "field": {
+    "identifier": "Username or email address",
+    "identifier_placeholder": "first.last or you@example.com",
+    "new_password": "New password",
+    "confirm": "Confirm the password",
+    "show_password": "Show password",
+    "hide_password": "Hide password"
+  },
+  "rules": "8 to 72 characters, with at least one uppercase letter, one digit and one special character.",
+  "action": {
+    "send": "Send the link",
+    "save": "Save the password"
+  },
+  "error": {
+    "mismatch": "The two passwords do not match.",
+    "weak": "This password does not follow the rules above.",
+    "rateLimit": "Too many attempts. Please wait before trying again.",
+    "rateLimitWithDelay": "Too many attempts. Try again in {{seconds}} seconds.",
+    "network": "Service unavailable. Please try again.",
+    "server": "Something went wrong. Please try again in a moment."
+  }
+}
