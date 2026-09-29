@@ -87,6 +87,16 @@ class UpdateMyProfileHandlerTest {
     }
 
     @Test
+    void a_rename_and_an_address_change_in_one_save_greets_the_old_address_by_the_previous_username() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
+        when(passwordCheck.matches(userId, "right")).thenReturn(true);
+
+        handler.updateProfile(new UpdateProfileCommand(userId, "someone.else", "new@test.com", "right"));
+
+        verify(profileMail).emailChanged("jane", "jane@test.com", "new@test.com", Language.FR);
+    }
+
+    @Test
     void a_change_of_letter_case_only_is_not_an_address_change() {
         User mixed = new User(userId, "jane", "Jane@Test.com", Role.USER, true, Instant.now());
         when(userRepository.findById(userId)).thenReturn(Optional.of(mixed));

@@ -56,7 +56,7 @@ public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
         }
         userCommandPort.updateProfile(command);
         if (addressChanges && user.email() != null) {
-            profileMail.emailChanged(command.username(), user.email(), command.email(), user.language());
+            profileMail.emailChanged(user.username(), user.email(), command.email(), user.language());
         }
     }
 }
