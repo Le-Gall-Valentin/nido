@@ -126,12 +126,36 @@ class UserLanguageIT {
     }
 
     @Test
-    void an_address_is_found_whatever_its_letter_case_and_never_on_a_deleted_account() {
+    void an_address_is_found_whatever_its_letter_case() {
         createUser("mixed", "Mixed.Case@Test.com", "password", null);
-        UserIdentityEntity gone = createUser("gone", "gone@test.com", "password", null);
-        users.gdprAnonymize(gone.getId());
 
         assertThat(findUser.findByEmailIgnoreCase("MIXED.case@test.COM")).extracting(User::username).containsExactly("mixed");
+    }
+
+    @Test
+    void a_deleted_account_is_never_found_even_when_it_kept_its_address() {
+        UserIdentityEntity gone = createUser("gone", "gone@test.com", "password", null);
+        gone.setDeleted(true);
+        users.saveAndFlush(gone);
+
         assertThat(findUser.findByEmailIgnoreCase("gone@test.com")).isEmpty();
+    }
+
+    @Test
+    void addresses_differing_only_by_letter_case_give_every_account() {
+        createUser("upper", "Twin@test.com", "password", null);
+        createUser("lower", "twin@test.com", "password", null);
+
+        assertThat(findUser.findByEmailIgnoreCase("TWIN@test.com")).extracting(User::username)
+            .containsExactlyInAnyOrder("upper", "lower");
+    }
+
+    @Test
+    void a_deactivated_account_is_still_found() {
+        UserIdentityEntity asleep = createUser("asleep", "asleep@test.com", "password", null);
+        asleep.setActive(false);
+        users.saveAndFlush(asleep);
+
+        assertThat(findUser.findByEmailIgnoreCase("asleep@test.com")).extracting(User::username).containsExactly("asleep");
     }
 }
