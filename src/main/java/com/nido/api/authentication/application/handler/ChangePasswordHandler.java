@@ -2,8 +2,12 @@ package com.nido.api.authentication.application.handler;
 
 import com.nido.api.authentication.application.dto.ChangePasswordResult;
 import com.nido.api.authentication.application.port.in.ChangePasswordUseCase;
+import com.nido.api.authentication.domain.model.AccountContact;
 import com.nido.api.authentication.domain.model.UserCredentials;
+import com.nido.api.authentication.domain.port.out.AccountMailPort;
+import com.nido.api.authentication.domain.port.out.IssuedTokenCutoffPort;
 import com.nido.api.authentication.domain.port.out.PasswordHasherPort;
+import com.nido.api.authentication.domain.port.out.PasswordResetTokenRepository;
 import com.nido.api.authentication.domain.port.out.PasswordVerifierPort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenRevocationPort;
 import com.nido.api.authentication.domain.port.out.UserCredentialPort;
@@ -25,17 +29,26 @@ public class ChangePasswordHandler implements ChangePasswordUseCase {
     private final PasswordHasherPort passwordHasher;
     private final UserCredentialPort userCredentialPort;
     private final RefreshTokenRevocationPort refreshTokenRevocationPort;
+    private final PasswordResetTokenRepository resetTokens;
+    private final IssuedTokenCutoffPort cutoff;
+    private final AccountMailPort accountMail;
 
     public ChangePasswordHandler(UserCredentialsPort userCredentialsPort,
                                  PasswordVerifierPort passwordVerifier,
                                  PasswordHasherPort passwordHasher,
                                  UserCredentialPort userCredentialPort,
-                                 RefreshTokenRevocationPort refreshTokenRevocationPort) {
+                                 RefreshTokenRevocationPort refreshTokenRevocationPort,
+                                 PasswordResetTokenRepository resetTokens,
+                                 IssuedTokenCutoffPort cutoff,
+                                 AccountMailPort accountMail) {
         this.userCredentialsPort = userCredentialsPort;
         this.passwordVerifier = passwordVerifier;
         this.passwordHasher = passwordHasher;
         this.userCredentialPort = userCredentialPort;
         this.refreshTokenRevocationPort = refreshTokenRevocationPort;
+        this.resetTokens = resetTokens;
+        this.cutoff = cutoff;
+        this.accountMail = accountMail;
     }
 
     @Override
@@ -60,12 +73,15 @@ public class ChangePasswordHandler implements ChangePasswordUseCase {
         // RefreshTokenRepositoryAdapter). Should this transaction fail at commit after the
         // call, the tokens stay revoked while the password stays unchanged: the user signs in
         // again with the old password. That is the harmless direction of the two.
-        //
-        // The caller's own session is revoked along with the rest. Its access token still
-        // works until it expires, which is why the frontend signs out right after a
-        // successful change rather than waiting for the next refresh to fail.
         refreshTokenRevocationPort.revokeAllForUser(userId);
-        log.info("Password changed for user {} — all refresh tokens revoked", userId);
+        // Since mail and password resets exist, a change here ends exactly like a reset: no older link
+        // may outlive a deliberate change, access tokens already issued stop now — the caller's own
+        // included, which is why the frontend signs out right after — and the holder is told, in case
+        // it was not them.
+        resetTokens.deleteAllForUser(userId);
+        cutoff.cutOffNow(userId);
+        accountMail.passwordChanged(AccountContact.of(creds));
+        log.info("Password changed for user {} — all sessions ended", userId);
         return new ChangePasswordResult.Success();
     }
 }

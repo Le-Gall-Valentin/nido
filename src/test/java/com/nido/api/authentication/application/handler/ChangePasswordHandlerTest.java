@@ -1,8 +1,12 @@
 package com.nido.api.authentication.application.handler;
 
 import com.nido.api.authentication.application.dto.ChangePasswordResult;
+import com.nido.api.authentication.domain.model.AccountContact;
 import com.nido.api.authentication.domain.model.UserCredentials;
+import com.nido.api.authentication.domain.port.out.AccountMailPort;
+import com.nido.api.authentication.domain.port.out.IssuedTokenCutoffPort;
 import com.nido.api.authentication.domain.port.out.PasswordHasherPort;
+import com.nido.api.authentication.domain.port.out.PasswordResetTokenRepository;
 import com.nido.api.authentication.domain.port.out.PasswordVerifierPort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenRevocationPort;
 import com.nido.api.authentication.domain.port.out.UserCredentialPort;
@@ -29,6 +33,9 @@ class ChangePasswordHandlerTest {
     @Mock PasswordHasherPort passwordHasher;
     @Mock UserCredentialPort userCredentialPort;
     @Mock RefreshTokenRevocationPort refreshTokenRevocationPort;
+    @Mock PasswordResetTokenRepository resetTokens;
+    @Mock IssuedTokenCutoffPort cutoff;
+    @Mock AccountMailPort accountMail;
 
     private ChangePasswordHandler handler;
 
@@ -37,7 +44,7 @@ class ChangePasswordHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new ChangePasswordHandler(userCredentialsPort, passwordVerifier, passwordHasher, userCredentialPort,
-            refreshTokenRevocationPort);
+            refreshTokenRevocationPort, resetTokens, cutoff, accountMail);
     }
 
     @Test
@@ -78,5 +85,30 @@ class ChangePasswordHandlerTest {
         assertThat(result).isInstanceOf(ChangePasswordResult.DataIntegrityError.class);
         verify(userCredentialPort, never()).updatePasswordHash(any(), any());
         verify(refreshTokenRevocationPort, never()).revokeAllForUser(any());
+    }
+
+    @Test
+    void a_changed_password_ends_the_way_a_reset_does() {
+        UserCredentials creds = new UserCredentials(userId, "user", "u@test.com", "$hashed", true, Role.USER, Instant.now(), "fr");
+        when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
+        when(passwordVerifier.matches("oldPass", "$hashed")).thenReturn(true);
+        when(passwordHasher.hash("newPass")).thenReturn("$newHashed");
+
+        handler.changePassword(userId, "oldPass", "newPass");
+
+        verify(resetTokens).deleteAllForUser(userId);
+        verify(cutoff).cutOffNow(userId);
+        verify(accountMail).passwordChanged(AccountContact.of(creds));
+    }
+
+    @Test
+    void a_wrong_current_password_ends_nothing_and_mails_nobody() {
+        UserCredentials creds = new UserCredentials(userId, "user", "u@test.com", "$hashed", true, Role.USER, Instant.now());
+        when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
+        when(passwordVerifier.matches("wrongPass", "$hashed")).thenReturn(false);
+
+        handler.changePassword(userId, "wrongPass", "newPass");
+
+        verifyNoInteractions(resetTokens, cutoff, accountMail);
     }
 }
