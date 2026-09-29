@@ -1,0 +1,69 @@
+databaseChangeLog:
+  - changeSet:
+      id: 057-create-mail-outbox
+      author: nido
+      comment: >
+        Mails waiting to be delivered. A row is written in the same transaction as the event it
+        reports and deleted as soon as the mail is sent, expired or refused for good: a queue, not an
+        archive of what Nido wrote to people. The payload (recipient, subject, both bodies) is
+        encrypted with a key derived from NIDO_ENCRYPTION_SECRET, so this table alone reads nothing —
+        a password-reset link is a credential for as long as it lives.
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: mail_outbox
+      changes:
+        - createTable:
+            tableName: mail_outbox
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: kind
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: next_attempt_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: attempts
+                  type: INTEGER
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: locked_until
+                  type: TIMESTAMPTZ
+              - column:
+                  name: last_error
+                  type: VARCHAR(500)
+        - createIndex:
+            tableName: mail_outbox
+            indexName: idx_mail_outbox_next_attempt_at
+            columns:
+              - column:
+                  name: next_attempt_at
+      rollback:
+        - dropTable:
+            tableName: mail_outbox
