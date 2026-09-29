@@ -1,17 +1,35 @@
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { LoginForm } from '@/features/auth'
 import { TotpVerifyStep, TotpEnrollProposal, TotpSetupFlow, totpApi as defaultTotpApi } from '@/features/totp'
 import type { ITotpVerifyApi, ITotpEnrollApi } from '@/features/totp'
-import { NidoMark } from '@/shared/ui'
-import { LoginBrandPanel } from './LoginBrandPanel'
+import {
+  passwordResetApi as defaultPasswordResetApi,
+  usePasswordResetAvailability,
+  type IPasswordResetApi,
+} from '@/features/password-reset'
+import { ROUTES } from '@/shared/config'
+import { Alert } from '@/shared/ui'
+import { AuthShell } from './AuthShell'
+import { isPasswordResetDone } from '../model/passwordResetDone'
 import { useLoginFlow } from './useLoginFlow'
 
 type TotpApi = ITotpVerifyApi & ITotpEnrollApi
 
 const TITLE_ID = 'login-title'
 
-export function LoginPage({ totpApi = defaultTotpApi }: { totpApi?: TotpApi } = {}) {
+interface LoginPageProps {
+  totpApi?: TotpApi
+  passwordResetApi?: IPasswordResetApi
+}
+
+export function LoginPage({ totpApi = defaultTotpApi, passwordResetApi = defaultPasswordResetApi }: LoginPageProps = {}) {
   const { t } = useTranslation('login')
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [resetDone] = useState(() => isPasswordResetDone(location.state))
+  const passwordReset = usePasswordResetAvailability(passwordResetApi)
   const {
     step,
     pendingUser,
@@ -25,74 +43,62 @@ export function LoginPage({ totpApi = defaultTotpApi }: { totpApi?: TotpApi } = 
     handleSetupDismiss,
   } = useLoginFlow()
 
+  // History state survives a reload. Once the banner has read it, the reason leaves the entry, so a
+  // reload of the login page does not announce a password change a second time.
+  useEffect(() => {
+    if (resetDone) void navigate(location.pathname, { replace: true, state: null })
+  }, [resetDone, navigate, location.pathname])
+
   return (
-    <div className="grid min-h-screen grid-cols-1 md:grid-cols-[1fr_1fr] lg:grid-cols-[1.1fr_1fr]">
-      <LoginBrandPanel />
-
-      <main className="relative flex flex-col justify-center bg-bg-0 px-8 py-12 sm:px-11">
-        <div className="mx-auto w-full max-w-95">
-          <div className="mb-8 flex items-center gap-2.5 md:hidden" data-testid="mobile-header">
-            <div
-              className="grid size-8 shrink-0 place-items-center rounded-[10px] text-white"
-              style={{ background: 'linear-gradient(135deg, var(--brand-icon-from), var(--brand-icon-to))' }}
-            >
-              <NidoMark size={17} />
-            </div>
-            <span
-              className="text-[17px] font-bold tracking-tight text-fg-0"
-              style={{ fontFamily: 'var(--font-family-display)' }}
-            >
-              Nido
-            </span>
+    <AuthShell>
+      {step === 'credentials' && (
+        <>
+          {resetDone && <Alert variant="success" className="mb-6">{t('reset.done')}</Alert>}
+          <div className="mb-8">
+            <h1 id={TITLE_ID} className="mb-2 text-[28px] font-semibold tracking-tight text-fg-0">
+              {t('form.title')}
+            </h1>
+            <p className="text-sm text-fg-2">{t('form.subtitle')}</p>
           </div>
-
-          {step === 'credentials' && (
-            <>
-              <div className="mb-8">
-                <h1 id={TITLE_ID} className="mb-2 text-[28px] font-semibold tracking-tight text-fg-0">
-                  {t('form.title')}
-                </h1>
-                <p className="text-sm text-fg-2">{t('form.subtitle')}</p>
-              </div>
-              <LoginForm labelId={TITLE_ID} onLoginOutcome={handleLoginOutcome} />
-              <p className="mt-7 text-center text-[13px] leading-relaxed text-fg-2">
-                <span className="font-medium text-fg-1">{t('help.no_account')}</span>{' '}
-                {t('help.contact_admin')}
-              </p>
-            </>
+          <LoginForm labelId={TITLE_ID} onLoginOutcome={handleLoginOutcome} />
+          {passwordReset === 'available' && (
+            <p className="mt-4 text-center">
+              <Link to={ROUTES.FORGOT_PASSWORD} className="text-[13px] font-semibold text-accent hover:underline">
+                {t('forgot.link')}
+              </Link>
+            </p>
           )}
+          <p className="mt-7 text-center text-[13px] leading-relaxed text-fg-2">
+            <span className="font-medium text-fg-1">{t('help.no_account')}</span>{' '}
+            {t('help.contact_admin')}
+          </p>
+        </>
+      )}
 
-          {step === 'totp' && (
-            <TotpVerifyStep
-              username={pendingUsername}
-              api={totpApi}
-              onVerified={handleVerified}
-              onBack={handleBack}
-            />
-          )}
+      {step === 'totp' && (
+        <TotpVerifyStep
+          username={pendingUsername}
+          api={totpApi}
+          onVerified={handleVerified}
+          onBack={handleBack}
+        />
+      )}
 
-          {step === 'enroll' && pendingUser && (
-            <TotpEnrollProposal
-              username={pendingUser.username}
-              onActivate={handleActivate}
-              onSkip={handleSkip}
-            />
-          )}
+      {step === 'enroll' && pendingUser && (
+        <TotpEnrollProposal
+          username={pendingUser.username}
+          onActivate={handleActivate}
+          onSkip={handleSkip}
+        />
+      )}
 
-          {step === 'setup' && (
-            <TotpSetupFlow
-              api={totpApi}
-              onSuccess={handleSetupSuccess}
-              onDismiss={handleSetupDismiss}
-            />
-          )}
-
-        </div>
-
-        <footer className="absolute bottom-6 left-0 right-0 text-center text-[11px] text-fg-3">
-          {t('footer')}
-        </footer>
-      </main>
-    </div>
+      {step === 'setup' && (
+        <TotpSetupFlow
+          api={totpApi}
+          onSuccess={handleSetupSuccess}
+          onDismiss={handleSetupDismiss}
+        />
+      )}
+    </AuthShell>
   )
 }
