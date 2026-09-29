@@ -25,17 +25,21 @@ const MINUTE_MS = 60_000
  * Whole minutes are the same instants in every zone, whose offsets are whole minutes too.
  */
 export function useNow(zone?: string): ZonedNow {
-  const [now, setNow] = useState(() => nowInZone(new Date(), zone))
+  const [clock, setClock] = useState(() => ({ zone, now: nowInZone(new Date(), zone) }))
 
   useEffect(() => {
     let id: number
     const tick = () => {
-      setNow(nowInZone(new Date(), zone))
+      setClock({ zone, now: nowInZone(new Date(), zone) })
       id = window.setTimeout(tick, MINUTE_MS - (Date.now() % MINUTE_MS))
     }
     tick()
     return () => window.clearTimeout(id)
   }, [zone])
 
-  return now
+  // The zone often arrives after the first render, with the spaces list. The render it arrives in
+  // reads the date there itself rather than wait for the effect above: that render's own effects —
+  // a link opening the new-event form on "today" — otherwise got the previous zone's date, which
+  // opened the form on the machine's day, not the household's.
+  return clock.zone === zone ? clock.now : nowInZone(new Date(), zone)
 }
