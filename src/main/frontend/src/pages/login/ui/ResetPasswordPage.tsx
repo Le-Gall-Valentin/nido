@@ -3,9 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, Clock } from 'lucide-react'
 import {
-  InvalidResetLinkError,
   NewPasswordForm,
   passwordResetApi as defaultApi,
+  useResetLinkCheck,
   type IPasswordResetApi,
 } from '@/features/password-reset'
 import { ROUTES } from '@/shared/config'
@@ -33,27 +33,14 @@ export function ResetPasswordPage({ api = defaultApi }: { api?: IPasswordResetAp
   const location = useLocation()
   const navigate = useNavigate()
   const [token] = useState(() => tokenIn(location.hash))
-  const [step, setStep] = useState<Step>(token ? 'checking' : 'invalid')
-  const [attempt, setAttempt] = useState(0)
+  const link = useResetLinkCheck(token, api)
+  // The link can also stop working while the new password is typed: the save is refused with 410.
+  const [refusedOnSave, setRefusedOnSave] = useState(false)
+  const step: Step = refusedOnSave ? 'invalid' : link.state === 'valid' ? 'form' : link.state
 
   useEffect(() => {
     if (location.hash) void navigate({ pathname: location.pathname, search: location.search }, { replace: true })
   }, [location.hash, location.pathname, location.search, navigate])
-
-  useEffect(() => {
-    if (!token) return
-    let current = true
-    void api.checkToken(token).then(
-      () => { if (current) setStep('form') },
-      (error: unknown) => { if (current) setStep(error instanceof InvalidResetLinkError ? 'invalid' : 'unavailable') },
-    )
-    return () => { current = false }
-  }, [api, token, attempt])
-
-  function retry() {
-    setStep('checking')
-    setAttempt((n) => n + 1)
-  }
 
   return (
     <AuthShell>
@@ -72,7 +59,7 @@ export function ResetPasswordPage({ api = defaultApi }: { api?: IPasswordResetAp
             token={token}
             labelId={TITLE_ID}
             onDone={() => void navigate(ROUTES.LOGIN, { replace: true, state: PASSWORD_RESET_DONE_STATE })}
-            onInvalid={() => setStep('invalid')}
+            onInvalid={() => setRefusedOnSave(true)}
           />
         </>
       )}
@@ -105,7 +92,7 @@ export function ResetPasswordPage({ api = defaultApi }: { api?: IPasswordResetAp
       {step === 'unavailable' && (
         <div className="flex flex-col gap-4">
           <Alert variant="error">{t('reset.unavailable')}</Alert>
-          <Button type="button" onClick={retry} className="w-full rounded-[11px] py-3">{t('reset.retry')}</Button>
+          <Button type="button" onClick={link.retry} className="w-full rounded-[11px] py-3">{t('reset.retry')}</Button>
         </div>
       )}
     </AuthShell>

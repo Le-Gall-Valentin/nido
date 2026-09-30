@@ -4,5 +4,7 @@ export type { IPasswordResetApi, PasswordResetCapabilities } from './model/IPass
 export { InvalidResetLinkError, WeakPasswordError } from './model/errors'
 export { usePasswordResetAvailability, PASSWORD_RESET_CAPABILITY_KEY } from './model/usePasswordResetAvailability'
 export type { PasswordResetAvailability } from './model/usePasswordResetAvailability'
+export { useResetLinkCheck } from './model/useResetLinkCheck'
+export type { ResetLinkState } from './model/useResetLinkCheck'
 export { RequestResetForm } from './ui/RequestResetForm'
 export { NewPasswordForm } from './ui/NewPasswordForm'

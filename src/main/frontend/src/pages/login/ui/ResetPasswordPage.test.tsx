@@ -1,8 +1,11 @@
+import { StrictMode } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { InvalidResetLinkError, type IPasswordResetApi } from '@/features/password-reset'
 import { NetworkError } from '@/shared/lib'
+import { createTestQueryClient } from '@/shared/test'
 import { ResetPasswordPage } from './ResetPasswordPage'
 
 vi.mock('react-i18next', () => ({
@@ -14,18 +17,21 @@ function Where() {
   return <output data-testid="where">{JSON.stringify({ path: location.pathname, hash: location.hash, state: location.state })}</output>
 }
 
-function open(url: string, api: Partial<IPasswordResetApi>) {
+function open(url: string, api: Partial<IPasswordResetApi>, { strict = false } = {}) {
   const full: IPasswordResetApi = {
     capabilities: vi.fn(), requestReset: vi.fn(), checkToken: vi.fn().mockResolvedValue(undefined), confirmReset: vi.fn(), ...api,
   }
-  render(
-    <MemoryRouter initialEntries={[url]}>
-      <Routes>
-        <Route path="/reset-password" element={<><ResetPasswordPage api={full} /><Where /></>} />
-        <Route path="/login" element={<Where />} />
-      </Routes>
-    </MemoryRouter>,
+  const tree = (
+    <QueryClientProvider client={createTestQueryClient()}>
+      <MemoryRouter initialEntries={[url]}>
+        <Routes>
+          <Route path="/reset-password" element={<><ResetPasswordPage api={full} /><Where /></>} />
+          <Route path="/login" element={<Where />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   )
+  render(strict ? <StrictMode>{tree}</StrictMode> : tree)
   return full
 }
 
@@ -38,6 +44,13 @@ describe('ResetPasswordPage', () => {
     await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('reset.title'))
     expect(api.checkToken).toHaveBeenCalledWith('abc')
     expect(where().hash).toBe('')
+  })
+
+  it('checks the link once, even when React mounts the page twice to find side effects', async () => {
+    const api = open('/reset-password#token=abc', {}, { strict: true })
+
+    await screen.findByLabelText('field.new_password')
+    expect(api.checkToken).toHaveBeenCalledTimes(1)
   })
 
   it('reads the token among other hash parameters', async () => {
