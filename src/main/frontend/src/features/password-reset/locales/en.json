@@ -14,6 +14,7 @@
   },
   "error": {
     "mismatch": "The two passwords do not match.",
+    "too_long": "Too long: 72 characters at most, fewer with accents or emoji.",
     "weak": "This password does not follow the rules above.",
     "rateLimit": "Too many attempts. Please wait before trying again.",
     "rateLimitWithDelay": "Too many attempts. Try again in {{seconds}} seconds.",

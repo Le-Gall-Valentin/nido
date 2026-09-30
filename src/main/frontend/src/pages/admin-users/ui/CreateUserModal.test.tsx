@@ -99,6 +99,13 @@ describe('CreateUserModal — validation', () => {
     expect(queryByText('create.error.password_weak')).toBeNull()
   })
 
+  it('counts the length as the server does: 72 accented characters are too long', () => {
+    const { getByLabelText, getByText } = setup()
+    fillForm(getByLabelText, 'Aé1!' + 'é'.repeat(68))
+    expect((getByText('create.submit') as HTMLButtonElement).disabled).toBe(true)
+    expect(getByText('create.error.password_too_long')).toBeDefined()
+  })
+
   it('shows hint when username is shorter than 3 chars', () => {
     const { getByLabelText, getByText } = setup()
     fireEvent.change(getByLabelText('create.username'), { target: { value: 'ab' } })

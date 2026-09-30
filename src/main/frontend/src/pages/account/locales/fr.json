@@ -65,6 +65,7 @@
     "error": {
       "mismatch": "Les deux mots de passe ne correspondent pas.",
       "too_short": "Trop court (8 caractères minimum).",
+      "too_long": "Trop long : 72 caractères au plus, moins avec des accents ou des emojis.",
       "weak": "Doit contenir au moins une majuscule, un chiffre et un caractère spécial.",
       "wrong_current": "Mot de passe actuel incorrect.",
       "server": "Une erreur est survenue. Veuillez réessayer.",

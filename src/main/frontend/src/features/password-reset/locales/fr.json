@@ -14,6 +14,7 @@
   },
   "error": {
     "mismatch": "Les deux mots de passe ne correspondent pas.",
+    "too_long": "Trop long : 72 caractères au plus, moins avec des accents ou des emojis.",
     "weak": "Ce mot de passe ne respecte pas les règles ci-dessus.",
     "rateLimit": "Trop de tentatives. Veuillez patienter avant de réessayer.",
     "rateLimitWithDelay": "Trop de tentatives. Réessayez dans {{seconds}} secondes.",

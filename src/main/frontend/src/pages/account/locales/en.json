@@ -65,6 +65,7 @@
     "error": {
       "mismatch": "The two passwords do not match.",
       "too_short": "Too short (minimum 8 characters).",
+      "too_long": "Too long: 72 characters at most, fewer with accents or emoji.",
       "weak": "Must contain at least one uppercase letter, one digit, and one special character.",
       "wrong_current": "Current password is incorrect.",
       "server": "An error occurred. Please try again.",

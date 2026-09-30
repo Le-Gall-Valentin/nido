@@ -37,6 +37,16 @@ describe('NewPasswordForm', () => {
     expect(save().disabled).toBe(false)
   })
 
+  it('says why a password the rules text seems to allow is refused: past 72 bytes', () => {
+    const { type, save } = setup(vi.fn())
+    const long = 'Aé1!' + 'é'.repeat(68)
+    type('field.new_password', long)
+    type('field.confirm', long)
+
+    expect(screen.getByText('error.too_long')).not.toBeNull()
+    expect(save().disabled).toBe(true)
+  })
+
   it('saves the password with the link token, then says it is done', async () => {
     const confirmReset = vi.fn().mockResolvedValue(undefined)
     const { type, save, onDone } = setup(confirmReset)

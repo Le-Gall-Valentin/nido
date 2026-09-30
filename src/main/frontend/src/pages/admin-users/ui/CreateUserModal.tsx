@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { isValidPassword, isValidEmail, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '@/shared/lib'
+import { isValidPassword, isValidEmail, passwordProblem } from '@/shared/lib'
 import type { User } from '@/entities/user'
 import { assignableRoles } from '../lib/permissions'
 import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
@@ -31,12 +31,10 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
   // Mirror of the backend RegisterRequest constraints.
   const usernameInvalid = trimmedUsername.length > 0 && (trimmedUsername.length < 3 || trimmedUsername.length > 50)
   const emailInvalid = trimmedEmail.length > 0 && !isValidEmail(trimmedEmail)
-  const passwordTooShort = password.length > 0 && password.length < PASSWORD_MIN_LENGTH
-  const passwordTooLong = password.length > PASSWORD_MAX_LENGTH
-  const passwordWeak =
-    password.length >= PASSWORD_MIN_LENGTH &&
-    password.length <= PASSWORD_MAX_LENGTH &&
-    !isValidPassword(password)
+  const problem = password.length > 0 ? passwordProblem(password) : null
+  const passwordTooShort = problem === 'too_short'
+  const passwordTooLong = problem === 'too_long'
+  const passwordWeak = problem === 'weak'
   const canSubmit =
     trimmedUsername.length >= 3 &&
     trimmedUsername.length <= 50 &&

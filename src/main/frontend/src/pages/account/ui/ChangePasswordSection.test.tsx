@@ -42,6 +42,14 @@ describe('ChangePasswordSection', () => {
     expect(getByText('password.error.too_short')).toBeDefined()
   })
 
+  it('shows a too_long warning past 72 bytes, 72 accented characters included', () => {
+    const { container, getByText, getByRole } = setup()
+    const long = 'Aé1!' + 'é'.repeat(68)
+    fillForm(container, 'old', long, long)
+    expect(getByText('password.error.too_long')).toBeDefined()
+    expect((getByRole('button', { name: 'password.submit' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
   it('calls onChangePassword with currentPassword and newPassword on submit', async () => {
     const { container, getByRole, onChangePassword } = setup()
     fillForm(container, 'oldpass', 'Newpass1!', 'Newpass1!')

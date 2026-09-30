@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
 import { Alert, Button, Input, CTA_BUTTON_SHADOW, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { isValidPassword } from '@/shared/lib'
+import { isValidPassword, passwordProblem } from '@/shared/lib'
 import type { IPasswordResetApi } from '../model/IPasswordResetApi'
 import { InvalidResetLinkError } from '../model/errors'
 import { describeError, type FormError } from '../model/describeError'
@@ -26,6 +26,8 @@ export function NewPasswordForm({ api, token, labelId, onDone, onInvalid }: Prop
   const isSubmittingRef = useRef(false)
 
   const mismatch = confirm.length > 0 && password !== confirm
+  // The rules text says 72 characters; past 72 bytes it needs saying why a password that fits is refused.
+  const tooLong = passwordProblem(password) === 'too_long'
   const canSave = isValidPassword(password) && password === confirm
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
@@ -78,6 +80,7 @@ export function NewPasswordForm({ api, token, labelId, onDone, onInvalid }: Prop
           suffix={toggle}
         />
         <p className="text-xs leading-relaxed text-fg-2">{t('rules')}</p>
+        {tooLong && <p className="text-xs text-status-orange">{t('error.too_long')}</p>}
       </div>
       <Input
         label={t('field.confirm')}

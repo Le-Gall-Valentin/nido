@@ -9,7 +9,7 @@ export {
 } from './sessionCallbacks'
 export { setSessionHint, clearSessionHint, hasSessionHint } from './sessionHint'
 export { NetworkError, ServerError, RateLimitError, ForbiddenError, NotFoundError } from './apiErrors'
-export { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH, PASSWORD_REGEX, isValidPassword } from './passwordPolicy'
+export { isValidPassword, passwordProblem, type PasswordProblem } from './passwordPolicy'
 export { isValidEmail } from './emailPolicy'
 export { useDebouncedValue } from './useDebouncedValue'
 export { usePointerIsFine } from './usePointerIsFine'
