@@ -2,12 +2,14 @@ package com.nido.api.authentication.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.authentication.application.port.in.RefreshTokenUseCase;
+import com.nido.api.authentication.application.port.in.RequestPasswordResetUseCase;
 import com.nido.api.authentication.domain.model.UserCredentials;
 import com.nido.api.authentication.domain.port.out.RefreshTokenIssuerPort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenRevocationPort;
 import com.nido.api.authentication.domain.port.out.UserCredentialsPort;
 import com.nido.api.authentication.infrastructure.persistence.entity.RefreshTokenEntity;
 import com.nido.api.authentication.infrastructure.persistence.entity.UserCredentialEntity;
+import com.nido.api.authentication.infrastructure.persistence.repository.PasswordResetTokenJpaRepository;
 import com.nido.api.authentication.infrastructure.persistence.repository.RefreshTokenJpaRepository;
 import com.nido.api.authentication.infrastructure.persistence.repository.UserCredentialJpaRepository;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
@@ -40,7 +42,9 @@ class AccountRacesIT {
     @Autowired RefreshTokenRevocationPort revocation;
     @Autowired RefreshTokenIssuerPort issuer;
     @Autowired UserCredentialsPort credentialsPort;
+    @Autowired RequestPasswordResetUseCase requestReset;
     @Autowired RefreshTokenJpaRepository refreshTokens;
+    @Autowired PasswordResetTokenJpaRepository resetTokens;
     @Autowired UserIdentityJpaRepository users;
     @Autowired UserCredentialJpaRepository credentials;
     @Autowired TransactionTemplate transactions;
@@ -90,6 +94,32 @@ class AccountRacesIT {
             List<RefreshTokenEntity> tokens = refreshTokens.findAll().stream()
                 .filter(token -> token.getUserId().equals(userId)).toList();
             assertThat(tokens).hasSize(2).allMatch(RefreshTokenEntity::isRevoked);
+        } finally {
+            releaseA.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void two_reset_requests_at_the_same_moment_send_one_link() throws Exception {
+        CountDownLatch aIssued = new CountDownLatch(1);
+        CountDownLatch releaseA = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> a = pool.submit(() -> transactions.executeWithoutResult(status -> {
+                requestReset.request(username);
+                aIssued.countDown();
+                awaitQuietly(releaseA);
+            }));
+            assertThat(aIssued.await(10, TimeUnit.SECONDS)).isTrue();
+
+            Future<?> b = pool.submit(() -> requestReset.request(username));
+            awaitWaitingOrDone(b);
+            releaseA.countDown();
+            a.get(15, TimeUnit.SECONDS);
+            b.get(15, TimeUnit.SECONDS);
+
+            assertThat(resetTokens.findAll()).filteredOn(token -> token.getUserId().equals(userId)).hasSize(1);
         } finally {
             releaseA.countDown();
             pool.shutdownNow();

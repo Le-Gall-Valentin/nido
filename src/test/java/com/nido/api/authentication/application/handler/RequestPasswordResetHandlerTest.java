@@ -3,6 +3,7 @@ package com.nido.api.authentication.application.handler;
 import com.nido.api.authentication.domain.model.AccountContact;
 import com.nido.api.authentication.domain.model.PasswordResetRules;
 import com.nido.api.authentication.domain.model.UserProfile;
+import com.nido.api.authentication.domain.port.out.AccountLockPort;
 import com.nido.api.authentication.domain.port.out.AccountMailPort;
 import com.nido.api.authentication.domain.port.out.PasswordResetTokenRepository;
 import com.nido.api.authentication.domain.port.out.ResetTokenGeneratorPort;
@@ -42,6 +43,7 @@ class RequestPasswordResetHandlerTest {
     @Mock ResetTokenGeneratorPort generator;
     @Mock TokenHashPort hasher;
     @Mock AccountMailPort mail;
+    @Mock AccountLockPort accountLock;
 
     private final Instant now = Instant.parse("2026-09-28T10:00:00Z");
     private final UserProfile jane = new UserProfile(UUID.randomUUID(), "jane", "jane@test.com", true, Role.USER,
@@ -50,7 +52,7 @@ class RequestPasswordResetHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new RequestPasswordResetHandler(profiles, tokens, generator, hasher, mail, Clock.fixed(now, ZoneOffset.UTC));
+        handler = new RequestPasswordResetHandler(profiles, tokens, generator, hasher, mail, accountLock, Clock.fixed(now, ZoneOffset.UTC));
         when(profiles.findByUsername(any())).thenReturn(Optional.empty());
         when(profiles.findByEmailIgnoreCase(any())).thenReturn(List.of());
         when(tokens.latestIssuedAt(any())).thenReturn(Optional.empty());
@@ -118,6 +120,18 @@ class RequestPasswordResetHandlerTest {
         handler.request("jane");
 
         verifyNoInteractions(mail);
+    }
+
+    @Test
+    void the_account_is_locked_before_its_last_link_is_looked_at() {
+        when(profiles.findByUsername("jane")).thenReturn(Optional.of(jane));
+
+        handler.request("jane");
+
+        // Otherwise two requests at the same moment both find no recent link and both send one.
+        InOrder order = inOrder(accountLock, tokens);
+        order.verify(accountLock).lockFor(jane.id());
+        order.verify(tokens).latestIssuedAt(jane.id());
     }
 
     @Test

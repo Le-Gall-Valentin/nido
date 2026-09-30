@@ -4,6 +4,7 @@ import com.nido.api.authentication.application.port.in.RequestPasswordResetUseCa
 import com.nido.api.authentication.domain.model.AccountContact;
 import com.nido.api.authentication.domain.model.PasswordResetRules;
 import com.nido.api.authentication.domain.model.UserProfile;
+import com.nido.api.authentication.domain.port.out.AccountLockPort;
 import com.nido.api.authentication.domain.port.out.AccountMailPort;
 import com.nido.api.authentication.domain.port.out.PasswordResetTokenRepository;
 import com.nido.api.authentication.domain.port.out.ResetTokenGeneratorPort;
@@ -40,16 +41,18 @@ public class RequestPasswordResetHandler implements RequestPasswordResetUseCase 
     private final ResetTokenGeneratorPort generator;
     private final TokenHashPort hasher;
     private final AccountMailPort mail;
+    private final AccountLockPort accountLock;
     private final Clock clock;
 
     public RequestPasswordResetHandler(UserProfilePort profiles, PasswordResetTokenRepository tokens,
                                        ResetTokenGeneratorPort generator, TokenHashPort hasher,
-                                       AccountMailPort mail, Clock clock) {
+                                       AccountMailPort mail, AccountLockPort accountLock, Clock clock) {
         this.profiles = profiles;
         this.tokens = tokens;
         this.generator = generator;
         this.hasher = hasher;
         this.mail = mail;
+        this.accountLock = accountLock;
         this.clock = clock;
     }
 
@@ -66,6 +69,9 @@ public class RequestPasswordResetHandler implements RequestPasswordResetUseCase 
             return;
         }
         UserProfile account = found.get();
+        // Two requests at the same moment would both find no recent link and both send one: the second
+        // waits here until the first has committed its link, then sees it and holds back.
+        accountLock.lockFor(account.id());
         Instant now = clock.instant();
         if (tokens.latestIssuedAt(account.id()).filter(last -> PasswordResetRules.inCooldown(last, now)).isPresent()) {
             log.info("Password reset for user {} held back: a link went out less than {} ago",
