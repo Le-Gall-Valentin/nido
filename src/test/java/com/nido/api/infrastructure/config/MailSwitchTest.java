@@ -54,7 +54,6 @@ class MailSwitchTest {
             "user", "s3cret", "Nido <nido@example.com>", "https://nido.example.com");
 
         assertThat(properties.toString()).doesNotContain("s3cret").contains("***");
-        assertThat(properties.enabled()).isTrue();
     }
 
     @Configuration(proxyBeanMethods = false)
@@ -65,11 +64,11 @@ class MailSwitchTest {
     @Test
     void an_empty_port_binds_and_leaves_mail_off_when_there_is_no_host() {
         // A compose line `NIDO_SMTP_PORT: ${NIDO_SMTP_PORT}` with nothing in .env hands the app "".
-        new ApplicationContextRunner().withUserConfiguration(Binding.class)
+        new ApplicationContextRunner().withUserConfiguration(Binding.class, Probe.class)
             .withPropertyValues("nido.mail.host=", "nido.mail.port=")
             .run(context -> {
                 assertThat(context).hasNotFailed();
-                assertThat(context.getBean(MailProperties.class).enabled()).isFalse();
+                assertThat(context).hasBean("whenOff").doesNotHaveBean("whenOn");
             });
     }
 

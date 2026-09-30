@@ -5,7 +5,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
  * Outgoing mail, every value optional. {@code host} (NIDO_SMTP_HOST) is the switch: blank means the
- * mail context builds nothing that could send — see {@link ConditionalOnMailEnabled}.
+ * mail context builds nothing that could send. {@link MailSwitch} alone reads it that way — see
+ * {@link ConditionalOnMailEnabled} — so there is one answer to "is mail on?".
  *
  * <p>Checking that a switched-on configuration is complete belongs to the mail context, which owns
  * the parsing of an address and of the app URL (MailSettings); this record only carries the values,
@@ -33,10 +34,6 @@ public record MailProperties(
         TLS,
         /** No encryption at all — local development against Mailpit only. */
         NONE
-    }
-
-    public boolean enabled() {
-        return host != null && !host.isBlank();
     }
 
     @Override
