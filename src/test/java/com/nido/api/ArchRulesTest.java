@@ -500,7 +500,7 @@ class ArchRulesTest {
         new CrossBcAppDep("identity",
             new String[]{BASE + "authentication.application.port.in..", BASE + "authentication.application.dto.."},
             Set.of("CredentialSetupAdapter", "CredentialChangeAdapter", "CredentialDeletionAdapter",
-                   "TokenInvalidationAdapter", "PasswordCheckAdapter")),
+                   "TokenInvalidationAdapter", "PasswordCheckAdapter", "AccountRecoveryAdapter")),
 
         // identity.infra → mail.application.port.in
         new CrossBcAppDep("identity",

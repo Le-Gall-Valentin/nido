@@ -4,6 +4,7 @@ import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.Language;
 import com.nido.api.identity.domain.model.UpdateProfileCommand;
 import com.nido.api.identity.domain.model.User;
+import com.nido.api.identity.domain.port.out.AccountRecoveryPort;
 import com.nido.api.identity.domain.port.out.PasswordCheckPort;
 import com.nido.api.identity.domain.port.out.ProfileMailPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
@@ -33,6 +34,7 @@ class UpdateMyProfileHandlerTest {
     @Mock UserCommandPort userCommandPort;
     @Mock PasswordCheckPort passwordCheck;
     @Mock ProfileMailPort profileMail;
+    @Mock AccountRecoveryPort accountRecovery;
 
     private final UUID userId = UUID.randomUUID();
     private final User jane = new User(userId, "jane", "jane@test.com", Role.USER, true, Instant.now(), Language.FR);
@@ -40,7 +42,7 @@ class UpdateMyProfileHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new UpdateMyProfileHandler(userRepository, userCommandPort, passwordCheck, profileMail);
+        handler = new UpdateMyProfileHandler(userRepository, userCommandPort, passwordCheck, profileMail, accountRecovery);
     }
 
     @Test
@@ -87,6 +89,16 @@ class UpdateMyProfileHandlerTest {
     }
 
     @Test
+    void a_new_address_voids_every_reset_link_the_old_one_received() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
+        when(passwordCheck.matches(userId, "right")).thenReturn(true);
+
+        handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com", "right"));
+
+        verify(accountRecovery).forgetResetLinks(userId);
+    }
+
+    @Test
     void a_rename_and_an_address_change_in_one_save_greets_the_old_address_by_the_previous_username() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
         when(passwordCheck.matches(userId, "right")).thenReturn(true);
@@ -103,7 +115,7 @@ class UpdateMyProfileHandlerTest {
 
         handler.updateProfile(new UpdateProfileCommand(userId, "jane", "jane@test.com"));
 
-        verifyNoInteractions(passwordCheck, profileMail);
+        verifyNoInteractions(passwordCheck, profileMail, accountRecovery);
     }
 
     @Test

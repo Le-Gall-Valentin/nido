@@ -46,6 +46,7 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -336,6 +337,22 @@ class PasswordResetIT {
         confirm(token, "Aé1!" + "é".repeat(68), 400);
 
         check(token, 204);
+    }
+
+    @Test
+    void a_link_sent_before_an_address_change_no_longer_works() throws Exception {
+        requestReset("jane", "fr");
+        String token = tokenIn(onlyMail());
+
+        // The address is how the account is recovered: a link that went to the old one must not
+        // outlive the change, or whoever still reads that mailbox keeps a way in for thirty minutes.
+        mockMvc.perform(patch("/api/users/me")
+                .cookie(tokenIssuedAMinuteAgoFor(jane.getId()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"jane\",\"email\":\"jane.new@test.com\",\"currentPassword\":\"OldPassw0rd!\"}"))
+            .andExpect(status().isNoContent());
+
+        check(token, 410);
     }
 
     @Test
