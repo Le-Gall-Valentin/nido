@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { InvalidResetLinkError, type IPasswordResetApi } from '@/features/password-reset'
 import { NetworkError } from '@/shared/lib'
@@ -17,6 +17,12 @@ function Where() {
   return <output data-testid="where">{JSON.stringify({ path: location.pathname, hash: location.hash, state: location.state })}</output>
 }
 
+/** Opens another reset link in the same tab — a navigation within the page, not a reload. */
+function OpenAnotherLink() {
+  const navigate = useNavigate()
+  return <button type="button" onClick={() => void navigate('/reset-password#token=def')}>another link</button>
+}
+
 function open(url: string, api: Partial<IPasswordResetApi>, { strict = false } = {}) {
   const full: IPasswordResetApi = {
     capabilities: vi.fn(), requestReset: vi.fn(), checkToken: vi.fn().mockResolvedValue(undefined), confirmReset: vi.fn(), ...api,
@@ -25,7 +31,7 @@ function open(url: string, api: Partial<IPasswordResetApi>, { strict = false } =
     <QueryClientProvider client={createTestQueryClient()}>
       <MemoryRouter initialEntries={[url]}>
         <Routes>
-          <Route path="/reset-password" element={<><ResetPasswordPage api={full} /><Where /></>} />
+          <Route path="/reset-password" element={<><ResetPasswordPage api={full} /><Where /><OpenAnotherLink /></>} />
           <Route path="/login" element={<Where />} />
         </Routes>
       </MemoryRouter>
@@ -107,6 +113,18 @@ describe('ResetPasswordPage', () => {
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toContain('reset.invalid.title')
     expect(screen.queryByLabelText('field.new_password')).toBeNull()
+  })
+
+  it('follows a newer link opened in the same tab instead of keeping the old token', async () => {
+    const checkToken = vi.fn((token: string) => (token === 'abc' ? Promise.reject(new InvalidResetLinkError()) : Promise.resolve()))
+    open('/reset-password#token=abc', { checkToken })
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('reset.invalid.title'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'another link' }))
+
+    await screen.findByLabelText('field.new_password')
+    expect(checkToken).toHaveBeenLastCalledWith('def')
+    expect(where().hash).toBe('')
   })
 
   it('sends the person to the login page, told the password changed', async () => {

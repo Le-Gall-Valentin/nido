@@ -32,11 +32,15 @@ export function ResetPasswordPage({ api = defaultApi }: { api?: IPasswordResetAp
   const { t } = useTranslation('login')
   const location = useLocation()
   const navigate = useNavigate()
-  const [token] = useState(() => tokenIn(location.hash))
+  const tokenInAddress = tokenIn(location.hash)
+  const [token, setToken] = useState(tokenInAddress)
+  // Kept once the address bar is cleaned below — but a newer link opened in the same tab arrives
+  // without a reload, and it is that link the person means now.
+  if (tokenInAddress !== null && tokenInAddress !== token) setToken(tokenInAddress)
   const link = useResetLinkCheck(token, api)
   // The link can also stop working while the new password is typed: the save is refused with 410.
-  const [refusedOnSave, setRefusedOnSave] = useState(false)
-  const step: Step = refusedOnSave ? 'invalid' : link.state === 'valid' ? 'form' : link.state
+  const [refusedOnSaveFor, setRefusedOnSaveFor] = useState<string | null>(null)
+  const step: Step = token !== null && refusedOnSaveFor === token ? 'invalid' : link.state === 'valid' ? 'form' : link.state
 
   useEffect(() => {
     if (location.hash) void navigate({ pathname: location.pathname, search: location.search }, { replace: true })
@@ -59,7 +63,7 @@ export function ResetPasswordPage({ api = defaultApi }: { api?: IPasswordResetAp
             token={token}
             labelId={TITLE_ID}
             onDone={() => void navigate(ROUTES.LOGIN, { replace: true, state: PASSWORD_RESET_DONE_STATE })}
-            onInvalid={() => setRefusedOnSave(true)}
+            onInvalid={() => setRefusedOnSaveFor(token)}
           />
         </>
       )}
