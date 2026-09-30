@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useAuth } from '../model/authStoreContext'
+import { forgetPendingLanguage, keepPendingLanguage, readPendingLanguage } from '../model/pendingLanguage'
 import { accountLanguageApi, type IAccountLanguageApi } from '@/entities/user'
 import { useLanguage } from '@/shared/lib'
 
@@ -18,9 +19,9 @@ interface Props {
  * - a change made while signed in (Preferences) is recorded on the account.
  *
  * The account's language is also what the server writes mails in, when nobody is there to ask.
- * A failed save keeps the language on this device and is not retried. An account with no recorded
- * language gets it recorded at the next sign-in; an account that already has one has that language
- * applied again at the next sign-in, so the choice made on the failed save is lost.
+ * A failed save is kept on this device for that account and not retried in the session; at the
+ * account's next sign-in here it is the latest choice, so it wins over the older recorded language and
+ * is saved again — then forgotten once the server takes it.
  * Renders nothing; the app mounts it inside AuthProvider, which it reads, and under LanguageProvider.
  */
 export function AccountLanguageSync({ api = accountLanguageApi }: Props) {
@@ -40,18 +41,27 @@ export function AccountLanguageSync({ api = accountLanguageApi }: Props) {
     const recorded = account.language ?? null
     if (appliedFor.current !== account.id) {
       appliedFor.current = account.id
-      if (recorded !== null) {
-        if (recorded !== language) setLanguage(recorded)
+      const pending = readPendingLanguage(account.id)
+      const wanted = pending ?? recorded
+      if (wanted !== null && wanted !== language) {
+        setLanguage(wanted)
         return
       }
+      // The recorded language is on screen already, and nothing waits to be saved.
+      if (pending === null && recorded !== null) return
     } else if (recorded === language) {
       return
     }
     // Saving needs the session, which exists once the sign-in is finished.
     if (!user) return
-    void api.saveLanguage(language).then(
-      () => patchUser({ language }),
-      () => { /* kept on this device only; not retried, and lost at the next sign-in if the account already has a language */ },
+    const userId = user.id
+    const chosen = language
+    void api.saveLanguage(chosen).then(
+      () => {
+        forgetPendingLanguage(userId)
+        patchUser({ language: chosen })
+      },
+      () => keepPendingLanguage(userId, chosen),
     )
   }, [account, user, language, api, patchUser, setLanguage])
 
