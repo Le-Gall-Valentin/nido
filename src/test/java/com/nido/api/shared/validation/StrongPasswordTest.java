@@ -32,4 +32,16 @@ class StrongPasswordTest {
         assertThat(accepts("LongEnough!!")).isFalse();
         assertThat(accepts("LongEnough11")).isFalse();
     }
+
+    @Test
+    void refuses_what_bcrypt_cannot_read_whole_even_under_seventy_two_characters() {
+        // 72 characters but 141 bytes: bcrypt reads 72 bytes, and hashing more throws — which was a 500.
+        assertThat(accepts("Aé1!" + "é".repeat(68))).isFalse();
+    }
+
+    @Test
+    void seventy_two_bytes_is_the_limit_whatever_the_characters_count() {
+        assertThat(accepts("Aé1!" + "x".repeat(67))).isTrue();
+        assertThat(accepts("Aé1!" + "x".repeat(68))).isFalse();
+    }
 }

@@ -328,6 +328,17 @@ class PasswordResetIT {
     }
 
     @Test
+    void a_password_bcrypt_cannot_read_whole_is_refused_and_the_link_survives() throws Exception {
+        requestReset("jane", "fr");
+        String token = tokenIn(onlyMail());
+
+        // 72 characters but 141 bytes: hashing it threw, and the confirmation answered 500.
+        confirm(token, "Aé1!" + "é".repeat(68), 400);
+
+        check(token, 204);
+    }
+
+    @Test
     void asking_six_times_in_fifteen_minutes_is_refused() throws Exception {
         for (int i = 0; i < 5; i++) {
             requestReset("stranger-" + i, "fr");

@@ -51,6 +51,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @IntegrationTestConfig
 class UserControllerIT {
 
+    /** 72 characters, 141 bytes: within the character count, past what bcrypt can read. */
+    private static final String SEVENTY_TWO_CHARACTERS_OVER_72_BYTES = "Aé1!" + "é".repeat(68);
+
     @Autowired WebApplicationContext webApplicationContext;
     @Autowired UserCredentialJpaRepository userCredentialJpaRepository;
     @Autowired UserIdentityJpaRepository userIdentityJpaRepository;
@@ -519,6 +522,17 @@ class UserControllerIT {
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currentPassword\":\"password\",\"newPassword\":\"weak\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void changePassword_seventyTwoAccentedCharacters_returns400NotA500() throws Exception {
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me/password")
+                .cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"password\",\"newPassword\":\"" + SEVENTY_TWO_CHARACTERS_OVER_72_BYTES + "\"}"))
             .andExpect(status().isBadRequest());
     }
 
