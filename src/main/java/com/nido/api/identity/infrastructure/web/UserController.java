@@ -2,10 +2,12 @@ package com.nido.api.identity.infrastructure.web;
 
 import com.nido.api.identity.application.port.in.ActivateUserUseCase;
 import com.nido.api.identity.application.port.in.AdminResetTotpUseCase;
+import com.nido.api.identity.application.port.in.ChangeMyLanguageUseCase;
 import com.nido.api.identity.application.port.in.ChangeMyPasswordUseCase;
 import com.nido.api.identity.application.port.in.DeleteUserUseCase;
 import com.nido.api.identity.application.port.in.ListUsersUseCase;
 import com.nido.api.identity.application.port.in.UpdateUserUseCase;
+import com.nido.api.shared.model.Language;
 import com.nido.api.shared.security.AuthenticatedUser;
 import com.nido.api.shared.security.CurrentUser;
 import com.nido.api.identity.application.port.in.DeactivateUserUseCase;
@@ -26,6 +28,7 @@ import com.nido.api.identity.domain.model.UserSelfView;
 import com.nido.api.identity.infrastructure.web.dto.ChangePasswordRequest;
 import com.nido.api.identity.infrastructure.web.dto.PageResponse;
 import com.nido.api.identity.infrastructure.web.dto.RegisterRequest;
+import com.nido.api.identity.infrastructure.web.dto.UpdateLanguageRequest;
 import com.nido.api.identity.infrastructure.web.dto.UpdateProfileRequest;
 import com.nido.api.identity.infrastructure.web.dto.UpdateUserRequest;
 import com.nido.api.identity.infrastructure.web.dto.UserAdminItemResponse;
@@ -73,6 +76,7 @@ public class UserController {
     private final ActivateUserUseCase activateUserUseCase;
     private final DeleteUserUseCase deleteUserUseCase;
     private final UpdateUserUseCase updateUserUseCase;
+    private final ChangeMyLanguageUseCase changeMyLanguageUseCase;
 
     public UserController(GetCurrentUserUseCase getCurrentUserUseCase,
                           RegisterUseCase registerUseCase,
@@ -83,7 +87,8 @@ public class UserController {
                           ListUsersUseCase listUsersUseCase,
                           ActivateUserUseCase activateUserUseCase,
                           DeleteUserUseCase deleteUserUseCase,
-                          UpdateUserUseCase updateUserUseCase) {
+                          UpdateUserUseCase updateUserUseCase,
+                          ChangeMyLanguageUseCase changeMyLanguageUseCase) {
         this.getCurrentUserUseCase = getCurrentUserUseCase;
         this.registerUseCase = registerUseCase;
         this.deactivateUserUseCase = deactivateUserUseCase;
@@ -94,6 +99,7 @@ public class UserController {
         this.activateUserUseCase = activateUserUseCase;
         this.deleteUserUseCase = deleteUserUseCase;
         this.updateUserUseCase = updateUserUseCase;
+        this.changeMyLanguageUseCase = changeMyLanguageUseCase;
     }
 
     @Operation(
@@ -133,7 +139,8 @@ public class UserController {
     public ResponseEntity<UserInfoResponse> me(@Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
         UserSelfView view = getCurrentUserUseCase.getCurrentUser(caller.userId());
         return ResponseEntity.ok(new UserInfoResponse(
-            view.id(), view.username(), view.email(), view.role(), view.createdAt(), view.totpEnabled()));
+            view.id(), view.username(), view.email(), view.role(), view.createdAt(), view.totpEnabled(),
+            view.language() == null ? null : view.language().code()));
     }
 
     @Operation(
@@ -260,7 +267,7 @@ public class UserController {
         );
         URI location = URI.create("/api/users/" + user.id());
         return ResponseEntity.created(location).body(new UserInfoResponse(
-            user.id(), user.username(), user.email(), user.role(), user.createdAt(), false));
+            user.id(), user.username(), user.email(), user.role(), user.createdAt(), false, null));
     }
 
     @Operation(
@@ -518,13 +525,15 @@ public class UserController {
 
             Double rate limit : 20 req/fenêtre globalement, et 5 req/fenêtre par utilisateur.
             Retourne `409` si le nouveau nom d'utilisateur ou la nouvelle adresse email est déjà pris.
+            Changer l'adresse (hors casse) exige `currentPassword` (`400` s'il manque, `422` s'il est faux) ;
+            l'ancienne adresse en est prévenue par mail.
             """
     )
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Profil mis à jour", content = @Content),
         @ApiResponse(
             responseCode = "400",
-            description = "Corps invalide (champs manquants ou non conformes aux contraintes)",
+            description = "Corps invalide (champs manquants ou non conformes aux contraintes), ou adresse changée sans le mot de passe actuel (`CurrentPasswordRequired`)",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
         ),
         @ApiResponse(
@@ -548,6 +557,11 @@ public class UserController {
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
         ),
         @ApiResponse(
+            responseCode = "422",
+            description = "Mot de passe actuel incorrect",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
+        ),
+        @ApiResponse(
             responseCode = "429",
             description = "Trop de requêtes (global ou par utilisateur)",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
@@ -560,7 +574,7 @@ public class UserController {
     public ResponseEntity<Void> updateProfile(@Valid @RequestBody UpdateProfileRequest request,
                                               @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
         updateMyProfileUseCase.updateProfile(
-            new UpdateProfileCommand(caller.userId(), request.username(), request.email()));
+            new UpdateProfileCommand(caller.userId(), request.username(), request.email(), request.currentPassword()));
         return ResponseEntity.noContent().build();
     }
 
@@ -613,6 +627,36 @@ public class UserController {
                                                @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
         changeMyPasswordUseCase.changeMyPassword(
             new ChangeMyPasswordCommand(caller.userId(), request.currentPassword(), request.newPassword()));
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
+        summary = "Changer la langue de son compte",
+        description = """
+            Enregistre la langue dans laquelle l'utilisateur lit l'application (`fr` ou `en`).
+            Une fois connecté, cette langue l'emporte sur celle que détecte chaque appareil ; c'est aussi
+            celle des mails que Nido lui envoie.
+
+            Rate limit : 20 req/fenêtre.
+            """
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Langue enregistrée", content = @Content),
+        @ApiResponse(responseCode = "400", description = "Langue absente ou non prise en charge",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "401", description = "Non authentifié",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "403", description = "Compte désactivé",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "429", description = "Trop de requêtes",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PutMapping("/me/language")
+    @RateLimiting(max = 20)
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> changeLanguage(@Valid @RequestBody UpdateLanguageRequest request,
+                                               @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
+        changeMyLanguageUseCase.changeLanguage(caller.userId(), Language.fromCode(request.language()).orElseThrow());
         return ResponseEntity.noContent().build();
     }
 }

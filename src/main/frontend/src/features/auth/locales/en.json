@@ -3,9 +3,7 @@
     "username": "Username",
     "username_placeholder": "firstname.lastname",
     "password": "Password",
-    "password_placeholder": "Your password",
-    "show_password": "Show password",
-    "hide_password": "Hide password"
+    "password_placeholder": "Your password"
   },
   "action": {
     "submit": "Sign in"

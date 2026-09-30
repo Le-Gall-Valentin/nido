@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { InvalidCurrentPasswordError } from '../api/accountApi'
-import { NetworkError, RateLimitError, PASSWORD_REGEX, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH, isValidPassword } from '@/shared/lib'
+import { NetworkError, RateLimitError, isValidPassword, passwordProblem } from '@/shared/lib'
 
 type Flash = { kind: 'success' | 'error'; key: string } | null
 
@@ -33,8 +33,7 @@ export function ChangePasswordSection({ onChangePassword, onChanged }: ChangePas
   const handoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const mismatch = next.length > 0 && confirm.length > 0 && next !== confirm
-  const tooShort = next.length > 0 && next.length < PASSWORD_MIN_LENGTH
-  const weak = next.length >= PASSWORD_MIN_LENGTH && next.length <= PASSWORD_MAX_LENGTH && !PASSWORD_REGEX.test(next)
+  const problem = next.length > 0 ? passwordProblem(next) : null
   const canSubmit = current.length > 0 && isValidPassword(next) && next === confirm
 
   useEffect(() => {
@@ -122,8 +121,7 @@ export function ChangePasswordSection({ onChangePassword, onChanged }: ChangePas
             </div>
           </div>
           {mismatch && <p className="text-xs text-status-red mb-2">{t('password.error.mismatch')}</p>}
-          {!mismatch && tooShort && <p className="text-xs text-status-orange mb-2">{t('password.error.too_short')}</p>}
-          {!mismatch && !tooShort && weak && <p className="text-xs text-status-orange mb-2">{t('password.error.weak')}</p>}
+          {!mismatch && problem && <p className="text-xs text-status-orange mb-2">{t(`password.error.${problem}`)}</p>}
           {flash && (
             <div
               role={flash.kind === 'success' ? 'status' : 'alert'}

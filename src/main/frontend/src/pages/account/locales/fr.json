@@ -29,7 +29,10 @@
     "save": "Enregistrer",
     "cancel": "Annuler",
     "success": "Profil mis à jour.",
+    "current_password": "Mot de passe actuel",
+    "current_password_hint": "Votre adresse sert à récupérer votre compte : confirmez avec votre mot de passe.",
     "error": {
+      "wrong_password": "Mot de passe actuel incorrect.",
       "conflict": "Ce nom d'utilisateur ou cette adresse e-mail est déjà utilisé(e).",
       "username_too_short": "Minimum 3 caractères.",
       "username_too_long": "Maximum 50 caractères.",
@@ -62,6 +65,7 @@
     "error": {
       "mismatch": "Les deux mots de passe ne correspondent pas.",
       "too_short": "Trop court (8 caractères minimum).",
+      "too_long": "Trop long : 72 caractères au plus, moins avec des accents ou des emojis.",
       "weak": "Doit contenir au moins une majuscule, un chiffre et un caractère spécial.",
       "wrong_current": "Mot de passe actuel incorrect.",
       "server": "Une erreur est survenue. Veuillez réessayer.",

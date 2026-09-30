@@ -8,6 +8,7 @@ public abstract sealed class IdentityException extends RuntimeException
             IdentityException.UsernameAlreadyExists,
             IdentityException.EmailAlreadyExists,
             IdentityException.InsufficientPermissions,
+            IdentityException.CurrentPasswordRequired,
             IdentityException.InvalidCurrentPassword,
             IdentityException.RoleAlreadyAssigned,
             IdentityException.DataIntegrityError {
@@ -34,6 +35,10 @@ public abstract sealed class IdentityException extends RuntimeException
     }
     public static final class InsufficientPermissions extends IdentityException {
         public InsufficientPermissions() { super("Insufficient permissions"); }
+    }
+    /** An address change without the current password: the address is how an account is recovered. */
+    public static final class CurrentPasswordRequired extends IdentityException {
+        public CurrentPasswordRequired() { super("The current password is required to change the email address"); }
     }
     public static final class InvalidCurrentPassword extends IdentityException {
         public InvalidCurrentPassword() { super("Current password is incorrect"); }

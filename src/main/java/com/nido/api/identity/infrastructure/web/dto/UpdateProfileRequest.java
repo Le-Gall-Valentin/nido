@@ -11,5 +11,13 @@ public record UpdateProfileRequest(
     @NotBlank @Size(min = 3, max = 50) String username,
 
     @Schema(description = "Nouvelle adresse email (max 254 caractères)", example = "john.updated@example.com", maxLength = 254)
-    @NotBlank @Email @Size(max = 254) String email
-) {}
+    @NotBlank @Email @Size(max = 254) String email,
+
+    @Schema(description = "Mot de passe actuel — obligatoire si l'adresse change (elle sert à récupérer le compte)", maxLength = 72)
+    @Size(max = 72) String currentPassword
+) {
+    @Override
+    public String toString() {
+        return "UpdateProfileRequest[username=" + username + ", email=***, currentPassword=***]";
+    }
+}

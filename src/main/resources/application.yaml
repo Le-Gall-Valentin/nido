@@ -67,6 +67,11 @@ management:
   health:
     redis:
       enabled: false
+    # Spring adds an SMTP check as soon as a JavaMailSenderImpl bean exists. A mail provider outage
+    # would then turn the probe DOWN and restart the container in a loop — the Redis scenario above.
+    # Losing mail is something to read in the logs, not something to restart into.
+    mail:
+      enabled: false
 
 springdoc:
   api-docs:
@@ -96,3 +101,12 @@ NIDO:
     allowed-origins: ${NIDO_CORS_ALLOWED_ORIGINS:}
   encryption:
     secret: ${NIDO_ENCRYPTION_SECRET}
+  # Optional. NIDO_SMTP_HOST empty = no mail at all, and nothing that could send one is built.
+  mail:
+    host: ${NIDO_SMTP_HOST:}
+    port: ${NIDO_SMTP_PORT:587}
+    security: ${NIDO_SMTP_SECURITY:starttls}
+    username: ${NIDO_SMTP_USERNAME:}
+    password: ${NIDO_SMTP_PASSWORD:}
+    from: ${NIDO_MAIL_FROM:}
+    app-url: ${NIDO_APP_URL:}

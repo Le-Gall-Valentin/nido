@@ -1,3 +1,5 @@
+import type { Language } from '@/shared/lib'
+
 export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'USER'
 
 export interface User {
@@ -7,6 +9,8 @@ export interface User {
   role: UserRole
   createdAt: string
   totpEnabled: boolean
+  /** The language recorded on the account; null until a signed-in session records one. */
+  language?: Language | null
 }
 
 /** User as seen by admin endpoints — includes account state. */

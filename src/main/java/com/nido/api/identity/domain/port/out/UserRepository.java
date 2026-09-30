@@ -11,4 +11,7 @@ public interface UserRepository {
     Optional<User> findByEmail(String email);
     Optional<User> findById(UUID id);
     List<User> findByIds(Collection<UUID> ids);
+
+    /** Non-deleted accounts with this address, letter case ignored — usually one, possibly none or several. */
+    List<User> findByEmailIgnoreCase(String email);
 }

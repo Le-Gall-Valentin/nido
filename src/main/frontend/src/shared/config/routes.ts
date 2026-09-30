@@ -1,5 +1,8 @@
 export const ROUTES = {
   LOGIN: '/login',
+  FORGOT_PASSWORD: '/forgot-password',
+  // Opened from the reset mail: the token follows a '#', so it never reaches a server log.
+  RESET_PASSWORD: '/reset-password',
 
   // Where the app opens: DefaultRedirect resolves it to the current space's dashboard
   HOME: '/',

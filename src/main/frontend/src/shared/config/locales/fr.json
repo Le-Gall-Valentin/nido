@@ -1,6 +1,10 @@
 {
   "loading": "Chargement...",
   "close": "Fermer",
+  "password": {
+    "show": "Afficher le mot de passe",
+    "hide": "Masquer le mot de passe"
+  },
   "error": {
     "unexpected": "Une erreur inattendue est survenue.",
     "retry": "Réessayer",

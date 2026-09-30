@@ -1,5 +1,6 @@
 package com.nido.api.authentication.infrastructure.web.dto;
 
+import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
@@ -24,5 +25,14 @@ public record UserInfoResponse(
     Instant createdAt,
 
     @Schema(description = "Indique si l'authentification à deux facteurs est activée", example = "false")
-    boolean totpEnabled
-) {}
+    boolean totpEnabled,
+
+    @Schema(description = "Langue du compte (fr, en), ou null tant qu'aucune n'a été enregistrée", example = "fr", nullable = true)
+    String language
+) {
+
+    /** How the account's language travels: its code, or null when it never recorded one. */
+    public static String codeOf(Language language) {
+        return language == null ? null : language.code();
+    }
+}

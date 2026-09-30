@@ -1,0 +1,194 @@
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { useState } from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { StoreApi } from 'zustand'
+import * as auth from '../model/authStoreContext'
+import type { User } from '@/entities/user'
+import { LanguageContext } from '@/shared/lib/language'
+import type { Language } from '@/shared/lib'
+import { AccountLanguageSync } from './AccountLanguageSync'
+
+interface FakeAuth {
+  user: User | null
+  signingIn: User | null
+  patchUser: (partial: Partial<User>) => void
+}
+
+// A real store behind the mocked hook: signing in and out re-renders the component the way the app
+// does, instead of remounting it the way rerender() would.
+vi.mock('../model/authStoreContext', async () => {
+  const { create, useStore } = await import('zustand')
+  const store = create<FakeAuth>((set) => ({
+    user: null,
+    signingIn: null,
+    patchUser: (partial) => set((state) => ({ user: state.user ? { ...state.user, ...partial } : null })),
+  }))
+  return {
+    useAuth: <T,>(selector: (state: FakeAuth) => T) => useStore(store, selector),
+    __store: store,
+  }
+})
+
+const authStore = (auth as unknown as { __store: StoreApi<FakeAuth> }).__store
+const saveLanguage = vi.fn<(language: Language) => Promise<void>>()
+
+function user(id: string, language: Language | null): User {
+  return { id, username: id, email: `${id}@test.com`, role: 'USER', createdAt: '2026-01-01T00:00:00Z', totpEnabled: false, language }
+}
+
+/** Owns the language on screen, like LanguageProvider; the button is Preferences' switch. */
+function Screen({ initial }: { initial: Language }) {
+  const [language, setLanguage] = useState<Language>(initial)
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage }}>
+      <AccountLanguageSync api={{ saveLanguage }} />
+      <output data-testid="on-screen">{language}</output>
+      <button onClick={() => setLanguage(language === 'fr' ? 'en' : 'fr')}>switch</button>
+    </LanguageContext.Provider>
+  )
+}
+
+const onScreen = () => screen.getByTestId('on-screen').textContent
+
+beforeEach(() => {
+  saveLanguage.mockReset().mockResolvedValue(undefined)
+  act(() => authStore.setState({ user: null, signingIn: null }))
+  localStorage.clear()
+})
+
+describe('AccountLanguageSync', () => {
+  it('does nothing while signed out', () => {
+    render(<Screen initial="fr" />)
+
+    expect(saveLanguage).not.toHaveBeenCalled()
+    expect(onScreen()).toBe('fr')
+  })
+
+  it('applies the account language at sign-in, then records a later switch', async () => {
+    render(<Screen initial="fr" />)
+
+    act(() => authStore.setState({ user: user('alice', 'en') }))
+    expect(onScreen()).toBe('en')
+    expect(saveLanguage).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'switch' }))
+
+    expect(onScreen()).toBe('fr')
+    await waitFor(() => expect(authStore.getState().user?.language).toBe('fr'))
+    expect(saveLanguage).toHaveBeenCalledTimes(1)
+    expect(saveLanguage).toHaveBeenCalledWith('fr')
+  })
+
+  it('records the detected language on an account that never had one', async () => {
+    render(<Screen initial="fr" />)
+
+    act(() => authStore.setState({ user: user('alice', null) }))
+
+    await waitFor(() => expect(authStore.getState().user?.language).toBe('fr'))
+    expect(saveLanguage).toHaveBeenCalledWith('fr')
+    expect(onScreen()).toBe('fr')
+  })
+
+  it('keeps the language on this device when recording it fails', async () => {
+    saveLanguage.mockRejectedValue(new Error('network'))
+    render(<Screen initial="fr" />)
+
+    act(() => authStore.setState({ user: user('alice', null) }))
+
+    await waitFor(() => expect(saveLanguage).toHaveBeenCalled())
+    expect(authStore.getState().user?.language).toBeNull()
+    expect(onScreen()).toBe('fr')
+  })
+
+  it('applies the next account’s language after a sign-out', () => {
+    render(<Screen initial="fr" />)
+    act(() => authStore.setState({ user: user('alice', 'fr') }))
+    act(() => authStore.setState({ user: null }))
+
+    act(() => authStore.setState({ user: user('bob', 'en') }))
+
+    expect(onScreen()).toBe('en')
+    expect(saveLanguage).not.toHaveBeenCalled()
+  })
+
+  it('applies the account language as soon as the server names the account, before the sign-in is done', () => {
+    render(<Screen initial="fr" />)
+
+    // The 2FA proposal comes between the password and the app: it already speaks the account's language.
+    act(() => authStore.setState({ signingIn: user('alice', 'en') }))
+    expect(onScreen()).toBe('en')
+
+    act(() => authStore.setState({ signingIn: null, user: user('alice', 'en') }))
+    expect(onScreen()).toBe('en')
+    expect(saveLanguage).not.toHaveBeenCalled()
+  })
+
+  it('records nothing before the sign-in is done', async () => {
+    render(<Screen initial="fr" />)
+
+    act(() => authStore.setState({ signingIn: user('alice', null) }))
+    expect(saveLanguage).not.toHaveBeenCalled()
+
+    act(() => authStore.setState({ signingIn: null, user: user('alice', null) }))
+    await waitFor(() => expect(saveLanguage).toHaveBeenCalledWith('fr'))
+  })
+
+  it('keeps a switch the server did not take, and records it at the next sign-in of that account', async () => {
+    saveLanguage.mockRejectedValue(new Error('network'))
+    const first = render(<Screen initial="fr" />)
+    act(() => authStore.setState({ user: user('alice', 'fr') }))
+    fireEvent.click(screen.getByRole('button', { name: 'switch' }))
+    await waitFor(() => expect(saveLanguage).toHaveBeenCalledWith('en'))
+    act(() => authStore.setState({ user: null }))
+    first.unmount()
+
+    // Another session on this device, the account still recorded in French.
+    saveLanguage.mockReset().mockResolvedValue(undefined)
+    render(<Screen initial="fr" />)
+    act(() => authStore.setState({ user: user('alice', 'fr') }))
+
+    expect(onScreen()).toBe('en')
+    await waitFor(() => expect(authStore.getState().user?.language).toBe('en'))
+    expect(saveLanguage).toHaveBeenCalledWith('en')
+  })
+
+  it('forgets a kept switch once the server has taken it', async () => {
+    saveLanguage.mockRejectedValueOnce(new Error('network'))
+    const first = render(<Screen initial="fr" />)
+    act(() => authStore.setState({ user: user('alice', 'fr') }))
+    fireEvent.click(screen.getByRole('button', { name: 'switch' }))
+    await waitFor(() => expect(saveLanguage).toHaveBeenCalledTimes(1))
+    act(() => authStore.setState({ user: null }))
+    first.unmount()
+
+    const second = render(<Screen initial="fr" />)
+    act(() => authStore.setState({ user: user('alice', 'fr') }))
+    await waitFor(() => expect(authStore.getState().user?.language).toBe('en'))
+    act(() => authStore.setState({ user: null }))
+    second.unmount()
+
+    // Back in French on the server by then (changed elsewhere): nothing left here overrides it.
+    saveLanguage.mockClear()
+    render(<Screen initial="fr" />)
+    act(() => authStore.setState({ user: user('alice', 'fr') }))
+    expect(onScreen()).toBe('fr')
+    expect(saveLanguage).not.toHaveBeenCalled()
+  })
+
+  it('keeps a switch for its own account only', async () => {
+    saveLanguage.mockRejectedValueOnce(new Error('network'))
+    const first = render(<Screen initial="fr" />)
+    act(() => authStore.setState({ user: user('alice', 'fr') }))
+    fireEvent.click(screen.getByRole('button', { name: 'switch' }))
+    await waitFor(() => expect(saveLanguage).toHaveBeenCalledTimes(1))
+    act(() => authStore.setState({ user: null }))
+    first.unmount()
+
+    saveLanguage.mockClear()
+    render(<Screen initial="fr" />)
+    act(() => authStore.setState({ user: user('bob', 'fr') }))
+
+    expect(onScreen()).toBe('fr')
+    expect(saveLanguage).not.toHaveBeenCalled()
+  })
+})

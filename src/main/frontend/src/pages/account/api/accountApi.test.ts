@@ -35,6 +35,17 @@ describe('accountApi', () => {
       expect(mockedClient.patch).toHaveBeenCalledWith('/users/me', { username: 'alice', email: 'alice@test.com' })
     })
 
+    it('sends the current password when there is one', async () => {
+      mockedClient.patch.mockResolvedValue({ status: 204 })
+      await accountApi.updateProfile('alice', 'new@test.com', 'secret')
+      expect(mockedClient.patch).toHaveBeenCalledWith('/users/me', { username: 'alice', email: 'new@test.com', currentPassword: 'secret' })
+    })
+
+    it('throws InvalidCurrentPasswordError on 422', async () => {
+      mockedClient.patch.mockRejectedValue(makeAxiosError(422))
+      await expect(accountApi.updateProfile('a', 'new@test.com', 'wrong')).rejects.toBeInstanceOf(InvalidCurrentPasswordError)
+    })
+
     it('resolves void on 204', async () => {
       mockedClient.patch.mockResolvedValue({ status: 204 })
       await expect(accountApi.updateProfile('a', 'a@test.com')).resolves.toBeUndefined()

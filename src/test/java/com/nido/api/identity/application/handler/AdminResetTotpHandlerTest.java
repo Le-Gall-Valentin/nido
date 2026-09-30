@@ -76,6 +76,6 @@ class AdminResetTotpHandlerTest {
     }
 
     private User user(UUID id, Role role) {
-        return new User(id, "user-" + id, id + "@test.com", role, true, Instant.now());
+        return new User(id, "user-" + id, id + "@test.com", role, true, Instant.now(), null);
     }
 }

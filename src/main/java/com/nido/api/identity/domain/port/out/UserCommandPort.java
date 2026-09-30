@@ -3,6 +3,7 @@ package com.nido.api.identity.domain.port.out;
 import com.nido.api.identity.domain.model.CreateUserProfileCommand;
 import com.nido.api.identity.domain.model.UpdateProfileCommand;
 import com.nido.api.identity.domain.model.User;
+import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
 import java.util.UUID;
 
@@ -13,4 +14,5 @@ public interface UserCommandPort {
     void updateRole(UUID userId, Role currentRole, Role newRole);
     void activate(UUID userId);
     void deleteGdpr(UUID userId);
+    void updateLanguage(UUID userId, Language language);
 }

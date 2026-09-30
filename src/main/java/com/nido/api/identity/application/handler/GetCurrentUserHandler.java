@@ -31,6 +31,7 @@ public class GetCurrentUserHandler implements GetCurrentUserUseCase {
             throw new IdentityException.UserNotActive();
         }
         boolean totpEnabled = totpStatusPort.isTotpEnabled(userId);
-        return new UserSelfView(user.id(), user.username(), user.email(), user.role(), user.createdAt(), totpEnabled);
+        return new UserSelfView(user.id(), user.username(), user.email(), user.role(), user.createdAt(), totpEnabled,
+            user.language());
     }
 }

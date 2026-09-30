@@ -44,7 +44,7 @@ class VerifyTotpChallengeHandlerTest {
     private final UUID userId = UUID.randomUUID();
     private final UserCredentials creds = new UserCredentials(
         userId, "user1", "user1@test.com", "hash", true, Role.USER
-    , Instant.now());
+    , Instant.now(), null);
 
     @BeforeEach
     void setUp() {
@@ -105,7 +105,7 @@ class VerifyTotpChallengeHandlerTest {
     @Test
     void verify_inactiveUser_throwsUserNotActive() {
         UserCredentials inactive = new UserCredentials(userId, "user1", "user1@test.com", "hash",
-            false, Role.USER, Instant.now());
+            false, Role.USER, Instant.now(), null);
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(inactive));
 

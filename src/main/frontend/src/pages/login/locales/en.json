@@ -17,5 +17,35 @@
     "no_account": "Don't have an account?",
     "contact_admin": "Contact your administrator to create one."
   },
+  "forgot": {
+    "link": "Forgot your password?",
+    "back": "Back to sign in",
+    "title": "Forgot your password",
+    "subtitle": "Enter your username or your email address. If an account matches, we will send you a link to choose a new password.",
+    "sent": {
+      "title": "Check your inbox",
+      "body": "If an account matches “{{identifier}}”, a link is on its way to the address on file. It is valid for 30 minutes.",
+      "hint": "Nothing arrived? Look in your spam folder, or try again in a few minutes."
+    }
+  },
+  "reset": {
+    "title": "New password",
+    "subtitle": "Choose the new password of your account.",
+    "checking": "Checking the link…",
+    "done": "Password changed. Sign in with your new password.",
+    "unavailable": "This link cannot be checked right now.",
+    "retry": "Try again",
+    "invalid": {
+      "title": "This link no longer works",
+      "body": "It expired, was already used, or a newer request replaced it.",
+      "again": "Ask for a new link"
+    },
+    "signed_in": {
+      "title": "You are signed in",
+      "body": "You are signed in as {{username}}. Sign out to use this link.",
+      "sign_out": "Sign out and use this link",
+      "back": "Back to the app"
+    }
+  },
   "footer": "© 2026 Nido"
 }

@@ -40,18 +40,21 @@ class RefreshTokenHandlerTest {
     TokenHashPort tokenHashPort;
     @Mock
     RefreshTokenConfigPort tokenConfig;
+    @Mock
+    AccountLockPort accountLock;
 
     private RefreshTokenHandler handler;
 
     private final UserCredentials activeUser = new UserCredentials(
         UUID.randomUUID(), "user1", "user1@test.com", "hashed_pw", true, Role.USER
-    , Instant.now());
+    , Instant.now(), null);
 
     @BeforeEach
     void setUp() {
         when(tokenConfig.refreshTokenExpiryDays()).thenReturn(30);
         handler = new RefreshTokenHandler(
-            refreshTokenRepository, revocationPort, userCredentialsPort, accessTokenPort, refreshTokenPort, tokenHashPort, tokenConfig
+            refreshTokenRepository, revocationPort, userCredentialsPort, accessTokenPort, refreshTokenPort, tokenHashPort,
+            accountLock, tokenConfig
         );
         lenient().when(tokenHashPort.hash(any(String.class)))
             .thenAnswer(i -> TestHashUtils.sha256(i.getArgument(0, String.class)));
@@ -74,7 +77,9 @@ class RefreshTokenHandlerTest {
 
         assertThat(result.accessToken()).isEqualTo("new_jwt");
         assertThat(result.refreshToken()).isEqualTo("new_raw_refresh");
-        InOrder inOrder = inOrder(revocationPort, refreshTokenPort);
+        InOrder inOrder = inOrder(accountLock, revocationPort, refreshTokenPort);
+        // Locked first: a revocation of every session must not start between the mark and the insert.
+        inOrder.verify(accountLock).lockFor(activeUser.id());
         inOrder.verify(revocationPort).tryMarkUsedAndRevoke(stored.id());
         inOrder.verify(refreshTokenPort).generate(activeUser, 30);
     }
@@ -105,6 +110,9 @@ class RefreshTokenHandlerTest {
         assertThatThrownBy(() -> handler.refresh(raw))
             .isInstanceOf(AuthenticationException.TokenRevoked.class);
         verify(revocationPort).revokeAllForUser(activeUser.id());
+        // revokeAllForUser takes the lock in a transaction of its own: taken here too, it would wait on
+        // this one for ever.
+        verifyNoInteractions(accountLock);
     }
 
     @Test
@@ -205,7 +213,7 @@ class RefreshTokenHandlerTest {
         UserCredentials inactiveUser = new UserCredentials(
             activeUser.id(), activeUser.username(), activeUser.email(),
             activeUser.passwordHash(), false, activeUser.role()
-        , Instant.now());
+        , Instant.now(), null);
         RefreshToken stored = new RefreshToken(
             UUID.randomUUID(), inactiveUser.id(), TestHashUtils.sha256(raw),
             Instant.now().plusSeconds(3600), false, Instant.now(), null

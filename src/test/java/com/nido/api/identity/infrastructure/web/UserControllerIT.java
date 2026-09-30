@@ -51,6 +51,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @IntegrationTestConfig
 class UserControllerIT {
 
+    /** 72 characters, 141 bytes: within the character count, past what bcrypt can read. */
+    private static final String SEVENTY_TWO_CHARACTERS_OVER_72_BYTES = "Aé1!" + "é".repeat(68);
+
     @Autowired WebApplicationContext webApplicationContext;
     @Autowired UserCredentialJpaRepository userCredentialJpaRepository;
     @Autowired UserIdentityJpaRepository userIdentityJpaRepository;
@@ -237,6 +240,18 @@ class UserControllerIT {
     }
 
     @Test
+    void register_passwordOverSeventyTwoBytes_returns400() throws Exception {
+        Cookie access = loginAs("superadmin", "adminpass");
+
+        mockMvc.perform(post("/api/users")
+                .cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"accented\",\"email\":\"accented@test.com\",\"password\":\""
+                    + SEVENTY_TWO_CHARACTERS_OVER_72_BYTES + "\",\"role\":\"USER\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void register_superAdminCannotCreateSuperAdmin_returns403() throws Exception {
         Cookie access = loginAs("superadmin", "adminpass");
 
@@ -393,11 +408,46 @@ class UserControllerIT {
         mockMvc.perform(patch("/api/users/me")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"updated\",\"email\":\"updated@test.com\"}"))
+                .content("{\"username\":\"updated\",\"email\":\"updated@test.com\",\"currentPassword\":\"password\"}"))
             .andExpect(status().isNoContent());
 
         assertThat(userIdentityJpaRepository.findByUsername("updated")).isPresent();
         assertThat(userIdentityJpaRepository.findByEmail("updated@test.com")).isPresent();
+    }
+
+    @Test
+    void updateProfile_newEmailWithoutPassword_returns400() throws Exception {
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"testuser\",\"email\":\"elsewhere@test.com\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("CurrentPasswordRequired"));
+
+        assertThat(userIdentityJpaRepository.findByEmail("testuser@test.com")).isPresent();
+    }
+
+    @Test
+    void updateProfile_newEmailWithWrongPassword_returns422() throws Exception {
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"testuser\",\"email\":\"elsewhere@test.com\",\"currentPassword\":\"wrong\"}"))
+            .andExpect(status().isUnprocessableEntity());
+
+        assertThat(userIdentityJpaRepository.findByEmail("testuser@test.com")).isPresent();
+    }
+
+    @Test
+    void updateProfile_usernameOnly_needsNoPassword() throws Exception {
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"renamed\",\"email\":\"testuser@test.com\"}"))
+            .andExpect(status().isNoContent());
     }
 
     @Test
@@ -407,7 +457,7 @@ class UserControllerIT {
         mockMvc.perform(patch("/api/users/me")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"superadmin\",\"email\":\"unique@test.com\"}"))
+                .content("{\"username\":\"superadmin\",\"email\":\"unique@test.com\",\"currentPassword\":\"password\"}"))
             .andExpect(status().isConflict());
     }
 
@@ -418,7 +468,7 @@ class UserControllerIT {
         mockMvc.perform(patch("/api/users/me")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"uniqueuser\",\"email\":\"superadmin@test.com\"}"))
+                .content("{\"username\":\"uniqueuser\",\"email\":\"superadmin@test.com\",\"currentPassword\":\"password\"}"))
             .andExpect(status().isConflict());
     }
 
@@ -484,6 +534,17 @@ class UserControllerIT {
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currentPassword\":\"password\",\"newPassword\":\"weak\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void changePassword_seventyTwoAccentedCharacters_returns400NotA500() throws Exception {
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me/password")
+                .cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"password\",\"newPassword\":\"" + SEVENTY_TWO_CHARACTERS_OVER_72_BYTES + "\"}"))
             .andExpect(status().isBadRequest());
     }
 

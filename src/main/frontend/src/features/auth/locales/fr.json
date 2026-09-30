@@ -3,9 +3,7 @@
     "username": "Identifiant",
     "username_placeholder": "prenom.nom",
     "password": "Mot de passe",
-    "password_placeholder": "Votre mot de passe",
-    "show_password": "Afficher le mot de passe",
-    "hide_password": "Masquer le mot de passe"
+    "password_placeholder": "Votre mot de passe"
   },
   "action": {
     "submit": "Se connecter"

@@ -15,7 +15,7 @@ class UserCredentialsTest {
         UserCredentials creds = new UserCredentials(
             UUID.randomUUID(), "alice", "alice@test.com",
             "$2a$12$very-sensitive-hash", true, Role.USER
-        , Instant.now());
+        , Instant.now(), null);
 
         assertThat(creds.toString()).doesNotContain("very-sensitive-hash");
     }
@@ -25,7 +25,7 @@ class UserCredentialsTest {
         UserCredentials creds = new UserCredentials(
             UUID.randomUUID(), "alice", "alice@test.com",
             "$2a$12$hash", true, Role.USER
-        , Instant.now());
+        , Instant.now(), null);
 
         assertThat(creds.toString()).contains("alice");
     }

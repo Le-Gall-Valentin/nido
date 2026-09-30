@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useId, useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { User } from '@/entities/user'
-import { ConflictError } from '../api/accountApi'
+import { ConflictError, InvalidCurrentPasswordError } from '../api/accountApi'
 import { NetworkError, RateLimitError } from '@/shared/lib'
 
 type Flash = { kind: 'success' | 'error'; key: string } | null
@@ -10,13 +10,14 @@ type Flash = { kind: 'success' | 'error'; key: string } | null
 interface ProfileEditSectionProps {
   user: User
   onPatch: (partial: Partial<User>) => void
-  onUpdateProfile: (username: string, email: string) => Promise<void>
+  onUpdateProfile: (username: string, email: string, currentPassword?: string) => Promise<void>
 }
 
 export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEditSectionProps) {
   const { t } = useTranslation('account')
   const [username, setUsername] = useState(user.username)
   const [email, setEmail] = useState(user.email)
+  const [currentPassword, setCurrentPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [flash, setFlash] = useState<Flash>(null)
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -27,7 +28,13 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
   const usernameTooShort = trimmedUsername.length > 0 && trimmedUsername.length < 3
   const usernameTooLong = trimmedUsername.length > 50
   const emailEmpty = trimmedEmail.length === 0
+  // The address is how an account is recovered, so changing it asks for the password. A change of
+  // letter case only is the same mailbox — the server agrees and asks for nothing.
+  const changesAddress = (value: string) => value.trim().toLowerCase() !== user.email.toLowerCase()
+  const addressChanges = changesAddress(email)
+  const passwordHintId = useId()
   const canSave = isDirty && !usernameTooShort && !usernameTooLong && !emailEmpty
+    && (!addressChanges || currentPassword.length > 0)
 
   useEffect(() => {
     return () => { if (flashTimer.current) clearTimeout(flashTimer.current) }
@@ -44,11 +51,15 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
     if (!canSave || isSubmitting) return
     setIsSubmitting(true)
     try {
-      await onUpdateProfile(trimmedUsername, trimmedEmail)
+      await onUpdateProfile(trimmedUsername, trimmedEmail, addressChanges ? currentPassword : undefined)
       onPatch({ username: trimmedUsername, email: trimmedEmail })
+      setCurrentPassword('')
       showFlash('success', 'profile.success')
     } catch (error) {
-      if (error instanceof ConflictError) {
+      if (error instanceof InvalidCurrentPasswordError) {
+        setCurrentPassword('')
+        showFlash('error', 'profile.error.wrong_password')
+      } else if (error instanceof ConflictError) {
         showFlash('error', 'profile.error.conflict')
       } else if (error instanceof RateLimitError) {
         showFlash('error', 'profile.error.rate_limit')
@@ -65,6 +76,7 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
   function handleCancel() {
     setUsername(user.username)
     setEmail(user.email)
+    setCurrentPassword('')
     setFlash(null)
   }
 
@@ -95,11 +107,30 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
                 name="email"
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={e => {
+                  setEmail(e.target.value)
+                  // Back to the address it had, the password is no longer asked: nothing typed for it stays.
+                  if (!changesAddress(e.target.value)) setCurrentPassword('')
+                }}
                 disabled={isSubmitting}
               />
             </div>
           </div>
+          {addressChanges && !emailEmpty && (
+            <div className="mb-3 flex flex-col gap-1.5">
+              <Input
+                label={t('profile.current_password')}
+                name="currentPassword"
+                type="password"
+                value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                disabled={isSubmitting}
+                aria-describedby={passwordHintId}
+              />
+              <p id={passwordHintId} className="text-xs text-fg-2">{t('profile.current_password_hint')}</p>
+            </div>
+          )}
           {flash && (
             <div
               role={flash.kind === 'success' ? 'status' : 'alert'}

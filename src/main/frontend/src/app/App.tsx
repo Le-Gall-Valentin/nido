@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { shouldRetryQuery } from '@/shared/api'
+import { AccountLanguageSync } from '@/features/auth'
 import { ThemeProvider, LanguageProvider, AuthProvider, ErrorBoundary } from './providers'
 import { AppRouter } from './router'
 
@@ -18,6 +19,7 @@ export function App() {
       <ThemeProvider>
         <LanguageProvider>
           <AuthProvider>
+            <AccountLanguageSync />
             <ErrorBoundary>
               <AppRouter />
             </ErrorBoundary>

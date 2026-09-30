@@ -29,7 +29,10 @@
     "save": "Save",
     "cancel": "Cancel",
     "success": "Profile updated.",
+    "current_password": "Current password",
+    "current_password_hint": "Your address is how your account is recovered: confirm with your password.",
     "error": {
+      "wrong_password": "The current password is incorrect.",
       "conflict": "This username or email address is already in use.",
       "username_too_short": "Minimum 3 characters.",
       "username_too_long": "Maximum 50 characters.",
@@ -62,6 +65,7 @@
     "error": {
       "mismatch": "The two passwords do not match.",
       "too_short": "Too short (minimum 8 characters).",
+      "too_long": "Too long: 72 characters at most, fewer with accents or emoji.",
       "weak": "Must contain at least one uppercase letter, one digit, and one special character.",
       "wrong_current": "Current password is incorrect.",
       "server": "An error occurred. Please try again.",

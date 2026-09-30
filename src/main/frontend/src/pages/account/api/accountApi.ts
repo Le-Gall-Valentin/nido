@@ -12,13 +12,16 @@ export class InvalidCurrentPasswordError extends Error {
 }
 
 export const accountApi: IAccountApi = {
-  async updateProfile(username: string, email: string): Promise<void> {
+  async updateProfile(username: string, email: string, currentPassword?: string): Promise<void> {
     try {
-      await client.patch('/users/me', { username, email })
+      await client.patch('/users/me', currentPassword === undefined
+        ? { username, email }
+        : { username, email, currentPassword })
     } catch (error) {
       if (isAxiosError(error)) {
         const status = error.response?.status
         if (status === 409) throw new ConflictError()
+        if (status === 422) throw new InvalidCurrentPasswordError()
         if (status === 429) throw new RateLimitError()
         if (status !== undefined) throw new ServerError()
       }

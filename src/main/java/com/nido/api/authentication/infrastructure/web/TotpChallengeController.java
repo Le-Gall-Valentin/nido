@@ -95,7 +95,7 @@ public class TotpChallengeController {
         response.addHeader(HttpHeaders.SET_COOKIE, cookieService.buildClearChallengeCookie().toString());
 
         UserCredentials user = result.credentials();
-        return ResponseEntity.ok(new UserInfoResponse(user.id(), user.username(), user.email(), user.role(), user.createdAt(), true));
+        return ResponseEntity.ok(new UserInfoResponse(user.id(), user.username(), user.email(), user.role(), user.createdAt(), true, UserInfoResponse.codeOf(user.language())));
     }
 
     @Schema(description = "Code TOTP à 6 chiffres pour valider le challenge de connexion")

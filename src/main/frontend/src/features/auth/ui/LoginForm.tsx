@@ -1,9 +1,9 @@
 import { CredentialsError, RateLimitError, ServerError } from '../model/errors'
 import React, { useId, useRef, useState } from 'react'
-import { AlertTriangle, Eye, EyeOff, ChevronRight } from 'lucide-react'
+import { AlertTriangle, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../model/authStoreContext'
-import { Button, Input, CTA_BUTTON_STYLE, CTA_BUTTON_SHADOW } from '@/shared/ui'
+import { Button, Input, PasswordInput, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE } from '@/shared/ui'
 import type { LoginOutcome } from '../model/types'
 
 interface LoginFormProps {
@@ -27,7 +27,6 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
   const errorAlertId = useId()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [errorKind, setErrorKind] = useState<ErrorKind>(null)
   const [retryAfterSeconds, setRetryAfterSeconds] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -92,43 +91,29 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
         required
         autoComplete="username"
         autoFocus
-        className="rounded-[11px] px-[15px] py-[13px] text-[15px]"
+        className={AUTH_FIELD_CLASS}
         aria-invalid={errorKind !== null}
         aria-describedby={errorKind !== null ? errorAlertId : undefined}
       />
 
-      <Input
+      <PasswordInput
         label={t('field.password')}
         name="password"
-        type={showPassword ? 'text' : 'password'}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder={t('field.password_placeholder')}
         required
         autoComplete="current-password"
-        spellCheck={false}
-        autoCorrect="off"
-        autoCapitalize="off"
-        className="rounded-[11px] px-[15px] py-[13px] text-[15px]"
+        className={AUTH_FIELD_CLASS}
         aria-invalid={errorKind !== null}
         aria-describedby={errorKind !== null ? errorAlertId : undefined}
-        suffix={
-          <button
-            type="button"
-            onClick={() => setShowPassword((v) => !v)}
-            className="rounded-md p-2 text-fg-3 transition-colors hover:bg-bg-2 hover:text-fg-0"
-            aria-label={showPassword ? t('field.hide_password') : t('field.show_password')}
-          >
-            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-          </button>
-        }
       />
 
       <Button
         type="submit"
         isLoading={isLoading}
-        className="mt-2 w-full rounded-[11px] border-transparent py-3.5 text-[15px] font-semibold active:translate-y-px disabled:cursor-wait"
-        style={{ ...CTA_BUTTON_STYLE, boxShadow: CTA_BUTTON_SHADOW }}
+        className={`${AUTH_SUBMIT_CLASS} disabled:cursor-wait`}
+        style={CTA_ELEVATED_STYLE}
       >
         {t('action.submit')}
         <ChevronRight className="size-3.5" />

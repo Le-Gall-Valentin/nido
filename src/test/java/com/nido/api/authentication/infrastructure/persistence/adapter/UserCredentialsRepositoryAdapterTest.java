@@ -29,7 +29,7 @@ class UserCredentialsRepositoryAdapterTest {
 
     private final UUID userId = UUID.randomUUID();
     private final UserProfile userProfile =
-            new UserProfile(userId, "alice", "alice@test.com", true, Role.USER, Instant.now());
+            new UserProfile(userId, "alice", "alice@test.com", true, Role.USER, Instant.now(), null);
 
     @BeforeEach
     void setUp() {

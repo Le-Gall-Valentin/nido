@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { LoginPage } from './LoginPage'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useAuth } from '@/features/auth'
@@ -41,13 +41,21 @@ vi.mock('@/features/totp', () => ({
   totpApi: {},
 }))
 
+const availability = vi.hoisted(() => ({ current: 'unavailable' as 'loading' | 'available' | 'unavailable' }))
+
+vi.mock('@/features/password-reset', () => ({
+  usePasswordResetAvailability: () => availability.current,
+  passwordResetApi: {},
+}))
+
 const mockFinalizeLogin = vi.fn()
 const mockTotpApi = { verify: vi.fn(), setup: vi.fn(), confirm: vi.fn(), getStatus: vi.fn(), disable: vi.fn() }
 
 describe('LoginPage', () => {
   beforeEach(() => {
+    availability.current = 'unavailable'
     vi.mocked(useAuth).mockImplementation((selector) =>
-      selector({ finalizeLogin: mockFinalizeLogin, user: null, isInitializing: false, signedOut: false, login: vi.fn(), logout: vi.fn(), initialize: vi.fn(), patchUser: vi.fn() })
+      selector({ finalizeLogin: mockFinalizeLogin, user: null, isInitializing: false, signedOut: false, signingIn: null, login: vi.fn(), logout: vi.fn(), initialize: vi.fn(), patchUser: vi.fn() })
     )
     mockFinalizeLogin.mockClear()
   })
@@ -160,6 +168,42 @@ describe('LoginPage', () => {
       fireEvent.click(screen.getByText('activate'))
       fireEvent.click(screen.getByText('setup-dismiss'))
       expect(mockFinalizeLogin).toHaveBeenCalledWith({ id: '1', username: 'alice', role: 'USER' })
+    })
+  })
+
+  describe('forgotten password', () => {
+    function Where() {
+      const location = useLocation()
+      return <output data-testid="where">{JSON.stringify(location.state)}</output>
+    }
+
+    it('offers the link under the form when the server can send it', () => {
+      availability.current = 'available'
+      render(<MemoryRouter><LoginPage totpApi={mockTotpApi} /></MemoryRouter>)
+
+      expect(screen.getByRole('link', { name: 'forgot.link' }).getAttribute('href')).toBe('/forgot-password')
+    })
+
+    it.each(['unavailable', 'loading'] as const)('shows the page as it always was when %s', (state) => {
+      availability.current = state
+      render(<MemoryRouter><LoginPage totpApi={mockTotpApi} /></MemoryRouter>)
+
+      expect(screen.queryByRole('link', { name: 'forgot.link' })).toBeNull()
+      expect(screen.getByText('help.contact_admin')).not.toBeNull()
+    })
+
+    it('shows the success banner once and takes its reason out of the history entry', async () => {
+      render(
+        <MemoryRouter initialEntries={[{ pathname: '/login', state: { passwordReset: 'done' } }]}>
+          <Routes>
+            <Route path="/login" element={<><LoginPage totpApi={mockTotpApi} /><Where /></>} />
+          </Routes>
+        </MemoryRouter>,
+      )
+
+      expect(screen.getByText('reset.done')).not.toBeNull()
+      await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('null'))
+      expect(screen.getByText('reset.done')).not.toBeNull()
     })
   })
 })

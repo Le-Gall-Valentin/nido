@@ -22,7 +22,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 class ArchRulesTest {
 
     private static final String BASE = "com.nido.api.";
-    private static final List<String> BCS = List.of("authentication", "identity", "mfa", "space");
+    private static final List<String> BCS = List.of("authentication", "identity", "mfa", "space", "mail");
 
     private final JavaClasses classes = new ClassFileImporter()
         .importPackages("com.nido.api");
@@ -395,6 +395,50 @@ class ArchRulesTest {
     }
 
     // -------------------------------------------------------------------------
+    // Mail — a channel any context may use, through what it publishes and nothing else
+    //
+    // A context sends a mail from an adapter in its own infrastructure, with a record of its own
+    // implementing MailContent. Its domain and application never learn mail exists; and nobody but
+    // mail's infrastructure touches an SMTP, template or HTML library.
+    // -------------------------------------------------------------------------
+
+    private static final String MAIL = BASE + "mail..";
+
+    @Test
+    void only_the_mail_infrastructure_touches_mail_libraries() {
+        noClasses()
+            .that().resideOutsideOfPackage(BASE + "mail.infrastructure..")
+            .and(excludeTests())
+            .should().dependOnClassesThat().resideInAnyPackage(
+                "jakarta.mail..", "org.springframework.mail..", "org.thymeleaf..", "org.jsoup..")
+            .check(classes);
+    }
+
+    @Test
+    void outside_mail_only_what_mail_publishes_is_used() {
+        DescribedPredicate<JavaClass> unpublished = DescribedPredicate.describe(
+            "a mail class outside its application.port.in and domain.model",
+            c -> c.getPackageName().startsWith(BASE + "mail.")
+                && !c.getPackageName().startsWith(BASE + "mail.application.port.in")
+                && !c.getPackageName().startsWith(BASE + "mail.domain.model"));
+        noClasses()
+            .that().resideOutsideOfPackage(MAIL)
+            .and(excludeTests())
+            .should().dependOnClassesThat(unpublished)
+            .check(classes);
+    }
+
+    @Test
+    void outside_mail_only_an_infrastructure_adapter_names_mail() {
+        noClasses()
+            .that().resideOutsideOfPackage(MAIL)
+            .and().resideOutsideOfPackage("..infrastructure..")
+            .and(excludeTests())
+            .should().dependOnClassesThat().resideInAPackage(MAIL)
+            .check(classes);
+    }
+
+    // -------------------------------------------------------------------------
     // Global infra isolation
     // -------------------------------------------------------------------------
 
@@ -410,7 +454,8 @@ class ArchRulesTest {
             .resideInAnyPackage(
                 BASE + "authentication.infrastructure..",
                 BASE + "identity.infrastructure..",
-                BASE + "mfa.infrastructure..")
+                BASE + "mfa.infrastructure..",
+                BASE + "mail.infrastructure..")
             .allowEmptyShould(false)
             .check(classes);
     }
@@ -446,11 +491,21 @@ class ArchRulesTest {
             new String[]{BASE + "mfa.application.port.in..", BASE + "mfa.application.dto.."},
             Set.of("TotpStatusAdapter", "MfaTotpVerifierAdapter")),
 
+        // authentication.infra → mail.application.port.in
+        new CrossBcAppDep("authentication",
+            new String[]{BASE + "mail.application.port.in.."},
+            Set.of("AccountMailAdapter")),
+
         // identity.infra → authentication.application (port.in + dto)
         new CrossBcAppDep("identity",
             new String[]{BASE + "authentication.application.port.in..", BASE + "authentication.application.dto.."},
             Set.of("CredentialSetupAdapter", "CredentialChangeAdapter", "CredentialDeletionAdapter",
-                   "TokenInvalidationAdapter")),
+                   "TokenInvalidationAdapter", "PasswordCheckAdapter", "AccountRecoveryAdapter")),
+
+        // identity.infra → mail.application.port.in
+        new CrossBcAppDep("identity",
+            new String[]{BASE + "mail.application.port.in.."},
+            Set.of("ProfileMailAdapter")),
 
         // identity.infra → mfa.application.port.in
         new CrossBcAppDep("identity",

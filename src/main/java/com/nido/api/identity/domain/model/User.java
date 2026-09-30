@@ -1,5 +1,6 @@
 package com.nido.api.identity.domain.model;
 
+import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
 import com.nido.api.shared.service.RoleHierarchy;
 import java.time.Instant;
@@ -11,7 +12,8 @@ public record User(
     String email,
     Role role,
     boolean isActive,
-    Instant createdAt
+    Instant createdAt,
+    Language language
 ) {
     public void ensureActive() {
         if (!isActive) throw new IdentityException.UserAlreadyInactive();

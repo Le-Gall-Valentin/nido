@@ -16,6 +16,7 @@ function setup(mockLogin: ReturnType<typeof vi.fn>, props: { onLoginOutcome?: (o
     user: null,
     isInitializing: false,
     signedOut: false,
+    signingIn: null,
     login: mockLogin,
     logout: vi.fn(),
     initialize: vi.fn(),
@@ -109,11 +110,11 @@ describe('LoginForm', () => {
     const passwordInput = getByLabelText('field.password') as HTMLInputElement
     expect(passwordInput.type).toBe('password')
 
-    const showBtn = container.querySelector('[aria-label="field.show_password"]') as HTMLButtonElement
+    const showBtn = container.querySelector('[aria-label="password.show"]') as HTMLButtonElement
     await act(async () => { fireEvent.click(showBtn) })
     expect(passwordInput.type).toBe('text')
 
-    const hideBtn = container.querySelector('[aria-label="field.hide_password"]') as HTMLButtonElement
+    const hideBtn = container.querySelector('[aria-label="password.hide"]') as HTMLButtonElement
     await act(async () => { fireEvent.click(hideBtn) })
     expect(passwordInput.type).toBe('password')
   })

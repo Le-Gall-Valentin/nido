@@ -1,6 +1,7 @@
 package com.nido.api.authentication.infrastructure.persistence.adapter;
 
 import com.nido.api.authentication.domain.model.RefreshToken;
+import com.nido.api.authentication.domain.port.out.AccountLockPort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenMaintenancePort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenRepository;
 import com.nido.api.authentication.domain.port.out.RefreshTokenRevocationPort;
@@ -18,9 +19,11 @@ import java.util.UUID;
 public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository, RefreshTokenRevocationPort, RefreshTokenMaintenancePort {
 
     private final RefreshTokenJpaRepository jpa;
+    private final AccountLockPort accountLock;
 
-    public RefreshTokenRepositoryAdapter(RefreshTokenJpaRepository jpa) {
+    public RefreshTokenRepositoryAdapter(RefreshTokenJpaRepository jpa, AccountLockPort accountLock) {
         this.jpa = jpa;
+        this.accountLock = accountLock;
     }
 
     @Override
@@ -40,9 +43,15 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository, Re
 
     // REQUIRES_NEW: revocation must commit independently so tokens stay revoked
     // even if the caller's outer transaction is rolled back (e.g., on reuse detection).
+    //
+    // The account lock first: a rotation in flight has inserted its new token without committing it,
+    // and an UPDATE started now would not see it — the new token would outlive the revocation. Behind
+    // the lock the UPDATE starts once the rotation has committed, and a rotation that comes after
+    // finds its token already revoked.
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void revokeAllForUser(UUID userId) {
+        accountLock.lockFor(userId);
         jpa.revokeAllByUserId(userId);
     }
 

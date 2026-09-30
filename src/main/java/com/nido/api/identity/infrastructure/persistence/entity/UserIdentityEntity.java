@@ -43,4 +43,8 @@ public class UserIdentityEntity {
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    /** "fr" or "en"; null until a signed-in session records one. */
+    @Column(length = 2)
+    private String language;
 }
