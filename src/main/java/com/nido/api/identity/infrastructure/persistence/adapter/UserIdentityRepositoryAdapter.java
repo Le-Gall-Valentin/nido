@@ -3,7 +3,7 @@ package com.nido.api.identity.infrastructure.persistence.adapter;
 import com.nido.api.identity.domain.model.CreateUserProfileCommand;
 import com.nido.api.identity.domain.model.UpdateProfileCommand;
 import com.nido.api.identity.domain.model.IdentityException;
-import com.nido.api.identity.domain.model.Language;
+import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.UserAdminPort;

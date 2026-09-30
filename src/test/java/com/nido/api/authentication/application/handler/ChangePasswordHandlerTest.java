@@ -12,6 +12,7 @@ import com.nido.api.authentication.domain.port.out.PasswordVerifierPort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenRevocationPort;
 import com.nido.api.authentication.domain.port.out.UserCredentialPort;
 import com.nido.api.authentication.domain.port.out.UserCredentialsPort;
+import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -90,7 +91,7 @@ class ChangePasswordHandlerTest {
 
     @Test
     void a_changed_password_ends_the_way_a_reset_does() {
-        UserCredentials creds = new UserCredentials(userId, "user", "u@test.com", "$hashed", true, Role.USER, Instant.now(), "fr");
+        UserCredentials creds = new UserCredentials(userId, "user", "u@test.com", "$hashed", true, Role.USER, Instant.now(), Language.FR);
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
         when(passwordVerifier.matches("oldPass", "$hashed")).thenReturn(true);
         when(passwordHasher.hash("newPass")).thenReturn("$newHashed");

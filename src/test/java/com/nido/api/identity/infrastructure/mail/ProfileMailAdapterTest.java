@@ -1,9 +1,9 @@
 package com.nido.api.identity.infrastructure.mail;
 
-import com.nido.api.identity.domain.model.Language;
 import com.nido.api.mail.application.port.in.SendMailUseCase;
 import com.nido.api.mail.domain.model.MailRequest;
 import com.nido.api.mail.domain.model.Recipient;
+import com.nido.api.shared.model.Language;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;

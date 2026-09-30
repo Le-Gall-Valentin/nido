@@ -1,6 +1,6 @@
 package com.nido.api.identity.domain.port.out;
 
-import com.nido.api.identity.domain.model.Language;
+import com.nido.api.shared.model.Language;
 
 public interface ProfileMailPort {
     /** Tells the previous address that the account now uses another one. */

@@ -1,4 +1,4 @@
-package com.nido.api.identity.domain.model;
+package com.nido.api.shared.model;
 
 import java.util.Arrays;
 import java.util.Optional;

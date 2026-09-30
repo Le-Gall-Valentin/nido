@@ -2,11 +2,11 @@ package com.nido.api.identity.application.handler;
 
 import com.nido.api.identity.application.port.in.ChangeMyLanguageUseCase;
 import com.nido.api.identity.domain.model.IdentityException;
-import com.nido.api.identity.domain.model.Language;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.shared.model.Language;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;

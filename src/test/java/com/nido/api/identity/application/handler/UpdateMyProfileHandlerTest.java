@@ -1,7 +1,6 @@
 package com.nido.api.identity.application.handler;
 
 import com.nido.api.identity.domain.model.IdentityException;
-import com.nido.api.identity.domain.model.Language;
 import com.nido.api.identity.domain.model.UpdateProfileCommand;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.AccountRecoveryPort;
@@ -9,6 +8,7 @@ import com.nido.api.identity.domain.port.out.PasswordCheckPort;
 import com.nido.api.identity.domain.port.out.ProfileMailPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
+import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

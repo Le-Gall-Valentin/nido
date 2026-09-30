@@ -1,9 +1,11 @@
 package com.nido.api.infrastructure.web;
 
+import com.nido.api.shared.model.Language;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -18,13 +20,13 @@ import java.util.Optional;
  */
 public final class MailLanguage {
 
-    private static final List<String> SUPPORTED = List.of("fr", "en");
+    private static final List<String> SUPPORTED = Arrays.stream(Language.values()).map(Language::code).toList();
 
     private MailLanguage() {}
 
-    public static Locale resolve(String accountLanguage) {
-        if (accountLanguage != null && SUPPORTED.contains(accountLanguage)) {
-            return Locale.of(accountLanguage);
+    public static Locale resolve(Language accountLanguage) {
+        if (accountLanguage != null) {
+            return Locale.of(accountLanguage.code());
         }
         return ofCurrentRequest().orElse(Locale.ENGLISH);
     }

@@ -13,6 +13,7 @@ import com.nido.api.authentication.domain.port.out.RefreshTokenRevocationPort;
 import com.nido.api.authentication.domain.port.out.TokenHashPort;
 import com.nido.api.authentication.domain.port.out.UserCredentialPort;
 import com.nido.api.authentication.domain.port.out.UserProfilePort;
+import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +51,7 @@ class PasswordResetHandlerTest {
     @Mock AccountMailPort mail;
 
     private final Instant now = Instant.parse("2026-09-28T10:00:00Z");
-    private final UserProfile jane = new UserProfile(UUID.randomUUID(), "jane", "jane@test.com", true, Role.USER, now, "fr");
+    private final UserProfile jane = new UserProfile(UUID.randomUUID(), "jane", "jane@test.com", true, Role.USER, now, Language.FR);
     private final PasswordResetToken live = new PasswordResetToken(UUID.randomUUID(), jane.id(), now, now.plusSeconds(1800));
     private PasswordResetHandler handler;
 

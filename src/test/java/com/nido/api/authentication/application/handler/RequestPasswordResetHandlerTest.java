@@ -9,6 +9,7 @@ import com.nido.api.authentication.domain.port.out.PasswordResetTokenRepository;
 import com.nido.api.authentication.domain.port.out.ResetTokenGeneratorPort;
 import com.nido.api.authentication.domain.port.out.TokenHashPort;
 import com.nido.api.authentication.domain.port.out.UserProfilePort;
+import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +48,7 @@ class RequestPasswordResetHandlerTest {
 
     private final Instant now = Instant.parse("2026-09-28T10:00:00Z");
     private final UserProfile jane = new UserProfile(UUID.randomUUID(), "jane", "jane@test.com", true, Role.USER,
-        Instant.parse("2026-01-01T00:00:00Z"), "fr");
+        Instant.parse("2026-01-01T00:00:00Z"), Language.FR);
     private RequestPasswordResetHandler handler;
 
     @BeforeEach

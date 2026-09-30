@@ -1,5 +1,6 @@
 package com.nido.api.infrastructure.web;
 
+import com.nido.api.shared.model.Language;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -29,7 +30,7 @@ class MailLanguageTest {
     void the_account_language_wins_over_the_request() {
         requestAsking("en");
 
-        assertThat(MailLanguage.resolve("fr")).isEqualTo(Locale.FRENCH);
+        assertThat(MailLanguage.resolve(Language.FR)).isEqualTo(Locale.FRENCH);
     }
 
     @Test
@@ -44,7 +45,6 @@ class MailLanguageTest {
         requestAsking("de-DE,de;q=0.9");
 
         assertThat(MailLanguage.resolve(null)).isEqualTo(Locale.ENGLISH);
-        assertThat(MailLanguage.resolve("de")).isEqualTo(Locale.ENGLISH);
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.nido.api.mail.application.port.in.MailAvailabilityQuery;
 import com.nido.api.mail.application.port.in.SendMailUseCase;
 import com.nido.api.mail.domain.model.MailRequest;
 import com.nido.api.mail.domain.model.Recipient;
+import com.nido.api.shared.model.Language;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -32,7 +33,7 @@ class AccountMailAdapterTest {
     @Mock SendMailUseCase sendMail;
     @Mock MailAvailabilityQuery availability;
 
-    private final AccountContact jane = new AccountContact(UUID.randomUUID(), "jane", "jane@test.com", "en");
+    private final AccountContact jane = new AccountContact(UUID.randomUUID(), "jane", "jane@test.com", Language.EN);
 
     private MailRequest sent() {
         ArgumentCaptor<MailRequest> request = ArgumentCaptor.forClass(MailRequest.class);

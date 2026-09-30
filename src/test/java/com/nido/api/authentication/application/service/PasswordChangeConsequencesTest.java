@@ -5,6 +5,7 @@ import com.nido.api.authentication.domain.port.out.AccountMailPort;
 import com.nido.api.authentication.domain.port.out.IssuedTokenCutoffPort;
 import com.nido.api.authentication.domain.port.out.PasswordResetTokenRepository;
 import com.nido.api.authentication.domain.port.out.RefreshTokenRevocationPort;
+import com.nido.api.shared.model.Language;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -24,7 +25,7 @@ class PasswordChangeConsequencesTest {
     @Mock IssuedTokenCutoffPort cutoff;
     @Mock AccountMailPort mail;
 
-    private final AccountContact jane = new AccountContact(UUID.randomUUID(), "jane", "jane@test.com", "fr");
+    private final AccountContact jane = new AccountContact(UUID.randomUUID(), "jane", "jane@test.com", Language.FR);
 
     @Test
     void every_way_in_the_old_password_opened_is_closed() {

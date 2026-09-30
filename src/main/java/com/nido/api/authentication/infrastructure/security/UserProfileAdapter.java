@@ -36,6 +36,6 @@ public class UserProfileAdapter implements UserProfilePort {
 
     private static UserProfile toProfile(User u) {
         return new UserProfile(u.id(), u.username(), u.email(), u.isActive(), u.role(), u.createdAt(),
-            u.language() == null ? null : u.language().code());
+            u.language());
     }
 }
