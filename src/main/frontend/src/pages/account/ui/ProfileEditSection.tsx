@@ -30,7 +30,8 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
   const emailEmpty = trimmedEmail.length === 0
   // The address is how an account is recovered, so changing it asks for the password. A change of
   // letter case only is the same mailbox — the server agrees and asks for nothing.
-  const addressChanges = trimmedEmail.toLowerCase() !== user.email.toLowerCase()
+  const changesAddress = (value: string) => value.trim().toLowerCase() !== user.email.toLowerCase()
+  const addressChanges = changesAddress(email)
   const passwordHintId = useId()
   const canSave = isDirty && !usernameTooShort && !usernameTooLong && !emailEmpty
     && (!addressChanges || currentPassword.length > 0)
@@ -106,7 +107,11 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
                 name="email"
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={e => {
+                  setEmail(e.target.value)
+                  // Back to the address it had, the password is no longer asked: nothing typed for it stays.
+                  if (!changesAddress(e.target.value)) setCurrentPassword('')
+                }}
                 disabled={isSubmitting}
               />
             </div>

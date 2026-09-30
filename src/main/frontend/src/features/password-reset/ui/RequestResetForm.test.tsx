@@ -18,6 +18,11 @@ function setup(requestReset: IPasswordResetApi['requestReset']) {
 }
 
 describe('RequestResetForm', () => {
+  it('takes no more than the server accepts', () => {
+    const { field } = setup(vi.fn())
+    expect(field().getAttribute('maxlength')).toBe('254')
+  })
+
   it('sends the identifier without its surrounding spaces, then hands it on', async () => {
     const requestReset = vi.fn().mockResolvedValue(undefined)
     const { onSent, field, submit } = setup(requestReset)

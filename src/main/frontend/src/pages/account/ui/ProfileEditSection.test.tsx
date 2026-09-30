@@ -165,6 +165,17 @@ describe('ProfileEditSection', () => {
     expect((getByLabelText('profile.current_password') as HTMLInputElement).value).toBe('')
   })
 
+  it('forgets the typed password once the address goes back to the one it had', () => {
+    const { getByLabelText } = setup()
+    fireEvent.change(getByLabelText('profile.email'), { target: { value: 'new@test.com' } })
+    fireEvent.change(getByLabelText('profile.current_password'), { target: { value: 'secret' } })
+
+    fireEvent.change(getByLabelText('profile.email'), { target: { value: 'alice@test.com' } })
+    fireEvent.change(getByLabelText('profile.email'), { target: { value: 'other@test.com' } })
+
+    expect((getByLabelText('profile.current_password') as HTMLInputElement).value).toBe('')
+  })
+
   it('ties the reason for the password to its field', () => {
     const { getByLabelText, getByText } = setup()
     fireEvent.change(getByLabelText('profile.email'), { target: { value: 'new@test.com' } })

@@ -55,6 +55,7 @@ export function RequestResetForm({ api, labelId, onSent }: Props) {
         spellCheck={false}
         autoCapitalize="off"
         autoFocus
+        maxLength={254}
         className={AUTH_FIELD_CLASS}
         aria-invalid={error !== null}
         aria-describedby={error ? errorId : undefined}
