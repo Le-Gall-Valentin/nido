@@ -1,10 +1,12 @@
 package com.nido.api.authentication.infrastructure.persistence.adapter;
 
 import com.nido.api.authentication.domain.model.RefreshToken;
+import com.nido.api.authentication.domain.port.out.AccountLockPort;
 import com.nido.api.authentication.infrastructure.persistence.entity.RefreshTokenEntity;
 import com.nido.api.authentication.infrastructure.persistence.repository.RefreshTokenJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -16,6 +18,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,6 +26,7 @@ import static org.mockito.Mockito.when;
 class RefreshTokenRepositoryAdapterTest {
 
     @Mock RefreshTokenJpaRepository jpa;
+    @Mock AccountLockPort accountLock;
     @InjectMocks RefreshTokenRepositoryAdapter adapter;
 
     @Test
@@ -73,5 +77,16 @@ class RefreshTokenRepositoryAdapterTest {
         UUID userId = UUID.randomUUID();
         adapter.revokeAllForUser(userId);
         verify(jpa).revokeAllByUserId(userId);
+    }
+
+    @Test
+    void revoking_every_session_waits_for_a_rotation_in_flight_before_updating() {
+        UUID userId = UUID.randomUUID();
+
+        adapter.revokeAllForUser(userId);
+
+        InOrder order = inOrder(accountLock, jpa);
+        order.verify(accountLock).lockFor(userId);
+        order.verify(jpa).revokeAllByUserId(userId);
     }
 }

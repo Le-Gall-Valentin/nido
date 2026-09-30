@@ -6,6 +6,7 @@ import com.nido.api.authentication.domain.model.AuthenticationException;
 import com.nido.api.authentication.domain.model.RefreshToken;
 import com.nido.api.authentication.domain.model.UserCredentials;
 import com.nido.api.authentication.domain.port.out.AccessTokenPort;
+import com.nido.api.authentication.domain.port.out.AccountLockPort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenConfigPort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenIssuerPort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenRepository;
@@ -28,6 +29,7 @@ public class RefreshTokenHandler implements RefreshTokenUseCase {
     private final AccessTokenPort accessTokenPort;
     private final RefreshTokenIssuerPort refreshTokenPort;
     private final TokenHashPort tokenHashPort;
+    private final AccountLockPort accountLock;
     private final int refreshTokenExpiryDays;
 
     public RefreshTokenHandler(RefreshTokenRepository refreshTokenRepository,
@@ -36,6 +38,7 @@ public class RefreshTokenHandler implements RefreshTokenUseCase {
                                AccessTokenPort accessTokenPort,
                                RefreshTokenIssuerPort refreshTokenPort,
                                TokenHashPort tokenHashPort,
+                               AccountLockPort accountLock,
                                RefreshTokenConfigPort tokenConfig) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.revocationPort = revocationPort;
@@ -43,6 +46,7 @@ public class RefreshTokenHandler implements RefreshTokenUseCase {
         this.accessTokenPort = accessTokenPort;
         this.refreshTokenPort = refreshTokenPort;
         this.tokenHashPort = tokenHashPort;
+        this.accountLock = accountLock;
         this.refreshTokenExpiryDays = tokenConfig.refreshTokenExpiryDays();
     }
 
@@ -79,6 +83,10 @@ public class RefreshTokenHandler implements RefreshTokenUseCase {
             throw new AuthenticationException.UserNotActive();
         }
 
+        // Not before this point: the reuse branch above revokes every session, which takes this lock in
+        // a transaction of its own and would wait on ours for ever. Held until commit, it keeps a
+        // revocation of every session from missing the token this rotation is about to insert.
+        accountLock.lockFor(creds.id());
         if (!revocationPort.tryMarkUsedAndRevoke(token.id())) {
             // Token was concurrently consumed by another request — treat as reuse
             log.warn("Concurrent token reuse detected for user: {}", creds.id());
