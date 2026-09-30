@@ -9,7 +9,7 @@ import {
   type IPasswordResetApi,
 } from '@/features/password-reset'
 import { ROUTES } from '@/shared/config'
-import { Alert, Button, Spinner, CTA_BUTTON_SHADOW, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Button, Spinner, CTA_ELEVATED_STYLE } from '@/shared/ui'
 import { AuthShell } from './AuthShell'
 import { PASSWORD_RESET_DONE_STATE } from '../model/passwordResetDone'
 
@@ -85,7 +85,7 @@ export function ResetPasswordPage({ api = defaultApi }: { api?: IPasswordResetAp
           <Link
             to={ROUTES.FORGOT_PASSWORD}
             className="block w-full rounded-[11px] py-3.5 text-center text-[15px] font-semibold"
-            style={{ ...CTA_BUTTON_STYLE, boxShadow: CTA_BUTTON_SHADOW }}
+            style={CTA_ELEVATED_STYLE}
           >
             {t('reset.invalid.again')}
           </Link>

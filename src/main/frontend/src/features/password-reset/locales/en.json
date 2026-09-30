@@ -3,9 +3,7 @@
     "identifier": "Username or email address",
     "identifier_placeholder": "first.last or you@example.com",
     "new_password": "New password",
-    "confirm": "Confirm the password",
-    "show_password": "Show password",
-    "hide_password": "Hide password"
+    "confirm": "Confirm the password"
   },
   "rules": "8 to 72 characters, with at least one uppercase letter, one digit and one special character.",
   "action": {

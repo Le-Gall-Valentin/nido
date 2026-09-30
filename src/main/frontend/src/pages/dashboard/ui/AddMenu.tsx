@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { CalendarPlus, Plus, ShoppingCart, SquareCheck, Wallet, type LucideIcon } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 import { withCreateIntent } from '@/shared/lib'
-import { CTA_BUTTON_SHADOW, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { CTA_ELEVATED_STYLE } from '@/shared/ui'
 import { useDashboardActions } from '../model/dashboardActions'
 
 const ITEM = 'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-fg-1 hover:bg-bg-2 focus-visible:bg-bg-2'
@@ -79,7 +79,7 @@ export function AddMenu({ onAddTask }: { onAddTask: () => void }) {
     <div ref={ref} className="relative shrink-0">
       <button ref={buttonRef} type="button" aria-haspopup="menu" aria-expanded={open} aria-label={t('hero.add')} onClick={() => setOpen((value) => !value)}
         className="flex size-[42px] items-center justify-center gap-1.5 rounded-[10px] text-sm font-semibold sm:h-auto sm:w-auto sm:px-4 sm:py-2.5"
-        style={{ ...CTA_BUTTON_STYLE, boxShadow: CTA_BUTTON_SHADOW }}>
+        style={CTA_ELEVATED_STYLE}>
         <Plus className="size-4" aria-hidden="true" /><span className="hidden sm:inline">{t('hero.add')}</span>
       </button>
       {open && (

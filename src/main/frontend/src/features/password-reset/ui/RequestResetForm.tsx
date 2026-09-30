@@ -1,6 +1,6 @@
 import React, { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Alert, Button, Input, CTA_BUTTON_SHADOW, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Button, Input, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE } from '@/shared/ui'
 import type { IPasswordResetApi } from '../model/IPasswordResetApi'
 import { describeError, type FormError } from '../model/describeError'
 
@@ -55,15 +55,15 @@ export function RequestResetForm({ api, labelId, onSent }: Props) {
         spellCheck={false}
         autoCapitalize="off"
         autoFocus
-        className="rounded-[11px] px-[15px] py-[13px] text-[15px]"
+        className={AUTH_FIELD_CLASS}
         aria-invalid={error !== null}
         aria-describedby={error ? errorId : undefined}
       />
       <Button
         type="submit"
         isLoading={isLoading}
-        className="mt-2 w-full rounded-[11px] border-transparent py-3.5 text-[15px] font-semibold active:translate-y-px disabled:cursor-wait"
-        style={{ ...CTA_BUTTON_STYLE, boxShadow: CTA_BUTTON_SHADOW }}
+        className={`${AUTH_SUBMIT_CLASS} disabled:cursor-wait`}
+        style={CTA_ELEVATED_STYLE}
       >
         {t('action.send')}
       </Button>

@@ -1,6 +1,10 @@
 {
   "loading": "Loading...",
   "close": "Close",
+  "password": {
+    "show": "Show password",
+    "hide": "Hide password"
+  },
   "error": {
     "unexpected": "An unexpected error occurred.",
     "retry": "Try again",
