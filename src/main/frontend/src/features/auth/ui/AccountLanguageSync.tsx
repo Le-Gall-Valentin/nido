@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useAuth } from '@/features/auth'
+import { useAuth } from '../model/authStoreContext'
 import { accountLanguageApi, type IAccountLanguageApi } from '@/entities/user'
 import { useLanguage } from '@/shared/lib'
 
@@ -20,7 +20,7 @@ interface Props {
  * A failed save keeps the language on this device and is not retried. An account with no recorded
  * language gets it recorded at the next sign-in; an account that already has one has that language
  * applied again at the next sign-in, so the choice made on the failed save is lost.
- * Renders nothing; lives inside AuthProvider, which it reads, and under LanguageProvider.
+ * Renders nothing; the app mounts it inside AuthProvider, which it reads, and under LanguageProvider.
  */
 export function AccountLanguageSync({ api = accountLanguageApi }: Props) {
   const user = useAuth((s) => s.user)

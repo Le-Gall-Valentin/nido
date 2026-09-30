@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { StoreApi } from 'zustand'
-import * as auth from '@/features/auth'
+import * as auth from '../model/authStoreContext'
 import type { User } from '@/entities/user'
 import { LanguageContext } from '@/shared/lib/language'
 import type { Language } from '@/shared/lib'
@@ -15,7 +15,7 @@ interface FakeAuth {
 
 // A real store behind the mocked hook: signing in and out re-renders the component the way the app
 // does, instead of remounting it the way rerender() would.
-vi.mock('@/features/auth', async () => {
+vi.mock('../model/authStoreContext', async () => {
   const { create, useStore } = await import('zustand')
   const store = create<FakeAuth>((set) => ({
     user: null,
