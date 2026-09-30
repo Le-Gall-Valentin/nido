@@ -240,6 +240,18 @@ class UserControllerIT {
     }
 
     @Test
+    void register_passwordOverSeventyTwoBytes_returns400() throws Exception {
+        Cookie access = loginAs("superadmin", "adminpass");
+
+        mockMvc.perform(post("/api/users")
+                .cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"accented\",\"email\":\"accented@test.com\",\"password\":\""
+                    + SEVENTY_TWO_CHARACTERS_OVER_72_BYTES + "\",\"role\":\"USER\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void register_superAdminCannotCreateSuperAdmin_returns403() throws Exception {
         Cookie access = loginAs("superadmin", "adminpass");
 
