@@ -39,6 +39,12 @@
       "title": "Ce lien n'est plus valable",
       "body": "Il a expiré, a déjà servi, ou une demande plus récente l'a remplacé.",
       "again": "Demander un nouveau lien"
+    },
+    "signed_in": {
+      "title": "Vous êtes connecté",
+      "body": "Vous êtes connecté en tant que {{username}}. Déconnectez-vous pour utiliser ce lien.",
+      "sign_out": "Se déconnecter et utiliser ce lien",
+      "back": "Revenir à l'application"
     }
   },
   "footer": "© 2026 Nido"

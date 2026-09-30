@@ -56,12 +56,12 @@ export function AppRouter() {
         />
         <Route
           path={ROUTES.RESET_PASSWORD}
+          // Not PublicOnlyRoute: someone signed in who opens a reset link is told so and may sign out
+          // there, the link kept — a redirect would drop it without a word.
           element={
-            <PublicOnlyRoute>
-              <RequirePasswordReset>
-                <ResetPasswordPage />
-              </RequirePasswordReset>
-            </PublicOnlyRoute>
+            <RequirePasswordReset>
+              <ResetPasswordPage />
+            </RequirePasswordReset>
           }
         />
 

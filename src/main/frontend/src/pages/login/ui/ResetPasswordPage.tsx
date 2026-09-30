@@ -8,14 +8,15 @@ import {
   useResetLinkCheck,
   type IPasswordResetApi,
 } from '@/features/password-reset'
+import { useAuth } from '@/features/auth'
 import { ROUTES } from '@/shared/config'
-import { Alert, Button, Spinner, CTA_ELEVATED_STYLE } from '@/shared/ui'
+import { Alert, Button, Spinner, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE } from '@/shared/ui'
 import { AuthShell } from './AuthShell'
 import { PASSWORD_RESET_DONE_STATE } from '../model/passwordResetDone'
 
 const TITLE_ID = 'reset-password-title'
 
-type Step = 'checking' | 'form' | 'invalid' | 'unavailable'
+type Step = 'checking' | 'signed_in' | 'form' | 'invalid' | 'unavailable'
 
 function tokenIn(hash: string): string | null {
   const token = new URLSearchParams(hash.replace(/^#/, '')).get('token')
@@ -40,7 +41,14 @@ export function ResetPasswordPage({ api = defaultApi }: { api?: IPasswordResetAp
   const link = useResetLinkCheck(token, api)
   // The link can also stop working while the new password is typed: the save is refused with 410.
   const [refusedOnSaveFor, setRefusedOnSaveFor] = useState<string | null>(null)
-  const step: Step = token !== null && refusedOnSaveFor === token ? 'invalid' : link.state === 'valid' ? 'form' : link.state
+  const linkStep: Step = token !== null && refusedOnSaveFor === token ? 'invalid' : link.state === 'valid' ? 'form' : link.state
+  // Someone signed in on this device follows the link: resetting another account's password — or
+  // their own from inside a session — would confuse more than it helps. They sign out first; the
+  // token stays with the page meanwhile.
+  const user = useAuth((s) => s.user)
+  const isRestoringSession = useAuth((s) => s.isInitializing)
+  const logout = useAuth((s) => s.logout)
+  const step: Step = isRestoringSession ? 'checking' : user ? 'signed_in' : linkStep
 
   useEffect(() => {
     if (location.hash) void navigate({ pathname: location.pathname, search: location.search }, { replace: true })
@@ -51,6 +59,26 @@ export function ResetPasswordPage({ api = defaultApi }: { api?: IPasswordResetAp
       {/* The page keeps its name while there is no form to title: a screen reader lands on something. */}
       {(step === 'checking' || step === 'unavailable') && <h1 className="sr-only">{t('reset.title')}</h1>}
       {step === 'checking' && <Spinner label={t('reset.checking')} />}
+
+      {step === 'signed_in' && user && (
+        <div>
+          <h1 className="mb-2 text-[28px] font-semibold tracking-tight text-fg-0">{t('reset.signed_in.title')}</h1>
+          <p className="mb-6 text-sm leading-relaxed text-fg-2">{t('reset.signed_in.body', { username: user.username })}</p>
+          <Button
+            type="button"
+            // The store clears the session in its own finally block: a failing call still signs this
+            // device out, and the catch only keeps the rejection from surfacing unhandled.
+            onClick={() => { logout().catch(() => {}) }}
+            className={AUTH_SUBMIT_CLASS}
+            style={CTA_ELEVATED_STYLE}
+          >
+            {t('reset.signed_in.sign_out')}
+          </Button>
+          <p className="mt-6 text-center">
+            <Link to={ROUTES.HOME} className="text-[13px] text-fg-2 hover:text-fg-0">{t('reset.signed_in.back')}</Link>
+          </p>
+        </div>
+      )}
 
       {step === 'form' && token && (
         <>

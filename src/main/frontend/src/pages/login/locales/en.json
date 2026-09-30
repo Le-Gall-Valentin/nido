@@ -39,6 +39,12 @@
       "title": "This link no longer works",
       "body": "It expired, was already used, or a newer request replaced it.",
       "again": "Ask for a new link"
+    },
+    "signed_in": {
+      "title": "You are signed in",
+      "body": "You are signed in as {{username}}. Sign out to use this link.",
+      "sign_out": "Sign out and use this link",
+      "back": "Back to the app"
     }
   },
   "footer": "© 2026 Nido"

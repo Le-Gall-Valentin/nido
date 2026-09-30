@@ -1,8 +1,11 @@
 import { StrictMode } from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { StoreApi } from 'zustand'
+import * as auth from '@/features/auth'
+import type { User } from '@/entities/user'
 import { InvalidResetLinkError, type IPasswordResetApi } from '@/features/password-reset'
 import { NetworkError } from '@/shared/lib'
 import { createTestQueryClient } from '@/shared/test'
@@ -11,6 +14,35 @@ import { ResetPasswordPage } from './ResetPasswordPage'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, o?: object) => (o ? `${k}:${JSON.stringify(o)}` : k) }),
 }))
+
+interface FakeAuth {
+  user: User | null
+  isInitializing: boolean
+  logout: () => Promise<void>
+}
+
+// A real store behind the mocked hook: signing out re-renders the page the way the app does.
+vi.mock('@/features/auth', async () => {
+  const { create, useStore } = await import('zustand')
+  const store = create<FakeAuth>((set) => ({
+    user: null,
+    isInitializing: false,
+    logout: vi.fn(async () => { set({ user: null }) }),
+  }))
+  return {
+    useAuth: <T,>(selector: (state: FakeAuth) => T) => useStore(store, selector),
+    __store: store,
+  }
+})
+
+const authStore = (auth as unknown as { __store: StoreApi<FakeAuth> }).__store
+const jane: User = {
+  id: 'u-1', username: 'jane', email: 'jane@test.com', role: 'USER', createdAt: '2026-01-01T00:00:00Z', totpEnabled: false,
+}
+
+beforeEach(() => {
+  authStore.setState({ user: null, isInitializing: false })
+})
 
 function Where() {
   const location = useLocation()
@@ -125,6 +157,39 @@ describe('ResetPasswordPage', () => {
     await screen.findByLabelText('field.new_password')
     expect(checkToken).toHaveBeenLastCalledWith('def')
     expect(where().hash).toBe('')
+  })
+
+  it('asks a signed-in person to sign out first, the link kept out of the address bar', async () => {
+    authStore.setState({ user: jane })
+    open('/reset-password#token=abc', {})
+
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('reset.signed_in.title'))
+    expect(screen.getByText('reset.signed_in.body:{"username":"jane"}')).not.toBeNull()
+    expect(screen.getByRole('link', { name: 'reset.signed_in.back' }).getAttribute('href')).toBe('/')
+    expect(screen.queryByLabelText('field.new_password')).toBeNull()
+    expect(where().hash).toBe('')
+  })
+
+  it('signs out and goes on with the same link', async () => {
+    authStore.setState({ user: jane })
+    const api = open('/reset-password#token=abc', {})
+
+    fireEvent.click(await screen.findByRole('button', { name: 'reset.signed_in.sign_out' }))
+
+    await screen.findByLabelText('field.new_password')
+    expect(authStore.getState().logout).toHaveBeenCalled()
+    expect(api.checkToken).toHaveBeenCalledWith('abc')
+  })
+
+  it('waits while a session is being restored, rather than show a form to someone signed in', async () => {
+    authStore.setState({ isInitializing: true })
+    const api = open('/reset-password#token=abc', {})
+
+    // The link itself checks out: only the session still being restored holds the form back.
+    await waitFor(() => expect(api.checkToken).toHaveBeenCalled())
+    await act(async () => {})
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('reset.title')
+    expect(screen.queryByLabelText('field.new_password')).toBeNull()
   })
 
   it('sends the person to the login page, told the password changed', async () => {
