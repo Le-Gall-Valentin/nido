@@ -1,5 +1,6 @@
 package com.nido.api.authentication.application.handler;
 
+import com.nido.api.authentication.application.service.PasswordChangeConsequences;
 import com.nido.api.authentication.domain.model.AccountContact;
 import com.nido.api.authentication.domain.model.AuthenticationException;
 import com.nido.api.authentication.domain.model.PasswordResetToken;
@@ -55,8 +56,8 @@ class PasswordResetHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new PasswordResetHandler(tokens, hasher, profiles, passwordHasher, credentials, refreshTokens, cutoff, mail,
-            Clock.fixed(now, ZoneOffset.UTC));
+        handler = new PasswordResetHandler(tokens, hasher, profiles, passwordHasher, credentials,
+            new PasswordChangeConsequences(tokens, refreshTokens, cutoff, mail), Clock.fixed(now, ZoneOffset.UTC));
         when(hasher.hash("RAW")).thenReturn("HASH");
         when(profiles.findById(jane.id())).thenReturn(Optional.of(jane));
         when(passwordHasher.hash("NewPassw0rd!")).thenReturn("$new");

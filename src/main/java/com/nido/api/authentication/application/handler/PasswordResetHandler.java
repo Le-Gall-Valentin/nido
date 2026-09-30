@@ -2,15 +2,13 @@ package com.nido.api.authentication.application.handler;
 
 import com.nido.api.authentication.application.port.in.CheckPasswordResetTokenUseCase;
 import com.nido.api.authentication.application.port.in.ConfirmPasswordResetUseCase;
+import com.nido.api.authentication.application.service.PasswordChangeConsequences;
 import com.nido.api.authentication.domain.model.AccountContact;
 import com.nido.api.authentication.domain.model.AuthenticationException;
 import com.nido.api.authentication.domain.model.PasswordResetToken;
 import com.nido.api.authentication.domain.model.UserProfile;
-import com.nido.api.authentication.domain.port.out.AccountMailPort;
-import com.nido.api.authentication.domain.port.out.IssuedTokenCutoffPort;
 import com.nido.api.authentication.domain.port.out.PasswordHasherPort;
 import com.nido.api.authentication.domain.port.out.PasswordResetTokenRepository;
-import com.nido.api.authentication.domain.port.out.RefreshTokenRevocationPort;
 import com.nido.api.authentication.domain.port.out.TokenHashPort;
 import com.nido.api.authentication.domain.port.out.UserCredentialPort;
 import com.nido.api.authentication.domain.port.out.UserProfilePort;
@@ -42,23 +40,18 @@ public class PasswordResetHandler implements CheckPasswordResetTokenUseCase, Con
     private final UserProfilePort profiles;
     private final PasswordHasherPort passwordHasher;
     private final UserCredentialPort credentials;
-    private final RefreshTokenRevocationPort refreshTokens;
-    private final IssuedTokenCutoffPort cutoff;
-    private final AccountMailPort mail;
+    private final PasswordChangeConsequences consequences;
     private final Clock clock;
 
     public PasswordResetHandler(PasswordResetTokenRepository tokens, TokenHashPort hasher, UserProfilePort profiles,
                                 PasswordHasherPort passwordHasher, UserCredentialPort credentials,
-                                RefreshTokenRevocationPort refreshTokens, IssuedTokenCutoffPort cutoff,
-                                AccountMailPort mail, Clock clock) {
+                                PasswordChangeConsequences consequences, Clock clock) {
         this.tokens = tokens;
         this.hasher = hasher;
         this.profiles = profiles;
         this.passwordHasher = passwordHasher;
         this.credentials = credentials;
-        this.refreshTokens = refreshTokens;
-        this.cutoff = cutoff;
-        this.mail = mail;
+        this.consequences = consequences;
         this.clock = clock;
     }
 
@@ -73,10 +66,7 @@ public class PasswordResetHandler implements CheckPasswordResetTokenUseCase, Con
     public void confirm(String token, String newPassword) {
         UserProfile account = accountOf(hash(token).flatMap(tokens::consumeByHash), clock.instant());
         credentials.updatePasswordHash(account.id(), passwordHasher.hash(newPassword));
-        tokens.deleteAllForUser(account.id());
-        refreshTokens.revokeAllForUser(account.id());
-        cutoff.cutOffNow(account.id());
-        mail.passwordChanged(AccountContact.of(account));
+        consequences.apply(AccountContact.of(account));
         log.info("Password reset for user {} — every session ended", account.id());
     }
 

@@ -1,6 +1,7 @@
 package com.nido.api.authentication.application.handler;
 
 import com.nido.api.authentication.application.dto.ChangePasswordResult;
+import com.nido.api.authentication.application.service.PasswordChangeConsequences;
 import com.nido.api.authentication.domain.model.AccountContact;
 import com.nido.api.authentication.domain.model.UserCredentials;
 import com.nido.api.authentication.domain.port.out.AccountMailPort;
@@ -44,7 +45,7 @@ class ChangePasswordHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new ChangePasswordHandler(userCredentialsPort, passwordVerifier, passwordHasher, userCredentialPort,
-            refreshTokenRevocationPort, resetTokens, cutoff, accountMail);
+            new PasswordChangeConsequences(resetTokens, refreshTokenRevocationPort, cutoff, accountMail));
     }
 
     @Test
