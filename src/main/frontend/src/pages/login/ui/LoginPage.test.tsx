@@ -55,7 +55,7 @@ describe('LoginPage', () => {
   beforeEach(() => {
     availability.current = 'unavailable'
     vi.mocked(useAuth).mockImplementation((selector) =>
-      selector({ finalizeLogin: mockFinalizeLogin, user: null, isInitializing: false, signedOut: false, login: vi.fn(), logout: vi.fn(), initialize: vi.fn(), patchUser: vi.fn() })
+      selector({ finalizeLogin: mockFinalizeLogin, user: null, isInitializing: false, signedOut: false, signingIn: null, login: vi.fn(), logout: vi.fn(), initialize: vi.fn(), patchUser: vi.fn() })
     )
     mockFinalizeLogin.mockClear()
   })

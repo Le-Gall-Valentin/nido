@@ -10,6 +10,7 @@ import { AccountLanguageSync } from './AccountLanguageSync'
 
 interface FakeAuth {
   user: User | null
+  signingIn: User | null
   patchUser: (partial: Partial<User>) => void
 }
 
@@ -19,6 +20,7 @@ vi.mock('../model/authStoreContext', async () => {
   const { create, useStore } = await import('zustand')
   const store = create<FakeAuth>((set) => ({
     user: null,
+    signingIn: null,
     patchUser: (partial) => set((state) => ({ user: state.user ? { ...state.user, ...partial } : null })),
   }))
   return {
@@ -50,7 +52,7 @@ const onScreen = () => screen.getByTestId('on-screen').textContent
 
 beforeEach(() => {
   saveLanguage.mockReset().mockResolvedValue(undefined)
-  act(() => authStore.setState({ user: null }))
+  act(() => authStore.setState({ user: null, signingIn: null }))
 })
 
 describe('AccountLanguageSync', () => {
@@ -106,5 +108,27 @@ describe('AccountLanguageSync', () => {
 
     expect(onScreen()).toBe('en')
     expect(saveLanguage).not.toHaveBeenCalled()
+  })
+
+  it('applies the account language as soon as the server names the account, before the sign-in is done', () => {
+    render(<Screen initial="fr" />)
+
+    // The 2FA proposal comes between the password and the app: it already speaks the account's language.
+    act(() => authStore.setState({ signingIn: user('alice', 'en') }))
+    expect(onScreen()).toBe('en')
+
+    act(() => authStore.setState({ signingIn: null, user: user('alice', 'en') }))
+    expect(onScreen()).toBe('en')
+    expect(saveLanguage).not.toHaveBeenCalled()
+  })
+
+  it('records nothing before the sign-in is done', async () => {
+    render(<Screen initial="fr" />)
+
+    act(() => authStore.setState({ signingIn: user('alice', null) }))
+    expect(saveLanguage).not.toHaveBeenCalled()
+
+    act(() => authStore.setState({ signingIn: null, user: user('alice', null) }))
+    await waitFor(() => expect(saveLanguage).toHaveBeenCalledWith('fr'))
   })
 })

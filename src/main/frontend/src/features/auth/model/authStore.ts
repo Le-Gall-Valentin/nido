@@ -13,6 +13,12 @@ export interface AuthState {
    * session, or on a link opened signed out, it sends them on to the page they were going to.
    */
   signedOut: boolean
+  /**
+   * The account the server named on a correct password, while the sign-in is not finished — the 2FA
+   * proposal is still on screen. Not signed in yet: nothing is saved for it, but what is shown can
+   * already suit it (its language). Null otherwise.
+   */
+  signingIn: User | null
 }
 
 export interface AuthActions {
@@ -32,6 +38,7 @@ export function createAuthStore(api: IAuthApi) {
     user: null,
     isInitializing: true,
     signedOut: false,
+    signingIn: null,
 
     async login(credentials: LoginCredentials): Promise<LoginOutcome> {
       const result = await api.login(credentials)
@@ -39,13 +46,14 @@ export function createAuthStore(api: IAuthApi) {
         return { kind: 'totp_required', username: credentials.username }
       }
       const { user } = result
+      set({ signingIn: user })
       return { kind: 'enrollment_proposed', user }
     },
 
     finalizeLogin(user: User): void {
       notifyLoginSuccess()
       setSessionHint()
-      set({ user, signedOut: false })
+      set({ user, signedOut: false, signingIn: null })
     },
 
     patchUser(partial: Partial<User>): void {
@@ -59,7 +67,7 @@ export function createAuthStore(api: IAuthApi) {
         await api.logout()
       } finally {
         clearSessionHint()
-        set({ user: null, signedOut: !options?.expired })
+        set({ user: null, signedOut: !options?.expired, signingIn: null })
       }
     },
 

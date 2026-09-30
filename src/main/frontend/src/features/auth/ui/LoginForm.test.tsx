@@ -16,6 +16,7 @@ function setup(mockLogin: ReturnType<typeof vi.fn>, props: { onLoginOutcome?: (o
     user: null,
     isInitializing: false,
     signedOut: false,
+    signingIn: null,
     login: mockLogin,
     logout: vi.fn(),
     initialize: vi.fn(),

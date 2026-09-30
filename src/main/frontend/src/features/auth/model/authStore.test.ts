@@ -51,6 +51,26 @@ describe('authStore', () => {
     expect(outcome).toEqual({ kind: 'enrollment_proposed', user })
   })
 
+  it('remembers who is signing in until the sign-in is finished or dropped', async () => {
+    const api = createApiMock()
+    const user = { id: '1', username: 'user', role: 'USER' as const, email: 'u@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false, language: 'en' as const }
+    vi.mocked(api.login).mockResolvedValue({ type: 'success', user })
+    const store = createAuthStore(api)
+
+    await store.getState().login({ username: 'user', password: 'secret' })
+    // Known before the 2FA proposal is answered: what is shown meanwhile can already suit the account.
+    expect(store.getState().signingIn).toEqual(user)
+    expect(store.getState().user).toBeNull()
+
+    store.getState().finalizeLogin(user)
+    expect(store.getState().signingIn).toBeNull()
+    expect(store.getState().user).toEqual(user)
+
+    await store.getState().login({ username: 'user', password: 'secret' })
+    await store.getState().logout()
+    expect(store.getState().signingIn).toBeNull()
+  })
+
   it('login returns totp_required with username and does not set user', async () => {
     const api = createApiMock()
     vi.mocked(api.login).mockResolvedValue({ type: 'totp_required' })
