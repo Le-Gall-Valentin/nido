@@ -106,10 +106,10 @@ class ActivateUserHandlerTest {
     }
 
     private User active(UUID id, Role role) {
-        return new User(id, "u-" + id, id + "@test.com", role, true, Instant.now());
+        return new User(id, "u-" + id, id + "@test.com", role, true, Instant.now(), null);
     }
 
     private User inactive(UUID id, Role role) {
-        return new User(id, "u-" + id, id + "@test.com", role, false, Instant.now());
+        return new User(id, "u-" + id, id + "@test.com", role, false, Instant.now(), null);
     }
 }

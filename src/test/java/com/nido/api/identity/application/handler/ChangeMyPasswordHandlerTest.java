@@ -37,7 +37,7 @@ class ChangeMyPasswordHandlerTest {
 
     @Test
     void changeMyPassword_activeUser_delegatesToCredentialChangePort() {
-        User user = new User(userId, "u", "u@test.com", Role.USER, true, Instant.now());
+        User user = new User(userId, "u", "u@test.com", Role.USER, true, Instant.now(), null);
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
         ChangeMyPasswordCommand cmd = new ChangeMyPasswordCommand(userId, "old", "Newpass1!");
@@ -58,7 +58,7 @@ class ChangeMyPasswordHandlerTest {
 
     @Test
     void changeMyPassword_inactiveUser_throwsUserNotActive() {
-        User inactive = new User(userId, "u", "u@test.com", Role.USER, false, Instant.now());
+        User inactive = new User(userId, "u", "u@test.com", Role.USER, false, Instant.now(), null);
         when(userRepository.findById(userId)).thenReturn(Optional.of(inactive));
 
         assertThatThrownBy(() -> handler.changeMyPassword(new ChangeMyPasswordCommand(userId, "old", "new")))

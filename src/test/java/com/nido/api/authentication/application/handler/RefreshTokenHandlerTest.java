@@ -47,7 +47,7 @@ class RefreshTokenHandlerTest {
 
     private final UserCredentials activeUser = new UserCredentials(
         UUID.randomUUID(), "user1", "user1@test.com", "hashed_pw", true, Role.USER
-    , Instant.now());
+    , Instant.now(), null);
 
     @BeforeEach
     void setUp() {
@@ -213,7 +213,7 @@ class RefreshTokenHandlerTest {
         UserCredentials inactiveUser = new UserCredentials(
             activeUser.id(), activeUser.username(), activeUser.email(),
             activeUser.passwordHash(), false, activeUser.role()
-        , Instant.now());
+        , Instant.now(), null);
         RefreshToken stored = new RefreshToken(
             UUID.randomUUID(), inactiveUser.id(), TestHashUtils.sha256(raw),
             Instant.now().plusSeconds(3600), false, Instant.now(), null

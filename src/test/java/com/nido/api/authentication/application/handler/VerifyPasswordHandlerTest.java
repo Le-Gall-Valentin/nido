@@ -27,7 +27,7 @@ class VerifyPasswordHandlerTest {
     @Test
     void answers_whether_the_password_is_the_accounts() {
         when(credentials.findById(userId)).thenReturn(Optional.of(
-            new UserCredentials(userId, "jane", "jane@test.com", "$hash", true, Role.USER, Instant.now())));
+            new UserCredentials(userId, "jane", "jane@test.com", "$hash", true, Role.USER, Instant.now(), null)));
         when(verifier.matches("right", "$hash")).thenReturn(true);
         when(verifier.matches("wrong", "$hash")).thenReturn(false);
 

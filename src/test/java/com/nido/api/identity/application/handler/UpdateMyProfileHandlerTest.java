@@ -48,7 +48,7 @@ class UpdateMyProfileHandlerTest {
     @Test
     void a_new_username_alone_needs_no_password_and_alerts_nobody() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
-        UpdateProfileCommand command = new UpdateProfileCommand(userId, "jane.doe", "jane@test.com");
+        UpdateProfileCommand command = new UpdateProfileCommand(userId, "jane.doe", "jane@test.com", null);
 
         handler.updateProfile(command);
 
@@ -60,7 +60,7 @@ class UpdateMyProfileHandlerTest {
     void a_new_address_without_the_password_is_refused() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
 
-        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com")))
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com", null)))
             .isInstanceOf(IdentityException.CurrentPasswordRequired.class);
         verify(userCommandPort, never()).updateProfile(any());
     }
@@ -110,10 +110,10 @@ class UpdateMyProfileHandlerTest {
 
     @Test
     void a_change_of_letter_case_only_is_not_an_address_change() {
-        User mixed = new User(userId, "jane", "Jane@Test.com", Role.USER, true, Instant.now());
+        User mixed = new User(userId, "jane", "Jane@Test.com", Role.USER, true, Instant.now(), null);
         when(userRepository.findById(userId)).thenReturn(Optional.of(mixed));
 
-        handler.updateProfile(new UpdateProfileCommand(userId, "jane", "jane@test.com"));
+        handler.updateProfile(new UpdateProfileCommand(userId, "jane", "jane@test.com", null));
 
         verifyNoInteractions(passwordCheck, profileMail, accountRecovery);
     }
@@ -121,9 +121,9 @@ class UpdateMyProfileHandlerTest {
     @Test
     void a_look_alike_address_is_an_address_change_not_a_case_change() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(
-            new User(userId, "jane", "jane@gmail.com", Role.USER, true, Instant.now())));
+            new User(userId, "jane", "jane@gmail.com", Role.USER, true, Instant.now(), null)));
 
-        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "jane@gma\u0131l.com")))
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "jane@gma\u0131l.com", null)))
             .isInstanceOf(IdentityException.CurrentPasswordRequired.class);
         verify(userCommandPort, never()).updateProfile(any());
         verifyNoInteractions(profileMail);
@@ -131,10 +131,10 @@ class UpdateMyProfileHandlerTest {
 
     @Test
     void an_account_without_an_address_needs_the_password_to_set_one() {
-        User noAddress = new User(userId, "jane", null, Role.USER, true, Instant.now());
+        User noAddress = new User(userId, "jane", null, Role.USER, true, Instant.now(), null);
         when(userRepository.findById(userId)).thenReturn(Optional.of(noAddress));
 
-        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com")))
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com", null)))
             .isInstanceOf(IdentityException.CurrentPasswordRequired.class);
         verify(userCommandPort, never()).updateProfile(any());
     }
@@ -142,7 +142,7 @@ class UpdateMyProfileHandlerTest {
     @Test
     void a_deactivated_account_changes_nothing() {
         when(userRepository.findById(userId)).thenReturn(Optional.of(
-            new User(userId, "jane", "jane@test.com", Role.USER, false, Instant.now())));
+            new User(userId, "jane", "jane@test.com", Role.USER, false, Instant.now(), null)));
 
         assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "x", "x@test.com", "right")))
             .isInstanceOf(IdentityException.UserNotActive.class);
@@ -153,7 +153,7 @@ class UpdateMyProfileHandlerTest {
     void an_unknown_account_changes_nothing() {
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "x", "x@test.com")))
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "x", "x@test.com", null)))
             .isInstanceOf(IdentityException.UserNotFound.class);
     }
 }

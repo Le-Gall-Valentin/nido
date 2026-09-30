@@ -85,7 +85,7 @@ class RequestPasswordResetHandlerTest {
 
     @Test
     void a_username_is_looked_up_before_an_address() {
-        UserProfile odd = new UserProfile(UUID.randomUUID(), "jane@test.com", "odd@test.com", true, Role.USER, now);
+        UserProfile odd = new UserProfile(UUID.randomUUID(), "jane@test.com", "odd@test.com", true, Role.USER, now, null);
         when(profiles.findByUsername("jane@test.com")).thenReturn(Optional.of(odd));
         when(profiles.findByEmailIgnoreCase("jane@test.com")).thenReturn(List.of(jane));
 
@@ -96,7 +96,7 @@ class RequestPasswordResetHandlerTest {
 
     @Test
     void an_address_shared_by_two_accounts_sends_nothing() {
-        UserProfile twin = new UserProfile(UUID.randomUUID(), "twin", "Jane@test.com", true, Role.USER, now);
+        UserProfile twin = new UserProfile(UUID.randomUUID(), "twin", "Jane@test.com", true, Role.USER, now, null);
         when(profiles.findByEmailIgnoreCase("jane@test.com")).thenReturn(List.of(jane, twin));
 
         handler.request("jane@test.com");
@@ -115,7 +115,7 @@ class RequestPasswordResetHandlerTest {
 
     @Test
     void a_deactivated_account_gets_nothing() {
-        UserProfile off = new UserProfile(jane.id(), "jane", "jane@test.com", false, Role.USER, now);
+        UserProfile off = new UserProfile(jane.id(), "jane", "jane@test.com", false, Role.USER, now, null);
         when(profiles.findByUsername("jane")).thenReturn(Optional.of(off));
 
         handler.request("jane");

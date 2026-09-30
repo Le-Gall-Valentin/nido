@@ -41,7 +41,7 @@ class SeedHandlerTest {
     @Test
     void seedInitialSuperAdmin_emptyDatabase_createsUser() {
         UUID userId = UUID.randomUUID();
-        User created = new User(userId, "admin", "admin@test.com", Role.SUPER_ADMIN, true, Instant.now());
+        User created = new User(userId, "admin", "admin@test.com", Role.SUPER_ADMIN, true, Instant.now(), null);
         when(userAdminPort.isEmpty()).thenReturn(true);
         when(userCommandPort.createProfile(argThat(cmd ->
             cmd.username().equals("admin") &&
@@ -80,7 +80,7 @@ class SeedHandlerTest {
     @Test
     void seedInitialSuperAdmin_infraFailure_propagatesException() {
         UUID userId = UUID.randomUUID();
-        User created = new User(userId, "admin", "admin@test.com", Role.SUPER_ADMIN, true, Instant.now());
+        User created = new User(userId, "admin", "admin@test.com", Role.SUPER_ADMIN, true, Instant.now(), null);
         when(userAdminPort.isEmpty()).thenReturn(true);
         when(userCommandPort.createProfile(any())).thenReturn(created);
         doThrow(new RuntimeException("DB unavailable")).when(credentialSetupPort).setup(userId, "secret");

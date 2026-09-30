@@ -51,7 +51,7 @@ class ChangePasswordHandlerTest {
 
     @Test
     void changePassword_correctCurrentPassword_returnsSuccess() {
-        UserCredentials creds = new UserCredentials(userId, "user", "u@test.com", "$hashed", true, Role.USER, Instant.now());
+        UserCredentials creds = new UserCredentials(userId, "user", "u@test.com", "$hashed", true, Role.USER, Instant.now(), null);
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
         when(passwordVerifier.matches("oldPass", "$hashed")).thenReturn(true);
         when(passwordHasher.hash("newPass")).thenReturn("$newHashed");
@@ -65,7 +65,7 @@ class ChangePasswordHandlerTest {
 
     @Test
     void changePassword_wrongCurrentPassword_returnsInvalidCurrentPassword() {
-        UserCredentials creds = new UserCredentials(userId, "user", "u@test.com", "$hashed", true, Role.USER, Instant.now());
+        UserCredentials creds = new UserCredentials(userId, "user", "u@test.com", "$hashed", true, Role.USER, Instant.now(), null);
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
         when(passwordVerifier.matches("wrongPass", "$hashed")).thenReturn(false);
 
@@ -105,7 +105,7 @@ class ChangePasswordHandlerTest {
 
     @Test
     void a_wrong_current_password_ends_nothing_and_mails_nobody() {
-        UserCredentials creds = new UserCredentials(userId, "user", "u@test.com", "$hashed", true, Role.USER, Instant.now());
+        UserCredentials creds = new UserCredentials(userId, "user", "u@test.com", "$hashed", true, Role.USER, Instant.now(), null);
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
         when(passwordVerifier.matches("wrongPass", "$hashed")).thenReturn(false);
 

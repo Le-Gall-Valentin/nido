@@ -39,8 +39,8 @@ class ListUsersHandlerTest {
     void listUsers_returnsPageWithTotpStatus() {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
-        User user1 = new User(id1, "alice", "alice@test.com", Role.USER, true, Instant.now());
-        User user2 = new User(id2, "bob", "bob@test.com", Role.ADMIN, false, Instant.now());
+        User user1 = new User(id1, "alice", "alice@test.com", Role.USER, true, Instant.now(), null);
+        User user2 = new User(id2, "bob", "bob@test.com", Role.ADMIN, false, Instant.now(), null);
         SortRequest sort = SortRequest.descBy("createdAt");
 
         when(userAdminPort.findAll(0, 20, sort, null))

@@ -7,10 +7,4 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record UserProfile(UUID id, String username, String email, boolean isActive, Role role, Instant createdAt,
-                          Language language) {
-
-    /** Without a language (null: the account never recorded one). */
-    public UserProfile(UUID id, String username, String email, boolean isActive, Role role, Instant createdAt) {
-        this(id, username, email, isActive, role, createdAt, null);
-    }
-}
+                          Language language) {}

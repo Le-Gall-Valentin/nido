@@ -8,10 +8,6 @@ public record UpdateProfileCommand(UUID userId, String username, String email, S
         email = email == null ? null : email.toLowerCase(Locale.ROOT);
     }
 
-    public UpdateProfileCommand(UUID userId, String username, String email) {
-        this(userId, username, email, null);
-    }
-
     @Override
     public String toString() {
         return "UpdateProfileCommand[userId=" + userId + ", username=" + username + ", email=***, currentPassword=***]";

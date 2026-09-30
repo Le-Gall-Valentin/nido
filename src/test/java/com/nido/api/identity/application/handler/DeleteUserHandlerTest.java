@@ -98,6 +98,6 @@ class DeleteUserHandlerTest {
     }
 
     private User user(UUID id, Role role) {
-        return new User(id, "u-" + id, id + "@test.com", role, true, Instant.now());
+        return new User(id, "u-" + id, id + "@test.com", role, true, Instant.now(), null);
     }
 }

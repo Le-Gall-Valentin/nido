@@ -25,7 +25,7 @@ class FindUserServiceTest {
 
     private final User user = new User(
         UUID.randomUUID(), "alice", "alice@test.com", Role.USER, true, Instant.now()
-    );
+    , null);
 
     @BeforeEach
     void setUp() {

@@ -140,6 +140,6 @@ class RegisterHandlerTest {
     }
 
     private User user(UUID id, String username, Role role) {
-        return new User(id, username, username + "@test.com", role, true, Instant.now());
+        return new User(id, username, username + "@test.com", role, true, Instant.now(), null);
     }
 }

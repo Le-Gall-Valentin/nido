@@ -32,7 +32,7 @@ class ChangeMyLanguageHandlerTest {
     @Test
     void records_the_language_on_the_account() {
         when(userRepository.findById(userId))
-            .thenReturn(Optional.of(new User(userId, "jane", "jane@test.com", Role.USER, true, Instant.now())));
+            .thenReturn(Optional.of(new User(userId, "jane", "jane@test.com", Role.USER, true, Instant.now(), null)));
 
         new ChangeMyLanguageHandler(userRepository, userCommandPort).changeLanguage(userId, Language.EN);
 
@@ -42,7 +42,7 @@ class ChangeMyLanguageHandlerTest {
     @Test
     void a_deactivated_account_changes_nothing() {
         when(userRepository.findById(userId))
-            .thenReturn(Optional.of(new User(userId, "jane", "jane@test.com", Role.USER, false, Instant.now())));
+            .thenReturn(Optional.of(new User(userId, "jane", "jane@test.com", Role.USER, false, Instant.now(), null)));
 
         assertThatThrownBy(() -> new ChangeMyLanguageHandler(userRepository, userCommandPort).changeLanguage(userId, Language.FR))
             .isInstanceOf(IdentityException.UserNotActive.class);

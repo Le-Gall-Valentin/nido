@@ -81,7 +81,7 @@ class PasswordResetHandlerTest {
 
         when(tokens.findByHash("HASH")).thenReturn(Optional.of(live));
         when(profiles.findById(jane.id())).thenReturn(Optional.of(
-            new UserProfile(jane.id(), "jane", "jane@test.com", false, Role.USER, now)));
+            new UserProfile(jane.id(), "jane", "jane@test.com", false, Role.USER, now, null)));
         assertThatThrownBy(() -> handler.check("RAW")).isInstanceOf(AuthenticationException.InvalidResetToken.class);
 
         assertThatThrownBy(() -> handler.check(" ")).isInstanceOf(AuthenticationException.InvalidResetToken.class);
