@@ -24,7 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * "Forgot password". Registered only when mail is on: without a way to send the link the routes
- * would promise something the installation cannot do, so they do not exist (404).
+ * would promise something the installation cannot do, so they do not exist — a request falls through
+ * to the static-resource handler, which refuses it (405 for these POSTs, 404 elsewhere).
  *
  * <p>The token always travels in a request body — never in a URL — so it appears in no access log.
  */
@@ -76,7 +77,11 @@ public class PasswordResetController {
     )
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Lien utilisable", content = @Content),
+        @ApiResponse(responseCode = "400", description = "Jeton absent ou trop long",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
         @ApiResponse(responseCode = "410", description = "Lien plus valable",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "429", description = "Trop de demandes",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/check")
@@ -96,9 +101,11 @@ public class PasswordResetController {
     )
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Mot de passe changé", content = @Content),
-        @ApiResponse(responseCode = "400", description = "Mot de passe trop faible",
+        @ApiResponse(responseCode = "400", description = "Mot de passe refusé par les règles, ou jeton absent ou trop long",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
         @ApiResponse(responseCode = "410", description = "Lien plus valable",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "429", description = "Trop de demandes",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PostMapping("/confirm")
