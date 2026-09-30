@@ -70,6 +70,32 @@ describe('ResetPasswordPage', () => {
     expect(checkToken).toHaveBeenCalledTimes(2)
   })
 
+  it('names the page while the link is being checked', () => {
+    open('/reset-password#token=abc', { checkToken: vi.fn(() => new Promise<void>(() => {})) })
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('reset.title')
+  })
+
+  it('names the page when the link could not be checked', async () => {
+    open('/reset-password#token=abc', { checkToken: vi.fn().mockRejectedValue(new NetworkError()) })
+
+    await screen.findByRole('button', { name: 'reset.retry' })
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('reset.title')
+  })
+
+  it('says aloud that the link stopped working while the new password was typed', async () => {
+    const confirmReset = vi.fn().mockRejectedValue(new InvalidResetLinkError())
+    open('/reset-password#token=abc', { confirmReset })
+    await screen.findByLabelText('field.new_password')
+
+    fireEvent.change(screen.getByLabelText('field.new_password'), { target: { value: 'NewPassw0rd!' } })
+    fireEvent.change(screen.getByLabelText('field.confirm'), { target: { value: 'NewPassw0rd!' } })
+    fireEvent.click(screen.getByRole('button', { name: 'action.save' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('reset.invalid.title')
+    expect(screen.queryByLabelText('field.new_password')).toBeNull()
+  })
+
   it('sends the person to the login page, told the password changed', async () => {
     const confirmReset = vi.fn().mockResolvedValue(undefined)
     open('/reset-password#token=abc', { confirmReset })

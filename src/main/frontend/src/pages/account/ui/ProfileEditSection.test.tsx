@@ -164,4 +164,13 @@ describe('ProfileEditSection', () => {
     expect((await findByRole('alert')).textContent).toContain('profile.error.wrong_password')
     expect((getByLabelText('profile.current_password') as HTMLInputElement).value).toBe('')
   })
+
+  it('ties the reason for the password to its field', () => {
+    const { getByLabelText, getByText } = setup()
+    fireEvent.change(getByLabelText('profile.email'), { target: { value: 'new@test.com' } })
+
+    const hint = getByText('profile.current_password_hint')
+    expect(hint.id).not.toBe('')
+    expect(getByLabelText('profile.current_password').getAttribute('aria-describedby')).toBe(hint.id)
+  })
 })

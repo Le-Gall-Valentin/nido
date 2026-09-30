@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useId, useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { User } from '@/entities/user'
@@ -31,6 +31,7 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
   // The address is how an account is recovered, so changing it asks for the password. A change of
   // letter case only is the same mailbox — the server agrees and asks for nothing.
   const addressChanges = trimmedEmail.toLowerCase() !== user.email.toLowerCase()
+  const passwordHintId = useId()
   const canSave = isDirty && !usernameTooShort && !usernameTooLong && !emailEmpty
     && (!addressChanges || currentPassword.length > 0)
 
@@ -120,8 +121,9 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
                 onChange={e => setCurrentPassword(e.target.value)}
                 autoComplete="current-password"
                 disabled={isSubmitting}
+                aria-describedby={passwordHintId}
               />
-              <p className="text-xs text-fg-2">{t('profile.current_password_hint')}</p>
+              <p id={passwordHintId} className="text-xs text-fg-2">{t('profile.current_password_hint')}</p>
             </div>
           )}
           {flash && (

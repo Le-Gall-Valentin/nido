@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, Button, Input, PasswordInput, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE } from '@/shared/ui'
 import { isValidPassword, passwordProblem } from '@/shared/lib'
@@ -23,11 +23,19 @@ export function NewPasswordForm({ api, token, labelId, onDone, onInvalid }: Prop
   const [error, setError] = useState<FormError | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const isSubmittingRef = useRef(false)
+  const rulesId = useId()
+  const tooLongId = useId()
+  const mismatchId = useId()
+  const errorId = useId()
 
   const mismatch = confirm.length > 0 && password !== confirm
   // The rules text says 72 characters; past 72 bytes it needs saying why a password that fits is refused.
   const tooLong = passwordProblem(password) === 'too_long'
   const canSave = isValidPassword(password) && password === confirm
+  // What the server refused, said on the field it is about rather than only at the top of the form.
+  const refusedByServer = error?.key === 'error.weak'
+  const passwordDescription = [rulesId, tooLong ? tooLongId : null, refusedByServer ? errorId : null]
+    .filter(Boolean).join(' ')
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
@@ -52,7 +60,11 @@ export function NewPasswordForm({ api, token, labelId, onDone, onInvalid }: Prop
 
   return (
     <form onSubmit={(e) => void handleSubmit(e)} aria-labelledby={labelId} className="flex flex-col gap-4">
-      {error && <Alert variant="error">{t(error.key, error.seconds === undefined ? undefined : { seconds: error.seconds })}</Alert>}
+      {error && (
+        <div id={errorId}>
+          <Alert variant="error">{t(error.key, error.seconds === undefined ? undefined : { seconds: error.seconds })}</Alert>
+        </div>
+      )}
       <div className="flex flex-col gap-1.5">
         <PasswordInput
           label={t('field.new_password')}
@@ -64,9 +76,11 @@ export function NewPasswordForm({ api, token, labelId, onDone, onInvalid }: Prop
           className={AUTH_FIELD_CLASS}
           visible={showPassword}
           onVisibleChange={setShowPassword}
+          aria-invalid={tooLong || refusedByServer}
+          aria-describedby={passwordDescription}
         />
-        <p className="text-xs leading-relaxed text-fg-2">{t('rules')}</p>
-        {tooLong && <p className="text-xs text-status-orange">{t('error.too_long')}</p>}
+        <p id={rulesId} className="text-xs leading-relaxed text-fg-2">{t('rules')}</p>
+        {tooLong && <p id={tooLongId} className="text-xs text-status-orange">{t('error.too_long')}</p>}
       </div>
       <Input
         label={t('field.confirm')}
@@ -79,8 +93,9 @@ export function NewPasswordForm({ api, token, labelId, onDone, onInvalid }: Prop
         autoCapitalize="off"
         className={AUTH_FIELD_CLASS}
         aria-invalid={mismatch}
+        aria-describedby={mismatch ? mismatchId : undefined}
       />
-      {mismatch && <p className="-mt-2 text-xs text-status-orange">{t('error.mismatch')}</p>}
+      {mismatch && <p id={mismatchId} className="-mt-2 text-xs text-status-orange">{t('error.mismatch')}</p>}
       <Button
         type="submit"
         disabled={!canSave}

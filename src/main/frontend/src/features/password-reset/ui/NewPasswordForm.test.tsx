@@ -47,6 +47,22 @@ describe('NewPasswordForm', () => {
     expect(save().disabled).toBe(true)
   })
 
+  it('ties what is wrong to the field it is about, for a screen reader', () => {
+    const { type } = setup(vi.fn())
+    const long = 'Aé1!' + 'é'.repeat(68)
+    type('field.new_password', long)
+    type('field.confirm', 'something else')
+
+    const describedBy = (label: string) => screen.getByLabelText(label).getAttribute('aria-describedby') ?? ''
+    const tooLong = screen.getByText('error.too_long')
+    const mismatch = screen.getByText('error.mismatch')
+    expect(tooLong.id).not.toBe('')
+    expect(mismatch.id).not.toBe('')
+    expect(describedBy('field.new_password').split(' ')).toContain(tooLong.id)
+    expect(describedBy('field.confirm').split(' ')).toContain(mismatch.id)
+    expect(screen.getByLabelText('field.new_password').getAttribute('aria-invalid')).toBe('true')
+  })
+
   it('saves the password with the link token, then says it is done', async () => {
     const confirmReset = vi.fn().mockResolvedValue(undefined)
     const { type, save, onDone } = setup(confirmReset)

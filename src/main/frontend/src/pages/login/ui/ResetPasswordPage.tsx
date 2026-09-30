@@ -57,6 +57,8 @@ export function ResetPasswordPage({ api = defaultApi }: { api?: IPasswordResetAp
 
   return (
     <AuthShell>
+      {/* The page keeps its name while there is no form to title: a screen reader lands on something. */}
+      {(step === 'checking' || step === 'unavailable') && <h1 className="sr-only">{t('reset.title')}</h1>}
       {step === 'checking' && <Spinner label={t('reset.checking')} />}
 
       {step === 'form' && token && (
@@ -76,7 +78,9 @@ export function ResetPasswordPage({ api = defaultApi }: { api?: IPasswordResetAp
       )}
 
       {step === 'invalid' && (
-        <div>
+        // An alert: the link can stop working while the new password is being typed, and the form
+        // that disappears must be replaced by something said aloud.
+        <div role="alert">
           <div className="mb-5 grid size-11 place-items-center rounded-xl bg-status-red-dim text-status-red">
             <Clock className="size-5" aria-hidden="true" />
           </div>

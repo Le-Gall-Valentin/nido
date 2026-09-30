@@ -24,6 +24,21 @@ describe('ForgotPasswordPage', () => {
     expect(screen.queryByLabelText('field.identifier')).toBeNull()
   })
 
+  it('announces the confirmation from a region that was there before it', async () => {
+    const api: IPasswordResetApi = {
+      capabilities: vi.fn(), requestReset: vi.fn().mockResolvedValue(undefined), checkToken: vi.fn(), confirmReset: vi.fn(),
+    }
+    const { container } = render(<MemoryRouter><ForgotPasswordPage api={api} /></MemoryRouter>)
+    // A live region mounted with its content is not reliably read out: it must exist first.
+    const region = container.querySelector('[aria-live="polite"]')
+    expect(region).not.toBeNull()
+
+    fireEvent.change(screen.getByLabelText('field.identifier'), { target: { value: 'jane' } })
+    fireEvent.click(screen.getByRole('button', { name: 'action.send' }))
+
+    await waitFor(() => expect(region?.textContent).toContain('forgot.sent.title'))
+  })
+
   it('leads back to the login page', () => {
     const api = { capabilities: vi.fn(), requestReset: vi.fn(), checkToken: vi.fn(), confirmReset: vi.fn() }
     render(<MemoryRouter><ForgotPasswordPage api={api} /></MemoryRouter>)

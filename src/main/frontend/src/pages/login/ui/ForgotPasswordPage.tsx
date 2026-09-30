@@ -23,7 +23,7 @@ export function ForgotPasswordPage({ api = defaultApi }: { api?: IPasswordResetA
         {t('forgot.back')}
       </Link>
 
-      {sentFor === null ? (
+      {sentFor === null && (
         <>
           <div className="mb-8">
             <h1 id={TITLE_ID} className="mb-2 text-[28px] font-semibold tracking-tight text-fg-0">{t('forgot.title')}</h1>
@@ -31,16 +31,22 @@ export function ForgotPasswordPage({ api = defaultApi }: { api?: IPasswordResetA
           </div>
           <RequestResetForm api={api} labelId={TITLE_ID} onSent={setSentFor} />
         </>
-      ) : (
-        <div role="status">
-          <div className="mb-5 grid size-11 place-items-center rounded-xl bg-accent-dim text-accent">
-            <Mail className="size-5" aria-hidden="true" />
-          </div>
-          <h1 className="mb-2 text-[28px] font-semibold tracking-tight text-fg-0">{t('forgot.sent.title')}</h1>
-          <p className="text-sm leading-relaxed text-fg-2">{t('forgot.sent.body', { identifier: sentFor })}</p>
-          <p className="mt-3 text-sm leading-relaxed text-fg-2">{t('forgot.sent.hint')}</p>
-        </div>
       )}
+
+      {/* Present from the first render, empty until the request is sent: a live region mounted with
+          its content is not reliably read out. */}
+      <div aria-live="polite">
+        {sentFor !== null && (
+          <>
+            <div className="mb-5 grid size-11 place-items-center rounded-xl bg-accent-dim text-accent">
+              <Mail className="size-5" aria-hidden="true" />
+            </div>
+            <h1 className="mb-2 text-[28px] font-semibold tracking-tight text-fg-0">{t('forgot.sent.title')}</h1>
+            <p className="text-sm leading-relaxed text-fg-2">{t('forgot.sent.body', { identifier: sentFor })}</p>
+            <p className="mt-3 text-sm leading-relaxed text-fg-2">{t('forgot.sent.hint')}</p>
+          </>
+        )}
+      </div>
     </AuthShell>
   )
 }
