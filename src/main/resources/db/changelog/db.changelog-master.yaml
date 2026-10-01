@@ -182,3 +182,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/061-bind-space-invitations-to-accounts.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/062-users-username-ignores-case.yaml
+      relativeToChangelogFile: false

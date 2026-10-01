@@ -13,9 +13,9 @@ public interface FindUserUseCase {
 
     /**
      * The account behind what a person typed to name one — at sign-in, in "forgot password", when
-     * inviting. Never a technical id: surrounding spaces are ignored; with an '@' it is an email
-     * address, letter case ignored; without, a username, matched exactly. The two cannot overlap — a
-     * username holds no '@'. A deleted account is never found; a deactivated one is.
+     * inviting. Never a technical id: surrounding spaces and letter case are ignored; with an '@' it is
+     * an email address, without one a username. The two cannot overlap — a username holds no '@'. A
+     * deleted account is never found; a deactivated one is.
      */
     Optional<User> findByIdentifier(String identifier);
 }

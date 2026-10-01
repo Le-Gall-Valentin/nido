@@ -52,6 +52,16 @@ class UserIdentityConstraintsIT {
     }
 
     @Test
+    void two_accounts_cannot_share_a_username_once_letter_case_is_ignored() {
+        String name = unique();
+        users.saveAndFlush(user(name, name + "@test.com"));
+
+        assertThatThrownBy(() -> users.saveAndFlush(user(name.toUpperCase(), name + ".other@test.com")))
+            .isInstanceOf(DataIntegrityViolationException.class)
+            .hasStackTraceContaining("uq_users_username_active");
+    }
+
+    @Test
     void anonymizing_an_account_still_clears_its_username_and_address() {
         UserIdentityEntity saved = users.saveAndFlush(user(unique(), unique() + "@test.com"));
 

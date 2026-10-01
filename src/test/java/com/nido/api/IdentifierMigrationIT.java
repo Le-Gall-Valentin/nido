@@ -119,6 +119,27 @@ class IdentifierMigrationIT {
     }
 
     @Test
+    void two_accounts_whose_usernames_differ_only_by_case_stop_062_and_change_nothing() throws Exception {
+        migrateUpTo("062-");
+        execute("INSERT INTO users (username, email, role) VALUES ('Jane', 'jane.upper@test.com', 'USER')");
+        execute("INSERT INTO users (username, email, role) VALUES ('jane', 'jane.lower@test.com', 'USER')");
+
+        assertThatThrownBy(this::migrateToTheEnd).hasStackTraceContaining("two accounts share a username");
+        assertThat(strings("SELECT username FROM users ORDER BY email")).containsExactly("jane", "Jane");
+    }
+
+    @Test
+    void usernames_keep_the_case_they_were_given_through_062() throws Exception {
+        migrateUpTo("062-");
+        execute("INSERT INTO users (username, email, role) VALUES ('Jane.Doe', 'jane@test.com', 'USER')");
+        execute("INSERT INTO users (username, email, role, is_deleted, is_active) VALUES ('jane.doe', NULL, 'USER', true, false)");
+
+        migrateToTheEnd();
+
+        assertThat(strings("SELECT username FROM users WHERE NOT is_deleted")).containsExactly("Jane.Doe");
+    }
+
+    @Test
     void a_legacy_invitation_in_any_letter_case_is_bound_to_its_account() throws Exception {
         migrateUpTo("061-");
         execute("INSERT INTO users (username, email, role) VALUES ('jane', 'jane@example.fr', 'USER')");

@@ -188,6 +188,17 @@ class UserControllerIT {
     }
 
     @Test
+    void register_aUsernameDifferingOnlyByLetterCase_returns409() throws Exception {
+        Cookie access = loginAs("superadmin", "adminpass");
+
+        mockMvc.perform(post("/api/users")
+                .cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"TestUser\",\"email\":\"another@test.com\",\"password\":\"Securepass1!\",\"role\":\"USER\"}"))
+            .andExpect(status().isConflict());
+    }
+
+    @Test
     void register_aUsernameWithAnAtSign_returns400() throws Exception {
         Cookie access = loginAs("superadmin", "adminpass");
 

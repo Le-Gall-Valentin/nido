@@ -42,6 +42,15 @@ class FindUserByIdentifierIT {
         assertThat(findUser.findByIdentifier(name)).map(User::id).contains(live);
     }
 
+    @Test
+    void a_username_is_found_whatever_its_letter_case_and_keeps_the_case_it_was_given() {
+        String name = "Jane." + unique();
+        save(name, name.toLowerCase() + "@test.com", false);
+
+        assertThat(findUser.findByIdentifier(name.toUpperCase())).map(User::username).contains(name);
+        assertThat(findUser.findByIdentifier(name.toLowerCase())).map(User::username).contains(name);
+    }
+
     private UUID save(String username, String email, boolean deleted) {
         UserIdentityEntity e = new UserIdentityEntity();
         e.setUsername(username);

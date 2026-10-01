@@ -151,8 +151,8 @@ class UserLanguageIT {
     }
 
     @Test
-    void a_username_is_found_exactly_and_never_by_letter_case() {
+    void a_username_is_found_whatever_its_letter_case() {
         assertThat(findUser.findByIdentifier("jane")).map(User::username).contains("jane");
-        assertThat(findUser.findByIdentifier("Jane")).isEmpty();
+        assertThat(findUser.findByIdentifier("Jane")).map(User::username).contains("jane");
     }
 }

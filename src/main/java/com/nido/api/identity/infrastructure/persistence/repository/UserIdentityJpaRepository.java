@@ -17,7 +17,10 @@ import java.util.UUID;
 
 public interface UserIdentityJpaRepository extends JpaRepository<UserIdentityEntity, UUID> {
     Optional<UserIdentityEntity> findByUsername(String username);
-    Optional<UserIdentityEntity> findByUsernameAndDeletedFalse(String username);
+
+    // lower() on both sides, as the unique index uq_users_username_active is on lower(username) (062).
+    @Query("SELECT u FROM UserIdentityEntity u WHERE lower(u.username) = lower(:username) AND u.deleted = false")
+    Optional<UserIdentityEntity> findNotDeletedByUsernameIgnoreCase(@Param("username") String username);
     Optional<UserIdentityEntity> findByEmail(String email);
     Optional<UserIdentityEntity> findByEmailAndDeletedFalse(String email);
 
