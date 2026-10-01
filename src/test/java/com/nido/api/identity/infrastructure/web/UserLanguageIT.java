@@ -129,7 +129,7 @@ class UserLanguageIT {
     void an_address_is_found_whatever_its_letter_case() {
         createUser("mixed", "mixed.case@test.com", "password", null);
 
-        assertThat(findUser.findByEmailIgnoreCase("MIXED.case@test.COM")).extracting(User::username).containsExactly("mixed");
+        assertThat(findUser.findByIdentifier("MIXED.case@test.COM")).map(User::username).contains("mixed");
     }
 
     @Test
@@ -138,7 +138,7 @@ class UserLanguageIT {
         gone.setDeleted(true);
         users.saveAndFlush(gone);
 
-        assertThat(findUser.findByEmailIgnoreCase("gone@test.com")).isEmpty();
+        assertThat(findUser.findByIdentifier("gone@test.com")).isEmpty();
     }
 
     @Test
@@ -147,6 +147,12 @@ class UserLanguageIT {
         asleep.setActive(false);
         users.saveAndFlush(asleep);
 
-        assertThat(findUser.findByEmailIgnoreCase("asleep@test.com")).extracting(User::username).containsExactly("asleep");
+        assertThat(findUser.findByIdentifier("asleep@test.com")).map(User::username).contains("asleep");
+    }
+
+    @Test
+    void a_username_is_found_exactly_and_never_by_letter_case() {
+        assertThat(findUser.findByIdentifier("jane")).map(User::username).contains("jane");
+        assertThat(findUser.findByIdentifier("Jane")).isEmpty();
     }
 }

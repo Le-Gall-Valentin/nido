@@ -46,12 +46,7 @@ public class UserIdentityRepositoryAdapter implements UserRepository, UserComman
 
     @Override
     public Optional<User> findByEmail(String email) {
-        return jpa.findByEmail(email).map(this::toDomain);
-    }
-
-    @Override
-    public List<User> findByEmailIgnoreCase(String email) {
-        return jpa.findNotDeletedByEmailIgnoreCase(email).stream().map(this::toDomain).toList();
+        return jpa.findByEmailAndDeletedFalse(email).map(this::toDomain);
     }
 
     @Override

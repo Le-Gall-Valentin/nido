@@ -28,7 +28,7 @@ public class MemberProfileAdapter implements MemberProfilePort {
 
     @Override
     public Optional<MemberProfile> findByEmail(String email) {
-        return findUserUseCase.findByEmail(email)
+        return findUserUseCase.findByIdentifier(email)
             .map(u -> new MemberProfile(u.id(), u.username(), u.email()));
     }
 }

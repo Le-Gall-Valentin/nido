@@ -14,6 +14,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,17 +37,34 @@ class FindUserServiceTest {
     }
 
     @Test
-    void findByUsername_existingUser_returnsUser() {
+    void a_typed_username_finds_the_account_by_username_exactly() {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
 
-        assertThat(service.findByUsername("alice")).contains(user);
+        assertThat(service.findByIdentifier("alice")).contains(user);
+        verify(userRepository, never()).findByEmail(any());
     }
 
     @Test
-    void findByUsername_unknownUser_returnsEmpty() {
-        when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+    void a_typed_address_finds_the_account_by_address() {
+        when(userRepository.findByEmail("alice@test.com")).thenReturn(Optional.of(user));
 
-        assertThat(service.findByUsername("unknown")).isEmpty();
+        assertThat(service.findByIdentifier("alice@test.com")).contains(user);
+        verify(userRepository, never()).findByUsername(any());
+    }
+
+    @Test
+    void surrounding_spaces_and_capitals_do_not_matter_for_an_address() {
+        // Mobile keyboards add a space after autocompleting an address.
+        when(userRepository.findByEmail("alice@test.com")).thenReturn(Optional.of(user));
+
+        assertThat(service.findByIdentifier(" Alice@Test.COM ")).contains(user);
+    }
+
+    @Test
+    void a_blank_identifier_finds_nobody_without_asking() {
+        assertThat(service.findByIdentifier("   ")).isEmpty();
+        assertThat(service.findByIdentifier(null)).isEmpty();
+        verifyNoInteractions(userRepository);
     }
 
     @Test

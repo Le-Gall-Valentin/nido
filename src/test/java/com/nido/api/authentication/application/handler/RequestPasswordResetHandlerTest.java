@@ -24,7 +24,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -54,8 +53,7 @@ class RequestPasswordResetHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new RequestPasswordResetHandler(profiles, tokens, generator, hasher, mail, accountLock, Clock.fixed(now, ZoneOffset.UTC));
-        when(profiles.findByUsername(any())).thenReturn(Optional.empty());
-        when(profiles.findByEmailIgnoreCase(any())).thenReturn(List.of());
+        when(profiles.findByIdentifier(any())).thenReturn(Optional.empty());
         when(tokens.latestIssuedAt(any())).thenReturn(Optional.empty());
         when(generator.newToken()).thenReturn("RAW");
         when(hasher.hash("RAW")).thenReturn("HASH");
@@ -63,7 +61,7 @@ class RequestPasswordResetHandlerTest {
 
     @Test
     void a_known_username_gets_a_link_whose_hash_alone_is_stored() {
-        when(profiles.findByUsername("jane")).thenReturn(Optional.of(jane));
+        when(profiles.findByIdentifier("jane")).thenReturn(Optional.of(jane));
 
         handler.request("  jane ");
 
@@ -76,33 +74,11 @@ class RequestPasswordResetHandlerTest {
 
     @Test
     void an_address_works_too_whatever_its_letter_case() {
-        when(profiles.findByEmailIgnoreCase("JANE@test.com")).thenReturn(List.of(jane));
+        when(profiles.findByIdentifier("JANE@test.com")).thenReturn(Optional.of(jane));
 
         handler.request("JANE@test.com");
 
         verify(mail).passwordResetRequested(any(), any(), any(), any());
-    }
-
-    @Test
-    void a_username_is_looked_up_before_an_address() {
-        UserProfile odd = new UserProfile(UUID.randomUUID(), "jane@test.com", "odd@test.com", true, Role.USER, now, null);
-        when(profiles.findByUsername("jane@test.com")).thenReturn(Optional.of(odd));
-        when(profiles.findByEmailIgnoreCase("jane@test.com")).thenReturn(List.of(jane));
-
-        handler.request("jane@test.com");
-
-        verify(mail).passwordResetRequested(AccountContact.of(odd), "RAW", now.plus(PasswordResetRules.VALIDITY), Duration.ofMinutes(30));
-    }
-
-    @Test
-    void an_address_shared_by_two_accounts_sends_nothing() {
-        UserProfile twin = new UserProfile(UUID.randomUUID(), "twin", "Jane@test.com", true, Role.USER, now, null);
-        when(profiles.findByEmailIgnoreCase("jane@test.com")).thenReturn(List.of(jane, twin));
-
-        handler.request("jane@test.com");
-
-        verifyNoInteractions(mail);
-        verify(tokens, never()).save(any(), any(), any(), any());
     }
 
     @Test
@@ -116,7 +92,7 @@ class RequestPasswordResetHandlerTest {
     @Test
     void a_deactivated_account_gets_nothing() {
         UserProfile off = new UserProfile(jane.id(), "jane", "jane@test.com", false, Role.USER, now, null);
-        when(profiles.findByUsername("jane")).thenReturn(Optional.of(off));
+        when(profiles.findByIdentifier("jane")).thenReturn(Optional.of(off));
 
         handler.request("jane");
 
@@ -125,7 +101,7 @@ class RequestPasswordResetHandlerTest {
 
     @Test
     void the_account_is_locked_before_its_last_link_is_looked_at() {
-        when(profiles.findByUsername("jane")).thenReturn(Optional.of(jane));
+        when(profiles.findByIdentifier("jane")).thenReturn(Optional.of(jane));
 
         handler.request("jane");
 
@@ -137,7 +113,7 @@ class RequestPasswordResetHandlerTest {
 
     @Test
     void a_second_request_within_five_minutes_sends_nothing_and_keeps_the_first_link() {
-        when(profiles.findByUsername("jane")).thenReturn(Optional.of(jane));
+        when(profiles.findByIdentifier("jane")).thenReturn(Optional.of(jane));
         when(tokens.latestIssuedAt(jane.id())).thenReturn(Optional.of(now.minus(Duration.ofMinutes(4))));
 
         handler.request("jane");

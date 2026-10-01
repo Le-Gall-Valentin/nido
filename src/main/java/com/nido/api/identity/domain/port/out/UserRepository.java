@@ -8,10 +8,8 @@ import java.util.UUID;
 
 public interface UserRepository {
     Optional<User> findByUsername(String username);
+    /** The account that is not deleted with exactly this address — addresses are stored lower-case. */
     Optional<User> findByEmail(String email);
     Optional<User> findById(UUID id);
     List<User> findByIds(Collection<UUID> ids);
-
-    /** Non-deleted accounts with this address, letter case ignored — usually one, possibly none or several. */
-    List<User> findByEmailIgnoreCase(String email);
 }

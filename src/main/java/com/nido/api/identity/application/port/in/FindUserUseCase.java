@@ -8,11 +8,14 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface FindUserUseCase {
-    Optional<User> findByUsername(String username);
     Optional<User> findById(UUID id);
     List<User> findByIds(Collection<UUID> ids);
-    Optional<User> findByEmail(String email);
 
-    /** Non-deleted accounts with this address, letter case ignored — usually one, possibly none or several. */
-    List<User> findByEmailIgnoreCase(String email);
+    /**
+     * The account behind what a person typed to name one — at sign-in, in "forgot password", when
+     * inviting. Never a technical id: surrounding spaces are ignored; with an '@' it is an email
+     * address, letter case ignored; without, a username, matched exactly. The two cannot overlap — a
+     * username holds no '@'. A deleted account is never found; a deactivated one is.
+     */
+    Optional<User> findByIdentifier(String identifier);
 }

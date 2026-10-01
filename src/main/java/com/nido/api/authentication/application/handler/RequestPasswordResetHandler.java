@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -27,9 +26,8 @@ import java.util.Optional;
  * stranger, a deactivated account and a cooldown — so nothing here throws for those cases, and the
  * logs never repeat what was typed.
  *
- * <p>The username is looked up first because a username may itself contain an '@'. An address two
- * accounts share (they may differ only by letter case) sends nothing: guessing would mail a link to
- * the wrong person.
+ * <p>Which account an identifier names — a username, or an address whatever its letter case — is
+ * identity's rule ({@code FindUserUseCase#findByIdentifier}); an address belongs to one account at most.
  */
 @ApplicationService
 public class RequestPasswordResetHandler implements RequestPasswordResetUseCase {
@@ -63,7 +61,7 @@ public class RequestPasswordResetHandler implements RequestPasswordResetUseCase 
         if (typed.isEmpty()) {
             return;
         }
-        Optional<UserProfile> found = findAccount(typed);
+        Optional<UserProfile> found = profiles.findByIdentifier(typed);
         if (found.isEmpty() || !found.get().isActive()) {
             log.info("Password reset asked for no active account");
             return;
@@ -84,18 +82,5 @@ public class RequestPasswordResetHandler implements RequestPasswordResetUseCase 
         tokens.save(account.id(), hasher.hash(token), now, expiresAt);
         mail.passwordResetRequested(AccountContact.of(account), token, expiresAt, PasswordResetRules.VALIDITY);
         log.info("Password reset link issued for user {}", account.id());
-    }
-
-    private Optional<UserProfile> findAccount(String identifier) {
-        Optional<UserProfile> byUsername = profiles.findByUsername(identifier);
-        if (byUsername.isPresent()) {
-            return byUsername;
-        }
-        List<UserProfile> byAddress = profiles.findByEmailIgnoreCase(identifier);
-        if (byAddress.size() > 1) {
-            log.warn("Password reset asked for an address {} accounts share: nothing sent", byAddress.size());
-            return Optional.empty();
-        }
-        return byAddress.stream().findFirst();
     }
 }

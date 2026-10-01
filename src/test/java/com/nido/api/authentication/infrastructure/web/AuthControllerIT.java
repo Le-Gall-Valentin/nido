@@ -136,6 +136,15 @@ class AuthControllerIT {
     }
 
     @Test
+    void login_withTheAddressInAnyCase_signsIn() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest(" TestUser@Test.com ", "password"))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.username").value("testuser"));
+    }
+
+    @Test
     void login_wrongPassword_returns401() throws Exception {
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)

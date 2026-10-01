@@ -43,11 +43,11 @@ class UserCredentialsRepositoryAdapterTest {
     }
 
     @Test
-    void findByUsername_userFound_credentialFound_returnsUserCredentials() {
-        when(userProfilePort.findByUsername("alice")).thenReturn(Optional.of(userProfile));
+    void findByIdentifier_userFound_credentialFound_returnsUserCredentials() {
+        when(userProfilePort.findByIdentifier("alice")).thenReturn(Optional.of(userProfile));
         when(credentialRepo.findById(userId)).thenReturn(Optional.of(entityWithHash("hashed_pw")));
 
-        Optional<UserCredentials> result = adapter.findByUsername("alice");
+        Optional<UserCredentials> result = adapter.findByIdentifier("alice");
 
         assertThat(result).isPresent();
         UserCredentials creds = result.get();
@@ -60,20 +60,20 @@ class UserCredentialsRepositoryAdapterTest {
     }
 
     @Test
-    void findByUsername_userNotFound_returnsEmpty() {
-        when(userProfilePort.findByUsername("unknown")).thenReturn(Optional.empty());
+    void findByIdentifier_userNotFound_returnsEmpty() {
+        when(userProfilePort.findByIdentifier("unknown")).thenReturn(Optional.empty());
 
-        Optional<UserCredentials> result = adapter.findByUsername("unknown");
+        Optional<UserCredentials> result = adapter.findByIdentifier("unknown");
 
         assertThat(result).isEmpty();
     }
 
     @Test
-    void findByUsername_credentialNotFound_returnsEmpty() {
-        when(userProfilePort.findByUsername("alice")).thenReturn(Optional.of(userProfile));
+    void findByIdentifier_credentialNotFound_returnsEmpty() {
+        when(userProfilePort.findByIdentifier("alice")).thenReturn(Optional.of(userProfile));
         when(credentialRepo.findById(userId)).thenReturn(Optional.empty());
 
-        Optional<UserCredentials> result = adapter.findByUsername("alice");
+        Optional<UserCredentials> result = adapter.findByIdentifier("alice");
 
         assertThat(result).isEmpty();
     }

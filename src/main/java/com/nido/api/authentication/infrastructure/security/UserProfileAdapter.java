@@ -6,7 +6,6 @@ import com.nido.api.identity.application.port.in.FindUserUseCase;
 import com.nido.api.identity.domain.model.User;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,18 +19,13 @@ public class UserProfileAdapter implements UserProfilePort {
     }
 
     @Override
-    public Optional<UserProfile> findByUsername(String username) {
-        return findUser.findByUsername(username).map(UserProfileAdapter::toProfile);
+    public Optional<UserProfile> findByIdentifier(String identifier) {
+        return findUser.findByIdentifier(identifier).map(UserProfileAdapter::toProfile);
     }
 
     @Override
     public Optional<UserProfile> findById(UUID id) {
         return findUser.findById(id).map(UserProfileAdapter::toProfile);
-    }
-
-    @Override
-    public List<UserProfile> findByEmailIgnoreCase(String email) {
-        return findUser.findByEmailIgnoreCase(email).stream().map(UserProfileAdapter::toProfile).toList();
     }
 
     private static UserProfile toProfile(User u) {

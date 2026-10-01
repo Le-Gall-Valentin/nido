@@ -50,18 +50,18 @@ public class LoginHandler implements LoginUseCase {
         this.totpChallengeStore = totpChallengeStore;
         this.totpStatusQuery = totpStatusQuery;
         this.refreshTokenExpiryDays = tokenConfig.refreshTokenExpiryDays();
-        // Precomputed hash for constant-time dummy comparison — prevents timing-based username enumeration
+        // Precomputed hash for constant-time dummy comparison — prevents timing-based account enumeration
         this.dummyHash = passwordHasher.hash("nido-timing-sentinel");
     }
 
     @Override
     @Transactional
     public LoginResult login(LoginCommand command) {
-        var credsOpt = userCredentialsPort.findByUsername(command.username());
+        var credsOpt = userCredentialsPort.findByIdentifier(command.username());
 
         if (credsOpt.isEmpty()) {
             passwordVerifier.matches(command.password(), dummyHash);
-            log.warn("Login attempt for unknown username");
+            log.warn("Login attempt for unknown identifier");
             throw new AuthenticationException.InvalidCredentials();
         }
 

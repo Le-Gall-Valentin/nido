@@ -7,6 +7,7 @@ import com.nido.api.shared.annotation.ApplicationService;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,11 +21,6 @@ public class FindUserService implements FindUserUseCase {
     }
 
     @Override
-    public Optional<User> findByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
-
-    @Override
     public Optional<User> findById(UUID id) {
         return userRepository.findById(id);
     }
@@ -35,12 +31,14 @@ public class FindUserService implements FindUserUseCase {
     }
 
     @Override
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
-    }
-
-    @Override
-    public List<User> findByEmailIgnoreCase(String email) {
-        return userRepository.findByEmailIgnoreCase(email);
+    public Optional<User> findByIdentifier(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            return Optional.empty();
+        }
+        String typed = identifier.strip();
+        if (typed.indexOf('@') >= 0) {
+            return userRepository.findByEmail(typed.toLowerCase(Locale.ROOT));
+        }
+        return userRepository.findByUsername(typed);
     }
 }
