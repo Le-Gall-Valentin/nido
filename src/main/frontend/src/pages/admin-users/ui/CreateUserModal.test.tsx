@@ -112,6 +112,14 @@ describe('CreateUserModal — validation', () => {
     expect(getByText('create.error.username_length')).toBeDefined()
   })
 
+  it('shows a hint and keeps submit disabled when the username holds an @', () => {
+    const { getByLabelText, getByText } = setup()
+    fillForm(getByLabelText)
+    fireEvent.change(getByLabelText('create.username'), { target: { value: 'bob@home' } })
+    expect(getByText('create.error.username_at')).toBeDefined()
+    expect((getByText('create.submit') as HTMLButtonElement).disabled).toBe(true)
+  })
+
   it('shows an email-invalid hint and keeps submit disabled for a malformed email', () => {
     const { getByLabelText, getByText } = setup()
     fireEvent.change(getByLabelText('create.username'), { target: { value: 'bob' } })

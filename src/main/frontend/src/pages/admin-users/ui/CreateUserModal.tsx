@@ -30,12 +30,15 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
 
   // Mirror of the backend RegisterRequest constraints.
   const usernameInvalid = trimmedUsername.length > 0 && (trimmedUsername.length < 3 || trimmedUsername.length > 50)
+  // Sign-in reads a typed value with an '@' as an address: a username holding one could never be reached.
+  const usernameHasAt = trimmedUsername.includes('@')
   const emailInvalid = trimmedEmail.length > 0 && !isValidEmail(trimmedEmail)
   const problem = password.length > 0 ? passwordProblem(password) : null
   const passwordTooShort = problem === 'too_short'
   const passwordTooLong = problem === 'too_long'
   const passwordWeak = problem === 'weak'
   const canSubmit =
+    !usernameHasAt &&
     trimmedUsername.length >= 3 &&
     trimmedUsername.length <= 50 &&
     isValidEmail(trimmedEmail) &&
@@ -108,6 +111,7 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
 
         <div aria-live="polite">
           {usernameInvalid && <p className="text-xs text-status-orange mb-2">{t('create.error.username_length')}</p>}
+          {usernameHasAt && <p className="text-xs text-status-orange mb-2">{t('create.error.username_at')}</p>}
           {emailInvalid && <p className="text-xs text-status-orange mb-2">{t('create.error.email_invalid')}</p>}
           {passwordTooShort && <p className="text-xs text-status-orange mb-2">{t('create.error.password_too_short')}</p>}
           {passwordTooLong && <p className="text-xs text-status-orange mb-2">{t('create.error.password_too_long')}</p>}

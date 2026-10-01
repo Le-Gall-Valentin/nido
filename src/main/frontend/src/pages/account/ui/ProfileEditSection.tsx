@@ -27,13 +27,15 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
   const isDirty = trimmedUsername !== user.username || trimmedEmail !== user.email
   const usernameTooShort = trimmedUsername.length > 0 && trimmedUsername.length < 3
   const usernameTooLong = trimmedUsername.length > 50
+  // Sign-in reads a typed value with an '@' as an address: a username holding one could never be reached.
+  const usernameHasAt = trimmedUsername.includes('@')
   const emailEmpty = trimmedEmail.length === 0
   // The address is how an account is recovered, so changing it asks for the password. A change of
   // letter case only is the same mailbox — the server agrees and asks for nothing.
   const changesAddress = (value: string) => value.trim().toLowerCase() !== user.email.toLowerCase()
   const addressChanges = changesAddress(email)
   const passwordHintId = useId()
-  const canSave = isDirty && !usernameTooShort && !usernameTooLong && !emailEmpty
+  const canSave = isDirty && !usernameTooShort && !usernameTooLong && !usernameHasAt && !emailEmpty
     && (!addressChanges || currentPassword.length > 0)
 
   useEffect(() => {
@@ -90,6 +92,7 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
         <form onSubmit={(e) => void handleSubmit(e)}>
           {usernameTooShort && <p className="text-xs text-status-orange mb-2">{t('profile.error.username_too_short')}</p>}
           {usernameTooLong && <p className="text-xs text-status-orange mb-2">{t('profile.error.username_too_long')}</p>}
+          {usernameHasAt && <p className="text-xs text-status-orange mb-2">{t('profile.error.username_at')}</p>}
           {emailEmpty && isDirty && <p className="text-xs text-status-orange mb-2">{t('profile.error.email_required')}</p>}
           <div className="flex flex-col gap-3 sm:flex-row mb-3">
             <div className="min-w-0 sm:flex-1">

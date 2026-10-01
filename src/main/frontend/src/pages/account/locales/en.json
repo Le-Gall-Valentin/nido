@@ -36,6 +36,7 @@
       "conflict": "This username or email address is already in use.",
       "username_too_short": "Minimum 3 characters.",
       "username_too_long": "Maximum 50 characters.",
+      "username_at": "A username cannot contain @.",
       "server": "An error occurred. Please try again.",
       "network": "Network unavailable.",
       "rate_limit": "Too many requests. Please try again later.",

@@ -81,6 +81,13 @@ describe('ProfileEditSection', () => {
     expect(getByText('profile.error.username_too_short')).toBeDefined()
   })
 
+  it('save button is disabled and shows error when the username holds an @', () => {
+    const { getByLabelText, getByRole, getByText } = setup()
+    fireEvent.change(getByLabelText('profile.username'), { target: { value: 'alice@home' } })
+    expect((getByRole('button', { name: 'profile.save' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(getByText('profile.error.username_at')).toBeDefined()
+  })
+
   it('save button is disabled and shows error when username is too long', () => {
     const { getByLabelText, getByRole, getByText } = setup()
     fireEvent.change(getByLabelText('profile.username'), { target: { value: 'a'.repeat(51) } })
