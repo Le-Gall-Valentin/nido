@@ -64,7 +64,8 @@ function InvitationRow({ invitation, revoking, onRevoke, lang }: RowProps) {
 
   return (
     <li className="flex flex-wrap items-center gap-3 px-[18px] py-3.5">
-      <div className="min-w-0 flex-1">
+      {/* A floor under the name: on a phone the badges wrap below it instead of squeezing it to "zz-…". */}
+      <div className="min-w-32 flex-1">
         <div className="text-[14.5px] font-semibold text-fg-0 truncate">{invitee}</div>
         {invitation.status === 'PENDING' && (
           <div className="text-[12.5px] text-fg-3 truncate">
