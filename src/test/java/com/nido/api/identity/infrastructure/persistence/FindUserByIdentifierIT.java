@@ -51,6 +51,33 @@ class FindUserByIdentifierIT {
         assertThat(findUser.findByIdentifier(name.toLowerCase())).map(User::username).contains(name);
     }
 
+    @Test
+    void an_address_is_found_whatever_its_letter_case() {
+        String name = unique();
+        save(name, name + ".mixed@test.com", false);
+
+        assertThat(findUser.findByIdentifier(name.toUpperCase() + ".MIXED@Test.COM")).map(User::username).contains(name);
+    }
+
+    @Test
+    void a_deleted_account_is_never_found_even_when_it_kept_its_address() {
+        String name = unique();
+        save(name, name + "@test.com", true);
+
+        assertThat(findUser.findByIdentifier(name + "@test.com")).isEmpty();
+    }
+
+    @Test
+    void a_deactivated_account_is_still_found() {
+        String name = unique();
+        UUID asleep = save(name, name + "@test.com", false);
+        UserIdentityEntity account = users.findById(asleep).orElseThrow();
+        account.setActive(false);
+        users.saveAndFlush(account);
+
+        assertThat(findUser.findByIdentifier(name + "@test.com")).map(User::id).contains(asleep);
+    }
+
     private UUID save(String username, String email, boolean deleted) {
         UserIdentityEntity e = new UserIdentityEntity();
         e.setUsername(username);

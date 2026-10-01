@@ -79,7 +79,7 @@ class SpaceInvitationRepositoryAdapterIT {
     }
 
     @Test
-    void a_second_pending_invitation_to_the_same_address_in_the_same_space_is_refused() {
+    void a_second_pending_invitation_to_the_same_account_in_the_same_space_is_refused() {
         adapter.create(space, camille, SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
 
         assertThatThrownBy(() -> adapter.create(space, camille, SpaceRole.VIEWER, "NIDO-BBBBBB", futureExpiry(), alice))
@@ -87,7 +87,7 @@ class SpaceInvitationRepositoryAdapterIT {
     }
 
     @Test
-    void after_revoking_the_first_a_new_invitation_for_the_same_address_is_accepted() {
+    void after_revoking_the_first_a_new_invitation_for_the_same_account_is_accepted() {
         SpaceInvitation first = adapter.create(space, camille, SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
 
         inTransaction(() -> adapter.revoke(first.id()));
@@ -97,7 +97,7 @@ class SpaceInvitationRepositoryAdapterIT {
     }
 
     @Test
-    void the_same_address_can_be_invited_to_two_different_spaces_at_once() {
+    void the_same_account_can_be_invited_to_two_different_spaces_at_once() {
         Space otherSpace = createSpace(alice);
 
         adapter.create(space, camille, SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
