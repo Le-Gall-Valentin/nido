@@ -16,4 +16,9 @@ public record SpaceInvitationView(
     InvitationStatus status,
     Instant expiresAt,
     Instant createdAt
-) {}
+) {
+    public static SpaceInvitationView of(SpaceInvitation invitation, String username) {
+        return new SpaceInvitationView(invitation.id(), username, invitation.role(),
+            invitation.code(), invitation.status(), invitation.expiresAt(), invitation.createdAt());
+    }
+}

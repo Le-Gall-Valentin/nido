@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.MemberNames;
 import com.nido.api.space.domain.model.InvitationStatus;
 import com.nido.api.space.domain.model.MemberProfile;
 import com.nido.api.space.domain.model.SpaceException;
@@ -41,7 +42,7 @@ class ListSpaceInvitationsHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new ListSpaceInvitationsHandler(spaceInvitationPort, memberProfilePort);
+        handler = new ListSpaceInvitationsHandler(spaceInvitationPort, new MemberNames(memberProfilePort));
     }
 
     @Test

@@ -63,11 +63,6 @@ public class InviteMemberHandler implements InviteMemberUseCase {
             caller.userId());
         log.info("Invitation {} issued for space {} by user {}",
             invitation.id(), command.spaceId(), caller.userId());
-        return toView(invitation, invitee.username());
-    }
-
-    private static SpaceInvitationView toView(SpaceInvitation invitation, String username) {
-        return new SpaceInvitationView(invitation.id(), username, invitation.role(),
-            invitation.code(), invitation.status(), invitation.expiresAt(), invitation.createdAt());
+        return SpaceInvitationView.of(invitation, invitee.username());
     }
 }

@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.MemberNames;
 import com.nido.api.space.domain.model.InvitationStatus;
 import com.nido.api.space.domain.model.MemberProfile;
 import com.nido.api.space.domain.model.ReceivedInvitationView;
@@ -47,7 +48,7 @@ class ListMyInvitationsHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new ListMyInvitationsHandler(spaceInvitationPort, spaceRepository, memberProfilePort);
+        handler = new ListMyInvitationsHandler(spaceInvitationPort, spaceRepository, new MemberNames(memberProfilePort));
     }
 
     @Test
