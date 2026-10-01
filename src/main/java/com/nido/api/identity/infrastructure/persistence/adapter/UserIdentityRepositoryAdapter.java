@@ -41,7 +41,7 @@ public class UserIdentityRepositoryAdapter implements UserRepository, UserComman
 
     @Override
     public Optional<User> findByUsername(String username) {
-        return jpa.findByUsername(username).map(this::toDomain);
+        return jpa.findByUsernameAndDeletedFalse(username).map(this::toDomain);
     }
 
     @Override
