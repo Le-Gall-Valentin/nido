@@ -1,0 +1,56 @@
+databaseChangeLog:
+  - changeSet:
+      id: 060-users-identifier-rules
+      author: nido
+      comment: >
+        One signs in, asks for a reset and is invited with a username or an email address, so the
+        database now guarantees what that relies on: an address is lower-case, unique and present for
+        every account that is not deleted, a username is present and holds no '@' — a typed value with
+        an '@' is always read as an address. Deleted accounts keep NULL in both (GDPR anonymization),
+        which every CHECK lets through. The guard refuses, with a message, data the constraints could
+        not accept: fix it, then restart. The unique index uq_users_email_active (007) stays as it is:
+        every address being lower-case, it now ignores letter case.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              DO $$
+              BEGIN
+                IF EXISTS (SELECT 1 FROM users WHERE NOT is_deleted AND email IS NULL) THEN
+                  RAISE EXCEPTION '060: an account that is not deleted has no email address. Give it one, then restart.';
+                END IF;
+                IF EXISTS (SELECT 1 FROM users WHERE NOT is_deleted AND username IS NULL) THEN
+                  RAISE EXCEPTION '060: an account that is not deleted has no username. Give it one, then restart.';
+                END IF;
+                IF EXISTS (SELECT 1 FROM users WHERE NOT is_deleted GROUP BY lower(email) HAVING count(*) > 1) THEN
+                  RAISE EXCEPTION '060: two accounts share an email address once letter case is ignored. Change one of them, then restart.';
+                END IF;
+                IF EXISTS (SELECT 1 FROM users WHERE NOT is_deleted AND position('@' in username) > 0) THEN
+                  RAISE EXCEPTION '060: a username contains @, which sign-in would read as an email address. Rename it, then restart.';
+                END IF;
+              END
+              $$;
+        - sql:
+            sql: UPDATE users SET email = lower(email) WHERE email <> lower(email)
+        - sql:
+            sql: ALTER TABLE users ADD CONSTRAINT ck_users_email_lowercase CHECK (email = lower(email))
+        - sql:
+            sql: ALTER TABLE users ADD CONSTRAINT ck_users_email_required CHECK (is_deleted OR email IS NOT NULL)
+        - sql:
+            sql: ALTER TABLE users ADD CONSTRAINT ck_users_username_required CHECK (is_deleted OR username IS NOT NULL)
+        - sql:
+            sql: ALTER TABLE users ADD CONSTRAINT ck_users_username_no_at CHECK (position('@' in username) = 0)
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_users_email_lower
+      rollback:
+        - comment: "The lower-casing of addresses is not undone: the original letter case is gone."
+        - sql:
+            sql: CREATE INDEX idx_users_email_lower ON users (lower(email)) WHERE is_deleted = false
+        - sql:
+            sql: ALTER TABLE users DROP CONSTRAINT IF EXISTS ck_users_username_no_at
+        - sql:
+            sql: ALTER TABLE users DROP CONSTRAINT IF EXISTS ck_users_username_required
+        - sql:
+            sql: ALTER TABLE users DROP CONSTRAINT IF EXISTS ck_users_email_required
+        - sql:
+            sql: ALTER TABLE users DROP CONSTRAINT IF EXISTS ck_users_email_lowercase

@@ -127,7 +127,7 @@ class UserLanguageIT {
 
     @Test
     void an_address_is_found_whatever_its_letter_case() {
-        createUser("mixed", "Mixed.Case@Test.com", "password", null);
+        createUser("mixed", "mixed.case@test.com", "password", null);
 
         assertThat(findUser.findByEmailIgnoreCase("MIXED.case@test.COM")).extracting(User::username).containsExactly("mixed");
     }
@@ -139,15 +139,6 @@ class UserLanguageIT {
         users.saveAndFlush(gone);
 
         assertThat(findUser.findByEmailIgnoreCase("gone@test.com")).isEmpty();
-    }
-
-    @Test
-    void addresses_differing_only_by_letter_case_give_every_account() {
-        createUser("upper", "Twin@test.com", "password", null);
-        createUser("lower", "twin@test.com", "password", null);
-
-        assertThat(findUser.findByEmailIgnoreCase("TWIN@test.com")).extracting(User::username)
-            .containsExactlyInAnyOrder("upper", "lower");
     }
 
     @Test
