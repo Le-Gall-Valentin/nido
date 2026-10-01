@@ -10,5 +10,6 @@ import java.util.UUID;
 public interface MemberProfilePort {
     List<MemberProfile> findByIds(Collection<UUID> userIds);
 
-    Optional<MemberProfile> findByEmail(String email);
+    /** The account behind a typed username or email address — identity's rule, FindUserUseCase#findByIdentifier. */
+    Optional<MemberProfile> findByIdentifier(String identifier);
 }

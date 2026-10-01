@@ -38,6 +38,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -237,6 +238,76 @@ class SpaceInvitationControllerIT {
         mockMvc.perform(delete("/api/spaces/" + sharedSpaceId + "/invitations/" + foreignInvitationId)
                 .cookie(accessTokenFor(aliceId)))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void a_username_is_enough_to_invite() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identifier\":\"carol\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.username").value("carol"));
+    }
+
+    @Test
+    void an_address_in_capitals_reaches_the_account() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identifier\":\"Carol@TEST.com\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.username").value("carol"));
+    }
+
+    @Test
+    void inviting_by_username_then_by_address_is_the_same_person_and_conflicts() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identifier\":\"carol\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identifier\":\"carol@test.com\",\"role\":\"VIEWER\"}"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.title").value("InvitationAlreadyPending"));
+    }
+
+    @Test
+    void inviting_by_username_never_reveals_the_address() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identifier\":\"carol\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.email").doesNotExist());
+
+        mockMvc.perform(get("/api/spaces/" + sharedSpaceId + "/invitations").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].email").doesNotExist())
+            .andExpect(content().string(Matchers.not(Matchers.containsString("carol@test.com"))));
+    }
+
+    @Test
+    void the_old_email_field_is_a_400() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"carol@test.com\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void nobody_behind_the_identifier_is_a_422_that_names_the_case() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identifier\":\"ghost\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.title").value("NoAccountForIdentifier"));
     }
 
     @Test

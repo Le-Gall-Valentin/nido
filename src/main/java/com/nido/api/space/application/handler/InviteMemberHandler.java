@@ -51,8 +51,8 @@ public class InviteMemberHandler implements InviteMemberUseCase {
         Space space = spaceRepository.findById(command.spaceId())
             .orElseThrow(SpaceException.SpaceNotFound::new);
         space.ensureShared();
-        MemberProfile invitee = memberProfilePort.findByEmail(command.email())
-            .orElseThrow(SpaceException.NoAccountForEmail::new);
+        MemberProfile invitee = memberProfilePort.findByIdentifier(command.identifier())
+            .orElseThrow(SpaceException.NoAccountForIdentifier::new);
         if (spaceMembershipPort.find(command.spaceId(), invitee.userId()).isPresent()) {
             throw new SpaceException.AlreadyMember();
         }

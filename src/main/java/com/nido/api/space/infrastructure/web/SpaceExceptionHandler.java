@@ -61,7 +61,8 @@ public class SpaceExceptionHandler {
             case SpaceException.InvalidSpaceDescription ex -> response(422, ex, "Space description must not exceed 280 characters.");
             case SpaceException.OwnerRoleNotAssignable ex -> response(422, ex, "The owner role is only reachable through an ownership transfer.");
             case SpaceException.InvitationExpired ex -> response(422, ex, "This invitation has expired.");
-            case SpaceException.NoAccountForEmail ex -> response(422, ex, "No account exists for this address. Ask an administrator to create one.");
+            case SpaceException.NoAccountForIdentifier ex -> response(422, ex,
+                "No account matches this username or email address. Ask an administrator to create one.");
 
             case SpaceException.DataIntegrityError ex -> {
                 log.error("Data integrity violation on {}", request.getRequestURI(), ex);

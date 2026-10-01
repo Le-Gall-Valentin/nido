@@ -130,7 +130,7 @@ class DashboardControllerIT {
             .formatted(today.plusDays(100)));
         mockMvc.perform(post("/api/spaces/" + bobsSpaceId + "/invitations")
                 .cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"alice@test.com\",\"role\":\"MEMBER\"}"))
+                .content("{\"identifier\":\"alice@test.com\",\"role\":\"MEMBER\"}"))
             .andExpect(status().isCreated());
 
         mockMvc.perform(get(dashboard()).cookie(tokenFor(aliceId)))
