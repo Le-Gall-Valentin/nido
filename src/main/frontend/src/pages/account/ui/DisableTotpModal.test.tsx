@@ -20,7 +20,7 @@ vi.mock('@/features/totp', async (importActual) => {
   const actual = await importActual<typeof import('@/features/totp')>()
   return {
     ...actual,
-    TotpDigitInput: ({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean; autoFocus?: boolean; groupLabel?: string; digitLabel?: (i: number) => string }) => (
+    TotpDigitInput: ({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean; autoFocus?: boolean; label?: string }) => (
       <input aria-label="code" value={value} onChange={e => onChange(e.target.value)} disabled={disabled} />
     ),
   }

@@ -83,7 +83,7 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
       } else if (error instanceof TotpCodeError) {
         setErrorKey('setup.error.invalid_code')
         setCode('')
-        digitInputRef.current?.focusFirst()
+        digitInputRef.current?.focus()
       } else if (error instanceof RateLimitError) {
         setErrorKey('setup.error.rate_limit')
       } else if (error instanceof NetworkError) {
@@ -93,7 +93,7 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
       } else {
         setErrorKey('setup.error.invalid_code')
         setCode('')
-        digitInputRef.current?.focusFirst()
+        digitInputRef.current?.focus()
       }
     } finally {
       isSubmittingRef.current = false
@@ -159,8 +159,7 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
           onChange={setCode}
           disabled={isLoading}
           autoFocus
-          groupLabel={t('setup.code_group_label')}
-          digitLabel={(i) => t('setup.digit_label', { n: i + 1 })}
+          label={t('setup.code_label')}
         />
 
         {errorKey && (

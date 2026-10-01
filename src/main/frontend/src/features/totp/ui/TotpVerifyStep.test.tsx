@@ -19,11 +19,12 @@ function makeApi(overrides: Partial<ITotpVerifyApi> = {}): ITotpVerifyApi {
   }
 }
 
+function codeField(container: HTMLElement) {
+  return container.querySelector('input[autocomplete="one-time-code"]') as HTMLInputElement
+}
+
 function fillCode(container: HTMLElement, code: string) {
-  const inputs = container.querySelectorAll('input[inputmode="numeric"]')
-  code.split('').forEach((digit, i) => {
-    fireEvent.change(inputs[i]!, { target: { value: digit } })
-  })
+  fireEvent.change(codeField(container), { target: { value: code } })
 }
 
 describe('TotpVerifyStep', () => {
@@ -86,8 +87,7 @@ describe('TotpVerifyStep', () => {
     })
 
     // Code should be cleared
-    const inputs = container.querySelectorAll('input[inputmode="numeric"]') as NodeListOf<HTMLInputElement>
-    inputs.forEach(input => expect(input.value).toBe(''))
+    expect(codeField(container).value).toBe('')
   })
 
   it('shows challenge_expired error on TotpChallengeExpiredError (does not clear code)', async () => {
@@ -106,9 +106,7 @@ describe('TotpVerifyStep', () => {
     })
 
     // Code should NOT be cleared
-    const inputs = container.querySelectorAll('input[inputmode="numeric"]') as NodeListOf<HTMLInputElement>
-    const filledDigits = Array.from(inputs).map(i => i.value).join('')
-    expect(filledDigits).toBe('123456')
+    expect(codeField(container).value).toBe('123456')
   })
 
   it('shows incomplete error without calling api if code has fewer than 6 digits', async () => {

@@ -64,7 +64,7 @@ export function TotpVerifyStep({ username, api, onVerified, onBack }: TotpVerify
       } else {
         setErrorKey('verify.error.invalid_code')
         setCode('')
-        digitInputRef.current?.focusFirst()
+        digitInputRef.current?.focus()
       }
     } finally {
       isSubmittingRef.current = false
@@ -104,8 +104,7 @@ export function TotpVerifyStep({ username, api, onVerified, onBack }: TotpVerify
           onChange={setCode}
           disabled={isLoading}
           autoFocus
-          groupLabel={t('verify.code_group_label')}
-          digitLabel={(i) => t('verify.digit_label', { n: i + 1 })}
+          label={t('verify.code_label')}
         />
 
         {errorKey && (
