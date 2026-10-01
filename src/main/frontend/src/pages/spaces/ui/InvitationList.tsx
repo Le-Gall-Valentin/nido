@@ -48,6 +48,8 @@ interface RowProps {
 function InvitationRow({ invitation, revoking, onRevoke, lang }: RowProps) {
   const { t } = useTranslation('spaces')
   const [copied, setCopied] = useState(false)
+  // An invitee the server can no longer name is an anonymised account, as in the member list.
+  const invitee = invitation.username ?? t('members.deleted_account')
 
   async function handleCopy() {
     try {
@@ -63,7 +65,7 @@ function InvitationRow({ invitation, revoking, onRevoke, lang }: RowProps) {
   return (
     <li className="flex flex-wrap items-center gap-3 px-[18px] py-3.5">
       <div className="min-w-0 flex-1">
-        <div className="text-[14.5px] font-semibold text-fg-0 truncate">{invitation.username ?? '—'}</div>
+        <div className="text-[14.5px] font-semibold text-fg-0 truncate">{invitee}</div>
         {invitation.status === 'PENDING' && (
           <div className="text-[12.5px] text-fg-3 truncate">
             {t('invitations.expires', { time: formatRelativeTime(invitation.expiresAt, lang) })}
@@ -90,7 +92,7 @@ function InvitationRow({ invitation, revoking, onRevoke, lang }: RowProps) {
       {invitation.status === 'PENDING' && (
         <button
           type="button"
-          aria-label={t('invitations.action_revoke', { username: invitation.username ?? '—' })}
+          aria-label={t('invitations.action_revoke', { username: invitee })}
           disabled={revoking}
           onClick={() => onRevoke(invitation)}
           className="flex size-8 items-center justify-center rounded-md text-fg-2 transition-colors hover:bg-bg-2 hover:text-status-red disabled:opacity-50"

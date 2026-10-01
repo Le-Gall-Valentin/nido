@@ -28,6 +28,12 @@ describe('InvitationList — empty state', () => {
 })
 
 describe('InvitationList — rendering', () => {
+  it('names an invitee who can no longer be found a deleted account, on the row and on its revoke button', () => {
+    render(<InvitationList invitations={[{ ...PENDING, username: null }]} onRevoke={vi.fn()} />)
+    expect(screen.getByText('members.deleted_account')).toBeDefined()
+    expect(screen.getByRole('button', { name: 'invitations.action_revoke:{"username":"members.deleted_account"}' })).toBeDefined()
+  })
+
   it('shows the username and the code with a copy button', () => {
     render(<InvitationList invitations={[PENDING]} onRevoke={vi.fn()} />)
     expect(screen.getByText('carol')).toBeDefined()
