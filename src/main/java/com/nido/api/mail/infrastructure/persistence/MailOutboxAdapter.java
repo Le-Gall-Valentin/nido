@@ -79,16 +79,22 @@ public class MailOutboxAdapter implements MailOutboxPort {
 
     @Override
     public List<OutboxEntry> claimDue(Instant now, int limit, Duration lease) {
+        // The batch is chosen once, in a materialized CTE. Inside "WHERE id IN (…)" Postgres may read
+        // the sub-select again for every row it updates, and each new read skips the rows this very
+        // statement has just locked — so the claim took more than the limit on some plans.
         List<ClaimedRow> rows = jdbc.sql("""
-                UPDATE mail_outbox SET locked_until = :leaseEnd
-                WHERE id IN (
+                WITH batch AS MATERIALIZED (
                     SELECT id FROM mail_outbox
                     WHERE next_attempt_at <= :now
                       AND (locked_until IS NULL OR locked_until <= :now)
                     ORDER BY next_attempt_at
                     LIMIT :limit
                     FOR UPDATE SKIP LOCKED)
-                RETURNING id, kind, payload, attempts, expires_at, next_attempt_at
+                UPDATE mail_outbox SET locked_until = :leaseEnd
+                FROM batch
+                WHERE mail_outbox.id = batch.id
+                RETURNING mail_outbox.id, mail_outbox.kind, mail_outbox.payload, mail_outbox.attempts,
+                          mail_outbox.expires_at, mail_outbox.next_attempt_at
                 """)
             .param("now", utc(now))
             .param("leaseEnd", utc(now.plus(lease)))

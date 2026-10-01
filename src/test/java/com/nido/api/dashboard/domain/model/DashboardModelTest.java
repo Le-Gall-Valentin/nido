@@ -116,8 +116,8 @@ class DashboardModelTest {
         UUID me = UUID.randomUUID();
         UUID someoneElse = UUID.randomUUID();
         SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), UUID.randomUUID(), me, SpaceRole.MEMBER, Instant.now());
-        DashboardContext shared = new DashboardContext(caller, "a@b.c", LocalDate.of(2026, 9, 26), SpaceType.SHARED);
-        DashboardContext personal = new DashboardContext(caller, "a@b.c", LocalDate.of(2026, 9, 26), SpaceType.PERSONAL);
+        DashboardContext shared = new DashboardContext(caller, LocalDate.of(2026, 9, 26), SpaceType.SHARED);
+        DashboardContext personal = new DashboardContext(caller, LocalDate.of(2026, 9, 26), SpaceType.PERSONAL);
 
         assertThat(shared.isMine(List.of(me, someoneElse))).isTrue();
         assertThat(shared.isMine(List.of())).isTrue();
@@ -131,8 +131,8 @@ class DashboardModelTest {
         SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), UUID.randomUUID(), userId,
             SpaceRole.MEMBER, Instant.now());
 
-        DashboardContext shared = new DashboardContext(caller, "a@b.c", LocalDate.of(2026, 9, 26), SpaceType.SHARED);
-        DashboardContext personal = new DashboardContext(caller, "a@b.c", LocalDate.of(2026, 9, 26), SpaceType.PERSONAL);
+        DashboardContext shared = new DashboardContext(caller, LocalDate.of(2026, 9, 26), SpaceType.SHARED);
+        DashboardContext personal = new DashboardContext(caller, LocalDate.of(2026, 9, 26), SpaceType.PERSONAL);
 
         assertThat(shared.callerId()).isEqualTo(userId);
         assertThat(shared.isShared()).isTrue();

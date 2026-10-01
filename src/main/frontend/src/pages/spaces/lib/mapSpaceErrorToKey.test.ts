@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { createInstance } from 'i18next'
 import { mapSpaceErrorToKey } from './mapSpaceErrorToKey'
 import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
-import { InsufficientRoleError, SelfManagementError, OwnerProtectedError, SpaceRoleAlreadyAssignedError, LastOwnerError, MemberNotFoundError, AlreadyMemberError, InvitationAlreadyPendingError, InvitationNotFoundError, InvitationNotPendingError, InvitationExpiredError, PersonalSpaceImmutableError, NoAccountForEmailError, InvalidAppearanceError, InvalidSpaceNameError, InvalidSpaceDescriptionError, OwnerRoleNotAssignableError, SpaceNotAccessibleError } from '@/entities/space'
+import { InsufficientRoleError, SelfManagementError, OwnerProtectedError, SpaceRoleAlreadyAssignedError, LastOwnerError, MemberNotFoundError, AlreadyMemberError, InvitationAlreadyPendingError, InvitationNotFoundError, InvitationNotPendingError, InvitationExpiredError, PersonalSpaceImmutableError, NoAccountForIdentifierError, InvalidAppearanceError, InvalidSpaceNameError, InvalidSpaceDescriptionError, OwnerRoleNotAssignableError, SpaceNotAccessibleError } from '@/entities/space'
 import en from '../locales/en.json'
 import fr from '../locales/fr.json'
 
@@ -63,8 +63,8 @@ describe('mapSpaceErrorToKey', () => {
     ])
   })
 
-  it('maps NoAccountForEmailError', () => {
-    expect(mapSpaceErrorToKey(new NoAccountForEmailError(), 'invite')).toEqual([
+  it('maps NoAccountForIdentifierError', () => {
+    expect(mapSpaceErrorToKey(new NoAccountForIdentifierError(), 'invite')).toEqual([
       'invite.error.no_account',
       'errors.no_account',
     ])
@@ -164,7 +164,7 @@ describe('mapSpaceErrorToKey — every produced key resolves to a real translati
     SpaceRoleAlreadyAssignedError: new SpaceRoleAlreadyAssignedError(),
     LastOwnerError: new LastOwnerError(),
     PersonalSpaceImmutableError: new PersonalSpaceImmutableError(),
-    NoAccountForEmailError: new NoAccountForEmailError(),
+    NoAccountForIdentifierError: new NoAccountForIdentifierError(),
     InvalidAppearanceError: new InvalidAppearanceError(),
     InvalidSpaceNameError: new InvalidSpaceNameError(),
     InvalidSpaceDescriptionError: new InvalidSpaceDescriptionError(),

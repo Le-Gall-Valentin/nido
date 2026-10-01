@@ -88,7 +88,7 @@ class RevokeInvitationHandlerTest {
     }
 
     private SpaceInvitation invitation(UUID ownerSpaceId, InvitationStatus status) {
-        return new SpaceInvitation(invitationId, ownerSpaceId, "carol@example.com", SpaceRole.MEMBER,
+        return new SpaceInvitation(invitationId, ownerSpaceId, UUID.randomUUID(), SpaceRole.MEMBER,
             "NIDO-ABC123", status, Instant.now().plusSeconds(3600), callerId, null, Instant.now());
     }
 }

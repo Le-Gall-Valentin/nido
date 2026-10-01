@@ -5,6 +5,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface UserCredentialsPort {
-    Optional<UserCredentials> findByUsername(String username);
+    Optional<UserCredentials> findByIdentifier(String identifier);
     Optional<UserCredentials> findById(UUID id);
 }

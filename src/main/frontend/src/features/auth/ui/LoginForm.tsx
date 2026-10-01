@@ -3,7 +3,7 @@ import React, { useId, useRef, useState } from 'react'
 import { AlertTriangle, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../model/authStoreContext'
-import { Button, Input, PasswordInput, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE } from '@/shared/ui'
+import { Button, Input, PasswordInput, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import type { LoginOutcome } from '../model/types'
 
 interface LoginFormProps {
@@ -25,7 +25,7 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
   const login = useAuth((s) => s.login)
   const { t } = useTranslation('auth')
   const errorAlertId = useId()
-  const [username, setUsername] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [errorKind, setErrorKind] = useState<ErrorKind>(null)
   const [retryAfterSeconds, setRetryAfterSeconds] = useState<number | null>(null)
@@ -40,7 +40,7 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
     setRetryAfterSeconds(null)
     setIsLoading(true)
     try {
-      const outcome = await login({ username, password })
+      const outcome = await login({ identifier, password })
       if (outcome.kind !== 'authenticated') {
         onLoginOutcome?.(outcome)
       }
@@ -82,14 +82,17 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
       )}
 
       <Input
-        label={t('field.username')}
-        name="username"
+        label={t('field.identifier')}
+        name="identifier"
         type="text"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder={t('field.username_placeholder')}
+        value={identifier}
+        onChange={(e) => setIdentifier(e.target.value)}
+        placeholder={t('field.identifier_placeholder')}
         required
+        maxLength={254}
+        // "username" is the token password managers fill — it covers an address typed here too.
         autoComplete="username"
+        {...VERBATIM_INPUT_PROPS}
         autoFocus
         className={AUTH_FIELD_CLASS}
         aria-invalid={errorKind !== null}

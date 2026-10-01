@@ -50,12 +50,12 @@ public class AuthController {
     @Operation(
         summary = "Connexion utilisateur",
         description = """
-            Authentifie un utilisateur avec ses identifiants.
+            Authentifie un utilisateur avec son nom d'utilisateur ou son adresse email.
 
             **Cas 1 — Succès sans 2FA** : retourne `200` avec les informations de l'utilisateur.
             Deux cookies HttpOnly sont posés : `access_token` et `refresh_token`.
 
-            **Cas 2 — 2FA requis** : retourne `200` avec `{ "totpRequired": true }`.
+            **Cas 2 — 2FA requis** : retourne `200` avec `{ "totpRequired": true, "username": "…" }`.
             Un cookie `totp_challenge` est posé. Le client doit ensuite appeler
             `POST /api/auth/2fa/verify` avec le code TOTP pour finaliser la connexion.
 
@@ -91,7 +91,7 @@ public class AuthController {
     @RateLimiting(max = 5)
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request,
                                    HttpServletResponse response) {
-        LoginResult result = loginUseCase.login(new LoginCommand(request.username(), request.password()));
+        LoginResult result = loginUseCase.login(new LoginCommand(request.identifier(), request.password()));
         return switch (result) {
             case LoginResult.Success s -> {
                 response.addHeader(HttpHeaders.SET_COOKIE, cookieService.buildAccessCookie(s.tokens().accessToken()).toString());
@@ -101,7 +101,7 @@ public class AuthController {
             }
             case LoginResult.TotpRequired t -> {
                 response.addHeader(HttpHeaders.SET_COOKIE, cookieService.buildChallengeCookie(t.challengeId()).toString());
-                yield ResponseEntity.ok(new TotpRequiredResponse());
+                yield ResponseEntity.ok(new TotpRequiredResponse(t.username()));
             }
         };
     }

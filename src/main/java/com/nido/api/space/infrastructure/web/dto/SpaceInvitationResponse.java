@@ -9,11 +9,12 @@ import java.util.UUID;
 
 /**
  * Le code figure en clair, c'est voulu : cette réponse n'est adressée qu'aux gestionnaires
- * du groupe, qui sont les personnes qui ont émis l'invitation.
+ * du groupe, qui sont les personnes qui ont émis l'invitation. {@code username} est null quand le
+ * compte invité n'est plus résoluble ; l'adresse de l'invité n'est jamais renvoyée.
  */
 public record SpaceInvitationResponse(
     UUID id,
-    String email,
+    String username,
     SpaceRole role,
     String code,
     InvitationStatus status,
@@ -21,7 +22,7 @@ public record SpaceInvitationResponse(
     Instant createdAt
 ) {
     public static SpaceInvitationResponse from(SpaceInvitationView view) {
-        return new SpaceInvitationResponse(view.id(), view.email(), view.role(), view.code(),
+        return new SpaceInvitationResponse(view.id(), view.username(), view.role(), view.code(),
             view.status(), view.expiresAt(), view.createdAt());
     }
 }

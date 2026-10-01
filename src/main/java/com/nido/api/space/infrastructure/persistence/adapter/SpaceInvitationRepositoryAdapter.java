@@ -26,12 +26,12 @@ public class SpaceInvitationRepositoryAdapter implements SpaceInvitationPort {
     }
 
     @Override
-    public SpaceInvitation create(UUID spaceId, String email, SpaceRole role, String code,
+    public SpaceInvitation create(UUID spaceId, UUID inviteeId, SpaceRole role, String code,
                                    Instant expiresAt, UUID createdBy) {
         try {
             SpaceInvitationEntity e = new SpaceInvitationEntity();
             e.setSpaceId(spaceId);
-            e.setEmail(email);
+            e.setInviteeId(inviteeId);
             e.setRole(role);
             e.setCode(code);
             e.setStatus(InvitationStatus.PENDING);
@@ -61,8 +61,8 @@ public class SpaceInvitationRepositoryAdapter implements SpaceInvitationPort {
     }
 
     @Override
-    public List<SpaceInvitation> findPendingForEmail(String email, Instant now) {
-        return invitations.findPendingForEmail(email, now).stream()
+    public List<SpaceInvitation> findPendingForInvitee(UUID inviteeId, Instant now) {
+        return invitations.findPendingForInvitee(inviteeId, now).stream()
             .map(SpaceInvitationRepositoryAdapter::toDomain)
             .toList();
     }
@@ -80,8 +80,8 @@ public class SpaceInvitationRepositoryAdapter implements SpaceInvitationPort {
     }
 
     @Override
-    public int deleteAllForEmail(String email) {
-        return invitations.deleteAllForEmail(email);
+    public int deleteAllForInvitee(UUID inviteeId) {
+        return invitations.deleteAllForInvitee(inviteeId);
     }
 
     private SpaceException resolveConstraintViolation(DataIntegrityViolationException e) {
@@ -95,7 +95,7 @@ public class SpaceInvitationRepositoryAdapter implements SpaceInvitationPort {
     }
 
     private static SpaceInvitation toDomain(SpaceInvitationEntity e) {
-        return new SpaceInvitation(e.getId(), e.getSpaceId(), e.getEmail(), e.getRole(), e.getCode(),
+        return new SpaceInvitation(e.getId(), e.getSpaceId(), e.getInviteeId(), e.getRole(), e.getCode(),
             e.getStatus(), e.getExpiresAt(), e.getCreatedBy(), e.getAcceptedAt(), e.getCreatedAt());
     }
 }

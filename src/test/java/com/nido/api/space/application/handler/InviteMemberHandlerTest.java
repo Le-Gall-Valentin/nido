@@ -60,15 +60,15 @@ class InviteMemberHandlerTest {
     @Test
     void an_admin_invites_an_existing_account() {
         when(spaceRepository.findById(spaceId)).thenReturn(Optional.of(sharedSpace()));
-        when(memberProfilePort.findByEmail("carol@example.com"))
+        when(memberProfilePort.findByIdentifier("carol@example.com"))
             .thenReturn(Optional.of(new MemberProfile(inviteeId, "carol", "carol@example.com")));
         when(spaceMembershipPort.find(spaceId, inviteeId)).thenReturn(Optional.empty());
         when(invitationCodeGeneratorPort.generate()).thenReturn("NIDO-ABC123");
         Instant beforeCall = Instant.now();
-        SpaceInvitation created = new SpaceInvitation(UUID.randomUUID(), spaceId, "carol@example.com",
+        SpaceInvitation created = new SpaceInvitation(UUID.randomUUID(), spaceId, inviteeId,
             SpaceRole.MEMBER, "NIDO-ABC123", com.nido.api.space.domain.model.InvitationStatus.PENDING,
             beforeCall.plus(InviteMemberCommand.VALIDITY), callerId, null, beforeCall);
-        when(spaceInvitationPort.create(any(), anyString(), any(), anyString(), any(), any()))
+        when(spaceInvitationPort.create(any(), any(), any(), anyString(), any(), any()))
             .thenReturn(created);
 
         SpaceInvitationView view = handler.invite(
@@ -78,12 +78,12 @@ class InviteMemberHandlerTest {
 
         verify(invitationCodeGeneratorPort).generate();
         ArgumentCaptor<Instant> expiresAtCaptor = ArgumentCaptor.forClass(Instant.class);
-        verify(spaceInvitationPort).create(eq(spaceId), eq("carol@example.com"), eq(SpaceRole.MEMBER),
+        verify(spaceInvitationPort).create(eq(spaceId), eq(inviteeId), eq(SpaceRole.MEMBER),
             eq("NIDO-ABC123"), expiresAtCaptor.capture(), eq(callerId));
         assertThat(expiresAtCaptor.getValue())
             .isBetween(beforeCall.plus(InviteMemberCommand.VALIDITY), afterCall.plus(InviteMemberCommand.VALIDITY));
         assertThat(view.code()).isEqualTo("NIDO-ABC123");
-        assertThat(view.email()).isEqualTo("carol@example.com");
+        assertThat(view.username()).isEqualTo("carol");
         assertThat(view.role()).isEqualTo(SpaceRole.MEMBER);
         assertThat(view.expiresAt()).isEqualTo(created.expiresAt());
     }
@@ -118,19 +118,19 @@ class InviteMemberHandlerTest {
     @Test
     void an_address_without_an_account_is_refused() {
         when(spaceRepository.findById(spaceId)).thenReturn(Optional.of(sharedSpace()));
-        when(memberProfilePort.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
+        when(memberProfilePort.findByIdentifier("nobody@example.com")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> handler.invite(
                 new InviteMemberCommand(spaceId, "nobody@example.com", SpaceRole.MEMBER, callerId),
                 membership(callerId, SpaceRole.OWNER)))
-            .isInstanceOf(SpaceException.NoAccountForEmail.class);
+            .isInstanceOf(SpaceException.NoAccountForIdentifier.class);
         verify(spaceInvitationPort, never()).create(any(), any(), any(), any(), any(), any());
     }
 
     @Test
     void an_address_already_a_member_is_refused() {
         when(spaceRepository.findById(spaceId)).thenReturn(Optional.of(sharedSpace()));
-        when(memberProfilePort.findByEmail("carol@example.com"))
+        when(memberProfilePort.findByIdentifier("carol@example.com"))
             .thenReturn(Optional.of(new MemberProfile(inviteeId, "carol", "carol@example.com")));
         when(spaceMembershipPort.find(spaceId, inviteeId))
             .thenReturn(Optional.of(membership(inviteeId, SpaceRole.MEMBER)));
@@ -151,6 +151,24 @@ class InviteMemberHandlerTest {
                 membership(callerId, SpaceRole.OWNER)))
             .isInstanceOf(SpaceException.PersonalSpaceImmutable.class);
         verify(spaceInvitationPort, never()).create(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void a_username_is_enough_to_invite() {
+        when(spaceRepository.findById(spaceId)).thenReturn(Optional.of(sharedSpace()));
+        when(memberProfilePort.findByIdentifier("carol"))
+            .thenReturn(Optional.of(new MemberProfile(inviteeId, "carol", "carol@example.com")));
+        when(spaceMembershipPort.find(spaceId, inviteeId)).thenReturn(Optional.empty());
+        when(invitationCodeGeneratorPort.generate()).thenReturn("NIDO-ABC123");
+        when(spaceInvitationPort.create(any(), any(), any(), anyString(), any(), any()))
+            .thenReturn(new SpaceInvitation(UUID.randomUUID(), spaceId, inviteeId, SpaceRole.MEMBER, "NIDO-ABC123",
+                com.nido.api.space.domain.model.InvitationStatus.PENDING, Instant.now().plus(InviteMemberCommand.VALIDITY),
+                callerId, null, Instant.now()));
+
+        handler.invite(new InviteMemberCommand(spaceId, "carol", SpaceRole.MEMBER, callerId),
+            membership(callerId, SpaceRole.ADMIN));
+
+        verify(spaceInvitationPort).create(eq(spaceId), eq(inviteeId), eq(SpaceRole.MEMBER), eq("NIDO-ABC123"), any(), eq(callerId));
     }
 
     @Test

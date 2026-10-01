@@ -1,6 +1,7 @@
 package com.nido.api.identity.application.handler;
 
 import com.nido.api.identity.application.port.in.UpdateMyProfileUseCase;
+import com.nido.api.identity.domain.model.EmailAddress;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.UpdateProfileCommand;
 import com.nido.api.identity.domain.model.User;
@@ -12,7 +13,6 @@ import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Locale;
 
 @ApplicationService
 public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
@@ -50,7 +50,7 @@ public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
         if (!user.isActive()) {
             throw new IdentityException.UserNotActive();
         }
-        boolean addressChanges = user.email() == null || !user.email().toLowerCase(Locale.ROOT).equals(command.email());
+        boolean addressChanges = user.email() == null || !EmailAddress.normalize(user.email()).equals(command.email());
         if (addressChanges) {
             if (command.currentPassword() == null || command.currentPassword().isBlank()) {
                 throw new IdentityException.CurrentPasswordRequired();

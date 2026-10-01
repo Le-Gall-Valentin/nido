@@ -111,7 +111,7 @@ class SavingsOutlookTest {
     }
 
     private DashboardContext context(SpaceType type) {
-        return new DashboardContext(caller, "me@test.com", TODAY, type);
+        return new DashboardContext(caller, TODAY, type);
     }
 
     private static SavingsOutlook.Goal goal(String name, String target, String contributed, LocalDate targetDate) {

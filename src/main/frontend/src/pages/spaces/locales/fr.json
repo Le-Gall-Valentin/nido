@@ -19,9 +19,9 @@
     "already_assigned": "Ce membre a déjà ce rôle.",
     "last_owner": "Transférez la propriété avant de quitter ce contexte.",
     "personal_immutable": "L'espace personnel ne peut être ni renommé, ni partagé, ni supprimé.",
-    "no_account": "Aucun compte n'existe pour cette adresse. Demandez à un administrateur d'en créer un.",
+    "no_account": "Aucun compte ne correspond à cet identifiant ou à cette adresse. Demandez à un administrateur d'en créer un.",
     "already_member": "Cette personne fait déjà partie de ce contexte.",
-    "invitation_pending": "Cette adresse a déjà une invitation en attente.",
+    "invitation_pending": "Cette personne a déjà une invitation en attente.",
     "invitation_not_found": "Cette invitation est introuvable.",
     "invitation_not_pending": "Cette invitation n'est plus en attente.",
     "invitation_expired": "Cette invitation a expiré.",
@@ -67,7 +67,7 @@
       "REVOKED": "Révoquée"
     },
     "action_copy": "Copier le code {{code}}",
-    "action_revoke": "Révoquer l'invitation de {{email}}"
+    "action_revoke": "Révoquer l'invitation de {{username}}"
   },
   "create": {
     "title": "Créer un groupe",
@@ -109,13 +109,13 @@
   },
   "invite": {
     "title": "Inviter un membre",
-    "email": "Adresse e-mail",
-    "email_placeholder": "nom@exemple.fr",
+    "identifier": "Identifiant ou email",
+    "identifier_placeholder": "prenom.nom ou nom@exemple.fr",
     "role": "Rôle",
     "cancel": "Annuler",
     "submit": "Envoyer l'invitation",
     "success_title": "Invitation envoyée",
-    "success_body": "{{email}} a désormais une invitation qui l'attend sur sa page de groupes.",
+    "success_body": "{{username}} a désormais une invitation qui l'attend sur sa page de groupes.",
     "code_hint": "Code de référence (inutile pour rejoindre)",
     "done": "Terminé"
   },

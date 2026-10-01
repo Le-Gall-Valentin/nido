@@ -47,9 +47,9 @@ export class AlreadyMemberError extends Error {
   constructor() { super('This user is already a member'); this.name = 'AlreadyMemberError' }
 }
 
-/** 409 InvitationAlreadyPending: this address already has an outstanding invitation. */
+/** 409 InvitationAlreadyPending: this account already has an outstanding invitation. */
 export class InvitationAlreadyPendingError extends Error {
-  constructor() { super('This address already has a pending invitation'); this.name = 'InvitationAlreadyPendingError' }
+  constructor() { super('This account already has a pending invitation'); this.name = 'InvitationAlreadyPendingError' }
 }
 
 /** 404 InvitationNotFound: unknown, foreign, or already-consumed invitation id/code. */
@@ -81,9 +81,9 @@ export class PersonalSpaceImmutableError extends Error {
   constructor() { super('The personal space cannot be renamed, shared or deleted'); this.name = 'PersonalSpaceImmutableError' }
 }
 
-/** 422 NoAccountForEmail: the invited address has no account on the platform. */
-export class NoAccountForEmailError extends Error {
-  constructor() { super('No account exists for this address'); this.name = 'NoAccountForEmailError' }
+/** 422 NoAccountForIdentifier: nobody has this username or this email address. */
+export class NoAccountForIdentifierError extends Error {
+  constructor() { super('No account matches this username or email address'); this.name = 'NoAccountForIdentifierError' }
 }
 
 /**
@@ -125,7 +125,7 @@ const CONFLICT_TITLES: Record<string, () => never> = {
 const UNPROCESSABLE_TITLES: Record<string, () => never> = {
   InvitationExpired: () => { throw new InvitationExpiredError() },
   PersonalSpaceImmutable: () => { throw new PersonalSpaceImmutableError() },
-  NoAccountForEmail: () => { throw new NoAccountForEmailError() },
+  NoAccountForIdentifier: () => { throw new NoAccountForIdentifierError() },
   InvalidAppearance: () => { throw new InvalidAppearanceError() },
   InvalidSpaceName: () => { throw new InvalidSpaceNameError() },
   InvalidSpaceDescription: () => { throw new InvalidSpaceDescriptionError() },
@@ -267,9 +267,9 @@ export const spaceApi: ISpaceApi = {
     }
   },
 
-  async inviteMember(spaceId: string, email: string, role: AssignableSpaceRole): Promise<SpaceInvitation> {
+  async inviteMember(spaceId: string, identifier: string, role: AssignableSpaceRole): Promise<SpaceInvitation> {
     try {
-      const res = await client.post<SpaceInvitation>(`/spaces/${spaceId}/invitations`, { email, role })
+      const res = await client.post<SpaceInvitation>(`/spaces/${spaceId}/invitations`, { identifier, role })
       return res.data
     } catch (error) {
       handleError(error)

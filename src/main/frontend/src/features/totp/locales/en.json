@@ -3,7 +3,7 @@
     "title": "Two-step verification",
     "subtitle": "Hello {{username}}. Enter the 6-digit code from your authenticator app.",
     "submit": "Verify",
-    "back": "← Use another account",
+    "back": "Use another account",
     "help": "Lost your device? Ask an administrator to reset your two-factor authentication.",
     "code_group_label": "Verification code",
     "digit_label": "Digit {{n}}",

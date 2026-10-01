@@ -26,12 +26,12 @@ class InvitationsDashboardSourceTest {
     private final ListMyInvitationsUseCase listMine = mock(ListMyInvitationsUseCase.class);
 
     @Test
-    void anInvitationSentToTheCallersAddressBecomesAnItem() {
+    void anInvitationSentToTheCallerBecomesAnItem() {
         // The order is PendingInvitations' (see PendingInvitationsTest); this is the translation.
         ReceivedInvitationView invitation = view("Club de lecture", "paul", Instant.parse("2026-09-28T09:00:00Z"));
-        when(listMine.listMine("alice@test.com")).thenReturn(List.of(invitation));
+        when(listMine.listMine(caller.userId())).thenReturn(List.of(invitation));
 
-        SourceResult result = read("alice@test.com");
+        SourceResult result = read();
 
         assertThat(result.card()).isNull();
         assertThat(result.attention()).containsExactly(new AttentionItem.Invitation(invitation.invitationId(),
@@ -40,10 +40,10 @@ class InvitationsDashboardSourceTest {
 
     @Test
     void anAnonymizedInviterStaysUnnamed() {
-        when(listMine.listMine("alice@test.com")).thenReturn(List.of(
+        when(listMine.listMine(caller.userId())).thenReturn(List.of(
             view("Coloc Lyon", null, Instant.parse("2026-10-05T09:00:00Z"))));
 
-        assertThat(read("alice@test.com").attention())
+        assertThat(read().attention())
             .extracting(item -> ((AttentionItem.Invitation) item).invitedByUsername())
             .containsOnlyNulls();
     }
@@ -53,9 +53,9 @@ class InvitationsDashboardSourceTest {
         assertThat(new InvitationsDashboardSource(listMine).kind()).isEqualTo(CardKind.INVITATIONS);
     }
 
-    private SourceResult read(String email) {
+    private SourceResult read() {
         return new InvitationsDashboardSource(listMine)
-            .read(new DashboardContext(caller, email, LocalDate.of(2026, 9, 26), SpaceType.SHARED));
+            .read(new DashboardContext(caller, LocalDate.of(2026, 9, 26), SpaceType.SHARED));
     }
 
     private static ReceivedInvitationView view(String spaceName, String invitedBy, Instant expiresAt) {

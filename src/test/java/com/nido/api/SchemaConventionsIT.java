@@ -111,27 +111,24 @@ class SchemaConventionsIT {
 
         assertThat(spaceScopedTables).isGreaterThanOrEqualTo(14);
     }
+
     /**
-     * An index only serves a query whose predicate it matches. The invitation email index used
-     * to sit on the raw column while every lookup compares {@code lower(email)}, so Postgres
-     * could never use it — a cost on every write for nothing, and invisible to any test that
-     * only checked the index existed.
-     *
-     * <p>Row counts here are far too small for the planner to prefer an index on its own, so
-     * sequential scans are discouraged to ask the question that actually matters: is this index
-     * usable for this predicate at all? That is exactly what was wrong before.
+     * "My invitations" and the dashboard look invitations up by account on every visit. The foreign-key
+     * rule above already demands an index on invitee_id; this pins that the lookup can actually use it.
+     * Row counts are far too small for the planner to choose an index on its own, so sequential scans
+     * are discouraged to ask the only question that matters: is the index usable for this predicate?
      */
     @Test
     @Transactional
-    void the_invitation_email_index_matches_the_query_that_looks_addresses_up() {
+    void the_received_invitations_are_reached_through_an_index() {
         jdbcTemplate.execute("SET LOCAL enable_seqscan = off");
 
         String plan = String.join("\n", jdbcTemplate.queryForList(
-            "explain select id from space_invitations where lower(email) = lower('someone@test.com')",
+            "explain select id from space_invitations where invitee_id = '00000000-0000-0000-0000-000000000000'::uuid",
             String.class));
 
         assertThat(plan)
-            .as("the planner must be able to reach the invitations by address through an index")
-            .contains("idx_space_invitations_lower_email");
+            .as("the planner must be able to reach an account's invitations through an index")
+            .contains("idx_space_invitations_invitee");
     }
 }

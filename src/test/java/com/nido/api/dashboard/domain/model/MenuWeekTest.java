@@ -17,7 +17,7 @@ class MenuWeekTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 9, 26);
     private final DashboardContext context = new DashboardContext(
         new SpaceMembership(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), SpaceRole.MEMBER, Instant.now()),
-        "me@test.com", TODAY, SpaceType.SHARED);
+        TODAY, SpaceType.SHARED);
 
     @Test
     void theWeekRunsSevenDaysFromToday() {

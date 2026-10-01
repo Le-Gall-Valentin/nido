@@ -55,7 +55,7 @@ public class SpaceInvitationController {
             @Valid @RequestBody InviteMemberRequest request,
             @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.ADMIN) SpaceMembership membership) {
         SpaceInvitationView view = inviteMemberUseCase.invite(
-            new InviteMemberCommand(spaceId, request.email(), request.role(), membership.userId()), membership);
+            new InviteMemberCommand(spaceId, request.identifier(), request.role(), membership.userId()), membership);
         SpaceInvitationResponse body = SpaceInvitationResponse.from(view);
         return ResponseEntity.created(URI.create("/api/spaces/" + spaceId + "/invitations/" + view.id())).body(body);
     }

@@ -1,0 +1,82 @@
+databaseChangeLog:
+  - changeSet:
+      id: 061-bind-space-invitations-to-accounts
+      author: nido
+      comment: >
+        An invitation is for an account — one cannot be issued without it — so it now names the account
+        instead of copying its address. The address copy went stale when the invitee changed it (the
+        invitation could no longer be seen or accepted) and survived the account's GDPR deletion. Each
+        invitation is matched to the account holding its address (lower-case since 060); one that no
+        account answers to any more could not be accepted, and is dropped. ON DELETE CASCADE only
+        matters to hard deletes: an anonymized account keeps its row, and its invitations are removed
+        explicitly by the space context.
+      changes:
+        - addColumn:
+            tableName: space_invitations
+            columns:
+              - column:
+                  name: invitee_id
+                  type: UUID
+        - sql:
+            sql: >
+              UPDATE space_invitations i SET invitee_id = u.id
+              FROM users u
+              WHERE NOT u.is_deleted AND u.email = lower(i.email)
+        - sql:
+            sql: DELETE FROM space_invitations WHERE invitee_id IS NULL
+        - addNotNullConstraint:
+            tableName: space_invitations
+            columnName: invitee_id
+            columnDataType: UUID
+        - addForeignKeyConstraint:
+            baseTableName: space_invitations
+            baseColumnNames: invitee_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_space_invitations_invitee
+            onDelete: CASCADE
+        - createIndex:
+            tableName: space_invitations
+            indexName: idx_space_invitations_invitee
+            columns:
+              - column:
+                  name: invitee_id
+        - sql:
+            sql: DROP INDEX IF EXISTS uq_space_invitations_pending
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_space_invitations_pending ON space_invitations (space_id, invitee_id) WHERE status = 'PENDING'
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_space_invitations_lower_email
+        - dropColumn:
+            tableName: space_invitations
+            columnName: email
+      rollback:
+        - addColumn:
+            tableName: space_invitations
+            columns:
+              - column:
+                  name: email
+                  type: VARCHAR(255)
+        - sql:
+            sql: UPDATE space_invitations i SET email = u.email FROM users u WHERE u.id = i.invitee_id
+        - sql:
+            sql: DELETE FROM space_invitations WHERE email IS NULL
+        - addNotNullConstraint:
+            tableName: space_invitations
+            columnName: email
+            columnDataType: VARCHAR(255)
+        - sql:
+            sql: DROP INDEX IF EXISTS uq_space_invitations_pending
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_space_invitations_pending ON space_invitations (space_id, lower(email)) WHERE status = 'PENDING'
+        - sql:
+            sql: CREATE INDEX idx_space_invitations_lower_email ON space_invitations (lower(email))
+        - dropIndex:
+            tableName: space_invitations
+            indexName: idx_space_invitations_invitee
+        - dropForeignKeyConstraint:
+            baseTableName: space_invitations
+            constraintName: fk_space_invitations_invitee
+        - dropColumn:
+            tableName: space_invitations
+            columnName: invitee_id

@@ -100,7 +100,7 @@ class AgendaDayTest {
     }
 
     private DashboardContext context() {
-        return new DashboardContext(caller, "me@test.com", TODAY, SpaceType.SHARED);
+        return new DashboardContext(caller, TODAY, SpaceType.SHARED);
     }
 
     private static AgendaEvent allDay(String title, LocalDate start, LocalDate end) {

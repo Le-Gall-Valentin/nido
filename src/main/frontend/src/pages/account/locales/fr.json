@@ -24,7 +24,7 @@
   "profile": {
     "title": "Informations personnelles",
     "subtitle": "Visible des autres utilisateurs de l'organisation.",
-    "username": "Nom d'utilisateur",
+    "username": "Identifiant",
     "email": "Adresse e-mail",
     "save": "Enregistrer",
     "cancel": "Annuler",
@@ -33,9 +33,10 @@
     "current_password_hint": "Votre adresse sert à récupérer votre compte : confirmez avec votre mot de passe.",
     "error": {
       "wrong_password": "Mot de passe actuel incorrect.",
-      "conflict": "Ce nom d'utilisateur ou cette adresse e-mail est déjà utilisé(e).",
+      "conflict": "Cet identifiant ou cette adresse e-mail est déjà utilisé(e).",
       "username_too_short": "Minimum 3 caractères.",
       "username_too_long": "Maximum 50 caractères.",
+      "username_at": "L'identifiant ne peut pas contenir @.",
       "server": "Une erreur est survenue. Veuillez réessayer.",
       "network": "Réseau indisponible.",
       "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard.",

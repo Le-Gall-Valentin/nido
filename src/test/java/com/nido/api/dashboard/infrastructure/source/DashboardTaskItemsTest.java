@@ -24,7 +24,7 @@ class DashboardTaskItemsTest {
     private final UUID me = UUID.randomUUID();
     private final DashboardContext shared = new DashboardContext(
         new SpaceMembership(UUID.randomUUID(), UUID.randomUUID(), me, SpaceRole.MEMBER, Instant.now()),
-        "me@test.com", LocalDate.of(2026, 9, 26), SpaceType.SHARED);
+        LocalDate.of(2026, 9, 26), SpaceType.SHARED);
 
     @Test
     void anItemKnowsWhetherItIsTheCallersToDo() {

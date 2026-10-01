@@ -130,7 +130,7 @@ class DashboardControllerIT {
             .formatted(today.plusDays(100)));
         mockMvc.perform(post("/api/spaces/" + bobsSpaceId + "/invitations")
                 .cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"alice@test.com\",\"role\":\"MEMBER\"}"))
+                .content("{\"identifier\":\"alice@test.com\",\"role\":\"MEMBER\"}"))
             .andExpect(status().isCreated());
 
         mockMvc.perform(get(dashboard()).cookie(tokenFor(aliceId)))
@@ -346,7 +346,7 @@ class DashboardControllerIT {
         members.saveAndFlush(member);
     }
 
-    /** The e-mail claim is the user's real address: received invitations are looked up by it. */
+    /** A real session carries the address; nothing about invitations reads it any more. */
     private Cookie tokenFor(UUID userId) {
         String token = Jwts.builder()
             .issuer("nido")

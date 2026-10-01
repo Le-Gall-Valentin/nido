@@ -16,8 +16,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface UserIdentityJpaRepository extends JpaRepository<UserIdentityEntity, UUID> {
-    Optional<UserIdentityEntity> findByUsername(String username);
-    Optional<UserIdentityEntity> findByEmail(String email);
+    // lower() on both sides, as the unique index uq_users_username_active is on lower(username) (062).
+    @Query("SELECT u FROM UserIdentityEntity u WHERE lower(u.username) = lower(:username) AND u.deleted = false")
+    Optional<UserIdentityEntity> findNotDeletedByUsernameIgnoreCase(@Param("username") String username);
+
+    Optional<UserIdentityEntity> findByEmailAndDeletedFalse(String email);
 
     @Query("SELECT u FROM UserIdentityEntity u WHERE u.id = :id AND u.deleted = false")
     Optional<UserIdentityEntity> findByIdAndDeletedFalse(@Param("id") UUID id);
@@ -56,9 +59,6 @@ public interface UserIdentityJpaRepository extends JpaRepository<UserIdentityEnt
     @Transactional
     @Query("UPDATE UserIdentityEntity u SET u.role = :newRole WHERE u.id = :id AND u.role = :currentRole AND u.deleted = false")
     int updateRoleById(@Param("id") UUID id, @Param("currentRole") Role currentRole, @Param("newRole") Role newRole);
-
-    @Query("SELECT u FROM UserIdentityEntity u WHERE lower(u.email) = lower(:email) AND u.deleted = false")
-    List<UserIdentityEntity> findNotDeletedByEmailIgnoreCase(@Param("email") String email);
 
     @Modifying(clearAutomatically = true)
     @Transactional

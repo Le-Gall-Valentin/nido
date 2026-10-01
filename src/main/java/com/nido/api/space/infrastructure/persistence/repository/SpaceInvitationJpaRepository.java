@@ -19,12 +19,12 @@ public interface SpaceInvitationJpaRepository extends JpaRepository<SpaceInvitat
 
     @Query("""
         select i from SpaceInvitationEntity i
-        where lower(i.email) = lower(:email)
+        where i.inviteeId = :inviteeId
           and i.status = com.nido.api.space.domain.model.InvitationStatus.PENDING
           and i.expiresAt > :now
         order by i.createdAt desc
         """)
-    List<SpaceInvitationEntity> findPendingForEmail(@Param("email") String email, @Param("now") Instant now);
+    List<SpaceInvitationEntity> findPendingForInvitee(@Param("inviteeId") UUID inviteeId, @Param("now") Instant now);
 
     @Modifying(clearAutomatically = true)
     @Query("""
@@ -47,9 +47,6 @@ public interface SpaceInvitationJpaRepository extends JpaRepository<SpaceInvitat
     // credential/TOTP deletion via deleteById()); without it, clearAutomatically would
     // detach those pending removals before they ever reach the database.
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("""
-        delete from SpaceInvitationEntity i
-        where lower(i.email) = lower(:email)
-        """)
-    int deleteAllForEmail(@Param("email") String email);
+    @Query("delete from SpaceInvitationEntity i where i.inviteeId = :inviteeId")
+    int deleteAllForInvitee(@Param("inviteeId") UUID inviteeId);
 }

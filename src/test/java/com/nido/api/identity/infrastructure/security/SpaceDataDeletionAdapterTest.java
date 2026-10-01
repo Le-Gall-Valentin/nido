@@ -20,8 +20,8 @@ class SpaceDataDeletionAdapterTest {
         SpaceDataDeletionAdapter adapter = new SpaceDataDeletionAdapter(handleUserDeletionUseCase);
         UUID userId = UUID.randomUUID();
 
-        adapter.deleteSpaceData(userId, "user@example.com");
+        adapter.deleteSpaceData(userId);
 
-        verify(handleUserDeletionUseCase).handleUserDeletion(userId, "user@example.com");
+        verify(handleUserDeletionUseCase).handleUserDeletion(userId);
     }
 }

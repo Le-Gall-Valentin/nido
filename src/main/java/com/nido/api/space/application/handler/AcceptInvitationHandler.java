@@ -34,29 +34,29 @@ public class AcceptInvitationHandler implements AcceptInvitationUseCase {
 
     @Override
     @Transactional
-    public UUID accept(AcceptInvitationCommand command, UUID userId, String userEmail) {
+    public UUID accept(AcceptInvitationCommand command, UUID userId) {
         SpaceInvitation invitation = spaceInvitationPort.findByCode(command.code())
             .orElseThrow(SpaceException.InvitationNotFound::new);
-        return acceptInvitation(invitation, userId, userEmail);
+        return acceptInvitation(invitation, userId);
     }
 
     @Override
     @Transactional
-    public UUID acceptById(UUID invitationId, UUID userId, String userEmail) {
+    public UUID acceptById(UUID invitationId, UUID userId) {
         SpaceInvitation invitation = spaceInvitationPort.findById(invitationId)
             .orElseThrow(SpaceException.InvitationNotFound::new);
-        return acceptInvitation(invitation, userId, userEmail);
+        return acceptInvitation(invitation, userId);
     }
 
     // Chemin partagé par accept() et acceptById() : seule la façon de retrouver l'invitation
     // diffère entre les deux entrées, tout le reste — l'enchaînement des garde-fous et des
     // écritures — doit rester rigoureusement identique.
-    private UUID acceptInvitation(SpaceInvitation invitation, UUID userId, String userEmail) {
+    private UUID acceptInvitation(SpaceInvitation invitation, UUID userId) {
         Instant now = Instant.now();
-        // L'ordre compte : l'adresse d'abord. Un appelant qui soumet des codes ou des
+        // L'ordre compte : le destinataire d'abord. Un appelant qui soumet des codes ou des
         // identifiants au hasard ne doit pas pouvoir distinguer « inexistant » de « destiné
         // à autrui », et les deux rendent le même 404 (cf. SpaceExceptionHandler).
-        invitation.ensureAddressedTo(userEmail);
+        invitation.ensureAddressedTo(userId);
         invitation.ensurePending();
         invitation.ensureNotExpired(now);
         Space space = spaceRepository.findById(invitation.spaceId())

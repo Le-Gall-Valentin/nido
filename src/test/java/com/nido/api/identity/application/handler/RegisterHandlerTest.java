@@ -62,7 +62,7 @@ class RegisterHandlerTest {
 
     @Test
     void register_insufficientPermissions_throwsInsufficientPermissions() {
-        assertThatThrownBy(() -> handler.register(cmd("sa", Role.SUPER_ADMIN), Role.SUPER_ADMIN))
+        assertThatThrownBy(() -> handler.register(cmd("sa-account", Role.SUPER_ADMIN), Role.SUPER_ADMIN))
             .isInstanceOf(IdentityException.InsufficientPermissions.class);
         verifyNoInteractions(userCommandPort);
     }

@@ -25,7 +25,7 @@
   },
   "close": "Fermer",
   "search": {
-    "placeholder": "Rechercher par nom d'utilisateur ou email…",
+    "placeholder": "Rechercher par identifiant ou email…",
     "clear": "Effacer la recherche"
   },
   "perm": {
@@ -58,13 +58,14 @@
     "cancel": "Annuler",
     "submit": "Créer",
     "error": {
-      "conflict": "Ce nom d'utilisateur ou cette adresse e-mail est déjà utilisé(e).",
+      "conflict": "Cet identifiant ou cette adresse e-mail est déjà utilisé(e).",
       "forbidden": "Vous n'avez pas les droits nécessaires pour créer cet utilisateur.",
       "not_found": "Utilisateur introuvable.",
       "server": "Une erreur est survenue. Veuillez réessayer.",
       "network": "Réseau indisponible.",
       "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard.",
       "username_length": "L'identifiant doit contenir entre 3 et 50 caractères.",
+      "username_at": "L'identifiant ne peut pas contenir @.",
       "email_invalid": "Veuillez saisir une adresse e-mail valide.",
       "password_too_short": "Le mot de passe doit contenir au moins 8 caractères.",
       "password_too_long": "Le mot de passe ne doit pas dépasser 72 caractères, moins avec des accents ou des emojis.",

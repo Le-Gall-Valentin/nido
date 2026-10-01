@@ -6,14 +6,14 @@ import jakarta.validation.constraints.Size;
 
 @Schema(description = "Credentials de connexion")
 public record LoginRequest(
-    @Schema(description = "Nom d'utilisateur", example = "john.doe", maxLength = 50)
-    @NotBlank @Size(max = 50) String username,
+    @Schema(description = "Nom d'utilisateur ou adresse email", example = "john.doe", maxLength = 254)
+    @NotBlank @Size(max = 254) String identifier,
 
     @Schema(description = "Mot de passe", example = "S3cr3t!Pass", maxLength = 72)
     @NotBlank @Size(max = 72) String password
 ) {
     @Override
     public String toString() {
-        return "LoginRequest[username=" + username + "]";
+        return "LoginRequest[identifier=***]";
     }
 }

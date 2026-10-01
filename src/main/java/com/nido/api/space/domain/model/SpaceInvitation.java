@@ -1,14 +1,13 @@
 package com.nido.api.space.domain.model;
 
 import java.time.Instant;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
 public record SpaceInvitation(
     UUID id,
     UUID spaceId,
-    String email,
+    UUID inviteeId,
     SpaceRole role,
     String code,
     InvitationStatus status,
@@ -20,7 +19,7 @@ public record SpaceInvitation(
     public SpaceInvitation {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(spaceId, "spaceId");
-        Objects.requireNonNull(email, "email");
+        Objects.requireNonNull(inviteeId, "inviteeId");
         Objects.requireNonNull(role, "role");
         Objects.requireNonNull(code, "code");
         Objects.requireNonNull(status, "status");
@@ -44,16 +43,16 @@ public record SpaceInvitation(
     }
 
     /**
-     * Vérifie que l'appelant est bien le titulaire de l'adresse invitée.
+     * Vérifie que l'appelant est bien le compte invité.
      *
      * <p>C'est ce contrôle, et lui seul, qui rend légitime le stockage du code en clair :
      * détenir le code ne suffit pas, il faut être authentifié comme la personne invitée.
      * Le relâcher — pour offrir un lien d'invitation ouvert par exemple — transformerait
      * le code en jeton porteur et rendrait le stockage en clair fautif.
      */
-    public void ensureAddressedTo(String callerEmail) {
-        if (callerEmail == null || !email.toLowerCase(Locale.ROOT).equals(callerEmail.toLowerCase(Locale.ROOT))) {
-            throw new SpaceException.InvitationEmailMismatch();
+    public void ensureAddressedTo(UUID callerId) {
+        if (!inviteeId.equals(callerId)) {
+            throw new SpaceException.InvitationForAnotherAccount();
         }
     }
 }

@@ -28,8 +28,8 @@ public class SpaceInvitationEntity {
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
 
-    @Column(nullable = false, length = 255)
-    private String email;
+    @Column(name = "invitee_id", nullable = false)
+    private UUID inviteeId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

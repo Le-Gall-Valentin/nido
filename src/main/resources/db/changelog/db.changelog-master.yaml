@@ -176,3 +176,12 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/059-create-password-reset-tokens.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/060-users-identifier-rules.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/061-bind-space-invitations-to-accounts.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/062-users-username-ignores-case.yaml
+      relativeToChangelogFile: false

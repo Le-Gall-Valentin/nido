@@ -189,7 +189,7 @@ class TotpControllerIT {
         String before = objectMapper.readTree(
             mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
                 .andReturn().getResponse().getContentAsString()).get("secret").asText();
-        String targetId = userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId().toString();
+        String targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").orElseThrow().getId().toString();
 
         mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(loginAs("superadmin", "adminpass")))
             .andExpect(status().isNoContent());
@@ -222,7 +222,7 @@ class TotpControllerIT {
             .andExpect(jsonPath("$.totpEnabled").value(true));
 
         UserTotpEntity stored = userTotpJpaRepository.findById(
-            userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId()).orElseThrow();
+            userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").orElseThrow().getId()).orElseThrow();
         assertThat(stored.getTotpSecret())
             .as("the proven secret is persisted, encrypted, by the confirmation")
             .isNotNull().isNotEqualTo(secret);
@@ -238,7 +238,7 @@ class TotpControllerIT {
     void setup_alreadyEnabled_returns409() throws Exception {
         // totpuser has totpEnabled=true; logging in as them starts the challenge flow (no access_token).
         // Inject authentication directly to reach the endpoint as an authenticated totpuser.
-        String totpUserId = userIdentityJpaRepository.findByUsername("totpuser")
+        String totpUserId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser")
             .orElseThrow().getId().toString();
         CustomUserDetails totpPrincipal = new CustomUserDetails(
             java.util.UUID.fromString(totpUserId), Role.USER, "totpuser@test.com");
@@ -386,7 +386,7 @@ class TotpControllerIT {
 
     @Test
     void status_authenticated_totpEnabled_returns200WithTrue() throws Exception {
-        String totpUserId = userIdentityJpaRepository.findByUsername("totpuser")
+        String totpUserId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser")
             .orElseThrow().getId().toString();
         CustomUserDetails totpPrincipal = new CustomUserDetails(
             java.util.UUID.fromString(totpUserId), Role.USER, "totpuser@test.com");
@@ -415,7 +415,7 @@ class TotpControllerIT {
 
     @Test
     void disable_validCode_returns204() throws Exception {
-        String totpUserId = userIdentityJpaRepository.findByUsername("totpuser")
+        String totpUserId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser")
             .orElseThrow().getId().toString();
         CustomUserDetails totpPrincipal = new CustomUserDetails(
             java.util.UUID.fromString(totpUserId), Role.USER, "totpuser@test.com");
@@ -465,7 +465,7 @@ class TotpControllerIT {
         // apart and the REQUIRES_NEW that used to paper over it is gone. The property is unchanged
         // and still worth holding — it is only read somewhere else.
         Cookie access = loginAs("testuser", "password");
-        java.util.UUID userId = userIdentityJpaRepository.findByUsername("testuser").orElseThrow().getId();
+        java.util.UUID userId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").orElseThrow().getId();
 
         mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
             .andExpect(status().isOk());

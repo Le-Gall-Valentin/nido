@@ -35,7 +35,7 @@ const MEMBERS: SpaceMember[] = [
   { userId: 'u-2', username: 'bob', email: 'bob@test.com', role: 'MEMBER', joinedAt: '2024-01-02T00:00:00Z' },
 ]
 const INVITATIONS: SpaceInvitation[] = [
-  { id: 'i-1', email: 'carol@test.com', role: 'MEMBER', code: 'NIDO-ABC', status: 'PENDING', expiresAt: '2999-01-01T00:00:00Z', createdAt: '2024-01-01T00:00:00Z' },
+  { id: 'i-1', username: 'carol', role: 'MEMBER', code: 'NIDO-ABC', status: 'PENDING', expiresAt: '2999-01-01T00:00:00Z', createdAt: '2024-01-01T00:00:00Z' },
 ]
 
 function fakeApi(overrides: Partial<ISpaceApi> = {}): ISpaceApi {
@@ -176,7 +176,7 @@ describe('SpaceDetailSection — invitations visibility', () => {
   it('fetches and shows invitations for a manager', async () => {
     const api = fakeApi()
     renderSection(api)
-    expect(await screen.findByText('carol@test.com')).toBeDefined()
+    expect(await screen.findByText('carol')).toBeDefined()
     expect(api.listInvitations).toHaveBeenCalledWith('s-1')
   })
 

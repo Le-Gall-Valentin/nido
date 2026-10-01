@@ -1,8 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Copy, Send } from 'lucide-react'
-import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { isValidEmail } from '@/shared/lib'
+import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import type { SpaceInvitation , AssignableSpaceRole } from '@/entities/space'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 
@@ -10,14 +9,14 @@ const ASSIGNABLE_ROLES: AssignableSpaceRole[] = ['ADMIN', 'MEMBER', 'VIEWER']
 
 interface InviteMemberModalProps {
   onClose: () => void
-  onInvite: (email: string, role: AssignableSpaceRole) => Promise<SpaceInvitation>
+  onInvite: (identifier: string, role: AssignableSpaceRole) => Promise<SpaceInvitation>
   onSuccess: () => void
 }
 
 export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMemberModalProps) {
   const { t } = useTranslation('spaces')
 
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [role, setRole] = useState<AssignableSpaceRole>('MEMBER')
   const [isLoading, setIsLoading] = useState(false)
   const [errorKey, setErrorKey] = useState<string[] | null>(null)
@@ -25,8 +24,8 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
   const [copied, setCopied] = useState(false)
   const pendingRef = useRef(false)
 
-  const trimmedEmail = email.trim()
-  const canSubmit = isValidEmail(trimmedEmail)
+  const trimmedIdentifier = identifier.trim()
+  const canSubmit = trimmedIdentifier.length > 0 && trimmedIdentifier.length <= 254
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -35,7 +34,7 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
     setIsLoading(true)
     setErrorKey(null)
     try {
-      const invitation = await onInvite(trimmedEmail, role)
+      const invitation = await onInvite(trimmedIdentifier, role)
       setIssued(invitation)
     } catch (error) {
       setErrorKey(mapSpaceErrorToKey(error, 'invite'))
@@ -67,7 +66,7 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
       <Dialog open onClose={handleClose} title={t('invite.success_title')} maxWidth="max-w-md">
         <div className="mb-5">
           <h3 className="text-xl font-semibold text-fg-0 mb-1.5">{t('invite.success_title')}</h3>
-          <p className="text-sm text-fg-2 leading-relaxed">{t('invite.success_body', { email: issued.email })}</p>
+          <p className="text-sm text-fg-2 leading-relaxed">{t('invite.success_body', { username: issued.username ?? trimmedIdentifier })}</p>
         </div>
 
         <p className="mb-1.5 text-xs text-fg-3">{t('invite.code_hint')}</p>
@@ -102,12 +101,15 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
       <form onSubmit={(e) => void handleSubmit(e)}>
         <div className="mb-3">
           <Input
-            label={t('invite.email')}
-            name="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={t('invite.email_placeholder')}
+            label={t('invite.identifier')}
+            name="identifier"
+            type="text"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            placeholder={t('invite.identifier_placeholder')}
+            maxLength={254}
+            autoComplete="off"
+            {...VERBATIM_INPUT_PROPS}
             disabled={isLoading}
             autoFocus
           />

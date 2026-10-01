@@ -77,7 +77,7 @@ class MenuDashboardSourceTest {
 
     private MenuCard read() {
         return (MenuCard) new MenuDashboardSource(listMenuEntries)
-            .read(new DashboardContext(caller, "me@test.com", TODAY, SpaceType.SHARED)).card();
+            .read(new DashboardContext(caller, TODAY, SpaceType.SHARED)).card();
     }
 
     private MenuEntryView entry(LocalDate date, int position, Recipe recipe) {

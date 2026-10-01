@@ -24,9 +24,9 @@ public abstract sealed class SpaceException extends RuntimeException
             SpaceException.InvitationNotFound,
             SpaceException.InvitationNotPending,
             SpaceException.InvitationExpired,
-            SpaceException.InvitationEmailMismatch,
+            SpaceException.InvitationForAnotherAccount,
             SpaceException.InvitationAlreadyPending,
-            SpaceException.NoAccountForEmail {
+            SpaceException.NoAccountForIdentifier {
 
     private SpaceException(String message) { super(message); }
 
@@ -101,13 +101,13 @@ public abstract sealed class SpaceException extends RuntimeException
     public static final class InvitationExpired extends SpaceException {
         public InvitationExpired() { super("Invitation has expired"); }
     }
-    public static final class InvitationEmailMismatch extends SpaceException {
-        public InvitationEmailMismatch() { super("Invitation was issued to another address"); }
+    public static final class InvitationForAnotherAccount extends SpaceException {
+        public InvitationForAnotherAccount() { super("Invitation was issued to another account"); }
     }
     public static final class InvitationAlreadyPending extends SpaceException {
-        public InvitationAlreadyPending() { super("This address already has a pending invitation to this space"); }
+        public InvitationAlreadyPending() { super("This account already has a pending invitation to this space"); }
     }
-    public static final class NoAccountForEmail extends SpaceException {
-        public NoAccountForEmail() { super("No account exists for this address"); }
+    public static final class NoAccountForIdentifier extends SpaceException {
+        public NoAccountForIdentifier() { super("No account matches this username or email address"); }
     }
 }

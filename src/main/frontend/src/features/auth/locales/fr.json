@@ -1,7 +1,7 @@
 {
   "field": {
-    "username": "Identifiant",
-    "username_placeholder": "prenom.nom",
+    "identifier": "Identifiant ou email",
+    "identifier_placeholder": "prenom.nom ou vous@exemple.fr",
     "password": "Mot de passe",
     "password_placeholder": "Votre mot de passe"
   },
@@ -9,7 +9,7 @@
     "submit": "Se connecter"
   },
   "error": {
-    "credentials": "Identifiant ou mot de passe incorrect.",
+    "credentials": "Identifiant, email ou mot de passe incorrect.",
     "network": "Service indisponible. Veuillez réessayer.",
     "rateLimit": "Trop de tentatives. Veuillez patienter avant de réessayer.",
     "rateLimitWithDelay": "Trop de tentatives. Réessayez dans {{seconds}} secondes.",

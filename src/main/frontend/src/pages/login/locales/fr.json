@@ -21,7 +21,7 @@
     "link": "Mot de passe oublié ?",
     "back": "Retour à la connexion",
     "title": "Mot de passe oublié",
-    "subtitle": "Indiquez votre identifiant ou votre adresse mail. Si un compte correspond, nous vous enverrons un lien pour choisir un nouveau mot de passe.",
+    "subtitle": "Indiquez votre identifiant ou votre adresse e-mail. Si un compte correspond, nous vous enverrons un lien pour choisir un nouveau mot de passe.",
     "sent": {
       "title": "Vérifiez votre boîte mail",
       "body": "Si un compte correspond à « {{identifier}} », un lien vient de partir vers l'adresse enregistrée. Il est valable 30 minutes.",

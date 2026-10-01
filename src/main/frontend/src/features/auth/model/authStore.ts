@@ -43,7 +43,7 @@ export function createAuthStore(api: IAuthApi) {
     async login(credentials: LoginCredentials): Promise<LoginOutcome> {
       const result = await api.login(credentials)
       if (result.type === 'totp_required') {
-        return { kind: 'totp_required', username: credentials.username }
+        return { kind: 'totp_required', username: result.username }
       }
       const { user } = result
       set({ signingIn: user })

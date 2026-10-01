@@ -2,6 +2,7 @@ import { useState, type ComponentProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff } from 'lucide-react'
 import { Input } from './Input'
+import { VERBATIM_INPUT_PROPS } from './verbatimInput'
 
 type InputProps = ComponentProps<typeof Input>
 
@@ -27,9 +28,7 @@ export function PasswordInput({ visible, onVisibleChange, ...props }: PasswordIn
 
   return (
     <Input
-      spellCheck={false}
-      autoCorrect="off"
-      autoCapitalize="off"
+      {...VERBATIM_INPUT_PROPS}
       {...props}
       type={shown ? 'text' : 'password'}
       suffix={

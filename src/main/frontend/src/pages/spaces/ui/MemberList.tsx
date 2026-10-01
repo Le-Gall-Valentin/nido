@@ -62,7 +62,8 @@ export function MemberList({
               {deleted ? <UserX className="size-4" /> : getInitials(member.username ?? '')}
             </div>
 
-            <div className="min-w-0 flex-1">
+            {/* A floor under the name, as in the invitation list: on a phone the role and actions wrap below. */}
+            <div className="min-w-32 flex-1">
               <div className="flex items-center gap-1.5 text-[14.5px] font-semibold text-fg-0">
                 <span className={deleted ? 'italic font-medium text-fg-3' : 'truncate'}>
                   {deleted ? t('members.deleted_account') : member.username}

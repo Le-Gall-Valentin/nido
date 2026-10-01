@@ -31,6 +31,23 @@ class DataSeederTest {
     }
 
     @Test
+    void seed_withAUsernameNidoWouldRefuse_stopsAndNamesTheVariable() {
+        DataSeeder seeder = new DataSeeder(properties("admin@home", "secret"), seedUseCase);
+        assertThatThrownBy(seeder::seed)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("NIDO_SEED_USERNAME");
+        verifyNoInteractions(seedUseCase);
+    }
+
+    @Test
+    void seed_withATwoLetterUsername_stopsToo() {
+        DataSeeder seeder = new DataSeeder(properties("ad", "secret"), seedUseCase);
+        assertThatThrownBy(seeder::seed)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("NIDO_SEED_USERNAME");
+    }
+
+    @Test
     void seed_withPassword_delegatesToSeedUseCase() {
         DataSeeder seeder = new DataSeeder(properties("secret"), seedUseCase);
         assertThatNoException().isThrownBy(seeder::seed);
@@ -67,11 +84,15 @@ class DataSeederTest {
     }
 
     private NidoProperties properties(String password) {
+        return properties("user", password);
+    }
+
+    private NidoProperties properties(String username, String password) {
         return new NidoProperties(
             new NidoProperties.JwtProperties("test-secret-key-at-least-32-chars", 15, "nido", "nido"),
             new NidoProperties.RefreshTokenProperties(30, "0 0 3 * * *"),
             new NidoProperties.CookieProperties(false),
-            new NidoProperties.SeedProperties("user", "user@test.com", password),
+            new NidoProperties.SeedProperties(username, "user@test.com", password),
             new NidoProperties.CorsProperties(List.of()),
             new NidoProperties.EncryptionProperties("test-enc-secret"),
             null

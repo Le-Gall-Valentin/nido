@@ -38,6 +38,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -94,7 +95,7 @@ class SpaceInvitationControllerIT {
                 .content(payload))
             .andExpect(status().isCreated())
             .andExpect(header().exists("Location"))
-            .andExpect(jsonPath("$.email").value("carol@test.com"))
+            .andExpect(jsonPath("$.username").value("carol"))
             .andExpect(jsonPath("$.role").value("MEMBER"))
             .andExpect(jsonPath("$.status").value("PENDING"))
             .andExpect(jsonPath("$.code", Matchers.matchesPattern("^NIDO-[A-Z0-9]{6}$")));
@@ -112,14 +113,14 @@ class SpaceInvitationControllerIT {
         mockMvc.perform(get("/api/spaces/" + sharedSpaceId + "/invitations").cookie(accessTokenFor(aliceId)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].email").value("carol@test.com"))
+            .andExpect(jsonPath("$[0].username").value("carol"))
             .andExpect(jsonPath("$[0].code", Matchers.matchesPattern("^NIDO-[A-Z0-9]{6}$")));
     }
 
     @Test
     void a_plain_member_is_forbidden_on_every_invitation_route() throws Exception {
         saveMembership(sharedSpaceId, bobId, SpaceRole.MEMBER);
-        UUID invitationId = createInvitation(sharedSpaceId, "carol@test.com", SpaceRole.MEMBER, aliceId);
+        UUID invitationId = createInvitation(sharedSpaceId, carolId, SpaceRole.MEMBER, aliceId);
         String payload = objectMapper.writeValueAsString(new InviteMemberRequest("dave@test.com", SpaceRole.MEMBER));
 
         mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
@@ -138,7 +139,7 @@ class SpaceInvitationControllerIT {
 
     @Test
     void a_non_member_gets_404_not_403_on_every_invitation_route() throws Exception {
-        UUID invitationId = createInvitation(sharedSpaceId, "carol@test.com", SpaceRole.MEMBER, aliceId);
+        UUID invitationId = createInvitation(sharedSpaceId, carolId, SpaceRole.MEMBER, aliceId);
         String payload = objectMapper.writeValueAsString(new InviteMemberRequest("dave@test.com", SpaceRole.MEMBER));
 
         mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
@@ -182,7 +183,7 @@ class SpaceInvitationControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(invitePayload))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.email").value("carol@test.com"));
+            .andExpect(jsonPath("$.username").value("carol"));
     }
 
     @Test
@@ -209,7 +210,7 @@ class SpaceInvitationControllerIT {
             .andReturn().getResponse().getContentAsString();
         UUID invitationId = UUID.fromString(objectMapper.readTree(created).get("id").asText());
 
-        // Même adresse, casse différente : la contrainte d'unicité porte sur lower(email).
+        // Même compte, casse différente : la contrainte d'unicité porte sur le compte invité.
         String secondPayload = objectMapper.writeValueAsString(new InviteMemberRequest("Carol@test.com", SpaceRole.MEMBER));
         mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
                 .cookie(accessTokenFor(aliceId))
@@ -232,11 +233,81 @@ class SpaceInvitationControllerIT {
     void revoking_an_invitation_from_another_context_is_a_404() throws Exception {
         UUID otherSpaceId = saveSharedSpace("Chez Bob", bobId);
         saveMembership(otherSpaceId, bobId, SpaceRole.OWNER);
-        UUID foreignInvitationId = createInvitation(otherSpaceId, "carol@test.com", SpaceRole.MEMBER, bobId);
+        UUID foreignInvitationId = createInvitation(otherSpaceId, carolId, SpaceRole.MEMBER, bobId);
 
         mockMvc.perform(delete("/api/spaces/" + sharedSpaceId + "/invitations/" + foreignInvitationId)
                 .cookie(accessTokenFor(aliceId)))
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void a_username_is_enough_to_invite() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identifier\":\"carol\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.username").value("carol"));
+    }
+
+    @Test
+    void an_address_in_capitals_reaches_the_account() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identifier\":\"Carol@TEST.com\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.username").value("carol"));
+    }
+
+    @Test
+    void inviting_by_username_then_by_address_is_the_same_person_and_conflicts() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identifier\":\"carol\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identifier\":\"carol@test.com\",\"role\":\"VIEWER\"}"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.title").value("InvitationAlreadyPending"));
+    }
+
+    @Test
+    void inviting_by_username_never_reveals_the_address() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identifier\":\"carol\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.email").doesNotExist());
+
+        mockMvc.perform(get("/api/spaces/" + sharedSpaceId + "/invitations").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].email").doesNotExist())
+            .andExpect(content().string(Matchers.not(Matchers.containsString("carol@test.com"))));
+    }
+
+    @Test
+    void the_old_email_field_is_a_400() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"carol@test.com\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void nobody_behind_the_identifier_is_a_422_that_names_the_case() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + sharedSpaceId + "/invitations")
+                .cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identifier\":\"ghost\",\"role\":\"MEMBER\"}"))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.title").value("NoAccountForIdentifier"));
     }
 
     @Test
@@ -262,10 +333,10 @@ class SpaceInvitationControllerIT {
             .andExpect(status().isUnprocessableEntity());
     }
 
-    private UUID createInvitation(UUID spaceId, String email, SpaceRole role, UUID createdBy) {
+    private UUID createInvitation(UUID spaceId, UUID inviteeId, SpaceRole role, UUID createdBy) {
         SpaceInvitationEntity invitation = new SpaceInvitationEntity();
         invitation.setSpaceId(spaceId);
-        invitation.setEmail(email);
+        invitation.setInviteeId(inviteeId);
         invitation.setRole(role);
         invitation.setCode("NIDO-TEST01");
         invitation.setStatus(com.nido.api.space.domain.model.InvitationStatus.PENDING);

@@ -41,7 +41,8 @@ export interface SpaceMember {
 
 export interface SpaceInvitation {
   id: string
-  email: string
+  /** The invitee's account name. Null once it can no longer be resolved. Their address is never sent. */
+  username: string | null
   role: SpaceRole
   /** Clear text, only ever returned to the context's managers, who issued it. */
   code: string

@@ -6,8 +6,6 @@ import com.nido.api.authentication.infrastructure.persistence.entity.UserCredent
 import com.nido.api.authentication.infrastructure.persistence.repository.RefreshTokenJpaRepository;
 import com.nido.api.authentication.infrastructure.persistence.repository.UserCredentialJpaRepository;
 import com.nido.api.authentication.infrastructure.web.dto.LoginRequest;
-import com.nido.api.identity.application.port.in.FindUserUseCase;
-import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
@@ -24,7 +22,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -40,7 +37,6 @@ class UserLanguageIT {
     @Autowired RefreshTokenJpaRepository refreshTokens;
     @Autowired UserTotpJpaRepository totps;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
-    @Autowired FindUserUseCase findUser;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -123,39 +119,5 @@ class UserLanguageIT {
                 .content(objectMapper.writeValueAsString(new LoginRequest("john", "password"))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.language").value("en"));
-    }
-
-    @Test
-    void an_address_is_found_whatever_its_letter_case() {
-        createUser("mixed", "Mixed.Case@Test.com", "password", null);
-
-        assertThat(findUser.findByEmailIgnoreCase("MIXED.case@test.COM")).extracting(User::username).containsExactly("mixed");
-    }
-
-    @Test
-    void a_deleted_account_is_never_found_even_when_it_kept_its_address() {
-        UserIdentityEntity gone = createUser("gone", "gone@test.com", "password", null);
-        gone.setDeleted(true);
-        users.saveAndFlush(gone);
-
-        assertThat(findUser.findByEmailIgnoreCase("gone@test.com")).isEmpty();
-    }
-
-    @Test
-    void addresses_differing_only_by_letter_case_give_every_account() {
-        createUser("upper", "Twin@test.com", "password", null);
-        createUser("lower", "twin@test.com", "password", null);
-
-        assertThat(findUser.findByEmailIgnoreCase("TWIN@test.com")).extracting(User::username)
-            .containsExactlyInAnyOrder("upper", "lower");
-    }
-
-    @Test
-    void a_deactivated_account_is_still_found() {
-        UserIdentityEntity asleep = createUser("asleep", "asleep@test.com", "password", null);
-        asleep.setActive(false);
-        users.saveAndFlush(asleep);
-
-        assertThat(findUser.findByEmailIgnoreCase("asleep@test.com")).extracting(User::username).containsExactly("asleep");
     }
 }

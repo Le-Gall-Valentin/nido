@@ -1,6 +1,6 @@
 {
   "field": {
-    "identifier": "Username or email address",
+    "identifier": "Username or email",
     "identifier_placeholder": "first.last or you@example.com",
     "new_password": "New password",
     "confirm": "Confirm the password"

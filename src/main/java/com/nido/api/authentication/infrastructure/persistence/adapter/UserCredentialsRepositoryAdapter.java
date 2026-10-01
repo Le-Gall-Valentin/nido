@@ -27,8 +27,8 @@ public class UserCredentialsRepositoryAdapter implements UserCredentialsPort {
     }
 
     @Override
-    public Optional<UserCredentials> findByUsername(String username) {
-        return userProfilePort.findByUsername(username).flatMap(this::resolveCredentials);
+    public Optional<UserCredentials> findByIdentifier(String identifier) {
+        return userProfilePort.findByIdentifier(identifier).flatMap(this::resolveCredentials);
     }
 
     @Override

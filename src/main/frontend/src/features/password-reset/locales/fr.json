@@ -1,6 +1,6 @@
 {
   "field": {
-    "identifier": "Identifiant ou adresse mail",
+    "identifier": "Identifiant ou email",
     "identifier_placeholder": "prenom.nom ou vous@exemple.fr",
     "new_password": "Nouveau mot de passe",
     "confirm": "Confirmer le mot de passe"

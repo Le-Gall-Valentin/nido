@@ -41,6 +41,8 @@ class SpaceInvitationRepositoryAdapterIT {
     @Autowired PlatformTransactionManager transactionManager;
 
     private UUID alice;
+    private UUID camille;
+    private UUID someoneElse;
     private UUID space;
 
     @BeforeEach
@@ -50,6 +52,8 @@ class SpaceInvitationRepositoryAdapterIT {
         spaceJpaRepository.deleteAll();
         userIdentityJpaRepository.deleteAll();
         alice = saveUser("alice");
+        camille = saveUser("camille");
+        someoneElse = saveUser("someoneelse");
         space = createSpace(alice).id();
     }
 
@@ -58,13 +62,13 @@ class SpaceInvitationRepositoryAdapterIT {
         // Postgres stocke TIMESTAMPTZ à la microseconde : on tronque pour comparer à l'identique.
         Instant expiresAt = Instant.now().plus(Duration.ofDays(7)).truncatedTo(ChronoUnit.MICROS);
 
-        SpaceInvitation created = adapter.create(space, "camille@exemple.fr", SpaceRole.MEMBER,
+        SpaceInvitation created = adapter.create(space, camille, SpaceRole.MEMBER,
             "NIDO-4F9C2A", expiresAt, alice);
 
         SpaceInvitation found = adapter.findByCode("NIDO-4F9C2A").orElseThrow();
         assertThat(found.id()).isEqualTo(created.id());
         assertThat(found.spaceId()).isEqualTo(space);
-        assertThat(found.email()).isEqualTo("camille@exemple.fr");
+        assertThat(found.inviteeId()).isEqualTo(camille);
         assertThat(found.role()).isEqualTo(SpaceRole.MEMBER);
         assertThat(found.code()).isEqualTo("NIDO-4F9C2A");
         assertThat(found.status()).isEqualTo(InvitationStatus.PENDING);
@@ -75,36 +79,36 @@ class SpaceInvitationRepositoryAdapterIT {
     }
 
     @Test
-    void a_second_pending_invitation_to_the_same_address_in_the_same_space_is_refused() {
-        adapter.create(space, "camille@exemple.fr", SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
+    void a_second_pending_invitation_to_the_same_account_in_the_same_space_is_refused() {
+        adapter.create(space, camille, SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
 
-        assertThatThrownBy(() -> adapter.create(space, "camille@exemple.fr", SpaceRole.VIEWER, "NIDO-BBBBBB", futureExpiry(), alice))
+        assertThatThrownBy(() -> adapter.create(space, camille, SpaceRole.VIEWER, "NIDO-BBBBBB", futureExpiry(), alice))
             .isInstanceOf(SpaceException.InvitationAlreadyPending.class);
     }
 
     @Test
-    void after_revoking_the_first_a_new_invitation_for_the_same_address_is_accepted() {
-        SpaceInvitation first = adapter.create(space, "camille@exemple.fr", SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
+    void after_revoking_the_first_a_new_invitation_for_the_same_account_is_accepted() {
+        SpaceInvitation first = adapter.create(space, camille, SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
 
         inTransaction(() -> adapter.revoke(first.id()));
 
-        SpaceInvitation second = adapter.create(space, "camille@exemple.fr", SpaceRole.VIEWER, "NIDO-BBBBBB", futureExpiry(), alice);
+        SpaceInvitation second = adapter.create(space, camille, SpaceRole.VIEWER, "NIDO-BBBBBB", futureExpiry(), alice);
         assertThat(second.id()).isNotEqualTo(first.id());
     }
 
     @Test
-    void the_same_address_can_be_invited_to_two_different_spaces_at_once() {
+    void the_same_account_can_be_invited_to_two_different_spaces_at_once() {
         Space otherSpace = createSpace(alice);
 
-        adapter.create(space, "camille@exemple.fr", SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
-        SpaceInvitation other = adapter.create(otherSpace.id(), "camille@exemple.fr", SpaceRole.MEMBER, "NIDO-BBBBBB", futureExpiry(), alice);
+        adapter.create(space, camille, SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
+        SpaceInvitation other = adapter.create(otherSpace.id(), camille, SpaceRole.MEMBER, "NIDO-BBBBBB", futureExpiry(), alice);
 
         assertThat(other.spaceId()).isEqualTo(otherSpace.id());
     }
 
     @Test
     void claim_is_atomic_and_only_succeeds_once() {
-        SpaceInvitation invitation = adapter.create(space, "camille@exemple.fr", SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
+        SpaceInvitation invitation = adapter.create(space, camille, SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
         Instant acceptedAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
 
         boolean firstClaim = inTransaction(() -> adapter.claim(invitation.id(), acceptedAt));
@@ -118,16 +122,15 @@ class SpaceInvitationRepositoryAdapterIT {
     }
 
     @Test
-    void findPendingForEmail_only_returns_pending_unexpired_invitations_for_that_address_case_insensitively() {
-        SpaceInvitation valid = adapter.create(space, "camille@exemple.fr", SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
+    void findPendingForInvitee_only_returns_pending_unexpired_invitations_for_that_account() {
+        SpaceInvitation valid = adapter.create(space, camille, SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
         Space otherSpace = createSpace(alice);
-        // Même adresse, autre espace : évite la collision avec l'index unique partiel, qui ne
-        // porte que sur (space_id, lower(email)).
-        SpaceInvitation expired = adapter.create(otherSpace.id(), "camille@exemple.fr", SpaceRole.VIEWER, "NIDO-BBBBBB", Instant.now().minusSeconds(1), alice);
-        SpaceInvitation accepted = adapter.create(space, "someoneelse@exemple.fr", SpaceRole.VIEWER, "NIDO-CCCCCC", futureExpiry(), alice);
+        // Même compte, autre espace : évite la collision avec l'index unique partiel (space_id, invitee_id).
+        SpaceInvitation expired = adapter.create(otherSpace.id(), camille, SpaceRole.VIEWER, "NIDO-BBBBBB", Instant.now().minusSeconds(1), alice);
+        SpaceInvitation accepted = adapter.create(space, someoneElse, SpaceRole.VIEWER, "NIDO-CCCCCC", futureExpiry(), alice);
         inTransaction(() -> adapter.claim(accepted.id(), Instant.now()));
 
-        List<SpaceInvitation> pending = adapter.findPendingForEmail("CAMILLE@Exemple.FR", Instant.now());
+        List<SpaceInvitation> pending = adapter.findPendingForInvitee(camille, Instant.now());
 
         assertThat(pending).hasSize(1);
         assertThat(pending.get(0).id()).isEqualTo(valid.id());
@@ -135,8 +138,21 @@ class SpaceInvitationRepositoryAdapterIT {
     }
 
     @Test
+    void deleteAllForInvitee_removes_that_accounts_invitations_whatever_their_status() {
+        SpaceInvitation accepted = adapter.create(space, camille, SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
+        inTransaction(() -> adapter.claim(accepted.id(), Instant.now()));
+        adapter.create(createSpace(alice).id(), camille, SpaceRole.VIEWER, "NIDO-BBBBBB", futureExpiry(), alice);
+        SpaceInvitation kept = adapter.create(space, someoneElse, SpaceRole.MEMBER, "NIDO-CCCCCC", futureExpiry(), alice);
+
+        int deleted = inTransaction(() -> adapter.deleteAllForInvitee(camille));
+
+        assertThat(deleted).isEqualTo(2);
+        assertThat(spaceInvitationJpaRepository.findAll()).extracting(e -> e.getId()).containsExactly(kept.id());
+    }
+
+    @Test
     void deleting_a_space_cascades_to_its_invitations() {
-        adapter.create(space, "camille@exemple.fr", SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
+        adapter.create(space, camille, SpaceRole.MEMBER, "NIDO-AAAAAA", futureExpiry(), alice);
 
         spaceAdapter.delete(space);
 

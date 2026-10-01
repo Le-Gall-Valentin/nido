@@ -8,7 +8,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 const PENDING: SpaceInvitation = {
-  id: 'i-1', email: 'carol@test.com', role: 'MEMBER', code: 'NIDO-ABC123',
+  id: 'i-1', username: 'carol', role: 'MEMBER', code: 'NIDO-ABC123',
   status: 'PENDING', expiresAt: '2999-01-01T00:00:00Z', createdAt: '2024-01-01T00:00:00Z',
 }
 const REVOKED: SpaceInvitation = { ...PENDING, id: 'i-2', status: 'REVOKED' }
@@ -28,9 +28,15 @@ describe('InvitationList — empty state', () => {
 })
 
 describe('InvitationList — rendering', () => {
-  it('shows the email and the code with a copy button', () => {
+  it('names an invitee who can no longer be found a deleted account, on the row and on its revoke button', () => {
+    render(<InvitationList invitations={[{ ...PENDING, username: null }]} onRevoke={vi.fn()} />)
+    expect(screen.getByText('members.deleted_account')).toBeDefined()
+    expect(screen.getByRole('button', { name: 'invitations.action_revoke:{"username":"members.deleted_account"}' })).toBeDefined()
+  })
+
+  it('shows the username and the code with a copy button', () => {
     render(<InvitationList invitations={[PENDING]} onRevoke={vi.fn()} />)
-    expect(screen.getByText('carol@test.com')).toBeDefined()
+    expect(screen.getByText('carol')).toBeDefined()
     expect(screen.getByText('NIDO-ABC123')).toBeDefined()
   })
 

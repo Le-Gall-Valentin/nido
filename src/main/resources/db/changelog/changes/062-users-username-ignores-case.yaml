@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 062-users-username-ignores-case
+      author: nido
+      comment: >
+        A username names one account whatever its letter case, like an address since 060: "Jane" and
+        "jane" are the same person at sign-in, in "forgot password" and when inviting, and two accounts
+        can no longer hold both. The name keeps the case it was given — only comparisons ignore it, so
+        the unique index moves to lower(username), under the same name to keep the 409 it maps to. The
+        guard refuses, with a message, two live accounts that already differ only by case: rename one,
+        then restart.
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              DO $$
+              BEGIN
+                IF EXISTS (SELECT 1 FROM users WHERE NOT is_deleted GROUP BY lower(username) HAVING count(*) > 1) THEN
+                  RAISE EXCEPTION '062: two accounts share a username once letter case is ignored. Rename one of them, then restart.';
+                END IF;
+              END
+              $$;
+        - sql:
+            sql: DROP INDEX IF EXISTS uq_users_username_active
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_users_username_active ON users (lower(username)) WHERE is_deleted = false
+      rollback:
+        - sql:
+            sql: DROP INDEX IF EXISTS uq_users_username_active
+        - sql:
+            sql: CREATE UNIQUE INDEX uq_users_username_active ON users (username) WHERE is_deleted = false

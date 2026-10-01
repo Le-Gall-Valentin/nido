@@ -51,23 +51,18 @@ public class InviteMemberHandler implements InviteMemberUseCase {
         Space space = spaceRepository.findById(command.spaceId())
             .orElseThrow(SpaceException.SpaceNotFound::new);
         space.ensureShared();
-        MemberProfile invitee = memberProfilePort.findByEmail(command.email())
-            .orElseThrow(SpaceException.NoAccountForEmail::new);
+        MemberProfile invitee = memberProfilePort.findByIdentifier(command.identifier())
+            .orElseThrow(SpaceException.NoAccountForIdentifier::new);
         if (spaceMembershipPort.find(command.spaceId(), invitee.userId()).isPresent()) {
             throw new SpaceException.AlreadyMember();
         }
         SpaceInvitation invitation = spaceInvitationPort.create(
-            command.spaceId(), command.email(), command.role(),
+            command.spaceId(), invitee.userId(), command.role(),
             invitationCodeGeneratorPort.generate(),
             Instant.now().plus(InviteMemberCommand.VALIDITY),
             caller.userId());
         log.info("Invitation {} issued for space {} by user {}",
             invitation.id(), command.spaceId(), caller.userId());
-        return toView(invitation);
-    }
-
-    private static SpaceInvitationView toView(SpaceInvitation invitation) {
-        return new SpaceInvitationView(invitation.id(), invitation.email(), invitation.role(),
-            invitation.code(), invitation.status(), invitation.expiresAt(), invitation.createdAt());
+        return SpaceInvitationView.of(invitation, invitee.username());
     }
 }

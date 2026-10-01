@@ -4,5 +4,6 @@ public sealed interface LoginResult permits LoginResult.Success, LoginResult.Tot
 
     record Success(AuthTokens tokens, UserCredentials credentials) implements LoginResult {}
 
-    record TotpRequired(String challengeId) implements LoginResult {}
+    /** {@code username} lets the code screen greet the account, even when the person typed an address. */
+    record TotpRequired(String challengeId, String username) implements LoginResult {}
 }
