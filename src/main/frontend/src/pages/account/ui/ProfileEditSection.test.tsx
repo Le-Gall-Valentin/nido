@@ -81,6 +81,12 @@ describe('ProfileEditSection', () => {
     expect(getByText('profile.error.username_too_short')).toBeDefined()
   })
 
+  it('save button is disabled when the username is emptied', () => {
+    const { getByLabelText, getByRole } = setup()
+    fireEvent.change(getByLabelText('profile.username'), { target: { value: '   ' } })
+    expect((getByRole('button', { name: 'profile.save' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
   it('takes the username as typed — no capital or correction from a phone keyboard', () => {
     const { getByLabelText } = setup()
     const field = getByLabelText('profile.username') as HTMLInputElement

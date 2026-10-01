@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import type { User } from '@/entities/user'
 import { ConflictError, InvalidCurrentPasswordError } from '../api/accountApi'
-import { NetworkError, RateLimitError } from '@/shared/lib'
+import { NetworkError, RateLimitError, isValidUsername, usernameProblem, type UsernameProblem } from '@/shared/lib'
 
 type Flash = { kind: 'success' | 'error'; key: string } | null
 
@@ -12,6 +12,13 @@ interface ProfileEditSectionProps {
   onPatch: (partial: Partial<User>) => void
   onUpdateProfile: (username: string, email: string, currentPassword?: string) => Promise<void>
 }
+
+
+const PROFILE_USERNAME_ERRORS = {
+  too_short: 'profile.error.username_too_short',
+  too_long: 'profile.error.username_too_long',
+  has_at: 'profile.error.username_at',
+} as const satisfies Record<UsernameProblem, string>
 
 export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEditSectionProps) {
   const { t } = useTranslation('account')
@@ -25,17 +32,15 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
   const trimmedUsername = username.trim()
   const trimmedEmail = email.trim()
   const isDirty = trimmedUsername !== user.username || trimmedEmail !== user.email
-  const usernameTooShort = trimmedUsername.length > 0 && trimmedUsername.length < 3
-  const usernameTooLong = trimmedUsername.length > 50
-  // Sign-in reads a typed value with an '@' as an address: a username holding one could never be reached.
-  const usernameHasAt = trimmedUsername.includes('@')
+  // Nothing is said about an empty field, but it cannot be saved either.
+  const usernameIssue = trimmedUsername.length > 0 ? usernameProblem(trimmedUsername) : null
   const emailEmpty = trimmedEmail.length === 0
   // The address is how an account is recovered, so changing it asks for the password. A change of
   // letter case only is the same mailbox — the server agrees and asks for nothing.
   const changesAddress = (value: string) => value.trim().toLowerCase() !== user.email.toLowerCase()
   const addressChanges = changesAddress(email)
   const passwordHintId = useId()
-  const canSave = isDirty && !usernameTooShort && !usernameTooLong && !usernameHasAt && !emailEmpty
+  const canSave = isDirty && isValidUsername(trimmedUsername) && !emailEmpty
     && (!addressChanges || currentPassword.length > 0)
 
   useEffect(() => {
@@ -90,9 +95,7 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
       </div>
       <div className="px-7 py-5">
         <form onSubmit={(e) => void handleSubmit(e)}>
-          {usernameTooShort && <p className="text-xs text-status-orange mb-2">{t('profile.error.username_too_short')}</p>}
-          {usernameTooLong && <p className="text-xs text-status-orange mb-2">{t('profile.error.username_too_long')}</p>}
-          {usernameHasAt && <p className="text-xs text-status-orange mb-2">{t('profile.error.username_at')}</p>}
+          {usernameIssue && <p className="text-xs text-status-orange mb-2">{t(PROFILE_USERNAME_ERRORS[usernameIssue])}</p>}
           {emailEmpty && isDirty && <p className="text-xs text-status-orange mb-2">{t('profile.error.email_required')}</p>}
           <div className="flex flex-col gap-3 sm:flex-row mb-3">
             <div className="min-w-0 sm:flex-1">

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
-import { isValidPassword, isValidEmail, passwordProblem } from '@/shared/lib'
+import { isValidPassword, isValidEmail, passwordProblem, isValidUsername, usernameProblem } from '@/shared/lib'
 import type { User } from '@/entities/user'
 import { assignableRoles } from '../lib/permissions'
 import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
@@ -29,18 +29,14 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
   const trimmedEmail = email.trim()
 
   // Mirror of the backend RegisterRequest constraints.
-  const usernameInvalid = trimmedUsername.length > 0 && (trimmedUsername.length < 3 || trimmedUsername.length > 50)
-  // Sign-in reads a typed value with an '@' as an address: a username holding one could never be reached.
-  const usernameHasAt = trimmedUsername.includes('@')
+  const usernameIssue = trimmedUsername.length > 0 ? usernameProblem(trimmedUsername) : null
   const emailInvalid = trimmedEmail.length > 0 && !isValidEmail(trimmedEmail)
   const problem = password.length > 0 ? passwordProblem(password) : null
   const passwordTooShort = problem === 'too_short'
   const passwordTooLong = problem === 'too_long'
   const passwordWeak = problem === 'weak'
   const canSubmit =
-    !usernameHasAt &&
-    trimmedUsername.length >= 3 &&
-    trimmedUsername.length <= 50 &&
+    isValidUsername(trimmedUsername) &&
     isValidEmail(trimmedEmail) &&
     isValidPassword(password)
 
@@ -111,8 +107,8 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
         </div>
 
         <div aria-live="polite">
-          {usernameInvalid && <p className="text-xs text-status-orange mb-2">{t('create.error.username_length')}</p>}
-          {usernameHasAt && <p className="text-xs text-status-orange mb-2">{t('create.error.username_at')}</p>}
+          {(usernameIssue === 'too_short' || usernameIssue === 'too_long') && <p className="text-xs text-status-orange mb-2">{t('create.error.username_length')}</p>}
+          {usernameIssue === 'has_at' && <p className="text-xs text-status-orange mb-2">{t('create.error.username_at')}</p>}
           {emailInvalid && <p className="text-xs text-status-orange mb-2">{t('create.error.email_invalid')}</p>}
           {passwordTooShort && <p className="text-xs text-status-orange mb-2">{t('create.error.password_too_short')}</p>}
           {passwordTooLong && <p className="text-xs text-status-orange mb-2">{t('create.error.password_too_long')}</p>}
