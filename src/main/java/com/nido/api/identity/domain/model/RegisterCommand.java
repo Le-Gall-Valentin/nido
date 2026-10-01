@@ -1,15 +1,14 @@
 package com.nido.api.identity.domain.model;
 
 import com.nido.api.shared.model.Role;
-import java.util.Locale;
 import java.util.Objects;
 
 public record RegisterCommand(String username, String email, String rawPassword, Role role) {
     public RegisterCommand {
-        Objects.requireNonNull(username, "username");
+        username = new Username(username).value();
         Objects.requireNonNull(rawPassword, "rawPassword");
         Objects.requireNonNull(role, "role");
-        email = email == null ? null : email.toLowerCase(Locale.ROOT);
+        email = EmailAddress.normalize(email);
     }
 
     @Override

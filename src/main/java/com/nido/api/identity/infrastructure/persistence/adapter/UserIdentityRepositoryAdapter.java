@@ -1,6 +1,7 @@
 package com.nido.api.identity.infrastructure.persistence.adapter;
 
 import com.nido.api.identity.domain.model.CreateUserProfileCommand;
+import com.nido.api.identity.domain.model.EmailAddress;
 import com.nido.api.identity.domain.model.UpdateProfileCommand;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.shared.model.Language;
@@ -45,8 +46,8 @@ public class UserIdentityRepositoryAdapter implements UserRepository, UserComman
     }
 
     @Override
-    public Optional<User> findByEmail(String email) {
-        return jpa.findByEmailAndDeletedFalse(email).map(this::toDomain);
+    public Optional<User> findByEmail(EmailAddress email) {
+        return jpa.findByEmailAndDeletedFalse(email.value()).map(this::toDomain);
     }
 
     @Override

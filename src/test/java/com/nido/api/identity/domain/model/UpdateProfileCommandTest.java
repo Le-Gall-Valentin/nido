@@ -15,6 +15,13 @@ class UpdateProfileCommandTest {
     }
 
     @Test
+    void a_username_nido_refuses_never_reaches_the_database() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> new UpdateProfileCommand(UUID.randomUUID(), "jane@home", "jane@test.com", null))
+            .isInstanceOf(IdentityException.InvalidUsername.class);
+    }
+
+    @Test
     void constructor_nullEmailIsToleratedWithoutNPE() {
         var cmd = new UpdateProfileCommand(UUID.randomUUID(), "alice", null, null);
         assertThat(cmd.email()).isNull();

@@ -1,13 +1,13 @@
 package com.nido.api.identity.application.service;
 
 import com.nido.api.identity.application.port.in.FindUserUseCase;
+import com.nido.api.identity.domain.model.AccountIdentifier;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -32,13 +32,9 @@ public class FindUserService implements FindUserUseCase {
 
     @Override
     public Optional<User> findByIdentifier(String identifier) {
-        if (identifier == null || identifier.isBlank()) {
-            return Optional.empty();
-        }
-        String typed = identifier.strip();
-        if (typed.indexOf('@') >= 0) {
-            return userRepository.findByEmail(typed.toLowerCase(Locale.ROOT));
-        }
-        return userRepository.findByUsername(typed);
+        return AccountIdentifier.parse(identifier).flatMap(typed -> switch (typed) {
+            case AccountIdentifier.ByEmail email -> userRepository.findByEmail(email.address());
+            case AccountIdentifier.ByUsername username -> userRepository.findByUsername(username.value());
+        });
     }
 }

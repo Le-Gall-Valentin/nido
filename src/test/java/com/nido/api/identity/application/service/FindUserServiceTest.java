@@ -1,5 +1,6 @@
 package com.nido.api.identity.application.service;
 
+import com.nido.api.identity.domain.model.EmailAddress;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.model.Role;
@@ -46,7 +47,7 @@ class FindUserServiceTest {
 
     @Test
     void a_typed_address_finds_the_account_by_address() {
-        when(userRepository.findByEmail("alice@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail(new EmailAddress("alice@test.com"))).thenReturn(Optional.of(user));
 
         assertThat(service.findByIdentifier("alice@test.com")).contains(user);
         verify(userRepository, never()).findByUsername(any());
@@ -55,7 +56,7 @@ class FindUserServiceTest {
     @Test
     void surrounding_spaces_and_capitals_do_not_matter_for_an_address() {
         // Mobile keyboards add a space after autocompleting an address.
-        when(userRepository.findByEmail("alice@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail(new EmailAddress("alice@test.com"))).thenReturn(Optional.of(user));
 
         assertThat(service.findByIdentifier(" Alice@Test.COM ")).contains(user);
     }

@@ -15,6 +15,12 @@ class RegisterCommandTest {
     }
 
     @Test
+    void a_username_nido_refuses_is_stopped_at_the_command() {
+        assertThatThrownBy(() -> new RegisterCommand("jane@home", "jane@test.com", "pass", Role.USER))
+            .isInstanceOf(IdentityException.InvalidUsername.class);
+    }
+
+    @Test
     void constructor_nullEmailIsToleratedWithoutNPE() {
         var cmd = new RegisterCommand("alice", null, "pass", Role.USER);
         assertThat(cmd.email()).isNull();

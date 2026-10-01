@@ -41,6 +41,9 @@ public class IdentityExceptionHandler {
             case IdentityException.UserAlreadyActive ex ->
                     response(409, ex, "User account is already active.");
 
+            case IdentityException.InvalidUsername ex ->
+                    response(400, ex, "A username is 3 to 50 characters and holds no @.");
+
             case IdentityException.UsernameAlreadyExists ex ->
                     response(409, ex, "Username already taken.");
 

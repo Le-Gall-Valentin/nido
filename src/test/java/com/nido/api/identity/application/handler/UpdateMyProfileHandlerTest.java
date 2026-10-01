@@ -144,7 +144,7 @@ class UpdateMyProfileHandlerTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(
             new User(userId, "jane", "jane@test.com", Role.USER, false, Instant.now(), null)));
 
-        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "x", "x@test.com", "right")))
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "xyz", "x@test.com", "right")))
             .isInstanceOf(IdentityException.UserNotActive.class);
         verifyNoInteractions(passwordCheck, profileMail);
     }
@@ -153,7 +153,7 @@ class UpdateMyProfileHandlerTest {
     void an_unknown_account_changes_nothing() {
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "x", "x@test.com", null)))
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "xyz", "x@test.com", null)))
             .isInstanceOf(IdentityException.UserNotFound.class);
     }
 }
