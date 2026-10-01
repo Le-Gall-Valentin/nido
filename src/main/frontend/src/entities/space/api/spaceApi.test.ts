@@ -16,7 +16,7 @@ import {
   InvitationNotPendingError,
   InvitationExpiredError,
   PersonalSpaceImmutableError,
-  NoAccountForEmailError,
+  NoAccountForIdentifierError,
   InvalidAppearanceError,
   InvalidSpaceNameError,
   InvalidSpaceDescriptionError,
@@ -238,7 +238,7 @@ describe('inviteMember', () => {
   it('POST /spaces/{id}/invitations with body', async () => {
     mock.post.mockResolvedValue({ data: {} })
     await spaceApi.inviteMember('s-1', 'carol@example.fr', 'MEMBER')
-    expect(mock.post).toHaveBeenCalledWith('/spaces/s-1/invitations', { email: 'carol@example.fr', role: 'MEMBER' })
+    expect(mock.post).toHaveBeenCalledWith('/spaces/s-1/invitations', { identifier: 'carol@example.fr', role: 'MEMBER' })
   })
 
   it('throws AlreadyMemberError on 409 AlreadyMember', async () => {
@@ -251,9 +251,9 @@ describe('inviteMember', () => {
     await expect(spaceApi.inviteMember('s-1', 'carol@example.fr', 'MEMBER')).rejects.toBeInstanceOf(InvitationAlreadyPendingError)
   })
 
-  it('throws NoAccountForEmailError on 422 NoAccountForEmail', async () => {
-    mock.post.mockRejectedValue(axiosErr(422, 'NoAccountForEmail'))
-    await expect(spaceApi.inviteMember('s-1', 'carol@example.fr', 'MEMBER')).rejects.toBeInstanceOf(NoAccountForEmailError)
+  it('throws NoAccountForIdentifierError on 422 NoAccountForIdentifier', async () => {
+    mock.post.mockRejectedValue(axiosErr(422, 'NoAccountForIdentifier'))
+    await expect(spaceApi.inviteMember('s-1', 'carol@example.fr', 'MEMBER')).rejects.toBeInstanceOf(NoAccountForIdentifierError)
   })
 })
 

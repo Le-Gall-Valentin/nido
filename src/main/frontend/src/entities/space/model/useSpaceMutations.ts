@@ -103,8 +103,8 @@ export function useInviteMember(spaceId: string) {
   const api = useSpaceApi()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ email, role }: { email: string; role: AssignableSpaceRole }) =>
-      api.inviteMember(spaceId, email, role),
+    mutationFn: ({ identifier, role }: { identifier: string; role: AssignableSpaceRole }) =>
+      api.inviteMember(spaceId, identifier, role),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: spaceInvitationsKey(spaceId) }),
   })
 }

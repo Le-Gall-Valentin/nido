@@ -209,7 +209,7 @@ export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSe
       {inviteOpen && (
         <InviteMemberModal
           onClose={() => setInviteOpen(false)}
-          onInvite={(email, role) => inviteMember.mutateAsync({ email, role })}
+          onInvite={(identifier, role) => inviteMember.mutateAsync({ identifier, role })}
           onSuccess={() => setInviteOpen(false)}
         />
       )}

@@ -223,10 +223,10 @@ describe('useInviteMember', () => {
     const invalidate = spy(queryClient)
     const { result } = renderHook(() => useInviteMember('s-1'), { wrapper })
 
-    result.current.mutate({ email: 'carol@test.com', role: 'MEMBER' })
+    result.current.mutate({ identifier: 'carol', role: 'MEMBER' })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
-    expect(api.inviteMember).toHaveBeenCalledWith('s-1', 'carol@test.com', 'MEMBER')
+    expect(api.inviteMember).toHaveBeenCalledWith('s-1', 'carol', 'MEMBER')
     expect(invalidate).toHaveBeenCalledExactlyOnceWith({ queryKey: spaceInvitationsKey('s-1') })
   })
 })

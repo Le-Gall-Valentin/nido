@@ -40,7 +40,7 @@ export interface ISpaceApi {
   removeMember(spaceId: string, userId: string): Promise<void>
   transferOwnership(spaceId: string, userId: string): Promise<void>
   leaveSpace(spaceId: string): Promise<void>
-  inviteMember(spaceId: string, email: string, role: AssignableSpaceRole): Promise<SpaceInvitation>
+  inviteMember(spaceId: string, identifier: string, role: AssignableSpaceRole): Promise<SpaceInvitation>
   revokeInvitation(spaceId: string, invitationId: string): Promise<void>
   acceptInvitation(invitationId: string): Promise<{ spaceId: string }>
 }

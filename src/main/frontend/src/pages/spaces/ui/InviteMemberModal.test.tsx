@@ -30,7 +30,7 @@ vi.mock('@/shared/ui', () => ({
 }))
 
 const ISSUED: SpaceInvitation = {
-  id: 'i-1', email: 'carol@test.com', role: 'MEMBER', code: 'NIDO-XYZ789',
+  id: 'i-1', username: 'carol', role: 'MEMBER', code: 'NIDO-XYZ789',
   status: 'PENDING', expiresAt: '2999-01-01T00:00:00Z', createdAt: '2024-01-01T00:00:00Z',
 }
 
@@ -50,16 +50,24 @@ function setup(overrides: { onInvite?: () => Promise<SpaceInvitation> } = {}) {
 }
 
 describe('InviteMemberModal — validation', () => {
-  it('submit is disabled with an invalid email', () => {
+  it('submit is disabled while the field is blank', () => {
     const { getByLabelText, getByText } = setup()
-    fireEvent.change(getByLabelText('invite.email'), { target: { value: 'not-an-email' } })
+    fireEvent.change(getByLabelText('invite.identifier'), { target: { value: '   ' } })
     expect((getByText('invite.submit') as HTMLButtonElement).disabled).toBe(true)
   })
 
-  it('submit is enabled with a valid email', () => {
-    const { getByLabelText, getByText } = setup()
-    fireEvent.change(getByLabelText('invite.email'), { target: { value: 'carol@test.com' } })
-    expect((getByText('invite.submit') as HTMLButtonElement).disabled).toBe(false)
+  it('a username is enough to submit, sent trimmed', async () => {
+    const { getByLabelText, getByText, onInvite } = setup()
+    fireEvent.change(getByLabelText('invite.identifier'), { target: { value: ' carol ' } })
+    fireEvent.click(getByText('invite.submit'))
+    await waitFor(() => expect(onInvite).toHaveBeenCalledWith('carol', 'MEMBER'))
+  })
+
+  it('names the invitee by username once the invitation is issued', async () => {
+    const { getByLabelText, getByText, findByText } = setup()
+    fireEvent.change(getByLabelText('invite.identifier'), { target: { value: 'carol@test.com' } })
+    fireEvent.click(getByText('invite.submit'))
+    expect(await findByText('invite.success_body:{"username":"carol"}')).toBeDefined()
   })
 
   it('defaults the role to MEMBER and offers ADMIN, MEMBER, VIEWER', () => {
@@ -73,14 +81,14 @@ describe('InviteMemberModal — validation', () => {
 describe('InviteMemberModal — success flow', () => {
   it('shows the issued code with a copy button after a successful invite', async () => {
     const { getByLabelText, getByText, findByText } = setup()
-    fireEvent.change(getByLabelText('invite.email'), { target: { value: 'carol@test.com' } })
+    fireEvent.change(getByLabelText('invite.identifier'), { target: { value: 'carol@test.com' } })
     fireEvent.click(getByText('invite.submit'))
     expect(await findByText('NIDO-XYZ789')).toBeDefined()
   })
 
   it('copies the code to the clipboard', async () => {
     const { getByLabelText, getByText, findByText } = setup()
-    fireEvent.change(getByLabelText('invite.email'), { target: { value: 'carol@test.com' } })
+    fireEvent.change(getByLabelText('invite.identifier'), { target: { value: 'carol@test.com' } })
     fireEvent.click(getByText('invite.submit'))
     const codeButton = await findByText('NIDO-XYZ789')
     fireEvent.click(codeButton)
@@ -89,7 +97,7 @@ describe('InviteMemberModal — success flow', () => {
 
   it('calls onSuccess when Done is clicked after issuing', async () => {
     const { getByLabelText, getByText, findByText, onSuccess } = setup()
-    fireEvent.change(getByLabelText('invite.email'), { target: { value: 'carol@test.com' } })
+    fireEvent.change(getByLabelText('invite.identifier'), { target: { value: 'carol@test.com' } })
     fireEvent.click(getByText('invite.submit'))
     await findByText('NIDO-XYZ789')
     fireEvent.click(getByText('invite.done'))
@@ -102,7 +110,7 @@ describe('InviteMemberModal — errors', () => {
     const { getByLabelText, getByText, findByRole, queryByText } = setup({
       onInvite: vi.fn().mockRejectedValue(new NetworkError()),
     })
-    fireEvent.change(getByLabelText('invite.email'), { target: { value: 'carol@test.com' } })
+    fireEvent.change(getByLabelText('invite.identifier'), { target: { value: 'carol@test.com' } })
     fireEvent.click(getByText('invite.submit'))
     const alert = await findByRole('alert')
     expect(alert.textContent).toContain('invite.error.network')

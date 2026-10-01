@@ -1,5 +1,5 @@
 import { NetworkError, RateLimitError } from '@/shared/lib'
-import { InsufficientRoleError, SelfManagementError, OwnerProtectedError, SpaceRoleAlreadyAssignedError, LastOwnerError, MemberNotFoundError, AlreadyMemberError, InvitationAlreadyPendingError, InvitationNotFoundError, InvitationNotPendingError, InvitationExpiredError, PersonalSpaceImmutableError, NoAccountForEmailError, InvalidAppearanceError, InvalidSpaceNameError, InvalidSpaceDescriptionError, OwnerRoleNotAssignableError, SpaceNotAccessibleError } from '@/entities/space'
+import { InsufficientRoleError, SelfManagementError, OwnerProtectedError, SpaceRoleAlreadyAssignedError, LastOwnerError, MemberNotFoundError, AlreadyMemberError, InvitationAlreadyPendingError, InvitationNotFoundError, InvitationNotPendingError, InvitationExpiredError, PersonalSpaceImmutableError, NoAccountForIdentifierError, InvalidAppearanceError, InvalidSpaceNameError, InvalidSpaceDescriptionError, OwnerRoleNotAssignableError, SpaceNotAccessibleError } from '@/entities/space'
 
 function suffixFor(error: unknown): string {
   if (error instanceof SpaceNotAccessibleError) return 'not_accessible'
@@ -10,7 +10,7 @@ function suffixFor(error: unknown): string {
   if (error instanceof SpaceRoleAlreadyAssignedError) return 'already_assigned'
   if (error instanceof LastOwnerError) return 'last_owner'
   if (error instanceof PersonalSpaceImmutableError) return 'personal_immutable'
-  if (error instanceof NoAccountForEmailError) return 'no_account'
+  if (error instanceof NoAccountForIdentifierError) return 'no_account'
   if (error instanceof InvalidAppearanceError) return 'invalid_appearance'
   if (error instanceof InvalidSpaceNameError) return 'invalid_space_name'
   if (error instanceof InvalidSpaceDescriptionError) return 'invalid_space_description'

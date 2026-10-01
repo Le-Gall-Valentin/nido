@@ -34,6 +34,6 @@ export {
   SpaceNotAccessibleError, InsufficientRoleError, SelfManagementError, OwnerProtectedError,
   SpaceRoleAlreadyAssignedError, LastOwnerError, AlreadyMemberError, InvitationAlreadyPendingError,
   InvitationNotFoundError, MemberNotFoundError, InvitationNotPendingError, InvitationExpiredError,
-  PersonalSpaceImmutableError, NoAccountForEmailError, InvalidAppearanceError, InvalidSpaceNameError,
+  PersonalSpaceImmutableError, NoAccountForIdentifierError, InvalidAppearanceError, InvalidSpaceNameError,
   InvalidSpaceDescriptionError, OwnerRoleNotAssignableError,
 } from './api/spaceApi'

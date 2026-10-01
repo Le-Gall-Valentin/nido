@@ -9,7 +9,7 @@ import { SpaceApiProvider } from './spaceApiContext'
 import { useSpaceInvitations, spaceInvitationsKey } from './useSpaceInvitations'
 
 const INVITATIONS: SpaceInvitation[] = [
-  { id: 'i-1', email: 'carol@test.com', role: 'MEMBER', code: 'NIDO-ABC123', status: 'PENDING', expiresAt: '2024-01-08T00:00:00Z', createdAt: '2024-01-01T00:00:00Z' },
+  { id: 'i-1', username: 'carol', role: 'MEMBER', code: 'NIDO-ABC123', status: 'PENDING', expiresAt: '2024-01-08T00:00:00Z', createdAt: '2024-01-01T00:00:00Z' },
 ]
 
 function fakeApi(overrides: Partial<ISpaceApi> = {}): ISpaceApi {

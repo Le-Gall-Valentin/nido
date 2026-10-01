@@ -19,9 +19,9 @@
     "already_assigned": "This member already has this role.",
     "last_owner": "Transfer ownership before leaving this context.",
     "personal_immutable": "The personal space cannot be renamed, shared or deleted.",
-    "no_account": "No account exists for this address. Ask an administrator to create one.",
+    "no_account": "No account matches this username or email. Ask an administrator to create one.",
     "already_member": "This person is already a member of this context.",
-    "invitation_pending": "This address already has a pending invitation.",
+    "invitation_pending": "This person already has a pending invitation.",
     "invitation_not_found": "This invitation could not be found.",
     "invitation_not_pending": "This invitation is no longer pending.",
     "invitation_expired": "This invitation has expired.",
@@ -67,7 +67,7 @@
       "REVOKED": "Revoked"
     },
     "action_copy": "Copy code {{code}}",
-    "action_revoke": "Revoke invitation for {{email}}"
+    "action_revoke": "Revoke invitation for {{username}}"
   },
   "create": {
     "title": "Create a group",
@@ -109,13 +109,13 @@
   },
   "invite": {
     "title": "Invite a member",
-    "email": "Email address",
-    "email_placeholder": "name@example.com",
+    "identifier": "Username or email",
+    "identifier_placeholder": "first.last or name@example.com",
     "role": "Role",
     "cancel": "Cancel",
     "submit": "Send invitation",
     "success_title": "Invitation sent",
-    "success_body": "{{email}} now has an invitation waiting on their groups page.",
+    "success_body": "{{username}} now has an invitation waiting on their groups page.",
     "code_hint": "Reference code (not needed to join)",
     "done": "Done"
   },
