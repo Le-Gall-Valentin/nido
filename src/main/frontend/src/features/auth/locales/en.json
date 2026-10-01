@@ -9,7 +9,7 @@
     "submit": "Sign in"
   },
   "error": {
-    "credentials": "Incorrect username or password.",
+    "credentials": "Incorrect username, email or password.",
     "network": "Service unavailable. Please try again.",
     "rateLimit": "Too many attempts. Please wait before trying again.",
     "rateLimitWithDelay": "Too many attempts. Try again in {{seconds}} seconds.",

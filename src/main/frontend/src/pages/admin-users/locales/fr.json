@@ -25,7 +25,7 @@
   },
   "close": "Fermer",
   "search": {
-    "placeholder": "Rechercher par nom d'utilisateur ou email…",
+    "placeholder": "Rechercher par identifiant ou email…",
     "clear": "Effacer la recherche"
   },
   "perm": {
@@ -58,7 +58,7 @@
     "cancel": "Annuler",
     "submit": "Créer",
     "error": {
-      "conflict": "Ce nom d'utilisateur ou cette adresse e-mail est déjà utilisé(e).",
+      "conflict": "Cet identifiant ou cette adresse e-mail est déjà utilisé(e).",
       "forbidden": "Vous n'avez pas les droits nécessaires pour créer cet utilisateur.",
       "not_found": "Utilisateur introuvable.",
       "server": "Une erreur est survenue. Veuillez réessayer.",
