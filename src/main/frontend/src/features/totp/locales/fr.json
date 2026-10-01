@@ -3,7 +3,7 @@
     "title": "Vérification en deux étapes",
     "subtitle": "Bonjour {{username}}. Saisissez le code à 6 chiffres généré par votre application d'authentification.",
     "submit": "Vérifier",
-    "back": "← Utiliser un autre compte",
+    "back": "Utiliser un autre compte",
     "help": "Vous avez perdu votre appareil ? Demandez à un administrateur de réinitialiser votre double authentification.",
     "code_group_label": "Code de vérification",
     "digit_label": "Chiffre {{n}}",
