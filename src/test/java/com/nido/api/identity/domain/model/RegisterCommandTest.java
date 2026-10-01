@@ -21,6 +21,11 @@ class RegisterCommandTest {
     }
 
     @Test
+    void its_string_form_never_shows_the_address() {
+        assertThat(new RegisterCommand("alice", "alice@test.com", "pass", Role.USER).toString()).doesNotContain("alice@test.com");
+    }
+
+    @Test
     void constructor_nullEmailIsToleratedWithoutNPE() {
         var cmd = new RegisterCommand("alice", null, "pass", Role.USER);
         assertThat(cmd.email()).isNull();

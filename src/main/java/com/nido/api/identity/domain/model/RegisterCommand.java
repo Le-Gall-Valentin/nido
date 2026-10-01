@@ -13,6 +13,6 @@ public record RegisterCommand(String username, String email, String rawPassword,
 
     @Override
     public String toString() {
-        return "RegisterCommand[username=" + username + ", email=" + email + ", role=" + role + "]";
+        return "RegisterCommand[username=" + username + ", email=***, role=" + role + "]";
     }
 }
