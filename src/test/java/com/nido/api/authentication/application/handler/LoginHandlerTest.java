@@ -257,6 +257,7 @@ class LoginHandlerTest {
 
         assertThat(result).isInstanceOf(LoginResult.TotpRequired.class);
         assertThat(((LoginResult.TotpRequired) result).challengeId()).isEqualTo("challenge-uuid");
+        assertThat(((LoginResult.TotpRequired) result).username()).isEqualTo("user2");
         verifyNoInteractions(accessTokenPort, refreshTokenPort);
     }
 

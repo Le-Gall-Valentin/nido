@@ -145,6 +145,44 @@ class AuthControllerIT {
     }
 
     @Test
+    void login_withTheOldUsernameField_returns400() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"testuser\",\"password\":\"password\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void login_anAddressLongerThanFiftyCharacters_reachesTheAccount() throws Exception {
+        String address = "a.rather.long.first.name.and.last.name@a-household-domain.example";
+        UserIdentityEntity longAddress = new UserIdentityEntity();
+        longAddress.setUsername("longaddress");
+        longAddress.setEmail(address);
+        longAddress.setRole(Role.USER);
+        userIdentityJpaRepository.save(longAddress);
+        UserCredentialEntity credential = new UserCredentialEntity();
+        credential.setUserId(longAddress.getId());
+        credential.setPasswordHash(encoder.encode("password"));
+        userCredentialJpaRepository.save(credential);
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest(address, "password"))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.username").value("longaddress"));
+    }
+
+    @Test
+    void login_totpRequired_namesTheAccountEvenWhenSignedInByAddress() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest("totpuser@test.com", "totppass"))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.totpRequired").value(true))
+            .andExpect(jsonPath("$.username").value("totpuser"));
+    }
+
+    @Test
     void login_wrongPassword_returns401() throws Exception {
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)

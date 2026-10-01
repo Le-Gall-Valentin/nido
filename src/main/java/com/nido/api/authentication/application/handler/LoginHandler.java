@@ -57,7 +57,7 @@ public class LoginHandler implements LoginUseCase {
     @Override
     @Transactional
     public LoginResult login(LoginCommand command) {
-        var credsOpt = userCredentialsPort.findByIdentifier(command.username());
+        var credsOpt = userCredentialsPort.findByIdentifier(command.identifier());
 
         if (credsOpt.isEmpty()) {
             passwordVerifier.matches(command.password(), dummyHash);
@@ -81,7 +81,7 @@ public class LoginHandler implements LoginUseCase {
         if (totpStatusQuery.isTotpEnabled(creds.id())) {
             String challengeId = totpChallengeStore.createChallenge(creds.id());
             log.info("TOTP challenge created for user: {}", creds.id());
-            return new LoginResult.TotpRequired(challengeId);
+            return new LoginResult.TotpRequired(challengeId, creds.username());
         }
 
         log.info("Successful login for user: {}", creds.id());
