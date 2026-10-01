@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import { isValidPassword, isValidEmail, passwordProblem } from '@/shared/lib'
 import type { User } from '@/entities/user'
 import { assignableRoles } from '../lib/permissions'
@@ -82,6 +82,7 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
               placeholder={t('create.username_placeholder')}
               disabled={isLoading}
               autoFocus
+              {...VERBATIM_INPUT_PROPS}
             />
           </div>
           <div className="min-w-0 flex-1">

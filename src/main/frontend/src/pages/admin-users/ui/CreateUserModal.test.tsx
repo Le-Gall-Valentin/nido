@@ -9,7 +9,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-vi.mock('@/shared/ui', () => ({
+vi.mock('@/shared/ui', async (importOriginal) => ({
+  // The real field attributes: the tests read them off the rendered input.
+  VERBATIM_INPUT_PROPS: (await importOriginal<typeof import('@/shared/ui')>()).VERBATIM_INPUT_PROPS,
   CTA_BUTTON_STYLE: {},
   Alert: ({ children, variant }: { children: React.ReactNode; variant: string }) => (
     <div role={variant === 'error' ? 'alert' : 'status'}>{children}</div>
@@ -19,13 +21,10 @@ vi.mock('@/shared/ui', () => ({
   Button: ({ children, onClick, disabled, isLoading, type, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { isLoading?: boolean; children: React.ReactNode }) => (
     <button type={type} onClick={onClick} disabled={disabled || isLoading} {...props}>{children}</button>
   ),
-  Input: ({ label, name, type = 'text', value, onChange, disabled, placeholder, autoFocus }: {
-    label: string; name: string; type?: string; value: string;
-    onChange: React.ChangeEventHandler<HTMLInputElement>; disabled?: boolean; placeholder?: string; autoFocus?: boolean
-  }) => (
+  Input: ({ label, name, type = 'text', ...inputProps }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string }) => (
     <div>
       <label htmlFor={name}>{label}</label>
-      <input id={name} name={name} type={type} value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} autoFocus={autoFocus} />
+      <input id={name} name={name} type={type} {...inputProps} />
     </div>
   ),
 }))
@@ -110,6 +109,14 @@ describe('CreateUserModal — validation', () => {
     const { getByLabelText, getByText } = setup()
     fireEvent.change(getByLabelText('create.username'), { target: { value: 'ab' } })
     expect(getByText('create.error.username_length')).toBeDefined()
+  })
+
+  it('takes the username as typed — no capital or correction from a phone keyboard', () => {
+    const { getByLabelText } = setup()
+    const field = getByLabelText('create.username') as HTMLInputElement
+    expect(field.getAttribute('autocapitalize')).toBe('off')
+    expect(field.getAttribute('autocorrect')).toBe('off')
+    expect(field.getAttribute('spellcheck')).toBe('false')
   })
 
   it('shows a hint and keeps submit disabled when the username holds an @', () => {

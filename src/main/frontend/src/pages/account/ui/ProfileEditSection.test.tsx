@@ -81,6 +81,14 @@ describe('ProfileEditSection', () => {
     expect(getByText('profile.error.username_too_short')).toBeDefined()
   })
 
+  it('takes the username as typed — no capital or correction from a phone keyboard', () => {
+    const { getByLabelText } = setup()
+    const field = getByLabelText('profile.username') as HTMLInputElement
+    expect(field.getAttribute('autocapitalize')).toBe('off')
+    expect(field.getAttribute('autocorrect')).toBe('off')
+    expect(field.getAttribute('spellcheck')).toBe('false')
+  })
+
   it('save button is disabled and shows error when the username holds an @', () => {
     const { getByLabelText, getByRole, getByText } = setup()
     fireEvent.change(getByLabelText('profile.username'), { target: { value: 'alice@home' } })

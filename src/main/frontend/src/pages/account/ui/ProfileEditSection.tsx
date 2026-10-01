@@ -1,6 +1,6 @@
 import { useId, useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import type { User } from '@/entities/user'
 import { ConflictError, InvalidCurrentPasswordError } from '../api/accountApi'
 import { NetworkError, RateLimitError } from '@/shared/lib'
@@ -102,6 +102,7 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 disabled={isSubmitting}
+                {...VERBATIM_INPUT_PROPS}
               />
             </div>
             <div className="min-w-0 sm:flex-[1.4]">

@@ -1,6 +1,6 @@
 import React, { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Alert, Button, Input, PasswordInput, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE } from '@/shared/ui'
+import { Alert, Button, Input, PasswordInput, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import { isValidPassword, passwordProblem } from '@/shared/lib'
 import type { IPasswordResetApi } from '../model/IPasswordResetApi'
 import { InvalidResetLinkError } from '../model/errors'
@@ -89,8 +89,7 @@ export function NewPasswordForm({ api, token, labelId, onDone, onInvalid }: Prop
         value={confirm}
         onChange={(e) => setConfirm(e.target.value)}
         autoComplete="new-password"
-        spellCheck={false}
-        autoCapitalize="off"
+        {...VERBATIM_INPUT_PROPS}
         className={AUTH_FIELD_CLASS}
         aria-invalid={mismatch}
         aria-describedby={mismatch ? mismatchId : undefined}

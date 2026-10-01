@@ -184,6 +184,15 @@ describe('LoginForm', () => {
     expect(field.name).toBe('identifier')
   })
 
+  it('takes the identifier as typed — no capital or correction from a phone keyboard', () => {
+    // Chrome and Safari capitalise the first letter by default: "jane" would arrive as "Jane".
+    const { getByLabelText } = setup(vi.fn())
+    const field = getByLabelText('field.identifier') as HTMLInputElement
+    expect(field.getAttribute('autocapitalize')).toBe('off')
+    expect(field.getAttribute('autocorrect')).toBe('off')
+    expect(field.getAttribute('spellcheck')).toBe('false')
+  })
+
   it('prevents double-submit — login called only once for concurrent submits', async () => {
     let resolveLogin!: (value: { kind: 'authenticated' }) => void
     const pendingPromise = new Promise<{ kind: 'authenticated' }>((resolve) => { resolveLogin = resolve })

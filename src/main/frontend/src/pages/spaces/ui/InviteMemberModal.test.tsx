@@ -8,7 +8,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),
 }))
 
-vi.mock('@/shared/ui', () => ({
+vi.mock('@/shared/ui', async (importOriginal) => ({
+  // The real field attributes: the tests read them off the rendered input.
+  VERBATIM_INPUT_PROPS: (await importOriginal<typeof import('@/shared/ui')>()).VERBATIM_INPUT_PROPS,
   CTA_BUTTON_STYLE: {},
   Alert: ({ children, variant }: { children: React.ReactNode; variant: string }) => (
     <div role={variant === 'error' ? 'alert' : 'status'}>{children}</div>
@@ -18,13 +20,10 @@ vi.mock('@/shared/ui', () => ({
   Button: ({ children, onClick, disabled, isLoading, type, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { isLoading?: boolean; children: React.ReactNode }) => (
     <button type={type} onClick={onClick} disabled={disabled || isLoading} {...props}>{children}</button>
   ),
-  Input: ({ label, name, value, onChange, disabled, placeholder, autoFocus }: {
-    label: string; name: string; value: string;
-    onChange: React.ChangeEventHandler<HTMLInputElement>; disabled?: boolean; placeholder?: string; autoFocus?: boolean
-  }) => (
+  Input: ({ label, name, ...inputProps }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; name: string }) => (
     <div>
       <label htmlFor={name}>{label}</label>
-      <input id={name} name={name} value={value} onChange={onChange} disabled={disabled} placeholder={placeholder} autoFocus={autoFocus} />
+      <input id={name} name={name} {...inputProps} />
     </div>
   ),
 }))
@@ -54,6 +53,14 @@ describe('InviteMemberModal — validation', () => {
     const { getByLabelText, getByText } = setup()
     fireEvent.change(getByLabelText('invite.identifier'), { target: { value: '   ' } })
     expect((getByText('invite.submit') as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('takes the identifier as typed — no capital or correction from a phone keyboard', () => {
+    const { getByLabelText } = setup()
+    const field = getByLabelText('invite.identifier') as HTMLInputElement
+    expect(field.getAttribute('autocapitalize')).toBe('off')
+    expect(field.getAttribute('autocorrect')).toBe('off')
+    expect(field.getAttribute('spellcheck')).toBe('false')
   })
 
   it('a username is enough to submit, sent trimmed', async () => {

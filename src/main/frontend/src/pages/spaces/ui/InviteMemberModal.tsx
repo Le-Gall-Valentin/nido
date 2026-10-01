@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Copy, Send } from 'lucide-react'
-import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import type { SpaceInvitation , AssignableSpaceRole } from '@/entities/space'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 
@@ -109,6 +109,7 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
             placeholder={t('invite.identifier_placeholder')}
             maxLength={254}
             autoComplete="off"
+            {...VERBATIM_INPUT_PROPS}
             disabled={isLoading}
             autoFocus
           />

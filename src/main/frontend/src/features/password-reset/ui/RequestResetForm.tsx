@@ -1,6 +1,6 @@
 import React, { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Alert, Button, Input, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE } from '@/shared/ui'
+import { Alert, Button, Input, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import type { IPasswordResetApi } from '../model/IPasswordResetApi'
 import { describeError, type FormError } from '../model/describeError'
 
@@ -52,8 +52,7 @@ export function RequestResetForm({ api, labelId, onSent }: Props) {
         onChange={(e) => setIdentifier(e.target.value)}
         placeholder={t('field.identifier_placeholder')}
         autoComplete="username"
-        spellCheck={false}
-        autoCapitalize="off"
+        {...VERBATIM_INPUT_PROPS}
         autoFocus
         maxLength={254}
         className={AUTH_FIELD_CLASS}

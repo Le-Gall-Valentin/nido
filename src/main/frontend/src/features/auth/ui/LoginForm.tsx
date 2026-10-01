@@ -3,7 +3,7 @@ import React, { useId, useRef, useState } from 'react'
 import { AlertTriangle, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../model/authStoreContext'
-import { Button, Input, PasswordInput, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE } from '@/shared/ui'
+import { Button, Input, PasswordInput, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import type { LoginOutcome } from '../model/types'
 
 interface LoginFormProps {
@@ -92,6 +92,7 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
         maxLength={254}
         // "username" is the token password managers fill — it covers an address typed here too.
         autoComplete="username"
+        {...VERBATIM_INPUT_PROPS}
         autoFocus
         className={AUTH_FIELD_CLASS}
         aria-invalid={errorKind !== null}
