@@ -42,9 +42,9 @@ describe('authStore', () => {
     vi.mocked(api.login).mockResolvedValue({ type: 'success', user })
     const store = createAuthStore(api)
 
-    const outcome = await store.getState().login({ username: 'user', password: 'secret' })
+    const outcome = await store.getState().login({ identifier: 'user', password: 'secret' })
 
-    expect(api.login).toHaveBeenCalledWith({ username: 'user', password: 'secret' })
+    expect(api.login).toHaveBeenCalledWith({ identifier: 'user', password: 'secret' })
     expect(mockedNotifyLoginSuccess).not.toHaveBeenCalled()
     expect(mockedSetSessionHint).not.toHaveBeenCalled()
     expect(store.getState().user).toBeNull()
@@ -57,7 +57,7 @@ describe('authStore', () => {
     vi.mocked(api.login).mockResolvedValue({ type: 'success', user })
     const store = createAuthStore(api)
 
-    await store.getState().login({ username: 'user', password: 'secret' })
+    await store.getState().login({ identifier: 'user', password: 'secret' })
     // Known before the 2FA proposal is answered: what is shown meanwhile can already suit the account.
     expect(store.getState().signingIn).toEqual(user)
     expect(store.getState().user).toBeNull()
@@ -66,17 +66,17 @@ describe('authStore', () => {
     expect(store.getState().signingIn).toBeNull()
     expect(store.getState().user).toEqual(user)
 
-    await store.getState().login({ username: 'user', password: 'secret' })
+    await store.getState().login({ identifier: 'user', password: 'secret' })
     await store.getState().logout()
     expect(store.getState().signingIn).toBeNull()
   })
 
-  it('login returns totp_required with username and does not set user', async () => {
+  it('login returns totp_required with the name the server gave, not what was typed', async () => {
     const api = createApiMock()
-    vi.mocked(api.login).mockResolvedValue({ type: 'totp_required' })
+    vi.mocked(api.login).mockResolvedValue({ type: 'totp_required', username: 'alice' })
     const store = createAuthStore(api)
 
-    const outcome = await store.getState().login({ username: 'alice', password: 'secret' })
+    const outcome = await store.getState().login({ identifier: 'Alice@Test.com', password: 'secret' })
 
     expect(outcome).toEqual({ kind: 'totp_required', username: 'alice' })
     expect(mockedSetSessionHint).not.toHaveBeenCalled()

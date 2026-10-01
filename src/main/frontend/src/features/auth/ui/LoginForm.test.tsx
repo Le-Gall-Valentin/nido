@@ -32,12 +32,12 @@ describe('LoginForm', () => {
     const mockLogin = vi.fn().mockResolvedValue({ kind: 'authenticated' })
     const { getByLabelText, queryByRole } = setup(mockLogin)
 
-    fireEvent.change(getByLabelText('field.username'), { target: { value: 'alice' } })
+    fireEvent.change(getByLabelText('field.identifier'), { target: { value: 'alice' } })
     fireEvent.change(getByLabelText('field.password'), { target: { value: 'secret' } })
-    fireEvent.submit(getByLabelText('field.username').closest('form')!)
+    fireEvent.submit(getByLabelText('field.identifier').closest('form')!)
 
     await waitFor(() =>
-      expect(mockLogin).toHaveBeenCalledWith({ username: 'alice', password: 'secret' })
+      expect(mockLogin).toHaveBeenCalledWith({ identifier: 'alice', password: 'secret' })
     )
     expect(queryByRole('alert')).toBeNull()
   })
@@ -46,9 +46,9 @@ describe('LoginForm', () => {
     const mockLogin = vi.fn().mockRejectedValue(new CredentialsError())
     const { getByLabelText, getByRole } = setup(mockLogin)
 
-    fireEvent.change(getByLabelText('field.username'), { target: { value: 'alice' } })
+    fireEvent.change(getByLabelText('field.identifier'), { target: { value: 'alice' } })
     fireEvent.change(getByLabelText('field.password'), { target: { value: 'wrong' } })
-    fireEvent.submit(getByLabelText('field.username').closest('form')!)
+    fireEvent.submit(getByLabelText('field.identifier').closest('form')!)
 
     await waitFor(() => {
       const alert = getByRole('alert')
@@ -61,7 +61,7 @@ describe('LoginForm', () => {
     const mockLogin = vi.fn().mockRejectedValue(new NetworkError())
     const { getByLabelText, getByRole } = setup(mockLogin)
 
-    fireEvent.submit(getByLabelText('field.username').closest('form')!)
+    fireEvent.submit(getByLabelText('field.identifier').closest('form')!)
 
     await waitFor(() => {
       const alert = getByRole('alert')
@@ -73,7 +73,7 @@ describe('LoginForm', () => {
     const mockLogin = vi.fn().mockRejectedValue(new RateLimitError())
     const { getByLabelText, getByRole } = setup(mockLogin)
 
-    fireEvent.submit(getByLabelText('field.username').closest('form')!)
+    fireEvent.submit(getByLabelText('field.identifier').closest('form')!)
 
     await waitFor(() => {
       const alert = getByRole('alert')
@@ -85,7 +85,7 @@ describe('LoginForm', () => {
     const mockLogin = vi.fn().mockRejectedValue(new RateLimitError(42))
     const { getByLabelText, getByRole } = setup(mockLogin)
 
-    fireEvent.submit(getByLabelText('field.username').closest('form')!)
+    fireEvent.submit(getByLabelText('field.identifier').closest('form')!)
 
     await waitFor(() => {
       const alert = getByRole('alert')
@@ -97,7 +97,7 @@ describe('LoginForm', () => {
     const mockLogin = vi.fn().mockRejectedValue(new ServerError())
     const { getByLabelText, getByRole } = setup(mockLogin)
 
-    fireEvent.submit(getByLabelText('field.username').closest('form')!)
+    fireEvent.submit(getByLabelText('field.identifier').closest('form')!)
 
     await waitFor(() => {
       const alert = getByRole('alert')
@@ -126,7 +126,7 @@ describe('LoginForm', () => {
     const { getByLabelText, container } = setup(mockLogin)
 
     await act(async () => {
-      fireEvent.submit(getByLabelText('field.username').closest('form')!)
+      fireEvent.submit(getByLabelText('field.identifier').closest('form')!)
       // flush microtasks so React commits setIsLoading(true)
       await Promise.resolve()
     })
@@ -143,9 +143,9 @@ describe('LoginForm', () => {
     const onLoginOutcome = vi.fn()
     const { getByLabelText } = setup(mockLogin, { onLoginOutcome })
 
-    fireEvent.change(getByLabelText('field.username'), { target: { value: 'alice' } })
+    fireEvent.change(getByLabelText('field.identifier'), { target: { value: 'alice' } })
     fireEvent.change(getByLabelText('field.password'), { target: { value: 'secret' } })
-    fireEvent.submit(getByLabelText('field.username').closest('form')!)
+    fireEvent.submit(getByLabelText('field.identifier').closest('form')!)
 
     await waitFor(() => expect(onLoginOutcome).toHaveBeenCalledWith({ kind: 'totp_required', username: 'alice' }))
   })
@@ -156,9 +156,9 @@ describe('LoginForm', () => {
     const onLoginOutcome = vi.fn()
     const { getByLabelText } = setup(mockLogin, { onLoginOutcome })
 
-    fireEvent.change(getByLabelText('field.username'), { target: { value: 'alice' } })
+    fireEvent.change(getByLabelText('field.identifier'), { target: { value: 'alice' } })
     fireEvent.change(getByLabelText('field.password'), { target: { value: 'secret' } })
-    fireEvent.submit(getByLabelText('field.username').closest('form')!)
+    fireEvent.submit(getByLabelText('field.identifier').closest('form')!)
 
     await waitFor(() => expect(onLoginOutcome).toHaveBeenCalledWith({ kind: 'enrollment_proposed', user }))
   })
@@ -168,12 +168,20 @@ describe('LoginForm', () => {
     const onLoginOutcome = vi.fn()
     const { getByLabelText } = setup(mockLogin, { onLoginOutcome })
 
-    fireEvent.change(getByLabelText('field.username'), { target: { value: 'alice' } })
+    fireEvent.change(getByLabelText('field.identifier'), { target: { value: 'alice' } })
     fireEvent.change(getByLabelText('field.password'), { target: { value: 'secret' } })
-    fireEvent.submit(getByLabelText('field.username').closest('form')!)
+    fireEvent.submit(getByLabelText('field.identifier').closest('form')!)
 
     await waitFor(() => expect(mockLogin).toHaveBeenCalled())
     expect(onLoginOutcome).not.toHaveBeenCalled()
+  })
+
+  it('takes up to 254 characters and keeps the username autocomplete token', () => {
+    const { getByLabelText } = setup(vi.fn())
+    const field = getByLabelText('field.identifier') as HTMLInputElement
+    expect(field.maxLength).toBe(254)
+    expect(field.getAttribute('autocomplete')).toBe('username')
+    expect(field.name).toBe('identifier')
   })
 
   it('prevents double-submit — login called only once for concurrent submits', async () => {
@@ -181,7 +189,7 @@ describe('LoginForm', () => {
     const pendingPromise = new Promise<{ kind: 'authenticated' }>((resolve) => { resolveLogin = resolve })
     const mockLogin = vi.fn().mockReturnValue(pendingPromise)
     const { getByLabelText } = setup(mockLogin)
-    const form = getByLabelText('field.username').closest('form')!
+    const form = getByLabelText('field.identifier').closest('form')!
 
     await act(async () => {
       fireEvent.submit(form)

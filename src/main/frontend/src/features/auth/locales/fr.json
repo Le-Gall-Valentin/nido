@@ -1,7 +1,7 @@
 {
   "field": {
-    "username": "Identifiant",
-    "username_placeholder": "prenom.nom",
+    "identifier": "Identifiant ou email",
+    "identifier_placeholder": "prenom.nom ou vous@exemple.fr",
     "password": "Mot de passe",
     "password_placeholder": "Votre mot de passe"
   },

@@ -35,7 +35,7 @@ describe('authApi', () => {
   })
 
   it('login posts credentials and returns full user from response', async () => {
-    const credentials: LoginCredentials = { username: 'user', password: 'secret' }
+    const credentials: LoginCredentials = { identifier: 'user', password: 'secret' }
     const fullUser = { id: '1', username: 'user', role: 'USER', email: 'user@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false }
     mockedClient.post.mockResolvedValue({ data: fullUser })
 
@@ -44,10 +44,10 @@ describe('authApi', () => {
     expect(mockedClient.get).not.toHaveBeenCalled()
   })
 
-  it('login returns { type: totp_required } when server responds with totpRequired:true', async () => {
-    mockedClient.post.mockResolvedValue({ data: { totpRequired: true } })
-    const result = await authApi.login({ username: 'u', password: 'p' })
-    expect(result).toEqual({ type: 'totp_required' })
+  it('login returns the account name from a totpRequired answer', async () => {
+    mockedClient.post.mockResolvedValue({ data: { totpRequired: true, username: 'alice' } })
+    const result = await authApi.login({ identifier: 'alice@test.com', password: 'p' })
+    expect(result).toEqual({ type: 'totp_required', username: 'alice' })
   })
 
   it('logout calls logout endpoint', async () => {
@@ -69,22 +69,22 @@ describe('authApi', () => {
 
   it('login throws CredentialsError on 401', async () => {
     mockedClient.post.mockRejectedValue(makeAxiosError(401))
-    await expect(authApi.login({ username: 'u', password: 'p' })).rejects.toBeInstanceOf(CredentialsError)
+    await expect(authApi.login({ identifier: 'u', password: 'p' })).rejects.toBeInstanceOf(CredentialsError)
   })
 
   it('login throws ServerError on 500', async () => {
     mockedClient.post.mockRejectedValue(makeAxiosError(500))
-    await expect(authApi.login({ username: 'u', password: 'p' })).rejects.toBeInstanceOf(ServerError)
+    await expect(authApi.login({ identifier: 'u', password: 'p' })).rejects.toBeInstanceOf(ServerError)
   })
 
   it('login throws RateLimitError on 429', async () => {
     mockedClient.post.mockRejectedValue(makeAxiosError(429))
-    await expect(authApi.login({ username: 'u', password: 'p' })).rejects.toBeInstanceOf(RateLimitError)
+    await expect(authApi.login({ identifier: 'u', password: 'p' })).rejects.toBeInstanceOf(RateLimitError)
   })
 
   it('login throws NetworkError when no response', async () => {
     mockedClient.post.mockRejectedValue(new Error('Network Error'))
-    await expect(authApi.login({ username: 'u', password: 'p' })).rejects.toBeInstanceOf(NetworkError)
+    await expect(authApi.login({ identifier: 'u', password: 'p' })).rejects.toBeInstanceOf(NetworkError)
   })
 
   it('logout throws ServerError on 500', async () => {
@@ -119,24 +119,24 @@ describe('authApi', () => {
 
   it('login throws ServerError on 400 (validation error)', async () => {
     mockedClient.post.mockRejectedValue(makeAxiosError(400))
-    await expect(authApi.login({ username: 'u', password: 'p' })).rejects.toBeInstanceOf(ServerError)
+    await expect(authApi.login({ identifier: 'u', password: 'p' })).rejects.toBeInstanceOf(ServerError)
   })
 
   it('login throws ServerError on 403', async () => {
     mockedClient.post.mockRejectedValue(makeAxiosError(403))
-    await expect(authApi.login({ username: 'u', password: 'p' })).rejects.toBeInstanceOf(ServerError)
+    await expect(authApi.login({ identifier: 'u', password: 'p' })).rejects.toBeInstanceOf(ServerError)
   })
 
   it('login RateLimitError carries retryAfterSeconds from header', async () => {
     mockedClient.post.mockRejectedValue(makeAxiosError(429, 'Too Many Requests', { 'retry-after': '45' }))
-    const caught = await authApi.login({ username: 'u', password: 'p' }).catch((e) => e)
+    const caught = await authApi.login({ identifier: 'u', password: 'p' }).catch((e) => e)
     expect(caught).toBeInstanceOf(RateLimitError)
     expect((caught as RateLimitError).retryAfterSeconds).toBe(45)
   })
 
   it('login RateLimitError has null retryAfterSeconds when header absent', async () => {
     mockedClient.post.mockRejectedValue(makeAxiosError(429))
-    const caught = await authApi.login({ username: 'u', password: 'p' }).catch((e) => e)
+    const caught = await authApi.login({ identifier: 'u', password: 'p' }).catch((e) => e)
     expect(caught).toBeInstanceOf(RateLimitError)
     expect((caught as RateLimitError).retryAfterSeconds).toBeNull()
   })
