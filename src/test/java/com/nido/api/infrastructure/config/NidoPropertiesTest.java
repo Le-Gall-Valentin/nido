@@ -40,6 +40,13 @@ class NidoPropertiesTest {
     }
 
     @Test
+    void seedProperties_rejectsAUsernameWithAnAtSign() {
+        var props = new NidoProperties.SeedProperties("admin@home", "admin@test.com", "strongpw");
+        var violations = validator.validate(props);
+        assertThat(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("username"))).isTrue();
+    }
+
+    @Test
     void seedProperties_acceptsPasswordOf8CharsOrMore() {
         var props = new NidoProperties.SeedProperties("admin", "admin@test.com", "strongpw");
         var violations = validator.validate(props);

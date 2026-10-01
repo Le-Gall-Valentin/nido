@@ -2,6 +2,7 @@ package com.nido.api.infrastructure.config;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -39,7 +40,9 @@ public record NidoProperties(
     ) {}
 
     public record SeedProperties(
-        @NotBlank String username,
+        @NotBlank
+        @Pattern(regexp = "[^@]*", message = "NIDO_SEED_USERNAME must not contain @ — sign-in would read it as an email address")
+        String username,
         @NotBlank String email,
         @NotBlank @Size(min = 8, message = "Seed password must be at least 8 characters") String password
     ) {}

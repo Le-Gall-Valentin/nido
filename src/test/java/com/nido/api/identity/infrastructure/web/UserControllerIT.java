@@ -188,6 +188,28 @@ class UserControllerIT {
     }
 
     @Test
+    void register_aUsernameWithAnAtSign_returns400() throws Exception {
+        Cookie access = loginAs("superadmin", "adminpass");
+
+        mockMvc.perform(post("/api/users")
+                .cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"new@user\",\"email\":\"newuser@test.com\",\"password\":\"Securepass1!\",\"role\":\"USER\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateProfile_aUsernameWithAnAtSign_returns400() throws Exception {
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me")
+                .cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"test@user\",\"email\":\"testuser@test.com\"}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void register_asUser_returns403() throws Exception {
         Cookie access = loginAs("testuser", "password");
 
