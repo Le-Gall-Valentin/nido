@@ -50,7 +50,7 @@ class ForwardedClientIpIT {
                 .header("Content-Type", "application/json")
                 .header("X-Forwarded-For", forwardedFor)
                 .POST(HttpRequest.BodyPublishers.ofString(
-                    "{\"username\":\"nobody\",\"password\":\"wrong-on-purpose\"}"))
+                    "{\"identifier\":\"nobody\",\"password\":\"wrong-on-purpose\"}"))
                 .build();
             return HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.discarding())
                 .statusCode();
