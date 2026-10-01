@@ -107,6 +107,29 @@ class MailOutboxAdapterIT {
     }
 
     @Test
+    void claims_at_most_the_limit_whatever_plan_postgres_picks() {
+        // A plan that reads the sub-select again for every row — a nested-loop semi-join — made the
+        // claim take more than the limit: on each new read the rows this statement had just locked
+        // were skipped, so the next ones came in. Postgres picks such a plan on its own for some table
+        // statistics (the test above failed now and then); these settings make it pick it every time.
+        for (int i = 0; i < 5; i++) {
+            outbox.enqueue("k" + i, mail("jane" + i + "@example.com"), now.minusSeconds(10 - i), null);
+        }
+
+        List<OutboxEntry> claimed = transactions.execute(status -> {
+            // Fresh statistics, so what the other tests left in them cannot steer the plan elsewhere.
+            jdbc.sql("ANALYZE mail_outbox").update();
+            for (String planner : List.of("enable_hashjoin", "enable_mergejoin", "enable_material",
+                    "enable_hashagg", "enable_memoize", "enable_sort")) {
+                jdbc.sql("SET LOCAL " + planner + " = off").update();
+            }
+            return outbox.claimDue(now, 3, lease);
+        });
+
+        assertThat(claimed).extracting(OutboxEntry::kind).containsExactly("k0", "k1", "k2");
+    }
+
+    @Test
     void two_dispatchers_claiming_at_once_never_get_the_same_mail() throws Exception {
         for (int i = 0; i < 40; i++) {
             outbox.enqueue("k", mail("jane" + i + "@example.com"), now, null);
