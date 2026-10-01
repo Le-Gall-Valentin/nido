@@ -60,6 +60,7 @@ class MyInvitationControllerIT {
 
     private UUID aliceId;
     private UUID carolId;
+    private UUID daveId;
     private UUID sharedSpaceId;
 
     @BeforeEach
@@ -75,6 +76,7 @@ class MyInvitationControllerIT {
 
         aliceId = saveUser("alice");
         carolId = saveUser("carol");
+        daveId = saveUser("dave");
         savePersonalSpace(aliceId);
         savePersonalSpace(carolId);
         sharedSpaceId = saveSharedSpace("Chez Valentin", aliceId);
@@ -83,7 +85,7 @@ class MyInvitationControllerIT {
 
     @Test
     void a_pending_invitation_addressed_to_the_caller_appears_in_her_list_with_the_space_name() throws Exception {
-        createInvitation(sharedSpaceId, "carol@test.com", SpaceRole.MEMBER, aliceId, "NIDO-TEST01",
+        createInvitation(sharedSpaceId, carolId, SpaceRole.MEMBER, aliceId, "NIDO-TEST01",
             Instant.now().plusSeconds(3600));
 
         mockMvc.perform(get("/api/me/invitations").cookie(accessTokenFor(carolId, "carol@test.com")))
@@ -97,7 +99,7 @@ class MyInvitationControllerIT {
 
     @Test
     void an_invitation_addressed_to_someone_else_does_not_appear_in_the_caller_list() throws Exception {
-        createInvitation(sharedSpaceId, "dave@test.com", SpaceRole.MEMBER, aliceId, "NIDO-TEST02",
+        createInvitation(sharedSpaceId, daveId, SpaceRole.MEMBER, aliceId, "NIDO-TEST02",
             Instant.now().plusSeconds(3600));
 
         mockMvc.perform(get("/api/me/invitations").cookie(accessTokenFor(carolId, "carol@test.com")))
@@ -107,7 +109,7 @@ class MyInvitationControllerIT {
 
     @Test
     void accepting_with_the_right_code_creates_the_membership_with_the_invitation_role() throws Exception {
-        createInvitation(sharedSpaceId, "carol@test.com", SpaceRole.ADMIN, aliceId, "NIDO-TEST03",
+        createInvitation(sharedSpaceId, carolId, SpaceRole.ADMIN, aliceId, "NIDO-TEST03",
             Instant.now().plusSeconds(3600));
         String payload = objectMapper.writeValueAsString(new AcceptInvitationRequest("NIDO-TEST03"));
 
@@ -125,7 +127,7 @@ class MyInvitationControllerIT {
 
     @Test
     void accepting_by_id_from_the_received_list_creates_the_membership_with_the_invitation_role() throws Exception {
-        UUID invitationId = createInvitation(sharedSpaceId, "carol@test.com", SpaceRole.ADMIN, aliceId, "NIDO-TEST09",
+        UUID invitationId = createInvitation(sharedSpaceId, carolId, SpaceRole.ADMIN, aliceId, "NIDO-TEST09",
             Instant.now().plusSeconds(3600));
 
         mockMvc.perform(post("/api/invitations/" + invitationId + "/accept")
@@ -144,7 +146,7 @@ class MyInvitationControllerIT {
     // champ, corps compris.
     @Test
     void an_unknown_id_and_an_id_addressed_to_someone_else_answer_exactly_alike() throws Exception {
-        UUID mismatchedInvitationId = createInvitation(sharedSpaceId, "dave@test.com", SpaceRole.MEMBER, aliceId,
+        UUID mismatchedInvitationId = createInvitation(sharedSpaceId, daveId, SpaceRole.MEMBER, aliceId,
             "NIDO-TEST10", Instant.now().plusSeconds(3600));
         UUID unknownInvitationId = UUID.randomUUID();
 
@@ -172,7 +174,7 @@ class MyInvitationControllerIT {
 
     @Test
     void reusing_the_same_code_is_a_409_single_use() throws Exception {
-        createInvitation(sharedSpaceId, "carol@test.com", SpaceRole.MEMBER, aliceId, "NIDO-TEST04",
+        createInvitation(sharedSpaceId, carolId, SpaceRole.MEMBER, aliceId, "NIDO-TEST04",
             Instant.now().plusSeconds(3600));
         String payload = objectMapper.writeValueAsString(new AcceptInvitationRequest("NIDO-TEST04"));
 
@@ -194,7 +196,7 @@ class MyInvitationControllerIT {
     // au hasard. Comparaison champ par champ, corps compris.
     @Test
     void a_code_addressed_to_someone_else_answers_exactly_like_an_unknown_code() throws Exception {
-        createInvitation(sharedSpaceId, "dave@test.com", SpaceRole.MEMBER, aliceId, "NIDO-TEST05",
+        createInvitation(sharedSpaceId, daveId, SpaceRole.MEMBER, aliceId, "NIDO-TEST05",
             Instant.now().plusSeconds(3600));
         String mismatchPayload = objectMapper.writeValueAsString(new AcceptInvitationRequest("NIDO-TEST05"));
         String unknownPayload = objectMapper.writeValueAsString(new AcceptInvitationRequest("NIDO-GHOST9"));
@@ -273,7 +275,7 @@ class MyInvitationControllerIT {
 
     @Test
     void an_expired_invitation_is_a_422() throws Exception {
-        createInvitation(sharedSpaceId, "carol@test.com", SpaceRole.MEMBER, aliceId, "NIDO-TEST06",
+        createInvitation(sharedSpaceId, carolId, SpaceRole.MEMBER, aliceId, "NIDO-TEST06",
             Instant.now().minusSeconds(60));
         String payload = objectMapper.writeValueAsString(new AcceptInvitationRequest("NIDO-TEST06"));
 
@@ -299,7 +301,7 @@ class MyInvitationControllerIT {
 
     @Test
     void an_accepted_invitation_no_longer_appears_in_the_received_list() throws Exception {
-        createInvitation(sharedSpaceId, "carol@test.com", SpaceRole.MEMBER, aliceId, "NIDO-TEST08",
+        createInvitation(sharedSpaceId, carolId, SpaceRole.MEMBER, aliceId, "NIDO-TEST08",
             Instant.now().plusSeconds(3600));
         String payload = objectMapper.writeValueAsString(new AcceptInvitationRequest("NIDO-TEST08"));
 
@@ -314,10 +316,29 @@ class MyInvitationControllerIT {
             .andExpect(jsonPath("$.length()").value(0));
     }
 
-    private UUID createInvitation(UUID spaceId, String email, SpaceRole role, UUID createdBy, String code, Instant expiresAt) {
+    @Test
+    void an_invitation_follows_its_account_through_an_address_change() throws Exception {
+        createInvitation(sharedSpaceId, carolId, SpaceRole.MEMBER, aliceId, "NIDO-TEST10",
+            Instant.now().plusSeconds(3600));
+        UserIdentityEntity carol = users.findById(carolId).orElseThrow();
+        carol.setEmail("carol.new@test.com");
+        users.saveAndFlush(carol);
+
+        // Her session may still carry the old address: nothing about invitations reads it any more.
+        mockMvc.perform(get("/api/me/invitations").cookie(accessTokenFor(carolId, "carol@test.com")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(1));
+        mockMvc.perform(post("/api/invitations/accept")
+                .cookie(accessTokenFor(carolId, "carol.new@test.com"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new AcceptInvitationRequest("NIDO-TEST10"))))
+            .andExpect(status().isOk());
+    }
+
+    private UUID createInvitation(UUID spaceId, UUID inviteeId, SpaceRole role, UUID createdBy, String code, Instant expiresAt) {
         SpaceInvitationEntity invitation = new SpaceInvitationEntity();
         invitation.setSpaceId(spaceId);
-        invitation.setEmail(email);
+        invitation.setInviteeId(inviteeId);
         invitation.setRole(role);
         invitation.setCode(code);
         invitation.setStatus(InvitationStatus.PENDING);

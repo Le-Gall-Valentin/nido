@@ -4,8 +4,6 @@ import com.nido.api.dashboard.application.port.in.GetDashboardUseCase;
 import com.nido.api.dashboard.infrastructure.web.dto.DashboardResponse;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import com.nido.api.infrastructure.web.CurrentMembership;
-import com.nido.api.shared.security.AuthenticatedUser;
-import com.nido.api.shared.security.CurrentUser;
 import com.nido.api.space.domain.model.SpaceMembership;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,8 +35,7 @@ public class DashboardController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<DashboardResponse> get(
             @PathVariable UUID spaceId,
-            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership,
-            @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
-        return ResponseEntity.ok(DashboardResponse.from(getDashboardUseCase.get(membership, caller.email())));
+            @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+        return ResponseEntity.ok(DashboardResponse.from(getDashboardUseCase.get(membership)));
     }
 }

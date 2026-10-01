@@ -80,7 +80,7 @@ class TasksDashboardSourceTest {
     }
 
     private SourceResult read(SpaceType type) {
-        return new TasksDashboardSource(listOpenTasks).read(new DashboardContext(caller, "me@test.com", TODAY, type));
+        return new TasksDashboardSource(listOpenTasks).read(new DashboardContext(caller, TODAY, type));
     }
 
     /** Same priority for every task, and a strictly increasing creation time, so the order is by due date, then input. */

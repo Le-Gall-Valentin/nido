@@ -48,7 +48,7 @@ class GetDashboardHandlerTest {
                 return SourceResult.of(EMPTY_AGENDA);
             })));
 
-        handler.get(member, "a@b.c");
+        handler.get(member);
 
         assertThat(calls).containsExactly("prepare", "read");
     }
@@ -59,7 +59,7 @@ class GetDashboardHandlerTest {
             List.of(caller -> { throw new IllegalStateException("lock timeout"); }),
             List.of(source(CardKind.AGENDA, context -> SourceResult.of(EMPTY_AGENDA))));
 
-        Dashboard dashboard = handler.get(member, "a@b.c");
+        Dashboard dashboard = handler.get(member);
 
         assertThat(dashboard.cards().get(CardKind.AGENDA)).isInstanceOf(CardResult.Ok.class);
     }
@@ -70,7 +70,7 @@ class GetDashboardHandlerTest {
             source(CardKind.FINANCE, context -> { throw new IllegalStateException("decryption failed"); }),
             source(CardKind.AGENDA, context -> SourceResult.of(EMPTY_AGENDA))));
 
-        Dashboard dashboard = handler.get(member, "a@b.c");
+        Dashboard dashboard = handler.get(member);
 
         assertThat(dashboard.cards().get(CardKind.FINANCE)).isInstanceOf(CardResult.Unavailable.class);
         assertThat(dashboard.cards().get(CardKind.AGENDA)).isEqualTo(new CardResult.Ok(EMPTY_AGENDA));
@@ -84,7 +84,7 @@ class GetDashboardHandlerTest {
             source(CardKind.INVITATIONS, context -> { throw new IllegalStateException("down"); }),
             source(CardKind.AGENDA, context -> SourceResult.of(EMPTY_AGENDA))));
 
-        Dashboard dashboard = handler.get(member, "a@b.c");
+        Dashboard dashboard = handler.get(member);
 
         assertThat(dashboard.cards().get(CardKind.INVITATIONS)).isInstanceOf(CardResult.Unavailable.class);
         assertThat(dashboard.complete()).isFalse();
@@ -97,7 +97,7 @@ class GetDashboardHandlerTest {
             source(CardKind.AGENDA, context -> SourceResult.of(EMPTY_AGENDA))));
 
         // A failed preparation is not a missing answer: the sources still read what exists.
-        assertThat(handler.get(member, "a@b.c").complete()).isTrue();
+        assertThat(handler.get(member).complete()).isTrue();
     }
 
     @Test
@@ -105,7 +105,7 @@ class GetDashboardHandlerTest {
         var handler = handler(SpaceType.SHARED, List.of(), List.of(
             source(CardKind.SHOPPING, context -> SourceResult.nothing())));
 
-        assertThat(handler.get(member, "a@b.c").cards()).isEmpty();
+        assertThat(handler.get(member).cards()).isEmpty();
     }
 
     @Test
@@ -121,7 +121,7 @@ class GetDashboardHandlerTest {
             source(CardKind.FINANCE, context -> SourceResult.attentionOnly(List.of(debt, overrun))),
             source(CardKind.TASKS, context -> SourceResult.attentionOnly(List.of(overdue)))));
 
-        assertThat(handler.get(member, "a@b.c").attention())
+        assertThat(handler.get(member).attention())
             .extracting(AttentionItem::kind)
             .containsExactly(AttentionKind.OVERDUE_TASKS, AttentionKind.BUDGET_OVERRUN,
                 AttentionKind.DEBT, AttentionKind.INVITATION);
@@ -135,9 +135,9 @@ class GetDashboardHandlerTest {
             return SourceResult.of(EMPTY_AGENDA);
         })));
 
-        Dashboard dashboard = handler.get(member, "alice@test.com");
+        Dashboard dashboard = handler.get(member);
 
-        assertThat(seen.get()).isEqualTo(new DashboardContext(member, "alice@test.com", TODAY, SpaceType.PERSONAL));
+        assertThat(seen.get()).isEqualTo(new DashboardContext(member, TODAY, SpaceType.PERSONAL));
         assertThat(dashboard.date()).isEqualTo(TODAY);
         assertThat(dashboard.spaceType()).isEqualTo(SpaceType.PERSONAL);
     }
@@ -146,8 +146,8 @@ class GetDashboardHandlerTest {
     void onlyARoleThatCanWriteGetsWriteRights() {
         var handler = handler(SpaceType.SHARED, List.of(), List.of());
 
-        assertThat(handler.get(member, "a@b.c").canWrite()).isTrue();
-        assertThat(handler.get(membership(SpaceRole.VIEWER), "a@b.c").canWrite()).isFalse();
+        assertThat(handler.get(member).canWrite()).isTrue();
+        assertThat(handler.get(membership(SpaceRole.VIEWER)).canWrite()).isFalse();
     }
 
     private GetDashboardHandler handler(SpaceType type, List<DashboardPreparation> preparations,

@@ -306,7 +306,7 @@ class UserControllerIT {
     }
 
     @Test
-    void deleteUser_asSuperAdmin_removesInvitationsAddressedToTheDeletedEmail() throws Exception {
+    void deleteUser_asSuperAdmin_removesTheInvitationsOfTheDeletedAccount() throws Exception {
         UUID targetId = userIdentityJpaRepository.findByUsername("testuser").get().getId();
         UUID adminId = userIdentityJpaRepository.findByUsername("superadmin").get().getId();
 
@@ -320,7 +320,7 @@ class UserControllerIT {
 
         SpaceInvitationEntity invitation = new SpaceInvitationEntity();
         invitation.setSpaceId(spaceId);
-        invitation.setEmail("testuser@test.com");
+        invitation.setInviteeId(targetId);
         invitation.setRole(SpaceRole.MEMBER);
         invitation.setCode("NIDO-GDPR01");
         invitation.setStatus(InvitationStatus.PENDING);

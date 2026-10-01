@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class SpaceInvitationTest {
 
     private static final Instant NOW = Instant.parse("2026-08-22T10:00:00Z");
+    private static final UUID INVITEE = UUID.randomUUID();
 
     @Test
     void a_pending_invitation_within_its_validity_passes_every_guard() {
@@ -41,20 +42,19 @@ class SpaceInvitationTest {
     }
 
     @Test
-    void the_email_binding_is_what_makes_a_clear_text_code_safe() {
+    void the_account_binding_is_what_makes_a_clear_text_code_safe() {
         // Garde structurante : sans elle, le code deviendrait un jeton porteur.
         SpaceInvitation invitation = invitation(InvitationStatus.PENDING, NOW.plus(Duration.ofDays(7)));
 
-        assertThatCode(() -> invitation.ensureAddressedTo("camille@exemple.fr")).doesNotThrowAnyException();
-        assertThatCode(() -> invitation.ensureAddressedTo("CAMILLE@Exemple.FR")).doesNotThrowAnyException();
-        assertThatThrownBy(() -> invitation.ensureAddressedTo("quelquun.dautre@exemple.fr"))
-            .isInstanceOf(SpaceException.InvitationEmailMismatch.class);
+        assertThatCode(() -> invitation.ensureAddressedTo(INVITEE)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> invitation.ensureAddressedTo(UUID.randomUUID()))
+            .isInstanceOf(SpaceException.InvitationForAnotherAccount.class);
         assertThatThrownBy(() -> invitation.ensureAddressedTo(null))
-            .isInstanceOf(SpaceException.InvitationEmailMismatch.class);
+            .isInstanceOf(SpaceException.InvitationForAnotherAccount.class);
     }
 
     private static SpaceInvitation invitation(InvitationStatus status, Instant expiresAt) {
-        return new SpaceInvitation(UUID.randomUUID(), UUID.randomUUID(), "camille@exemple.fr",
+        return new SpaceInvitation(UUID.randomUUID(), UUID.randomUUID(), INVITEE,
             SpaceRole.MEMBER, "NIDO-4F9C2A", status, expiresAt, UUID.randomUUID(), null, NOW);
     }
 }

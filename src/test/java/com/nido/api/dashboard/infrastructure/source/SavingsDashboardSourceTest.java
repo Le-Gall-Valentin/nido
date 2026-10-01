@@ -66,6 +66,6 @@ class SavingsDashboardSourceTest {
     }
 
     private SourceResult read(SpaceType type) {
-        return new SavingsDashboardSource(listGoals).read(new DashboardContext(caller, "me@test.com", TODAY, type));
+        return new SavingsDashboardSource(listGoals).read(new DashboardContext(caller, TODAY, type));
     }
 }

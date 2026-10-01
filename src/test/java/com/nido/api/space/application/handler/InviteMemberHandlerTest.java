@@ -65,10 +65,10 @@ class InviteMemberHandlerTest {
         when(spaceMembershipPort.find(spaceId, inviteeId)).thenReturn(Optional.empty());
         when(invitationCodeGeneratorPort.generate()).thenReturn("NIDO-ABC123");
         Instant beforeCall = Instant.now();
-        SpaceInvitation created = new SpaceInvitation(UUID.randomUUID(), spaceId, "carol@example.com",
+        SpaceInvitation created = new SpaceInvitation(UUID.randomUUID(), spaceId, inviteeId,
             SpaceRole.MEMBER, "NIDO-ABC123", com.nido.api.space.domain.model.InvitationStatus.PENDING,
             beforeCall.plus(InviteMemberCommand.VALIDITY), callerId, null, beforeCall);
-        when(spaceInvitationPort.create(any(), anyString(), any(), anyString(), any(), any()))
+        when(spaceInvitationPort.create(any(), any(), any(), anyString(), any(), any()))
             .thenReturn(created);
 
         SpaceInvitationView view = handler.invite(
@@ -78,12 +78,12 @@ class InviteMemberHandlerTest {
 
         verify(invitationCodeGeneratorPort).generate();
         ArgumentCaptor<Instant> expiresAtCaptor = ArgumentCaptor.forClass(Instant.class);
-        verify(spaceInvitationPort).create(eq(spaceId), eq("carol@example.com"), eq(SpaceRole.MEMBER),
+        verify(spaceInvitationPort).create(eq(spaceId), eq(inviteeId), eq(SpaceRole.MEMBER),
             eq("NIDO-ABC123"), expiresAtCaptor.capture(), eq(callerId));
         assertThat(expiresAtCaptor.getValue())
             .isBetween(beforeCall.plus(InviteMemberCommand.VALIDITY), afterCall.plus(InviteMemberCommand.VALIDITY));
         assertThat(view.code()).isEqualTo("NIDO-ABC123");
-        assertThat(view.email()).isEqualTo("carol@example.com");
+        assertThat(view.username()).isEqualTo("carol");
         assertThat(view.role()).isEqualTo(SpaceRole.MEMBER);
         assertThat(view.expiresAt()).isEqualTo(created.expiresAt());
     }

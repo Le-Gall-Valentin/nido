@@ -118,6 +118,39 @@ class IdentifierMigrationIT {
         assertThat(strings("SELECT coalesce(email, 'none') FROM users")).containsExactly("none");
     }
 
+    @Test
+    void a_legacy_invitation_in_any_letter_case_is_bound_to_its_account() throws Exception {
+        migrateUpTo("061-");
+        execute("INSERT INTO users (username, email, role) VALUES ('jane', 'jane@example.fr', 'USER')");
+        execute("INSERT INTO spaces (type, name, accent, glyph, encryption_salt) VALUES ('SHARED', 'Maison', '#8a7d6b', '🏠', md5('salt'))");
+        execute("""
+            INSERT INTO space_invitations (space_id, email, role, code, status, expires_at)
+            SELECT id, 'Jane@Example.FR', 'MEMBER', 'NIDO-AAAAAA', 'PENDING', now() + interval '7 days' FROM spaces""");
+
+        migrateToTheEnd();
+
+        assertThat(strings("""
+            SELECT u.username FROM space_invitations i JOIN users u ON u.id = i.invitee_id"""))
+            .containsExactly("jane");
+    }
+
+    @Test
+    void an_invitation_no_account_answers_to_any_more_is_dropped() throws Exception {
+        migrateUpTo("061-");
+        execute("INSERT INTO users (username, email, role, is_deleted, is_active) VALUES (NULL, NULL, 'USER', true, false)");
+        execute("INSERT INTO spaces (type, name, accent, glyph, encryption_salt) VALUES ('SHARED', 'Maison', '#8a7d6b', '🏠', md5('salt'))");
+        execute("""
+            INSERT INTO space_invitations (space_id, email, role, code, status, expires_at)
+            SELECT id, 'gone@example.fr', 'MEMBER', 'NIDO-BBBBBB', 'ACCEPTED', now() FROM spaces""");
+
+        migrateToTheEnd();
+
+        assertThat(strings("SELECT count(*) FROM space_invitations")).containsExactly("0");
+        assertThat(strings("""
+            SELECT count(*) FROM information_schema.columns
+            WHERE table_name = 'space_invitations' AND column_name = 'email'""")).containsExactly("0");
+    }
+
     /** Applies every changeset that comes before the first one whose id starts with the prefix. */
     private void migrateUpTo(String changeSetIdPrefix) throws LiquibaseException {
         List<ChangeSet> changeSets = liquibase.getDatabaseChangeLog().getChangeSets();

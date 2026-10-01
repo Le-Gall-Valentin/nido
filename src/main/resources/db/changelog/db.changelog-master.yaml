@@ -179,3 +179,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/060-users-identifier-rules.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/061-bind-space-invitations-to-accounts.yaml
+      relativeToChangelogFile: false

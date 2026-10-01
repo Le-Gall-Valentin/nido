@@ -26,7 +26,7 @@ import java.util.UUID;
 /**
  * Trois routes qui ne sont pas des routes de contexte : ni {@code {spaceId}}, ni
  * {@code @CurrentMembership}. L'appelant est identifié par {@code @CurrentUser}, dont on
- * lit l'adresse email — celle qui reçoit les invitations.
+ * lit l'identifiant de compte — celui à qui les invitations sont adressées.
  *
  * <p>Deux façons d'accepter, volontairement : par code, pour le cas hors bande, et par
  * identifiant, pour la liste reçue qui n'expose jamais le code. Les deux passent par le
@@ -51,7 +51,7 @@ public class MyInvitationController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<ReceivedInvitationResponse>> listMine(
             @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
-        List<ReceivedInvitationResponse> body = listMyInvitationsUseCase.listMine(caller.email()).stream()
+        List<ReceivedInvitationResponse> body = listMyInvitationsUseCase.listMine(caller.userId()).stream()
             .map(ReceivedInvitationResponse::from)
             .toList();
         return ResponseEntity.ok(body);
@@ -65,7 +65,7 @@ public class MyInvitationController {
             @RequestBody AcceptInvitationRequest request,
             @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
         UUID spaceId = acceptInvitationUseCase.accept(
-            new AcceptInvitationCommand(request.code()), caller.userId(), caller.email());
+            new AcceptInvitationCommand(request.code()), caller.userId());
         return ResponseEntity.ok(new AcceptInvitationResponse(spaceId));
     }
 
@@ -76,7 +76,7 @@ public class MyInvitationController {
     public ResponseEntity<AcceptInvitationResponse> acceptById(
             @PathVariable UUID invitationId,
             @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
-        UUID spaceId = acceptInvitationUseCase.acceptById(invitationId, caller.userId(), caller.email());
+        UUID spaceId = acceptInvitationUseCase.acceptById(invitationId, caller.userId());
         return ResponseEntity.ok(new AcceptInvitationResponse(spaceId));
     }
 

@@ -71,7 +71,7 @@ class ShoppingDashboardSourceTest {
 
     private SourceResult read() {
         return new ShoppingDashboardSource(listItems, listCategories)
-            .read(new DashboardContext(caller, "me@test.com", LocalDate.of(2026, 9, 26), SpaceType.SHARED));
+            .read(new DashboardContext(caller, LocalDate.of(2026, 9, 26), SpaceType.SHARED));
     }
 
     private ShoppingItem item(ShoppingCategory category, String name, int position, boolean done) {

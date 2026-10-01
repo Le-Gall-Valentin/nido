@@ -8,10 +8,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * What every source reads with. {@code today} is the space's date, never the server's;
- * {@code callerEmail} is the address invitations are sent to.
+ * What every source reads with. {@code today} is the space's date, never the server's.
  */
-public record DashboardContext(SpaceMembership caller, String callerEmail, LocalDate today, SpaceType spaceType) {
+public record DashboardContext(SpaceMembership caller, LocalDate today, SpaceType spaceType) {
 
     public UUID callerId() {
         return caller.userId();

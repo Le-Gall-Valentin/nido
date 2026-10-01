@@ -99,7 +99,7 @@ class AgendaDashboardSourceTest {
 
     private AgendaCard read() {
         return (AgendaCard) new AgendaDashboardSource(listEvents, listTasksDue)
-            .read(new DashboardContext(caller, "me@test.com", TODAY, SpaceType.SHARED)).card();
+            .read(new DashboardContext(caller, TODAY, SpaceType.SHARED)).card();
     }
 
     private static CalendarOccurrence allDay(String title, LocalDate start, LocalDate end) {

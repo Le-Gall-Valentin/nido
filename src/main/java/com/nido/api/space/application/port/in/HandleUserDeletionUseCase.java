@@ -7,7 +7,7 @@ public interface HandleUserDeletionUseCase {
      * Supprime l'espace perso du compte, transfère la propriété de ses groupes
      * au plus ancien ADMIN, à défaut au plus ancien MEMBER, et supprime les groupes
      * dont il ne reste aucun successeur possible. Supprime aussi les invitations
-     * adressées à cet email (email peut être null, auquel cas cette étape est ignorée).
+     * adressées à ce compte.
      */
-    void handleUserDeletion(UUID userId, String email);
+    void handleUserDeletion(UUID userId);
 }

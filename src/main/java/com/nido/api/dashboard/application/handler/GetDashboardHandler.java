@@ -62,7 +62,7 @@ public class GetDashboardHandler implements GetDashboardUseCase {
     }
 
     @Override
-    public Dashboard get(SpaceMembership caller, String callerEmail) {
+    public Dashboard get(SpaceMembership caller) {
         LocalDate today = spaceToday.today(caller.spaceId());
         SpaceType spaceType = getSpace.get(caller.spaceId(), caller).type();
 
@@ -75,7 +75,7 @@ public class GetDashboardHandler implements GetDashboardUseCase {
             }
         }
 
-        DashboardContext context = new DashboardContext(caller, callerEmail, today, spaceType);
+        DashboardContext context = new DashboardContext(caller, today, spaceType);
         Map<CardKind, CardResult> cards = new EnumMap<>(CardKind.class);
         List<AttentionItem> attention = new ArrayList<>();
         for (DashboardSource source : sources) {

@@ -111,7 +111,7 @@ class TaskTriageTest {
     }
 
     private DashboardContext context(SpaceType type) {
-        return new DashboardContext(caller, "me@test.com", TODAY, type);
+        return new DashboardContext(caller, TODAY, type);
     }
 
     /** {@code mine} as DashboardContext#isMine decided it when the task was read. */

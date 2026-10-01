@@ -35,8 +35,8 @@ public class ListMyInvitationsHandler implements ListMyInvitationsUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReceivedInvitationView> listMine(String email) {
-        List<SpaceInvitation> invitations = spaceInvitationPort.findPendingForEmail(email, Instant.now());
+    public List<ReceivedInvitationView> listMine(UUID userId) {
+        List<SpaceInvitation> invitations = spaceInvitationPort.findPendingForInvitee(userId, Instant.now());
         if (invitations.isEmpty()) {
             return List.of();
         }

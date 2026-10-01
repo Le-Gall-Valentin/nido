@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public interface SpaceInvitationPort {
 
-    SpaceInvitation create(UUID spaceId, String email, SpaceRole role, String code,
+    SpaceInvitation create(UUID spaceId, UUID inviteeId, SpaceRole role, String code,
                            Instant expiresAt, UUID createdBy);
 
     Optional<SpaceInvitation> findById(UUID invitationId);
@@ -19,8 +19,8 @@ public interface SpaceInvitationPort {
 
     List<SpaceInvitation> findBySpace(UUID spaceId);
 
-    /** Invitations en attente et non expirées adressées à cette adresse, insensible à la casse. */
-    List<SpaceInvitation> findPendingForEmail(String email, Instant now);
+    /** Invitations en attente et non expirées adressées à ce compte. */
+    List<SpaceInvitation> findPendingForInvitee(UUID inviteeId, Instant now);
 
     /**
      * Passe l'invitation de PENDING à ACCEPTED de façon atomique.
@@ -31,6 +31,6 @@ public interface SpaceInvitationPort {
 
     void revoke(UUID invitationId);
 
-    /** Supprime toutes les invitations adressées à cet email, quel que soit leur statut. */
-    int deleteAllForEmail(String email);
+    /** Supprime toutes les invitations adressées à ce compte, quel que soit leur statut. */
+    int deleteAllForInvitee(UUID inviteeId);
 }

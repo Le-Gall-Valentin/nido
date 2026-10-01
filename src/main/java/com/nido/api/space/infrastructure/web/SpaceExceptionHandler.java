@@ -35,7 +35,7 @@ public class SpaceExceptionHandler {
             case SpaceException.InvitationNotFound ex -> response(404, ex, "Invitation not found.");
             // Indistinguable d'un code inconnu : sinon un appelant pourrait, en soumettant
             // des codes au hasard, apprendre lesquels existent réellement.
-            case SpaceException.InvitationEmailMismatch ignored -> new SpaceErrorResponse(
+            case SpaceException.InvitationForAnotherAccount ignored -> new SpaceErrorResponse(
                 404, SpaceException.InvitationNotFound.class.getSimpleName(), "Invitation not found.");
 
             case SpaceException.InsufficientRole ex -> response(403, ex, "Your role in this space does not allow this action.");
@@ -50,7 +50,7 @@ public class SpaceExceptionHandler {
             case SpaceException.PersonalSpaceAlreadyExists ex -> response(409, ex, "This account already has a personal space.");
             case SpaceException.OwnerAlreadyExists ex -> response(409, ex, "This space already has an owner.");
             case SpaceException.InvitationNotPending ex -> response(409, ex, "This invitation is no longer pending.");
-            case SpaceException.InvitationAlreadyPending ex -> response(409, ex, "This address already has a pending invitation to this space.");
+            case SpaceException.InvitationAlreadyPending ex -> response(409, ex, "This account already has a pending invitation to this space.");
 
             case SpaceException.PersonalSpaceImmutable ex -> response(422, ex, "The personal space cannot be renamed, shared or deleted.");
             case SpaceException.InvalidAppearance ex -> response(422, ex, "Accent or glyph outside the allowed palette.");

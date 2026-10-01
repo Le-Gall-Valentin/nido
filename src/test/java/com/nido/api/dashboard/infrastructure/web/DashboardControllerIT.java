@@ -346,7 +346,7 @@ class DashboardControllerIT {
         members.saveAndFlush(member);
     }
 
-    /** The e-mail claim is the user's real address: received invitations are looked up by it. */
+    /** A real session carries the address; nothing about invitations reads it any more. */
     private Cookie tokenFor(UUID userId) {
         String token = Jwts.builder()
             .issuer("nido")

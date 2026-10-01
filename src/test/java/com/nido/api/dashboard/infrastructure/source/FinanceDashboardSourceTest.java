@@ -167,7 +167,7 @@ class FinanceDashboardSourceTest {
     }
 
     private SourceResult read(LocalDate today, SpaceType type) {
-        return source().read(new DashboardContext(caller, "me@test.com", today, type));
+        return source().read(new DashboardContext(caller, today, type));
     }
 
     private FinanceDashboardSource source() {

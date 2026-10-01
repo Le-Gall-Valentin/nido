@@ -14,8 +14,7 @@ import java.util.List;
 
 /**
  * Reads the invitations waiting for the caller and lets {@link PendingInvitations} order them. They belong
- * to the account, not to the space being read, which is why they are found by the caller's e-mail — the
- * address invitations are sent to.
+ * to the account, not to the space being read, which is why they are found by the caller's id.
  */
 @Component
 public class InvitationsDashboardSource implements DashboardSource {
@@ -33,7 +32,7 @@ public class InvitationsDashboardSource implements DashboardSource {
 
     @Override
     public SourceResult read(DashboardContext context) {
-        List<AttentionItem.Invitation> invitations = listMine.listMine(context.callerEmail()).stream()
+        List<AttentionItem.Invitation> invitations = listMine.listMine(context.callerId()).stream()
             .map(InvitationsDashboardSource::toItem)
             .toList();
         return PendingInvitations.of(invitations);

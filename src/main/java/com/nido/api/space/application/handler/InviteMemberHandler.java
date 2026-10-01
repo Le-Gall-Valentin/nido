@@ -57,17 +57,17 @@ public class InviteMemberHandler implements InviteMemberUseCase {
             throw new SpaceException.AlreadyMember();
         }
         SpaceInvitation invitation = spaceInvitationPort.create(
-            command.spaceId(), command.email(), command.role(),
+            command.spaceId(), invitee.userId(), command.role(),
             invitationCodeGeneratorPort.generate(),
             Instant.now().plus(InviteMemberCommand.VALIDITY),
             caller.userId());
         log.info("Invitation {} issued for space {} by user {}",
             invitation.id(), command.spaceId(), caller.userId());
-        return toView(invitation);
+        return toView(invitation, invitee.username());
     }
 
-    private static SpaceInvitationView toView(SpaceInvitation invitation) {
-        return new SpaceInvitationView(invitation.id(), invitation.email(), invitation.role(),
+    private static SpaceInvitationView toView(SpaceInvitation invitation, String username) {
+        return new SpaceInvitationView(invitation.id(), username, invitation.role(),
             invitation.code(), invitation.status(), invitation.expiresAt(), invitation.createdAt());
     }
 }

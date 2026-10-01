@@ -118,7 +118,7 @@ class FinanceReviewTest {
     }
 
     private DashboardContext context(SpaceType type) {
-        return new DashboardContext(caller, "me@test.com", TODAY, type);
+        return new DashboardContext(caller, TODAY, type);
     }
 
     private static FinanceCard card(SourceResult result) {
