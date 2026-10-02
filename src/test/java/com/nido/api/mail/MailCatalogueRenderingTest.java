@@ -4,6 +4,7 @@ import com.nido.api.mail.domain.model.AppPath;
 import com.nido.api.mail.domain.model.MailContent;
 import com.nido.api.mail.domain.model.RenderedMail;
 import com.nido.api.mail.infrastructure.render.ThymeleafMailRenderer;
+import com.nido.api.notifications.domain.model.Notification;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -61,6 +62,22 @@ class MailCatalogueRenderingTest {
                 assertThat(mail.text()).as("text part of %s", type.getSimpleName()).contains(own);
             }
         }
+    }
+
+    static Stream<Arguments> notificationMailsAndLanguages() {
+        return productionMails().stream()
+            .filter(Notification.class::isAssignableFrom)
+            .flatMap(type -> Stream.of(Locale.FRENCH, Locale.ENGLISH).map(locale -> Arguments.of(type, locale)));
+    }
+
+    /** A notification can be switched off, so its mail says where — in both parts. */
+    @ParameterizedTest(name = "{0} in {1}")
+    @MethodSource("notificationMailsAndLanguages")
+    void a_notification_mail_says_where_to_switch_it_off(Class<?> type, Locale locale) throws Exception {
+        RenderedMail mail = RENDERER.render(sample(type), locale);
+
+        assertThat(mail.html()).contains("https://nido.example/account/preferences");
+        assertThat(mail.text()).contains("https://nido.example/account/preferences");
     }
 
     @Test

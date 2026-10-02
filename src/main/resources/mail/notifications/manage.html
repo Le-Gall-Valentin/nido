@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- The last lines of every notification mail: why it came, and where to switch it off. Owned by the
+     notifications context; each notification template ends with ~{notifications/manage :: manage}. -->
+<p th:fragment="manage"
+   style="margin:22px 0 0;padding-top:14px;border-top:1px solid #e4ded3;font-family:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.55;color:#6f6a61;">
+  <span data-text-line th:text="#{manage.why}">Why</span><br>
+  <a data-text-line th:href="${appUrl + '/account/preferences'}" th:text="#{manage.link}" href="#"
+     style="color:#5c7a58;">Manage</a>
+</p>
+
+</body>
+</html>

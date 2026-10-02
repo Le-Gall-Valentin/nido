@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: mail(#{subject(${mail.inviterName}, ${mail.spaceName})}, #{preheader(${mail.validityDays})}, ~{::content})}">
+<body>
+<th:block th:fragment="content">
+  <h1 th:replace="~{components :: heading(#{heading})}"></h1>
+  <p th:replace="~{components :: paragraph(#{greeting(${mail.username})})}"></p>
+  <p th:replace="~{components :: paragraph(#{body(${mail.inviterName}, ${mail.spaceName})})}"></p>
+  <table th:replace="~{components :: button(${appUrl + mail.invitationsPath.value}, #{action})}"></table>
+  <table th:replace="~{components :: note(#{validity(${mail.validityDays})}, 'info')}"></table>
+  <p th:replace="~{components :: fallbackLink(${appUrl + mail.invitationsPath.value})}"></p>
+  <p th:replace="~{notifications/manage :: manage}"></p>
+</th:block>
+</body>
+</html>

@@ -1,6 +1,8 @@
 package com.nido.api;
 
 import com.nido.api.authentication.domain.port.out.RefreshTokenConfigPort;
+import com.nido.api.notifications.domain.model.Notification;
+import com.nido.api.notifications.domain.model.NotificationKind;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -469,6 +471,24 @@ class ArchRulesTest {
             .and().resideOutsideOfPackage("..infrastructure..")
             .and(excludeTests())
             .should().dependOnClassesThat().resideInAPackage(NOTIFICATIONS)
+            .check(classes);
+    }
+
+    @Test
+    void a_notification_declares_its_kind_and_lives_in_the_infrastructure_of_its_context() {
+        classes()
+            .that().implement(Notification.class)
+            .and(excludeTests())
+            .should().beAnnotatedWith(NotificationKind.class)
+            .andShould().resideInAPackage("..infrastructure..")
+            .check(classes);
+    }
+
+    @Test
+    void only_a_notification_declares_a_notification_kind() {
+        classes()
+            .that().areAnnotatedWith(NotificationKind.class)
+            .should().implement(Notification.class)
             .check(classes);
     }
 
