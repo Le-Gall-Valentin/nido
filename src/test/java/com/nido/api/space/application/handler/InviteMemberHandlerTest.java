@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.MemberNames;
 import com.nido.api.space.domain.model.InviteMemberCommand;
 import com.nido.api.space.domain.model.MemberProfile;
 import com.nido.api.space.domain.model.Space;
@@ -10,6 +11,7 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.domain.port.out.InvitationCodeGeneratorPort;
+import com.nido.api.space.domain.port.out.InvitationNotificationPort;
 import com.nido.api.space.domain.port.out.MemberProfilePort;
 import com.nido.api.space.domain.port.out.SpaceInvitationPort;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
@@ -23,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,6 +47,7 @@ class InviteMemberHandlerTest {
     @Mock SpaceRepository spaceRepository;
     @Mock SpaceMembershipPort spaceMembershipPort;
     @Mock MemberProfilePort memberProfilePort;
+    @Mock InvitationNotificationPort invitationNotificationPort;
 
     private InviteMemberHandler handler;
 
@@ -54,7 +58,8 @@ class InviteMemberHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new InviteMemberHandler(
-            spaceInvitationPort, invitationCodeGeneratorPort, spaceRepository, spaceMembershipPort, memberProfilePort);
+            spaceInvitationPort, invitationCodeGeneratorPort, spaceRepository, spaceMembershipPort, memberProfilePort,
+            invitationNotificationPort, new MemberNames(memberProfilePort));
     }
 
     @Test
@@ -169,6 +174,59 @@ class InviteMemberHandlerTest {
             membership(callerId, SpaceRole.ADMIN));
 
         verify(spaceInvitationPort).create(eq(spaceId), eq(inviteeId), eq(SpaceRole.MEMBER), eq("NIDO-ABC123"), any(), eq(callerId));
+    }
+
+    @Test
+    void the_invitee_is_told_who_invites_them_and_where() {
+        SpaceInvitation created = carolCanBeInvited();
+        when(memberProfilePort.findByIds(List.of(callerId)))
+            .thenReturn(List.of(new MemberProfile(callerId, "alice", "alice@example.com")));
+
+        handler.invite(new InviteMemberCommand(spaceId, "carol", SpaceRole.MEMBER, callerId),
+            membership(callerId, SpaceRole.ADMIN));
+
+        verify(invitationNotificationPort).invitationIssued(created, "carol", "alice", "Chez Valentin");
+    }
+
+    @Test
+    void an_inviter_who_can_no_longer_be_named_still_invites_but_tells_nobody() {
+        carolCanBeInvited();
+        when(memberProfilePort.findByIds(List.of(callerId))).thenReturn(List.of());
+
+        handler.invite(new InviteMemberCommand(spaceId, "carol", SpaceRole.MEMBER, callerId),
+            membership(callerId, SpaceRole.ADMIN));
+
+        verify(spaceInvitationPort).create(eq(spaceId), eq(inviteeId), eq(SpaceRole.MEMBER), eq("NIDO-ABC123"), any(), eq(callerId));
+        verifyNoInteractions(invitationNotificationPort);
+    }
+
+    @Test
+    void a_refused_invitation_tells_nobody() {
+        when(spaceRepository.findById(spaceId)).thenReturn(Optional.of(sharedSpace()));
+        when(memberProfilePort.findByIdentifier("carol"))
+            .thenReturn(Optional.of(new MemberProfile(inviteeId, "carol", "carol@example.com")));
+        when(spaceMembershipPort.find(spaceId, inviteeId))
+            .thenReturn(Optional.of(membership(inviteeId, SpaceRole.MEMBER)));
+
+        assertThatThrownBy(() -> handler.invite(
+                new InviteMemberCommand(spaceId, "carol", SpaceRole.MEMBER, callerId),
+                membership(callerId, SpaceRole.OWNER)))
+            .isInstanceOf(SpaceException.AlreadyMember.class);
+        verifyNoInteractions(invitationNotificationPort);
+    }
+
+    private SpaceInvitation carolCanBeInvited() {
+        when(spaceRepository.findById(spaceId)).thenReturn(Optional.of(sharedSpace()));
+        when(memberProfilePort.findByIdentifier("carol"))
+            .thenReturn(Optional.of(new MemberProfile(inviteeId, "carol", "carol@example.com")));
+        when(spaceMembershipPort.find(spaceId, inviteeId)).thenReturn(Optional.empty());
+        when(invitationCodeGeneratorPort.generate()).thenReturn("NIDO-ABC123");
+        Instant now = Instant.now();
+        SpaceInvitation created = new SpaceInvitation(UUID.randomUUID(), spaceId, inviteeId, SpaceRole.MEMBER,
+            "NIDO-ABC123", com.nido.api.space.domain.model.InvitationStatus.PENDING,
+            now.plus(InviteMemberCommand.VALIDITY), callerId, null, now);
+        when(spaceInvitationPort.create(any(), any(), any(), anyString(), any(), any())).thenReturn(created);
+        return created;
     }
 
     @Test
