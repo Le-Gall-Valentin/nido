@@ -595,7 +595,7 @@ class ArchRulesTest {
         // space.infra → notifications.application.port.in
         new CrossBcAppDep("space",
             new String[]{BASE + "notifications.application.port.in.."},
-            Set.of("InvitationNotificationAdapter"))
+            Set.of("SpaceNotificationAdapter"))
     );
 
     @ParameterizedTest(name = "{0}.infra → {1}: only whitelisted adapters allowed")

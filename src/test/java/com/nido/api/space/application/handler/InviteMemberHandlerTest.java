@@ -11,7 +11,7 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.domain.port.out.InvitationCodeGeneratorPort;
-import com.nido.api.space.domain.port.out.InvitationNotificationPort;
+import com.nido.api.space.domain.port.out.SpaceNotificationPort;
 import com.nido.api.space.domain.port.out.MemberProfilePort;
 import com.nido.api.space.domain.port.out.SpaceInvitationPort;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
@@ -47,7 +47,7 @@ class InviteMemberHandlerTest {
     @Mock SpaceRepository spaceRepository;
     @Mock SpaceMembershipPort spaceMembershipPort;
     @Mock MemberProfilePort memberProfilePort;
-    @Mock InvitationNotificationPort invitationNotificationPort;
+    @Mock SpaceNotificationPort spaceNotificationPort;
 
     private InviteMemberHandler handler;
 
@@ -59,7 +59,7 @@ class InviteMemberHandlerTest {
     void setUp() {
         handler = new InviteMemberHandler(
             spaceInvitationPort, invitationCodeGeneratorPort, spaceRepository, spaceMembershipPort, memberProfilePort,
-            invitationNotificationPort, new MemberNames(memberProfilePort));
+            spaceNotificationPort, new MemberNames(memberProfilePort));
     }
 
     @Test
@@ -185,7 +185,7 @@ class InviteMemberHandlerTest {
         handler.invite(new InviteMemberCommand(spaceId, "carol", SpaceRole.MEMBER, callerId),
             membership(callerId, SpaceRole.ADMIN));
 
-        verify(invitationNotificationPort).invitationIssued(created, "carol", "alice", "Chez Valentin");
+        verify(spaceNotificationPort).invitationIssued(created, "carol", "alice", "Chez Valentin");
     }
 
     @Test
@@ -197,7 +197,7 @@ class InviteMemberHandlerTest {
             membership(callerId, SpaceRole.ADMIN));
 
         verify(spaceInvitationPort).create(eq(spaceId), eq(inviteeId), eq(SpaceRole.MEMBER), eq("NIDO-ABC123"), any(), eq(callerId));
-        verifyNoInteractions(invitationNotificationPort);
+        verifyNoInteractions(spaceNotificationPort);
     }
 
     @Test
@@ -212,7 +212,7 @@ class InviteMemberHandlerTest {
                 new InviteMemberCommand(spaceId, "carol", SpaceRole.MEMBER, callerId),
                 membership(callerId, SpaceRole.OWNER)))
             .isInstanceOf(SpaceException.AlreadyMember.class);
-        verifyNoInteractions(invitationNotificationPort);
+        verifyNoInteractions(spaceNotificationPort);
     }
 
     private SpaceInvitation carolCanBeInvited() {

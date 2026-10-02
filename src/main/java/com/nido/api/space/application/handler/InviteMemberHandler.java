@@ -11,7 +11,7 @@ import com.nido.api.space.domain.model.SpaceInvitation;
 import com.nido.api.space.domain.model.SpaceInvitationView;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.port.out.InvitationCodeGeneratorPort;
-import com.nido.api.space.domain.port.out.InvitationNotificationPort;
+import com.nido.api.space.domain.port.out.SpaceNotificationPort;
 import com.nido.api.space.domain.port.out.MemberProfilePort;
 import com.nido.api.space.domain.port.out.SpaceInvitationPort;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
@@ -34,7 +34,7 @@ public class InviteMemberHandler implements InviteMemberUseCase {
     private final SpaceRepository spaceRepository;
     private final SpaceMembershipPort spaceMembershipPort;
     private final MemberProfilePort memberProfilePort;
-    private final InvitationNotificationPort invitationNotificationPort;
+    private final SpaceNotificationPort spaceNotificationPort;
     private final MemberNames memberNames;
 
     public InviteMemberHandler(SpaceInvitationPort spaceInvitationPort,
@@ -42,14 +42,14 @@ public class InviteMemberHandler implements InviteMemberUseCase {
                                SpaceRepository spaceRepository,
                                SpaceMembershipPort spaceMembershipPort,
                                MemberProfilePort memberProfilePort,
-                               InvitationNotificationPort invitationNotificationPort,
+                               SpaceNotificationPort spaceNotificationPort,
                                MemberNames memberNames) {
         this.spaceInvitationPort = spaceInvitationPort;
         this.invitationCodeGeneratorPort = invitationCodeGeneratorPort;
         this.spaceRepository = spaceRepository;
         this.spaceMembershipPort = spaceMembershipPort;
         this.memberProfilePort = memberProfilePort;
-        this.invitationNotificationPort = invitationNotificationPort;
+        this.spaceNotificationPort = spaceNotificationPort;
         this.memberNames = memberNames;
     }
 
@@ -88,6 +88,6 @@ public class InviteMemberHandler implements InviteMemberUseCase {
                 invitation.id(), inviterId);
             return;
         }
-        invitationNotificationPort.invitationIssued(invitation, invitee.username(), inviterName, space.name());
+        spaceNotificationPort.invitationIssued(invitation, invitee.username(), inviterName, space.name());
     }
 }
