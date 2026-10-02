@@ -1,5 +1,7 @@
 package com.nido.api.space.application.handler;
 
+import org.mockito.InOrder;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceAppearance;
 import com.nido.api.space.domain.model.SpaceException;
@@ -19,6 +21,8 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -29,6 +33,7 @@ class DeleteSpaceHandlerTest {
 
     @Mock SpaceRepository spaceRepository;
     @Mock SpaceCommandPort spaceCommandPort;
+    @Mock SpaceNotifier spaceNotifier;
 
     private DeleteSpaceHandler handler;
 
@@ -37,16 +42,18 @@ class DeleteSpaceHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new DeleteSpaceHandler(spaceRepository, spaceCommandPort);
+        handler = new DeleteSpaceHandler(spaceRepository, spaceCommandPort, spaceNotifier);
     }
 
     @Test
-    void the_owner_can_delete_a_group() {
+    void the_members_are_told_before_the_space_and_its_memberships_go() {
         when(spaceRepository.findById(spaceId)).thenReturn(Optional.of(shared()));
 
         handler.delete(membership(SpaceRole.OWNER));
 
-        verify(spaceCommandPort).delete(spaceId);
+        InOrder order = inOrder(spaceNotifier, spaceCommandPort);
+        order.verify(spaceNotifier).spaceDeleted(spaceId, userId);
+        order.verify(spaceCommandPort).delete(spaceId);
     }
 
     @Test
@@ -54,6 +61,7 @@ class DeleteSpaceHandlerTest {
         assertThatThrownBy(() -> handler.delete(membership(SpaceRole.ADMIN)))
             .isInstanceOf(SpaceException.OwnerRequired.class);
         verify(spaceCommandPort, never()).delete(spaceId);
+        verifyNoInteractions(spaceNotifier);
     }
 
     @Test

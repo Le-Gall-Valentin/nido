@@ -1,6 +1,7 @@
 package com.nido.api.space.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.port.in.ChangeMemberRoleUseCase;
 import com.nido.api.space.domain.model.ChangeMemberRoleCommand;
 import com.nido.api.space.domain.model.SpaceException;
@@ -13,9 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ChangeMemberRoleHandler implements ChangeMemberRoleUseCase {
 
     private final SpaceMembershipPort spaceMembershipPort;
+    private final SpaceNotifier spaceNotifier;
 
-    public ChangeMemberRoleHandler(SpaceMembershipPort spaceMembershipPort) {
+    public ChangeMemberRoleHandler(SpaceMembershipPort spaceMembershipPort, SpaceNotifier spaceNotifier) {
         this.spaceMembershipPort = spaceMembershipPort;
+        this.spaceNotifier = spaceNotifier;
     }
 
     @Override
@@ -38,5 +41,6 @@ public class ChangeMemberRoleHandler implements ChangeMemberRoleUseCase {
             throw new SpaceException.RoleAlreadyAssigned();
         }
         spaceMembershipPort.changeRole(target.id(), command.newRole());
+        spaceNotifier.roleChanged(command.spaceId(), caller.userId(), command.targetUserId(), target.role(), command.newRole());
     }
 }

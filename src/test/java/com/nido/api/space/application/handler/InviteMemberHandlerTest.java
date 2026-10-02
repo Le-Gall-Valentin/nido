@@ -1,6 +1,6 @@
 package com.nido.api.space.application.handler;
 
-import com.nido.api.space.application.service.MemberNames;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.InviteMemberCommand;
 import com.nido.api.space.domain.model.MemberProfile;
 import com.nido.api.space.domain.model.Space;
@@ -11,7 +11,6 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.domain.port.out.InvitationCodeGeneratorPort;
-import com.nido.api.space.domain.port.out.SpaceNotificationPort;
 import com.nido.api.space.domain.port.out.MemberProfilePort;
 import com.nido.api.space.domain.port.out.SpaceInvitationPort;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
@@ -47,7 +46,7 @@ class InviteMemberHandlerTest {
     @Mock SpaceRepository spaceRepository;
     @Mock SpaceMembershipPort spaceMembershipPort;
     @Mock MemberProfilePort memberProfilePort;
-    @Mock SpaceNotificationPort spaceNotificationPort;
+    @Mock SpaceNotifier spaceNotifier;
 
     private InviteMemberHandler handler;
 
@@ -59,7 +58,7 @@ class InviteMemberHandlerTest {
     void setUp() {
         handler = new InviteMemberHandler(
             spaceInvitationPort, invitationCodeGeneratorPort, spaceRepository, spaceMembershipPort, memberProfilePort,
-            spaceNotificationPort, new MemberNames(memberProfilePort));
+            spaceNotifier);
     }
 
     @Test
@@ -179,25 +178,11 @@ class InviteMemberHandlerTest {
     @Test
     void the_invitee_is_told_who_invites_them_and_where() {
         SpaceInvitation created = carolCanBeInvited();
-        when(memberProfilePort.findByIds(List.of(callerId)))
-            .thenReturn(List.of(new MemberProfile(callerId, "alice", "alice@example.com")));
 
         handler.invite(new InviteMemberCommand(spaceId, "carol", SpaceRole.MEMBER, callerId),
             membership(callerId, SpaceRole.ADMIN));
 
-        verify(spaceNotificationPort).invitationIssued(created, "carol", "alice", "Chez Valentin");
-    }
-
-    @Test
-    void an_inviter_who_can_no_longer_be_named_still_invites_but_tells_nobody() {
-        carolCanBeInvited();
-        when(memberProfilePort.findByIds(List.of(callerId))).thenReturn(List.of());
-
-        handler.invite(new InviteMemberCommand(spaceId, "carol", SpaceRole.MEMBER, callerId),
-            membership(callerId, SpaceRole.ADMIN));
-
-        verify(spaceInvitationPort).create(eq(spaceId), eq(inviteeId), eq(SpaceRole.MEMBER), eq("NIDO-ABC123"), any(), eq(callerId));
-        verifyNoInteractions(spaceNotificationPort);
+        verify(spaceNotifier).invitationIssued(created, "carol", callerId);
     }
 
     @Test
@@ -212,7 +197,7 @@ class InviteMemberHandlerTest {
                 new InviteMemberCommand(spaceId, "carol", SpaceRole.MEMBER, callerId),
                 membership(callerId, SpaceRole.OWNER)))
             .isInstanceOf(SpaceException.AlreadyMember.class);
-        verifyNoInteractions(spaceNotificationPort);
+        verifyNoInteractions(spaceNotifier);
     }
 
     private SpaceInvitation carolCanBeInvited() {

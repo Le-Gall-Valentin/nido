@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.AcceptInvitationCommand;
 import com.nido.api.space.domain.model.InvitationStatus;
 import com.nido.api.space.domain.model.Space;
@@ -23,6 +24,7 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,6 +40,7 @@ class AcceptInvitationHandlerTest {
     @Mock SpaceInvitationPort spaceInvitationPort;
     @Mock SpaceRepository spaceRepository;
     @Mock SpaceMembershipPort spaceMembershipPort;
+    @Mock SpaceNotifier spaceNotifier;
 
     private AcceptInvitationHandler handler;
 
@@ -47,7 +50,7 @@ class AcceptInvitationHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new AcceptInvitationHandler(spaceInvitationPort, spaceRepository, spaceMembershipPort);
+        handler = new AcceptInvitationHandler(spaceInvitationPort, spaceRepository, spaceMembershipPort, spaceNotifier);
     }
 
     @Test
@@ -64,6 +67,7 @@ class AcceptInvitationHandlerTest {
         order.verify(spaceInvitationPort).claim(eq(invitationId), any());
         // La réclamation précède la création de l'adhésion : c'est le point de sérialisation.
         order.verify(spaceMembershipPort).add(spaceId, userId, SpaceRole.ADMIN);
+        verify(spaceNotifier).memberJoined(spaceId, userId);
     }
 
     @Test
@@ -119,6 +123,7 @@ class AcceptInvitationHandlerTest {
             .isInstanceOf(SpaceException.AlreadyMember.class);
         verify(spaceInvitationPort, never()).claim(any(), any());
         verify(spaceMembershipPort, never()).add(any(), any(), any());
+        verifyNoInteractions(spaceNotifier);
     }
 
     @Test
@@ -159,6 +164,7 @@ class AcceptInvitationHandlerTest {
         order.verify(spaceInvitationPort).claim(eq(invitationId), any());
         // La réclamation précède la création de l'adhésion : c'est le point de sérialisation.
         order.verify(spaceMembershipPort).add(spaceId, userId, SpaceRole.ADMIN);
+        verify(spaceNotifier).memberJoined(spaceId, userId);
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.nido.api.space.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.port.in.HandleUserDeletionUseCase;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -28,15 +29,18 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
     private final SpaceCommandPort spaceCommandPort;
     private final SpaceMembershipPort spaceMembershipPort;
     private final SpaceInvitationPort spaceInvitationPort;
+    private final SpaceNotifier spaceNotifier;
 
     public HandleUserDeletionHandler(SpaceRepository spaceRepository,
                                      SpaceCommandPort spaceCommandPort,
                                      SpaceMembershipPort spaceMembershipPort,
-                                     SpaceInvitationPort spaceInvitationPort) {
+                                     SpaceInvitationPort spaceInvitationPort,
+                                     SpaceNotifier spaceNotifier) {
         this.spaceRepository = spaceRepository;
         this.spaceCommandPort = spaceCommandPort;
         this.spaceMembershipPort = spaceMembershipPort;
         this.spaceInvitationPort = spaceInvitationPort;
+        this.spaceNotifier = spaceNotifier;
     }
 
     @Override
@@ -77,6 +81,7 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
             spaceMembershipPort.changeRole(successor.get().id(), SpaceRole.OWNER);
             log.info("Ownership of space {} passed to {} after the deletion of {}",
                 space.id(), successor.get().userId(), userId);
+            spaceNotifier.ownershipInherited(space.id(), successor.get().userId());
         }
         int deleted = spaceInvitationPort.deleteAllForInvitee(userId);
         if (deleted > 0) {

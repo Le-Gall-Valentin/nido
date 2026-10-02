@@ -1,7 +1,7 @@
 package com.nido.api.space.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
-import com.nido.api.space.application.service.MemberNames;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.port.in.InviteMemberUseCase;
 import com.nido.api.space.domain.model.InviteMemberCommand;
 import com.nido.api.space.domain.model.MemberProfile;
@@ -11,7 +11,6 @@ import com.nido.api.space.domain.model.SpaceInvitation;
 import com.nido.api.space.domain.model.SpaceInvitationView;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.port.out.InvitationCodeGeneratorPort;
-import com.nido.api.space.domain.port.out.SpaceNotificationPort;
 import com.nido.api.space.domain.port.out.MemberProfilePort;
 import com.nido.api.space.domain.port.out.SpaceInvitationPort;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
@@ -21,8 +20,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
 
 @ApplicationService
 public class InviteMemberHandler implements InviteMemberUseCase {
@@ -34,23 +31,20 @@ public class InviteMemberHandler implements InviteMemberUseCase {
     private final SpaceRepository spaceRepository;
     private final SpaceMembershipPort spaceMembershipPort;
     private final MemberProfilePort memberProfilePort;
-    private final SpaceNotificationPort spaceNotificationPort;
-    private final MemberNames memberNames;
+    private final SpaceNotifier spaceNotifier;
 
     public InviteMemberHandler(SpaceInvitationPort spaceInvitationPort,
                                InvitationCodeGeneratorPort invitationCodeGeneratorPort,
                                SpaceRepository spaceRepository,
                                SpaceMembershipPort spaceMembershipPort,
                                MemberProfilePort memberProfilePort,
-                               SpaceNotificationPort spaceNotificationPort,
-                               MemberNames memberNames) {
+                               SpaceNotifier spaceNotifier) {
         this.spaceInvitationPort = spaceInvitationPort;
         this.invitationCodeGeneratorPort = invitationCodeGeneratorPort;
         this.spaceRepository = spaceRepository;
         this.spaceMembershipPort = spaceMembershipPort;
         this.memberProfilePort = memberProfilePort;
-        this.spaceNotificationPort = spaceNotificationPort;
-        this.memberNames = memberNames;
+        this.spaceNotifier = spaceNotifier;
     }
 
     @Override
@@ -73,21 +67,7 @@ public class InviteMemberHandler implements InviteMemberUseCase {
             caller.userId());
         log.info("Invitation {} issued for space {} by user {}",
             invitation.id(), command.spaceId(), caller.userId());
-        tellTheInvitee(invitation, invitee, space, caller.userId());
+        spaceNotifier.invitationIssued(invitation, invitee.username(), caller.userId());
         return SpaceInvitationView.of(invitation, invitee.username());
-    }
-
-    /**
-     * In this transaction, once every check has passed: a refused or rolled-back invitation tells nobody.
-     * An account that can sign in always has a name; one that lost it was erased while it was inviting.
-     */
-    private void tellTheInvitee(SpaceInvitation invitation, MemberProfile invitee, Space space, UUID inviterId) {
-        String inviterName = memberNames.byId(List.of(inviterId)).get(inviterId);
-        if (inviterName == null) {
-            log.warn("Invitation {} was issued by user {}, who can no longer be named: the invitee is not notified",
-                invitation.id(), inviterId);
-            return;
-        }
-        spaceNotificationPort.invitationIssued(invitation, invitee.username(), inviterName, space.name());
     }
 }

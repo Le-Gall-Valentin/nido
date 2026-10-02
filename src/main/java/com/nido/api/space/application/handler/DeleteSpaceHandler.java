@@ -1,6 +1,7 @@
 package com.nido.api.space.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.port.in.DeleteSpaceUseCase;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceException;
@@ -18,10 +19,13 @@ public class DeleteSpaceHandler implements DeleteSpaceUseCase {
 
     private final SpaceRepository spaceRepository;
     private final SpaceCommandPort spaceCommandPort;
+    private final SpaceNotifier spaceNotifier;
 
-    public DeleteSpaceHandler(SpaceRepository spaceRepository, SpaceCommandPort spaceCommandPort) {
+    public DeleteSpaceHandler(SpaceRepository spaceRepository, SpaceCommandPort spaceCommandPort,
+                              SpaceNotifier spaceNotifier) {
         this.spaceRepository = spaceRepository;
         this.spaceCommandPort = spaceCommandPort;
+        this.spaceNotifier = spaceNotifier;
     }
 
     @Override
@@ -31,6 +35,8 @@ public class DeleteSpaceHandler implements DeleteSpaceUseCase {
         Space space = spaceRepository.findById(caller.spaceId())
             .orElseThrow(SpaceException.SpaceNotFound::new);
         space.ensureShared();
+        // Before the deletion, which takes the memberships with it: afterwards there is nobody left to tell.
+        spaceNotifier.spaceDeleted(space.id(), caller.userId());
         spaceCommandPort.delete(space.id());
         log.info("Shared space {} deleted by its owner {}", space.id(), caller.userId());
     }

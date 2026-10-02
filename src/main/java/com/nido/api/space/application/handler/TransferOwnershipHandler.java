@@ -1,6 +1,7 @@
 package com.nido.api.space.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.port.in.TransferOwnershipUseCase;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceException;
@@ -20,11 +21,14 @@ public class TransferOwnershipHandler implements TransferOwnershipUseCase {
 
     private final SpaceRepository spaceRepository;
     private final SpaceMembershipPort spaceMembershipPort;
+    private final SpaceNotifier spaceNotifier;
 
     public TransferOwnershipHandler(SpaceRepository spaceRepository,
-                                    SpaceMembershipPort spaceMembershipPort) {
+                                    SpaceMembershipPort spaceMembershipPort,
+                                    SpaceNotifier spaceNotifier) {
         this.spaceRepository = spaceRepository;
         this.spaceMembershipPort = spaceMembershipPort;
+        this.spaceNotifier = spaceNotifier;
     }
 
     @Override
@@ -48,5 +52,6 @@ public class TransferOwnershipHandler implements TransferOwnershipUseCase {
         spaceMembershipPort.changeRole(target.id(), SpaceRole.OWNER);
         log.info("Ownership of space {} transferred from {} to {}",
             space.id(), caller.userId(), target.userId());
+        spaceNotifier.ownershipTransferred(space.id(), caller.userId(), target.userId());
     }
 }

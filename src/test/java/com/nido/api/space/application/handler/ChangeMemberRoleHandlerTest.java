@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.ChangeMemberRoleCommand;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -25,6 +27,7 @@ import static org.mockito.Mockito.when;
 class ChangeMemberRoleHandlerTest {
 
     @Mock SpaceMembershipPort spaceMembershipPort;
+    @Mock SpaceNotifier spaceNotifier;
 
     private ChangeMemberRoleHandler handler;
 
@@ -34,7 +37,7 @@ class ChangeMemberRoleHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new ChangeMemberRoleHandler(spaceMembershipPort);
+        handler = new ChangeMemberRoleHandler(spaceMembershipPort, spaceNotifier);
     }
 
     @Test
@@ -46,6 +49,7 @@ class ChangeMemberRoleHandlerTest {
             membership(callerId, SpaceRole.ADMIN));
 
         verify(spaceMembershipPort).changeRole(target.id(), SpaceRole.ADMIN);
+        verify(spaceNotifier).roleChanged(spaceId, callerId, targetId, SpaceRole.MEMBER, SpaceRole.ADMIN);
     }
 
     @Test
@@ -81,6 +85,7 @@ class ChangeMemberRoleHandlerTest {
                 new ChangeMemberRoleCommand(spaceId, targetId, SpaceRole.MEMBER),
                 membership(callerId, SpaceRole.ADMIN)))
             .isInstanceOf(SpaceException.OwnerMembershipProtected.class);
+        verifyNoInteractions(spaceNotifier);
     }
 
     @Test

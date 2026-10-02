@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -20,6 +21,7 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.verify;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -30,6 +32,7 @@ class TransferOwnershipHandlerTest {
 
     @Mock SpaceRepository spaceRepository;
     @Mock SpaceMembershipPort spaceMembershipPort;
+    @Mock SpaceNotifier spaceNotifier;
 
     private TransferOwnershipHandler handler;
 
@@ -39,7 +42,7 @@ class TransferOwnershipHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new TransferOwnershipHandler(spaceRepository, spaceMembershipPort);
+        handler = new TransferOwnershipHandler(spaceRepository, spaceMembershipPort, spaceNotifier);
     }
 
     @Test
@@ -55,6 +58,7 @@ class TransferOwnershipHandlerTest {
         InOrder order = inOrder(spaceMembershipPort);
         order.verify(spaceMembershipPort).changeRole(caller.id(), SpaceRole.ADMIN);
         order.verify(spaceMembershipPort).changeRole(target.id(), SpaceRole.OWNER);
+        verify(spaceNotifier).ownershipTransferred(spaceId, ownerId, targetId);
     }
 
     @Test
@@ -62,6 +66,7 @@ class TransferOwnershipHandlerTest {
         assertThatThrownBy(() -> handler.transfer(
                 new TransferOwnershipCommand(spaceId, targetId), membership(ownerId, SpaceRole.ADMIN)))
             .isInstanceOf(SpaceException.OwnerRequired.class);
+        verifyNoInteractions(spaceNotifier);
     }
 
     @Test

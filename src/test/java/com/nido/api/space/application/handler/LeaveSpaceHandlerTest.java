@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceAppearance;
 import com.nido.api.space.domain.model.SpaceException;
@@ -19,6 +20,7 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,6 +30,7 @@ class LeaveSpaceHandlerTest {
 
     @Mock SpaceRepository spaceRepository;
     @Mock SpaceMembershipPort spaceMembershipPort;
+    @Mock SpaceNotifier spaceNotifier;
 
     private LeaveSpaceHandler handler;
 
@@ -36,7 +39,7 @@ class LeaveSpaceHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new LeaveSpaceHandler(spaceRepository, spaceMembershipPort);
+        handler = new LeaveSpaceHandler(spaceRepository, spaceMembershipPort, spaceNotifier);
     }
 
     @Test
@@ -47,6 +50,7 @@ class LeaveSpaceHandlerTest {
         handler.leave(membership);
 
         verify(spaceMembershipPort).remove(membership.id());
+        verify(spaceNotifier).memberLeft(spaceId, userId);
     }
 
     @Test
@@ -55,6 +59,7 @@ class LeaveSpaceHandlerTest {
 
         assertThatThrownBy(() -> handler.leave(membership(SpaceRole.OWNER)))
             .isInstanceOf(SpaceException.LastOwnerCannotLeave.class);
+        verifyNoInteractions(spaceNotifier);
     }
 
     @Test

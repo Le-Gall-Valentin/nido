@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceAppearance;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,6 +34,7 @@ class HandleUserDeletionHandlerTest {
     @Mock SpaceCommandPort spaceCommandPort;
     @Mock SpaceMembershipPort spaceMembershipPort;
     @Mock SpaceInvitationPort spaceInvitationPort;
+    @Mock SpaceNotifier spaceNotifier;
 
     private HandleUserDeletionHandler handler;
 
@@ -41,7 +44,7 @@ class HandleUserDeletionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new HandleUserDeletionHandler(spaceRepository, spaceCommandPort, spaceMembershipPort, spaceInvitationPort);
+        handler = new HandleUserDeletionHandler(spaceRepository, spaceCommandPort, spaceMembershipPort, spaceInvitationPort, spaceNotifier);
     }
 
     @Test
@@ -65,6 +68,7 @@ class HandleUserDeletionHandlerTest {
 
         verify(spaceMembershipPort).remove(membership.id());
         verify(spaceCommandPort, never()).delete(sharedSpaceId);
+        verifyNoInteractions(spaceNotifier);
     }
 
     @Test
@@ -81,6 +85,7 @@ class HandleUserDeletionHandlerTest {
         verify(spaceMembershipPort).remove(membership.id());
         verify(spaceMembershipPort).changeRole(successor.id(), SpaceRole.OWNER);
         verify(spaceCommandPort, never()).delete(sharedSpaceId);
+        verify(spaceNotifier).ownershipInherited(sharedSpaceId, successor.userId());
     }
 
     @Test
@@ -93,6 +98,7 @@ class HandleUserDeletionHandlerTest {
         handler.handleUserDeletion(userId);
 
         verify(spaceCommandPort).delete(sharedSpaceId);
+        verifyNoInteractions(spaceNotifier);
     }
 
     @Test
