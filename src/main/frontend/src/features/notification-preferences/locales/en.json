@@ -32,6 +32,22 @@
       "removed": {
         "label": "You were removed",
         "description": "When you are removed from a space"
+      },
+      "deleted": {
+        "label": "Space deleted",
+        "description": "When one of your spaces is deleted"
+      },
+      "role-changed": {
+        "label": "Your role changed",
+        "description": "When your role changes in a space"
+      },
+      "ownership-received": {
+        "label": "Ownership received",
+        "description": "When you become the owner of a space"
+      },
+      "owner-changed": {
+        "label": "New owner",
+        "description": "When one of your spaces changes owner"
       }
     }
   },

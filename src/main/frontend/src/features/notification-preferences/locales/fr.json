@@ -32,6 +32,22 @@
       "removed": {
         "label": "Votre exclusion",
         "description": "Quand on vous retire d'un espace"
+      },
+      "deleted": {
+        "label": "Suppression d'un espace",
+        "description": "Quand un de vos espaces est supprimé"
+      },
+      "role-changed": {
+        "label": "Changement de votre rôle",
+        "description": "Quand votre rôle change dans un espace"
+      },
+      "ownership-received": {
+        "label": "Propriété reçue",
+        "description": "Quand vous devenez propriétaire d'un espace"
+      },
+      "owner-changed": {
+        "label": "Nouveau propriétaire",
+        "description": "Quand un de vos espaces change de propriétaire"
       }
     }
   },
