@@ -1,0 +1,30 @@
+{
+  "title": "Notifications",
+  "subtitle": "Choisissez ce que Nido vous envoie.",
+  "channels_title": "Canaux",
+  "channel": {
+    "email": {
+      "label": "E-mail",
+      "description": "Toutes les notifications envoyées par mail"
+    }
+  },
+  "group": {
+    "space": "Espaces"
+  },
+  "type": {
+    "space": {
+      "invitation": {
+        "label": "Invitation à un espace",
+        "description": "Quand quelqu'un vous invite à rejoindre un espace"
+      }
+    }
+  },
+  "no_channel": "Aucun canal n'est activé : vous ne recevrez aucune notification.",
+  "security_note": "Les e-mails de sécurité (mot de passe, adresse) sont toujours envoyés.",
+  "errors": {
+    "load": "Impossible de charger vos préférences de notification.",
+    "network": "Réseau indisponible : votre choix n'a pas été enregistré.",
+    "rate_limit": "Trop de changements d'affilée. Réessayez dans un instant.",
+    "server": "Une erreur est survenue : votre choix n'a pas été enregistré."
+  }
+}

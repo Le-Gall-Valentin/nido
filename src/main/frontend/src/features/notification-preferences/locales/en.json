@@ -1,0 +1,30 @@
+{
+  "title": "Notifications",
+  "subtitle": "Choose what Nido sends you.",
+  "channels_title": "Channels",
+  "channel": {
+    "email": {
+      "label": "Email",
+      "description": "Every notification sent by email"
+    }
+  },
+  "group": {
+    "space": "Spaces"
+  },
+  "type": {
+    "space": {
+      "invitation": {
+        "label": "Invitation to a space",
+        "description": "When someone invites you to join a space"
+      }
+    }
+  },
+  "no_channel": "No channel is on: you will not receive any notification.",
+  "security_note": "Security emails (password, address) are always sent.",
+  "errors": {
+    "load": "Your notification preferences could not be loaded.",
+    "network": "Network unavailable: your choice was not saved.",
+    "rate_limit": "Too many changes in a row. Try again in a moment.",
+    "server": "Something went wrong: your choice was not saved."
+  }
+}
