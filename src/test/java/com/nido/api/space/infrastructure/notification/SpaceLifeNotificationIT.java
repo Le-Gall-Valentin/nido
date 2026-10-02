@@ -14,6 +14,8 @@ import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaReposito
 import com.nido.api.space.infrastructure.persistence.repository.SpaceMemberJpaRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.mail.Multipart;
+import jakarta.mail.Part;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.Cookie;
@@ -61,6 +63,8 @@ class SpaceLifeNotificationIT {
     private UUID bobId;
     private UUID carolId;
     private UUID spaceId;
+    /** A super administrator, made only by the test that erases an account. */
+    private UUID rootId;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -84,7 +88,8 @@ class SpaceLifeNotificationIT {
     void removeWhatThisTestCreated() {
         jdbc.sql("DELETE FROM space_members WHERE space_id = :id").param("id", spaceId).update();
         jdbc.sql("DELETE FROM spaces WHERE id = :id").param("id", spaceId).update();
-        jdbc.sql("DELETE FROM users WHERE id IN (:ids)").param("ids", List.of(aliceId, bobId, carolId)).update();
+        List<UUID> accounts = rootId == null ? List.of(aliceId, bobId, carolId) : List.of(aliceId, bobId, carolId, rootId);
+        jdbc.sql("DELETE FROM users WHERE id IN (:ids)").param("ids", accounts).update();
     }
 
     @Test
@@ -119,6 +124,56 @@ class SpaceLifeNotificationIT {
 
         assertThat(subjectsByRecipient(1)).containsOnlyKeys(address("bob"));
         assertThat(SharedGreenMail.server().waitForIncomingEmail(1_500, 2)).isFalse();
+    }
+
+    @Test
+    void erasing_the_owner_tells_the_successor_and_the_others_without_naming_the_erased_account() throws Exception {
+        // bob outranks carol, so he is the successor whatever the order they joined in.
+        jdbc.sql("UPDATE space_members SET role = 'ADMIN' WHERE space_id = :space AND user_id = :user")
+            .param("space", spaceId).param("user", bobId).update();
+        UserIdentityEntity root = new UserIdentityEntity();
+        root.setUsername(name("root"));
+        root.setEmail(address("root"));
+        root.setRole(Role.SUPER_ADMIN);
+        rootId = users.saveAndFlush(root).getId();
+
+        mockMvc.perform(delete("/api/users/" + aliceId).cookie(accessTokenFor(rootId, Role.SUPER_ADMIN)))
+            .andExpect(status().isNoContent());
+
+        Map<String, MimeMessage> mails = mailsByRecipient(2);
+        assertThat(mails).containsOnlyKeys(address("bob"), address("carol"));
+        assertThat(mails.get(address("bob")).getSubject()).isEqualTo("Vous êtes propriétaire de Chez nous");
+        assertThat(textOf(mails.get(address("bob"))))
+            .contains("L’ancien propriétaire de l’espace « Chez nous » a quitté Nido : vous en êtes maintenant propriétaire.")
+            .doesNotContain(name("alice"));
+        assertThat(mails.get(address("carol")).getSubject()).isEqualTo(name("bob") + " est propriétaire de Chez nous");
+        assertThat(textOf(mails.get(address("carol"))))
+            .contains("L’ancien propriétaire ayant quitté Nido, " + name("bob") + " est maintenant propriétaire de l’espace « Chez nous ».")
+            .doesNotContain(name("alice"));
+        assertThat(jdbc.sql("SELECT is_deleted FROM users WHERE id = :id").param("id", aliceId).query(Boolean.class).single())
+            .isTrue();
+    }
+
+    private Map<String, MimeMessage> mailsByRecipient(int count) {
+        assertThat(SharedGreenMail.server().waitForIncomingEmail(10_000, count)).isTrue();
+        return Arrays.stream(SharedGreenMail.server().getReceivedMessages())
+            .collect(Collectors.toMap(this::recipientOf, message -> message));
+    }
+
+    /** The plain-text part, wherever it sits in the multipart tree. */
+    private static String textOf(Part part) throws Exception {
+        if (part.isMimeType("text/plain")) {
+            return (String) part.getContent();
+        }
+        if (part.getContent() instanceof Multipart multipart) {
+            for (int i = 0; i < multipart.getCount(); i++) {
+                String text = textOf(multipart.getBodyPart(i));
+                if (text != null) {
+                    return text;
+                }
+            }
+        }
+        return null;
     }
 
     /** Waits for {@code count} mails and returns their subjects by recipient address. */
@@ -180,11 +235,15 @@ class SpaceLifeNotificationIT {
     }
 
     private Cookie accessTokenFor(UUID userId) {
+        return accessTokenFor(userId, Role.USER);
+    }
+
+    private Cookie accessTokenFor(UUID userId, Role role) {
         String token = Jwts.builder()
             .issuer("nido")
             .audience().add("nido").and()
             .subject(userId.toString())
-            .claim("role", Role.USER.name())
+            .claim("role", role.name())
             .claim("email", userId + "@test.local")
             .issuedAt(Date.from(Instant.now()))
             .expiration(Date.from(Instant.now().plusSeconds(900)))
