@@ -16,6 +16,22 @@
       "invitation": {
         "label": "Invitation to a space",
         "description": "When someone invites you to join a space"
+      },
+      "member-joined": {
+        "label": "Member joined",
+        "description": "When someone joins one of your spaces"
+      },
+      "member-left": {
+        "label": "Member left",
+        "description": "When someone leaves one of your spaces"
+      },
+      "member-removed": {
+        "label": "Member removed",
+        "description": "When someone is removed from one of your spaces"
+      },
+      "removed": {
+        "label": "You were removed",
+        "description": "When you are removed from a space"
       }
     }
   },

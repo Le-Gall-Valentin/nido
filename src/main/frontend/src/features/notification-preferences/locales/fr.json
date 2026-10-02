@@ -16,6 +16,22 @@
       "invitation": {
         "label": "Invitation à un espace",
         "description": "Quand quelqu'un vous invite à rejoindre un espace"
+      },
+      "member-joined": {
+        "label": "Arrivée d'un membre",
+        "description": "Quand quelqu'un rejoint un de vos espaces"
+      },
+      "member-left": {
+        "label": "Départ d'un membre",
+        "description": "Quand quelqu'un quitte un de vos espaces"
+      },
+      "member-removed": {
+        "label": "Exclusion d'un membre",
+        "description": "Quand quelqu'un est retiré d'un de vos espaces"
+      },
+      "removed": {
+        "label": "Votre exclusion",
+        "description": "Quand on vous retire d'un espace"
       }
     }
   },
