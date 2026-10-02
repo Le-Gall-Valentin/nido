@@ -22,7 +22,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 class ArchRulesTest {
 
     private static final String BASE = "com.nido.api.";
-    private static final List<String> BCS = List.of("authentication", "identity", "mfa", "space", "mail");
+    private static final List<String> BCS = List.of("authentication", "identity", "mfa", "space", "mail", "notifications");
 
     private final JavaClasses classes = new ClassFileImporter()
         .importPackages("com.nido.api");
@@ -439,6 +439,40 @@ class ArchRulesTest {
     }
 
     // -------------------------------------------------------------------------
+    // Notifications — a context any other may use, through what it publishes
+    //
+    // A context notifies from an adapter in its own infrastructure, with a record of its own implementing
+    // Notification. Its domain and application never learn notifications exist, and nobody reaches the
+    // handlers, the catalogue scan or the channels.
+    // -------------------------------------------------------------------------
+
+    private static final String NOTIFICATIONS = BASE + "notifications..";
+
+    @Test
+    void outside_notifications_only_what_notifications_publishes_is_used() {
+        DescribedPredicate<JavaClass> unpublished = DescribedPredicate.describe(
+            "a notifications class outside its application.port.in and domain.model",
+            c -> c.getPackageName().startsWith(BASE + "notifications.")
+                && !c.getPackageName().startsWith(BASE + "notifications.application.port.in")
+                && !c.getPackageName().startsWith(BASE + "notifications.domain.model"));
+        noClasses()
+            .that().resideOutsideOfPackage(NOTIFICATIONS)
+            .and(excludeTests())
+            .should().dependOnClassesThat(unpublished)
+            .check(classes);
+    }
+
+    @Test
+    void outside_notifications_only_an_infrastructure_adapter_names_notifications() {
+        noClasses()
+            .that().resideOutsideOfPackage(NOTIFICATIONS)
+            .and().resideOutsideOfPackage("..infrastructure..")
+            .and(excludeTests())
+            .should().dependOnClassesThat().resideInAPackage(NOTIFICATIONS)
+            .check(classes);
+    }
+
+    // -------------------------------------------------------------------------
     // Global infra isolation
     // -------------------------------------------------------------------------
 
@@ -455,7 +489,8 @@ class ArchRulesTest {
                 BASE + "authentication.infrastructure..",
                 BASE + "identity.infrastructure..",
                 BASE + "mfa.infrastructure..",
-                BASE + "mail.infrastructure..")
+                BASE + "mail.infrastructure..",
+                BASE + "notifications.infrastructure..")
             .allowEmptyShould(false)
             .check(classes);
     }
@@ -516,6 +551,16 @@ class ArchRulesTest {
         new CrossBcAppDep("identity",
             new String[]{BASE + "space.application.port.in.."},
             Set.of("PersonalSpaceInitAdapter", "SpaceDataDeletionAdapter")),
+
+        // notifications.infra → mail.application.port.in
+        new CrossBcAppDep("notifications",
+            new String[]{BASE + "mail.application.port.in.."},
+            Set.of("MailChannelAdapter")),
+
+        // notifications.infra → identity.application.port.in
+        new CrossBcAppDep("notifications",
+            new String[]{BASE + "identity.application.port.in.."},
+            Set.of("NotificationRecipientAdapter")),
 
         // space.infra → identity.application.port.in
         new CrossBcAppDep("space",
