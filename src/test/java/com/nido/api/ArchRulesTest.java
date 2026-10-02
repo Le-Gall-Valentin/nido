@@ -572,6 +572,11 @@ class ArchRulesTest {
             new String[]{BASE + "space.application.port.in.."},
             Set.of("PersonalSpaceInitAdapter", "SpaceDataDeletionAdapter")),
 
+        // identity.infra → notifications.application.port.in
+        new CrossBcAppDep("identity",
+            new String[]{BASE + "notifications.application.port.in.."},
+            Set.of("NotificationDataDeletionAdapter")),
+
         // notifications.infra → mail.application.port.in
         new CrossBcAppDep("notifications",
             new String[]{BASE + "mail.application.port.in.."},

@@ -4,6 +4,7 @@ import com.nido.api.identity.domain.model.DeleteUserCommand;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.CredentialDeletionPort;
+import com.nido.api.identity.domain.port.out.NotificationDataDeletionPort;
 import com.nido.api.identity.domain.port.out.SpaceDataDeletionPort;
 import com.nido.api.identity.domain.port.out.TotpDeletionPort;
 import com.nido.api.identity.domain.port.out.TokenInvalidationPort;
@@ -34,6 +35,7 @@ class DeleteUserHandlerTest {
     @Mock CredentialDeletionPort credentialDeletionPort;
     @Mock TotpDeletionPort totpDeletionPort;
     @Mock SpaceDataDeletionPort spaceDataDeletionPort;
+    @Mock NotificationDataDeletionPort notificationDataDeletionPort;
 
     private DeleteUserHandler handler;
 
@@ -42,7 +44,8 @@ class DeleteUserHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new DeleteUserHandler(userRepository, userCommandPort, credentialDeletionPort, totpDeletionPort, spaceDataDeletionPort, tokenInvalidationPort);
+        handler = new DeleteUserHandler(userRepository, userCommandPort, credentialDeletionPort, totpDeletionPort,
+            spaceDataDeletionPort, notificationDataDeletionPort, tokenInvalidationPort);
     }
 
     @Test
@@ -57,6 +60,7 @@ class DeleteUserHandlerTest {
         order.verify(credentialDeletionPort).deleteCredentials(targetId);
         order.verify(totpDeletionPort).deleteTotpData(targetId);
         verify(spaceDataDeletionPort).deleteSpaceData(targetId);
+        verify(notificationDataDeletionPort).deleteNotificationData(targetId);
     }
 
     @Test
@@ -85,6 +89,7 @@ class DeleteUserHandlerTest {
             .isInstanceOf(IdentityException.UserNotFound.class);
 
         verify(userCommandPort, never()).deleteGdpr(any());
+        verifyNoInteractions(notificationDataDeletionPort);
     }
 
     @Test
