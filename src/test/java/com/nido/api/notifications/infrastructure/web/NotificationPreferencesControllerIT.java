@@ -67,6 +67,13 @@ class NotificationPreferencesControllerIT {
     }
 
     @Test
+    void every_kind_is_listed_even_without_a_channel_and_on_by_default() throws Exception {
+        mockMvc.perform(get("/api/notifications/preferences").cookie(accessTokenFor(janeId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.types[?(@.type == 'space.invitation')].enabled").value(true));
+    }
+
+    @Test
     void a_channel_this_installation_lacks_cannot_be_switched() throws Exception {
         mockMvc.perform(put("/api/notifications/preferences/channels/email").cookie(accessTokenFor(janeId))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
