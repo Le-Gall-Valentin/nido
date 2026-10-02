@@ -185,3 +185,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/062-users-username-ignores-case.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/063-create-notification-preferences.yaml
+      relativeToChangelogFile: false
