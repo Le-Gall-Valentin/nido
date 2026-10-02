@@ -1,0 +1,212 @@
+package com.nido.api.space.application.service;
+
+import com.nido.api.space.domain.model.Addressee;
+import com.nido.api.space.domain.model.InvitationStatus;
+import com.nido.api.space.domain.model.MemberProfile;
+import com.nido.api.space.domain.model.Space;
+import com.nido.api.space.domain.model.SpaceInvitation;
+import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.model.SpaceRole;
+import com.nido.api.space.domain.model.SpaceType;
+import com.nido.api.space.domain.port.out.MemberProfilePort;
+import com.nido.api.space.domain.port.out.SpaceMembershipPort;
+import com.nido.api.space.domain.port.out.SpaceNotificationPort;
+import com.nido.api.space.domain.port.out.SpaceRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class SpaceNotifierTest {
+
+    @Mock SpaceRepository spaces;
+    @Mock SpaceMembershipPort memberships;
+    @Mock MemberProfilePort profiles;
+    @Mock SpaceNotificationPort notifications;
+
+    private final UUID spaceId = UUID.randomUUID();
+    private final UUID alice = UUID.randomUUID();
+    private final UUID bob = UUID.randomUUID();
+    private final UUID carol = UUID.randomUUID();
+    private final UUID dave = UUID.randomUUID();
+    /** The directory of names; an account missing here can no longer be named. */
+    private final Map<UUID, String> names = new HashMap<>();
+
+    private SpaceNotifier notifier;
+
+    @BeforeEach
+    void setUp() {
+        names.putAll(Map.of(alice, "alice", bob, "bob", carol, "carol", dave, "dave"));
+        lenient().when(profiles.findByIds(any())).thenAnswer(call -> ((Collection<?>) call.getArgument(0)).stream()
+            .map(UUID.class::cast).filter(names::containsKey)
+            .map(id -> new MemberProfile(id, names.get(id), names.get(id) + "@test.local")).toList());
+        lenient().when(spaces.findById(spaceId)).thenReturn(Optional.of(new Space(spaceId, SpaceType.SHARED,
+            "Chez nous", null, "#c17a5c", "🏡", null, ZoneId.of("Europe/Paris"), Instant.now())));
+        notifier = new SpaceNotifier(spaces, memberships, new MemberNames(profiles), notifications);
+    }
+
+    private void membersAre(UUID... userIds) {
+        when(memberships.findMemberships(spaceId)).thenReturn(Arrays.stream(userIds)
+            .map(id -> new SpaceMembership(UUID.randomUUID(), spaceId, id, SpaceRole.MEMBER, Instant.now())).toList());
+    }
+
+    private static Addressee to(UUID id, String name) {
+        return new Addressee(id, name);
+    }
+
+    private SpaceInvitation invitationFor(UUID invitee, UUID inviter) {
+        return new SpaceInvitation(UUID.randomUUID(), spaceId, invitee, SpaceRole.MEMBER, "NIDO-ABC123",
+            InvitationStatus.PENDING, Instant.now().plusSeconds(60), inviter, null, Instant.now());
+    }
+
+    @Test
+    void an_invitee_is_told_by_the_name_of_who_invites() {
+        SpaceInvitation invitation = invitationFor(carol, alice);
+
+        notifier.invitationIssued(invitation, "carol", alice);
+
+        verify(notifications).invitationIssued(invitation, "carol", "alice", "Chez nous");
+    }
+
+    @Test
+    void an_inviter_who_can_no_longer_be_named_tells_nobody() {
+        names.remove(alice);
+
+        notifier.invitationIssued(invitationFor(carol, alice), "carol", alice);
+
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void a_newcomer_is_announced_to_everyone_else() {
+        membersAre(alice, bob, dave);
+
+        notifier.memberJoined(spaceId, dave);
+
+        verify(notifications).memberJoined(spaceId, "Chez nous", "dave", List.of(to(alice, "alice"), to(bob, "bob")));
+    }
+
+    @Test
+    void nobody_else_in_the_space_means_nobody_is_told() {
+        membersAre(dave);
+
+        notifier.memberJoined(spaceId, dave);
+
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void a_departure_is_told_to_those_who_remain() {
+        membersAre(alice, bob);
+
+        notifier.memberLeft(spaceId, dave);
+
+        verify(notifications).memberLeft(spaceId, "Chez nous", "dave", List.of(to(alice, "alice"), to(bob, "bob")));
+    }
+
+    @Test
+    void a_removal_is_told_to_the_removed_and_to_the_others_but_never_to_its_author() {
+        membersAre(alice, bob, carol);
+
+        notifier.memberRemoved(spaceId, alice, dave);
+
+        verify(notifications).removedFromSpace("Chez nous", "alice", to(dave, "dave"));
+        verify(notifications).memberRemoved(spaceId, "Chez nous", "alice", "dave", List.of(to(bob, "bob"), to(carol, "carol")));
+    }
+
+    @Test
+    void alone_with_the_author_only_the_removed_member_is_told() {
+        membersAre(alice);
+
+        notifier.memberRemoved(spaceId, alice, dave);
+
+        verify(notifications).removedFromSpace("Chez nous", "alice", to(dave, "dave"));
+        verifyNoMoreInteractions(notifications);
+    }
+
+    @Test
+    void a_deletion_is_told_to_every_member_but_the_owner_who_deleted() {
+        membersAre(alice, bob, carol);
+
+        notifier.spaceDeleted(spaceId, alice);
+
+        verify(notifications).spaceDeleted("Chez nous", "alice", List.of(to(bob, "bob"), to(carol, "carol")));
+    }
+
+    @Test
+    void a_role_change_is_told_to_the_member_concerned_only() {
+        notifier.roleChanged(spaceId, alice, bob, SpaceRole.VIEWER, SpaceRole.MEMBER);
+
+        verify(notifications).roleChanged(spaceId, "Chez nous", "alice", to(bob, "bob"), SpaceRole.VIEWER, SpaceRole.MEMBER);
+    }
+
+    @Test
+    void a_transfer_tells_the_new_owner_and_the_others_but_not_the_former_owner() {
+        membersAre(alice, bob, carol, dave);
+
+        notifier.ownershipTransferred(spaceId, alice, bob);
+
+        verify(notifications).ownershipReceived(spaceId, "Chez nous", "alice", to(bob, "bob"));
+        verify(notifications).ownerChanged(spaceId, "Chez nous", "alice", "bob", List.of(to(carol, "carol"), to(dave, "dave")));
+    }
+
+    @Test
+    void a_succession_names_no_author() {
+        membersAre(bob, carol);
+
+        notifier.ownershipInherited(spaceId, bob);
+
+        verify(notifications).ownershipReceived(spaceId, "Chez nous", null, to(bob, "bob"));
+        verify(notifications).ownerChanged(spaceId, "Chez nous", null, "bob", List.of(to(carol, "carol")));
+    }
+
+    @Test
+    void a_member_who_can_no_longer_be_named_is_left_out() {
+        names.remove(carol);
+        membersAre(alice, bob, carol, dave);
+
+        notifier.memberJoined(spaceId, dave);
+
+        verify(notifications).memberJoined(spaceId, "Chez nous", "dave", List.of(to(alice, "alice"), to(bob, "bob")));
+    }
+
+    @Test
+    void an_event_whose_author_cannot_be_named_tells_nobody() {
+        names.remove(alice);
+        membersAre(alice, bob, carol);
+
+        notifier.memberRemoved(spaceId, alice, dave);
+        notifier.spaceDeleted(spaceId, alice);
+
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void a_space_that_is_not_there_tells_nobody() {
+        UUID elsewhere = UUID.randomUUID();
+        when(spaces.findById(elsewhere)).thenReturn(Optional.empty());
+
+        notifier.memberJoined(elsewhere, dave);
+
+        verifyNoInteractions(notifications);
+    }
+}
