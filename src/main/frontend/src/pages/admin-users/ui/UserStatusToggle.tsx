@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Switch } from '@/shared/ui'
 import type { User, AdminUser } from '@/entities/user'
 import { canActivate, canDeactivate } from '../lib/permissions'
 import { permissionDenialTitle } from './permissionDenialTitle'
@@ -22,19 +23,13 @@ export function UserStatusToggle({ user, currentUser, onToggle, isPending = fals
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        role="switch"
-        aria-checked={user.isActive}
+      <Switch
+        checked={user.isActive}
         aria-label={label}
         title={permissionDenialTitle(check, t, label)}
-        onClick={() => { if (!disabled) onToggle(user) }}
         disabled={disabled}
-        className={`relative inline-flex h-[26px] w-[44px] shrink-0 items-center rounded-full border-0 transition-colors
-          ${user.isActive ? 'bg-accent' : 'bg-bg-4'}
-          ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
-      >
-        <span className={`pointer-events-none inline-block size-5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)] transition-transform ${user.isActive ? 'translate-x-[21px]' : 'translate-x-[3px]'}`} />
-      </button>
+        onChange={() => onToggle(user)}
+      />
       <span className="text-[12.5px] text-fg-2">
         {user.isActive ? t('table.active') : t('table.inactive')}
       </span>
