@@ -35,7 +35,7 @@ export function DisableTotpModal({ open, onClose, onSuccess, onDisable }: Disabl
       if (error instanceof TotpCodeError) {
         setErrorKey('disable.error.invalid_code')
         setCode('')
-        digitInputRef.current?.focusFirst()
+        digitInputRef.current?.focus()
       } else if (error instanceof TotpDisableMaxAttemptsError) {
         setErrorKey('disable.error.max_attempts')
         setCode('')
@@ -48,7 +48,7 @@ export function DisableTotpModal({ open, onClose, onSuccess, onDisable }: Disabl
       } else {
         setErrorKey('disable.error.invalid_code')
         setCode('')
-        digitInputRef.current?.focusFirst()
+        digitInputRef.current?.focus()
       }
     } finally {
       isSubmittingRef.current = false
@@ -75,8 +75,7 @@ export function DisableTotpModal({ open, onClose, onSuccess, onDisable }: Disabl
           onChange={setCode}
           disabled={isLoading}
           autoFocus
-          groupLabel={t('disable.code_group_label')}
-          digitLabel={(i) => t('disable.digit_label', { n: i + 1 })}
+          label={t('disable.code_label')}
         />
         {errorKey && (
           <div role="alert" className="flex items-center gap-2 rounded-[10px] bg-status-red-dim px-3.5 py-[11px] text-[13.5px] text-status-red mt-3">

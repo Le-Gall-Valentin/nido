@@ -29,11 +29,12 @@ function makeApi(overrides: Partial<ITotpEnrollApi> = {}): ITotpEnrollApi {
   }
 }
 
+function codeField(container: HTMLElement) {
+  return container.querySelector('input[autocomplete="one-time-code"]') as HTMLInputElement
+}
+
 function fillCode(container: HTMLElement, code: string) {
-  const inputs = container.querySelectorAll('input[inputmode="numeric"]')
-  code.split('').forEach((digit, i) => {
-    fireEvent.change(inputs[i]!, { target: { value: digit } })
-  })
+  fireEvent.change(codeField(container), { target: { value: code } })
 }
 
 describe('TotpSetupFlow', () => {
@@ -156,8 +157,7 @@ describe('TotpSetupFlow', () => {
     const alert = await findByRole('alert')
     expect(alert.textContent).toContain('setup.error.invalid_code')
 
-    const inputs = container.querySelectorAll('input[inputmode="numeric"]') as NodeListOf<HTMLInputElement>
-    inputs.forEach(input => expect(input.value).toBe(''))
+    expect(codeField(container).value).toBe('')
   })
 
   it('says the code was refused, not that a code is needed', async () => {
@@ -240,8 +240,7 @@ describe('TotpSetupFlow', () => {
       <TotpSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
-    const inputs = container.querySelectorAll('input[inputmode="numeric"]')
-    '123456'.split('').forEach((d, i) => fireEvent.change(inputs[i]!, { target: { value: d } }))
+    fillCode(container, '123456')
     await act(async () => {
       fireEvent.submit(getByRole('button', { name: /setup\.submit/i }).closest('form')!)
     })
@@ -255,8 +254,7 @@ describe('TotpSetupFlow', () => {
       <TotpSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
-    const inputs = container.querySelectorAll('input[inputmode="numeric"]')
-    '654321'.split('').forEach((d, i) => fireEvent.change(inputs[i]!, { target: { value: d } }))
+    fillCode(container, '654321')
     await act(async () => {
       fireEvent.submit(getByRole('button', { name: /setup\.submit/i }).closest('form')!)
     })
@@ -270,9 +268,7 @@ describe('TotpSetupFlow', () => {
       <TotpSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
-    '123456'.split('').forEach((d, i) =>
-      fireEvent.change(container.querySelectorAll('input[inputmode="numeric"]')[i]!, { target: { value: d } })
-    )
+    fillCode(container, '123456')
     await act(async () => {
       fireEvent.submit(getByRole('button', { name: /setup\.submit/i }).closest('form')!)
     })
@@ -289,9 +285,7 @@ describe('TotpSetupFlow', () => {
     await findByTestId('qr-code')
     vi.useFakeTimers()
 
-    '123456'.split('').forEach((d, i) =>
-      fireEvent.change(container.querySelectorAll('input[inputmode="numeric"]')[i]!, { target: { value: d } })
-    )
+    fillCode(container, '123456')
     await act(async () => {
       fireEvent.submit(getByRole('button', { name: /setup\.submit/i }).closest('form')!)
     })
@@ -315,9 +309,7 @@ describe('TotpSetupFlow', () => {
     // Switch to fake timers BEFORE submit so the setTimeout(2000) in catch is fake
     vi.useFakeTimers()
 
-    '123456'.split('').forEach((d, i) =>
-      fireEvent.change(container.querySelectorAll('input[inputmode="numeric"]')[i]!, { target: { value: d } })
-    )
+    fillCode(container, '123456')
     await act(async () => {
       fireEvent.submit(getByRole('button', { name: /setup\.submit/i }).closest('form')!)
     })
@@ -355,8 +347,7 @@ describe('TotpSetupFlow', () => {
       <TotpSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
-    const inputs = container.querySelectorAll('input[inputmode="numeric"]')
-    '111111'.split('').forEach((d, i) => fireEvent.change(inputs[i]!, { target: { value: d } }))
+    fillCode(container, '111111')
     await act(async () => {
       fireEvent.submit(getByRole('button', { name: /setup\.submit/i }).closest('form')!)
     })

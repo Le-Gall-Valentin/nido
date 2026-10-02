@@ -4,118 +4,81 @@ import { describe, it, expect, vi } from 'vitest'
 import { TotpDigitInput, type TotpDigitInputHandle } from './TotpDigitInput'
 
 function setup(value = '', onChange = vi.fn()) {
-  return render(<TotpDigitInput value={value} onChange={onChange} />)
+  const utils = render(<TotpDigitInput value={value} onChange={onChange} label="Code de vérification" />)
+  const field = utils.getByRole('textbox', { name: 'Code de vérification' }) as HTMLInputElement
+  const boxes = Array.from(utils.container.querySelector('[aria-hidden="true"]')!.children)
+  return { ...utils, field, boxes }
 }
 
 describe('TotpDigitInput', () => {
-  it('renders 6 inputs', () => {
-    const { getAllByRole } = setup()
-    expect(getAllByRole('textbox')).toHaveLength(6)
+  it('is a single one-time-code field, the one password managers and phones fill', () => {
+    const { getAllByRole, field } = setup()
+    expect(getAllByRole('textbox')).toHaveLength(1)
+    expect(field.autocomplete).toBe('one-time-code')
   })
 
-  it('shows value digits in correct positions', () => {
-    const { getAllByRole } = setup('123')
-    const inputs = getAllByRole('textbox') as HTMLInputElement[]
-    expect(inputs[0].value).toBe('1')
-    expect(inputs[1].value).toBe('2')
-    expect(inputs[2].value).toBe('3')
-    expect(inputs[3].value).toBe('')
-    expect(inputs[4].value).toBe('')
-    expect(inputs[5].value).toBe('')
-  })
-
-  it('calls onChange when a digit is typed', () => {
+  it('takes a whole code written into it at once, as a password manager does', () => {
+    // What Bitwarden's content script does: set the value through the native setter, then fire
+    // input and change. Six one-character fields kept only the last digit, in the first box.
     const onChange = vi.fn()
-    const { getAllByRole } = setup('', onChange)
-    const inputs = getAllByRole('textbox')
-    fireEvent.change(inputs[0], { target: { value: '5' } })
-    expect(onChange).toHaveBeenCalledWith('5')
-  })
-
-  it('auto-advances focus to next input after digit entry', () => {
-    const { getAllByRole } = setup('', vi.fn())
-    const inputs = getAllByRole('textbox') as HTMLInputElement[]
-    inputs[0].focus()
-    fireEvent.change(inputs[0], { target: { value: '3' } })
-    expect(document.activeElement).toBe(inputs[1])
-  })
-
-  it('backspace on empty input focuses previous and clears it', () => {
-    const onChange = vi.fn()
-    const { getAllByRole } = setup('12', onChange)
-    const inputs = getAllByRole('textbox') as HTMLInputElement[]
-    // index 2 is empty, pressing backspace should clear index 1 and focus it
-    inputs[2].focus()
-    fireEvent.keyDown(inputs[2], { key: 'Backspace' })
-    expect(onChange).toHaveBeenCalledWith('1')
-    expect(document.activeElement).toBe(inputs[1])
-  })
-
-  it('arrow left navigates to previous input', () => {
-    const { getAllByRole } = setup('123456')
-    const inputs = getAllByRole('textbox') as HTMLInputElement[]
-    inputs[3].focus()
-    fireEvent.keyDown(inputs[3], { key: 'ArrowLeft' })
-    expect(document.activeElement).toBe(inputs[2])
-  })
-
-  it('arrow right navigates to next input', () => {
-    const { getAllByRole } = setup('123456')
-    const inputs = getAllByRole('textbox') as HTMLInputElement[]
-    inputs[2].focus()
-    fireEvent.keyDown(inputs[2], { key: 'ArrowRight' })
-    expect(document.activeElement).toBe(inputs[3])
-  })
-
-  it('paste fills all 6 inputs from clipboard text', () => {
-    const onChange = vi.fn()
-    const { getByRole } = setup('', onChange)
-    const container = getByRole('group')
-    fireEvent.paste(container, {
-      clipboardData: { getData: () => '123456' },
-    })
+    const { field } = setup('', onChange)
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(field, '123456')
+    field.dispatchEvent(new Event('input', { bubbles: true }))
+    field.dispatchEvent(new Event('change', { bubbles: true }))
     expect(onChange).toHaveBeenCalledWith('123456')
   })
 
-  it('paste strips non-numeric characters', () => {
+  it('draws the value one digit per box', () => {
+    const { boxes } = setup('123')
+    expect(boxes.map(b => b.textContent)).toEqual(['1', '2', '3', '', '', ''])
+  })
+
+  it('keeps digits only, six at most', () => {
     const onChange = vi.fn()
-    const { getByRole } = setup('', onChange)
-    const container = getByRole('group')
-    fireEvent.paste(container, {
-      clipboardData: { getData: () => '1a2b3c4d5e6f' },
-    })
+    const { field } = setup('', onChange)
+    fireEvent.change(field, { target: { value: '12a 34-5678' } })
     expect(onChange).toHaveBeenCalledWith('123456')
   })
 
-  it('disabled inputs are disabled', () => {
-    const { getAllByRole } = render(
-      <TotpDigitInput value="" onChange={vi.fn()} disabled />
-    )
-    const inputs = getAllByRole('textbox') as HTMLInputElement[]
-    inputs.forEach(input => expect(input.disabled).toBe(true))
+  it('a paste replaces the code already typed, spaces and dashes dropped', () => {
+    const onChange = vi.fn()
+    const { field } = setup('1', onChange)
+    fireEvent.paste(field, { clipboardData: { getData: () => '987 654' } })
+    expect(onChange).toHaveBeenCalledWith('987654')
   })
 
-  it('uses provided groupLabel for the group aria-label', () => {
-    const { getByRole } = render(
-      <TotpDigitInput value="" onChange={vi.fn()} groupLabel="Code de vérification" />
-    )
-    expect(getByRole('group', { name: 'Code de vérification' })).toBeTruthy()
+  it('highlights the box the next digit goes in, only while the field has focus', () => {
+    const { field, boxes } = setup('12')
+    const highlighted = () => boxes.map(b => b.className.includes('border-accent'))
+    expect(highlighted()).toEqual([false, false, false, false, false, false])
+    fireEvent.focus(field)
+    expect(highlighted()).toEqual([false, false, true, false, false, false])
+    fireEvent.blur(field)
+    expect(highlighted()).toEqual([false, false, false, false, false, false])
   })
 
-  it('uses provided digitLabel for each input aria-label', () => {
-    const { getAllByRole } = render(
-      <TotpDigitInput value="" onChange={vi.fn()} digitLabel={(i) => `Chiffre ${i + 1}`} />
-    )
-    const inputs = getAllByRole('textbox')
-    expect(inputs[0].getAttribute('aria-label')).toBe('Chiffre 1')
-    expect(inputs[5].getAttribute('aria-label')).toBe('Chiffre 6')
+  it('highlights the last box once the code is complete', () => {
+    const { field, boxes } = setup('123456')
+    fireEvent.focus(field)
+    expect(boxes.map(b => b.className.includes('border-accent'))).toEqual([false, false, false, false, false, true])
   })
 
-  it('exposes focusFirst() via ref', () => {
+  it('keeps the caret after the last digit, where the highlighted box says the next one goes', () => {
+    const { field } = setup('1234')
+    field.setSelectionRange(1, 1)
+    fireEvent.select(field)
+    expect([field.selectionStart, field.selectionEnd]).toEqual([4, 4])
+  })
+
+  it('is disabled when asked', () => {
+    const { getByRole } = render(<TotpDigitInput value="" onChange={vi.fn()} disabled />)
+    expect((getByRole('textbox') as HTMLInputElement).disabled).toBe(true)
+  })
+
+  it('focus() through the ref focuses the field', () => {
     const ref = createRef<TotpDigitInputHandle>()
-    render(<TotpDigitInput value="" onChange={vi.fn()} ref={ref} />)
-    expect(ref.current).toBeTruthy()
-    // focusFirst should not throw
-    expect(() => ref.current?.focusFirst()).not.toThrow()
+    const { getByRole } = render(<TotpDigitInput value="" onChange={vi.fn()} ref={ref} />)
+    ref.current!.focus()
+    expect(document.activeElement).toBe(getByRole('textbox'))
   })
 })
