@@ -2,6 +2,8 @@
   "title": "Notifications",
   "subtitle": "Choose what Nido sends you.",
   "channels_title": "Channels",
+  "group_summary_one": "{{count}} of {{total}} on",
+  "group_summary_other": "{{count}} of {{total}} on",
   "channel": {
     "email": {
       "label": "Email",

@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
 import { renderWithQuery } from '@/shared/test'
 import type { INotificationPreferencesApi } from '../model/INotificationPreferencesApi'
@@ -30,6 +30,8 @@ const kindSwitch = () => screen.getByRole('switch', { name: 'type.space.invitati
 const mailSwitch = () => screen.getByRole('switch', { name: 'channel.email.label' }) as HTMLButtonElement
 
 describe('NotificationPreferencesSection', () => {
+  beforeEach(() => localStorage.clear())
+
   it('shows nothing while the choices load', () => {
     const { container } = renderWithQuery(
       <NotificationPreferencesSection api={fakeApi({ get: vi.fn(() => new Promise<NotificationPreferences>(() => {})) })} />)
@@ -121,5 +123,35 @@ describe('NotificationPreferencesSection', () => {
     renderWithQuery(<NotificationPreferencesSection api={fakeApi({ get: vi.fn().mockRejectedValue(new NetworkError()) })} />)
 
     expect(await screen.findByText('errors.load')).toBeDefined()
+  })
+
+  it('folds a context away and says how many of its kinds are on', async () => {
+    renderWithQuery(<NotificationPreferencesSection api={fakeApi()} />)
+    const header = await screen.findByRole('button', { name: 'group.space' })
+    expect(header.getAttribute('aria-expanded')).toBe('true')
+
+    fireEvent.click(header)
+
+    expect(screen.getByRole('button', { name: /group\.space/ }).getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByRole('switch', { name: 'type.space.invitation.label' })).toBeNull()
+    expect(screen.getByText('group_summary')).toBeDefined()
+    expect(screen.getByRole('switch', { name: 'channel.email.label' })).toBeDefined()
+  })
+
+  it('remembers on this device which contexts are folded', async () => {
+    const { unmount } = renderWithQuery(<NotificationPreferencesSection api={fakeApi()} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'group.space' }))
+    unmount()
+
+    renderWithQuery(<NotificationPreferencesSection api={fakeApi()} />)
+
+    expect((await screen.findByRole('button', { name: /group\.space/ })).getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('never folds the channels', async () => {
+    renderWithQuery(<NotificationPreferencesSection api={fakeApi()} />)
+
+    await screen.findByRole('switch', { name: 'channel.email.label' })
+    expect(screen.queryByRole('button', { name: 'channels_title' })).toBeNull()
   })
 })

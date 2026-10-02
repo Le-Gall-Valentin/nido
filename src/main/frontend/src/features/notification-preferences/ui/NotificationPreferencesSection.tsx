@@ -1,5 +1,5 @@
-import { Fragment, useId, useState } from 'react'
-import { Info } from 'lucide-react'
+import { Fragment, useId, useState, type ReactNode } from 'react'
+import { ChevronDown, Info } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { NetworkError, RateLimitError } from '@/shared/lib'
 import { Alert, Switch } from '@/shared/ui'
@@ -9,6 +9,7 @@ import { groupTypes, targetKey } from '../model/preferenceChange'
 import type { PreferenceTarget } from '../model/types'
 import { useNotificationPreferences } from '../model/useNotificationPreferences'
 import { useToggleNotificationPreference } from '../model/useToggleNotificationPreference'
+import { useCollapsedGroups } from '../model/useCollapsedGroups'
 
 function errorKey(error: unknown): string {
   if (error instanceof RateLimitError) return 'errors.rate_limit'
@@ -43,8 +44,43 @@ function PreferenceRow({ label, description, checked, disabled, onChange }: RowP
   )
 }
 
-function GroupTitle({ children }: { children: React.ReactNode }) {
+function GroupTitle({ children }: { children: ReactNode }) {
   return <h4 className="text-[12px] font-semibold uppercase tracking-[0.05em] text-fg-3">{children}</h4>
+}
+
+interface TypeGroupProps {
+  title: string
+  summary: string
+  collapsed: boolean
+  onToggle: () => void
+  children: ReactNode
+}
+
+/** A category of kinds, folded or not; folded, it says how many of its kinds are on. */
+function TypeGroup({ title, summary, collapsed, onToggle, children }: TypeGroupProps) {
+  const panelId = useId()
+  return (
+    <div className="flex flex-col gap-3.5">
+      <h4>
+        <button
+          type="button"
+          aria-expanded={!collapsed}
+          aria-controls={panelId}
+          onClick={onToggle}
+          className="flex w-full items-center justify-between gap-3 text-left"
+        >
+          <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-fg-3">{title}</span>
+          <span className="flex items-center gap-1.5 text-[12.5px] text-fg-3">
+            {collapsed && <span>{summary}</span>}
+            <ChevronDown aria-hidden="true" className={`size-4 transition-transform ${collapsed ? '-rotate-90' : ''}`} />
+          </span>
+        </button>
+      </h4>
+      <div id={panelId} hidden={collapsed} className="flex flex-col gap-3.5">
+        {children}
+      </div>
+    </div>
+  )
 }
 
 interface Props {
@@ -60,6 +96,7 @@ export function NotificationPreferencesSection({ api = notificationPreferencesAp
   const { t } = useTranslation('notificationPreferences')
   const { data, isError } = useNotificationPreferences(api)
   const toggle = useToggleNotificationPreference(api)
+  const groups = useCollapsedGroups()
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
 
@@ -115,10 +152,14 @@ export function NotificationPreferencesSection({ api = notificationPreferencesAp
             {groupTypes(data.types).map(({ group, types }) => (
               <Fragment key={group}>
                 <div className="-my-[5px] h-px bg-bg-3" aria-hidden="true" />
-                <div className="flex flex-col gap-3.5">
-                  <GroupTitle>{t(`group.${group}`)}</GroupTitle>
+                <TypeGroup
+                  title={t(`group.${group}`)}
+                  summary={t('group_summary', { count: types.filter((type) => type.enabled).length, total: types.length })}
+                  collapsed={groups.isCollapsed(group)}
+                  onToggle={() => groups.toggle(group)}
+                >
                   {types.map(({ type, enabled }) => row({ kind: 'type', code: type }, enabled, `type.${type}`))}
-                </div>
+                </TypeGroup>
               </Fragment>
             ))}
             <p className="flex items-start gap-2 text-[12.5px] text-fg-3">
