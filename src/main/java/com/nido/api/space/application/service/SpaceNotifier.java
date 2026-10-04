@@ -2,16 +2,21 @@ package com.nido.api.space.application.service;
 
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.Addressee;
+import com.nido.api.space.domain.model.InvitationCancellation;
+import com.nido.api.space.domain.model.InvitationStatus;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceInvitation;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
+import com.nido.api.space.domain.port.out.SpaceInvitationPort;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
 import com.nido.api.space.domain.port.out.SpaceNotificationPort;
 import com.nido.api.space.domain.port.out.SpaceRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -20,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 /**
  * Who hears about what happens in a space — every rule of the space notifications, in one place. The
@@ -38,15 +44,19 @@ public class SpaceNotifier {
 
     private final SpaceRepository spaces;
     private final SpaceMembershipPort memberships;
+    private final SpaceInvitationPort invitations;
     private final MemberNames memberNames;
     private final SpaceNotificationPort notifications;
+    private final Clock clock;
 
-    public SpaceNotifier(SpaceRepository spaces, SpaceMembershipPort memberships, MemberNames memberNames,
-                         SpaceNotificationPort notifications) {
+    public SpaceNotifier(SpaceRepository spaces, SpaceMembershipPort memberships, SpaceInvitationPort invitations,
+                         MemberNames memberNames, SpaceNotificationPort notifications, Clock clock) {
         this.spaces = spaces;
         this.memberships = memberships;
+        this.invitations = invitations;
         this.memberNames = memberNames;
         this.notifications = notifications;
+        this.clock = clock;
     }
 
     public void invitationIssued(SpaceInvitation invitation, String inviteeName, UUID inviterId) {
@@ -56,6 +66,24 @@ public class SpaceNotifier {
                 return;
             }
             notifications.invitationIssued(invitation, inviteeName, names.get(inviterId), spaceName);
+        });
+    }
+
+    /** A pending invitation was revoked: its invitee hears it — unless it had expired anyway. */
+    public void invitationRevoked(SpaceInvitation invitation, UUID actorId) {
+        if (invitation.isExpired(clock.instant())) {
+            return;
+        }
+        inSpace(invitation.spaceId(), spaceName -> {
+            List<UUID> invitee = List.of(invitation.inviteeId());
+            Map<UUID, String> names = namesOf(invitee, actorId);
+            if (unnamed(names, "invitation " + invitation.id() + " revoked", invitation.spaceId(), actorId)) {
+                return;
+            }
+            List<Addressee> told = addressees(invitee, names);
+            if (!told.isEmpty()) {
+                notifications.invitationCancelled(spaceName, names.get(actorId), InvitationCancellation.REVOKED, told);
+            }
         });
     }
 
@@ -82,18 +110,42 @@ public class SpaceNotifier {
         });
     }
 
-    /** Before the deletion: it takes the memberships with it. */
+    /** Before the deletion: it takes the memberships and the invitations with it. */
     public void spaceDeleted(UUID spaceId, UUID actorId) {
         inSpace(spaceId, spaceName -> {
             List<UUID> readers = membersExcept(spaceId, actorId);
-            if (readers.isEmpty()) {
+            List<UUID> invitees = pendingInvitees(spaceId);
+            if (readers.isEmpty() && invitees.isEmpty()) {
                 return;
             }
-            Map<UUID, String> names = namesOf(readers, actorId);
+            Map<UUID, String> names = namesOf(Stream.concat(readers.stream(), invitees.stream()).toList(), actorId);
             if (unnamed(names, "space deleted", spaceId, actorId)) {
                 return;
             }
-            notifications.spaceDeleted(spaceName, names.get(actorId), addressees(readers, names));
+            String actorName = names.get(actorId);
+            if (!readers.isEmpty()) {
+                notifications.spaceDeleted(spaceName, actorName, addressees(readers, names));
+            }
+            List<Addressee> invited = addressees(invitees, names);
+            if (!invited.isEmpty()) {
+                notifications.invitationCancelled(spaceName, actorName, InvitationCancellation.SPACE_DELETED, invited);
+            }
+        });
+    }
+
+    /** The owner's account was deleted and nobody could inherit the space: it goes, and its invitees hear who left. */
+    public void spaceDeletedWithoutHeir(UUID spaceId, UUID formerOwnerId, String formerOwnerName) {
+        inSpace(spaceId, spaceName -> {
+            List<UUID> invitees = pendingInvitees(spaceId);
+            if (invitees.isEmpty()) {
+                return;
+            }
+            Map<UUID, String> names = namesWithErased(invitees, formerOwnerId, formerOwnerName);
+            if (unnamed(names, "space deleted without heir", spaceId, formerOwnerId)) {
+                return;
+            }
+            notifications.invitationCancelled(spaceName, formerOwnerName, InvitationCancellation.OWNER_LEFT_NIDO,
+                addressees(invitees, names));
         });
     }
 
@@ -182,6 +234,15 @@ public class SpaceNotifier {
         return memberships.findMemberships(spaceId).stream()
             .map(SpaceMembership::userId)
             .filter(userId -> !skipped.contains(userId))
+            .toList();
+    }
+
+    /** Who still waits on an invitation to this space: pending, and not expired. */
+    private List<UUID> pendingInvitees(UUID spaceId) {
+        Instant now = clock.instant();
+        return invitations.findBySpace(spaceId).stream()
+            .filter(invitation -> invitation.status() == InvitationStatus.PENDING && !invitation.isExpired(now))
+            .map(SpaceInvitation::inviteeId)
             .toList();
     }
 

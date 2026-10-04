@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.nido.api.space.domain.model.Addressee;
+import com.nido.api.space.domain.model.InvitationCancellation;
 import com.nido.api.space.domain.model.InvitationStatus;
 import com.nido.api.space.domain.model.MemberProfile;
 import com.nido.api.space.domain.model.Space;
@@ -12,6 +13,7 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.domain.port.out.MemberProfilePort;
+import com.nido.api.space.domain.port.out.SpaceInvitationPort;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
 import com.nido.api.space.domain.port.out.SpaceNotificationPort;
 import com.nido.api.space.domain.port.out.SpaceRepository;
@@ -23,8 +25,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -48,7 +52,9 @@ class SpaceNotifierTest {
     @Mock SpaceMembershipPort memberships;
     @Mock MemberProfilePort profiles;
     @Mock SpaceNotificationPort notifications;
+    @Mock SpaceInvitationPort invitations;
 
+    private final Instant now = Instant.parse("2026-10-04T10:00:00Z");
     private final UUID spaceId = UUID.randomUUID();
     private final UUID alice = UUID.randomUUID();
     private final UUID bob = UUID.randomUUID();
@@ -70,7 +76,8 @@ class SpaceNotifierTest {
             .map(id -> new MemberProfile(id, names.get(id), names.get(id) + "@test.local")).toList());
         lenient().when(spaces.findById(spaceId)).thenReturn(Optional.of(new Space(spaceId, SpaceType.SHARED,
             "Chez nous", null, "#c17a5c", "🏡", null, ZoneId.of("Europe/Paris"), Instant.now())));
-        notifier = new SpaceNotifier(spaces, memberships, new MemberNames(profiles), notifications);
+        notifier = new SpaceNotifier(spaces, memberships, invitations, new MemberNames(profiles), notifications,
+            Clock.fixed(now, ZoneOffset.UTC));
     }
 
     @AfterEach
@@ -257,5 +264,62 @@ class SpaceNotifierTest {
         notifier.memberJoined(elsewhere, dave);
 
         verifyNoInteractions(notifications);
+    }
+
+    private SpaceInvitation invitation(UUID invitee, InvitationStatus status, Instant expiresAt) {
+        return new SpaceInvitation(UUID.randomUUID(), spaceId, invitee, SpaceRole.MEMBER, "NIDO-" + invitee,
+            status, expiresAt, alice, null, now.minusSeconds(60));
+    }
+
+    @Test
+    void a_revoked_invitation_is_told_to_its_invitee_by_the_name_of_who_revoked() {
+        notifier.invitationRevoked(invitation(dave, InvitationStatus.PENDING, now.plusSeconds(60)), bob);
+
+        verify(notifications).invitationCancelled("Chez nous", "bob", InvitationCancellation.REVOKED, List.of(to(dave, "dave")));
+    }
+
+    @Test
+    void an_expired_invitation_is_revoked_silently() {
+        notifier.invitationRevoked(invitation(dave, InvitationStatus.PENDING, now), bob);
+
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void a_deletion_tells_the_pending_invitees_their_invitation_is_cancelled() {
+        membersAre(alice, bob);
+        when(invitations.findBySpace(spaceId)).thenReturn(List.of(
+            invitation(carol, InvitationStatus.PENDING, now.plusSeconds(60)),
+            invitation(dave, InvitationStatus.PENDING, now.minusSeconds(1)),
+            invitation(UUID.randomUUID(), InvitationStatus.ACCEPTED, now.plusSeconds(60))));
+
+        notifier.spaceDeleted(spaceId, alice);
+
+        verify(notifications).spaceDeleted("Chez nous", "alice", List.of(to(bob, "bob")));
+        verify(notifications).invitationCancelled("Chez nous", "alice", InvitationCancellation.SPACE_DELETED,
+            List.of(to(carol, "carol")));
+    }
+
+    @Test
+    void a_space_alone_with_its_owner_still_tells_its_invitees() {
+        membersAre(alice);
+        when(invitations.findBySpace(spaceId)).thenReturn(List.of(invitation(carol, InvitationStatus.PENDING, now.plusSeconds(60))));
+
+        notifier.spaceDeleted(spaceId, alice);
+
+        verify(notifications).invitationCancelled("Chez nous", "alice", InvitationCancellation.SPACE_DELETED,
+            List.of(to(carol, "carol")));
+        verifyNoMoreInteractions(notifications);
+    }
+
+    @Test
+    void a_space_lost_without_heir_tells_its_invitees_who_left_nido() {
+        names.remove(alice);   // anonymised by now
+        when(invitations.findBySpace(spaceId)).thenReturn(List.of(invitation(carol, InvitationStatus.PENDING, now.plusSeconds(60))));
+
+        notifier.spaceDeletedWithoutHeir(spaceId, alice, "alice");
+
+        verify(notifications).invitationCancelled("Chez nous", "alice", InvitationCancellation.OWNER_LEFT_NIDO,
+            List.of(to(carol, "carol")));
     }
 }

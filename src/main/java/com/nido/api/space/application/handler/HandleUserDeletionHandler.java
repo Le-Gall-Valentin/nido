@@ -72,6 +72,8 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
             }
             Optional<SpaceMembership> successor = spaceMembershipPort.findSuccessor(space.id(), userId);
             if (successor.isEmpty()) {
+                // Before the deletion, which takes the invitations with it.
+                spaceNotifier.spaceDeletedWithoutHeir(space.id(), userId, username);
                 spaceCommandPort.delete(space.id());
                 log.info("Space {} deleted: its owner {} was deleted and no successor remained",
                     space.id(), userId);

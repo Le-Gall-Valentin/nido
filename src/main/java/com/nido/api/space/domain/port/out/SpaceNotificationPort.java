@@ -1,6 +1,7 @@
 package com.nido.api.space.domain.port.out;
 
 import com.nido.api.space.domain.model.Addressee;
+import com.nido.api.space.domain.model.InvitationCancellation;
 import com.nido.api.space.domain.model.SpaceInvitation;
 import com.nido.api.space.domain.model.SpaceRole;
 
@@ -14,6 +15,9 @@ import java.util.UUID;
 public interface SpaceNotificationPort {
 
     void invitationIssued(SpaceInvitation invitation, String inviteeName, String inviterName, String spaceName);
+
+    /** Pending invitations that stopped being valid, told to their invitees. */
+    void invitationCancelled(String spaceName, String actorName, InvitationCancellation reason, List<Addressee> invitees);
 
     void memberJoined(UUID spaceId, String spaceName, String memberName, List<Addressee> recipients);
 

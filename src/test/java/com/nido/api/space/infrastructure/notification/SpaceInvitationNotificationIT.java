@@ -4,6 +4,7 @@ import com.nido.api.MailIntegrationTestConfig;
 import com.nido.api.SharedGreenMail;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
+import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceMemberJpaRepository;
@@ -25,7 +26,9 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.nido.api.TestAccessTokens.cookieFor;
+import static com.nido.api.space.infrastructure.notification.SpaceNotificationITSupport.textOf;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -48,11 +51,14 @@ class SpaceInvitationNotificationIT {
 
     private MockMvc mockMvc;
     private SpaceNotificationITSupport scene;
+    private String suffix;
     private String aliceName;
     private String carolName;
     private UUID aliceId;
     private UUID carolId;
     private UUID spaceId;
+    /** A super administrator, made only by the test that erases an account. */
+    private UUID rootId;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -63,7 +69,7 @@ class SpaceInvitationNotificationIT {
         rateLimitBucketStore.clearAll();
         jdbc.sql("DELETE FROM mail_outbox").update();
         SharedGreenMail.server().purgeEmailFromAllMailboxes();
-        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        suffix = UUID.randomUUID().toString().substring(0, 8);
         aliceName = "alice-" + suffix;
         carolName = "carol-" + suffix;
         aliceId = scene.saveUser(aliceName, "fr");
@@ -77,7 +83,8 @@ class SpaceInvitationNotificationIT {
         jdbc.sql("DELETE FROM space_invitations WHERE space_id = :id").param("id", spaceId).update();
         jdbc.sql("DELETE FROM space_members WHERE space_id = :id").param("id", spaceId).update();
         jdbc.sql("DELETE FROM spaces WHERE id = :id").param("id", spaceId).update();
-        jdbc.sql("DELETE FROM users WHERE id IN (:ids)").param("ids", List.of(aliceId, carolId)).update();
+        List<UUID> accounts = rootId == null ? List.of(aliceId, carolId) : List.of(aliceId, carolId, rootId);
+        jdbc.sql("DELETE FROM users WHERE id IN (:ids)").param("ids", accounts).update();
     }
 
     @Test
@@ -140,6 +147,50 @@ class SpaceInvitationNotificationIT {
         invite(carolName, null).andExpect(status().isConflict());
 
         assertThat(SharedGreenMail.server().waitForIncomingEmail(1_500, 1)).isFalse();
+    }
+
+    @Test
+    void revoking_an_invitation_tells_the_invitee() throws Exception {
+        UUID invitationId = carolInvited();
+
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/invitations/" + invitationId).cookie(cookieFor(aliceId)))
+            .andExpect(status().isNoContent());
+
+        MimeMessage mail = theOnlyMail();
+        assertThat(mail.getSubject()).isEqualTo("Votre invitation dans Chez nous est annulée");
+        assertThat(textOf(mail)).contains(aliceName + " a annulé votre invitation à rejoindre l’espace « Chez nous ».");
+    }
+
+    @Test
+    void deleting_the_space_tells_its_invitee() throws Exception {
+        carolInvited();
+
+        mockMvc.perform(delete("/api/spaces/" + spaceId).cookie(cookieFor(aliceId)))
+            .andExpect(status().isNoContent());
+
+        assertThat(textOf(theOnlyMail()))
+            .contains(aliceName + " a supprimé l’espace « Chez nous » : votre invitation n’est plus valable.");
+    }
+
+    @Test
+    void erasing_an_owner_without_heir_tells_the_invitee_who_left() throws Exception {
+        carolInvited();
+        rootId = scene.saveUser("root-" + suffix, null, Role.SUPER_ADMIN);
+
+        mockMvc.perform(delete("/api/users/" + aliceId).cookie(cookieFor(rootId, Role.SUPER_ADMIN)))
+            .andExpect(status().isNoContent());
+
+        assertThat(textOf(theOnlyMail())).contains(aliceName
+            + " a quitté Nido et l’espace « Chez nous » a été supprimé : votre invitation n’est plus valable.");
+    }
+
+    /** Invites carol, waits for her invitation mail, and forgets it: what follows is the only mail left. */
+    private UUID carolInvited() throws Exception {
+        invite(carolName, null).andExpect(status().isCreated());
+        theOnlyMail();
+        SharedGreenMail.server().purgeEmailFromAllMailboxes();
+        return jdbc.sql("SELECT id FROM space_invitations WHERE space_id = :space AND invitee_id = :invitee")
+            .param("space", spaceId).param("invitee", carolId).query(UUID.class).single();
     }
 
     private void choose(UUID userId, String target, boolean enabled) throws Exception {

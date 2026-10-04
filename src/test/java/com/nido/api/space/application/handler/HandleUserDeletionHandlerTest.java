@@ -13,6 +13,7 @@ import com.nido.api.space.domain.port.out.SpaceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -22,7 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -89,7 +90,7 @@ class HandleUserDeletionHandlerTest {
     }
 
     @Test
-    void a_space_with_no_successor_is_deleted() {
+    void a_space_without_heir_tells_its_invitees_before_it_goes() {
         SpaceMembership membership = membership(sharedSpaceId, SpaceRole.OWNER);
         when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of(membership));
         when(spaceRepository.findByIds(List.of(sharedSpaceId))).thenReturn(List.of(shared()));
@@ -97,8 +98,9 @@ class HandleUserDeletionHandlerTest {
 
         handler.handleUserDeletion(userId, "alice");
 
-        verify(spaceCommandPort).delete(sharedSpaceId);
-        verifyNoInteractions(spaceNotifier);
+        InOrder order = inOrder(spaceNotifier, spaceCommandPort);
+        order.verify(spaceNotifier).spaceDeletedWithoutHeir(sharedSpaceId, userId, "alice");
+        order.verify(spaceCommandPort).delete(sharedSpaceId);
     }
 
     @Test

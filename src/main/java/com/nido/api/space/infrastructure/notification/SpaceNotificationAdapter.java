@@ -5,6 +5,7 @@ import com.nido.api.notifications.application.port.in.NotifyUseCase;
 import com.nido.api.notifications.domain.model.Notification;
 import com.nido.api.notifications.domain.model.NotificationRequest;
 import com.nido.api.space.domain.model.Addressee;
+import com.nido.api.space.domain.model.InvitationCancellation;
 import com.nido.api.space.domain.model.InviteMemberCommand;
 import com.nido.api.space.domain.model.SpaceInvitation;
 import com.nido.api.space.domain.model.SpaceRole;
@@ -36,6 +37,13 @@ public class SpaceNotificationAdapter implements SpaceNotificationPort {
             new SpaceInvitationNotification(inviteeName, inviterName, spaceName,
                 InviteMemberCommand.VALIDITY.toDays(), SPACES),
             invitation.expiresAt()));
+    }
+
+    @Override
+    public void invitationCancelled(String spaceName, String actorName, InvitationCancellation reason,
+                                    List<Addressee> invitees) {
+        invitees.forEach(invitee ->
+            tell(invitee, new InvitationCancelledNotification(invitee.username(), actorName, spaceName, reason, SPACES)));
     }
 
     @Override

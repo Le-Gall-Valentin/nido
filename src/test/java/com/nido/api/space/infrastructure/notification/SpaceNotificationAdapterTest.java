@@ -4,6 +4,7 @@ import com.nido.api.mail.domain.model.AppPath;
 import com.nido.api.notifications.application.port.in.NotifyUseCase;
 import com.nido.api.notifications.domain.model.NotificationRequest;
 import com.nido.api.space.domain.model.Addressee;
+import com.nido.api.space.domain.model.InvitationCancellation;
 import com.nido.api.space.domain.model.InvitationStatus;
 import com.nido.api.space.domain.model.SpaceInvitation;
 import com.nido.api.space.domain.model.SpaceRole;
@@ -132,5 +133,16 @@ class SpaceNotificationAdapterTest {
         assertThat(sent(2)).extracting(NotificationRequest::notification).containsExactly(
             new OwnershipReceivedNotification("bob", "alice", "Chez nous", true, members),
             new OwnerChangedNotification("carol", "alice", "bob", "Chez nous", true, members));
+    }
+
+    @Test
+    void a_cancelled_invitation_points_to_the_spaces_and_dies_with_nothing() {
+        adapter().invitationCancelled("Chez nous", "alice", InvitationCancellation.REVOKED, List.of(carol));
+
+        NotificationRequest request = sent(1).getFirst();
+        assertThat(request.recipientId()).isEqualTo(carol.userId());
+        assertThat(request.expiresAt()).isNull();
+        assertThat(request.notification()).isEqualTo(
+            new InvitationCancelledNotification("carol", "alice", "Chez nous", InvitationCancellation.REVOKED, spaces));
     }
 }
