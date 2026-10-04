@@ -111,9 +111,7 @@ class SpaceInvitationNotificationIT {
 
     @Test
     void switching_the_kind_off_stops_the_mail() throws Exception {
-        mockMvc.perform(put("/api/notifications/preferences/types/space.invitation").cookie(cookieFor(carolId))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
-            .andExpect(status().isNoContent());
+        choose(carolId, "types/space.invitation", false);
 
         invite(carolName, null).andExpect(status().isCreated());
 
@@ -122,16 +120,17 @@ class SpaceInvitationNotificationIT {
 
     @Test
     void switching_mail_off_stops_it_and_keeps_each_kind_as_chosen() throws Exception {
-        mockMvc.perform(put("/api/notifications/preferences/channels/email").cookie(cookieFor(carolId))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
-            .andExpect(status().isNoContent());
+        choose(carolId, "types/space.member-joined", false);
+        choose(carolId, "channels/email", false);
 
         invite(carolName, null).andExpect(status().isCreated());
-
         assertThat(SharedGreenMail.server().waitForIncomingEmail(1_500, 1)).isFalse();
+
+        choose(carolId, "channels/email", true);
         mockMvc.perform(get("/api/notifications/preferences").cookie(cookieFor(carolId)))
-            .andExpect(jsonPath("$.channels[0].enabled").value(false))
-            .andExpect(jsonPath("$.types[?(@.type == 'space.invitation')].enabled").value(true));
+            .andExpect(jsonPath("$.channels[0].enabled").value(true))
+            .andExpect(jsonPath("$.types[?(@.type == 'space.invitation')].enabled").value(true))
+            .andExpect(jsonPath("$.types[?(@.type == 'space.member-joined')].enabled").value(false));
     }
 
     @Test
@@ -141,6 +140,12 @@ class SpaceInvitationNotificationIT {
         invite(carolName, null).andExpect(status().isConflict());
 
         assertThat(SharedGreenMail.server().waitForIncomingEmail(1_500, 1)).isFalse();
+    }
+
+    private void choose(UUID userId, String target, boolean enabled) throws Exception {
+        mockMvc.perform(put("/api/notifications/preferences/" + target).cookie(cookieFor(userId))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":" + enabled + "}"))
+            .andExpect(status().isNoContent());
     }
 
     private ResultActions invite(String identifier, String inviterLanguage) throws Exception {

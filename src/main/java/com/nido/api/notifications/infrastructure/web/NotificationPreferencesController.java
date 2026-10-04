@@ -66,7 +66,11 @@ public class NotificationPreferencesController {
         @ApiResponse(responseCode = "204", description = "Enregistré", content = @Content),
         @ApiResponse(responseCode = "400", description = "État absent",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "401", description = "Non authentifié",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
         @ApiResponse(responseCode = "404", description = "Canal inconnu ou absent de cette installation",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "429", description = "Trop de requêtes",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PutMapping("/channels/{channel}")
@@ -85,7 +89,11 @@ public class NotificationPreferencesController {
         @ApiResponse(responseCode = "204", description = "Enregistré", content = @Content),
         @ApiResponse(responseCode = "400", description = "État absent",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "401", description = "Non authentifié",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
         @ApiResponse(responseCode = "404", description = "Type inconnu",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "429", description = "Trop de requêtes",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
     })
     @PutMapping("/types/{type}")

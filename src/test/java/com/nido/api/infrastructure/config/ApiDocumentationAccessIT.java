@@ -18,6 +18,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -134,5 +135,16 @@ class ApiDocumentationAccessIT {
             .contains("allDay", "timed", "dueToday", "tomorrow");
         Iterable<JsonNode> statuses = schemas.path("CardResultResponse").path("properties").path("status").path("enum");
         assertThat(statuses).extracting(JsonNode::asText).containsExactlyInAnyOrder("OK", "UNAVAILABLE");
+    }
+
+    @Test
+    void the_notification_switches_document_who_may_flip_them_and_how_often() throws Exception {
+        JsonNode paths = new ObjectMapper().readTree(get("/api/docs", sessionCookie()).body()).path("paths");
+
+        for (String path : List.of("/api/notifications/preferences/channels/{channel}",
+                                   "/api/notifications/preferences/types/{type}")) {
+            assertThat(paths.path(path).path("put").path("responses").fieldNames()).toIterable()
+                .as(path).contains("204", "400", "401", "404", "429");
+        }
     }
 }
