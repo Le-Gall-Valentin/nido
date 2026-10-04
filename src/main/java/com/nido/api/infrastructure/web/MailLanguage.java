@@ -31,6 +31,11 @@ public final class MailLanguage {
         return ofCurrentRequest().orElse(Locale.ENGLISH);
     }
 
+    /** The language the current request asks for, among those Nido speaks; empty outside a request. */
+    public static Optional<Language> requested() {
+        return ofCurrentRequest().flatMap(locale -> Language.fromCode(locale.getLanguage()));
+    }
+
     static Optional<Locale> ofCurrentRequest() {
         if (!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes)) {
             return Optional.empty();

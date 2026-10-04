@@ -14,4 +14,9 @@ public record NotificationRecipient(UUID userId, String username, String email, 
     public NotificationRecipient {
         Objects.requireNonNull(userId, "userId");
     }
+
+    /** This account, written to in {@code fallback} when it has no language of its own. */
+    public NotificationRecipient withLanguageOr(Language fallback) {
+        return language != null || fallback == null ? this : new NotificationRecipient(userId, username, email, fallback, active);
+    }
 }

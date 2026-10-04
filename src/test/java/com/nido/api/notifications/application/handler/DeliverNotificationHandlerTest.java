@@ -64,13 +64,14 @@ class DeliverNotificationHandlerTest {
     }
 
     private void deliverTo(DeliverNotificationHandler handler) {
-        handler.deliver(GREETING, new NotificationRequest(janeId, greeting, EXPIRES_AT));
+        handler.deliver(GREETING, new NotificationRequest(janeId, greeting, EXPIRES_AT), null);
     }
 
     @Test
     void it_runs_alone_in_its_transaction() throws Exception {
         Transactional transactional = DeliverNotificationHandler.class
-            .getMethod("deliver", NotificationType.class, NotificationRequest.class).getAnnotation(Transactional.class);
+            .getMethod("deliver", NotificationType.class, NotificationRequest.class, Language.class)
+            .getAnnotation(Transactional.class);
 
         assertThat(transactional.propagation()).isEqualTo(Propagation.REQUIRES_NEW);
     }
@@ -148,5 +149,28 @@ class DeliverNotificationHandlerTest {
 
         verify(open).deliver(jane, GREETING, greeting, EXPIRES_AT);
         verify(closed, never()).deliver(any(), any(), any(), any());
+    }
+
+    @Test
+    void an_account_without_a_language_is_written_to_in_the_language_of_whoever_acts() {
+        NotificationChannelPort mail = channel(true);
+        NotificationRecipient speechless = new NotificationRecipient(janeId, "jane", "jane@test.local", null, true);
+        when(recipients.find(janeId)).thenReturn(Optional.of(speechless));
+        when(preferences.find(janeId)).thenReturn(NotificationPreferences.DEFAULTS);
+
+        handler(mail).deliver(GREETING, new NotificationRequest(janeId, greeting, EXPIRES_AT), Language.FR);
+
+        verify(mail).deliver(new NotificationRecipient(janeId, "jane", "jane@test.local", Language.FR, true),
+            GREETING, greeting, EXPIRES_AT);
+    }
+
+    @Test
+    void an_account_s_own_language_wins_over_the_language_of_whoever_acts() {
+        NotificationChannelPort mail = channel(true);
+        janeChose(NotificationPreferences.DEFAULTS);
+
+        handler(mail).deliver(GREETING, new NotificationRequest(janeId, greeting, EXPIRES_AT), Language.EN);
+
+        verify(mail).deliver(jane, GREETING, greeting, EXPIRES_AT);
     }
 }

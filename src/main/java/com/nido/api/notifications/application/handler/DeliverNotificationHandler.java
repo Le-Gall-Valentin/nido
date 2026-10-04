@@ -10,6 +10,7 @@ import com.nido.api.notifications.domain.port.out.NotificationChannelPort;
 import com.nido.api.notifications.domain.port.out.NotificationPreferencesRepository;
 import com.nido.api.notifications.domain.port.out.NotificationRecipientPort;
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.shared.model.Language;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Propagation;
@@ -21,6 +22,8 @@ import java.util.Optional;
 /**
  * Delivers a notification on every channel that can: the installation has it, it can write this
  * notification, and the account — existing and active — keeps both the channel and the kind on.
+ *
+ * An account without a language of its own is written to in the language of whoever acted.
  *
  * <p>Alone in its transaction: it runs once the change it reports is committed (see NotifyHandler), so
  * nothing here can undo that change, and a failure here rolls back only what this delivery wrote.
@@ -43,7 +46,7 @@ public class DeliverNotificationHandler implements DeliverNotificationUseCase {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void deliver(NotificationType type, NotificationRequest request) {
+    public void deliver(NotificationType type, NotificationRequest request, Language actorLanguage) {
         Notification notification = request.notification();
         List<NotificationChannelPort> able = channels.stream()
             .filter(channel -> channel.canDeliver(notification.getClass()))
@@ -59,9 +62,10 @@ public class DeliverNotificationHandler implements DeliverNotificationUseCase {
             return;
         }
         NotificationPreferences chosen = preferences.find(request.recipientId());
+        NotificationRecipient addressed = recipient.get().withLanguageOr(actorLanguage);
         for (NotificationChannelPort channel : able) {
             if (chosen.allows(type, channel.channel())) {
-                channel.deliver(recipient.get(), type, notification, request.expiresAt());
+                channel.deliver(addressed, type, notification, request.expiresAt());
             }
         }
     }

@@ -62,4 +62,16 @@ class MailLanguageTest {
         RequestContextHolder.resetRequestAttributes();
         assertThat(MailLanguage.resolve(null)).isEqualTo(Locale.ENGLISH);
     }
+
+    @Test
+    void the_language_a_request_asks_for_is_known_when_nido_speaks_it() {
+        requestAsking("fr-FR,fr;q=0.9,en;q=0.8");
+        assertThat(MailLanguage.requested()).contains(Language.FR);
+
+        requestAsking("de-DE,de;q=0.9");
+        assertThat(MailLanguage.requested()).isEmpty();
+
+        RequestContextHolder.resetRequestAttributes();
+        assertThat(MailLanguage.requested()).isEmpty();
+    }
 }

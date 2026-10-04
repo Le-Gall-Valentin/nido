@@ -124,19 +124,22 @@ class SpaceLifeNotificationIT {
     }
 
     @Test
-    void a_mail_that_cannot_be_queued_leaves_the_removal_done() throws Exception {
-        // The outbox refuses every row, as a full disk or a broken template would refuse the mail.
-        jdbc.sql("ALTER TABLE mail_outbox ADD CONSTRAINT it_refuse_every_mail CHECK (kind = '') NOT VALID").update();
+    void a_mail_that_cannot_be_queued_leaves_the_removal_done_and_the_other_mails_sent() throws Exception {
+        // The outbox refuses the removed member's mail only, as a broken template would refuse that one mail.
+        jdbc.sql("ALTER TABLE mail_outbox ADD CONSTRAINT it_refuse_removed CHECK (kind <> 'space/removed') NOT VALID").update();
         try {
             mockMvc.perform(delete("/api/spaces/" + spaceId + "/members/" + bobId).cookie(cookieFor(aliceId)))
                 .andExpect(status().isNoContent());
+
+            // Each notification is delivered on its own: carol's arrives although bob's failed.
+            assertThat(subjectsByRecipient(1)).containsOnlyKeys(address("carol"));
+            assertThat(SharedGreenMail.server().waitForIncomingEmail(1_500, 2)).isFalse();
         } finally {
-            jdbc.sql("ALTER TABLE mail_outbox DROP CONSTRAINT it_refuse_every_mail").update();
+            jdbc.sql("ALTER TABLE mail_outbox DROP CONSTRAINT it_refuse_removed").update();
         }
 
         assertThat(jdbc.sql("SELECT count(*) FROM space_members WHERE space_id = :space AND user_id = :user")
             .param("space", spaceId).param("user", bobId).query(Integer.class).single()).isZero();
-        assertThat(SharedGreenMail.server().waitForIncomingEmail(1_500, 1)).isFalse();
     }
 
     @Test
