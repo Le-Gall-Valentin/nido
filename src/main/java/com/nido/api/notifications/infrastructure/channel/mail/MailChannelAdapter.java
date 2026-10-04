@@ -20,8 +20,9 @@ import java.time.Instant;
 /**
  * Notifications by mail, through the mail context. A notification goes by mail when its record is also a
  * {@link MailContent}: the record is handed to the mail context as it is, written now in the account's
- * language and queued in the caller's transaction. Present whether mail is on or off — off, it is simply
- * never available.
+ * language (the acting person's when the account has none, settled before it gets here) and queued in the
+ * delivery's own transaction, once the change it reports is committed. Present whether mail is on or off —
+ * off, it is simply never available.
  */
 @Component
 public class MailChannelAdapter implements NotificationChannelPort {

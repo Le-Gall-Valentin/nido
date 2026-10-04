@@ -9,6 +9,9 @@ public interface NotificationDeliveryPort {
     /**
      * Delivers after the current transaction commits — right away when there is none, never when it rolls
      * back. A delivery that fails is logged and goes no further: the change it reports stands.
+     *
+     * <p>Not from inside an after-commit callback: the transaction's callbacks are already running from a list
+     * taken before the commit, so one registered then never runs, and the notification would be lost silently.
      */
     void deliverAfterCommit(NotificationType type, NotificationRequest request);
 }
