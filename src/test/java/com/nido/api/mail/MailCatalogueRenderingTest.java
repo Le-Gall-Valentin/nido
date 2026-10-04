@@ -14,6 +14,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AssignableTypeFilter;
+import org.springframework.util.StringUtils;
 
 import java.lang.reflect.RecordComponent;
 import java.util.Arrays;
@@ -78,6 +79,20 @@ class MailCatalogueRenderingTest {
 
         assertThat(mail.html()).contains("https://nido.example/account/preferences");
         assertThat(mail.text()).contains("https://nido.example/account/preferences");
+    }
+
+    /** The layout says why a mail came; a notification adds only where to switch it off — once each. */
+    @ParameterizedTest(name = "{0} in {1}")
+    @MethodSource("notificationMailsAndLanguages")
+    void a_notification_mail_says_why_it_came_once_and_offers_to_stop_it(Class<?> type, Locale locale) throws Exception {
+        RenderedMail mail = RENDERER.render(sample(type), locale);
+        boolean french = locale.getLanguage().equals("fr");
+
+        assertThat(StringUtils.countOccurrencesOf(mail.text(), french ? "Vous recevez ce mail" : "You are receiving this email"))
+            .isEqualTo(1);
+        assertThat(mail.text()).contains(french
+            ? "Vous ne voulez plus recevoir ce type de mail ?"
+            : "No longer want this kind of email?");
     }
 
     @Test

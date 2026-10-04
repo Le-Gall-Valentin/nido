@@ -35,7 +35,7 @@ class SpaceInvitationNotificationTest {
             "alice vous invite à rejoindre l’espace « Chez nous » sur Nido.",
             "Voir l’invitation\nhttps://nido.example/spaces",
             "L’invitation est valable 7 jours.",
-            "Vous recevez ce mail parce que cette notification est activée dans vos préférences.",
+            "Vous ne voulez plus recevoir ce type de mail ?",
             "Gérer mes notifications\nhttps://nido.example/account/preferences");
     }
 
