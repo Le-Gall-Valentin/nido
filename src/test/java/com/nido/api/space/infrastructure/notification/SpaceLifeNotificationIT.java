@@ -2,23 +2,13 @@ package com.nido.api.space.infrastructure.notification;
 
 import com.nido.api.MailIntegrationTestConfig;
 import com.nido.api.SharedGreenMail;
-import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceRole;
-import com.nido.api.space.domain.model.SpaceType;
-import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
-import com.nido.api.space.infrastructure.persistence.entity.SpaceMemberEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceMemberJpaRepository;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import jakarta.mail.Multipart;
-import jakarta.mail.Part;
-import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,15 +20,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
+import static com.nido.api.TestAccessTokens.cookieFor;
+import static com.nido.api.space.infrastructure.notification.SpaceNotificationITSupport.mailsByRecipient;
+import static com.nido.api.space.infrastructure.notification.SpaceNotificationITSupport.subjectsByRecipient;
+import static com.nido.api.space.infrastructure.notification.SpaceNotificationITSupport.textOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -48,8 +37,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @MailIntegrationTestConfig
 class SpaceLifeNotificationIT {
 
-    private static final String JWT_SECRET = "integration-test-secret-at-least-32-chars!";
-
     @Autowired WebApplicationContext webApplicationContext;
     @Autowired UserIdentityJpaRepository users;
     @Autowired SpaceJpaRepository spaces;
@@ -58,6 +45,7 @@ class SpaceLifeNotificationIT {
     @Autowired JdbcClient jdbc;
 
     private MockMvc mockMvc;
+    private SpaceNotificationITSupport scene;
     private String suffix;
     private UUID aliceId;
     private UUID bobId;
@@ -71,17 +59,18 @@ class SpaceLifeNotificationIT {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
             .apply(SecurityMockMvcConfigurers.springSecurity())
             .build();
+        scene = new SpaceNotificationITSupport(users, spaces, members);
         rateLimitBucketStore.clearAll();
         jdbc.sql("DELETE FROM mail_outbox").update();
         SharedGreenMail.server().purgeEmailFromAllMailboxes();
         suffix = UUID.randomUUID().toString().substring(0, 8);
-        aliceId = saveUser("alice");
-        bobId = saveUser("bob");
-        carolId = saveUser("carol");
-        spaceId = saveSharedSpace("Chez nous", aliceId);
-        saveMembership(aliceId, SpaceRole.OWNER);
-        saveMembership(bobId, SpaceRole.MEMBER);
-        saveMembership(carolId, SpaceRole.MEMBER);
+        aliceId = scene.saveUser(name("alice"), "fr");
+        bobId = scene.saveUser(name("bob"), "fr");
+        carolId = scene.saveUser(name("carol"), "fr");
+        spaceId = scene.saveSharedSpace("Chez nous", aliceId);
+        scene.saveMembership(spaceId, aliceId, SpaceRole.OWNER);
+        scene.saveMembership(spaceId, bobId, SpaceRole.MEMBER);
+        scene.saveMembership(spaceId, carolId, SpaceRole.MEMBER);
     }
 
     @AfterEach
@@ -94,7 +83,7 @@ class SpaceLifeNotificationIT {
 
     @Test
     void removing_a_member_tells_them_and_the_others_but_not_the_author() throws Exception {
-        mockMvc.perform(delete("/api/spaces/" + spaceId + "/members/" + bobId).cookie(accessTokenFor(aliceId)))
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/members/" + bobId).cookie(cookieFor(aliceId)))
             .andExpect(status().isNoContent());
 
         Map<String, String> subjects = subjectsByRecipient(2);
@@ -105,7 +94,7 @@ class SpaceLifeNotificationIT {
 
     @Test
     void deleting_the_space_tells_everyone_but_its_owner() throws Exception {
-        mockMvc.perform(delete("/api/spaces/" + spaceId).cookie(accessTokenFor(aliceId)))
+        mockMvc.perform(delete("/api/spaces/" + spaceId).cookie(cookieFor(aliceId)))
             .andExpect(status().isNoContent());
 
         Map<String, String> subjects = subjectsByRecipient(2);
@@ -115,11 +104,11 @@ class SpaceLifeNotificationIT {
 
     @Test
     void a_kind_switched_off_silences_only_whoever_switched_it_off() throws Exception {
-        mockMvc.perform(put("/api/notifications/preferences/types/space.member-removed").cookie(accessTokenFor(carolId))
+        mockMvc.perform(put("/api/notifications/preferences/types/space.member-removed").cookie(cookieFor(carolId))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
             .andExpect(status().isNoContent());
 
-        mockMvc.perform(delete("/api/spaces/" + spaceId + "/members/" + bobId).cookie(accessTokenFor(aliceId)))
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/members/" + bobId).cookie(cookieFor(aliceId)))
             .andExpect(status().isNoContent());
 
         assertThat(subjectsByRecipient(1)).containsOnlyKeys(address("bob"));
@@ -131,13 +120,9 @@ class SpaceLifeNotificationIT {
         // bob outranks carol, so he is the successor whatever the order they joined in.
         jdbc.sql("UPDATE space_members SET role = 'ADMIN' WHERE space_id = :space AND user_id = :user")
             .param("space", spaceId).param("user", bobId).update();
-        UserIdentityEntity root = new UserIdentityEntity();
-        root.setUsername(name("root"));
-        root.setEmail(address("root"));
-        root.setRole(Role.SUPER_ADMIN);
-        rootId = users.saveAndFlush(root).getId();
+        rootId = scene.saveUser(name("root"), null, Role.SUPER_ADMIN);
 
-        mockMvc.perform(delete("/api/users/" + aliceId).cookie(accessTokenFor(rootId, Role.SUPER_ADMIN)))
+        mockMvc.perform(delete("/api/users/" + aliceId).cookie(cookieFor(rootId, Role.SUPER_ADMIN)))
             .andExpect(status().isNoContent());
 
         Map<String, MimeMessage> mails = mailsByRecipient(2);
@@ -154,101 +139,11 @@ class SpaceLifeNotificationIT {
             .isTrue();
     }
 
-    private Map<String, MimeMessage> mailsByRecipient(int count) {
-        assertThat(SharedGreenMail.server().waitForIncomingEmail(10_000, count)).isTrue();
-        return Arrays.stream(SharedGreenMail.server().getReceivedMessages())
-            .collect(Collectors.toMap(this::recipientOf, message -> message));
-    }
-
-    /** The plain-text part, wherever it sits in the multipart tree. */
-    private static String textOf(Part part) throws Exception {
-        if (part.isMimeType("text/plain")) {
-            return (String) part.getContent();
-        }
-        if (part.getContent() instanceof Multipart multipart) {
-            for (int i = 0; i < multipart.getCount(); i++) {
-                String text = textOf(multipart.getBodyPart(i));
-                if (text != null) {
-                    return text;
-                }
-            }
-        }
-        return null;
-    }
-
-    /** Waits for {@code count} mails and returns their subjects by recipient address. */
-    private Map<String, String> subjectsByRecipient(int count) throws Exception {
-        assertThat(SharedGreenMail.server().waitForIncomingEmail(10_000, count)).isTrue();
-        MimeMessage[] received = SharedGreenMail.server().getReceivedMessages();
-        return Arrays.stream(received).collect(Collectors.toMap(this::recipientOf, this::subjectOf));
-    }
-
-    private String recipientOf(MimeMessage message) {
-        try {
-            return ((InternetAddress) message.getRecipients(MimeMessage.RecipientType.TO)[0]).getAddress();
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private String subjectOf(MimeMessage message) {
-        try {
-            return message.getSubject();
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
     private String name(String who) {
         return who + "-" + suffix;
     }
 
     private String address(String who) {
         return name(who) + "@test.local";
-    }
-
-    private UUID saveUser(String who) {
-        UserIdentityEntity user = new UserIdentityEntity();
-        user.setUsername(name(who));
-        user.setEmail(address(who));
-        user.setRole(Role.USER);
-        user.setLanguage("fr");
-        return users.saveAndFlush(user).getId();
-    }
-
-    private UUID saveSharedSpace(String spaceName, UUID creatorId) {
-        SpaceEntity space = new SpaceEntity();
-        space.setType(SpaceType.SHARED);
-        space.setName(spaceName);
-        space.setAccent("#c17a5c");
-        space.setGlyph("🏡");
-        space.setCreatedBy(creatorId);
-        return spaces.saveAndFlush(space).getId();
-    }
-
-    private void saveMembership(UUID userId, SpaceRole role) {
-        SpaceMemberEntity member = new SpaceMemberEntity();
-        member.setSpaceId(spaceId);
-        member.setUserId(userId);
-        member.setRole(role);
-        members.saveAndFlush(member);
-    }
-
-    private Cookie accessTokenFor(UUID userId) {
-        return accessTokenFor(userId, Role.USER);
-    }
-
-    private Cookie accessTokenFor(UUID userId, Role role) {
-        String token = Jwts.builder()
-            .issuer("nido")
-            .audience().add("nido").and()
-            .subject(userId.toString())
-            .claim("role", role.name())
-            .claim("email", userId + "@test.local")
-            .issuedAt(Date.from(Instant.now()))
-            .expiration(Date.from(Instant.now().plusSeconds(900)))
-            .signWith(Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
-            .compact();
-        return new Cookie("access_token", token);
     }
 }

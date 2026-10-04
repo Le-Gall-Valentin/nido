@@ -5,8 +5,6 @@ import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntit
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.shared.model.Role;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,11 +15,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.Date;
 import java.util.UUID;
 
+import static com.nido.api.TestAccessTokens.cookieFor;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -30,8 +26,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Mail is on: the email channel exists, starts on, and keeps what the account chooses. */
 @MailIntegrationTestConfig
 class NotificationPreferencesMailIT {
-
-    private static final String JWT_SECRET = "integration-test-secret-at-least-32-chars!";
 
     @Autowired WebApplicationContext webApplicationContext;
     @Autowired UserIdentityJpaRepository users;
@@ -51,7 +45,7 @@ class NotificationPreferencesMailIT {
         user.setUsername(name);
         user.setEmail(name + "@test.local");
         user.setRole(Role.USER);
-        jane = accessTokenFor(users.saveAndFlush(user).getId());
+        jane = cookieFor(users.saveAndFlush(user).getId());
     }
 
     @Test
@@ -76,19 +70,4 @@ class NotificationPreferencesMailIT {
             .andExpect(status().isNoContent());
         mockMvc.perform(get("/api/notifications/preferences").cookie(jane))
             .andExpect(jsonPath("$.channels[0].enabled").value(true));
-    }
-
-    private Cookie accessTokenFor(UUID userId) {
-        String token = Jwts.builder()
-            .issuer("nido")
-            .audience().add("nido").and()
-            .subject(userId.toString())
-            .claim("role", Role.USER.name())
-            .claim("email", userId + "@test.local")
-            .issuedAt(Date.from(Instant.now()))
-            .expiration(Date.from(Instant.now().plusSeconds(900)))
-            .signWith(Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
-            .compact();
-        return new Cookie("access_token", token);
-    }
-}
+    }}

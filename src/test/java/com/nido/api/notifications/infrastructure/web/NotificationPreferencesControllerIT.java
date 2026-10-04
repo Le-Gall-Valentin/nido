@@ -5,9 +5,6 @@ import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntit
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.shared.model.Role;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,11 +15,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.Date;
 import java.util.UUID;
 
+import static com.nido.api.TestAccessTokens.cookieFor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -32,9 +27,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Mail is off in this context: no channel exists, and the card would not show. */
 @IntegrationTestConfig
 class NotificationPreferencesControllerIT {
-
-    // Exact value of IntegrationTestConfig: any difference turns every request into a 401.
-    private static final String JWT_SECRET = "integration-test-secret-at-least-32-chars!";
 
     @Autowired WebApplicationContext webApplicationContext;
     @Autowired UserIdentityJpaRepository users;
@@ -60,7 +52,7 @@ class NotificationPreferencesControllerIT {
 
     @Test
     void mail_off_lists_no_channel() throws Exception {
-        mockMvc.perform(get("/api/notifications/preferences").cookie(accessTokenFor(janeId)))
+        mockMvc.perform(get("/api/notifications/preferences").cookie(cookieFor(janeId)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.channels").isEmpty())
             .andExpect(jsonPath("$.types").isArray());
@@ -68,14 +60,14 @@ class NotificationPreferencesControllerIT {
 
     @Test
     void every_kind_is_listed_even_without_a_channel_and_on_by_default() throws Exception {
-        mockMvc.perform(get("/api/notifications/preferences").cookie(accessTokenFor(janeId)))
+        mockMvc.perform(get("/api/notifications/preferences").cookie(cookieFor(janeId)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.types[?(@.type == 'space.invitation')].enabled").value(true));
     }
 
     @Test
     void a_channel_this_installation_lacks_cannot_be_switched() throws Exception {
-        mockMvc.perform(put("/api/notifications/preferences/channels/email").cookie(accessTokenFor(janeId))
+        mockMvc.perform(put("/api/notifications/preferences/channels/email").cookie(cookieFor(janeId))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.title").value("UnknownChannel"));
@@ -86,7 +78,7 @@ class NotificationPreferencesControllerIT {
 
     @Test
     void an_unknown_kind_is_not_found_with_its_whole_dotted_code() throws Exception {
-        mockMvc.perform(put("/api/notifications/preferences/types/fixture.unknown").cookie(accessTokenFor(janeId))
+        mockMvc.perform(put("/api/notifications/preferences/types/fixture.unknown").cookie(cookieFor(janeId))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.title").value("UnknownType"))
@@ -95,7 +87,7 @@ class NotificationPreferencesControllerIT {
 
     @Test
     void a_switch_without_its_state_is_refused() throws Exception {
-        mockMvc.perform(put("/api/notifications/preferences/types/fixture.unknown").cookie(accessTokenFor(janeId))
+        mockMvc.perform(put("/api/notifications/preferences/types/fixture.unknown").cookie(cookieFor(janeId))
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isBadRequest());
     }
@@ -104,19 +96,4 @@ class NotificationPreferencesControllerIT {
     void nobody_signed_in_is_refused() throws Exception {
         mockMvc.perform(get("/api/notifications/preferences"))
             .andExpect(status().isUnauthorized());
-    }
-
-    private Cookie accessTokenFor(UUID userId) {
-        String token = Jwts.builder()
-            .issuer("nido")
-            .audience().add("nido").and()
-            .subject(userId.toString())
-            .claim("role", Role.USER.name())
-            .claim("email", userId + "@test.local")
-            .issuedAt(Date.from(Instant.now()))
-            .expiration(Date.from(Instant.now().plusSeconds(900)))
-            .signWith(Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
-            .compact();
-        return new Cookie("access_token", token);
-    }
-}
+    }}
