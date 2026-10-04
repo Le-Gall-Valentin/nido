@@ -202,6 +202,28 @@ class MailOutboxAdapterIT {
     }
 
     @Test
+    void the_mails_waiting_for_an_address_are_withdrawn_and_only_those() {
+        outbox.enqueue("k", mail("jane@example.com"), now, null);
+        outbox.enqueue("k", mail("JANE@example.com"), now, null);
+        outbox.enqueue("k", mail("john@example.com"), now, null);
+
+        assertThat(outbox.deleteAddressedTo("jane@example.com")).isEqualTo(2);
+
+        assertThat(outbox.claimDue(now, 20, lease)).extracting(entry -> entry.mail().to().address())
+            .containsExactly("john@example.com");
+    }
+
+    @Test
+    void a_row_this_key_cannot_read_is_left_to_the_dispatcher() {
+        MailOutboxAdapter withAnotherKey = new MailOutboxAdapter(jdbc, json,
+            Encryptors.delux("another-encryption-secret-at-least-32-chars", MailOutboxAdapter.SALT));
+        withAnotherKey.enqueue("k", mail("jane@example.com"), now, null);
+
+        assertThat(outbox.deleteAddressedTo("jane@example.com")).isZero();
+        assertThat(rows()).isEqualTo(1);
+    }
+
+    @Test
     void a_mail_queued_in_a_rolled_back_transaction_is_gone_with_it() {
         transactions.executeWithoutResult(status -> {
             outbox.enqueue("k", mail("jane@example.com"), now, null);

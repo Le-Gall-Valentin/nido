@@ -5,6 +5,7 @@ import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.CredentialDeletionPort;
 import com.nido.api.identity.domain.port.out.NotificationDataDeletionPort;
+import com.nido.api.identity.domain.port.out.PendingMailCancellationPort;
 import com.nido.api.identity.domain.port.out.SpaceDataDeletionPort;
 import com.nido.api.identity.domain.port.out.TotpDeletionPort;
 import com.nido.api.identity.domain.port.out.TokenInvalidationPort;
@@ -36,6 +37,7 @@ class DeleteUserHandlerTest {
     @Mock TotpDeletionPort totpDeletionPort;
     @Mock SpaceDataDeletionPort spaceDataDeletionPort;
     @Mock NotificationDataDeletionPort notificationDataDeletionPort;
+    @Mock PendingMailCancellationPort pendingMailCancellationPort;
 
     private DeleteUserHandler handler;
 
@@ -45,7 +47,7 @@ class DeleteUserHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new DeleteUserHandler(userRepository, userCommandPort, credentialDeletionPort, totpDeletionPort,
-            spaceDataDeletionPort, notificationDataDeletionPort, tokenInvalidationPort);
+            spaceDataDeletionPort, notificationDataDeletionPort, pendingMailCancellationPort, tokenInvalidationPort);
     }
 
     @Test
@@ -61,6 +63,7 @@ class DeleteUserHandlerTest {
         order.verify(totpDeletionPort).deleteTotpData(targetId);
         verify(spaceDataDeletionPort).deleteSpaceData(targetId, "u-" + targetId);
         verify(notificationDataDeletionPort).deleteNotificationData(targetId);
+        verify(pendingMailCancellationPort).cancelPendingMailsTo(targetId + "@test.com");
     }
 
     @Test
@@ -90,6 +93,7 @@ class DeleteUserHandlerTest {
 
         verify(userCommandPort, never()).deleteGdpr(any());
         verifyNoInteractions(notificationDataDeletionPort);
+        verifyNoInteractions(pendingMailCancellationPort);
     }
 
     @Test

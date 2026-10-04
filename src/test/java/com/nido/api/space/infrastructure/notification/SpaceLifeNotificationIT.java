@@ -4,6 +4,10 @@ import com.nido.api.MailIntegrationTestConfig;
 import com.nido.api.SharedGreenMail;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
+import com.nido.api.mail.domain.model.OutgoingMail;
+import com.nido.api.mail.domain.model.Recipient;
+import com.nido.api.mail.domain.model.RenderedMail;
+import com.nido.api.mail.domain.port.out.MailOutboxPort;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
@@ -20,6 +24,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -43,6 +49,7 @@ class SpaceLifeNotificationIT {
     @Autowired SpaceMemberJpaRepository members;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired JdbcClient jdbc;
+    @Autowired MailOutboxPort outbox;
 
     private MockMvc mockMvc;
     private SpaceNotificationITSupport scene;
@@ -75,6 +82,7 @@ class SpaceLifeNotificationIT {
 
     @AfterEach
     void removeWhatThisTestCreated() {
+        jdbc.sql("DELETE FROM mail_outbox").update();
         jdbc.sql("DELETE FROM space_members WHERE space_id = :id").param("id", spaceId).update();
         jdbc.sql("DELETE FROM spaces WHERE id = :id").param("id", spaceId).update();
         List<UUID> accounts = rootId == null ? List.of(aliceId, bobId, carolId) : List.of(aliceId, bobId, carolId, rootId);
@@ -162,6 +170,28 @@ class SpaceLifeNotificationIT {
         assertThat(mails.get(address("alice")).getSubject()).isEqualTo(name("carol") + " a quitté Chez nous");
         assertThat(textOf(mails.get(address("bob"))))
             .contains(name("carol") + " a quitté Nido et ne fait plus partie de l’espace « Chez nous ».");
+    }
+
+    @Test
+    void erasing_an_account_withdraws_the_mails_still_waiting_for_it() throws Exception {
+        // Due in an hour: no dispatch takes them meanwhile, whatever this test sends.
+        Instant later = Instant.now().plus(Duration.ofHours(1));
+        outbox.enqueue("it/waiting", waiting(address("carol")), later, null);
+        outbox.enqueue("it/waiting", waiting(address("bob")), later, null);
+
+        mockMvc.perform(delete("/api/users/" + carolId).cookie(cookieFor(saveSuperAdmin(), Role.SUPER_ADMIN)))
+            .andExpect(status().isNoContent());
+
+        // The erasure's own mails, due now, go out: waited for here, they cannot reach the next test.
+        assertThat(mailsByRecipient(2)).containsOnlyKeys(address("alice"), address("bob"));
+        assertThat(outbox.claimDue(later, 20, Duration.ofMinutes(1)))
+            .filteredOn(entry -> entry.kind().equals("it/waiting"))
+            .extracting(entry -> entry.mail().to().address())
+            .containsExactly(address("bob"));
+    }
+
+    private static OutgoingMail waiting(String address) {
+        return new OutgoingMail(new Recipient(address, null), new RenderedMail("s", "<p>h</p>", "t"));
     }
 
     private UUID saveSuperAdmin() {

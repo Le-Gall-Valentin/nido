@@ -2,10 +2,12 @@ package com.nido.api.mail.infrastructure.config;
 
 import com.nido.api.infrastructure.config.ConditionalOnMailDisabled;
 import com.nido.api.infrastructure.config.ConditionalOnMailEnabled;
+import com.nido.api.mail.application.handler.CancelPendingMailsHandler;
 import com.nido.api.mail.application.handler.DisabledSendMailHandler;
 import com.nido.api.mail.application.handler.DispatchPendingMailsHandler;
 import com.nido.api.mail.application.handler.MailAvailabilityHandler;
 import com.nido.api.mail.application.handler.SendMailHandler;
+import com.nido.api.mail.application.port.in.CancelPendingMailsUseCase;
 import com.nido.api.mail.application.port.in.DispatchPendingMailsUseCase;
 import com.nido.api.mail.application.port.in.MailAvailabilityQuery;
 import com.nido.api.mail.application.port.in.SendMailUseCase;
@@ -63,5 +65,21 @@ public class MailHandlersConfiguration {
     @ConditionalOnMailEnabled
     DispatchPendingMailsUseCase dispatchPendingMailsUseCase(MailOutboxPort outbox, MailTransportPort transport, Clock clock) {
         return new DispatchPendingMailsHandler(outbox, transport, new RetryPolicy(), clock);
+    }
+
+    @Bean
+    @ConditionalOnMailEnabled
+    CancelPendingMailsUseCase cancelPendingMailsUseCase(MailOutboxPort outbox) {
+        return new CancelPendingMailsHandler(outbox);
+    }
+
+    /**
+     * Mail off: this installation queues nothing. Rows left from a time mail was on are not read — the
+     * outbox adapter does not exist — and would go out if mail were switched back on.
+     */
+    @Bean
+    @ConditionalOnMailDisabled
+    CancelPendingMailsUseCase noPendingMailsToCancel() {
+        return address -> 0;
     }
 }
