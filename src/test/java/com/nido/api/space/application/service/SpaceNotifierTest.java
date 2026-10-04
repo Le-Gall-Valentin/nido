@@ -1,5 +1,8 @@
 package com.nido.api.space.application.service;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.nido.api.space.domain.model.Addressee;
 import com.nido.api.space.domain.model.InvitationStatus;
 import com.nido.api.space.domain.model.MemberProfile;
@@ -12,11 +15,13 @@ import com.nido.api.space.domain.port.out.MemberProfilePort;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
 import com.nido.api.space.domain.port.out.SpaceNotificationPort;
 import com.nido.api.space.domain.port.out.SpaceRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -28,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
@@ -50,11 +56,14 @@ class SpaceNotifierTest {
     private final UUID dave = UUID.randomUUID();
     /** The directory of names; an account missing here can no longer be named. */
     private final Map<UUID, String> names = new HashMap<>();
+    private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
 
     private SpaceNotifier notifier;
 
     @BeforeEach
     void setUp() {
+        logged.start();
+        ((Logger) LoggerFactory.getLogger(SpaceNotifier.class)).addAppender(logged);
         names.putAll(Map.of(alice, "alice", bob, "bob", carol, "carol", dave, "dave"));
         lenient().when(profiles.findByIds(any())).thenAnswer(call -> ((Collection<?>) call.getArgument(0)).stream()
             .map(UUID.class::cast).filter(names::containsKey)
@@ -62,6 +71,11 @@ class SpaceNotifierTest {
         lenient().when(spaces.findById(spaceId)).thenReturn(Optional.of(new Space(spaceId, SpaceType.SHARED,
             "Chez nous", null, "#c17a5c", "🏡", null, ZoneId.of("Europe/Paris"), Instant.now())));
         notifier = new SpaceNotifier(spaces, memberships, new MemberNames(profiles), notifications);
+    }
+
+    @AfterEach
+    void stopListening() {
+        ((Logger) LoggerFactory.getLogger(SpaceNotifier.class)).detachAppender(logged);
     }
 
     private void membersAre(UUID... userIds) {
@@ -94,6 +108,18 @@ class SpaceNotifierTest {
         notifier.invitationIssued(invitationFor(carol, alice), "carol", alice);
 
         verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void the_warning_says_which_invitation_and_which_account_can_no_longer_be_named() {
+        names.remove(alice);
+        SpaceInvitation invitation = invitationFor(carol, alice);
+
+        notifier.invitationIssued(invitation, "carol", alice);
+
+        assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage).containsExactly(
+            "Space " + spaceId + ": invitation " + invitation.id() + " — account(s) [" + alice
+                + "] can no longer be named, nobody is notified");
     }
 
     @Test

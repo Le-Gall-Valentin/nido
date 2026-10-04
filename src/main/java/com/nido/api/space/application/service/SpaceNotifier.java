@@ -16,9 +16,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * Who hears about what happens in a space — every rule of the space notifications, in one place. The
@@ -28,7 +28,7 @@ import java.util.UUID;
  *
  * <p>The author of a change is never told about it. A reader who can no longer be named (an anonymised
  * account) is left out; an event whose author or subject can no longer be named tells nobody, with a
- * warning — never an exception, which would undo the change it is about.
+ * warning naming the accounts by id — never an exception, which would undo the change it is about.
  */
 @ApplicationService
 public class SpaceNotifier {
@@ -49,128 +49,114 @@ public class SpaceNotifier {
     }
 
     public void invitationIssued(SpaceInvitation invitation, String inviteeName, UUID inviterId) {
-        Optional<Space> space = spaces.findById(invitation.spaceId());
-        if (space.isEmpty()) {
-            return;
-        }
-        String inviterName = memberNames.byId(List.of(inviterId)).get(inviterId);
-        if (inviterName == null) {
-            unnamed("invitation", invitation.spaceId());
-            return;
-        }
-        notifications.invitationIssued(invitation, inviteeName, inviterName, space.get().name());
+        inSpace(invitation.spaceId(), spaceName -> {
+            Map<UUID, String> names = namesOf(List.of(), inviterId);
+            if (unnamed(names, "invitation " + invitation.id(), invitation.spaceId(), inviterId)) {
+                return;
+            }
+            notifications.invitationIssued(invitation, inviteeName, names.get(inviterId), spaceName);
+        });
     }
 
     public void memberJoined(UUID spaceId, UUID memberId) {
-        Optional<Space> space = spaces.findById(spaceId);
-        List<UUID> readers = membersExcept(spaceId, memberId);
-        if (space.isEmpty() || readers.isEmpty()) {
-            return;
-        }
-        Map<UUID, String> names = namesOf(readers, memberId);
-        if (!names.containsKey(memberId)) {
-            unnamed("member joined", spaceId);
-            return;
-        }
-        notifications.memberJoined(spaceId, space.get().name(), names.get(memberId), addressees(readers, names));
+        announceMember(spaceId, memberId, "member joined", notifications::memberJoined);
     }
 
     public void memberLeft(UUID spaceId, UUID memberId) {
-        Optional<Space> space = spaces.findById(spaceId);
-        List<UUID> readers = membersExcept(spaceId, memberId);
-        if (space.isEmpty() || readers.isEmpty()) {
-            return;
-        }
-        Map<UUID, String> names = namesOf(readers, memberId);
-        if (!names.containsKey(memberId)) {
-            unnamed("member left", spaceId);
-            return;
-        }
-        notifications.memberLeft(spaceId, space.get().name(), names.get(memberId), addressees(readers, names));
+        announceMember(spaceId, memberId, "member left", notifications::memberLeft);
     }
 
     public void memberRemoved(UUID spaceId, UUID actorId, UUID removedId) {
-        Optional<Space> space = spaces.findById(spaceId);
-        if (space.isEmpty()) {
-            return;
-        }
-        List<UUID> others = membersExcept(spaceId, actorId, removedId);
-        Map<UUID, String> names = namesOf(others, actorId, removedId);
-        if (!names.containsKey(actorId) || !names.containsKey(removedId)) {
-            unnamed("member removed", spaceId);
-            return;
-        }
-        String spaceName = space.get().name();
-        notifications.removedFromSpace(spaceName, names.get(actorId), new Addressee(removedId, names.get(removedId)));
-        if (!others.isEmpty()) {
-            notifications.memberRemoved(spaceId, spaceName, names.get(actorId), names.get(removedId), addressees(others, names));
-        }
+        inSpace(spaceId, spaceName -> {
+            List<UUID> others = membersExcept(spaceId, actorId, removedId);
+            Map<UUID, String> names = namesOf(others, actorId, removedId);
+            if (unnamed(names, "member removed", spaceId, actorId, removedId)) {
+                return;
+            }
+            notifications.removedFromSpace(spaceName, names.get(actorId), new Addressee(removedId, names.get(removedId)));
+            if (!others.isEmpty()) {
+                notifications.memberRemoved(spaceId, spaceName, names.get(actorId), names.get(removedId),
+                    addressees(others, names));
+            }
+        });
     }
 
     /** Before the deletion: it takes the memberships with it. */
     public void spaceDeleted(UUID spaceId, UUID actorId) {
-        Optional<Space> space = spaces.findById(spaceId);
-        List<UUID> readers = membersExcept(spaceId, actorId);
-        if (space.isEmpty() || readers.isEmpty()) {
-            return;
-        }
-        Map<UUID, String> names = namesOf(readers, actorId);
-        if (!names.containsKey(actorId)) {
-            unnamed("space deleted", spaceId);
-            return;
-        }
-        notifications.spaceDeleted(space.get().name(), names.get(actorId), addressees(readers, names));
+        inSpace(spaceId, spaceName -> {
+            List<UUID> readers = membersExcept(spaceId, actorId);
+            if (readers.isEmpty()) {
+                return;
+            }
+            Map<UUID, String> names = namesOf(readers, actorId);
+            if (unnamed(names, "space deleted", spaceId, actorId)) {
+                return;
+            }
+            notifications.spaceDeleted(spaceName, names.get(actorId), addressees(readers, names));
+        });
     }
 
     public void roleChanged(UUID spaceId, UUID actorId, UUID memberId, SpaceRole previousRole, SpaceRole newRole) {
-        Optional<Space> space = spaces.findById(spaceId);
-        if (space.isEmpty()) {
-            return;
-        }
-        Map<UUID, String> names = namesOf(List.of(), actorId, memberId);
-        if (!names.containsKey(actorId) || !names.containsKey(memberId)) {
-            unnamed("role changed", spaceId);
-            return;
-        }
-        notifications.roleChanged(spaceId, space.get().name(), names.get(actorId),
-            new Addressee(memberId, names.get(memberId)), previousRole, newRole);
+        inSpace(spaceId, spaceName -> {
+            Map<UUID, String> names = namesOf(List.of(), actorId, memberId);
+            if (unnamed(names, "role changed", spaceId, actorId, memberId)) {
+                return;
+            }
+            notifications.roleChanged(spaceId, spaceName, names.get(actorId),
+                new Addressee(memberId, names.get(memberId)), previousRole, newRole);
+        });
     }
 
     public void ownershipTransferred(UUID spaceId, UUID previousOwnerId, UUID newOwnerId) {
-        Optional<Space> space = spaces.findById(spaceId);
-        if (space.isEmpty()) {
-            return;
-        }
-        List<UUID> others = membersExcept(spaceId, previousOwnerId, newOwnerId);
-        Map<UUID, String> names = namesOf(others, previousOwnerId, newOwnerId);
-        if (!names.containsKey(previousOwnerId) || !names.containsKey(newOwnerId)) {
-            unnamed("ownership transferred", spaceId);
-            return;
-        }
-        newOwner(spaceId, space.get().name(), names.get(previousOwnerId), new Addressee(newOwnerId, names.get(newOwnerId)),
-            addressees(others, names));
+        inSpace(spaceId, spaceName -> {
+            List<UUID> others = membersExcept(spaceId, previousOwnerId, newOwnerId);
+            Map<UUID, String> names = namesOf(others, previousOwnerId, newOwnerId);
+            if (unnamed(names, "ownership transferred", spaceId, previousOwnerId, newOwnerId)) {
+                return;
+            }
+            Addressee newOwner = new Addressee(newOwnerId, names.get(newOwnerId));
+            notifications.ownershipReceived(spaceId, spaceName, names.get(previousOwnerId), newOwner);
+            if (!others.isEmpty()) {
+                notifications.ownerChanged(spaceId, spaceName, names.get(previousOwnerId), newOwner.username(),
+                    addressees(others, names));
+            }
+        });
     }
 
     /** The owner's account was deleted and the ownership passed on: there is no author to name. */
     public void ownershipInherited(UUID spaceId, UUID newOwnerId) {
-        Optional<Space> space = spaces.findById(spaceId);
-        if (space.isEmpty()) {
-            return;
-        }
-        List<UUID> others = membersExcept(spaceId, newOwnerId);
-        Map<UUID, String> names = namesOf(others, newOwnerId);
-        if (!names.containsKey(newOwnerId)) {
-            unnamed("ownership inherited", spaceId);
-            return;
-        }
-        newOwner(spaceId, space.get().name(), null, new Addressee(newOwnerId, names.get(newOwnerId)), addressees(others, names));
+        inSpace(spaceId, spaceName -> {
+            List<UUID> others = membersExcept(spaceId, newOwnerId);
+            Map<UUID, String> names = namesOf(others, newOwnerId);
+            if (unnamed(names, "ownership inherited", spaceId, newOwnerId)) {
+                return;
+            }
+            Addressee newOwner = new Addressee(newOwnerId, names.get(newOwnerId));
+            notifications.ownershipReceived(spaceId, spaceName, null, newOwner);
+            if (!others.isEmpty()) {
+                notifications.ownerChanged(spaceId, spaceName, null, newOwner.username(), addressees(others, names));
+            }
+        });
     }
 
-    private void newOwner(UUID spaceId, String spaceName, String actorName, Addressee newOwner, List<Addressee> others) {
-        notifications.ownershipReceived(spaceId, spaceName, actorName, newOwner);
-        if (!others.isEmpty()) {
-            notifications.ownerChanged(spaceId, spaceName, actorName, newOwner.username(), others);
-        }
+    /** A member's arrival or departure, told to everyone else in the space. */
+    private void announceMember(UUID spaceId, UUID memberId, String event, MemberAnnouncement announcement) {
+        inSpace(spaceId, spaceName -> {
+            List<UUID> readers = membersExcept(spaceId, memberId);
+            if (readers.isEmpty()) {
+                return;
+            }
+            Map<UUID, String> names = namesOf(readers, memberId);
+            if (unnamed(names, event, spaceId, memberId)) {
+                return;
+            }
+            announcement.tell(spaceId, spaceName, names.get(memberId), addressees(readers, names));
+        });
+    }
+
+    /** Hands the space's name to what is told about it; a space already gone tells nobody. */
+    private void inSpace(UUID spaceId, Consumer<String> told) {
+        spaces.findById(spaceId).map(Space::name).ifPresent(told);
     }
 
     private List<UUID> membersExcept(UUID spaceId, UUID... excluded) {
@@ -194,7 +180,18 @@ public class SpaceNotifier {
             .toList();
     }
 
-    private static void unnamed(String event, UUID spaceId) {
-        log.warn("Space {}: {} — an account it names can no longer be named, nobody is notified", spaceId, event);
+    /** True, with a warning naming them by id, when an account the event must name can no longer be named. */
+    private static boolean unnamed(Map<UUID, String> names, String event, UUID spaceId, UUID... mentioned) {
+        List<UUID> missing = Arrays.stream(mentioned).filter(id -> !names.containsKey(id)).toList();
+        if (missing.isEmpty()) {
+            return false;
+        }
+        log.warn("Space {}: {} — account(s) {} can no longer be named, nobody is notified", spaceId, event, missing);
+        return true;
+    }
+
+    @FunctionalInterface
+    private interface MemberAnnouncement {
+        void tell(UUID spaceId, String spaceName, String memberName, List<Addressee> recipients);
     }
 }
