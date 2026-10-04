@@ -6,7 +6,10 @@ import com.nido.api.mail.infrastructure.render.ThymeleafMailRenderer;
 import com.nido.api.notifications.domain.model.NotificationKind;
 import com.nido.api.space.domain.model.SpaceRole;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
+import java.util.List;
 import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,6 +60,18 @@ class SpaceChangeMailsTest {
         assertThat(fr.text()).contains("alice a changé votre rôle dans l’espace « Chez nous » : Lecture seule → Membre.");
         assertThat(en.subject()).isEqualTo("Your role in Our place changed");
         assertThat(en.text()).contains("alice changed your role in the space “Our place”: Member → Admin.");
+    }
+
+    /** A role added to SpaceRole without its words would fail the role change itself: StrictMessageResolver throws. */
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(SpaceRole.class)
+    void every_role_has_its_word_in_both_languages(SpaceRole role) {
+        for (Locale locale : List.of(Locale.FRENCH, Locale.ENGLISH)) {
+            RenderedMail mail = RENDERER.render(
+                new RoleChangedNotification("bob", "alice", "Chez nous", role, role, MEMBERS), locale);
+
+            assertThat(mail.text()).as("%s in %s", role, locale).contains(" → ").doesNotContain("role.");
+        }
     }
 
     @Test

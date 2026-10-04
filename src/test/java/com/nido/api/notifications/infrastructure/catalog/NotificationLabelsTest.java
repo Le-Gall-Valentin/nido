@@ -40,7 +40,7 @@ class NotificationLabelsTest {
         }
         for (NotificationType type : CATALOG.types()) {
             String name = type.code().substring(type.code().indexOf('.') + 1);
-            if (!labels.path("group").path(type.group()).isTextual()) {
+            if (!hasText(labels.path("group").path(type.group()))) {
                 missing.add("group." + type.group());
             }
             requireLine(labels.path("type").path(type.group()).path(name), "type." + type.code(), missing);
@@ -55,11 +55,16 @@ class NotificationLabelsTest {
     }
 
     private static void requireLine(JsonNode entry, String key, List<String> missing) {
-        if (!entry.path("label").isTextual()) {
+        if (!hasText(entry.path("label"))) {
             missing.add(key + ".label");
         }
-        if (!entry.path("description").isTextual()) {
+        if (!hasText(entry.path("description"))) {
             missing.add(key + ".description");
         }
+    }
+
+    /** A label shows on the card: an empty one is as missing as an absent one. */
+    private static boolean hasText(JsonNode node) {
+        return node.isTextual() && !node.asText().isBlank();
     }
 }
