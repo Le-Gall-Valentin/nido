@@ -19,6 +19,10 @@
         "label": "Invitation à un espace",
         "description": "Quand quelqu'un vous invite à rejoindre un espace"
       },
+      "invitation-cancelled": {
+        "label": "Invitation annulée",
+        "description": "Quand une invitation que vous avez reçue n'est plus valable"
+      },
       "member-joined": {
         "label": "Arrivée d'un membre",
         "description": "Quand quelqu'un rejoint un de vos espaces"

@@ -19,6 +19,10 @@
         "label": "Invitation to a space",
         "description": "When someone invites you to join a space"
       },
+      "invitation-cancelled": {
+        "label": "Invitation cancelled",
+        "description": "When an invitation you received is no longer valid"
+      },
       "member-joined": {
         "label": "Member joined",
         "description": "When someone joins one of your spaces"
