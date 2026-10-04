@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
 import { renderWithQuery } from '@/shared/test'
 import type { INotificationPreferencesApi } from '../model/INotificationPreferencesApi'
@@ -8,7 +8,9 @@ import { NOTIFICATION_PREFERENCES_QUERY_KEY } from '../model/useNotificationPref
 import { NotificationPreferencesSection } from './NotificationPreferencesSection'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  useTranslation: () => ({
+    t: (k: string, o?: { count?: number; total?: number }) => (o ? `${k}:${o.count}/${o.total}` : k),
+  }),
 }))
 
 const PREFERENCES: NotificationPreferences = {
@@ -31,6 +33,7 @@ const mailSwitch = () => screen.getByRole('switch', { name: 'channel.email.label
 
 describe('NotificationPreferencesSection', () => {
   beforeEach(() => localStorage.clear())
+  afterEach(() => vi.restoreAllMocks())
 
   it('shows nothing while the choices load', () => {
     const { container } = renderWithQuery(
@@ -134,7 +137,7 @@ describe('NotificationPreferencesSection', () => {
 
     expect(screen.getByRole('button', { name: /group\.space/ }).getAttribute('aria-expanded')).toBe('false')
     expect(screen.queryByRole('switch', { name: 'type.space.invitation.label' })).toBeNull()
-    expect(screen.getByText('group_summary')).toBeDefined()
+    expect(screen.getByText('group_summary:1/1')).toBeDefined()
     expect(screen.getByRole('switch', { name: 'channel.email.label' })).toBeDefined()
   })
 
@@ -146,6 +149,43 @@ describe('NotificationPreferencesSection', () => {
     renderWithQuery(<NotificationPreferencesSection api={fakeApi()} />)
 
     expect((await screen.findByRole('button', { name: /group\.space/ })).getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('counts the kinds still on in a folded context', async () => {
+    const types = [
+      { type: 'space.invitation', enabled: true },
+      { type: 'space.member-joined', enabled: false },
+      { type: 'space.deleted', enabled: true },
+    ]
+    renderWithQuery(<NotificationPreferencesSection api={fakeApi({ get: vi.fn().mockResolvedValue({ ...PREFERENCES, types }) })} />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'group.space' }))
+
+    expect(screen.getByText('group_summary:2/3')).toBeDefined()
+  })
+
+  it('unfolds a folded context, and remembers that too', async () => {
+    renderWithQuery(<NotificationPreferencesSection api={fakeApi()} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'group.space' }))
+
+    fireEvent.click(screen.getByRole('button', { name: /group\.space/ }))
+
+    expect(screen.getByRole('button', { name: 'group.space' }).getAttribute('aria-expanded')).toBe('true')
+    expect(kindSwitch()).toBeDefined()
+    expect(localStorage.getItem('nido.notification-groups.collapsed')).toBe('[]')
+  })
+
+  it('works with a storage that refuses everything, folding for the visit', async () => {
+    const denied = () => { throw new DOMException('denied', 'SecurityError') }
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(denied)
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(denied)
+    renderWithQuery(<NotificationPreferencesSection api={fakeApi()} />)
+
+    const header = await screen.findByRole('button', { name: 'group.space' })
+    expect(header.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(header)
+
+    expect(screen.getByRole('button', { name: /group\.space/ }).getAttribute('aria-expanded')).toBe('false')
   })
 
   it('never folds the channels', async () => {
