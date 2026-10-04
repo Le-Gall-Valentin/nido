@@ -6,6 +6,8 @@ import com.nido.api.notifications.domain.model.NotificationKind;
 import com.nido.api.notifications.domain.model.NotificationType;
 import com.nido.api.notifications.domain.port.out.NotificationCatalogPort;
 import com.nido.api.notifications.domain.port.out.NotificationChannelPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -25,11 +27,14 @@ import java.util.Map;
  * kind by writing its record — this context never lists them. The scan only reads annotations; it creates
  * no dependency from this context to the ones it finds.
  *
- * <p>The application refuses to start on a declaration that could only fail later: a notification without
- * its kind, a kind declared twice, a malformed code, or a notification no channel can write.
+ * <p>The application refuses to start on a declaration that could only fail later: no notification at all, a
+ * notification without its kind, a kind declared twice, a malformed code, or a notification no channel can
+ * write. The kinds it found are logged at startup.
  */
 @Component
 public class ScannedNotificationCatalogAdapter implements NotificationCatalogPort {
+
+    private static final Logger log = LoggerFactory.getLogger(ScannedNotificationCatalogAdapter.class);
 
     private final NotificationCatalog catalog;
 
@@ -40,6 +45,8 @@ public class ScannedNotificationCatalogAdapter implements NotificationCatalogPor
 
     ScannedNotificationCatalogAdapter(List<String> basePackages, List<NotificationChannelPort> channels) {
         this.catalog = scan(basePackages, channels);
+        List<String> codes = catalog.types().stream().map(NotificationType::code).toList();
+        log.info("Notification kinds ({}): {}", codes.size(), codes);
     }
 
     @Override
@@ -56,6 +63,12 @@ public class ScannedNotificationCatalogAdapter implements NotificationCatalogPor
                 Class<? extends Notification> notificationClass = load(candidate.getBeanClassName());
                 byClass.put(notificationClass, declaredKind(notificationClass, channels));
             }
+        }
+        if (byClass.isEmpty()) {
+            // The application declares notifications, so finding none means the scan could not read its
+            // classes: every notification would fail at its first use. Better not to start.
+            throw new IllegalStateException("No notification found under " + basePackages
+                + ": the scan could not read the application's classes");
         }
         return new NotificationCatalog(byClass);
     }

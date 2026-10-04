@@ -1,5 +1,8 @@
 package com.nido.api.notifications.infrastructure.catalog;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.nido.api.mail.application.port.in.MailAvailabilityQuery;
 import com.nido.api.mail.application.port.in.SendMailUseCase;
 import com.nido.api.notifications.domain.model.NotificationCatalog;
@@ -7,7 +10,10 @@ import com.nido.api.notifications.domain.model.NotificationType;
 import com.nido.api.notifications.domain.port.out.NotificationChannelPort;
 import com.nido.api.notifications.infrastructure.channel.mail.MailChannelAdapter;
 import fixtures.notifications.valid.GreetingNotification;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -20,6 +26,19 @@ class ScannedNotificationCatalogAdapterTest {
 
     private final List<NotificationChannelPort> mailOnly = List.of(
         new MailChannelAdapter(mock(SendMailUseCase.class), mock(MailAvailabilityQuery.class)));
+
+    private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
+
+    @BeforeEach
+    void listen() {
+        logged.start();
+        ((Logger) LoggerFactory.getLogger(ScannedNotificationCatalogAdapter.class)).addAppender(logged);
+    }
+
+    @AfterEach
+    void stopListening() {
+        ((Logger) LoggerFactory.getLogger(ScannedNotificationCatalogAdapter.class)).detachAppender(logged);
+    }
 
     private NotificationCatalog scan(String basePackage) {
         return new ScannedNotificationCatalogAdapter(List.of(basePackage), mailOnly).catalog();
@@ -61,6 +80,23 @@ class ScannedNotificationCatalogAdapterTest {
         assertThatThrownBy(() -> scan("fixtures.notifications.nochannel"))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("NoChannelNotification");
+    }
+
+    @Test
+    void finding_no_notification_at_all_stops_the_start() {
+        // What a packaging the scan cannot read would look like: the application always declares some.
+        assertThatThrownBy(() -> scan("fixtures.notifications.none"))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("No notification found")
+            .hasMessageContaining("fixtures.notifications.none");
+    }
+
+    @Test
+    void the_kinds_found_are_logged_at_startup() {
+        scan("fixtures.notifications.valid");
+
+        assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
+            .containsExactly("Notification kinds (2): [agenda.reminder, fixture.greeting]");
     }
 
     @Test
