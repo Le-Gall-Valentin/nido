@@ -16,6 +16,10 @@ vi.mock('./PreferencesSection', () => ({
   PreferencesSection: () => <div data-testid="preferences-section" />,
 }))
 
+vi.mock('@/features/notification-preferences', () => ({
+  NotificationPreferencesSection: () => <div data-testid="notification-preferences-section" />,
+}))
+
 const BASE_USER: User = {
   id: '1', username: 'alice', email: 'alice@test.com',
   role: 'USER', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
@@ -40,6 +44,14 @@ describe('AccountPreferencesPage', () => {
     makeState()
     const { getByTestId } = render(<AccountPreferencesPage />)
     expect(getByTestId('preferences-section')).toBeDefined()
+  })
+
+  it('renders the notifications card under the preferences', () => {
+    makeState()
+    const { getByTestId } = render(<AccountPreferencesPage />)
+    const preferences = getByTestId('preferences-section')
+    const notifications = getByTestId('notification-preferences-section')
+    expect(preferences.compareDocumentPosition(notifications) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('renders the page heading with kicker, title and subtitle', () => {

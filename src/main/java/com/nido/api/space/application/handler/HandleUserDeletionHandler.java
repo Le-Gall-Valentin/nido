@@ -1,6 +1,7 @@
 package com.nido.api.space.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.port.in.HandleUserDeletionUseCase;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -28,20 +29,23 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
     private final SpaceCommandPort spaceCommandPort;
     private final SpaceMembershipPort spaceMembershipPort;
     private final SpaceInvitationPort spaceInvitationPort;
+    private final SpaceNotifier spaceNotifier;
 
     public HandleUserDeletionHandler(SpaceRepository spaceRepository,
                                      SpaceCommandPort spaceCommandPort,
                                      SpaceMembershipPort spaceMembershipPort,
-                                     SpaceInvitationPort spaceInvitationPort) {
+                                     SpaceInvitationPort spaceInvitationPort,
+                                     SpaceNotifier spaceNotifier) {
         this.spaceRepository = spaceRepository;
         this.spaceCommandPort = spaceCommandPort;
         this.spaceMembershipPort = spaceMembershipPort;
         this.spaceInvitationPort = spaceInvitationPort;
+        this.spaceNotifier = spaceNotifier;
     }
 
     @Override
     @Transactional
-    public void handleUserDeletion(UUID userId) {
+    public void handleUserDeletion(UUID userId, String username) {
         List<SpaceMembership> memberships = spaceMembershipPort.findByUser(userId);
         // One query for every space rather than one per membership. Somebody belongs to a handful
         // of spaces, so this saves very little today — it is here because the loop below deletes
@@ -63,10 +67,13 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
             }
             if (!membership.isOwner()) {
                 spaceMembershipPort.remove(membership.id());
+                spaceNotifier.memberLeftNido(space.id(), userId, username);
                 continue;
             }
             Optional<SpaceMembership> successor = spaceMembershipPort.findSuccessor(space.id(), userId);
             if (successor.isEmpty()) {
+                // Before the deletion, which takes the invitations with it.
+                spaceNotifier.spaceDeletedWithoutHeir(space.id(), userId, username);
                 spaceCommandPort.delete(space.id());
                 log.info("Space {} deleted: its owner {} was deleted and no successor remained",
                     space.id(), userId);
@@ -77,6 +84,7 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
             spaceMembershipPort.changeRole(successor.get().id(), SpaceRole.OWNER);
             log.info("Ownership of space {} passed to {} after the deletion of {}",
                 space.id(), successor.get().userId(), userId);
+            spaceNotifier.ownershipInherited(space.id(), userId, username, successor.get().userId());
         }
         int deleted = spaceInvitationPort.deleteAllForInvitee(userId);
         if (deleted > 0) {

@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.RemoveMemberCommand;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -25,6 +27,7 @@ import static org.mockito.Mockito.when;
 class RemoveMemberHandlerTest {
 
     @Mock SpaceMembershipPort spaceMembershipPort;
+    @Mock SpaceNotifier spaceNotifier;
 
     private RemoveMemberHandler handler;
 
@@ -34,7 +37,7 @@ class RemoveMemberHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new RemoveMemberHandler(spaceMembershipPort);
+        handler = new RemoveMemberHandler(spaceMembershipPort, spaceNotifier);
     }
 
     @Test
@@ -45,6 +48,7 @@ class RemoveMemberHandlerTest {
         handler.remove(new RemoveMemberCommand(spaceId, targetId), membership(callerId, SpaceRole.ADMIN));
 
         verify(spaceMembershipPort).remove(target.id());
+        verify(spaceNotifier).memberRemoved(spaceId, callerId, targetId);
     }
 
     @Test
@@ -69,6 +73,7 @@ class RemoveMemberHandlerTest {
         assertThatThrownBy(() -> handler.remove(
                 new RemoveMemberCommand(spaceId, targetId), membership(callerId, SpaceRole.ADMIN)))
             .isInstanceOf(SpaceException.OwnerMembershipProtected.class);
+        verifyNoInteractions(spaceNotifier);
     }
 
     @Test

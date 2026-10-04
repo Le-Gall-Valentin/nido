@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setSessionExpiredCallback, hasSessionHint } from '@/shared/lib'
 import { AuthStoreProvider } from './AuthStoreProvider'
@@ -174,5 +174,47 @@ describe('AuthStoreProvider', () => {
       expect(screen.queryByRole('status')).toBeNull()
     })
     expect(screen.getByText('content')).not.toBeNull()
+  })
+})
+
+function SignOut() {
+  const logout = useAuth((s) => s.logout)
+  return <button onClick={() => void logout()}>sign out</button>
+}
+
+const alice = {
+  id: 'alice', username: 'alice', email: 'alice@test.com', role: 'USER' as const,
+  createdAt: '2026-01-01T00:00:00Z', totpEnabled: false, language: null,
+}
+
+describe('AuthStoreProvider — end of a session', () => {
+  it('says so when a signed-in session is signed out, and not when it starts', async () => {
+    const api = createApiMock()
+    api.getMe.mockResolvedValue(alice)
+    api.logout.mockResolvedValue(undefined)
+    mockedHasSessionHint.mockReturnValue(true)
+    const onSessionEnd = vi.fn()
+    render(<AuthStoreProvider api={api} onSessionEnd={onSessionEnd}><SignOut /></AuthStoreProvider>)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'sign out' }))
+
+    await waitFor(() => expect(onSessionEnd).toHaveBeenCalledTimes(1))
+  })
+
+  it('says so when the session expires', async () => {
+    const api = createApiMock()
+    api.getMe.mockResolvedValue(alice)
+    api.logout.mockResolvedValue(undefined)
+    mockedHasSessionHint.mockReturnValue(true)
+    const onSessionEnd = vi.fn()
+    render(<AuthStoreProvider api={api} onSessionEnd={onSessionEnd}><SignOut /></AuthStoreProvider>)
+    await screen.findByRole('button', { name: 'sign out' })
+    expect(onSessionEnd).not.toHaveBeenCalled()
+
+    // The callback the provider registered on mount (no StrictMode here: registered once).
+    const expire = mockedSetSessionExpiredCallback.mock.calls[0][0]
+    act(() => expire?.())
+
+    await waitFor(() => expect(onSessionEnd).toHaveBeenCalledTimes(1))
   })
 })

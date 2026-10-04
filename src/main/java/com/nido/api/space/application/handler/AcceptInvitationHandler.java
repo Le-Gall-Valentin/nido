@@ -1,6 +1,7 @@
 package com.nido.api.space.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.port.in.AcceptInvitationUseCase;
 import com.nido.api.space.domain.model.AcceptInvitationCommand;
 import com.nido.api.space.domain.model.Space;
@@ -24,12 +25,15 @@ public class AcceptInvitationHandler implements AcceptInvitationUseCase {
     private final SpaceInvitationPort spaceInvitationPort;
     private final SpaceRepository spaceRepository;
     private final SpaceMembershipPort spaceMembershipPort;
+    private final SpaceNotifier spaceNotifier;
 
     public AcceptInvitationHandler(SpaceInvitationPort spaceInvitationPort, SpaceRepository spaceRepository,
-                                   SpaceMembershipPort spaceMembershipPort) {
+                                   SpaceMembershipPort spaceMembershipPort,
+                                   SpaceNotifier spaceNotifier) {
         this.spaceInvitationPort = spaceInvitationPort;
         this.spaceRepository = spaceRepository;
         this.spaceMembershipPort = spaceMembershipPort;
+        this.spaceNotifier = spaceNotifier;
     }
 
     @Override
@@ -71,6 +75,7 @@ public class AcceptInvitationHandler implements AcceptInvitationUseCase {
         }
         spaceMembershipPort.add(space.id(), userId, invitation.role());
         log.info("User {} joined space {} through invitation {}", userId, space.id(), invitation.id());
+        spaceNotifier.memberJoined(space.id(), userId);
         return space.id();
     }
 }

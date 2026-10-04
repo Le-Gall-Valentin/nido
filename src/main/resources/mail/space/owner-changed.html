@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: mail(#{subject(${mail.newOwnerName}, ${mail.spaceName})}, #{preheader(${mail.spaceName})}, ~{::content})}">
+<body>
+<th:block th:fragment="content">
+  <h1 th:replace="~{components :: heading(#{heading})}"></h1>
+  <p th:replace="~{components :: paragraph(#{greeting(${mail.username})})}"></p>
+  <th:block th:unless="${mail.leftNido}">
+    <p th:replace="~{components :: paragraph(#{body.transfer(${mail.formerOwnerName}, ${mail.spaceName}, ${mail.newOwnerName})})}"></p>
+  </th:block>
+  <th:block th:if="${mail.leftNido}">
+    <p th:replace="~{components :: paragraph(#{body.succession(${mail.formerOwnerName}, ${mail.spaceName}, ${mail.newOwnerName})})}"></p>
+  </th:block>
+  <table th:replace="~{components :: button(${appUrl + mail.membersPath.value}, #{action})}"></table>
+  <p th:replace="~{components :: fallbackLink(${appUrl + mail.membersPath.value})}"></p>
+  <p th:replace="~{notifications/manage :: manage}"></p>
+</th:block>
+</body>
+</html>

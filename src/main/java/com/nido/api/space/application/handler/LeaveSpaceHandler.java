@@ -1,6 +1,7 @@
 package com.nido.api.space.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.port.in.LeaveSpaceUseCase;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceException;
@@ -18,10 +19,13 @@ public class LeaveSpaceHandler implements LeaveSpaceUseCase {
 
     private final SpaceRepository spaceRepository;
     private final SpaceMembershipPort spaceMembershipPort;
+    private final SpaceNotifier spaceNotifier;
 
-    public LeaveSpaceHandler(SpaceRepository spaceRepository, SpaceMembershipPort spaceMembershipPort) {
+    public LeaveSpaceHandler(SpaceRepository spaceRepository, SpaceMembershipPort spaceMembershipPort,
+                             SpaceNotifier spaceNotifier) {
         this.spaceRepository = spaceRepository;
         this.spaceMembershipPort = spaceMembershipPort;
+        this.spaceNotifier = spaceNotifier;
     }
 
     @Override
@@ -35,5 +39,6 @@ public class LeaveSpaceHandler implements LeaveSpaceUseCase {
         }
         spaceMembershipPort.remove(caller.id());
         log.info("User {} left space {}", caller.userId(), space.id());
+        spaceNotifier.memberLeft(space.id(), caller.userId());
     }
 }

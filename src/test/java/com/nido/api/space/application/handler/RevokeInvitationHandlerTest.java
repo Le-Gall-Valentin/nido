@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.InvitationStatus;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceInvitation;
@@ -19,12 +20,14 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RevokeInvitationHandlerTest {
 
     @Mock SpaceInvitationPort spaceInvitationPort;
+    @Mock SpaceNotifier spaceNotifier;
 
     private RevokeInvitationHandler handler;
 
@@ -34,16 +37,18 @@ class RevokeInvitationHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new RevokeInvitationHandler(spaceInvitationPort);
+        handler = new RevokeInvitationHandler(spaceInvitationPort, spaceNotifier);
     }
 
     @Test
     void an_admin_revokes_a_pending_invitation() {
-        when(spaceInvitationPort.findById(invitationId)).thenReturn(Optional.of(invitation(spaceId, InvitationStatus.PENDING)));
+        SpaceInvitation invitation = invitation(spaceId, InvitationStatus.PENDING);
+        when(spaceInvitationPort.findById(invitationId)).thenReturn(Optional.of(invitation));
 
         handler.revoke(spaceId, invitationId, membership(SpaceRole.ADMIN));
 
         verify(spaceInvitationPort).revoke(invitationId);
+        verify(spaceNotifier).invitationRevoked(invitation, callerId);
     }
 
     @Test
@@ -51,6 +56,7 @@ class RevokeInvitationHandlerTest {
         assertThatThrownBy(() -> handler.revoke(spaceId, invitationId, membership(SpaceRole.MEMBER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);
         verify(spaceInvitationPort, never()).revoke(invitationId);
+        verifyNoInteractions(spaceNotifier);
     }
 
     @Test
@@ -60,6 +66,7 @@ class RevokeInvitationHandlerTest {
         assertThatThrownBy(() -> handler.revoke(spaceId, invitationId, membership(SpaceRole.OWNER)))
             .isInstanceOf(SpaceException.InvitationNotFound.class);
         verify(spaceInvitationPort, never()).revoke(invitationId);
+        verifyNoInteractions(spaceNotifier);
     }
 
     @Test
@@ -71,6 +78,7 @@ class RevokeInvitationHandlerTest {
         assertThatThrownBy(() -> handler.revoke(spaceId, invitationId, membership(SpaceRole.OWNER)))
             .isInstanceOf(SpaceException.InvitationNotFound.class);
         verify(spaceInvitationPort, never()).revoke(invitationId);
+        verifyNoInteractions(spaceNotifier);
     }
 
     @Test
@@ -81,6 +89,7 @@ class RevokeInvitationHandlerTest {
         assertThatThrownBy(() -> handler.revoke(spaceId, invitationId, membership(SpaceRole.OWNER)))
             .isInstanceOf(SpaceException.InvitationNotPending.class);
         verify(spaceInvitationPort, never()).revoke(invitationId);
+        verifyNoInteractions(spaceNotifier);
     }
 
     private SpaceMembership membership(SpaceRole role) {

@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceAppearance;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -12,6 +13,7 @@ import com.nido.api.space.domain.port.out.SpaceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -21,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,6 +35,7 @@ class HandleUserDeletionHandlerTest {
     @Mock SpaceCommandPort spaceCommandPort;
     @Mock SpaceMembershipPort spaceMembershipPort;
     @Mock SpaceInvitationPort spaceInvitationPort;
+    @Mock SpaceNotifier spaceNotifier;
 
     private HandleUserDeletionHandler handler;
 
@@ -41,7 +45,7 @@ class HandleUserDeletionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new HandleUserDeletionHandler(spaceRepository, spaceCommandPort, spaceMembershipPort, spaceInvitationPort);
+        handler = new HandleUserDeletionHandler(spaceRepository, spaceCommandPort, spaceMembershipPort, spaceInvitationPort, spaceNotifier);
     }
 
     @Test
@@ -50,21 +54,22 @@ class HandleUserDeletionHandlerTest {
         when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of(membership));
         when(spaceRepository.findByIds(List.of(personalSpaceId))).thenReturn(List.of(personal()));
 
-        handler.handleUserDeletion(userId);
+        handler.handleUserDeletion(userId, "alice");
 
         verify(spaceCommandPort).delete(personalSpaceId);
     }
 
     @Test
-    void a_plain_membership_is_simply_removed() {
+    void a_plain_membership_is_removed_and_the_others_hear_the_member_left_nido() {
         SpaceMembership membership = membership(sharedSpaceId, SpaceRole.MEMBER);
         when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of(membership));
         when(spaceRepository.findByIds(List.of(sharedSpaceId))).thenReturn(List.of(shared()));
 
-        handler.handleUserDeletion(userId);
+        handler.handleUserDeletion(userId, "alice");
 
         verify(spaceMembershipPort).remove(membership.id());
         verify(spaceCommandPort, never()).delete(sharedSpaceId);
+        verify(spaceNotifier).memberLeftNido(sharedSpaceId, userId, "alice");
     }
 
     @Test
@@ -76,30 +81,33 @@ class HandleUserDeletionHandlerTest {
         when(spaceRepository.findByIds(List.of(sharedSpaceId))).thenReturn(List.of(shared()));
         when(spaceMembershipPort.findSuccessor(sharedSpaceId, userId)).thenReturn(Optional.of(successor));
 
-        handler.handleUserDeletion(userId);
+        handler.handleUserDeletion(userId, "alice");
 
         verify(spaceMembershipPort).remove(membership.id());
         verify(spaceMembershipPort).changeRole(successor.id(), SpaceRole.OWNER);
         verify(spaceCommandPort, never()).delete(sharedSpaceId);
+        verify(spaceNotifier).ownershipInherited(sharedSpaceId, userId, "alice", successor.userId());
     }
 
     @Test
-    void a_space_with_no_successor_is_deleted() {
+    void a_space_without_heir_tells_its_invitees_before_it_goes() {
         SpaceMembership membership = membership(sharedSpaceId, SpaceRole.OWNER);
         when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of(membership));
         when(spaceRepository.findByIds(List.of(sharedSpaceId))).thenReturn(List.of(shared()));
         when(spaceMembershipPort.findSuccessor(sharedSpaceId, userId)).thenReturn(Optional.empty());
 
-        handler.handleUserDeletion(userId);
+        handler.handleUserDeletion(userId, "alice");
 
-        verify(spaceCommandPort).delete(sharedSpaceId);
+        InOrder order = inOrder(spaceNotifier, spaceCommandPort);
+        order.verify(spaceNotifier).spaceDeletedWithoutHeir(sharedSpaceId, userId, "alice");
+        order.verify(spaceCommandPort).delete(sharedSpaceId);
     }
 
     @Test
     void invitations_for_the_deleted_account_are_removed() {
         when(spaceMembershipPort.findByUser(userId)).thenReturn(List.of());
 
-        handler.handleUserDeletion(userId);
+        handler.handleUserDeletion(userId, "alice");
 
         verify(spaceInvitationPort).deleteAllForInvitee(userId);
     }

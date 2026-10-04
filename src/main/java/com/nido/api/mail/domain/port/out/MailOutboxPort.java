@@ -23,4 +23,13 @@ public interface MailOutboxPort {
 
     /** Records a failed attempt, releases the lease and sets when the mail is due again. */
     void reschedule(UUID id, int attempts, Instant nextAttemptAt, String lastError);
+
+    /**
+     * Deletes every mail still waiting for this address, in the caller's transaction, and says how many. Beyond
+     * reach: a mail already handed to the SMTP server, and one another transaction is queueing at this very
+     * moment and has not committed yet (a notification checks that its account still exists when it is sent,
+     * so this leaves a race of milliseconds, not worth locking the queue for). A row this key cannot read is
+     * left to the dispatcher, which drops it.
+     */
+    int deleteAddressedTo(String address);
 }

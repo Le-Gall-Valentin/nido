@@ -1,0 +1,90 @@
+databaseChangeLog:
+  - changeSet:
+      id: 063-create-notification-preferences
+      author: nido
+      comment: >
+        What each account chose in its notifications: a channel as a whole, and each kind of notification.
+        A missing row means "on" — every channel and every kind start on, the ones added later included —
+        so an account that never touched its preferences has no row at all. The primary keys lead with
+        user_id, which serves the foreign keys and every read (one account at a time).
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: notification_channel_preferences
+      changes:
+        - createTable:
+            tableName: notification_channel_preferences
+            columns:
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: channel
+                  type: VARCHAR(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: notification_channel_preferences
+            columnNames: user_id, channel
+            constraintName: pk_notification_channel_preferences
+        - addForeignKeyConstraint:
+            baseTableName: notification_channel_preferences
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_notification_channel_preferences_user
+            onDelete: CASCADE
+        - createTable:
+            tableName: notification_type_preferences
+            columns:
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: BOOLEAN
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+        - addPrimaryKey:
+            tableName: notification_type_preferences
+            columnNames: user_id, type
+            constraintName: pk_notification_type_preferences
+        - addForeignKeyConstraint:
+            baseTableName: notification_type_preferences
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_notification_type_preferences_user
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: notification_type_preferences
+            cascadeConstraints: true
+        - dropTable:
+            tableName: notification_channel_preferences
+            cascadeConstraints: true

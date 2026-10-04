@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
+import { NotificationPreferencesSection } from '@/features/notification-preferences'
 import { PreferencesSection } from './PreferencesSection'
 
 export function AccountPreferencesPage() {
@@ -19,6 +20,7 @@ export function AccountPreferencesPage() {
       </div>
 
       <PreferencesSection />
+      <NotificationPreferencesSection />
     </div>
   )
 }

@@ -5,6 +5,8 @@ import com.nido.api.identity.domain.model.DeleteUserCommand;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.CredentialDeletionPort;
+import com.nido.api.identity.domain.port.out.NotificationDataDeletionPort;
+import com.nido.api.identity.domain.port.out.PendingMailCancellationPort;
 import com.nido.api.identity.domain.port.out.SpaceDataDeletionPort;
 import com.nido.api.identity.domain.port.out.TotpDeletionPort;
 import com.nido.api.identity.domain.port.out.TokenInvalidationPort;
@@ -25,6 +27,8 @@ public class DeleteUserHandler implements DeleteUserUseCase {
     private final CredentialDeletionPort credentialDeletionPort;
     private final TotpDeletionPort totpDeletionPort;
     private final SpaceDataDeletionPort spaceDataDeletionPort;
+    private final NotificationDataDeletionPort notificationDataDeletionPort;
+    private final PendingMailCancellationPort pendingMailCancellationPort;
     private final TokenInvalidationPort tokenInvalidationPort;
 
     public DeleteUserHandler(UserRepository userRepository,
@@ -32,12 +36,16 @@ public class DeleteUserHandler implements DeleteUserUseCase {
                              CredentialDeletionPort credentialDeletionPort,
                              TotpDeletionPort totpDeletionPort,
                              SpaceDataDeletionPort spaceDataDeletionPort,
+                             NotificationDataDeletionPort notificationDataDeletionPort,
+                             PendingMailCancellationPort pendingMailCancellationPort,
                              TokenInvalidationPort tokenInvalidationPort) {
         this.userRepository = userRepository;
         this.userCommandPort = userCommandPort;
         this.credentialDeletionPort = credentialDeletionPort;
         this.totpDeletionPort = totpDeletionPort;
         this.spaceDataDeletionPort = spaceDataDeletionPort;
+        this.notificationDataDeletionPort = notificationDataDeletionPort;
+        this.pendingMailCancellationPort = pendingMailCancellationPort;
         this.tokenInvalidationPort = tokenInvalidationPort;
     }
 
@@ -53,7 +61,12 @@ public class DeleteUserHandler implements DeleteUserUseCase {
         userCommandPort.deleteGdpr(command.targetUserId());
         credentialDeletionPort.deleteCredentials(command.targetUserId());
         totpDeletionPort.deleteTotpData(command.targetUserId());
-        spaceDataDeletionPort.deleteSpaceData(command.targetUserId());
+        spaceDataDeletionPort.deleteSpaceData(command.targetUserId(), target.username());
+        notificationDataDeletionPort.deleteNotificationData(command.targetUserId());
+        // Read before the anonymisation above wiped it from the row; still in hand in the loaded account.
+        if (target.email() != null) {
+            pendingMailCancellationPort.cancelPendingMailsTo(target.email());
+        }
         // Everything about the user is gone, except the access token in their browser — nothing in
         // it consults the database, so it would keep authenticating a user who no longer exists.
         tokenInvalidationPort.invalidateIssuedTokens(command.targetUserId());

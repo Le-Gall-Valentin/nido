@@ -148,6 +148,30 @@ public class MailOutboxAdapter implements MailOutboxPort {
             .update();
     }
 
+    @Override
+    public int deleteAddressedTo(String address) {
+        // The address is encrypted with the rest, so the queue is read whole: it holds what waits to be sent,
+        // a few rows seconds old, and this runs when an account is erased — rarely.
+        List<UUID> addressed = jdbc.sql("SELECT id, payload FROM mail_outbox")
+            .query((rs, rowNum) -> new StoredRow(rs.getObject("id", UUID.class), rs.getString("payload")))
+            .list().stream()
+            .filter(row -> isAddressedTo(row.payload(), address))
+            .map(StoredRow::id)
+            .toList();
+        if (addressed.isEmpty()) {
+            return 0;
+        }
+        return jdbc.sql("DELETE FROM mail_outbox WHERE id IN (:ids)").param("ids", addressed).update();
+    }
+
+    private boolean isAddressedTo(String payload, String address) {
+        try {
+            return decrypt(payload).to().address().equalsIgnoreCase(address);
+        } catch (RuntimeException unreadable) {
+            return false;
+        }
+    }
+
     private OutgoingMail decrypt(String payload) {
         return json.readValue(encryptor.decrypt(payload), Payload.class).toMail();
     }
@@ -159,6 +183,8 @@ public class MailOutboxAdapter implements MailOutboxPort {
     private static Instant instant(OffsetDateTime value) {
         return value == null ? null : value.toInstant();
     }
+
+    private record StoredRow(UUID id, String payload) {}
 
     private record ClaimedRow(UUID id, String kind, String payload, int attempts, Instant expiresAt, Instant nextAttemptAt) {}
 

@@ -2,6 +2,7 @@ package com.nido.api.space.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.application.port.in.RevokeInvitationUseCase;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceInvitation;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -18,9 +19,11 @@ public class RevokeInvitationHandler implements RevokeInvitationUseCase {
     private static final Logger log = LoggerFactory.getLogger(RevokeInvitationHandler.class);
 
     private final SpaceInvitationPort spaceInvitationPort;
+    private final SpaceNotifier spaceNotifier;
 
-    public RevokeInvitationHandler(SpaceInvitationPort spaceInvitationPort) {
+    public RevokeInvitationHandler(SpaceInvitationPort spaceInvitationPort, SpaceNotifier spaceNotifier) {
         this.spaceInvitationPort = spaceInvitationPort;
+        this.spaceNotifier = spaceNotifier;
     }
 
     @Override
@@ -37,6 +40,7 @@ public class RevokeInvitationHandler implements RevokeInvitationUseCase {
         }
         invitation.ensurePending();
         spaceInvitationPort.revoke(invitationId);
+        spaceNotifier.invitationRevoked(invitation, caller.userId());
         log.info("Invitation {} revoked in space {} by user {}", invitationId, spaceId, caller.userId());
     }
 }

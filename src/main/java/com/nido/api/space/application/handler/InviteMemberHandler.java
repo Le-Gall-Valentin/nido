@@ -1,6 +1,7 @@
 package com.nido.api.space.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.port.in.InviteMemberUseCase;
 import com.nido.api.space.domain.model.InviteMemberCommand;
 import com.nido.api.space.domain.model.MemberProfile;
@@ -30,17 +31,20 @@ public class InviteMemberHandler implements InviteMemberUseCase {
     private final SpaceRepository spaceRepository;
     private final SpaceMembershipPort spaceMembershipPort;
     private final MemberProfilePort memberProfilePort;
+    private final SpaceNotifier spaceNotifier;
 
     public InviteMemberHandler(SpaceInvitationPort spaceInvitationPort,
                                InvitationCodeGeneratorPort invitationCodeGeneratorPort,
                                SpaceRepository spaceRepository,
                                SpaceMembershipPort spaceMembershipPort,
-                               MemberProfilePort memberProfilePort) {
+                               MemberProfilePort memberProfilePort,
+                               SpaceNotifier spaceNotifier) {
         this.spaceInvitationPort = spaceInvitationPort;
         this.invitationCodeGeneratorPort = invitationCodeGeneratorPort;
         this.spaceRepository = spaceRepository;
         this.spaceMembershipPort = spaceMembershipPort;
         this.memberProfilePort = memberProfilePort;
+        this.spaceNotifier = spaceNotifier;
     }
 
     @Override
@@ -63,6 +67,7 @@ public class InviteMemberHandler implements InviteMemberUseCase {
             caller.userId());
         log.info("Invitation {} issued for space {} by user {}",
             invitation.id(), command.spaceId(), caller.userId());
+        spaceNotifier.invitationIssued(invitation, invitee.username(), caller.userId());
         return SpaceInvitationView.of(invitation, invitee.username());
     }
 }

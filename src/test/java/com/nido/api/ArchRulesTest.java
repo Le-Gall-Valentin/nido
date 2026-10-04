@@ -1,6 +1,8 @@
 package com.nido.api;
 
 import com.nido.api.authentication.domain.port.out.RefreshTokenConfigPort;
+import com.nido.api.notifications.domain.model.Notification;
+import com.nido.api.notifications.domain.model.NotificationKind;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -12,6 +14,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -22,14 +26,33 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 class ArchRulesTest {
 
     private static final String BASE = "com.nido.api.";
-    private static final List<String> BCS = List.of("authentication", "identity", "mfa", "space", "mail");
+    private static final List<String> BCS = List.of("authentication", "identity", "mfa", "space", "mail", "notifications");
 
     private final JavaClasses classes = new ClassFileImporter()
         .importPackages("com.nido.api");
 
     private static DescribedPredicate<JavaClass> excludeTests() {
+        // By name, and by where it was compiled: a test's helpers and anonymous classes are test code too.
         return DescribedPredicate.describe("excluding tests",
-            c -> !c.getSimpleName().endsWith("Test") && !c.getSimpleName().endsWith("IT"));
+            c -> !c.getSimpleName().endsWith("Test") && !c.getSimpleName().endsWith("IT") && !compiledFromTests(c));
+    }
+
+    /** Where this very class was compiled: the test output, whatever the build tool calls it. */
+    private static final Path TEST_OUTPUT = testOutput();
+
+    private static Path testOutput() {
+        try {
+            return Path.of(ArchRulesTest.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static boolean compiledFromTests(JavaClass c) {
+        return c.getSource()
+            .filter(source -> "file".equals(source.getUri().getScheme()))
+            .map(source -> Path.of(source.getUri()).startsWith(TEST_OUTPUT))
+            .orElse(false);
     }
 
     // -------------------------------------------------------------------------
@@ -127,6 +150,7 @@ class ArchRulesTest {
     void ports_out_should_be_interfaces() {
         classes()
             .that().resideInAPackage("..domain.port.out..")
+            .and(excludeTests())
             .should().beInterfaces()
             .check(classes);
     }
@@ -439,6 +463,58 @@ class ArchRulesTest {
     }
 
     // -------------------------------------------------------------------------
+    // Notifications — a context any other may use, through what it publishes
+    //
+    // A context notifies from an adapter in its own infrastructure, with a record of its own implementing
+    // Notification. Its domain and application never learn notifications exist, and nobody reaches the
+    // handlers, the catalogue scan or the channels.
+    // -------------------------------------------------------------------------
+
+    private static final String NOTIFICATIONS = BASE + "notifications..";
+
+    @Test
+    void outside_notifications_only_what_notifications_publishes_is_used() {
+        DescribedPredicate<JavaClass> unpublished = DescribedPredicate.describe(
+            "a notifications class outside its application.port.in and domain.model",
+            c -> c.getPackageName().startsWith(BASE + "notifications.")
+                && !c.getPackageName().startsWith(BASE + "notifications.application.port.in")
+                && !c.getPackageName().startsWith(BASE + "notifications.domain.model"));
+        noClasses()
+            .that().resideOutsideOfPackage(NOTIFICATIONS)
+            .and(excludeTests())
+            .should().dependOnClassesThat(unpublished)
+            .check(classes);
+    }
+
+    @Test
+    void outside_notifications_only_an_infrastructure_adapter_names_notifications() {
+        noClasses()
+            .that().resideOutsideOfPackage(NOTIFICATIONS)
+            .and().resideOutsideOfPackage("..infrastructure..")
+            .and(excludeTests())
+            .should().dependOnClassesThat().resideInAPackage(NOTIFICATIONS)
+            .check(classes);
+    }
+
+    @Test
+    void a_notification_declares_its_kind_and_lives_in_the_infrastructure_of_its_context() {
+        classes()
+            .that().implement(Notification.class)
+            .and(excludeTests())
+            .should().beAnnotatedWith(NotificationKind.class)
+            .andShould().resideInAPackage("..infrastructure..")
+            .check(classes);
+    }
+
+    @Test
+    void only_a_notification_declares_a_notification_kind() {
+        classes()
+            .that().areAnnotatedWith(NotificationKind.class)
+            .should().implement(Notification.class)
+            .check(classes);
+    }
+
+    // -------------------------------------------------------------------------
     // Global infra isolation
     // -------------------------------------------------------------------------
 
@@ -455,7 +531,8 @@ class ArchRulesTest {
                 BASE + "authentication.infrastructure..",
                 BASE + "identity.infrastructure..",
                 BASE + "mfa.infrastructure..",
-                BASE + "mail.infrastructure..")
+                BASE + "mail.infrastructure..",
+                BASE + "notifications.infrastructure..")
             .allowEmptyShould(false)
             .check(classes);
     }
@@ -505,7 +582,7 @@ class ArchRulesTest {
         // identity.infra → mail.application.port.in
         new CrossBcAppDep("identity",
             new String[]{BASE + "mail.application.port.in.."},
-            Set.of("ProfileMailAdapter")),
+            Set.of("ProfileMailAdapter", "PendingMailCancellationAdapter")),
 
         // identity.infra → mfa.application.port.in
         new CrossBcAppDep("identity",
@@ -517,10 +594,30 @@ class ArchRulesTest {
             new String[]{BASE + "space.application.port.in.."},
             Set.of("PersonalSpaceInitAdapter", "SpaceDataDeletionAdapter")),
 
+        // identity.infra → notifications.application.port.in
+        new CrossBcAppDep("identity",
+            new String[]{BASE + "notifications.application.port.in.."},
+            Set.of("NotificationDataDeletionAdapter")),
+
+        // notifications.infra → mail.application.port.in
+        new CrossBcAppDep("notifications",
+            new String[]{BASE + "mail.application.port.in.."},
+            Set.of("MailChannelAdapter")),
+
+        // notifications.infra → identity.application.port.in
+        new CrossBcAppDep("notifications",
+            new String[]{BASE + "identity.application.port.in.."},
+            Set.of("NotificationRecipientAdapter")),
+
         // space.infra → identity.application.port.in
         new CrossBcAppDep("space",
             new String[]{BASE + "identity.application.port.in.."},
-            Set.of("MemberProfileAdapter"))
+            Set.of("MemberProfileAdapter")),
+
+        // space.infra → notifications.application.port.in
+        new CrossBcAppDep("space",
+            new String[]{BASE + "notifications.application.port.in.."},
+            Set.of("SpaceNotificationAdapter"))
     );
 
     @ParameterizedTest(name = "{0}.infra → {1}: only whitelisted adapters allowed")

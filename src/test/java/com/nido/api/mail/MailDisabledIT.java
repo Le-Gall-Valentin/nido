@@ -2,6 +2,7 @@ package com.nido.api.mail;
 
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.mail.application.handler.DisabledSendMailHandler;
+import com.nido.api.mail.application.port.in.CancelPendingMailsUseCase;
 import com.nido.api.mail.application.port.in.DispatchPendingMailsUseCase;
 import com.nido.api.mail.application.port.in.MailAvailabilityQuery;
 import com.nido.api.mail.application.port.in.SendMailUseCase;
@@ -31,6 +32,7 @@ class MailDisabledIT {
 
     @Autowired ApplicationContext context;
     @Autowired SendMailUseCase sendMail;
+    @Autowired CancelPendingMailsUseCase cancelPendingMails;
     @Autowired MailAvailabilityQuery availability;
     @Autowired JdbcClient jdbc;
 
@@ -57,5 +59,10 @@ class MailDisabledIT {
     @Test
     void mail_says_it_is_unavailable() {
         assertThat(availability.isAvailable()).isFalse();
+    }
+
+    @Test
+    void there_is_nothing_queued_to_withdraw() {
+        assertThat(cancelPendingMails.cancelPendingMailsTo("jane@test.local")).isZero();
     }
 }

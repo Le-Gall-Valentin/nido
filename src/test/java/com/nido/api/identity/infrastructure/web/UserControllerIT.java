@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.nido.api.mfa.infrastructure.config.TotpEncryptorFactory;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,6 +38,7 @@ import org.springframework.web.context.WebApplicationContext;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -63,6 +65,7 @@ class UserControllerIT {
     @Autowired TotpEncryptorFactory encryptorFactory;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired SpaceInvitationJpaRepository spaceInvitationJpaRepository;
+    @Autowired JdbcClient jdbc;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -345,6 +348,25 @@ class UserControllerIT {
             .andExpect(status().isNoContent());
 
         assertThat(spaceInvitationJpaRepository.findById(invitationId)).isEmpty();
+    }
+
+    @Test
+    void deleteUser_asSuperAdmin_forgetsTheNotificationChoicesOfTheDeletedAccount() throws Exception {
+        UUID targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").get().getId();
+        UUID adminId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("superadmin").get().getId();
+        for (UUID userId : List.of(targetId, adminId)) {
+            jdbc.sql("INSERT INTO notification_type_preferences VALUES (:id, 'space.invitation', false, now())")
+                .param("id", userId).update();
+        }
+        Cookie access = loginAs("superadmin", "adminpass");
+
+        mockMvc.perform(delete("/api/users/" + targetId).cookie(access))
+            .andExpect(status().isNoContent());
+
+        assertThat(jdbc.sql("SELECT count(*) FROM notification_type_preferences WHERE user_id = :id")
+            .param("id", targetId).query(Integer.class).single()).isZero();
+        assertThat(jdbc.sql("SELECT count(*) FROM notification_type_preferences WHERE user_id = :id")
+            .param("id", adminId).query(Integer.class).single()).isEqualTo(1);
     }
 
     @Test
