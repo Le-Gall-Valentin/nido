@@ -8,12 +8,12 @@ import com.nido.api.notifications.domain.model.NotificationKind;
 /**
  * mail/space/owner-changed.html — told to the other members when a space changes owner.
  *
- * @param actorName the former owner who handed it over; {@code null} after a succession (see
- *                  {@link OwnershipReceivedNotification})
+ * @param formerOwnerName who owned it before (see {@link OwnershipReceivedNotification})
+ * @param leftNido        the former owner's account was deleted and the ownership passed on by succession
  */
 @NotificationKind("space.owner-changed")
-public record OwnerChangedNotification(String username, String actorName, String newOwnerName, String spaceName,
-                                       AppPath membersPath)
+public record OwnerChangedNotification(String username, String formerOwnerName, String newOwnerName, String spaceName,
+                                       boolean leftNido, AppPath membersPath)
     implements Notification, MailContent {
 
     @Override

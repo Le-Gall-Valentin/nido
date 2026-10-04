@@ -75,7 +75,7 @@ class SpaceNotificationAdapterTest {
     void a_departure() {
         adapter().memberLeft(spaceId, "Chez nous", "dave", List.of(bob));
 
-        assertThat(sent(1).getFirst().notification()).isEqualTo(new MemberLeftNotification("bob", "dave", "Chez nous", members));
+        assertThat(sent(1).getFirst().notification()).isEqualTo(new MemberLeftNotification("bob", "dave", "Chez nous", false, members));
     }
 
     @Test
@@ -107,12 +107,30 @@ class SpaceNotificationAdapterTest {
     }
 
     @Test
-    void a_new_owner_and_the_others_with_or_without_an_author() {
-        adapter().ownershipReceived(spaceId, "Chez nous", null, bob);
+    void a_new_owner_and_the_others_after_a_transfer() {
+        adapter().ownershipReceived(spaceId, "Chez nous", "alice", bob);
         adapter().ownerChanged(spaceId, "Chez nous", "alice", "bob", List.of(carol));
 
-        List<NotificationRequest> requests = sent(2);
-        assertThat(requests.get(0).notification()).isEqualTo(new OwnershipReceivedNotification("bob", null, "Chez nous", members));
-        assertThat(requests.get(1).notification()).isEqualTo(new OwnerChangedNotification("carol", "alice", "bob", "Chez nous", members));
+        assertThat(sent(2)).extracting(NotificationRequest::notification).containsExactly(
+            new OwnershipReceivedNotification("bob", "alice", "Chez nous", false, members),
+            new OwnerChangedNotification("carol", "alice", "bob", "Chez nous", false, members));
+    }
+
+    @Test
+    void a_member_who_left_nido_is_told_to_the_others() {
+        adapter().memberLeftNido(spaceId, "Chez nous", "dave", List.of(bob));
+
+        assertThat(sent(1).getFirst().notification())
+            .isEqualTo(new MemberLeftNotification("bob", "dave", "Chez nous", true, members));
+    }
+
+    @Test
+    void a_succession_names_the_former_owner_to_the_heir_and_the_others() {
+        adapter().ownershipInherited(spaceId, "Chez nous", "alice", bob);
+        adapter().ownerSucceeded(spaceId, "Chez nous", "alice", "bob", List.of(carol));
+
+        assertThat(sent(2)).extracting(NotificationRequest::notification).containsExactly(
+            new OwnershipReceivedNotification("bob", "alice", "Chez nous", true, members),
+            new OwnerChangedNotification("carol", "alice", "bob", "Chez nous", true, members));
     }
 }

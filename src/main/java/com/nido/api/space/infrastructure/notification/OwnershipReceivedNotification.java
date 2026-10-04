@@ -8,11 +8,12 @@ import com.nido.api.notifications.domain.model.NotificationKind;
 /**
  * mail/space/ownership-received.html — told to the new owner of a space.
  *
- * @param actorName the former owner who handed it over; {@code null} when the ownership passed on because
- *                  the former owner's account was deleted — whose name is erased by then, and must not be told
+ * @param formerOwnerName who owned it before: who handed it over, or whose account was deleted ({@code leftNido})
+ * @param leftNido        the former owner's account was deleted and the ownership passed on by succession
  */
 @NotificationKind("space.ownership-received")
-public record OwnershipReceivedNotification(String username, String actorName, String spaceName, AppPath membersPath)
+public record OwnershipReceivedNotification(String username, String formerOwnerName, String spaceName, boolean leftNido,
+                                            AppPath membersPath)
     implements Notification, MailContent {
 
     @Override

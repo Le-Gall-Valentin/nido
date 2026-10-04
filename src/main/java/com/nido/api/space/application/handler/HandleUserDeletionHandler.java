@@ -45,7 +45,7 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
 
     @Override
     @Transactional
-    public void handleUserDeletion(UUID userId) {
+    public void handleUserDeletion(UUID userId, String username) {
         List<SpaceMembership> memberships = spaceMembershipPort.findByUser(userId);
         // One query for every space rather than one per membership. Somebody belongs to a handful
         // of spaces, so this saves very little today — it is here because the loop below deletes
@@ -67,6 +67,7 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
             }
             if (!membership.isOwner()) {
                 spaceMembershipPort.remove(membership.id());
+                spaceNotifier.memberLeftNido(space.id(), userId, username);
                 continue;
             }
             Optional<SpaceMembership> successor = spaceMembershipPort.findSuccessor(space.id(), userId);
@@ -81,7 +82,7 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
             spaceMembershipPort.changeRole(successor.get().id(), SpaceRole.OWNER);
             log.info("Ownership of space {} passed to {} after the deletion of {}",
                 space.id(), successor.get().userId(), userId);
-            spaceNotifier.ownershipInherited(space.id(), successor.get().userId());
+            spaceNotifier.ownershipInherited(space.id(), userId, username, successor.get().userId());
         }
         int deleted = spaceInvitationPort.deleteAllForInvitee(userId);
         if (deleted > 0) {

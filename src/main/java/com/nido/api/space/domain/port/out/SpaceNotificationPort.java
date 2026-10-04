@@ -19,6 +19,9 @@ public interface SpaceNotificationPort {
 
     void memberLeft(UUID spaceId, String spaceName, String memberName, List<Addressee> recipients);
 
+    /** A member's account was deleted: they left Nido, and so the space. */
+    void memberLeftNido(UUID spaceId, String spaceName, String memberName, List<Addressee> recipients);
+
     void memberRemoved(UUID spaceId, String spaceName, String actorName, String removedName, List<Addressee> recipients);
 
     void removedFromSpace(String spaceName, String actorName, Addressee removed);
@@ -28,9 +31,15 @@ public interface SpaceNotificationPort {
     void roleChanged(UUID spaceId, String spaceName, String actorName, Addressee member,
                      SpaceRole previousRole, SpaceRole newRole);
 
-    /** @param actorName the former owner who handed it over; {@code null} after a succession */
+    /** @param actorName the former owner who handed it over */
     void ownershipReceived(UUID spaceId, String spaceName, String actorName, Addressee newOwner);
 
-    /** @param actorName the former owner who handed it over; {@code null} after a succession */
+    /** @param actorName the former owner who handed it over */
     void ownerChanged(UUID spaceId, String spaceName, String actorName, String newOwnerName, List<Addressee> recipients);
+
+    /** The owner's account was deleted and the ownership passed on to {@code heir}. */
+    void ownershipInherited(UUID spaceId, String spaceName, String formerOwnerName, Addressee heir);
+
+    /** The other members hear who inherited the space whose owner's account was deleted. */
+    void ownerSucceeded(UUID spaceId, String spaceName, String formerOwnerName, String heirName, List<Addressee> recipients);
 }

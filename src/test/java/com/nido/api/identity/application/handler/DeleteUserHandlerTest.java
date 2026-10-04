@@ -59,7 +59,7 @@ class DeleteUserHandlerTest {
         order.verify(userCommandPort).deleteGdpr(targetId);
         order.verify(credentialDeletionPort).deleteCredentials(targetId);
         order.verify(totpDeletionPort).deleteTotpData(targetId);
-        verify(spaceDataDeletionPort).deleteSpaceData(targetId);
+        verify(spaceDataDeletionPort).deleteSpaceData(targetId, "u-" + targetId);
         verify(notificationDataDeletionPort).deleteNotificationData(targetId);
     }
 

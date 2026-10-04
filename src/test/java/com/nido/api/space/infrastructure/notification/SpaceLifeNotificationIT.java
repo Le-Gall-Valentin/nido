@@ -132,27 +132,41 @@ class SpaceLifeNotificationIT {
     }
 
     @Test
-    void erasing_the_owner_tells_the_successor_and_the_others_without_naming_the_erased_account() throws Exception {
+    void erasing_the_owner_tells_the_successor_and_the_others_who_left() throws Exception {
         // bob outranks carol, so he is the successor whatever the order they joined in.
         jdbc.sql("UPDATE space_members SET role = 'ADMIN' WHERE space_id = :space AND user_id = :user")
             .param("space", spaceId).param("user", bobId).update();
-        rootId = scene.saveUser(name("root"), null, Role.SUPER_ADMIN);
 
-        mockMvc.perform(delete("/api/users/" + aliceId).cookie(cookieFor(rootId, Role.SUPER_ADMIN)))
+        mockMvc.perform(delete("/api/users/" + aliceId).cookie(cookieFor(saveSuperAdmin(), Role.SUPER_ADMIN)))
             .andExpect(status().isNoContent());
 
         Map<String, MimeMessage> mails = mailsByRecipient(2);
         assertThat(mails).containsOnlyKeys(address("bob"), address("carol"));
         assertThat(mails.get(address("bob")).getSubject()).isEqualTo("Vous êtes propriétaire de Chez nous");
         assertThat(textOf(mails.get(address("bob"))))
-            .contains("L’ancien propriétaire de l’espace « Chez nous » a quitté Nido : vous en êtes maintenant propriétaire.")
-            .doesNotContain(name("alice"));
+            .contains(name("alice") + " a quitté Nido : vous êtes maintenant propriétaire de l’espace « Chez nous ».");
         assertThat(mails.get(address("carol")).getSubject()).isEqualTo(name("bob") + " est propriétaire de Chez nous");
         assertThat(textOf(mails.get(address("carol"))))
-            .contains("L’ancien propriétaire ayant quitté Nido, " + name("bob") + " est maintenant propriétaire de l’espace « Chez nous ».")
-            .doesNotContain(name("alice"));
+            .contains(name("alice") + " a quitté Nido : " + name("bob") + " est maintenant propriétaire de l’espace « Chez nous ».");
         assertThat(jdbc.sql("SELECT is_deleted FROM users WHERE id = :id").param("id", aliceId).query(Boolean.class).single())
             .isTrue();
+    }
+
+    @Test
+    void erasing_a_member_tells_the_others_they_left_nido() throws Exception {
+        mockMvc.perform(delete("/api/users/" + carolId).cookie(cookieFor(saveSuperAdmin(), Role.SUPER_ADMIN)))
+            .andExpect(status().isNoContent());
+
+        Map<String, MimeMessage> mails = mailsByRecipient(2);
+        assertThat(mails).containsOnlyKeys(address("alice"), address("bob"));
+        assertThat(mails.get(address("alice")).getSubject()).isEqualTo(name("carol") + " a quitté Chez nous");
+        assertThat(textOf(mails.get(address("bob"))))
+            .contains(name("carol") + " a quitté Nido et ne fait plus partie de l’espace « Chez nous ».");
+    }
+
+    private UUID saveSuperAdmin() {
+        rootId = scene.saveUser(name("root"), null, Role.SUPER_ADMIN);
+        return rootId;
     }
 
     private String name(String who) {

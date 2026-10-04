@@ -196,13 +196,36 @@ class SpaceNotifierTest {
     }
 
     @Test
-    void a_succession_names_no_author() {
+    void a_succession_names_the_former_owner_read_before_the_erasure() {
         membersAre(bob, carol);
+        names.remove(alice);   // anonymised by now: only the caller still knows the name
 
-        notifier.ownershipInherited(spaceId, bob);
+        notifier.ownershipInherited(spaceId, alice, "alice", bob);
 
-        verify(notifications).ownershipReceived(spaceId, "Chez nous", null, to(bob, "bob"));
-        verify(notifications).ownerChanged(spaceId, "Chez nous", null, "bob", List.of(to(carol, "carol")));
+        verify(notifications).ownershipInherited(spaceId, "Chez nous", "alice", to(bob, "bob"));
+        verify(notifications).ownerSucceeded(spaceId, "Chez nous", "alice", "bob", List.of(to(carol, "carol")));
+    }
+
+    @Test
+    void a_member_who_left_nido_is_named_to_those_who_remain() {
+        membersAre(alice, bob);
+        names.remove(dave);
+
+        notifier.memberLeftNido(spaceId, dave, "dave");
+
+        verify(notifications).memberLeftNido(spaceId, "Chez nous", "dave", List.of(to(alice, "alice"), to(bob, "bob")));
+    }
+
+    @Test
+    void an_erased_account_without_a_name_tells_nobody() {
+        membersAre(alice, bob);
+        names.remove(dave);
+
+        notifier.memberLeftNido(spaceId, dave, null);
+        notifier.ownershipInherited(spaceId, dave, null, alice);
+
+        verifyNoInteractions(notifications);
+        assertThat(logged.list).hasSize(2);
     }
 
     @Test

@@ -57,7 +57,7 @@ public class DeleteUserHandler implements DeleteUserUseCase {
         userCommandPort.deleteGdpr(command.targetUserId());
         credentialDeletionPort.deleteCredentials(command.targetUserId());
         totpDeletionPort.deleteTotpData(command.targetUserId());
-        spaceDataDeletionPort.deleteSpaceData(command.targetUserId());
+        spaceDataDeletionPort.deleteSpaceData(command.targetUserId(), target.username());
         notificationDataDeletionPort.deleteNotificationData(command.targetUserId());
         // Everything about the user is gone, except the access token in their browser — nothing in
         // it consults the database, so it would keep authenticating a user who no longer exists.

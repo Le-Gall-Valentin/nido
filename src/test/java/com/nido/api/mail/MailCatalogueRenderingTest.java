@@ -113,6 +113,7 @@ class MailCatalogueRenderingTest {
         if (type == AppPath.class) return new AppPath("/sample/" + name);
         if (type == long.class || type == Long.class) return 30L;
         if (type == int.class || type == Integer.class) return 30;
+        if (type == boolean.class) return false;
         if (type.isEnum()) return type.getEnumConstants()[0];
         throw new IllegalStateException("Teach MailCatalogueRenderingTest a sample for " + type.getName() + " (" + name + ")");
     }

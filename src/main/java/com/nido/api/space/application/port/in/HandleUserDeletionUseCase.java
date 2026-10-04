@@ -8,6 +8,9 @@ public interface HandleUserDeletionUseCase {
      * au plus ancien ADMIN, à défaut au plus ancien MEMBER, et supprime les groupes
      * dont il ne reste aucun successeur possible. Supprime aussi les invitations
      * adressées à ce compte.
+     *
+     * @param username le nom du compte, lu avant son anonymisation : les mails que cette
+     *                 suppression envoie disent qui a quitté Nido
      */
-    void handleUserDeletion(UUID userId);
+    void handleUserDeletion(UUID userId, String username);
 }

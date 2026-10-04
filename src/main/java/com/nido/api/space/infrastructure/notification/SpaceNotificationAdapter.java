@@ -47,7 +47,13 @@ public class SpaceNotificationAdapter implements SpaceNotificationPort {
     @Override
     public void memberLeft(UUID spaceId, String spaceName, String memberName, List<Addressee> recipients) {
         recipients.forEach(reader ->
-            tell(reader, new MemberLeftNotification(reader.username(), memberName, spaceName, members(spaceId))));
+            tell(reader, new MemberLeftNotification(reader.username(), memberName, spaceName, false, members(spaceId))));
+    }
+
+    @Override
+    public void memberLeftNido(UUID spaceId, String spaceName, String memberName, List<Addressee> recipients) {
+        recipients.forEach(reader ->
+            tell(reader, new MemberLeftNotification(reader.username(), memberName, spaceName, true, members(spaceId))));
     }
 
     @Override
@@ -76,13 +82,25 @@ public class SpaceNotificationAdapter implements SpaceNotificationPort {
 
     @Override
     public void ownershipReceived(UUID spaceId, String spaceName, String actorName, Addressee newOwner) {
-        tell(newOwner, new OwnershipReceivedNotification(newOwner.username(), actorName, spaceName, members(spaceId)));
+        tell(newOwner, new OwnershipReceivedNotification(newOwner.username(), actorName, spaceName, false, members(spaceId)));
     }
 
     @Override
     public void ownerChanged(UUID spaceId, String spaceName, String actorName, String newOwnerName, List<Addressee> recipients) {
         recipients.forEach(reader -> tell(reader,
-            new OwnerChangedNotification(reader.username(), actorName, newOwnerName, spaceName, members(spaceId))));
+            new OwnerChangedNotification(reader.username(), actorName, newOwnerName, spaceName, false, members(spaceId))));
+    }
+
+    @Override
+    public void ownershipInherited(UUID spaceId, String spaceName, String formerOwnerName, Addressee heir) {
+        tell(heir, new OwnershipReceivedNotification(heir.username(), formerOwnerName, spaceName, true, members(spaceId)));
+    }
+
+    @Override
+    public void ownerSucceeded(UUID spaceId, String spaceName, String formerOwnerName, String heirName,
+                               List<Addressee> recipients) {
+        recipients.forEach(reader -> tell(reader,
+            new OwnerChangedNotification(reader.username(), formerOwnerName, heirName, spaceName, true, members(spaceId))));
     }
 
     private void tell(Addressee reader, Notification notification) {

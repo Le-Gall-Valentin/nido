@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -123,18 +124,35 @@ public class SpaceNotifier {
         });
     }
 
-    /** The owner's account was deleted and the ownership passed on: there is no author to name. */
-    public void ownershipInherited(UUID spaceId, UUID newOwnerId) {
+    /** A member's account was deleted (an owner's goes through ownershipInherited): the others hear they left Nido. */
+    public void memberLeftNido(UUID spaceId, UUID memberId, String memberName) {
         inSpace(spaceId, spaceName -> {
-            List<UUID> others = membersExcept(spaceId, newOwnerId);
-            Map<UUID, String> names = namesOf(others, newOwnerId);
-            if (unnamed(names, "ownership inherited", spaceId, newOwnerId)) {
+            List<UUID> readers = membersExcept(spaceId, memberId);
+            if (readers.isEmpty()) {
                 return;
             }
-            Addressee newOwner = new Addressee(newOwnerId, names.get(newOwnerId));
-            notifications.ownershipReceived(spaceId, spaceName, null, newOwner);
-            if (!others.isEmpty()) {
-                notifications.ownerChanged(spaceId, spaceName, null, newOwner.username(), addressees(others, names));
+            Map<UUID, String> names = namesWithErased(readers, memberId, memberName);
+            if (unnamed(names, "member left Nido", spaceId, memberId)) {
+                return;
+            }
+            notifications.memberLeftNido(spaceId, spaceName, memberName, addressees(readers, names));
+        });
+    }
+
+    /** The owner's account was deleted and {@code heirId} inherited the space: the heir and the others hear who left. */
+    public void ownershipInherited(UUID spaceId, UUID formerOwnerId, String formerOwnerName, UUID heirId) {
+        inSpace(spaceId, spaceName -> {
+            List<UUID> others = membersExcept(spaceId, heirId, formerOwnerId);
+            Map<UUID, String> names = namesWithErased(others, formerOwnerId, formerOwnerName);
+            names.putAll(namesOf(List.of(), heirId));
+            if (unnamed(names, "ownership inherited", spaceId, formerOwnerId, heirId)) {
+                return;
+            }
+            Addressee heir = new Addressee(heirId, names.get(heirId));
+            notifications.ownershipInherited(spaceId, spaceName, formerOwnerName, heir);
+            List<Addressee> told = addressees(others, names);
+            if (!told.isEmpty()) {
+                notifications.ownerSucceeded(spaceId, spaceName, formerOwnerName, heir.username(), told);
             }
         });
     }
@@ -171,6 +189,18 @@ public class SpaceNotifier {
         List<UUID> ids = new ArrayList<>(readers);
         ids.addAll(Arrays.asList(mentioned));
         return memberNames.byId(ids);
+    }
+
+    /**
+     * The readers' names, and the name of an account being erased — read by the caller before the
+     * anonymisation, since it can no longer be looked up. A null name stays absent: the event is then unnamed.
+     */
+    private Map<UUID, String> namesWithErased(List<UUID> readers, UUID erasedId, String erasedName) {
+        Map<UUID, String> names = new HashMap<>(namesOf(readers));
+        if (erasedName != null) {
+            names.put(erasedId, erasedName);
+        }
+        return names;
     }
 
     private static List<Addressee> addressees(List<UUID> readers, Map<UUID, String> names) {

@@ -33,8 +33,8 @@ class SpaceChangeMailsTest {
         assertThat(new SpaceDeletedNotification("u", "a", "s", SPACES).template()).isEqualTo("space/deleted");
         assertThat(new RoleChangedNotification("u", "a", "s", SpaceRole.VIEWER, SpaceRole.MEMBER, MEMBERS).template())
             .isEqualTo("space/role-changed");
-        assertThat(new OwnershipReceivedNotification("u", "a", "s", MEMBERS).template()).isEqualTo("space/ownership-received");
-        assertThat(new OwnerChangedNotification("u", "a", "n", "s", MEMBERS).template()).isEqualTo("space/owner-changed");
+        assertThat(new OwnershipReceivedNotification("u", "a", "s", false, MEMBERS).template()).isEqualTo("space/ownership-received");
+        assertThat(new OwnerChangedNotification("u", "a", "n", "s", false, MEMBERS).template()).isEqualTo("space/owner-changed");
     }
 
     @Test
@@ -75,32 +75,32 @@ class SpaceChangeMailsTest {
     }
 
     @Test
-    void ownership_received_from_someone_or_by_succession() {
-        RenderedMail transfer = RENDERER.render(new OwnershipReceivedNotification("bob", "alice", "Chez nous", MEMBERS), Locale.FRENCH);
-        RenderedMail succession = RENDERER.render(new OwnershipReceivedNotification("bob", null, "Chez nous", MEMBERS), Locale.FRENCH);
-        RenderedMail english = RENDERER.render(new OwnershipReceivedNotification("bob", null, "Our place", MEMBERS), Locale.ENGLISH);
+    void ownership_received_from_someone_or_from_someone_who_left_nido() {
+        RenderedMail transfer = RENDERER.render(new OwnershipReceivedNotification("bob", "alice", "Chez nous", false, MEMBERS), Locale.FRENCH);
+        RenderedMail succession = RENDERER.render(new OwnershipReceivedNotification("bob", "alice", "Chez nous", true, MEMBERS), Locale.FRENCH);
+        RenderedMail english = RENDERER.render(new OwnershipReceivedNotification("bob", "alice", "Our place", true, MEMBERS), Locale.ENGLISH);
 
         assertThat(transfer.subject()).isEqualTo("Vous êtes propriétaire de Chez nous");
         assertThat(transfer.text()).contains("alice vous a transmis la propriété de l’espace « Chez nous ».")
             .doesNotContain("a quitté Nido");
         assertThat(succession.text())
-            .contains("L’ancien propriétaire de l’espace « Chez nous » a quitté Nido : vous en êtes maintenant propriétaire.")
+            .contains("alice a quitté Nido : vous êtes maintenant propriétaire de l’espace « Chez nous ».")
             .doesNotContain("vous a transmis");
         assertThat(english.subject()).isEqualTo("You own Our place now");
-        assertThat(english.text()).contains("The former owner of the space “Our place” left Nido: you own it now.");
+        assertThat(english.text()).contains("alice left Nido: you own the space “Our place” now.");
     }
 
     @Test
     void a_new_owner_announced_to_the_others() {
-        RenderedMail transfer = RENDERER.render(new OwnerChangedNotification("carol", "alice", "bob", "Chez nous", MEMBERS), Locale.FRENCH);
-        RenderedMail succession = RENDERER.render(new OwnerChangedNotification("carol", null, "bob", "Chez nous", MEMBERS), Locale.FRENCH);
-        RenderedMail english = RENDERER.render(new OwnerChangedNotification("carol", "alice", "bob", "Our place", MEMBERS), Locale.ENGLISH);
+        RenderedMail transfer = RENDERER.render(new OwnerChangedNotification("carol", "alice", "bob", "Chez nous", false, MEMBERS), Locale.FRENCH);
+        RenderedMail succession = RENDERER.render(new OwnerChangedNotification("carol", "alice", "bob", "Chez nous", true, MEMBERS), Locale.FRENCH);
+        RenderedMail english = RENDERER.render(new OwnerChangedNotification("carol", "alice", "bob", "Our place", true, MEMBERS), Locale.ENGLISH);
 
         assertThat(transfer.subject()).isEqualTo("bob est propriétaire de Chez nous");
         assertThat(transfer.text()).contains("alice a transmis la propriété de l’espace « Chez nous » à bob.");
         assertThat(succession.text())
-            .contains("L’ancien propriétaire ayant quitté Nido, bob est maintenant propriétaire de l’espace « Chez nous ».");
+            .contains("alice a quitté Nido : bob est maintenant propriétaire de l’espace « Chez nous ».");
         assertThat(english.subject()).isEqualTo("bob owns Our place now");
-        assertThat(english.text()).contains("alice handed the ownership of the space “Our place” to bob.");
+        assertThat(english.text()).contains("alice left Nido: bob owns the space “Our place” now.");
     }
 }

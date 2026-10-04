@@ -27,7 +27,7 @@ class MembershipMailsTest {
         assertThat(kindOf(MemberRemovedNotification.class)).isEqualTo("space.member-removed");
         assertThat(kindOf(RemovedFromSpaceNotification.class)).isEqualTo("space.removed");
         assertThat(new MemberJoinedNotification("u", "m", "s", MEMBERS).template()).isEqualTo("space/member-joined");
-        assertThat(new MemberLeftNotification("u", "m", "s", MEMBERS).template()).isEqualTo("space/member-left");
+        assertThat(new MemberLeftNotification("u", "m", "s", false, MEMBERS).template()).isEqualTo("space/member-left");
         assertThat(new MemberRemovedNotification("u", "a", "m", "s", MEMBERS).template()).isEqualTo("space/member-removed");
         assertThat(new RemovedFromSpaceNotification("u", "a", "s", SPACES).template()).isEqualTo("space/removed");
     }
@@ -46,13 +46,23 @@ class MembershipMailsTest {
 
     @Test
     void someone_left() {
-        RenderedMail fr = RENDERER.render(new MemberLeftNotification("carol", "bob", "Chez nous", MEMBERS), Locale.FRENCH);
-        RenderedMail en = RENDERER.render(new MemberLeftNotification("carol", "bob", "Our place", MEMBERS), Locale.ENGLISH);
+        RenderedMail fr = RENDERER.render(new MemberLeftNotification("carol", "bob", "Chez nous", false, MEMBERS), Locale.FRENCH);
+        RenderedMail en = RENDERER.render(new MemberLeftNotification("carol", "bob", "Our place", false, MEMBERS), Locale.ENGLISH);
 
         assertThat(fr.subject()).isEqualTo("bob a quitté Chez nous");
-        assertThat(fr.text()).contains("bob a quitté l’espace « Chez nous ».");
+        assertThat(fr.text()).contains("bob a quitté l’espace « Chez nous ».").doesNotContain("Nido et");
         assertThat(en.subject()).isEqualTo("bob left Our place");
         assertThat(en.text()).contains("bob left the space “Our place”.");
+    }
+
+    @Test
+    void someone_left_nido() {
+        RenderedMail fr = RENDERER.render(new MemberLeftNotification("carol", "bob", "Chez nous", true, MEMBERS), Locale.FRENCH);
+        RenderedMail en = RENDERER.render(new MemberLeftNotification("carol", "bob", "Our place", true, MEMBERS), Locale.ENGLISH);
+
+        assertThat(fr.subject()).isEqualTo("bob a quitté Chez nous");
+        assertThat(fr.text()).contains("bob a quitté Nido et ne fait plus partie de l’espace « Chez nous ».");
+        assertThat(en.text()).contains("bob left Nido and is no longer in the space “Our place”.");
     }
 
     @Test
