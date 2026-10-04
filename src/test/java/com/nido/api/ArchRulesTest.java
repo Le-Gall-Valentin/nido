@@ -30,8 +30,13 @@ class ArchRulesTest {
         .importPackages("com.nido.api");
 
     private static DescribedPredicate<JavaClass> excludeTests() {
+        // By name, and by where it was compiled: a test's helpers and anonymous classes are test code too.
         return DescribedPredicate.describe("excluding tests",
-            c -> !c.getSimpleName().endsWith("Test") && !c.getSimpleName().endsWith("IT"));
+            c -> !c.getSimpleName().endsWith("Test") && !c.getSimpleName().endsWith("IT") && !compiledFromTests(c));
+    }
+
+    private static boolean compiledFromTests(JavaClass c) {
+        return c.getSource().map(source -> source.getUri().toString().contains("/test-classes/")).orElse(false);
     }
 
     // -------------------------------------------------------------------------
@@ -129,6 +134,7 @@ class ArchRulesTest {
     void ports_out_should_be_interfaces() {
         classes()
             .that().resideInAPackage("..domain.port.out..")
+            .and(excludeTests())
             .should().beInterfaces()
             .check(classes);
     }

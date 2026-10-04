@@ -21,6 +21,11 @@ public interface NotificationChannelPort {
      */
     boolean supports(Class<? extends Notification> notificationClass);
 
+    /** Whether a notification of this class can go out on this channel, here and now. */
+    default boolean canDeliver(Class<? extends Notification> notificationClass) {
+        return isAvailable() && supports(notificationClass);
+    }
+
     /**
      * Hands the notification over for delivery, in the current transaction. Only called when the channel is
      * available, supports the notification and the account keeps it on. {@code type} names it in logs.

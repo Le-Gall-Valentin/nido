@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * What happens in a space, told to the people it concerns — on the channels they keep open, inside the
- * transaction of the change. Names are resolved by the caller: this port only says, it never looks up.
+ * What happens in a space, told to the people it concerns — on the channels they keep open, once the
+ * change is committed. Names are resolved by the caller: this port only says, it never looks up.
  */
 public interface SpaceNotificationPort {
 

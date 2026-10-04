@@ -116,6 +116,22 @@ class SpaceLifeNotificationIT {
     }
 
     @Test
+    void a_mail_that_cannot_be_queued_leaves_the_removal_done() throws Exception {
+        // The outbox refuses every row, as a full disk or a broken template would refuse the mail.
+        jdbc.sql("ALTER TABLE mail_outbox ADD CONSTRAINT it_refuse_every_mail CHECK (kind = '') NOT VALID").update();
+        try {
+            mockMvc.perform(delete("/api/spaces/" + spaceId + "/members/" + bobId).cookie(cookieFor(aliceId)))
+                .andExpect(status().isNoContent());
+        } finally {
+            jdbc.sql("ALTER TABLE mail_outbox DROP CONSTRAINT it_refuse_every_mail").update();
+        }
+
+        assertThat(jdbc.sql("SELECT count(*) FROM space_members WHERE space_id = :space AND user_id = :user")
+            .param("space", spaceId).param("user", bobId).query(Integer.class).single()).isZero();
+        assertThat(SharedGreenMail.server().waitForIncomingEmail(1_500, 1)).isFalse();
+    }
+
+    @Test
     void erasing_the_owner_tells_the_successor_and_the_others_without_naming_the_erased_account() throws Exception {
         // bob outranks carol, so he is the successor whatever the order they joined in.
         jdbc.sql("UPDATE space_members SET role = 'ADMIN' WHERE space_id = :space AND user_id = :user")
