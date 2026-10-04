@@ -3,6 +3,7 @@ package com.nido.api.notifications.domain.port.out;
 import com.nido.api.notifications.domain.model.Notification;
 import com.nido.api.notifications.domain.model.NotificationChannel;
 import com.nido.api.notifications.domain.model.NotificationRecipient;
+import com.nido.api.notifications.domain.model.NotificationType;
 
 import java.time.Instant;
 
@@ -21,8 +22,8 @@ public interface NotificationChannelPort {
     boolean supports(Class<? extends Notification> notificationClass);
 
     /**
-     * Hands the notification over for delivery, in the caller's transaction. Only called when the channel
-     * is available, supports the notification and the account keeps it on.
+     * Hands the notification over for delivery, in the current transaction. Only called when the channel is
+     * available, supports the notification and the account keeps it on. {@code type} names it in logs.
      */
-    void deliver(NotificationRecipient recipient, Notification notification, Instant expiresAt);
+    void deliver(NotificationRecipient recipient, NotificationType type, Notification notification, Instant expiresAt);
 }

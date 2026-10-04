@@ -76,7 +76,7 @@ class NotifyHandlerTest {
 
         handler(mail).notify(request());
 
-        verify(mail).deliver(jane, greeting, EXPIRES_AT);
+        verify(mail).deliver(jane, GREETING, greeting, EXPIRES_AT);
     }
 
     @Test
@@ -86,7 +86,7 @@ class NotifyHandlerTest {
 
         handler(mail).notify(request());
 
-        verify(mail, never()).deliver(any(), any(), any());
+        verify(mail, never()).deliver(any(), any(), any(), any());
         verifyNoInteractions(preferences);
     }
 
@@ -98,7 +98,7 @@ class NotifyHandlerTest {
 
         handler(mail).notify(request());
 
-        verify(mail, never()).deliver(any(), any(), any());
+        verify(mail, never()).deliver(any(), any(), any(), any());
         verifyNoInteractions(preferences);
     }
 
@@ -108,7 +108,7 @@ class NotifyHandlerTest {
 
         handler(mail).notify(request());
 
-        verify(mail, never()).deliver(any(), any(), any());
+        verify(mail, never()).deliver(any(), any(), any(), any());
         verifyNoInteractions(recipients, preferences);
     }
 
@@ -118,7 +118,7 @@ class NotifyHandlerTest {
 
         handler(mail).notify(request());
 
-        verify(mail, never()).deliver(any(), any(), any());
+        verify(mail, never()).deliver(any(), any(), any(), any());
         verifyNoInteractions(recipients, preferences);
     }
 
@@ -129,7 +129,7 @@ class NotifyHandlerTest {
 
         handler(mail).notify(request());
 
-        verify(mail, never()).deliver(any(), any(), any());
+        verify(mail, never()).deliver(any(), any(), any(), any());
     }
 
     @Test
@@ -139,7 +139,7 @@ class NotifyHandlerTest {
 
         handler(mail).notify(request());
 
-        verify(mail, never()).deliver(any(), any(), any());
+        verify(mail, never()).deliver(any(), any(), any(), any());
     }
 
     @Test
@@ -150,8 +150,8 @@ class NotifyHandlerTest {
 
         handler(missing, open).notify(request());
 
-        verify(open).deliver(jane, greeting, EXPIRES_AT);
-        verify(missing, never()).deliver(any(), any(), any());
+        verify(open).deliver(jane, GREETING, greeting, EXPIRES_AT);
+        verify(missing, never()).deliver(any(), any(), any(), any());
     }
 
     @Test

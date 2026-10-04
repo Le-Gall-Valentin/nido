@@ -66,7 +66,7 @@ public class NotifyHandler implements NotifyUseCase {
         NotificationPreferences chosen = preferences.find(request.recipientId());
         for (NotificationChannelPort channel : able) {
             if (chosen.allows(type, channel.channel())) {
-                channel.deliver(recipient.get(), notification, request.expiresAt());
+                channel.deliver(recipient.get(), type, notification, request.expiresAt());
             }
         }
     }
