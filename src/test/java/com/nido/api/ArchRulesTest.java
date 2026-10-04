@@ -14,6 +14,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -35,8 +37,22 @@ class ArchRulesTest {
             c -> !c.getSimpleName().endsWith("Test") && !c.getSimpleName().endsWith("IT") && !compiledFromTests(c));
     }
 
+    /** Where this very class was compiled: the test output, whatever the build tool calls it. */
+    private static final Path TEST_OUTPUT = testOutput();
+
+    private static Path testOutput() {
+        try {
+            return Path.of(ArchRulesTest.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     private static boolean compiledFromTests(JavaClass c) {
-        return c.getSource().map(source -> source.getUri().toString().contains("/test-classes/")).orElse(false);
+        return c.getSource()
+            .filter(source -> "file".equals(source.getUri().getScheme()))
+            .map(source -> Path.of(source.getUri()).startsWith(TEST_OUTPUT))
+            .orElse(false);
     }
 
     // -------------------------------------------------------------------------
