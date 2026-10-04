@@ -1,8 +1,8 @@
 import type { NotificationPreferences } from './types'
 
 /**
- * The signed-in account's notification choices on the server. The card depends on this contract; the
- * axios implementation is injected (defaulting to notificationPreferencesApi), never imported by the UI.
+ * The signed-in account's notification choices on the server. The card and its hooks take it as a
+ * parameter, defaulting to the axios implementation (notificationPreferencesApi); tests pass a fake.
  */
 export interface INotificationPreferencesApi {
   get(): Promise<NotificationPreferences>

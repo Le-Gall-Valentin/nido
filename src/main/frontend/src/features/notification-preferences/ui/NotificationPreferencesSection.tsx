@@ -1,21 +1,14 @@
-import { Fragment, useId, useState, type ReactNode } from 'react'
+import { Fragment, useId, type ReactNode } from 'react'
 import { ChevronDown, Info } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { NetworkError, RateLimitError } from '@/shared/lib'
 import { Alert, Switch } from '@/shared/ui'
 import { notificationPreferencesApi } from '../api/notificationPreferencesApi'
 import type { INotificationPreferencesApi } from '../model/INotificationPreferencesApi'
 import { groupTypes, targetKey } from '../model/preferenceChange'
 import type { PreferenceTarget } from '../model/types'
 import { useNotificationPreferences } from '../model/useNotificationPreferences'
-import { useToggleNotificationPreference } from '../model/useToggleNotificationPreference'
 import { useCollapsedGroups } from '../model/useCollapsedGroups'
-
-function errorKey(error: unknown): string {
-  if (error instanceof RateLimitError) return 'errors.rate_limit'
-  if (error instanceof NetworkError) return 'errors.network'
-  return 'errors.server'
-}
+import { usePreferenceSwitches } from '../model/usePreferenceSwitches'
 
 interface RowProps {
   label: string
@@ -95,30 +88,11 @@ interface Props {
 export function NotificationPreferencesSection({ api = notificationPreferencesApi }: Props) {
   const { t } = useTranslation('notificationPreferences')
   const { data, isError } = useNotificationPreferences(api)
-  const toggle = useToggleNotificationPreference(api)
+  const switches = usePreferenceSwitches(api)
   const groups = useCollapsedGroups()
-  const [pending, setPending] = useState<ReadonlySet<string>>(new Set())
-  const [error, setError] = useState<string | null>(null)
 
   if (!data && !isError) return null
   if (data && data.channels.length === 0) return null
-
-  async function change(target: PreferenceTarget, enabled: boolean) {
-    const key = targetKey(target)
-    setError(null)
-    setPending((current) => new Set(current).add(key))
-    try {
-      await toggle.mutateAsync({ target, enabled })
-    } catch (failure) {
-      setError(errorKey(failure))
-    } finally {
-      setPending((current) => {
-        const next = new Set(current)
-        next.delete(key)
-        return next
-      })
-    }
-  }
 
   const row = (target: PreferenceTarget, enabled: boolean, labelKey: string) => (
     <PreferenceRow
@@ -126,8 +100,8 @@ export function NotificationPreferencesSection({ api = notificationPreferencesAp
       label={t(`${labelKey}.label`)}
       description={t(`${labelKey}.description`)}
       checked={enabled}
-      disabled={pending.has(targetKey(target))}
-      onChange={(next) => void change(target, next)}
+      disabled={switches.isPending(target)}
+      onChange={(next) => void switches.change(target, next)}
     />
   )
 
@@ -142,7 +116,7 @@ export function NotificationPreferencesSection({ api = notificationPreferencesAp
           <Alert variant="error">{t('errors.load')}</Alert>
         ) : (
           <>
-            {error && <Alert variant="error">{t(error)}</Alert>}
+            {switches.failure && <Alert variant="error">{t(`errors.${switches.failure}`)}</Alert>}
             <div className="flex flex-col gap-3.5">
               <GroupTitle>{t('channels_title')}</GroupTitle>
               {data.channels.map(({ channel, enabled }) =>

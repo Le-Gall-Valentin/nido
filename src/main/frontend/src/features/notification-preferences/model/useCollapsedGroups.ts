@@ -6,13 +6,12 @@ export function useCollapsedGroups() {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(readCollapsedGroups)
 
   function toggle(group: string) {
-    setCollapsed((current) => {
-      const next = new Set(current)
-      if (next.has(group)) next.delete(group)
-      else next.add(group)
-      writeCollapsedGroups(next)
-      return next
-    })
+    const next = new Set(collapsed)
+    if (next.has(group)) next.delete(group)
+    else next.add(group)
+    // Written here, in the click: a state update must stay pure, React may run it twice.
+    writeCollapsedGroups(next)
+    setCollapsed(next)
   }
 
   return { isCollapsed: (group: string) => collapsed.has(group), toggle }
