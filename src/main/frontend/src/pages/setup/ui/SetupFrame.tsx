@@ -44,11 +44,20 @@ export function SetupFrame({ step, children }: { step: SetupStep | 'done'; child
           </div>
         </header>
         {step !== 'done' && (
-          <ol className="mb-6 flex gap-1.5" aria-label={t('progress', { current: index + 1, total: STEPS.length })}>
+          // One progress bar for assistive technologies, drawn as segments: "step 2 of 5", not five empty items.
+          <div
+            role="progressbar"
+            aria-valuemin={1}
+            aria-valuemax={STEPS.length}
+            aria-valuenow={index + 1}
+            aria-valuetext={t('progress', { current: index + 1, total: STEPS.length })}
+            aria-label={t('progress', { current: index + 1, total: STEPS.length })}
+            className="mb-6 flex gap-1.5"
+          >
             {STEPS.map((name, i) => (
-              <li key={name} className={`h-1 flex-1 rounded-full ${i <= index ? 'bg-accent' : 'bg-bg-3'}`} />
+              <span key={name} aria-hidden="true" className={`h-1 flex-1 rounded-full ${i <= index ? 'bg-accent' : 'bg-bg-3'}`} />
             ))}
-          </ol>
+          </div>
         )}
         <section className="rounded-2xl border border-border bg-bg-1 p-6 sm:p-8">{children}</section>
       </div>

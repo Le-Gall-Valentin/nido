@@ -80,6 +80,17 @@ describe('SetupPage', () => {
     expect(api.encryptionKey).toHaveBeenCalledTimes(1)
   })
 
+  it('tells assistive technologies how far along the setup is', async () => {
+    open()
+    await passTheCode()
+
+    const progress = await screen.findByRole('progressbar')
+    expect(progress.getAttribute('aria-valuenow')).toBe('2')
+    expect(progress.getAttribute('aria-valuemax')).toBe('5')
+    expect(progress.getAttribute('aria-valuetext')).toBe('progress:{"current":2,"total":5}')
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0)
+  })
+
   it('says when the code is not the one in the logs', async () => {
     open(fakeApi({ verifyCode: vi.fn().mockRejectedValue(new SetupCodeInvalidError()) }))
 
