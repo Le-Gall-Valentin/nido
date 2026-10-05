@@ -31,7 +31,7 @@ public class LoginHandler implements LoginUseCase {
     private final RefreshTokenIssuerPort refreshTokenPort;
     private final TotpChallengeStorePort totpChallengeStore;
     private final TotpStatusQueryPort totpStatusQuery;
-    private final int refreshTokenExpiryDays;
+    private final RefreshTokenConfigPort tokenConfig;
     private final String dummyHash;
 
     public LoginHandler(UserCredentialsPort userCredentialsPort,
@@ -49,7 +49,7 @@ public class LoginHandler implements LoginUseCase {
         this.refreshTokenPort = refreshTokenPort;
         this.totpChallengeStore = totpChallengeStore;
         this.totpStatusQuery = totpStatusQuery;
-        this.refreshTokenExpiryDays = tokenConfig.refreshTokenExpiryDays();
+        this.tokenConfig = tokenConfig;
         // Precomputed hash for constant-time dummy comparison — prevents timing-based account enumeration
         this.dummyHash = passwordHasher.hash("nido-timing-sentinel");
     }
@@ -87,7 +87,7 @@ public class LoginHandler implements LoginUseCase {
         log.info("Successful login for user: {}", creds.id());
         AuthTokens tokens = new AuthTokens(
             accessTokenPort.generate(creds),
-            refreshTokenPort.generate(creds, refreshTokenExpiryDays)
+            refreshTokenPort.generate(creds, tokenConfig.refreshTokenExpiryDays())
         );
         return new LoginResult.Success(tokens, creds);
     }

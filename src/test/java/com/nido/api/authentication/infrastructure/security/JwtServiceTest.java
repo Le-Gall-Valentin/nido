@@ -2,6 +2,7 @@ package com.nido.api.authentication.infrastructure.security;
 
 import com.nido.api.authentication.domain.model.UserCredentials;
 import com.nido.api.shared.model.Role;
+import com.nido.api.authentication.domain.port.out.SessionSettingsPort;
 import com.nido.api.infrastructure.config.NidoProperties;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -24,19 +25,26 @@ class JwtServiceTest {
 
     private static final String SECRET = "test-secret-key-that-is-at-least-32-chars-long!";
 
+    private static SessionSettingsPort sessions(int accessMinutes) {
+        return new SessionSettingsPort() {
+            @Override public int accessTokenMinutes() { return accessMinutes; }
+            @Override public boolean secureCookies() { return false; }
+        };
+    }
+
     @BeforeEach
     void setUp() {
         SecretKey key = JwtKeyFactory.from(SECRET);
         var properties = new NidoProperties(
-            new NidoProperties.JwtProperties(SECRET, 15, "nido", "nido"),
-            new NidoProperties.RefreshTokenProperties(30, "0 0 3 * * *"),
+            new NidoProperties.JwtProperties(SECRET, "nido", "nido"),
+            new NidoProperties.RefreshTokenProperties("0 0 3 * * *"),
             new NidoProperties.CookieProperties(false),
             null,
             new NidoProperties.CorsProperties(java.util.List.of()),
             new NidoProperties.EncryptionProperties("test-enc-secret"),
             null
         );
-        jwtService = new JwtService(key, properties);
+        jwtService = new JwtService(key, properties, sessions(15));
         validationService = new JwtValidationService(key, properties);
     }
 
@@ -136,15 +144,15 @@ class JwtServiceTest {
     void validateAndExtract_throwsOnExpiredToken() {
         SecretKey key = JwtKeyFactory.from(SECRET);
         var properties = new NidoProperties(
-            new NidoProperties.JwtProperties(SECRET, -1, "nido", "nido"),
-            new NidoProperties.RefreshTokenProperties(30, "0 0 3 * * *"),
+            new NidoProperties.JwtProperties(SECRET, "nido", "nido"),
+            new NidoProperties.RefreshTokenProperties("0 0 3 * * *"),
             new NidoProperties.CookieProperties(false),
             null,
             new NidoProperties.CorsProperties(java.util.List.of()),
             new NidoProperties.EncryptionProperties("test-enc-secret"),
             null
         );
-        JwtService expiredJwtService = new JwtService(key, properties);
+        JwtService expiredJwtService = new JwtService(key, properties, sessions(-1));
         JwtValidationService expiredValidationService = new JwtValidationService(key, properties);
         UserCredentials user = new UserCredentials(UUID.randomUUID(), "alice", "alice@test.com",
             "hash", true, Role.USER, Instant.now(), null);
@@ -159,8 +167,8 @@ class JwtServiceTest {
     @Test
     void jwtValidationService_validateAndExtract_returnsCorrectClaims() {
         var props = new NidoProperties(
-            new NidoProperties.JwtProperties(SECRET, 15, "nido", "nido"),
-            new NidoProperties.RefreshTokenProperties(30, "0 0 3 * * *"),
+            new NidoProperties.JwtProperties(SECRET, "nido", "nido"),
+            new NidoProperties.RefreshTokenProperties("0 0 3 * * *"),
             new NidoProperties.CookieProperties(false),
             null,
             new NidoProperties.CorsProperties(java.util.List.of()),

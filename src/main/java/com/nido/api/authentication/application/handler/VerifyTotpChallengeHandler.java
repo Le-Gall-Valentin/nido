@@ -29,7 +29,7 @@ public class VerifyTotpChallengeHandler implements VerifyTotpChallengeUseCase {
     private final UserCredentialsPort userCredentialsPort;
     private final AccessTokenPort accessTokenPort;
     private final RefreshTokenIssuerPort refreshTokenPort;
-    private final int refreshTokenExpiryDays;
+    private final RefreshTokenConfigPort tokenConfig;
 
     public VerifyTotpChallengeHandler(TotpChallengeStorePort challengeStore,
                                       MfaTotpVerifierPort mfaVerifier,
@@ -42,7 +42,7 @@ public class VerifyTotpChallengeHandler implements VerifyTotpChallengeUseCase {
         this.userCredentialsPort = userCredentialsPort;
         this.accessTokenPort = accessTokenPort;
         this.refreshTokenPort = refreshTokenPort;
-        this.refreshTokenExpiryDays = tokenConfig.refreshTokenExpiryDays();
+        this.tokenConfig = tokenConfig;
     }
 
     @Override
@@ -85,7 +85,7 @@ public class VerifyTotpChallengeHandler implements VerifyTotpChallengeUseCase {
 
         AuthTokens tokens = new AuthTokens(
             accessTokenPort.generate(creds),
-            refreshTokenPort.generate(creds, refreshTokenExpiryDays)
+            refreshTokenPort.generate(creds, tokenConfig.refreshTokenExpiryDays())
         );
         return new LoginResult.Success(tokens, creds);
     }

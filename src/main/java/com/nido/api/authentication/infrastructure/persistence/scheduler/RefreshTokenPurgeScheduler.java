@@ -19,14 +19,14 @@ public class RefreshTokenPurgeScheduler implements SchedulingConfigurer {
     private static final Logger log = LoggerFactory.getLogger(RefreshTokenPurgeScheduler.class);
 
     private final RefreshTokenMaintenancePort refreshTokenMaintenance;
-    private final int refreshTokenExpiryDays;
+    private final RefreshTokenConfigPort tokenConfig;
     private final String purgeCron;
 
     public RefreshTokenPurgeScheduler(RefreshTokenMaintenancePort refreshTokenMaintenance,
                                       RefreshTokenConfigPort tokenConfig,
                                       RefreshTokenSchedulePort schedulePort) {
         this.refreshTokenMaintenance = refreshTokenMaintenance;
-        this.refreshTokenExpiryDays = tokenConfig.refreshTokenExpiryDays();
+        this.tokenConfig = tokenConfig;
         this.purgeCron = schedulePort.refreshTokenPurgeCron();
     }
 
@@ -38,7 +38,7 @@ public class RefreshTokenPurgeScheduler implements SchedulingConfigurer {
     public void purgeExpiredTokens() {
         try {
             Instant now = Instant.now();
-            Instant cutoff = now.minus(refreshTokenExpiryDays, ChronoUnit.DAYS);
+            Instant cutoff = now.minus(tokenConfig.refreshTokenExpiryDays(), ChronoUnit.DAYS);
             int deleted = refreshTokenMaintenance.deleteExpiredAndRevoked(now, cutoff);
             log.info("Purged {} expired/revoked refresh tokens", deleted);
         } catch (Exception e) {

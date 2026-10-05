@@ -51,7 +51,7 @@ class RefreshTokenHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(tokenConfig.refreshTokenExpiryDays()).thenReturn(30);
+        lenient().when(tokenConfig.refreshTokenExpiryDays()).thenReturn(30);
         handler = new RefreshTokenHandler(
             refreshTokenRepository, revocationPort, userCredentialsPort, accessTokenPort, refreshTokenPort, tokenHashPort,
             accountLock, tokenConfig

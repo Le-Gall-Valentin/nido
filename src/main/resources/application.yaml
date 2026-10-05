@@ -93,12 +93,12 @@ springdoc:
 NIDO:
   jwt:
     secret: ${NIDO_JWT_SECRET:}
-    expiry-minutes: ${NIDO_JWT_EXPIRY_MINUTES:15}
   refresh-token:
-    expiry-days: ${NIDO_REFRESH_TOKEN_EXPIRY_DAYS:30}
     purge-cron: ${NIDO_REFRESH_TOKEN_PURGE_CRON:0 0 3 * * *}
   cookie:
-    secure: ${NIDO_COOKIE_SECURE:true}
+    # Empty: Secure when the public address is https (or unknown). Set to false only to get back in
+    # after an https address was saved while Nido was still reached over plain http.
+    secure: ${NIDO_COOKIE_SECURE:}
   seed:
     username: ${NIDO_SEED_USERNAME}
     email: ${NIDO_SEED_EMAIL}

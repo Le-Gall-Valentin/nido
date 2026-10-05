@@ -2,6 +2,7 @@ package com.nido.api.authentication.infrastructure.security;
 
 import com.nido.api.authentication.domain.model.UserCredentials;
 import com.nido.api.authentication.domain.port.out.AccessTokenPort;
+import com.nido.api.authentication.domain.port.out.SessionSettingsPort;
 import com.nido.api.infrastructure.config.NidoProperties;
 import io.jsonwebtoken.Jwts;
 import org.springframework.stereotype.Component;
@@ -14,15 +15,15 @@ import java.util.Date;
 public class JwtService implements AccessTokenPort {
 
     private final SecretKey key;
-    private final int expiryMinutes;
     private final String issuer;
     private final String audience;
+    private final SessionSettingsPort sessionSettings;
 
-    public JwtService(SecretKey jwtSecretKey, NidoProperties properties) {
+    public JwtService(SecretKey jwtSecretKey, NidoProperties properties, SessionSettingsPort sessionSettings) {
         this.key = jwtSecretKey;
-        this.expiryMinutes = properties.jwt().expiryMinutes();
         this.issuer = properties.jwt().issuer();
         this.audience = properties.jwt().audience();
+        this.sessionSettings = sessionSettings;
     }
 
     @Override
@@ -35,7 +36,7 @@ public class JwtService implements AccessTokenPort {
             .claim("role", user.role().name())
             .claim("email", user.email())
             .issuedAt(Date.from(now))
-            .expiration(Date.from(now.plusSeconds(expiryMinutes * 60L)))
+            .expiration(Date.from(now.plusSeconds(sessionSettings.accessTokenMinutes() * 60L)))
             .signWith(key)
             .compact();
     }

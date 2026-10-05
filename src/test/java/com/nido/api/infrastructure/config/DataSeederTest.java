@@ -89,8 +89,8 @@ class DataSeederTest {
 
     private NidoProperties properties(String username, String password) {
         return new NidoProperties(
-            new NidoProperties.JwtProperties("test-secret-key-at-least-32-chars", 15, "nido", "nido"),
-            new NidoProperties.RefreshTokenProperties(30, "0 0 3 * * *"),
+            new NidoProperties.JwtProperties("test-secret-key-at-least-32-chars", "nido", "nido"),
+            new NidoProperties.RefreshTokenProperties("0 0 3 * * *"),
             new NidoProperties.CookieProperties(false),
             new NidoProperties.SeedProperties(username, "user@test.com", password),
             new NidoProperties.CorsProperties(List.of()),

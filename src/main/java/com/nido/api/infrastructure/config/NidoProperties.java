@@ -13,7 +13,7 @@ import java.util.List;
 @Validated
 @ConfigurationProperties(prefix = "nido")
 public record NidoProperties(
-    @Valid JwtProperties jwt,
+    JwtProperties jwt,
     RefreshTokenProperties refreshToken,
     CookieProperties cookie,
     @Valid SeedProperties seed,
@@ -22,20 +22,21 @@ public record NidoProperties(
     SecurityProperties security
 ) {
 
+    /** The secret is optional: without one, a secret is generated in the data directory (JwtConfig). */
     public record JwtProperties(
         String secret,
-        @Positive @DefaultValue("15") int expiryMinutes,
         @DefaultValue("nido") String issuer,
         @DefaultValue("nido") String audience
     ) {}
 
+    /** The lifetimes are instance settings now; only the purge schedule stays here. */
     public record RefreshTokenProperties(
-        @DefaultValue("30") int expiryDays,
         @DefaultValue("0 0 3 * * *") String purgeCron
     ) {}
 
+    /** Null: decided by the public address (SessionSettingsAdapter). */
     public record CookieProperties(
-        @DefaultValue("true") boolean secure
+        Boolean secure
     ) {}
 
     public record SeedProperties(
