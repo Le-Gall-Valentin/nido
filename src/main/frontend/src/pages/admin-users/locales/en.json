@@ -22,7 +22,8 @@
     "btn_delete": "Delete account",
     "empty": "No users found.",
     "meta": "{{email}} · member since {{date}}",
-    "btn_resend": "Resend {{username}}'s invitation"
+    "btn_resend": "Resend {{username}}'s invitation",
+    "btn_new_link": "New invitation link for {{username}}"
   },
   "close": "Close",
   "search": {
@@ -107,6 +108,7 @@
     "cancel": "Cancel",
     "submit": "Deactivate",
     "error": {
+      "already_inactive": "This account is already deactivated.",
       "forbidden": "You are not allowed to deactivate this account.",
       "not_found": "User not found.",
       "server": "Something went wrong. Please try again.",

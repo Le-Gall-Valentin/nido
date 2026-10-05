@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { User, AdminUser } from '@/entities/user'
+import type { MailAvailability } from '@/features/password-reset'
 import { RolePill, UserAvatar } from '@/entities/user'
 import { formatUserDate } from '../lib/formatUserDate'
 import { UserStatusToggle } from './UserStatusToggle'
@@ -12,6 +13,8 @@ interface UsersTableProps extends UserRowCallbacks {
   users: AdminUser[]
   isLoading: boolean
   currentUser: User
+  /** Whether a new invitation link would be mailed or shown: the row's action is named after it. */
+  mail: MailAvailability
   /** Id of the user whose active/inactive toggle is currently in flight. */
   pendingToggleId?: string | null
 }
@@ -20,6 +23,7 @@ export function UsersTable({
   users,
   isLoading,
   currentUser,
+  mail,
   pendingToggleId,
   onToggleActive,
   onEditRole,
@@ -72,6 +76,7 @@ export function UsersTable({
                 key={user.id}
                 user={user}
                 currentUser={currentUser}
+                mail={mail}
                 youLabel={t('table.you')}
                 roleLabel={t(`user.role.${user.role}`, { ns: 'shell' })}
                 meta={t('table.meta', { email: user.email, date: formatUserDate(user.createdAt, i18n.language) })}
@@ -93,13 +98,14 @@ export function UsersTable({
 interface RowProps extends UserRowCallbacks {
   user: AdminUser
   currentUser: User
+  mail: MailAvailability
   youLabel: string
   roleLabel: string
   meta: string
   isToggling: boolean
 }
 
-function UserRow({ user, currentUser, youLabel, roleLabel, meta, isToggling, onToggleActive, onEditRole, onResetTotp, onDelete, onResendInvitation }: RowProps) {
+function UserRow({ user, currentUser, mail, youLabel, roleLabel, meta, isToggling, onToggleActive, onEditRole, onResetTotp, onDelete, onResendInvitation }: RowProps) {
   const isMe = user.id === currentUser.id
 
   return (
@@ -138,6 +144,7 @@ function UserRow({ user, currentUser, youLabel, roleLabel, meta, isToggling, onT
         <UserActions
           user={user}
           currentUser={currentUser}
+          mail={mail}
           onEditRole={onEditRole}
           onResetTotp={onResetTotp}
           onDelete={onDelete}

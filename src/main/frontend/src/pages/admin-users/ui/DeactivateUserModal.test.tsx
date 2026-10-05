@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ForbiddenError } from '@/shared/lib'
-import type { AdminUser } from '@/entities/user'
+import { AlreadyInactiveError, type AdminUser } from '@/entities/user'
 import { DeactivateUserModal } from './DeactivateUserModal'
 
 vi.mock('react-i18next', () => ({
@@ -35,6 +35,15 @@ describe('DeactivateUserModal', () => {
 
     expect(await screen.findByText('deactivate.error.forbidden')).not.toBeNull()
     expect(onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('says so when another administrator deactivated the account first', async () => {
+    render(<DeactivateUserModal user={CAROL} mail="available" onClose={vi.fn()}
+      onDeactivate={vi.fn().mockRejectedValue(new AlreadyInactiveError())} onSuccess={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'deactivate.submit' }))
+
+    expect(await screen.findByText('deactivate.error.already_inactive')).not.toBeNull()
   })
 
   it('cancels without deactivating', () => {

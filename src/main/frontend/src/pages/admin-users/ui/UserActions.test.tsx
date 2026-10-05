@@ -2,6 +2,7 @@ import { render, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { UserActions } from './UserActions'
 import type { User, AdminUser } from '@/entities/user'
+import type { MailAvailability } from '@/features/password-reset'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, string>) => (opts?.username ? `${k}:${opts.username}` : k) }),
@@ -14,9 +15,9 @@ function target(overrides: Partial<AdminUser> = {}): AdminUser {
   return { id: 'u1', username: 'alice', email: 'alice@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', totpEnabled: true, ...overrides }
 }
 
-function setup(currentUser: User, user: AdminUser) {
+function setup(currentUser: User, user: AdminUser, mail: MailAvailability = 'available') {
   const handlers = { onEditRole: vi.fn(), onResetTotp: vi.fn(), onDelete: vi.fn(), onResendInvitation: vi.fn() }
-  const result = render(<UserActions user={user} currentUser={currentUser} {...handlers} />)
+  const result = render(<UserActions user={user} currentUser={currentUser} mail={mail} {...handlers} />)
   return { ...result, ...handlers }
 }
 
@@ -64,7 +65,7 @@ describe('UserActions — handlers', () => {
 describe('UserActions — sizing', () => {
   it('uses larger touch targets for the md size', () => {
     const { getByLabelText } = render(
-      <UserActions user={target()} currentUser={SA} size="md" onEditRole={vi.fn()} onResetTotp={vi.fn()} onDelete={vi.fn()} onResendInvitation={vi.fn()} />
+      <UserActions user={target()} currentUser={SA} mail="available" size="md" onEditRole={vi.fn()} onResetTotp={vi.fn()} onDelete={vi.fn()} onResendInvitation={vi.fn()} />
     )
     expect(getByLabelText('table.btn_delete').className).toContain('size-9')
   })
@@ -75,6 +76,14 @@ describe('UserActions — sizing', () => {
 
     fireEvent.click(getByLabelText('table.btn_resend:alice'))
     expect(onResendInvitation).toHaveBeenCalledWith(invited)
+  })
+
+  it('offers a new invitation link instead when mail is not configured', () => {
+    const invited = target({ invitation: { status: 'pending', expiresAt: '2026-10-12T00:00:00Z' } })
+    const { getByLabelText, queryByLabelText } = setup(SA, invited, 'unavailable')
+
+    expect(getByLabelText('table.btn_new_link:alice')).not.toBeNull()
+    expect(queryByLabelText('table.btn_resend:alice')).toBeNull()
   })
 
   it('offers nothing to resend once the account joined', () => {

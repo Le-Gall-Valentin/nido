@@ -1,12 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import { Key, Pencil, Send, Trash2 } from 'lucide-react'
 import type { User, AdminUser } from '@/entities/user'
+import type { MailAvailability } from '@/features/password-reset'
 import { canDelete, canResetTotp, canEditRole, canResendInvitation } from '../lib/permissions'
 import { permissionDenialTitle } from './permissionDenialTitle'
 
 interface UserActionsProps {
   user: AdminUser
   currentUser: User
+  /** Without mail, a new invitation link is shown to be passed on rather than sent: the action says so. */
+  mail: MailAvailability
   onEditRole: (user: AdminUser) => void
   onResetTotp: (user: AdminUser) => void
   onDelete: (user: AdminUser) => void
@@ -22,6 +25,7 @@ const BUTTON_SIZE = { sm: 'size-7', md: 'size-9' } as const
 export function UserActions({
   user,
   currentUser,
+  mail,
   onEditRole,
   onResetTotp,
   onDelete,
@@ -38,7 +42,7 @@ export function UserActions({
   const resetLabel = t('table.btn_reset_totp', { username: user.username })
   const editLabel = t('table.btn_edit', { username: user.username })
   const deleteLabel = t('table.btn_delete')
-  const resendLabel = t('table.btn_resend', { username: user.username })
+  const resendLabel = t(mail === 'available' ? 'table.btn_resend' : 'table.btn_new_link', { username: user.username })
 
   return (
     <div className={`flex items-center gap-1 ${className}`}>

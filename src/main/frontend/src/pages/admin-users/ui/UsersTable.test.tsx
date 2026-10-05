@@ -2,6 +2,7 @@ import { render, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { UsersTable } from './UsersTable'
 import type { AdminUser , User } from '@/entities/user'
+import type { MailAvailability } from '@/features/password-reset'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, string>) => {
@@ -33,12 +34,13 @@ const DEFAULT_HANDLERS = {
   onResendInvitation: vi.fn(),
 }
 
-function setup(currentUser: User = SA, users: AdminUser[] = USERS, isLoading = false) {
+function setup(currentUser: User = SA, users: AdminUser[] = USERS, isLoading = false, mail: MailAvailability = 'available') {
   return render(
     <UsersTable
       users={users}
       isLoading={isLoading}
       currentUser={currentUser}
+      mail={mail}
       {...DEFAULT_HANDLERS}
     />
   )
@@ -146,5 +148,13 @@ describe('UsersTable — button permissions', () => {
     const saRow = rows[0] // SUPER_ADMIN
     const editBtn = saRow.querySelector('[aria-label^="table.btn_edit"]') as HTMLButtonElement
     expect(editBtn?.disabled).toBe(true)
+  })
+})
+
+describe('UsersTable — invitations', () => {
+  it('names the row action after how the new link will leave', () => {
+    const invited: AdminUser = { ...USERS[2], invitation: { status: 'pending', expiresAt: '2026-10-12T00:00:00Z' } }
+    const { getByLabelText } = setup(SA, [invited], false, 'unavailable')
+    expect(getByLabelText('table.btn_new_link:testuser')).not.toBeNull()
   })
 })

@@ -145,6 +145,7 @@ function AdminUsersPageContent() {
           users={users}
           isLoading={isPending}
           currentUser={currentUser}
+          mail={mail}
           pendingToggleId={pendingToggleId}
           onToggleActive={handleToggle}
           onEditRole={setEditTarget}
@@ -158,6 +159,7 @@ function AdminUsersPageContent() {
           users={users}
           isLoading={isPending}
           currentUser={currentUser}
+          mail={mail}
           pendingToggleId={pendingToggleId}
           onToggleActive={handleToggle}
           onEditRole={setEditTarget}

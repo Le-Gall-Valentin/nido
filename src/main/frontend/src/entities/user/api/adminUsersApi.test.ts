@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import axios, { type AxiosError } from 'axios'
-import { adminUsersApi, AlreadyJoinedError, ConflictError, RoleAlreadyAssignedError } from './adminUsersApi'
+import { adminUsersApi, AlreadyInactiveError, AlreadyJoinedError, ConflictError, RoleAlreadyAssignedError } from './adminUsersApi'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
 
@@ -195,6 +195,11 @@ describe('deactivateUser', () => {
   it('throws ServerError on 500', async () => {
     mock.post.mockRejectedValue(axiosErr(500))
     await expect(adminUsersApi.deactivateUser('u-1')).rejects.toBeInstanceOf(ServerError)
+  })
+
+  it('throws AlreadyInactiveError on 409: another administrator deactivated the account first', async () => {
+    mock.post.mockRejectedValue(axiosErr(409))
+    await expect(adminUsersApi.deactivateUser('u-1')).rejects.toBeInstanceOf(AlreadyInactiveError)
   })
 
   it('throws NetworkError on no response', async () => {

@@ -22,7 +22,8 @@
     "btn_delete": "Supprimer le compte",
     "empty": "Aucun utilisateur trouvé.",
     "meta": "{{email}} · membre depuis le {{date}}",
-    "btn_resend": "Renvoyer l'invitation de {{username}}"
+    "btn_resend": "Renvoyer l'invitation de {{username}}",
+    "btn_new_link": "Nouveau lien d'invitation pour {{username}}"
   },
   "close": "Fermer",
   "search": {
@@ -107,6 +108,7 @@
     "cancel": "Annuler",
     "submit": "Désactiver",
     "error": {
+      "already_inactive": "Ce compte est déjà désactivé.",
       "forbidden": "Vous n'avez pas les droits nécessaires pour désactiver ce compte.",
       "not_found": "Utilisateur introuvable.",
       "server": "Une erreur est survenue. Veuillez réessayer.",

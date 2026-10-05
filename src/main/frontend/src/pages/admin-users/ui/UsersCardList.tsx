@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { User, AdminUser } from '@/entities/user'
+import type { MailAvailability } from '@/features/password-reset'
 import { RolePill, UserAvatar } from '@/entities/user'
 import { formatUserDate } from '../lib/formatUserDate'
 import { UserStatusToggle } from './UserStatusToggle'
@@ -12,6 +13,8 @@ interface UsersCardListProps extends UserRowCallbacks {
   users: AdminUser[]
   isLoading: boolean
   currentUser: User
+  /** Whether a new invitation link would be mailed or shown: the row's action is named after it. */
+  mail: MailAvailability
   /** Id of the user whose active/inactive toggle is currently in flight. */
   pendingToggleId?: string | null
 }
@@ -21,6 +24,7 @@ export function UsersCardList({
   users,
   isLoading,
   currentUser,
+  mail,
   pendingToggleId,
   onToggleActive,
   onEditRole,
@@ -63,6 +67,7 @@ export function UsersCardList({
           <UserCard
             user={user}
             currentUser={currentUser}
+            mail={mail}
             youLabel={t('table.you')}
             roleLabel={t(`user.role.${user.role}`, { ns: 'shell' })}
             createdLabel={t('table.col_created')}
@@ -83,6 +88,7 @@ export function UsersCardList({
 interface UserCardProps extends UserRowCallbacks {
   user: AdminUser
   currentUser: User
+  mail: MailAvailability
   youLabel: string
   roleLabel: string
   createdLabel: string
@@ -93,6 +99,7 @@ interface UserCardProps extends UserRowCallbacks {
 function UserCard({
   user,
   currentUser,
+  mail,
   youLabel,
   roleLabel,
   createdLabel,
@@ -138,6 +145,7 @@ function UserCard({
         <UserActions
           user={user}
           currentUser={currentUser}
+          mail={mail}
           onEditRole={onEditRole}
           onResetTotp={onResetTotp}
           onDelete={onDelete}

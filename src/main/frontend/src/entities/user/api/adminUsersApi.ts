@@ -15,6 +15,10 @@ export class AlreadyJoinedError extends Error {
   constructor() { super('This account already chose its password'); this.name = 'AlreadyJoinedError' }
 }
 
+export class AlreadyInactiveError extends Error {
+  constructor() { super('This account is already deactivated'); this.name = 'AlreadyInactiveError' }
+}
+
 export class RoleAlreadyAssignedError extends Error {
   constructor() { super('User already has this role'); this.name = 'RoleAlreadyAssignedError' }
 }
@@ -81,7 +85,7 @@ export const adminUsersApi: IAdminUsersApi = {
     try {
       await client.post(`/users/${id}/deactivate`)
     } catch (error) {
-      handleError(error)
+      handleError(error, () => { throw new AlreadyInactiveError() })
     }
   },
 
