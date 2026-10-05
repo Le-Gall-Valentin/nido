@@ -621,6 +621,16 @@ class ArchRulesTest {
             new String[]{BASE + "mfa.application.port.in.."},
             Set.of("TotpRecordInitAdapter", "MfaAdminResetTotpAdapter", "IdentityTotpStatusAdapter", "TotpDeletionAdapter")),
 
+        // mfa.infra → identity.application.port.in
+        new CrossBcAppDep("mfa",
+            new String[]{BASE + "identity.application.port.in.."},
+            Set.of("TotpMailAdapter")),
+
+        // mfa.infra → mail.application.port.in
+        new CrossBcAppDep("mfa",
+            new String[]{BASE + "mail.application.port.in.."},
+            Set.of("TotpMailAdapter")),
+
         // identity.infra → space.application.port.in
         new CrossBcAppDep("identity",
             new String[]{BASE + "space.application.port.in.."},

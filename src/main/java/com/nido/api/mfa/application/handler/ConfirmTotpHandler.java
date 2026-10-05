@@ -1,5 +1,6 @@
 package com.nido.api.mfa.application.handler;
 
+import com.nido.api.mfa.domain.port.out.TotpMailPort;
 import com.nido.api.mfa.application.dto.ConfirmTotpCommand;
 import com.nido.api.mfa.application.port.in.ConfirmTotpUseCase;
 import com.nido.api.mfa.domain.model.MfaException;
@@ -23,19 +24,22 @@ public class ConfirmTotpHandler implements ConfirmTotpUseCase {
     private final TotpCodeReplayPort codeReplay;
     private final TotpConfirmAttemptPort confirmAttemptPort;
     private final PendingTotpEnrolmentPort pendingEnrolment;
+    private final TotpMailPort mails;
 
     public ConfirmTotpHandler(UserTotpQueryPort userTotpQuery,
                               TotpCodeValidatorPort codeValidator,
                               UserTotpLifecyclePort userTotpLifecyclePort,
                               TotpCodeReplayPort codeReplay,
                               TotpConfirmAttemptPort confirmAttemptPort,
-                              PendingTotpEnrolmentPort pendingEnrolment) {
+                              PendingTotpEnrolmentPort pendingEnrolment,
+                              TotpMailPort mails) {
         this.userTotpQuery = userTotpQuery;
         this.codeValidator = codeValidator;
         this.userTotpLifecyclePort = userTotpLifecyclePort;
         this.codeReplay = codeReplay;
         this.confirmAttemptPort = confirmAttemptPort;
         this.pendingEnrolment = pendingEnrolment;
+        this.mails = mails;
     }
 
     @Override
@@ -70,5 +74,6 @@ public class ConfirmTotpHandler implements ConfirmTotpUseCase {
         // the account: the secret is written where it will survive, and the in-flight copy goes.
         userTotpLifecyclePort.enableTotp(command.userId(), secret);
         pendingEnrolment.discard(command.userId());
+        mails.totpEnabled(command.userId());
     }
 }
