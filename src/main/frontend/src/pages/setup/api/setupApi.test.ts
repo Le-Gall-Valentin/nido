@@ -1,6 +1,7 @@
 import { AxiosError, AxiosHeaders } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { client, SettingsInvalidError } from '@/shared/api'
+import { client } from '@/shared/api'
+import { SettingsInvalidError } from '@/shared/lib'
 import { KeyNotSavedError, SetupAlreadyDoneError, SetupCodeInvalidError } from '../model/errors'
 import { setupApi } from './setupApi'
 

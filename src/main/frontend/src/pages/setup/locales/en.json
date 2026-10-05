@@ -1,1 +1,87 @@
-{}
+{
+  "language": {
+    "label": "Language"
+  },
+  "progress": "Step {{current}} of {{total}}",
+  "action": {
+    "next": "Continue",
+    "back": "Back",
+    "later": "Later",
+    "test": "Send a test email",
+    "copy": "Copy",
+    "copied": "Copied",
+    "download": "Download",
+    "finish": "Finish the installation",
+    "reload": "Reload the page"
+  },
+  "code": {
+    "title": "Welcome to Nido",
+    "lead": "To prove you are the one installing Nido, enter the setup code written in the server's logs. On the machine, run:",
+    "field": "Setup code"
+  },
+  "admin": {
+    "title": "Your administrator account",
+    "lead": "It can change every setting and invite the other members.",
+    "username": "Username",
+    "email": "Email address",
+    "password": "Password",
+    "confirm": "Confirm the password",
+    "username_too_short": "A username is at least 3 characters.",
+    "username_too_long": "A username is at most 50 characters.",
+    "username_has_at": "A username holds no @.",
+    "email_invalid": "Enter a valid email address.",
+    "password_too_short": "A password is at least 8 characters.",
+    "password_too_long": "This password is too long.",
+    "password_weak": "Use at least one capital letter, one digit and one special character.",
+    "confirm_mismatch": "The two passwords are not the same."
+  },
+  "address": {
+    "title": "Nido's address",
+    "lead": "The address members will type to open Nido. The links in emails start with it.",
+    "field": "Public address",
+    "invalid": "Enter a full address, such as https://nido.example.com.",
+    "http_warning": "Without HTTPS, passwords and links travel in clear on the network. The README explains how to turn HTTPS on.",
+    "locked": "This address is set by the server's configuration (NIDO_APP_URL)."
+  },
+  "mail": {
+    "title": "Email, if you wish",
+    "lead": "With a sending server, Nido can send forgotten-password links, invitations and notifications. You can also do this later from the settings.",
+    "locked": "Email is set by the server's configuration.",
+    "host": "SMTP server",
+    "port": "Port",
+    "security": "Security",
+    "security_starttls": "STARTTLS (port 587)",
+    "security_tls": "TLS (port 465)",
+    "security_none": "None",
+    "username": "SMTP username",
+    "password": "SMTP password",
+    "from": "Sender",
+    "from_placeholder": "Nido <nido@example.com>",
+    "test_sent": "Test email sent to {{recipient}}. Check the inbox, and the spam folder."
+  },
+  "key": {
+    "title": "Your encryption key",
+    "lead": "Nido made this key to encrypt two-factor authentication, finances and the calendar. Without it, that data is lost: keep it in a password manager, away from your database backups. It will never be shown again.",
+    "provided": "Your encryption key comes from the server's configuration: keep it safe, as you already do.",
+    "saved": "I have put this key somewhere safe",
+    "file": {
+      "title": "Nido encryption key",
+      "date": "Created on {{date}}",
+      "url": "Installation: {{url}}",
+      "protects": "It encrypts two-factor authentication, finances and the calendar. Without it, that data is lost.",
+      "where": "Keep it in a password manager, away from your database backups."
+    }
+  },
+  "done": {
+    "title": "Nido is ready",
+    "lead": "Open Nido at its address to sign in:"
+  },
+  "errors": {
+    "code_invalid": "This is not the code written in the logs. Check it: it changes at every restart.",
+    "already_done": "Nido is already set up.",
+    "too_many": "Too many attempts. Wait a minute before trying again.",
+    "network": "The server does not answer. Check that it is still running.",
+    "server": "Something went wrong on the server. Try again.",
+    "key_not_saved": "Confirm that the key is somewhere safe."
+  }
+}

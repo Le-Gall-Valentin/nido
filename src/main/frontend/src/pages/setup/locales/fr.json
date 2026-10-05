@@ -1,1 +1,87 @@
-{}
+{
+  "language": {
+    "label": "Langue"
+  },
+  "progress": "Étape {{current}} sur {{total}}",
+  "action": {
+    "next": "Continuer",
+    "back": "Retour",
+    "later": "Plus tard",
+    "test": "Envoyer un mail de test",
+    "copy": "Copier",
+    "copied": "Copiée",
+    "download": "Télécharger",
+    "finish": "Terminer l'installation",
+    "reload": "Recharger la page"
+  },
+  "code": {
+    "title": "Bienvenue dans Nido",
+    "lead": "Pour prouver que c'est bien vous qui installez Nido, saisissez le code d'installation écrit dans les journaux du serveur. Sur la machine, lancez :",
+    "field": "Code d'installation"
+  },
+  "admin": {
+    "title": "Votre compte administrateur",
+    "lead": "Il pourra tout régler et inviter les autres membres.",
+    "username": "Identifiant",
+    "email": "Adresse mail",
+    "password": "Mot de passe",
+    "confirm": "Confirmez le mot de passe",
+    "username_too_short": "L'identifiant fait au moins 3 caractères.",
+    "username_too_long": "L'identifiant fait au plus 50 caractères.",
+    "username_has_at": "L'identifiant ne contient pas de @.",
+    "email_invalid": "Saisissez une adresse mail valide.",
+    "password_too_short": "Le mot de passe fait au moins 8 caractères.",
+    "password_too_long": "Le mot de passe est trop long.",
+    "password_weak": "Il faut au moins une majuscule, un chiffre et un caractère spécial.",
+    "confirm_mismatch": "Les deux mots de passe ne sont pas identiques."
+  },
+  "address": {
+    "title": "L'adresse de Nido",
+    "lead": "L'adresse que les membres taperont pour ouvrir Nido. Les liens des mails commencent par elle.",
+    "field": "Adresse publique",
+    "invalid": "Saisissez une adresse complète, comme https://nido.example.com.",
+    "http_warning": "Sans HTTPS, les mots de passe et les liens circulent en clair sur le réseau. Le fichier README explique comment activer HTTPS.",
+    "locked": "Cette adresse est définie par la configuration du serveur (NIDO_APP_URL)."
+  },
+  "mail": {
+    "title": "Le mail, si vous voulez",
+    "lead": "Avec un serveur d'envoi, Nido peut envoyer les liens de mot de passe oublié, les invitations et les notifications. Vous pourrez le faire plus tard depuis les réglages.",
+    "locked": "Le mail est défini par la configuration du serveur.",
+    "host": "Serveur SMTP",
+    "port": "Port",
+    "security": "Sécurité",
+    "security_starttls": "STARTTLS (port 587)",
+    "security_tls": "TLS (port 465)",
+    "security_none": "Aucune",
+    "username": "Identifiant SMTP",
+    "password": "Mot de passe SMTP",
+    "from": "Expéditeur",
+    "from_placeholder": "Nido <nido@example.com>",
+    "test_sent": "Mail de test envoyé à {{recipient}}. Vérifiez la boîte de réception, et les indésirables."
+  },
+  "key": {
+    "title": "Votre clé de chiffrement",
+    "lead": "Nido a créé cette clé pour chiffrer la double authentification, les finances et le calendrier. Sans elle, ces données sont perdues : rangez-la dans un gestionnaire de mots de passe, à l'écart de vos sauvegardes de la base. Elle ne sera plus jamais affichée.",
+    "provided": "Votre clé de chiffrement vient de la configuration du serveur : conservez-la précieusement, comme vous le faites déjà.",
+    "saved": "J'ai rangé cette clé en lieu sûr",
+    "file": {
+      "title": "Clé de chiffrement de Nido",
+      "date": "Créée le {{date}}",
+      "url": "Installation : {{url}}",
+      "protects": "Elle chiffre la double authentification, les finances et le calendrier. Sans elle, ces données sont perdues.",
+      "where": "Rangez-la dans un gestionnaire de mots de passe, à l'écart des sauvegardes de la base de données."
+    }
+  },
+  "done": {
+    "title": "Nido est prêt",
+    "lead": "Ouvrez Nido à son adresse pour vous connecter :"
+  },
+  "errors": {
+    "code_invalid": "Ce n'est pas le code écrit dans les journaux. Vérifiez-le : il change à chaque redémarrage.",
+    "already_done": "Nido est déjà installé.",
+    "too_many": "Trop d'essais. Attendez une minute avant de réessayer.",
+    "network": "Le serveur ne répond pas. Vérifiez qu'il tourne toujours.",
+    "server": "Une erreur est survenue sur le serveur. Réessayez.",
+    "key_not_saved": "Confirmez que la clé est rangée en lieu sûr."
+  }
+}

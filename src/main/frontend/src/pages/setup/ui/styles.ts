@@ -1,0 +1,5 @@
+export const TITLE_CLASS = 'mb-2 text-[24px] font-semibold tracking-tight text-fg-0'
+export const LEAD_CLASS = 'mb-6 text-sm leading-relaxed text-fg-2'
+export const PRIMARY_CLASS = 'w-full rounded-[11px] border-transparent py-3 text-[15px] font-semibold'
+export const ACTIONS_CLASS = 'mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between'
+export const FIELD_ERROR_CLASS = 'mt-1 text-[12.5px] text-status-red'
