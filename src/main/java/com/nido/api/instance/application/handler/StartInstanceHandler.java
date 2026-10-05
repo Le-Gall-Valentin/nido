@@ -12,6 +12,7 @@ import com.nido.api.instance.domain.model.SettingProblem;
 import com.nido.api.instance.domain.model.SettingRules;
 import com.nido.api.instance.domain.model.SettingsResolution;
 import com.nido.api.instance.domain.model.SetupCode;
+import com.nido.api.instance.domain.port.out.AccountRulesPort;
 import com.nido.api.instance.domain.port.out.EnvironmentSettingsPort;
 import com.nido.api.instance.domain.port.out.InitialAdminPort;
 import com.nido.api.instance.domain.port.out.InstanceStatePort;
@@ -34,7 +35,6 @@ import java.util.Optional;
 public class StartInstanceHandler implements StartInstanceUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(StartInstanceHandler.class);
-    private static final int MIN_SEED_PASSWORD_LENGTH = 8;
 
     private final EnvironmentSettingsPort environment;
     private final SettingsStorePort store;
@@ -43,11 +43,12 @@ public class StartInstanceHandler implements StartInstanceUseCase {
     private final InitialAdminPort initialAdmin;
     private final SetupCodePort setupCodes;
     private final KeyFilePort keyFile;
+    private final AccountRulesPort accountRules;
     private final Clock clock;
 
     public StartInstanceHandler(EnvironmentSettingsPort environment, SettingsStorePort store, MailSettingsCheckPort mail,
                                 InstanceStatePort instanceState, InitialAdminPort initialAdmin, SetupCodePort setupCodes,
-                                KeyFilePort keyFile, Clock clock) {
+                                KeyFilePort keyFile, AccountRulesPort accountRules, Clock clock) {
         this.environment = environment;
         this.store = store;
         this.mail = mail;
@@ -55,6 +56,7 @@ public class StartInstanceHandler implements StartInstanceUseCase {
         this.initialAdmin = initialAdmin;
         this.setupCodes = setupCodes;
         this.keyFile = keyFile;
+        this.accountRules = accountRules;
         this.clock = clock;
     }
 
@@ -82,9 +84,17 @@ public class StartInstanceHandler implements StartInstanceUseCase {
         return Optional.of(code);
     }
 
+    /**
+     * Held to the rules of the setup screen, which this account skips — checked here, once the seed is
+     * known to be used: an installation already set up ignores its old NIDO_SEED_*, whatever they say.
+     */
     private void seedFromEnvironment(EnvironmentSeed seed, InstanceState state) {
-        if (seed.password().length() < MIN_SEED_PASSWORD_LENGTH) {
-            throw new IllegalStateException("NIDO_SEED_PASSWORD must be at least 8 characters");
+        List<String> problems = new ArrayList<>();
+        accountRules.emailProblem(seed.email().strip()).ifPresent(problem -> problems.add("NIDO_SEED_EMAIL " + problem));
+        accountRules.passwordProblem(seed.password()).ifPresent(problem -> problems.add("NIDO_SEED_PASSWORD " + problem));
+        if (!problems.isEmpty()) {
+            throw new IllegalStateException("The first administrator in the environment is not valid, so Nido does not start: "
+                + String.join("; ", problems));
         }
         instanceState.markSetupCompleted(clock.instant());
         try {

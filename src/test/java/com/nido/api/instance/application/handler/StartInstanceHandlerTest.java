@@ -27,8 +27,9 @@ class StartInstanceHandlerTest {
         @Override public String create() { return "k"; }
         @Override public String location() { return "/data/secrets/encryption-key"; }
     };
+    private final InstanceFakes.FakeAccountRules rules = new InstanceFakes.FakeAccountRules();
     private final StartInstanceHandler handler = new StartInstanceHandler(() -> environment, store, mail, state, admins,
-        codes, keyFile, Clock.systemUTC());
+        codes, keyFile, rules, Clock.systemUTC());
 
     private static final EnvironmentSeed NO_SEED = new EnvironmentSeed(null, null, null);
 
@@ -64,10 +65,24 @@ class StartInstanceHandlerTest {
     }
 
     @Test
-    void a_seed_password_shorter_than_eight_characters_stops_the_start() {
-        assertThatThrownBy(() -> handler.start(new EnvironmentSeed("admin", "admin@example.fr", "short")))
+    void a_seed_the_setup_screen_would_refuse_stops_the_start_naming_the_variables_not_the_values() {
+        rules.emailProblem = "must be a well-formed email address";
+        rules.passwordProblem = "is not a strong enough password";
+
+        assertThatThrownBy(() -> handler.start(new EnvironmentSeed("admin", "nope", "password")))
             .isInstanceOf(IllegalStateException.class)
-            .hasMessageContaining("NIDO_SEED_PASSWORD");
+            .hasMessageContaining("NIDO_SEED_EMAIL")
+            .hasMessageContaining("NIDO_SEED_PASSWORD")
+            .message().doesNotContain("nope").doesNotContain(": password");
+        assertThat(admins.created).isEmpty();
+    }
+
+    @Test
+    void an_installation_already_set_up_starts_whatever_its_old_seed_says() {
+        state.setupCompleted = true;
+        rules.passwordProblem = "is not a strong enough password";
+
+        assertThat(handler.start(new EnvironmentSeed("admin", "admin@example.fr", "changeme"))).isEmpty();
     }
 
     @Test

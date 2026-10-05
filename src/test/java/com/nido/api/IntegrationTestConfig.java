@@ -19,7 +19,7 @@ import java.lang.annotation.Target;
     "nido.cookie.secure=false",
     "nido.seed.username=it-admin",
     "nido.seed.email=it-admin@test.local",
-    "nido.seed.password=integration-test-seed-password",
+    "nido.seed.password=Integration-Test-Seed-1",
     "nido.cors.allowed-origins=",
     "nido.encryption.secret=integration-test-encryption-secret-32chars!",
     "spring.jpa.hibernate.ddl-auto=none"

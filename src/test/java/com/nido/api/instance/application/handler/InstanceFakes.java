@@ -8,6 +8,7 @@ import com.nido.api.instance.domain.model.MailTestFailure;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.instance.domain.model.SettingProblem;
 import com.nido.api.instance.domain.model.SetupCode;
+import com.nido.api.instance.domain.port.out.AccountRulesPort;
 import com.nido.api.instance.domain.port.out.InitialAdminPort;
 import com.nido.api.instance.domain.port.out.InstanceStatePort;
 import com.nido.api.instance.domain.port.out.MailSettingsCheckPort;
@@ -53,6 +54,15 @@ final class InstanceFakes {
         MailDraft tried;
         @Override public List<SettingProblem> problems(MailDraft draft) { return problems; }
         @Override public Optional<MailTestFailure> sendTest(MailDraft draft, String recipient, Locale locale) { tried = draft; return failure; }
+    }
+
+    /** Every address and password hold, unless a test says what is wrong with them. */
+    static final class FakeAccountRules implements AccountRulesPort {
+        String emailProblem;
+        String passwordProblem;
+
+        @Override public Optional<String> emailProblem(String email) { return Optional.ofNullable(emailProblem); }
+        @Override public Optional<String> passwordProblem(String password) { return Optional.ofNullable(passwordProblem); }
     }
 
     static final class MemoryCodes implements SetupCodePort {

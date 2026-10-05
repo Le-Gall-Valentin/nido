@@ -108,7 +108,7 @@ And the ones only the environment sets, all optional:
 | Variable | What |
 |---|---|
 | `NIDO_JWT_SECRET`, `NIDO_ENCRYPTION_SECRET` | Nido's secrets, generated in `/data` when absent |
-| `NIDO_SEED_USERNAME`, `NIDO_SEED_EMAIL`, `NIDO_SEED_PASSWORD` | The first administrator, without the setup screen (scripted installs) |
+| `NIDO_SEED_USERNAME`, `NIDO_SEED_EMAIL`, `NIDO_SEED_PASSWORD` | The first administrator, without the setup screen (scripted installs) — held to its rules |
 | `NIDO_COOKIE_SECURE` | Forces the cookies' Secure flag; by default it follows the address (`https` or not) |
 | `NIDO_DATA_DIR` | Where Nido keeps what it generates (`/data` in the image) |
 | `NIDO_DB_URL`, `NIDO_DB_USER`, `NIDO_DB_PASSWORD`, `NIDO_REDIS_URL` | Database and Redis — set by `compose.yaml` |
