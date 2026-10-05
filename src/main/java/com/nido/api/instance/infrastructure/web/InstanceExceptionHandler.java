@@ -56,6 +56,9 @@ public class InstanceExceptionHandler {
         }
         if (e instanceof InstanceException.MailTestFailed failed) {
             problem.setProperty("reason", failed.reason());
+            if (failed.serverReply() != null) {
+                problem.setProperty("server_reply", failed.serverReply());
+            }
         }
         if (e instanceof InstanceException.SettingLockedByEnvironment locked) {
             problem.setProperty("setting", locked.key().code());
