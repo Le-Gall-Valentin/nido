@@ -5,6 +5,7 @@ import { formatUserDate } from '../lib/formatUserDate'
 import { UserStatusToggle } from './UserStatusToggle'
 import { UserActions } from './UserActions'
 import { TotpBadge } from './TotpBadge'
+import { InvitationBadge } from './InvitationBadge'
 import type { UserRowCallbacks } from './userRowCallbacks'
 
 interface UsersCardListProps extends UserRowCallbacks {
@@ -25,6 +26,7 @@ export function UsersCardList({
   onEditRole,
   onResetTotp,
   onDelete,
+  onResendInvitation,
 }: UsersCardListProps) {
   const { t, i18n } = useTranslation('adminUsers')
 
@@ -70,6 +72,7 @@ export function UsersCardList({
             onEditRole={onEditRole}
             onResetTotp={onResetTotp}
             onDelete={onDelete}
+            onResendInvitation={onResendInvitation}
           />
         </li>
       ))}
@@ -99,6 +102,7 @@ function UserCard({
   onEditRole,
   onResetTotp,
   onDelete,
+  onResendInvitation,
 }: UserCardProps) {
   const isMe = user.id === currentUser.id
 
@@ -122,6 +126,7 @@ function UserCard({
       {/* Status / 2FA / created */}
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-bg-3 pt-3">
         <UserStatusToggle user={user} currentUser={currentUser} onToggle={onToggleActive} isPending={isToggling} />
+        {user.invitation && <InvitationBadge invitation={user.invitation} />}
         <TotpBadge enabled={user.totpEnabled} />
         <span className="text-[12.5px] text-fg-3">
           {createdLabel} · {createdDate}
@@ -136,6 +141,7 @@ function UserCard({
           onEditRole={onEditRole}
           onResetTotp={onResetTotp}
           onDelete={onDelete}
+          onResendInvitation={onResendInvitation}
           size="md"
         />
       </div>

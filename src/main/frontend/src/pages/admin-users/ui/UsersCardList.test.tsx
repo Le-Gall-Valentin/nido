@@ -22,6 +22,7 @@ const HANDLERS = {
   onEditRole: vi.fn(),
   onResetTotp: vi.fn(),
   onDelete: vi.fn(),
+  onResendInvitation: vi.fn(),
 }
 
 function setup(users: AdminUser[] = USERS, isLoading = false, currentUser: User = SA) {

@@ -11,13 +11,16 @@ import { adminUsersApi , AdminUsersApiProvider , useUsers ,
   useDeleteUser,
   useResetTotp,
   useToggleUserActive,
+  useResendInvitation,
 } from '@/entities/user'
+import { useMailAvailability } from '@/features/password-reset'
 import { UsersTable } from './UsersTable'
 import { UsersCardList } from './UsersCardList'
 import { CreateUserModal } from './CreateUserModal'
 import { EditUserRoleModal } from './EditUserRoleModal'
 import { DeleteUserModal } from './DeleteUserModal'
 import { ResetTotpModal } from './ResetTotpModal'
+import { ResendInvitationModal } from './ResendInvitationModal'
 import { ProtectionRulesPanel } from './ProtectionRulesPanel'
 
 interface AdminUsersPageProps {
@@ -50,12 +53,15 @@ function AdminUsersPageContent() {
   const [editTarget, setEditTarget] = useState<AdminUser | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null)
   const [resetTotpTarget, setResetTotpTarget] = useState<AdminUser | null>(null)
+  const [resendTarget, setResendTarget] = useState<AdminUser | null>(null)
 
   const createUser = useCreateUser()
   const updateUserRole = useUpdateUserRole()
   const deleteUser = useDeleteUser()
   const resetTotp = useResetTotp()
   const toggleActive = useToggleUserActive(page, search)
+  const resendInvitation = useResendInvitation()
+  const mail = useMailAvailability()
 
   // Settled value only: the field below keeps the keystrokes, so this runs once the typing stops.
   const handleSearch = useCallback((value: string) => {
@@ -137,6 +143,7 @@ function AdminUsersPageContent() {
           onEditRole={setEditTarget}
           onResetTotp={setResetTotpTarget}
           onDelete={setDeleteTarget}
+          onResendInvitation={setResendTarget}
         />
       </div>
       <div className="md:hidden">
@@ -149,6 +156,7 @@ function AdminUsersPageContent() {
           onEditRole={setEditTarget}
           onResetTotp={setResetTotpTarget}
           onDelete={setDeleteTarget}
+          onResendInvitation={setResendTarget}
         />
       </div>
 
@@ -172,7 +180,7 @@ function AdminUsersPageContent() {
         <CreateUserModal
           caller={currentUser}
           onClose={() => setCreateOpen(false)}
-          onCreate={(u, e, _p, r) => createUser.mutateAsync({ username: u, email: e, role: r }).then(() => undefined)}
+          onCreate={(u, e, r) => createUser.mutateAsync({ username: u, email: e, role: r })}
           onSuccess={() => { setPage(0); setCreateOpen(false) }}
         />
       )}
@@ -202,6 +210,15 @@ function AdminUsersPageContent() {
           onClose={() => setResetTotpTarget(null)}
           onReset={resetTotp.mutateAsync}
           onSuccess={() => setResetTotpTarget(null)}
+        />
+      )}
+
+      {resendTarget && (
+        <ResendInvitationModal
+          user={resendTarget}
+          mail={mail}
+          onClose={() => setResendTarget(null)}
+          onResend={resendInvitation.mutateAsync}
         />
       )}
     </div>

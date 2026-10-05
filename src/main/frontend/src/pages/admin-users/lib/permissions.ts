@@ -15,6 +15,7 @@ export type PermissionDenialReason =
   | 'totp_not_enabled'
   | 'target_inactive'
   | 'no_assignable_role'
+  | 'target_inactive_invitation'
 
 export type PermissionResult =
   | { ok: true }
@@ -88,5 +89,13 @@ export function canEditRole(caller: User, target: AdminUser): PermissionResult {
   // target's current one. An ADMIN may only assign USER, so a USER target is a
   // dead end — mirror of UpdateUserHandler rejecting a no-op role change.
   if (!assignableRoles(caller.role).some(r => r !== target.role)) return deny('no_assignable_role')
+  return OK
+}
+
+/** ResendInvitationHandler: self → hierarchy → active; offered only for an account that has not joined. */
+export function canResendInvitation(caller: User, target: AdminUser): PermissionResult {
+  if (caller.id === target.id) return deny('self')
+  if (!canManage(caller.role, target.role)) return deny(hierarchyDenialReason(caller, target))
+  if (!target.isActive) return deny('target_inactive_invitation')
   return OK
 }

@@ -29,6 +29,8 @@ vi.mock('@/features/auth', () => ({
   useAuth: (...args: unknown[]) => mockUseAuth(...args),
 }))
 
+vi.mock('@/features/password-reset', () => ({ useMailAvailability: () => 'available' }))
+
 // The concrete api is injected through the slice's DIP context, so the fake is
 // provided via AdminUsersApiProvider rather than module-mocked.
 
@@ -39,6 +41,7 @@ vi.mock('./UsersTable', () => ({
     onDelete: (u: AdminUser) => void
     onResetTotp: (u: AdminUser) => void
     onToggleActive: (u: AdminUser) => void
+    onResendInvitation: (u: AdminUser) => void
   }) => {
     if (props.isLoading) return <div data-testid="skeleton" />
     return (
@@ -47,6 +50,7 @@ vi.mock('./UsersTable', () => ({
         <button data-testid="trigger-delete" onClick={() => props.onDelete(MOCK_USER)}>delete</button>
         <button data-testid="trigger-totp" onClick={() => props.onResetTotp(MOCK_USER)}>totp</button>
         <button data-testid="trigger-toggle" onClick={() => props.onToggleActive(MOCK_USER)}>toggle</button>
+        <button data-testid="trigger-resend" onClick={() => props.onResendInvitation(MOCK_USER)}>resend</button>
       </div>
     )
   },
@@ -78,6 +82,12 @@ vi.mock('./DeleteUserModal', () => ({
       <button onClick={onClose}>close-delete</button>
       <button onClick={onSuccess}>success-delete</button>
     </div>
+  ),
+}))
+
+vi.mock('./ResendInvitationModal', () => ({
+  ResendInvitationModal: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="resend-modal"><button onClick={onClose}>close-resend</button></div>
   ),
 }))
 
@@ -117,7 +127,8 @@ beforeEach(() => {
   mockApi.deleteUser.mockResolvedValue(undefined)
   mockApi.resetTotp.mockResolvedValue(undefined)
   mockApi.updateUserRole.mockResolvedValue(undefined)
-  mockApi.createUser.mockResolvedValue(undefined)
+  mockApi.createUser.mockResolvedValue({ delivery: 'mail' })
+  mockApi.resendInvitation.mockResolvedValue({ delivery: 'mail' })
 })
 
 describe('AdminUsersPage — loading', () => {
@@ -193,6 +204,15 @@ describe('AdminUsersPage — reset totp modal', () => {
     await findByTestId('users-table')
     fireEvent.click(document.querySelector('[data-testid="trigger-totp"]')!)
     expect(await findByTestId('totp-modal')).toBeDefined()
+  })
+})
+
+describe('AdminUsersPage — resend invitation modal', () => {
+  it('opens ResendInvitationModal when resend triggered', async () => {
+    const { findByTestId } = setup()
+    await findByTestId('users-table')
+    fireEvent.click(document.querySelector('[data-testid="trigger-resend"]')!)
+    expect(await findByTestId('resend-modal')).not.toBeNull()
   })
 })
 

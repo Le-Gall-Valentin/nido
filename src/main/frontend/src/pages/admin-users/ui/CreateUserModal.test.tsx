@@ -1,9 +1,12 @@
 import { render, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { ComponentProps } from 'react'
 import { CreateUserModal } from './CreateUserModal'
 import { NetworkError, ServerError } from '@/shared/lib'
 import { ConflictError } from '@/entities/user'
 import type { User } from '@/entities/user'
+
+type CreateUserModalProps = ComponentProps<typeof CreateUserModal>
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -29,28 +32,29 @@ vi.mock('@/shared/ui', async (importOriginal) => ({
   ),
 }))
 
+vi.mock('./InvitationResult', () => ({
+  InvitationResult: ({ delivery }: { delivery: { delivery: string } }) => <div data-testid="invitation-result">{delivery.delivery}</div>,
+}))
+
 const SUPER_ADMIN_CALLER: User = {
   id: 'sa', username: 'sa', email: 'sa@test.com',
   role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
 }
 const ADMIN_CALLER: User = { ...SUPER_ADMIN_CALLER, id: 'a1', username: 'admin', role: 'ADMIN' }
 
-const VALID_PASSWORD = 'P@ssword1!'
-
-function setup(overrides: { onCreate?: () => Promise<void>; caller?: User } = {}) {
+function setup(overrides: { onCreate?: CreateUserModalProps['onCreate']; caller?: User } = {}) {
   const onClose = vi.fn()
   const onSuccess = vi.fn()
-  const onCreate = overrides.onCreate ?? vi.fn().mockResolvedValue(undefined)
+  const onCreate = overrides.onCreate ?? vi.fn<CreateUserModalProps['onCreate']>().mockResolvedValue({ delivery: 'mail' })
   const result = render(
     <CreateUserModal caller={overrides.caller ?? SUPER_ADMIN_CALLER} onClose={onClose} onCreate={onCreate} onSuccess={onSuccess} />
   )
   return { ...result, onClose, onSuccess, onCreate }
 }
 
-function fillForm(getByLabelText: ReturnType<typeof render>['getByLabelText'], password = VALID_PASSWORD) {
+function fillForm(getByLabelText: ReturnType<typeof render>['getByLabelText']) {
   fireEvent.change(getByLabelText('create.username'), { target: { value: 'bob' } })
   fireEvent.change(getByLabelText('create.email'), { target: { value: 'bob@test.com' } })
-  fireEvent.change(getByLabelText('create.password'), { target: { value: password } })
 }
 
 beforeEach(() => { vi.clearAllMocks() })
@@ -73,36 +77,6 @@ describe('CreateUserModal — validation', () => {
   it('submit button is disabled when fields are empty', () => {
     const { getByText } = setup()
     expect((getByText('create.submit') as HTMLButtonElement).disabled).toBe(true)
-  })
-
-  it('submit stays disabled with a weak password and shows hint', () => {
-    const { getByLabelText, getByText } = setup()
-    fillForm(getByLabelText, 'weakpassword')
-    expect((getByText('create.submit') as HTMLButtonElement).disabled).toBe(true)
-    expect(getByText('create.error.password_weak')).toBeDefined()
-  })
-
-  it('submit stays disabled with a too short password and shows hint', () => {
-    const { getByLabelText, getByText } = setup()
-    fillForm(getByLabelText, 'P@s1')
-    expect((getByText('create.submit') as HTMLButtonElement).disabled).toBe(true)
-    expect(getByText('create.error.password_too_short')).toBeDefined()
-  })
-
-  it('shows a too-long hint (not the weak hint) for a password over 72 chars', () => {
-    const { getByLabelText, getByText, queryByText } = setup()
-    // Otherwise-valid (upper/digit/special) but longer than the 72-char limit.
-    fillForm(getByLabelText, `P@ssw0rd${'a'.repeat(72)}`)
-    expect((getByText('create.submit') as HTMLButtonElement).disabled).toBe(true)
-    expect(getByText('create.error.password_too_long')).toBeDefined()
-    expect(queryByText('create.error.password_weak')).toBeNull()
-  })
-
-  it('counts the length as the server does: 72 accented characters are too long', () => {
-    const { getByLabelText, getByText } = setup()
-    fillForm(getByLabelText, 'Aé1!' + 'é'.repeat(68))
-    expect((getByText('create.submit') as HTMLButtonElement).disabled).toBe(true)
-    expect(getByText('create.error.password_too_long')).toBeDefined()
   })
 
   it('shows hint when username is shorter than 3 chars', () => {
@@ -131,26 +105,40 @@ describe('CreateUserModal — validation', () => {
     const { getByLabelText, getByText } = setup()
     fireEvent.change(getByLabelText('create.username'), { target: { value: 'bob' } })
     fireEvent.change(getByLabelText('create.email'), { target: { value: 'notanemail' } })
-    fireEvent.change(getByLabelText('create.password'), { target: { value: VALID_PASSWORD } })
     expect(getByText('create.error.email_invalid')).toBeDefined()
     expect((getByText('create.submit') as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('calls onCreate with trimmed values and selected role on submit', async () => {
-    const { getByLabelText, getByText, onCreate, onSuccess } = setup()
+    const { getByLabelText, getByText, onCreate } = setup()
     fillForm(getByLabelText)
     fireEvent.click(getByText('create.submit'))
-    await waitFor(() => expect(onCreate).toHaveBeenCalledWith('bob', 'bob@test.com', VALID_PASSWORD, 'USER'))
+    await waitFor(() => expect(onCreate).toHaveBeenCalledWith('bob', 'bob@test.com', 'USER'))
+  })
+
+  it('shows how the invitation left, and calls onSuccess only when closed', async () => {
+    const { getByLabelText, getByRole, findByTestId, onSuccess } = setup()
+    fillForm(getByLabelText)
+
+    fireEvent.click(getByRole('button', { name: 'create.submit' }))
+
+    expect((await findByTestId('invitation-result')).textContent).toBe('mail')
+    expect(onSuccess).not.toHaveBeenCalled()
+    fireEvent.click(getByRole('button', { name: 'invitation.done' }))
     expect(onSuccess).toHaveBeenCalledOnce()
+  })
+
+  it('asks for no password', () => {
+    const { queryByLabelText } = setup()
+    expect(queryByLabelText('create.password')).toBeNull()
   })
 
   it('trims whitespace from username and email', async () => {
     const { getByLabelText, getByText, onCreate } = setup()
     fireEvent.change(getByLabelText('create.username'), { target: { value: '  bob  ' } })
     fireEvent.change(getByLabelText('create.email'), { target: { value: '  bob@test.com  ' } })
-    fireEvent.change(getByLabelText('create.password'), { target: { value: VALID_PASSWORD } })
     fireEvent.click(getByText('create.submit'))
-    await waitFor(() => expect(onCreate).toHaveBeenCalledWith('bob', 'bob@test.com', VALID_PASSWORD, 'USER'))
+    await waitFor(() => expect(onCreate).toHaveBeenCalledWith('bob', 'bob@test.com', 'USER'))
   })
 })
 
@@ -193,7 +181,7 @@ describe('CreateUserModal — errors', () => {
 
   it('prevents double submit', async () => {
     let resolve!: () => void
-    const onCreate = vi.fn().mockImplementation(() => new Promise<void>(r => { resolve = r }))
+    const onCreate = vi.fn().mockImplementation(() => new Promise(r => { resolve = () => r({ delivery: 'mail' }) }))
     const { getByLabelText, getByText } = setup({ onCreate })
     fillForm(getByLabelText)
     fireEvent.click(getByText('create.submit'))
@@ -205,7 +193,7 @@ describe('CreateUserModal — errors', () => {
   it('clears the error alert on a successful resubmit', async () => {
     const onCreate = vi.fn()
       .mockRejectedValueOnce(new ServerError())
-      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce({ delivery: 'mail' })
     const { getByLabelText, getByText, findByRole, queryByRole } = setup({ onCreate })
     fillForm(getByLabelText)
     fireEvent.click(getByText('create.submit'))

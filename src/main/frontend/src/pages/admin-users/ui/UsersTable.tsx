@@ -5,6 +5,7 @@ import { formatUserDate } from '../lib/formatUserDate'
 import { UserStatusToggle } from './UserStatusToggle'
 import { UserActions } from './UserActions'
 import { TotpBadge } from './TotpBadge'
+import { InvitationBadge } from './InvitationBadge'
 import type { UserRowCallbacks } from './userRowCallbacks'
 
 interface UsersTableProps extends UserRowCallbacks {
@@ -24,6 +25,7 @@ export function UsersTable({
   onEditRole,
   onResetTotp,
   onDelete,
+  onResendInvitation,
 }: UsersTableProps) {
   const { t, i18n } = useTranslation('adminUsers')
 
@@ -78,6 +80,7 @@ export function UsersTable({
                 onEditRole={onEditRole}
                 onResetTotp={onResetTotp}
                 onDelete={onDelete}
+                onResendInvitation={onResendInvitation}
               />
             ))}
           </tbody>
@@ -96,7 +99,7 @@ interface RowProps extends UserRowCallbacks {
   isToggling: boolean
 }
 
-function UserRow({ user, currentUser, youLabel, roleLabel, meta, isToggling, onToggleActive, onEditRole, onResetTotp, onDelete }: RowProps) {
+function UserRow({ user, currentUser, youLabel, roleLabel, meta, isToggling, onToggleActive, onEditRole, onResetTotp, onDelete, onResendInvitation }: RowProps) {
   const isMe = user.id === currentUser.id
 
   return (
@@ -121,7 +124,10 @@ function UserRow({ user, currentUser, youLabel, roleLabel, meta, isToggling, onT
       </td>
 
       <td className="px-3.5 py-3.5">
-        <UserStatusToggle user={user} currentUser={currentUser} onToggle={onToggleActive} isPending={isToggling} />
+        <div className="flex flex-wrap items-center gap-2">
+          <UserStatusToggle user={user} currentUser={currentUser} onToggle={onToggleActive} isPending={isToggling} />
+          {user.invitation && <InvitationBadge invitation={user.invitation} />}
+        </div>
       </td>
 
       <td className="px-3.5 py-3.5">
@@ -135,6 +141,7 @@ function UserRow({ user, currentUser, youLabel, roleLabel, meta, isToggling, onT
           onEditRole={onEditRole}
           onResetTotp={onResetTotp}
           onDelete={onDelete}
+          onResendInvitation={onResendInvitation}
           className="justify-end"
         />
       </td>

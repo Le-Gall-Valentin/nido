@@ -1,12 +1,13 @@
 import { NetworkError, RateLimitError, ForbiddenError, NotFoundError } from '@/shared/lib'
-import { ConflictError, RoleAlreadyAssignedError } from '@/entities/user'
+import { AlreadyJoinedError, ConflictError, RoleAlreadyAssignedError } from '@/entities/user'
 
 /**
  * Maps an API error to a translation key under the given namespace prefix.
  * All admin-users error namespaces share the same suffixes
- * (conflict, already_assigned, forbidden, not_found, rate_limit, network, server).
+ * (already_joined, conflict, already_assigned, forbidden, not_found, rate_limit, network, server).
  */
 export function mapApiErrorToKey(error: unknown, prefix: string): string {
+  if (error instanceof AlreadyJoinedError) return `${prefix}.error.already_joined`
   if (error instanceof ConflictError) return `${prefix}.error.conflict`
   if (error instanceof RoleAlreadyAssignedError) return `${prefix}.error.already_assigned`
   if (error instanceof ForbiddenError) return `${prefix}.error.forbidden`

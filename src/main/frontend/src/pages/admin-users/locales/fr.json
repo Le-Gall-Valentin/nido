@@ -21,7 +21,8 @@
     "btn_edit": "Modifier le rôle de {{username}}",
     "btn_delete": "Supprimer le compte",
     "empty": "Aucun utilisateur trouvé.",
-    "meta": "{{email}} · membre depuis le {{date}}"
+    "meta": "{{email}} · membre depuis le {{date}}",
+    "btn_resend": "Renvoyer l'invitation de {{username}}"
   },
   "close": "Fermer",
   "search": {
@@ -35,7 +36,8 @@
     "insufficient": "Action réservée aux administrateurs.",
     "totp_not_enabled": "La 2FA n'est pas activée sur ce compte.",
     "target_inactive": "Le compte doit être actif pour modifier son rôle.",
-    "no_assignable_role": "Aucun autre rôle ne peut être attribué à cet utilisateur."
+    "no_assignable_role": "Aucun autre rôle ne peut être attribué à cet utilisateur.",
+    "target_inactive_invitation": "Le compte doit être actif pour renvoyer son invitation."
   },
   "load_error": "Impossible de charger la liste des utilisateurs. Veuillez réessayer.",
   "mutation_error": "Une erreur est survenue. Les modifications ont été annulées.",
@@ -48,11 +50,11 @@
   },
   "create": {
     "title": "Créer un utilisateur",
+    "intro": "La personne recevra un lien pour choisir elle-même son mot de passe.",
     "username": "Identifiant",
     "username_placeholder": "prenom.nom",
     "email": "Email",
     "email_placeholder": "user@acme.io",
-    "password": "Mot de passe initial",
     "role": "Rôle",
     "role_note": "Le rôle Super administrateur n'est pas attribuable manuellement — il est unique et permanent.",
     "cancel": "Annuler",
@@ -66,10 +68,37 @@
       "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard.",
       "username_length": "L'identifiant doit contenir entre 3 et 50 caractères.",
       "username_at": "L'identifiant ne peut pas contenir @.",
-      "email_invalid": "Veuillez saisir une adresse e-mail valide.",
-      "password_too_short": "Le mot de passe doit contenir au moins 8 caractères.",
-      "password_too_long": "Le mot de passe ne doit pas dépasser 72 caractères, moins avec des accents ou des emojis.",
-      "password_weak": "Le mot de passe doit contenir une majuscule, un chiffre et un caractère spécial."
+      "email_invalid": "Veuillez saisir une adresse e-mail valide."
+    }
+  },
+  "invitation": {
+    "created_title": "Compte créé",
+    "mailed": "Une invitation est partie vers {{email}}. {{username}} y trouvera un lien, valable 7 jours, pour choisir son mot de passe.",
+    "link_intro": "Le mail n'est pas configuré : transmettez ce lien à {{username}} (SMS, messagerie…). Il sert à choisir son mot de passe et reste valable 7 jours.",
+    "link_label": "Lien d'invitation",
+    "copy": "Copier",
+    "copied": "Copié",
+    "once": "Ce lien ne sera plus affiché. Pour en obtenir un autre, générez un nouveau lien d'invitation.",
+    "done": "Terminé",
+    "pending": "Invitation en attente",
+    "expired": "Invitation expirée"
+  },
+  "resend": {
+    "title_mail": "Renvoyer l'invitation de {{username}} ?",
+    "title_link": "Nouveau lien d'invitation pour {{username}} ?",
+    "body_mail": "Un nouveau lien, valable 7 jours, partira par mail. L'ancien ne fonctionnera plus.",
+    "body_link": "Un nouveau lien, valable 7 jours, sera affiché pour que vous le transmettiez. L'ancien ne fonctionnera plus.",
+    "cancel": "Annuler",
+    "submit_mail": "Renvoyer",
+    "submit_link": "Générer le lien",
+    "done_title": "Invitation renouvelée",
+    "error": {
+      "already_joined": "Cette personne a déjà choisi son mot de passe.",
+      "forbidden": "Vous n'avez pas les droits nécessaires pour renvoyer cette invitation.",
+      "not_found": "Utilisateur introuvable.",
+      "server": "Une erreur est survenue. Veuillez réessayer.",
+      "network": "Réseau indisponible.",
+      "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard."
     }
   },
   "edit_role": {

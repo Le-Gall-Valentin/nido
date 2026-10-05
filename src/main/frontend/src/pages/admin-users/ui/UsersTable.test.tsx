@@ -30,6 +30,7 @@ const DEFAULT_HANDLERS = {
   onEditRole: vi.fn(),
   onResetTotp: vi.fn(),
   onDelete: vi.fn(),
+  onResendInvitation: vi.fn(),
 }
 
 function setup(currentUser: User = SA, users: AdminUser[] = USERS, isLoading = false) {

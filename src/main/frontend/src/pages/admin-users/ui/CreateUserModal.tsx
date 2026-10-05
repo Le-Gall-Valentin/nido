@@ -1,15 +1,17 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
-import { isValidPassword, isValidEmail, passwordProblem, isValidUsername, usernameProblem } from '@/shared/lib'
-import type { User } from '@/entities/user'
+import { isValidEmail, isValidUsername, usernameProblem } from '@/shared/lib'
+import type { InvitationDelivery, User } from '@/entities/user'
 import { assignableRoles } from '../lib/permissions'
 import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
+import { InvitationResult } from './InvitationResult'
 
 interface CreateUserModalProps {
   caller: User
   onClose: () => void
-  onCreate: (username: string, email: string, password: string, role: 'USER' | 'ADMIN') => Promise<void>
+  onCreate: (username: string, email: string, role: 'USER' | 'ADMIN') => Promise<InvitationDelivery>
+  /** Called when the dialog closes after the account was created. */
   onSuccess: () => void
 }
 
@@ -19,10 +21,10 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
 
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [role, setRole] = useState<'USER' | 'ADMIN'>('USER')
   const [isLoading, setIsLoading] = useState(false)
   const [errorKey, setErrorKey] = useState<string | null>(null)
+  const [created, setCreated] = useState<{ username: string; email: string; delivery: InvitationDelivery } | null>(null)
   const pendingRef = useRef(false)
 
   const trimmedUsername = username.trim()
@@ -31,14 +33,7 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
   // Mirror of the backend RegisterRequest constraints.
   const usernameIssue = trimmedUsername.length > 0 ? usernameProblem(trimmedUsername) : null
   const emailInvalid = trimmedEmail.length > 0 && !isValidEmail(trimmedEmail)
-  const problem = password.length > 0 ? passwordProblem(password) : null
-  const passwordTooShort = problem === 'too_short'
-  const passwordTooLong = problem === 'too_long'
-  const passwordWeak = problem === 'weak'
-  const canSubmit =
-    isValidUsername(trimmedUsername) &&
-    isValidEmail(trimmedEmail) &&
-    isValidPassword(password)
+  const canSubmit = isValidUsername(trimmedUsername) && isValidEmail(trimmedEmail)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -47,8 +42,8 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
     setIsLoading(true)
     setErrorKey(null)
     try {
-      await onCreate(trimmedUsername, trimmedEmail, password, role)
-      onSuccess()
+      const delivery = await onCreate(trimmedUsername, trimmedEmail, role)
+      setCreated({ username: trimmedUsername, email: trimmedEmail, delivery })
     } catch (error) {
       setErrorKey(mapApiErrorToKey(error, 'create'))
     } finally {
@@ -59,13 +54,32 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
 
   function handleClose() {
     setErrorKey(null)
+    if (created) {
+      onSuccess()
+      return
+    }
     onClose()
+  }
+
+  if (created) {
+    return (
+      <Dialog open onClose={handleClose} title={t('invitation.created_title')} maxWidth="max-w-lg">
+        <h3 className="mb-4 text-xl font-semibold text-fg-0">{t('invitation.created_title')}</h3>
+        <InvitationResult username={created.username} email={created.email} delivery={created.delivery} />
+        <div className="mt-5 flex justify-end">
+          <Button type="button" onClick={handleClose} className="border-transparent font-semibold" style={CTA_BUTTON_STYLE}>
+            {t('invitation.done')}
+          </Button>
+        </div>
+      </Dialog>
+    )
   }
 
   return (
     <Dialog open onClose={handleClose} title={t('create.title')} maxWidth="max-w-lg">
       <div className="mb-5">
         <h3 className="text-xl font-semibold text-fg-0">{t('create.title')}</h3>
+        <p className="mt-1.5 text-sm text-fg-2">{t('create.intro')}</p>
       </div>
       <form onSubmit={(e) => void handleSubmit(e)}>
         <div className="flex flex-col gap-3 sm:flex-row mb-3">
@@ -94,25 +108,10 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
           </div>
         </div>
 
-        <div className="mb-3">
-          <Input
-            label={t('create.password')}
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            disabled={isLoading}
-          />
-        </div>
-
         <div aria-live="polite">
           {(usernameIssue === 'too_short' || usernameIssue === 'too_long') && <p className="text-xs text-status-orange mb-2">{t('create.error.username_length')}</p>}
           {usernameIssue === 'has_at' && <p className="text-xs text-status-orange mb-2">{t('create.error.username_at')}</p>}
           {emailInvalid && <p className="text-xs text-status-orange mb-2">{t('create.error.email_invalid')}</p>}
-          {passwordTooShort && <p className="text-xs text-status-orange mb-2">{t('create.error.password_too_short')}</p>}
-          {passwordTooLong && <p className="text-xs text-status-orange mb-2">{t('create.error.password_too_long')}</p>}
-          {passwordWeak && <p className="text-xs text-status-orange mb-2">{t('create.error.password_weak')}</p>}
         </div>
 
         <div className="mb-1 flex flex-col gap-2">

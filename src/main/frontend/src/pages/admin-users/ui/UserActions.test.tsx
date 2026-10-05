@@ -15,7 +15,7 @@ function target(overrides: Partial<AdminUser> = {}): AdminUser {
 }
 
 function setup(currentUser: User, user: AdminUser) {
-  const handlers = { onEditRole: vi.fn(), onResetTotp: vi.fn(), onDelete: vi.fn() }
+  const handlers = { onEditRole: vi.fn(), onResetTotp: vi.fn(), onDelete: vi.fn(), onResendInvitation: vi.fn() }
   const result = render(<UserActions user={user} currentUser={currentUser} {...handlers} />)
   return { ...result, ...handlers }
 }
@@ -64,8 +64,22 @@ describe('UserActions — handlers', () => {
 describe('UserActions — sizing', () => {
   it('uses larger touch targets for the md size', () => {
     const { getByLabelText } = render(
-      <UserActions user={target()} currentUser={SA} size="md" onEditRole={vi.fn()} onResetTotp={vi.fn()} onDelete={vi.fn()} />
+      <UserActions user={target()} currentUser={SA} size="md" onEditRole={vi.fn()} onResetTotp={vi.fn()} onDelete={vi.fn()} onResendInvitation={vi.fn()} />
     )
     expect(getByLabelText('table.btn_delete').className).toContain('size-9')
+  })
+
+  it('offers to resend the invitation of an account that has not joined, and only then', () => {
+    const invited = target({ invitation: { status: 'pending', expiresAt: '2026-10-12T00:00:00Z' } })
+    const { getByLabelText, onResendInvitation } = setup(SA, invited)
+
+    fireEvent.click(getByLabelText('table.btn_resend:alice'))
+    expect(onResendInvitation).toHaveBeenCalledWith(invited)
+  })
+
+  it('offers nothing to resend once the account joined', () => {
+    const { queryByLabelText } = setup(SA, target({ invitation: null }))
+
+    expect(queryByLabelText('table.btn_resend:alice')).toBeNull()
   })
 })
