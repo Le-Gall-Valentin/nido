@@ -1,89 +1,18 @@
-import { useEffect, useId, useState, type FormEvent } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PASSWORD_RESET_CAPABILITY_KEY } from '@/features/password-reset'
-import { MailTestFailedError, SettingLockedError, SettingsInvalidError, useSettingWording } from '@/entities/instance-settings'
-import { RateLimitError } from '@/shared/lib'
+import type { SettingsGroup } from '@/entities/instance-settings'
 import { Alert, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { SETTINGS_KEY } from '../model/fields'
 import type { ISettingsApi } from '../model/ISettingsApi'
-import type { InstanceSettings, SettingField, SettingsGroup } from '@/entities/instance-settings'
+import { useSettingsGroup } from '../model/useSettingsGroup'
+import { GROUP_EXTRAS } from './extras'
 import { SettingFieldRow } from './SettingFieldRow'
 
-function initialValues(group: SettingsGroup): Record<string, string> {
-  return Object.fromEntries(group.fields.map((field) => [field.key, field.secret ? '' : field.value ?? '']))
-}
-
-/** What a save sends: every field the page may change — a password only when one was typed. */
-function toSend(fields: SettingField[], values: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(fields
-    .filter((field) => field.source !== 'ENVIRONMENT')
-    .filter((field) => !field.secret || values[field.key] !== '')
-    .map((field) => [field.key, values[field.key] ?? '']))
-}
-
+/** One block of the settings page, saved on its own. What a block adds of its own comes from GROUP_EXTRAS. */
 export function SettingsGroupCard({ group, api }: { group: SettingsGroup; api: ISettingsApi }) {
   const { t } = useTranslation('adminSettings')
-  const wording = useSettingWording()
   const titleId = useId()
-  const queryClient = useQueryClient()
-  const [values, setValues] = useState(() => initialValues(group))
-  const [problems, setProblems] = useState<Record<string, string>>({})
-  const [notice, setNotice] = useState<string | null>(null)
-  const [failure, setFailure] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  useEffect(() => setValues(initialValues(group)), [group])
-
-  const editable = group.fields.some((field) => field.source !== 'ENVIRONMENT')
-  const mailHost = group.fields.find((field) => field.key === 'mail.host')
-
-  function reportFailure(error: unknown) {
-    if (error instanceof SettingsInvalidError) setProblems(error.errors)
-    else if (error instanceof MailTestFailedError) setFailure(wording.mailFailure(error))
-    else if (error instanceof SettingLockedError) setFailure(t('error.locked'))
-    else if (error instanceof RateLimitError) setFailure(t('error.too_many'))
-    else setFailure(t('error.server'))
-  }
-
-  async function run(action: () => Promise<InstanceSettings>) {
-    setBusy(true)
-    setProblems({})
-    setNotice(null)
-    setFailure(null)
-    try {
-      queryClient.setQueryData(SETTINGS_KEY, await action())
-      // Mail switched on or off changes what the sign-in page offers.
-      void queryClient.invalidateQueries({ queryKey: PASSWORD_RESET_CAPABILITY_KEY })
-      setNotice(t('saved'))
-    } catch (error) {
-      reportFailure(error)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function sendTest() {
-    setBusy(true)
-    setProblems({})
-    setNotice(null)
-    setFailure(null)
-    try {
-      await api.testMail(toSend(group.fields, values))
-      setNotice(t('mail.test_sent'))
-    } catch (error) {
-      reportFailure(error)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (editable && !busy) void run(() => api.update(group.group, toSend(group.fields, values)))
-  }
-
-  const publicUrl = values['public-url'] ?? ''
+  const state = useSettingsGroup(group, api)
+  const { Notes, Actions } = GROUP_EXTRAS[group.group] ?? {}
 
   return (
     <section aria-labelledby={titleId} className="rounded-2xl border border-border bg-bg-1 p-5 sm:p-6">
@@ -91,45 +20,30 @@ export function SettingsGroupCard({ group, api }: { group: SettingsGroup; api: I
       <p className="mt-1 text-[13.5px] leading-relaxed text-fg-2">{t(`group.${group.group}.description`)}</p>
 
       {/* A form, so that Enter saves the block and the browser knows what the password belongs to. */}
-      <form onSubmit={submit} noValidate>
+      <form onSubmit={(event) => { event.preventDefault(); state.save() }} noValidate>
         <div className="mt-5 flex flex-col gap-4">
           {group.fields.map((field) => (
             <SettingFieldRow
               key={field.key}
               field={field}
-              value={values[field.key] ?? ''}
-              problem={problems[field.key]}
-              busy={busy}
-              onChange={(value) => setValues((current) => ({ ...current, [field.key]: value }))}
-              onReset={() => void run(() => api.reset(group.group, field.key))}
+              value={state.values[field.key] ?? ''}
+              problem={state.problems[field.key]}
+              busy={state.busy}
+              onChange={(value) => state.setValue(field.key, value)}
+              onReset={() => state.reset(field.key)}
             />
           ))}
         </div>
 
-        {group.group === 'public-url' && publicUrl.toLowerCase().startsWith('http://') && (
-          <Alert variant="warning" className="mt-4">{t('public_url.http_warning')}</Alert>
-        )}
-        {group.group === 'public-url' && publicUrl.toLowerCase().startsWith('https://') && window.location.protocol === 'http:' && (
-          <Alert variant="warning" className="mt-4">{t('public_url.https_from_http', { url: publicUrl })}</Alert>
-        )}
-        {group.group === 'mail' && problems['public-url'] && (
-          <p className="mt-3 text-[12.5px] text-status-red">{wording.problem(problems['public-url'])}</p>
-        )}
+        {Notes && <Notes group={group} state={state} />}
+        {state.notice && <Alert variant="success" className="mt-4">{state.notice}</Alert>}
+        {state.failure && <Alert variant="error" className="mt-4">{state.failure}</Alert>}
 
-        {notice && <Alert variant="success" className="mt-4">{notice}</Alert>}
-        {failure && <Alert variant="error" className="mt-4">{failure}</Alert>}
-
-        {/* The test stays when the environment sets the mail: it is how to check that configuration. */}
-        {(editable || group.group === 'mail') && (
+        {(state.editable || Actions) && (
           <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
-            {group.group === 'mail' && mailHost?.source === 'DATABASE' && (
-              <Button type="button" disabled={busy} onClick={() => void run(() => api.reset('mail', 'mail.host'))}>{t('action.disable_mail')}</Button>
-            )}
-            {group.group === 'mail' && (
-              <Button type="button" disabled={busy} onClick={() => void sendTest()}>{t('action.test')}</Button>
-            )}
-            {editable && (
-              <Button type="submit" className="border-transparent" style={CTA_BUTTON_STYLE} isLoading={busy}>
+            {Actions && <Actions group={group} state={state} />}
+            {state.editable && (
+              <Button type="submit" className="border-transparent" style={CTA_BUTTON_STYLE} isLoading={state.busy}>
                 {t('action.save')}
               </Button>
             )}
