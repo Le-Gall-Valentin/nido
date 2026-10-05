@@ -87,8 +87,7 @@ export function ResetPasswordPage({ api = defaultApi }: { api?: IPasswordResetAp
             <p className="text-sm text-fg-2">{t('reset.subtitle')}</p>
           </div>
           <NewPasswordForm
-            api={api}
-            token={token}
+            onSave={(password) => api.confirmReset(token, password)}
             labelId={TITLE_ID}
             onDone={() => void navigate(ROUTES.LOGIN, { replace: true, state: PASSWORD_RESET_DONE_STATE })}
             onInvalid={() => setRefusedOnSaveFor(token)}

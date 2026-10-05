@@ -1,5 +1,7 @@
 export interface PasswordResetCapabilities {
   passwordReset: boolean
+  /** Whether a mail can leave this installation at all. */
+  mail: boolean
 }
 
 /** The server side of "forgot password". Every method answers the same way whoever is asked about. */

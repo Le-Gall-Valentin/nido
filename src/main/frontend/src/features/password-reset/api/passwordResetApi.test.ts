@@ -23,9 +23,9 @@ describe('passwordResetApi', () => {
   })
 
   it('asks what the sign-in pages may offer', async () => {
-    mocked.get.mockResolvedValue({ data: { passwordReset: true } })
+    mocked.get.mockResolvedValue({ data: { passwordReset: true, mail: true } })
 
-    await expect(passwordResetApi.capabilities()).resolves.toEqual({ passwordReset: true })
+    await expect(passwordResetApi.capabilities()).resolves.toEqual({ passwordReset: true, mail: true })
     expect(mocked.get).toHaveBeenCalledWith('/auth/capabilities')
   })
 

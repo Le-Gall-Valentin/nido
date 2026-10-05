@@ -1,23 +1,7 @@
-import { isAxiosError } from 'axios'
 import { client } from '@/shared/api'
-import { NetworkError, parseRetryAfter, RateLimitError, ServerError } from '@/shared/lib'
 import type { IPasswordResetApi, PasswordResetCapabilities } from '../model/IPasswordResetApi'
-import { InvalidResetLinkError, WeakPasswordError } from '../model/errors'
-
-function toError(error: unknown, specific: (status: number) => Error | null = () => null): Error {
-  if (isAxiosError(error)) {
-    const status = error.response?.status
-    if (status !== undefined) {
-      const known = specific(status)
-      if (known) return known
-      if (status === 429) return new RateLimitError(parseRetryAfter(error.response?.headers))
-      return new ServerError()
-    }
-  }
-  return new NetworkError()
-}
-
-const linkNoLongerWorks = (status: number) => (status === 410 ? new InvalidResetLinkError() : null)
+import { WeakPasswordError } from '../model/errors'
+import { linkNoLongerWorks, toError } from './apiErrors'
 
 export const passwordResetApi: IPasswordResetApi = {
   async capabilities(): Promise<PasswordResetCapabilities> {

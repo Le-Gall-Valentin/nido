@@ -9,17 +9,30 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, o?: object) => (o ? `${k}:${JSON.stringify(o)}` : k) }),
 }))
 
-function setup(confirmReset: IPasswordResetApi['confirmReset']) {
+function setup(confirmReset: IPasswordResetApi['confirmReset'], username?: string) {
   const onDone = vi.fn()
   const onInvalid = vi.fn()
-  const api: IPasswordResetApi = { capabilities: vi.fn(), requestReset: vi.fn(), checkToken: vi.fn(), confirmReset }
-  render(<NewPasswordForm api={api} token="abc" onDone={onDone} onInvalid={onInvalid} />)
+  render(<NewPasswordForm onSave={(password) => confirmReset('abc', password)} username={username} onDone={onDone} onInvalid={onInvalid} />)
   const type = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
   const save = () => screen.getByRole('button', { name: 'action.save' }) as HTMLButtonElement
   return { onDone, onInvalid, type, save }
 }
 
 describe('NewPasswordForm', () => {
+  it('hands the username to password managers when it knows it, out of sight', () => {
+    setup(vi.fn(), 'carol')
+
+    const field = document.querySelector('input[autocomplete="username"]') as HTMLInputElement
+    expect(field.value).toBe('carol')
+    expect(field.hidden).toBe(true)
+  })
+
+  it('has no username field when it does not know one', () => {
+    setup(vi.fn())
+
+    expect(document.querySelector('input[autocomplete="username"]')).toBeNull()
+  })
+
   it('can only be saved with a password the rules accept, typed twice', () => {
     const { type, save } = setup(vi.fn())
 

@@ -2,20 +2,21 @@ import React, { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, Button, Input, PasswordInput, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import { isValidPassword, passwordProblem } from '@/shared/lib'
-import type { IPasswordResetApi } from '../model/IPasswordResetApi'
 import { InvalidResetLinkError } from '../model/errors'
 import { describeError, type FormError } from '../model/describeError'
 
 interface Props {
-  api: IPasswordResetApi
-  token: string
+  /** Saves the password with the link the page holds. @throws InvalidResetLinkError, WeakPasswordError */
+  onSave: (password: string) => Promise<void>
+  /** The account's username: handed to password managers, so they store the password under the right name. */
+  username?: string
   labelId?: string
   onDone: () => void
   /** The link stopped working between opening the page and saving (expired, or used elsewhere). */
   onInvalid: () => void
 }
 
-export function NewPasswordForm({ api, token, labelId, onDone, onInvalid }: Props) {
+export function NewPasswordForm({ onSave, username, labelId, onDone, onInvalid }: Props) {
   const { t } = useTranslation('passwordReset')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -44,7 +45,7 @@ export function NewPasswordForm({ api, token, labelId, onDone, onInvalid }: Prop
     setIsLoading(true)
     setError(null)
     try {
-      await api.confirmReset(token, password)
+      await onSave(password)
       onDone()
     } catch (err) {
       if (err instanceof InvalidResetLinkError) {
@@ -60,6 +61,7 @@ export function NewPasswordForm({ api, token, labelId, onDone, onInvalid }: Prop
 
   return (
     <form onSubmit={(e) => void handleSubmit(e)} aria-labelledby={labelId} className="flex flex-col gap-4">
+      {username && <input type="text" name="username" autoComplete="username" value={username} readOnly hidden />}
       {error && (
         <div id={errorId}>
           <Alert variant="error">{t(error.key, error.seconds === undefined ? undefined : { seconds: error.seconds })}</Alert>

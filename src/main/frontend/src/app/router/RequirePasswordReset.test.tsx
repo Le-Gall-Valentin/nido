@@ -22,13 +22,13 @@ function openForgotPage(capabilities: IPasswordResetApi['capabilities']) {
 
 describe('RequirePasswordReset', () => {
   it('shows the page when password reset is available', async () => {
-    openForgotPage(async () => ({ passwordReset: true }))
+    openForgotPage(async () => ({ passwordReset: true, mail: true }))
 
     expect(await screen.findByText('forgot page')).not.toBeNull()
   })
 
   it('redirects to the login page when password reset is unavailable', async () => {
-    openForgotPage(async () => ({ passwordReset: false }))
+    openForgotPage(async () => ({ passwordReset: false, mail: false }))
 
     expect(await screen.findByText('login page')).not.toBeNull()
   })
