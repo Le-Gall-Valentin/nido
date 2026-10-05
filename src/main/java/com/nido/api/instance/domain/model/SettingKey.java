@@ -16,7 +16,7 @@ public enum SettingKey {
     MAIL_PORT("mail.port", SettingGroup.MAIL, "NIDO_SMTP_PORT", "587"),
     MAIL_SECURITY("mail.security", SettingGroup.MAIL, "NIDO_SMTP_SECURITY", "starttls"),
     MAIL_USERNAME("mail.username", SettingGroup.MAIL, "NIDO_SMTP_USERNAME", null),
-    MAIL_PASSWORD("mail.password", SettingGroup.MAIL, "NIDO_SMTP_PASSWORD", null),
+    MAIL_PASSWORD("mail.password", SettingGroup.MAIL, "NIDO_SMTP_PASSWORD", null, Trait.SECRET),
     MAIL_FROM("mail.from", SettingGroup.MAIL, "NIDO_MAIL_FROM", null),
     PUBLIC_URL("public-url", SettingGroup.PUBLIC_URL, "NIDO_APP_URL", null, Trait.REQUIRED),
     ACCESS_TOKEN_MINUTES("sessions.access-token-minutes", SettingGroup.SESSIONS, "NIDO_JWT_EXPIRY_MINUTES", "15"),
@@ -25,6 +25,8 @@ public enum SettingKey {
 
     /** What sets a setting apart from the others. */
     public enum Trait {
+        /** Stored encrypted, never sent back to a browser, never logged. */
+        SECRET,
         /**
          * Never emptied once given. The public address: without one, the cookies require HTTPS (an
          * address nobody gave may be anything) and an installation reached over http locks everyone out.
@@ -59,7 +61,7 @@ public enum SettingKey {
 
     /** Stored encrypted, never sent back to a browser, never logged. */
     public boolean secret() {
-        return this == MAIL_PASSWORD;
+        return traits.contains(Trait.SECRET);
     }
 
     public static Optional<SettingKey> fromCode(String code) {

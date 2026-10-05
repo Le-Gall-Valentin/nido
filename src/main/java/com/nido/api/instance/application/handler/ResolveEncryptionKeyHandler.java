@@ -29,8 +29,8 @@ public class ResolveEncryptionKeyHandler implements ResolveEncryptionKeyUseCase 
 
     @Override
     @Transactional
-    public String resolve(Optional<String> configuredKey) {
-        Optional<ProvidedKey> configured = configuredKey
+    public String resolve(String configuredKey) {
+        Optional<ProvidedKey> configured = Optional.ofNullable(configuredKey)
             .filter(key -> !key.isBlank())
             .map(key -> new ProvidedKey(key, "NIDO_ENCRYPTION_SECRET"));
         Optional<ProvidedKey> provided = configured

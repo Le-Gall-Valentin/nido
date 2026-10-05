@@ -1,8 +1,7 @@
 package com.nido.api.instance.application.port.in;
 
-import java.util.Optional;
-
 /** The key every encryptor of the application uses, decided once at start; throws to stop the start. */
 public interface ResolveEncryptionKeyUseCase {
-    String resolve(Optional<String> configuredKey);
+    /** {@code configuredKey}: NIDO_ENCRYPTION_SECRET, or null — blank counts as not given. */
+    String resolve(String configuredKey);
 }

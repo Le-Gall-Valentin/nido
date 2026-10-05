@@ -7,7 +7,6 @@ import liquibase.integration.spring.SpringLiquibase;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.Optional;
 
 @Configuration(proxyBeanMethods = false)
 public class EncryptionKeyConfiguration {
@@ -20,6 +19,6 @@ public class EncryptionKeyConfiguration {
     @Bean
     EncryptionKey encryptionKey(SpringLiquibase liquibase, NidoProperties properties, ResolveEncryptionKeyUseCase resolve) {
         String configured = properties.encryption() == null ? null : properties.encryption().secret();
-        return new EncryptionKey(resolve.resolve(Optional.ofNullable(configured)));
+        return new EncryptionKey(resolve.resolve(configured));
     }
 }
