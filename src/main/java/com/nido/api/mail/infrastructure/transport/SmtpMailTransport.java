@@ -3,8 +3,8 @@ package com.nido.api.mail.infrastructure.transport;
 import com.nido.api.mail.domain.model.DeliveryOutcome;
 import com.nido.api.mail.domain.model.OutgoingMail;
 import com.nido.api.mail.domain.port.out.MailTransportPort;
-import com.nido.api.mail.infrastructure.config.MailConfigurationAdapter;
 import com.nido.api.mail.infrastructure.config.MailSettings;
+import com.nido.api.mail.infrastructure.config.MailSettingsSource;
 import com.nido.api.mail.infrastructure.render.MailBranding;
 import jakarta.mail.MessagingException;
 import jakarta.mail.SendFailedException;
@@ -49,9 +49,9 @@ public class SmtpMailTransport implements MailTransportPort {
 
     /** The server of the moment: the SMTP client is rebuilt when the settings change, kept otherwise. */
     @Autowired
-    public SmtpMailTransport(MailConfigurationAdapter configuration) {
+    public SmtpMailTransport(MailSettingsSource source) {
         AtomicReference<Client> last = new AtomicReference<>();
-        this.client = () -> configuration.settings().map(settings -> {
+        this.client = () -> source.settings().map(settings -> {
             Client current = last.get();
             if (current != null && current.settings().equals(settings)) {
                 return current;

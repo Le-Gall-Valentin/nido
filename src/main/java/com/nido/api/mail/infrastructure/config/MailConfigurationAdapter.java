@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * stopped accepting.
  */
 @Component
-public class MailConfigurationAdapter implements MailConfigurationPort {
+public class MailConfigurationAdapter implements MailConfigurationPort, MailSettingsSource {
 
     private static final Logger log = LoggerFactory.getLogger(MailConfigurationAdapter.class);
 
@@ -37,6 +37,7 @@ public class MailConfigurationAdapter implements MailConfigurationPort {
         this.settings = settings;
     }
 
+    @Override
     public Optional<MailSettings> settings() {
         Optional<MailSettingsInput> input = input(settings.current());
         if (input.isEmpty()) {
