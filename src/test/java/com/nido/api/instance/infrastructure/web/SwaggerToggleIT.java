@@ -28,14 +28,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SwaggerToggleIT {
 
     @Autowired WebApplicationContext context;
-    @Autowired SwaggerToggleFilter toggle;
     @Autowired SettingsStorePort store;
 
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
-        mvc = MockMvcBuilders.webAppContextSetup(context).apply(SecurityMockMvcConfigurers.springSecurity()).addFilters(toggle).build();
+        mvc = MockMvcBuilders.webAppContextSetup(context).apply(SecurityMockMvcConfigurers.springSecurity()).build();
     }
 
     @AfterEach
@@ -54,5 +53,18 @@ class SwaggerToggleIT {
 
         InstanceSettingsTestSupport.clear(store);
         mvc.perform(get("/api/docs").cookie(signedIn)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void no_other_spelling_of_the_documentation_answers_while_it_is_off() throws Exception {
+        Cookie signedIn = TestAccessTokens.cookieFor(UUID.randomUUID(), Role.USER);
+
+        // springdoc also serves the document as YAML: each of these reaches the documentation unless the
+        // switch is checked where MVC matches its routes, not on the raw URI.
+        for (String path : new String[]{"/api/docs.yaml", "/api/docs/swagger-config", "/swagger-ui/index.html"}) {
+            mvc.perform(get(path).cookie(signedIn)).andExpect(status().isNotFound());
+        }
+        // A ;parameter, which MVC would drop before matching, is refused outright by Spring Security's firewall.
+        mvc.perform(get("/api/docs;x=1").cookie(signedIn)).andExpect(status().isBadRequest());
     }
 }

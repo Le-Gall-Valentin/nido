@@ -80,7 +80,7 @@ management:
       enabled: false
 
 # Always built: whether its routes answer is the SWAGGER_ENABLED setting, read on each request by
-# SwaggerToggleFilter — it can be switched from the settings page without a restart.
+# SwaggerToggle — it can be switched from the settings page without a restart.
 springdoc:
   api-docs:
     enabled: true
