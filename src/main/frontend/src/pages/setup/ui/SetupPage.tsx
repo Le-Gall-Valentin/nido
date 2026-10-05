@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
-import { SettingsInvalidError, useLanguage } from '@/shared/lib'
+import { SettingsInvalidError } from '@/entities/instance-settings'
+import { useLanguage } from '@/shared/lib'
 import { setupApi } from '../api/setupApi'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SettingValues, SetupAdmin, SetupStatus } from '../model/types'

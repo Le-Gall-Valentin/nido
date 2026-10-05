@@ -1,5 +1,6 @@
 import { isAxiosError } from 'axios'
-import { MailTestFailedError, NetworkError, parseRetryAfter, RateLimitError, ServerError, SettingLockedError, SettingsInvalidError } from '@/shared/lib'
+import { NetworkError, parseRetryAfter, RateLimitError, ServerError } from '@/shared/lib'
+import { MailTestFailedError, SettingLockedError, SettingsInvalidError } from '../model/errors'
 
 interface ProblemBody {
   error_code?: string

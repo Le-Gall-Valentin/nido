@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSettingWording } from '@/entities/instance-settings'
 import { Input, PasswordInput, Switch } from '@/shared/ui'
 import { FIELD_KINDS } from '../model/fields'
 import type { SettingField } from '../model/types'
@@ -15,7 +16,8 @@ interface Props {
 }
 
 export function SettingFieldRow({ field, value, problem, busy, onChange, onReset }: Props) {
-  const { t } = useTranslation(['adminSettings', 'common'])
+  const { t } = useTranslation('adminSettings')
+  const wording = useSettingWording()
   const labelId = useId()
   const kind = FIELD_KINDS[field.key] ?? { kind: 'text' }
   const locked = field.source === 'ENVIRONMENT'
@@ -77,7 +79,7 @@ export function SettingFieldRow({ field, value, problem, busy, onChange, onReset
     <div>
       <div className="mb-1 flex justify-end empty:hidden"><SourceBadge source={field.source} variable={field.variable} /></div>
       {control}
-      {problem && <p className="mt-1 text-[12.5px] text-status-red">{t(`common:setting_problem.${problem}`)}</p>}
+      {problem && <p className="mt-1 text-[12.5px] text-status-red">{wording.problem(problem)}</p>}
       {!locked && !field.required && field.source === 'DATABASE' && (
         <button type="button" disabled={busy} onClick={onReset} className="mt-1 text-[12.5px] font-semibold text-accent hover:underline disabled:opacity-50">
           {field.secret ? t('secret.clear') : t('action.reset')}

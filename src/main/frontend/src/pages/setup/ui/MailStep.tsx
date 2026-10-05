@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MailTestFailedError, SettingsInvalidError, useLanguage } from '@/shared/lib'
+import { MailTestFailedError, SettingsInvalidError, useSettingWording } from '@/entities/instance-settings'
+import { useLanguage } from '@/shared/lib'
 import { Alert, Button, CTA_BUTTON_STYLE, Input, PasswordInput } from '@/shared/ui'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SettingValues } from '../model/types'
@@ -26,7 +27,8 @@ const DEFAULTS: SettingValues = { 'mail.port': '587', 'mail.security': 'starttls
 const SECURITIES = ['starttls', 'tls', 'none'] as const
 
 export function MailStep({ api, code, publicUrl, recipient, locked, initial, serverProblems = {}, onNext, onBack, onCodeExpired }: Props) {
-  const { t } = useTranslation(['setup', 'common'])
+  const { t } = useTranslation('setup')
+  const wording = useSettingWording()
   const { language } = useLanguage()
   const [values, setValues] = useState<SettingValues>(initial ?? DEFAULTS)
   const [problems, setProblems] = useState<Record<string, string>>(serverProblems)
@@ -35,7 +37,7 @@ export function MailStep({ api, code, publicUrl, recipient, locked, initial, ser
   const [testing, setTesting] = useState(false)
 
   const set = (key: string) => (value: string) => setValues((current) => ({ ...current, [key]: value }))
-  const problem = (key: string) => problems[key] && <p className={FIELD_ERROR_CLASS}>{t(`common:setting_problem.${problems[key]}`)}</p>
+  const problem = (key: string) => problems[key] && <p className={FIELD_ERROR_CLASS}>{wording.problem(problems[key])}</p>
 
   async function test() {
     setTesting(true)
@@ -48,9 +50,7 @@ export function MailStep({ api, code, publicUrl, recipient, locked, initial, ser
     } catch (error) {
       if (error instanceof SetupCodeInvalidError) onCodeExpired()
       else if (error instanceof SettingsInvalidError) setProblems(error.errors)
-      else if (error instanceof MailTestFailedError) {
-        setFailure([t(`common:mail_failure.${error.reason}`), error.serverReply].filter(Boolean).join(' — '))
-      }
+      else if (error instanceof MailTestFailedError) setFailure(wording.mailFailure(error))
       else setFailure(t(describeSetupError(error)))
     } finally {
       setTesting(false)

@@ -1,3 +1,2 @@
 export { client } from './client'
 export { shouldRetryQuery } from './retryPolicy'
-export { toInstanceError } from './instanceErrors'

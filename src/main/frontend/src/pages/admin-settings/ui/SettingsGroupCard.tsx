@@ -2,7 +2,8 @@ import { useEffect, useId, useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { PASSWORD_RESET_CAPABILITY_KEY } from '@/features/password-reset'
-import { MailTestFailedError, RateLimitError, SettingLockedError, SettingsInvalidError } from '@/shared/lib'
+import { MailTestFailedError, SettingLockedError, SettingsInvalidError, useSettingWording } from '@/entities/instance-settings'
+import { RateLimitError } from '@/shared/lib'
 import { Alert, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { SETTINGS_KEY } from '../model/fields'
 import type { ISettingsApi } from '../model/ISettingsApi'
@@ -22,7 +23,8 @@ function toSend(fields: SettingField[], values: Record<string, string>): Record<
 }
 
 export function SettingsGroupCard({ group, api }: { group: SettingsGroup; api: ISettingsApi }) {
-  const { t } = useTranslation(['adminSettings', 'common'])
+  const { t } = useTranslation('adminSettings')
+  const wording = useSettingWording()
   const titleId = useId()
   const queryClient = useQueryClient()
   const [values, setValues] = useState(() => initialValues(group))
@@ -38,9 +40,7 @@ export function SettingsGroupCard({ group, api }: { group: SettingsGroup; api: I
 
   function reportFailure(error: unknown) {
     if (error instanceof SettingsInvalidError) setProblems(error.errors)
-    else if (error instanceof MailTestFailedError) {
-      setFailure([t(`common:mail_failure.${error.reason}`), error.serverReply].filter(Boolean).join(' — '))
-    }
+    else if (error instanceof MailTestFailedError) setFailure(wording.mailFailure(error))
     else if (error instanceof SettingLockedError) setFailure(t('error.locked'))
     else if (error instanceof RateLimitError) setFailure(t('error.too_many'))
     else setFailure(t('error.server'))
@@ -113,7 +113,7 @@ export function SettingsGroupCard({ group, api }: { group: SettingsGroup; api: I
           <Alert variant="warning" className="mt-4">{t('public_url.https_from_http', { url: publicUrl })}</Alert>
         )}
         {group.group === 'mail' && problems['public-url'] && (
-          <p className="mt-3 text-[12.5px] text-status-red">{t(`common:setting_problem.${problems['public-url']}`)}</p>
+          <p className="mt-3 text-[12.5px] text-status-red">{wording.problem(problems['public-url'])}</p>
         )}
 
         {notice && <Alert variant="success" className="mt-4">{notice}</Alert>}

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { MailTestFailedError, SettingsInvalidError } from '@/shared/lib'
+import { MailTestFailedError, SettingsInvalidError } from '@/entities/instance-settings'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SetupStatus } from '../model/types'
 import { AdminRefusedError, SetupAlreadyDoneError, SetupCodeInvalidError } from '../model/errors'
@@ -139,7 +139,7 @@ describe('SetupPage', () => {
 
     click('action.test')
 
-    expect(await screen.findByText('common:mail_failure.authentication_failed — 535 Authentication failed')).not.toBeNull()
+    expect(await screen.findByText('mail_failure.authentication_failed — 535 Authentication failed')).not.toBeNull()
   })
 
   it('keeps the mail password in a form, where Enter moves on like Continue', async () => {
@@ -225,7 +225,7 @@ describe('SetupPage', () => {
     click('action.next')
 
     click('action.next')
-    expect(screen.getByText('common:setting_problem.required')).not.toBeNull()
+    expect(screen.getByText('problem.required')).not.toBeNull()
 
     type('mail.host', 'smtp.example.com')
     click('action.test')
@@ -330,6 +330,6 @@ describe('SetupPage', () => {
     click('action.finish')
 
     expect(await screen.findByLabelText('address.field')).not.toBeNull()
-    expect(screen.getByText('common:setting_problem.invalid_url')).not.toBeNull()
+    expect(screen.getByText('problem.invalid_url')).not.toBeNull()
   })
 })

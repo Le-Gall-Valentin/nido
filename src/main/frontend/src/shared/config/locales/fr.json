@@ -23,29 +23,5 @@
     "cancel": "Annuler",
     "confirm": "Supprimer",
     "error": "Une erreur est survenue. Réessayez."
-  },
-  "setting_problem": {
-    "required": "Ce champ est requis.",
-    "not_a_number": "Saisissez un nombre.",
-    "out_of_range": "Cette valeur est hors des limites permises.",
-    "not_a_boolean": "Valeur invalide.",
-    "unknown_security": "Choisissez STARTTLS, TLS ou aucune.",
-    "invalid_url": "Saisissez l'adresse du serveur, sans chemin après le nom, comme https://nido.example.com.",
-    "invalid_address": "Saisissez une adresse mail, comme Nido <nido@example.com>.",
-    "credentials_go_together": "L'identifiant et le mot de passe vont ensemble.",
-    "access_not_shorter_than_session": "Le jeton d'accès doit durer moins longtemps que la session.",
-    "public_url_required_by_mail": "Le mail a besoin de l'adresse publique pour ses liens : renseignez-la d'abord.",
-    "password_required_for_new_server": "Retapez le mot de passe : il n'est réutilisé qu'avec le serveur, le port et la sécurité pour lesquels il a été enregistré.",
-    "unknown": "Valeur refusée."
-  },
-  "mail_failure": {
-    "authentication_failed": "Le serveur a refusé l'identifiant ou le mot de passe.",
-    "rejected": "Le serveur a refusé le mail.",
-    "connection_refused": "Rien ne répond à cette adresse sur ce port.",
-    "unknown_host": "Ce nom de serveur n'existe pas.",
-    "timeout": "Le serveur ne répond pas dans les temps.",
-    "tls_failed": "La connexion chiffrée a échoué : vérifiez la sécurité et le port.",
-    "not_an_smtp_server": "Ce qui répond à cette adresse n'est pas un serveur de mail.",
-    "failed": "Le mail n'a pas pu partir."
   }
 }

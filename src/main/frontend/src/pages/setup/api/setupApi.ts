@@ -1,4 +1,5 @@
-import { client, toInstanceError } from '@/shared/api'
+import { toInstanceError } from '@/entities/instance-settings'
+import { client } from '@/shared/api'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SetupKey, SetupStatus } from '../model/types'
 import { AdminRefusedError, KeyNotSavedError, SetupAlreadyDoneError, SetupCodeInvalidError } from '../model/errors'

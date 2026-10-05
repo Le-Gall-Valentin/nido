@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { MailTestFailedError, SettingsInvalidError } from '@/shared/lib'
+import { MailTestFailedError, SettingsInvalidError } from '@/entities/instance-settings'
 import { renderWithQuery } from '@/shared/test'
 import type { ISettingsApi } from '../model/ISettingsApi'
 import type { InstanceSettings } from '../model/types'
@@ -128,7 +128,7 @@ describe('AdminSettingsPage', () => {
 
     fireEvent.click(card('sessions').getByRole('button', { name: 'action.save' }))
 
-    expect(await card('sessions').findByText('common:setting_problem.out_of_range')).not.toBeNull()
+    expect(await card('sessions').findByText('problem.out_of_range')).not.toBeNull()
   })
 
   it('sends a test with the form and reports what the server answered', async () => {
@@ -137,7 +137,7 @@ describe('AdminSettingsPage', () => {
 
     fireEvent.click(card('mail').getByRole('button', { name: 'action.test' }))
 
-    expect(await card('mail').findByText('common:mail_failure.authentication_failed — 535 Authentication failed')).not.toBeNull()
+    expect(await card('mail').findByText('mail_failure.authentication_failed — 535 Authentication failed')).not.toBeNull()
     expect(api.testMail).toHaveBeenCalledWith(expect.objectContaining({ 'mail.host': 'smtp.example.com' }))
   })
 

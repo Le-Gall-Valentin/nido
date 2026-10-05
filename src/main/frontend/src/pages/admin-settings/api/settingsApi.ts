@@ -1,4 +1,5 @@
-import { client, toInstanceError } from '@/shared/api'
+import { toInstanceError } from '@/entities/instance-settings'
+import { client } from '@/shared/api'
 import type { ISettingsApi } from '../model/ISettingsApi'
 import type { InstanceSettings } from '../model/types'
 

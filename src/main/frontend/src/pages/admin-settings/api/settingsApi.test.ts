@@ -1,7 +1,8 @@
 import { AxiosError, AxiosHeaders } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { client } from '@/shared/api'
-import { MailTestFailedError, ServerError, SettingLockedError, SettingsInvalidError } from '@/shared/lib'
+import { MailTestFailedError, SettingLockedError, SettingsInvalidError } from '@/entities/instance-settings'
+import { ServerError } from '@/shared/lib'
 import { settingsApi } from './settingsApi'
 
 vi.mock('@/shared/api', async (importOriginal) => {

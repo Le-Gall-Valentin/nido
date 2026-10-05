@@ -1,4 +1,4 @@
-/** The server refused some settings; `errors` maps a setting's code to a problem code (see common:setting_problem). */
+/** The server refused some settings; `errors` maps a setting's code to a problem code (worded by useSettingWording). */
 export class SettingsInvalidError extends Error {
   readonly errors: Record<string, string>
   constructor(errors: Record<string, string>) {
@@ -19,7 +19,7 @@ export class SettingLockedError extends Error {
 }
 
 /**
- * The test mail did not leave. `reason` says why (see common:mail_failure); `serverReply` is what the
+ * The test mail did not leave. `reason` says why (worded by useSettingWording); `serverReply` is what the
  * mail server answered, when it answered as a mail server does — null otherwise, never another
  * service's words.
  */

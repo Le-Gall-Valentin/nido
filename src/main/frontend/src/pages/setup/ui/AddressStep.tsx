@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSettingWording } from '@/entities/instance-settings'
 import { Alert, Button, CTA_BUTTON_STYLE, Input } from '@/shared/ui'
 import { isHttpAddress } from '../lib/isHttpAddress'
 import { ACTIONS_CLASS, FIELD_ERROR_CLASS, LEAD_CLASS, TITLE_CLASS } from './styles'
@@ -13,7 +14,8 @@ interface Props {
 }
 
 export function AddressStep({ initial, locked, serverProblem, onNext, onBack }: Props) {
-  const { t } = useTranslation(['setup', 'common'])
+  const { t } = useTranslation('setup')
+  const wording = useSettingWording()
   const [url, setUrl] = useState(locked ?? initial)
   const [invalid, setInvalid] = useState(false)
   const shown = locked ?? url
@@ -42,7 +44,7 @@ export function AddressStep({ initial, locked, serverProblem, onNext, onBack }: 
       />
       {locked && <p className="mt-2 text-[12.5px] text-fg-3">{t('address.locked')}</p>}
       {invalid && <p className={FIELD_ERROR_CLASS}>{t('address.invalid')}</p>}
-      {serverProblem && <p className={FIELD_ERROR_CLASS}>{t(`common:setting_problem.${serverProblem}`)}</p>}
+      {serverProblem && <p className={FIELD_ERROR_CLASS}>{wording.problem(serverProblem)}</p>}
       {shown.trim().toLowerCase().startsWith('http://') && (
         <Alert variant="warning" className="mt-4">{t('address.http_warning')}</Alert>
       )}

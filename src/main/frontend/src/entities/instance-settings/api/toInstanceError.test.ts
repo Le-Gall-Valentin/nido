@@ -1,7 +1,8 @@
 import { AxiosError, AxiosHeaders } from 'axios'
 import { describe, expect, it } from 'vitest'
-import { MailTestFailedError, NetworkError, RateLimitError, ServerError, SettingLockedError, SettingsInvalidError } from '@/shared/lib'
-import { toInstanceError } from './instanceErrors'
+import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
+import { MailTestFailedError, SettingLockedError, SettingsInvalidError } from '../model/errors'
+import { toInstanceError } from './toInstanceError'
 
 function answer(status: number, data: object = {}, headers: Record<string, string> = {}) {
   const config = { headers: new AxiosHeaders() }
