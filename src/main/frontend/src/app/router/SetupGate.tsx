@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { SetupPage, setupApi, useSetupStatus, type ISetupApi, type SetupStatus } from '@/pages/setup'
 import { ROUTES } from '@/shared/config'
 import { Spinner } from '@/shared/ui'
+import { ErrorBoundary } from '../providers'
 
 interface Props {
   children: ReactNode
@@ -24,7 +25,8 @@ export function SetupGate({ children, api = setupApi, renderSetup = (status) => 
     return (
       <BrowserRouter>
         <Routes>
-          <Route path={ROUTES.SETUP} element={renderSetup(setup.status)} />
+          {/* Outside the application's own boundary, which sits under the session: without one, a crash here is a blank page. */}
+          <Route path={ROUTES.SETUP} element={<ErrorBoundary>{renderSetup(setup.status)}</ErrorBoundary>} />
           <Route path="*" element={<Navigate to={ROUTES.SETUP} replace />} />
         </Routes>
       </BrowserRouter>
