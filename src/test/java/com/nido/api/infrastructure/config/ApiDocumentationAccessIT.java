@@ -40,7 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @IntegrationTestConfig
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@TestPropertySource(properties = {"springdoc.api-docs.enabled=true", "springdoc.swagger-ui.enabled=true"})
+@TestPropertySource(properties = "SWAGGER_ENABLED=true")
 class ApiDocumentationAccessIT {
 
     private static final String JWT_SECRET = "integration-test-secret-at-least-32-chars!";
