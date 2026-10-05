@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { SetupPage, setupApi, useSetupStatus, type ISetupApi, type SetupStatus } from '@/pages/setup'
 import { ROUTES } from '@/shared/config'
 import { Spinner } from '@/shared/ui'
-import { ErrorBoundary } from '../providers'
+import { ErrorBoundary } from '../providers/ErrorBoundary'
 
 interface Props {
   children: ReactNode
