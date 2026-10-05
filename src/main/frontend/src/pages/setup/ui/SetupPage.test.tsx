@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { MailTestFailedError, SettingsInvalidError } from '@/shared/lib'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SetupStatus } from '../model/types'
-import { SetupCodeInvalidError } from '../model/errors'
+import { SetupAlreadyDoneError, SetupCodeInvalidError } from '../model/errors'
 import { SetupPage } from './SetupPage'
 
 vi.mock('react-i18next', () => ({
@@ -178,6 +178,76 @@ describe('SetupPage', () => {
     click('action.copy')
 
     expect(await screen.findByText('key.copy_failed')).not.toBeNull()
+  })
+
+  it('says the key is copied once it is', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockResolvedValue(undefined) }, configurable: true })
+    open()
+    await passTheCode()
+    await passTheAdmin()
+    click('action.next')
+    click('action.later')
+    await screen.findByText('the-generated-key')
+
+    click('action.copy')
+
+    expect(await screen.findByRole('button', { name: 'action.copied' })).not.toBeNull()
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true })
+  })
+
+  it('says why the key could not be loaded', async () => {
+    open(fakeApi({ encryptionKey: vi.fn().mockRejectedValue(new SetupAlreadyDoneError()) }))
+    await passTheCode()
+    await passTheAdmin()
+    click('action.next')
+    click('action.later')
+
+    expect(await screen.findByText('errors.already_done')).not.toBeNull()
+  })
+
+  it('refuses an address the server would refuse before going on', async () => {
+    open()
+    await passTheCode()
+    await passTheAdmin()
+
+    type('address.field', 'https://nido.example.com/nido')
+    click('action.next')
+
+    expect(screen.getByText('address.invalid')).not.toBeNull()
+    expect(screen.queryByLabelText('mail.host')).toBeNull()
+  })
+
+  it('wants a server before going on with mail, and says where the test went', async () => {
+    const { api } = open()
+    await passTheCode()
+    await passTheAdmin()
+    click('action.next')
+
+    click('action.next')
+    expect(screen.getByText('common:setting_problem.required')).not.toBeNull()
+
+    type('mail.host', 'smtp.example.com')
+    click('action.test')
+    expect(await screen.findByText('mail.test_sent:{"recipient":"jane@example.fr"}')).not.toBeNull()
+    expect(api.testMail).toHaveBeenCalledWith(expect.objectContaining({ recipient: 'jane@example.fr', language: 'fr' }))
+  })
+
+  it('goes on without mail, or back, when the server configuration sets it', async () => {
+    const { api } = open(fakeApi(), { ...OPEN, mailLocked: true })
+    await passTheCode()
+    await passTheAdmin()
+    click('action.next')
+    await screen.findByText('mail.locked')
+
+    click('action.back')
+    expect(await screen.findByLabelText('address.field')).not.toBeNull()
+    click('action.next')
+    await screen.findByText('mail.locked')
+    click('action.next')
+    fireEvent.click(await screen.findByLabelText('key.saved'))
+    click('action.finish')
+
+    await waitFor(() => expect(api.complete).toHaveBeenCalledWith(expect.objectContaining({ mail: null })))
   })
 
   it('asks nothing about mail when the server configuration sets it', async () => {

@@ -109,6 +109,19 @@ describe('AdminSettingsPage', () => {
     expect(card('mail').getAllByRole('button', { name: 'action.reset' }).length).toBeGreaterThan(0)
   })
 
+  it('saves the protection chosen in the list, and the switch turned on', async () => {
+    const api = open()
+    await screen.findByRole('region', { name: 'group.mail.title' })
+
+    fireEvent.change(card('mail').getByLabelText('field.mail.security'), { target: { value: 'tls' } })
+    fireEvent.click(card('mail').getByRole('button', { name: 'action.save' }))
+    fireEvent.click(card('api').getByRole('switch'))
+    fireEvent.click(card('api').getByRole('button', { name: 'action.save' }))
+
+    await waitFor(() => expect(api.update).toHaveBeenCalledWith('mail', expect.objectContaining({ 'mail.security': 'tls' })))
+    await waitFor(() => expect(api.update).toHaveBeenCalledWith('api', { 'api.swagger': 'true' }))
+  })
+
   it('shows the problem under its field', async () => {
     open({ update: vi.fn().mockRejectedValue(new SettingsInvalidError({ 'sessions.access-token-minutes': 'out_of_range' })) })
     await screen.findByRole('region', { name: 'group.sessions.title' })
