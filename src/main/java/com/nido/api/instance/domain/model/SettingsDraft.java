@@ -16,12 +16,13 @@ public final class SettingsDraft {
     /**
      * Blank clears the setting — back to its default — except a secret: a password field is always
      * shown empty, so leaving it empty must keep the stored password. Clearing one is {@link #clear}.
+     * A required setting is never cleared: blank is a problem.
      */
     public SettingsDraft set(SettingKey key, String typed) {
         String value = typed == null ? "" : typed;
         if (value.isBlank()) {
             if (!key.secret()) {
-                changes.put(key, Optional.empty());
+                clear(key);
             }
             return this;
         }
@@ -32,7 +33,11 @@ public final class SettingsDraft {
     }
 
     public SettingsDraft clear(SettingKey key) {
-        changes.put(key, Optional.empty());
+        if (key.required()) {
+            problems.add(new SettingProblem(key, SettingProblem.REQUIRED));
+        } else {
+            changes.put(key, Optional.empty());
+        }
         return this;
     }
 

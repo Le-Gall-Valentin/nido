@@ -30,6 +30,17 @@ class SettingsDraftTest {
     }
 
     @Test
+    void the_public_address_is_never_emptied_its_cookies_would_turn_secure_and_lock_http_out() {
+        SettingsDraft typed = new SettingsDraft().set(SettingKey.PUBLIC_URL, "  ");
+        SettingsDraft reset = new SettingsDraft().clear(SettingKey.PUBLIC_URL);
+
+        for (SettingsDraft draft : new SettingsDraft[]{typed, reset}) {
+            assertThat(draft.changes()).doesNotContainKey(SettingKey.PUBLIC_URL);
+            assertThat(draft.problems()).containsExactly(new SettingProblem(SettingKey.PUBLIC_URL, SettingProblem.REQUIRED));
+        }
+    }
+
+    @Test
     void the_draft_applies_over_what_is_stored() {
         SettingsDraft draft = new SettingsDraft().set(SettingKey.MAIL_HOST, "smtp.new").clear(SettingKey.MAIL_PORT);
 

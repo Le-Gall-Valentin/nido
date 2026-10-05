@@ -12,7 +12,8 @@ public record SettingsResponse(List<Group> groups) {
 
     public record Group(String group, List<Field> fields) {}
 
-    public record Field(String key, String value, String source, String variable, boolean secret, boolean set) {}
+    /** {@code required}: never emptied — the page offers no way back to a default it does not have. */
+    public record Field(String key, String value, String source, String variable, boolean secret, boolean required, boolean set) {}
 
     public static SettingsResponse of(EffectiveSettings settings) {
         return new SettingsResponse(Arrays.stream(SettingGroup.values())
@@ -23,6 +24,6 @@ public record SettingsResponse(List<Group> groups) {
     private static Field field(EffectiveSetting setting) {
         boolean set = setting.value() != null && !setting.value().isBlank();
         return new Field(setting.key().code(), setting.key().secret() ? null : setting.value(),
-            setting.source().name(), setting.key().variable(), setting.key().secret(), set);
+            setting.source().name(), setting.key().variable(), setting.key().secret(), setting.key().required(), set);
     }
 }

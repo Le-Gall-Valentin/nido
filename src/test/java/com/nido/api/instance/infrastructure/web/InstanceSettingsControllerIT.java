@@ -81,6 +81,15 @@ class InstanceSettingsControllerIT {
     }
 
     @Test
+    void the_page_is_told_which_setting_cannot_be_emptied() throws Exception {
+        mvc.perform(get("/api/admin/settings").cookie(superAdmin))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.groups[1].fields[0].key").value("public-url"))
+            .andExpect(jsonPath("$.groups[1].fields[0].required").value(true))
+            .andExpect(jsonPath("$.groups[2].fields[0].required").value(false));
+    }
+
+    @Test
     void wrong_values_come_back_by_setting() throws Exception {
         mvc.perform(put("/api/admin/settings/sessions").cookie(superAdmin).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"values\":{\"sessions.access-token-minutes\":\"abc\"}}"))

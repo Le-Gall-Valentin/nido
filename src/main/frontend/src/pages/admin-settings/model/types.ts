@@ -7,6 +7,8 @@ export interface SettingField {
   source: SettingSource
   variable: string
   secret: boolean
+  /** Never emptied: no way back to a default it does not have. */
+  required: boolean
   set: boolean
 }
 

@@ -64,13 +64,24 @@ class UpdateSettingsHandlerTest {
     }
 
     @Test
-    void the_public_address_cannot_go_while_mail_needs_it() {
-        store.rows.put(SettingKey.MAIL_HOST, "smtp.example.com");
-        store.rows.put(SettingKey.PUBLIC_URL, "https://nido.example.com");
+    void mail_cannot_be_switched_on_while_no_public_address_is_known() {
+        // An installation upgraded without NIDO_APP_URL has none: the links of the mails would lead nowhere.
+        assertThatThrownBy(() -> handler.update(SettingGroup.MAIL,
+                Map.of(SettingKey.MAIL_HOST, "smtp.example.com", SettingKey.MAIL_FROM, "nido@example.com"), admin))
+            .isInstanceOfSatisfying(InstanceException.SettingsInvalid.class, invalid ->
+                assertThat(invalid.problems()).contains(new SettingProblem(SettingKey.PUBLIC_URL, SettingProblem.PUBLIC_URL_REQUIRED_BY_MAIL)));
+    }
+
+    @Test
+    void the_public_address_cannot_be_reset_even_with_mail_off() {
+        store.rows.put(SettingKey.PUBLIC_URL, "http://192.168.1.10:8080");
 
         assertThatThrownBy(() -> handler.reset(SettingKey.PUBLIC_URL, admin))
             .isInstanceOfSatisfying(InstanceException.SettingsInvalid.class, invalid ->
-                assertThat(invalid.problems()).contains(new SettingProblem(SettingKey.PUBLIC_URL, SettingProblem.PUBLIC_URL_REQUIRED_BY_MAIL)));
+                assertThat(invalid.problems()).containsExactly(new SettingProblem(SettingKey.PUBLIC_URL, SettingProblem.REQUIRED)));
+        assertThatThrownBy(() -> handler.update(SettingGroup.PUBLIC_URL, Map.of(SettingKey.PUBLIC_URL, ""), admin))
+            .isInstanceOf(InstanceException.SettingsInvalid.class);
+        assertThat(store.rows).containsEntry(SettingKey.PUBLIC_URL, "http://192.168.1.10:8080");
     }
 
     @Test

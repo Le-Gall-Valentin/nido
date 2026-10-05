@@ -13,22 +13,22 @@ vi.mock('react-i18next', () => ({
 const SETTINGS: InstanceSettings = {
   groups: [
     { group: 'mail', fields: [
-      { key: 'mail.host', value: 'smtp.example.com', source: 'DATABASE', variable: 'NIDO_SMTP_HOST', secret: false, set: true },
-      { key: 'mail.port', value: '587', source: 'DEFAULT', variable: 'NIDO_SMTP_PORT', secret: false, set: true },
-      { key: 'mail.security', value: 'starttls', source: 'DEFAULT', variable: 'NIDO_SMTP_SECURITY', secret: false, set: true },
-      { key: 'mail.username', value: 'jane', source: 'DATABASE', variable: 'NIDO_SMTP_USERNAME', secret: false, set: true },
-      { key: 'mail.password', value: null, source: 'DATABASE', variable: 'NIDO_SMTP_PASSWORD', secret: true, set: true },
-      { key: 'mail.from', value: 'nido@example.com', source: 'DATABASE', variable: 'NIDO_MAIL_FROM', secret: false, set: true },
+      { key: 'mail.host', value: 'smtp.example.com', source: 'DATABASE', variable: 'NIDO_SMTP_HOST', secret: false, required: false, set: true },
+      { key: 'mail.port', value: '587', source: 'DEFAULT', variable: 'NIDO_SMTP_PORT', secret: false, required: false, set: true },
+      { key: 'mail.security', value: 'starttls', source: 'DEFAULT', variable: 'NIDO_SMTP_SECURITY', secret: false, required: false, set: true },
+      { key: 'mail.username', value: 'jane', source: 'DATABASE', variable: 'NIDO_SMTP_USERNAME', secret: false, required: false, set: true },
+      { key: 'mail.password', value: null, source: 'DATABASE', variable: 'NIDO_SMTP_PASSWORD', secret: true, required: false, set: true },
+      { key: 'mail.from', value: 'nido@example.com', source: 'DATABASE', variable: 'NIDO_MAIL_FROM', secret: false, required: false, set: true },
     ] },
     { group: 'public-url', fields: [
-      { key: 'public-url', value: 'https://nido.example.com', source: 'ENVIRONMENT', variable: 'NIDO_APP_URL', secret: false, set: true },
+      { key: 'public-url', value: 'https://nido.example.com', source: 'ENVIRONMENT', variable: 'NIDO_APP_URL', secret: false, required: true, set: true },
     ] },
     { group: 'sessions', fields: [
-      { key: 'sessions.access-token-minutes', value: '15', source: 'DEFAULT', variable: 'NIDO_JWT_EXPIRY_MINUTES', secret: false, set: true },
-      { key: 'sessions.refresh-token-days', value: '30', source: 'DEFAULT', variable: 'NIDO_REFRESH_TOKEN_EXPIRY_DAYS', secret: false, set: true },
+      { key: 'sessions.access-token-minutes', value: '15', source: 'DEFAULT', variable: 'NIDO_JWT_EXPIRY_MINUTES', secret: false, required: false, set: true },
+      { key: 'sessions.refresh-token-days', value: '30', source: 'DEFAULT', variable: 'NIDO_REFRESH_TOKEN_EXPIRY_DAYS', secret: false, required: false, set: true },
     ] },
     { group: 'api', fields: [
-      { key: 'api.swagger', value: 'false', source: 'DEFAULT', variable: 'SWAGGER_ENABLED', secret: false, set: true },
+      { key: 'api.swagger', value: 'false', source: 'DEFAULT', variable: 'SWAGGER_ENABLED', secret: false, required: false, set: true },
     ] },
   ],
 }
@@ -97,6 +97,16 @@ describe('AdminSettingsPage', () => {
 
     expect(await card('api').findByText('saved')).not.toBeNull()
     expect((card('sessions').getByLabelText('field.sessions.access-token-minutes') as HTMLInputElement).value).toBe('45')
+  })
+
+  it('offers no way to empty the public address, saved from this page or not', async () => {
+    const saved = structuredClone(SETTINGS)
+    saved.groups[1].fields[0] = { ...saved.groups[1].fields[0], source: 'DATABASE' }
+    open({ get: vi.fn().mockResolvedValue(saved) })
+    await screen.findByRole('region', { name: 'group.public-url.title' })
+
+    expect(card('public-url').queryByRole('button', { name: 'action.reset' })).toBeNull()
+    expect(card('mail').getAllByRole('button', { name: 'action.reset' }).length).toBeGreaterThan(0)
   })
 
   it('shows the problem under its field', async () => {

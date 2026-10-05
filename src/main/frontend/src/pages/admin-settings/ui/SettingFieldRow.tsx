@@ -78,7 +78,7 @@ export function SettingFieldRow({ field, value, problem, busy, onChange, onReset
       <div className="mb-1 flex justify-end empty:hidden"><SourceBadge source={field.source} variable={field.variable} /></div>
       {control}
       {problem && <p className="mt-1 text-[12.5px] text-status-red">{t(`common:setting_problem.${problem}`)}</p>}
-      {!locked && field.source === 'DATABASE' && (
+      {!locked && !field.required && field.source === 'DATABASE' && (
         <button type="button" disabled={busy} onClick={onReset} className="mt-1 text-[12.5px] font-semibold text-accent hover:underline disabled:opacity-50">
           {field.secret ? t('secret.clear') : t('action.reset')}
         </button>
