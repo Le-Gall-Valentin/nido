@@ -23,7 +23,7 @@ class CheckMailSettingsHandlerTest {
     @Test
     void a_configuration_that_does_not_hold_is_not_tried() {
         AtomicBoolean tried = new AtomicBoolean();
-        List<MailSettingsProblem> problems = List.of(new MailSettingsProblem("from", MailSettingsProblem.INVALID_ADDRESS));
+        List<MailSettingsProblem> problems = List.of(new MailSettingsProblem(MailSettingsProblem.Field.FROM, MailSettingsProblem.INVALID_ADDRESS));
         CheckMailSettingsHandler handler = new CheckMailSettingsHandler(input -> problems,
             (input, to, locale) -> { tried.set(true); return new TestMailOutcome.Sent(); });
 

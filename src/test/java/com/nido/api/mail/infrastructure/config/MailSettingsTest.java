@@ -31,21 +31,21 @@ class MailSettingsTest {
 
         assertThat(check.settings()).isEmpty();
         assertThat(check.problems()).containsExactlyInAnyOrder(
-            new MailSettingsProblem("host", MailSettingsProblem.REQUIRED),
-            new MailSettingsProblem("from", MailSettingsProblem.REQUIRED),
-            new MailSettingsProblem("appUrl", MailSettingsProblem.REQUIRED));
+            new MailSettingsProblem(MailSettingsProblem.Field.HOST, MailSettingsProblem.REQUIRED),
+            new MailSettingsProblem(MailSettingsProblem.Field.FROM, MailSettingsProblem.REQUIRED),
+            new MailSettingsProblem(MailSettingsProblem.Field.APP_URL, MailSettingsProblem.REQUIRED));
     }
 
     @Test
     void a_sender_that_is_not_an_address_is_refused() {
         assertThat(MailSettings.check(input("not an address", "https://nido.example.com")).problems())
-            .containsExactly(new MailSettingsProblem("from", MailSettingsProblem.INVALID_ADDRESS));
+            .containsExactly(new MailSettingsProblem(MailSettingsProblem.Field.FROM, MailSettingsProblem.INVALID_ADDRESS));
     }
 
     @Test
     void the_app_url_is_absolute_and_plain_http_is_fine_for_any_host() {
         assertThat(MailSettings.check(input("nido@example.com", "nido.example.com")).problems())
-            .containsExactly(new MailSettingsProblem("appUrl", MailSettingsProblem.INVALID_URL));
+            .containsExactly(new MailSettingsProblem(MailSettingsProblem.Field.APP_URL, MailSettingsProblem.INVALID_URL));
         assertThat(MailSettings.check(input("nido@example.com", "http://192.168.1.10:8080")).settings()).isPresent();
     }
 
@@ -58,18 +58,18 @@ class MailSettingsTest {
 
         assertThat(MailSettings.check(new MailSettingsInput("smtp.example.com", 70_000, "ssl", null, null,
             "nido@example.com", "https://nido.example.com")).problems()).containsExactlyInAnyOrder(
-            new MailSettingsProblem("port", MailSettingsProblem.OUT_OF_RANGE),
-            new MailSettingsProblem("security", MailSettingsProblem.UNKNOWN_SECURITY));
+            new MailSettingsProblem(MailSettingsProblem.Field.PORT, MailSettingsProblem.OUT_OF_RANGE),
+            new MailSettingsProblem(MailSettingsProblem.Field.SECURITY, MailSettingsProblem.UNKNOWN_SECURITY));
     }
 
     @Test
     void username_and_password_go_together() {
         assertThat(MailSettings.check(new MailSettingsInput("smtp.example.com", 587, "starttls", "user", " ",
             "nido@example.com", "https://nido.example.com")).problems())
-            .containsExactly(new MailSettingsProblem("password", MailSettingsProblem.CREDENTIALS_GO_TOGETHER));
+            .containsExactly(new MailSettingsProblem(MailSettingsProblem.Field.PASSWORD, MailSettingsProblem.CREDENTIALS_GO_TOGETHER));
         assertThat(MailSettings.check(new MailSettingsInput("smtp.example.com", 587, "starttls", null, "s3cret",
             "nido@example.com", "https://nido.example.com")).problems())
-            .containsExactly(new MailSettingsProblem("username", MailSettingsProblem.CREDENTIALS_GO_TOGETHER));
+            .containsExactly(new MailSettingsProblem(MailSettingsProblem.Field.USERNAME, MailSettingsProblem.CREDENTIALS_GO_TOGETHER));
     }
 
     @Test

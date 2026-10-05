@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -25,15 +24,6 @@ import java.util.Optional;
  */
 @Component
 public class MailSettingsCheckAdapter implements MailSettingsCheckPort {
-
-    private static final Map<String, SettingKey> FIELDS = Map.of(
-        "host", SettingKey.MAIL_HOST,
-        "port", SettingKey.MAIL_PORT,
-        "security", SettingKey.MAIL_SECURITY,
-        "username", SettingKey.MAIL_USERNAME,
-        "password", SettingKey.MAIL_PASSWORD,
-        "from", SettingKey.MAIL_FROM,
-        "appUrl", SettingKey.PUBLIC_URL);
 
     private final CheckMailSettingsUseCase check;
 
@@ -56,8 +46,18 @@ public class MailSettingsCheckAdapter implements MailSettingsCheckPort {
         };
     }
 
+    /** Exhaustive: a field the mail context adds stops the build here, not a request at run time. */
     private static SettingProblem problem(MailSettingsProblem problem) {
-        return new SettingProblem(FIELDS.get(problem.field()), problem.code());
+        SettingKey key = switch (problem.field()) {
+            case HOST -> SettingKey.MAIL_HOST;
+            case PORT -> SettingKey.MAIL_PORT;
+            case SECURITY -> SettingKey.MAIL_SECURITY;
+            case USERNAME -> SettingKey.MAIL_USERNAME;
+            case PASSWORD -> SettingKey.MAIL_PASSWORD;
+            case FROM -> SettingKey.MAIL_FROM;
+            case APP_URL -> SettingKey.PUBLIC_URL;
+        };
+        return new SettingProblem(key, problem.code());
     }
 
     private static MailSettingsInput input(MailDraft draft) {

@@ -12,7 +12,10 @@ import com.nido.api.mail.domain.model.Recipient;
 import com.nido.api.mail.domain.model.TestMailOutcome;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -58,18 +61,21 @@ class MailSettingsCheckAdapterTest {
 
     @Test
     void each_problem_of_a_mail_field_lands_on_its_setting() {
-        check.problems = List.of(
-            new MailSettingsProblem("host", MailSettingsProblem.REQUIRED),
-            new MailSettingsProblem("port", MailSettingsProblem.OUT_OF_RANGE),
-            new MailSettingsProblem("security", MailSettingsProblem.UNKNOWN_SECURITY),
-            new MailSettingsProblem("username", MailSettingsProblem.CREDENTIALS_GO_TOGETHER),
-            new MailSettingsProblem("password", MailSettingsProblem.CREDENTIALS_GO_TOGETHER),
-            new MailSettingsProblem("from", MailSettingsProblem.INVALID_ADDRESS),
-            new MailSettingsProblem("appUrl", MailSettingsProblem.INVALID_URL));
+        check.problems = Arrays.stream(MailSettingsProblem.Field.values())
+            .map(field -> new MailSettingsProblem(field, MailSettingsProblem.REQUIRED)).toList();
 
         assertThat(adapter.problems(DRAFT)).extracting(SettingProblem::key).containsExactly(
             SettingKey.MAIL_HOST, SettingKey.MAIL_PORT, SettingKey.MAIL_SECURITY, SettingKey.MAIL_USERNAME,
             SettingKey.MAIL_PASSWORD, SettingKey.MAIL_FROM, SettingKey.PUBLIC_URL);
+    }
+
+    @Test
+    void every_code_the_mail_context_gives_is_one_the_pages_word() throws Exception {
+        for (Field constant : MailSettingsProblem.class.getFields()) {
+            if (constant.getType() == String.class && Modifier.isStatic(constant.getModifiers())) {
+                assertThat(SettingProblem.class.getField(constant.getName()).get(null)).isEqualTo(constant.get(null));
+            }
+        }
     }
 
     @Test
@@ -90,7 +96,7 @@ class MailSettingsCheckAdapterTest {
 
     @Test
     void a_test_refused_before_sending_reports_its_problems_by_setting() {
-        check.outcome = new TestMailOutcome.Invalid(List.of(new MailSettingsProblem("from", MailSettingsProblem.REQUIRED)));
+        check.outcome = new TestMailOutcome.Invalid(List.of(new MailSettingsProblem(MailSettingsProblem.Field.FROM, MailSettingsProblem.REQUIRED)));
 
         assertThatThrownBy(() -> adapter.sendTest(DRAFT, "jane@example.fr", Locale.FRENCH))
             .isInstanceOfSatisfying(InstanceException.SettingsInvalid.class, invalid -> assertThat(invalid.problems())

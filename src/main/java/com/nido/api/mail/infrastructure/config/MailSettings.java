@@ -26,20 +26,20 @@ public record MailSettings(String host, int port, MailSecurity security, String 
         List<MailSettingsProblem> problems = new ArrayList<>();
         String host = blankToNull(input.host());
         if (host == null) {
-            problems.add(new MailSettingsProblem("host", MailSettingsProblem.REQUIRED));
+            problems.add(new MailSettingsProblem(MailSettingsProblem.Field.HOST, MailSettingsProblem.REQUIRED));
         }
         int port = input.port() == null ? DEFAULT_PORT : input.port();
         if (port < 1 || port > 65_535) {
-            problems.add(new MailSettingsProblem("port", MailSettingsProblem.OUT_OF_RANGE));
+            problems.add(new MailSettingsProblem(MailSettingsProblem.Field.PORT, MailSettingsProblem.OUT_OF_RANGE));
         }
         Optional<MailSecurity> security = MailSecurity.parse(input.security());
         if (security.isEmpty()) {
-            problems.add(new MailSettingsProblem("security", MailSettingsProblem.UNKNOWN_SECURITY));
+            problems.add(new MailSettingsProblem(MailSettingsProblem.Field.SECURITY, MailSettingsProblem.UNKNOWN_SECURITY));
         }
         String username = blankToNull(input.username());
         String password = blankToNull(input.password());
         if ((username == null) != (password == null)) {
-            problems.add(new MailSettingsProblem(username == null ? "username" : "password", MailSettingsProblem.CREDENTIALS_GO_TOGETHER));
+            problems.add(new MailSettingsProblem(username == null ? MailSettingsProblem.Field.USERNAME : MailSettingsProblem.Field.PASSWORD, MailSettingsProblem.CREDENTIALS_GO_TOGETHER));
         }
         InternetAddress from = parseFrom(input.from(), problems);
         URI appUrl = parseAppUrl(input.appUrl(), problems);
@@ -51,13 +51,13 @@ public record MailSettings(String host, int port, MailSecurity security, String 
 
     private static InternetAddress parseFrom(String value, List<MailSettingsProblem> problems) {
         if (value == null || value.isBlank()) {
-            problems.add(new MailSettingsProblem("from", MailSettingsProblem.REQUIRED));
+            problems.add(new MailSettingsProblem(MailSettingsProblem.Field.FROM, MailSettingsProblem.REQUIRED));
             return null;
         }
         try {
             return new InternetAddress(value.strip(), true);
         } catch (AddressException e) {
-            problems.add(new MailSettingsProblem("from", MailSettingsProblem.INVALID_ADDRESS));
+            problems.add(new MailSettingsProblem(MailSettingsProblem.Field.FROM, MailSettingsProblem.INVALID_ADDRESS));
             return null;
         }
     }
@@ -65,19 +65,19 @@ public record MailSettings(String host, int port, MailSecurity security, String 
     /** Plain http is accepted for any host: on a home network the whole app is http anyway. */
     private static URI parseAppUrl(String value, List<MailSettingsProblem> problems) {
         if (value == null || value.isBlank()) {
-            problems.add(new MailSettingsProblem("appUrl", MailSettingsProblem.REQUIRED));
+            problems.add(new MailSettingsProblem(MailSettingsProblem.Field.APP_URL, MailSettingsProblem.REQUIRED));
             return null;
         }
         URI uri;
         try {
             uri = new URI(value.strip());
         } catch (URISyntaxException e) {
-            problems.add(new MailSettingsProblem("appUrl", MailSettingsProblem.INVALID_URL));
+            problems.add(new MailSettingsProblem(MailSettingsProblem.Field.APP_URL, MailSettingsProblem.INVALID_URL));
             return null;
         }
         if (!uri.isAbsolute() || uri.getHost() == null
                 || !("https".equals(uri.getScheme()) || "http".equals(uri.getScheme()))) {
-            problems.add(new MailSettingsProblem("appUrl", MailSettingsProblem.INVALID_URL));
+            problems.add(new MailSettingsProblem(MailSettingsProblem.Field.APP_URL, MailSettingsProblem.INVALID_URL));
             return null;
         }
         String text = uri.toString();

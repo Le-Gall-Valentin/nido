@@ -1,10 +1,13 @@
 package com.nido.api.mail.domain.model;
 
 /**
- * What is wrong with one field of a mail configuration. Fields: host, port, security, username,
- * password, from, appUrl. The codes are those the settings pages word.
+ * What is wrong with one field of a mail configuration. The codes are those the settings pages word.
  */
-public record MailSettingsProblem(String field, String code) {
+public record MailSettingsProblem(Field field, String code) {
+
+    /** The fields of a mail configuration: a context that maps them to its own names must name every one. */
+    public enum Field { HOST, PORT, SECURITY, USERNAME, PASSWORD, FROM, APP_URL }
+
     public static final String REQUIRED = "required";
     public static final String OUT_OF_RANGE = "out_of_range";
     public static final String UNKNOWN_SECURITY = "unknown_security";
