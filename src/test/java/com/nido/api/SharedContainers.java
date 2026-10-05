@@ -28,9 +28,14 @@ import org.testcontainers.containers.PostgreSQLContainer;
 public class SharedContainers {
 
     @ServiceConnection
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16");
+    public static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16");
 
     @ServiceConnection
     @SuppressWarnings("resource")
-    static final GenericContainer<?> REDIS = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
+    public static final GenericContainer<?> REDIS = new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
+
+    /** A database of the shared container, by name — for the tests that need one of their own. */
+    public static String jdbcUrl(String database) {
+        return "jdbc:postgresql://" + POSTGRES.getHost() + ":" + POSTGRES.getMappedPort(5432) + "/" + database;
+    }
 }

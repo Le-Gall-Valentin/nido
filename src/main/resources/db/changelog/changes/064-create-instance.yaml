@@ -1,0 +1,58 @@
+databaseChangeLog:
+  - changeSet:
+      id: 064-create-instance
+      author: nido
+      comment: >
+        The installation itself, in one row: whether its first-run setup is done, and the fingerprint
+        of the encryption key in use — what lets a start with the wrong key stop instead of writing
+        data nobody can read back. An installation that already has accounts was set up before this
+        table existed: its row says so, and it never sees the setup screen.
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: instance
+      changes:
+        - createTable:
+            tableName: instance
+            columns:
+              - column:
+                  name: id
+                  type: SMALLINT
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_instance
+                    nullable: false
+              - column:
+                  name: setup_completed_at
+                  type: TIMESTAMPTZ
+              - column:
+                  name: key_fingerprint
+                  type: BYTEA
+              - column:
+                  name: key_fingerprint_salt
+                  type: BYTEA
+              - column:
+                  name: key_generated
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE instance ADD CONSTRAINT ck_instance_single_row CHECK (id = 1)
+        - sql:
+            sql: >
+              ALTER TABLE instance ADD CONSTRAINT ck_instance_fingerprint_whole
+              CHECK ((key_fingerprint IS NULL) = (key_fingerprint_salt IS NULL))
+        - sql:
+            sql: >
+              INSERT INTO instance (id, setup_completed_at, key_generated, created_at)
+              SELECT 1, CASE WHEN EXISTS (SELECT 1 FROM users) THEN now() END, false, now()
+      rollback:
+        - dropTable:
+            tableName: instance

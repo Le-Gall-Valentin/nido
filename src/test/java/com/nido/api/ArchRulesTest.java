@@ -26,7 +26,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 class ArchRulesTest {
 
     private static final String BASE = "com.nido.api.";
-    private static final List<String> BCS = List.of("authentication", "identity", "mfa", "space", "mail", "notifications");
+    private static final List<String> BCS = List.of("authentication", "identity", "mfa", "space", "mail", "notifications", "instance");
 
     private final JavaClasses classes = new ClassFileImporter()
         .importPackages("com.nido.api");
@@ -515,6 +515,36 @@ class ArchRulesTest {
     }
 
     // -------------------------------------------------------------------------
+    // Instance — the installation's settings, setup and key; read by others through what it publishes
+    // -------------------------------------------------------------------------
+
+    private static final String INSTANCE = BASE + "instance..";
+
+    @Test
+    void outside_instance_only_what_instance_publishes_is_used() {
+        DescribedPredicate<JavaClass> unpublished = DescribedPredicate.describe(
+            "an instance class outside its application.port.in and domain.model",
+            c -> c.getPackageName().startsWith(BASE + "instance.")
+                && !c.getPackageName().startsWith(BASE + "instance.application.port.in")
+                && !c.getPackageName().startsWith(BASE + "instance.domain.model"));
+        noClasses()
+            .that().resideOutsideOfPackage(INSTANCE)
+            .and(excludeTests())
+            .should().dependOnClassesThat(unpublished)
+            .check(classes);
+    }
+
+    @Test
+    void outside_instance_only_an_infrastructure_adapter_names_instance() {
+        noClasses()
+            .that().resideOutsideOfPackage(INSTANCE)
+            .and().resideOutsideOfPackage("..infrastructure..")
+            .and(excludeTests())
+            .should().dependOnClassesThat().resideInAPackage(INSTANCE)
+            .check(classes);
+    }
+
+    // -------------------------------------------------------------------------
     // Global infra isolation
     // -------------------------------------------------------------------------
 
@@ -532,7 +562,8 @@ class ArchRulesTest {
                 BASE + "identity.infrastructure..",
                 BASE + "mfa.infrastructure..",
                 BASE + "mail.infrastructure..",
-                BASE + "notifications.infrastructure..")
+                BASE + "notifications.infrastructure..",
+                BASE + "instance.infrastructure..")
             .allowEmptyShould(false)
             .check(classes);
     }
