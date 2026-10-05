@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import axios, { type AxiosError } from 'axios'
-import { adminUsersApi, ConflictError, RoleAlreadyAssignedError } from './adminUsersApi'
+import { adminUsersApi, AlreadyJoinedError, ConflictError, RoleAlreadyAssignedError } from './adminUsersApi'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
 
@@ -71,42 +71,61 @@ describe('listUsers', () => {
 })
 
 describe('createUser', () => {
-  it('POST /users with correct body', async () => {
-    mock.post.mockResolvedValue({ status: 201 })
-    await adminUsersApi.createUser('bob', 'bob@test.com', 'P@ss1!', 'USER')
-    expect(mock.post).toHaveBeenCalledWith('/users', {
-      username: 'bob', email: 'bob@test.com', password: 'P@ss1!', role: 'USER',
-    })
+  it('POST /users without a password, and hands back how the invitation left', async () => {
+    mock.post.mockResolvedValue({ status: 201, data: { id: 'u-9', invitation: { delivery: 'link', link: '/welcome#token=x' } } })
+
+    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'USER'))
+      .resolves.toEqual({ delivery: 'link', link: '/welcome#token=x' })
+    expect(mock.post).toHaveBeenCalledWith('/users', { username: 'bob', email: 'bob@test.com', role: 'USER' })
   })
 
   it('throws ConflictError on 409', async () => {
     mock.post.mockRejectedValue(axiosErr(409))
-    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'P@ss1!', 'USER')).rejects.toBeInstanceOf(ConflictError)
+    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'USER')).rejects.toBeInstanceOf(ConflictError)
   })
 
   it('throws RateLimitError on 429', async () => {
     mock.post.mockRejectedValue(axiosErr(429))
-    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'P@ss1!', 'USER')).rejects.toBeInstanceOf(RateLimitError)
+    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'USER')).rejects.toBeInstanceOf(RateLimitError)
   })
 
   it('throws ForbiddenError on 403', async () => {
     mock.post.mockRejectedValue(axiosErr(403))
-    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'P@ss1!', 'USER')).rejects.toBeInstanceOf(ForbiddenError)
+    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'USER')).rejects.toBeInstanceOf(ForbiddenError)
   })
 
   it('throws NotFoundError on 404', async () => {
     mock.post.mockRejectedValue(axiosErr(404))
-    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'P@ss1!', 'USER')).rejects.toBeInstanceOf(NotFoundError)
+    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'USER')).rejects.toBeInstanceOf(NotFoundError)
   })
 
   it('throws ServerError on 500', async () => {
     mock.post.mockRejectedValue(axiosErr(500))
-    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'P@ss1!', 'USER')).rejects.toBeInstanceOf(ServerError)
+    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'USER')).rejects.toBeInstanceOf(ServerError)
   })
 
   it('throws NetworkError on no response', async () => {
     mock.post.mockRejectedValue(new Error('network'))
-    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'P@ss1!', 'USER')).rejects.toBeInstanceOf(NetworkError)
+    await expect(adminUsersApi.createUser('bob', 'bob@test.com', 'USER')).rejects.toBeInstanceOf(NetworkError)
+  })
+})
+
+describe('resendInvitation', () => {
+  it('POST /users/{id}/invitation and hands back how the new invitation left', async () => {
+    mock.post.mockResolvedValue({ status: 200, data: { delivery: 'mail' } })
+
+    await expect(adminUsersApi.resendInvitation('u-1')).resolves.toEqual({ delivery: 'mail' })
+    expect(mock.post).toHaveBeenCalledWith('/users/u-1/invitation')
+  })
+
+  it('throws AlreadyJoinedError on 409', async () => {
+    mock.post.mockRejectedValue(axiosErr(409))
+    await expect(adminUsersApi.resendInvitation('u-1')).rejects.toBeInstanceOf(AlreadyJoinedError)
+  })
+
+  it('throws ForbiddenError on 403', async () => {
+    mock.post.mockRejectedValue(axiosErr(403))
+    await expect(adminUsersApi.resendInvitation('u-1')).rejects.toBeInstanceOf(ForbiddenError)
   })
 })
 

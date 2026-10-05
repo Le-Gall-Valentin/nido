@@ -11,7 +11,7 @@ const SA: User = { id: 'sa', username: 'sa', email: 'sa@test.com', role: 'SUPER_
 const ADMIN: User = { id: 'a1', username: 'admin', email: 'admin@test.com', role: 'ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false }
 
 function target(overrides: Partial<AdminUser> = {}): AdminUser {
-  return { id: 'u1', username: 'alice', email: 'alice@test.com', role: 'USER', isActive: true, createdAt: '2024-01-01T00:00:00Z', totpEnabled: true, ...overrides }
+  return { id: 'u1', username: 'alice', email: 'alice@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', totpEnabled: true, ...overrides }
 }
 
 function setup(currentUser: User, user: AdminUser) {

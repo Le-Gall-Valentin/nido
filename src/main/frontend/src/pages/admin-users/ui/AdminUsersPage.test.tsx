@@ -22,6 +22,7 @@ const mockApi = vi.hoisted(() => ({
   deactivateUser: vi.fn(),
   resetTotp: vi.fn(),
   deleteUser: vi.fn(),
+    resendInvitation: vi.fn(),
 }))
 
 vi.mock('@/features/auth', () => ({
@@ -92,7 +93,7 @@ const MOCK_CURRENT_USER: User = {
 }
 const MOCK_USER: AdminUser = {
   id: 'u1', username: 'alice', email: 'alice@test.com',
-  role: 'USER', isActive: true, createdAt: '2024-02-01T00:00:00Z', totpEnabled: false,
+  role: 'USER', isActive: true, invitation: null, createdAt: '2024-02-01T00:00:00Z', totpEnabled: false,
 }
 const MOCK_PAGE: UsersPage = {
   content: [MOCK_USER],

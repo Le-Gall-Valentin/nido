@@ -13,7 +13,7 @@ vi.mock('react-i18next', () => ({
 
 const TARGET: AdminUser = {
   id: 'u-1', username: 'alice', email: 'alice@test.com',
-  role: 'USER', isActive: true, createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
+  role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
 }
 
 function setup(overrides: { onDelete?: () => Promise<void> } = {}) {

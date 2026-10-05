@@ -19,10 +19,10 @@ const SA: User = { id: 'sa', username: 'superadmin', email: 'sa@test.com', role:
 const ADMIN: User = { id: 'a1', username: 'adminuser', email: 'admin@test.com', role: 'ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false }
 
 const USERS: AdminUser[] = [
-  { ...SA, isActive: true },
-  { ...ADMIN, isActive: true },
-  { id: 'u1', username: 'testuser', email: 'test@test.com', role: 'USER', isActive: true, createdAt: '2024-02-01T00:00:00Z', totpEnabled: true },
-  { id: 'u2', username: 'inactive', email: 'inactive@test.com', role: 'USER', isActive: false, createdAt: '2024-03-01T00:00:00Z', totpEnabled: false },
+  { ...SA, isActive: true, invitation: null },
+  { ...ADMIN, isActive: true, invitation: null },
+  { id: 'u1', username: 'testuser', email: 'test@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-02-01T00:00:00Z', totpEnabled: true },
+  { id: 'u2', username: 'inactive', email: 'inactive@test.com', role: 'USER', isActive: false, invitation: null, createdAt: '2024-03-01T00:00:00Z', totpEnabled: false },
 ]
 
 const DEFAULT_HANDLERS = {

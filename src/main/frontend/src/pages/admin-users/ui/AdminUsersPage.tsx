@@ -172,7 +172,7 @@ function AdminUsersPageContent() {
         <CreateUserModal
           caller={currentUser}
           onClose={() => setCreateOpen(false)}
-          onCreate={(u, e, p, r) => createUser.mutateAsync({ username: u, email: e, password: p, role: r })}
+          onCreate={(u, e, _p, r) => createUser.mutateAsync({ username: u, email: e, role: r }).then(() => undefined)}
           onSuccess={() => { setPage(0); setCreateOpen(false) }}
         />
       )}

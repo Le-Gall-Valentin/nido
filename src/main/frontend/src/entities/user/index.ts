@@ -1,4 +1,4 @@
-export type { User, UserRole, AdminUser } from './model/types'
+export type { User, UserRole, AdminUser, InvitationState, InvitationDelivery } from './model/types'
 export { isAdminRole } from './model/types'
 export { getInitials } from './lib/getInitials'
 export { RolePill } from './ui/RolePill'
@@ -7,8 +7,8 @@ export type { IAdminUsersApi, UsersPage } from './model/IAdminUsersApi'
 export { AdminUsersApiProvider, useAdminUsersApi } from './model/adminUsersApiContext'
 export { USERS_QUERY_KEY, USERS_PAGE_SIZE, useUsers } from './model/useUsers'
 export {
-  useCreateUser, useUpdateUserRole, useDeleteUser, useResetTotp, useToggleUserActive,
+  useCreateUser, useUpdateUserRole, useDeleteUser, useResetTotp, useToggleUserActive, useResendInvitation,
 } from './model/useUserMutations'
-export { adminUsersApi, ConflictError, RoleAlreadyAssignedError } from './api/adminUsersApi'
+export { adminUsersApi, AlreadyJoinedError, ConflictError, RoleAlreadyAssignedError } from './api/adminUsersApi'
 export type { IAccountLanguageApi } from './model/IAccountLanguageApi'
 export { accountLanguageApi } from './api/accountLanguageApi'

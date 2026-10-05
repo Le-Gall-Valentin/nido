@@ -13,8 +13,8 @@ vi.mock('react-i18next', () => ({
 const SA: User = { id: 'sa', username: 'superadmin', email: 'sa@test.com', role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: true }
 
 const USERS: AdminUser[] = [
-  { ...SA, isActive: true },
-  { id: 'u1', username: 'testuser', email: 'test@test.com', role: 'USER', isActive: true, createdAt: '2024-02-01T00:00:00Z', totpEnabled: true },
+  { ...SA, isActive: true, invitation: null },
+  { id: 'u1', username: 'testuser', email: 'test@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-02-01T00:00:00Z', totpEnabled: true },
 ]
 
 const HANDLERS = {

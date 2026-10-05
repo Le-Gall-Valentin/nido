@@ -1,4 +1,4 @@
-import type { AdminUser } from './types'
+import type { AdminUser, InvitationDelivery } from './types'
 
 /** Paginated users payload returned by the backend (mirrors `PageResponse`). */
 export interface UsersPage {
@@ -20,7 +20,10 @@ export interface UsersPage {
  */
 export interface IAdminUsersApi {
   listUsers(page: number, size?: number, search?: string): Promise<UsersPage>
-  createUser(username: string, email: string, password: string, role: 'USER' | 'ADMIN'): Promise<void>
+  /** Creates the account and invites it: it chooses its own password with the link. */
+  createUser(username: string, email: string, role: 'USER' | 'ADMIN'): Promise<InvitationDelivery>
+  /** A new link for an account that has not chosen its password yet; the previous one stops working. */
+  resendInvitation(id: string): Promise<InvitationDelivery>
   updateUserRole(id: string, role: 'USER' | 'ADMIN'): Promise<void>
   activateUser(id: string): Promise<void>
   deactivateUser(id: string): Promise<void>

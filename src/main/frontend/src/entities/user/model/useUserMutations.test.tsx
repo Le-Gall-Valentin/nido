@@ -6,10 +6,10 @@ import type { AdminUser } from '@/entities/user'
 import type { IAdminUsersApi, UsersPage } from './IAdminUsersApi'
 import { AdminUsersApiProvider } from './adminUsersApiContext'
 import { USERS_QUERY_KEY } from './useUsers'
-import { useToggleUserActive } from './useUserMutations'
+import { useCreateUser, useResendInvitation, useToggleUserActive } from './useUserMutations'
 
 const USER: AdminUser = {
-  id: 'u-1', username: 'alice', email: 'alice@test.com', role: 'USER', createdAt: '2026-01-01', totpEnabled: false, isActive: true,
+  id: 'u-1', username: 'alice', email: 'alice@test.com', role: 'USER', createdAt: '2026-01-01', totpEnabled: false, isActive: true, invitation: null,
 }
 
 const PAGE: UsersPage = { content: [USER], totalElements: 1, page: 0, size: 20 }
@@ -23,6 +23,7 @@ function fakeApi(overrides: Partial<IAdminUsersApi> = {}): IAdminUsersApi {
     deactivateUser: vi.fn(),
     resetTotp: vi.fn(),
     deleteUser: vi.fn(),
+    resendInvitation: vi.fn(),
     ...overrides,
   }
 }
@@ -52,5 +53,35 @@ describe('useToggleUserActive', () => {
     rejectDeactivate(new Error('boom'))
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(queryClient.getQueryData<UsersPage>(queryKey)?.content[0].isActive).toBe(true)
+  })
+})
+
+function wrapperWith(api: IAdminUsersApi) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <AdminUsersApiProvider api={api}>{children}</AdminUsersApiProvider>
+    </QueryClientProvider>
+  )
+}
+
+describe('useCreateUser', () => {
+  it('creates without a password and hands back how the invitation left', async () => {
+    const api = fakeApi({ createUser: vi.fn().mockResolvedValue({ delivery: 'mail' }) })
+    const { result } = renderHook(() => useCreateUser(), { wrapper: wrapperWith(api) })
+
+    await expect(result.current.mutateAsync({ username: 'bob', email: 'bob@test.com', role: 'USER' }))
+      .resolves.toEqual({ delivery: 'mail' })
+    expect(api.createUser).toHaveBeenCalledWith('bob', 'bob@test.com', 'USER')
+  })
+})
+
+describe('useResendInvitation', () => {
+  it('hands back how the new invitation left', async () => {
+    const api = fakeApi({ resendInvitation: vi.fn().mockResolvedValue({ delivery: 'link', link: '/welcome#token=y' }) })
+    const { result } = renderHook(() => useResendInvitation(), { wrapper: wrapperWith(api) })
+
+    await expect(result.current.mutateAsync('u-1')).resolves.toEqual({ delivery: 'link', link: '/welcome#token=y' })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
   })
 })
