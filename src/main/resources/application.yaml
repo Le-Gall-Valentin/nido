@@ -101,10 +101,12 @@ NIDO:
     # Empty: Secure when the public address is https (or unknown). Set to false only to get back in
     # after an https address was saved while Nido was still reached over plain http.
     secure: ${NIDO_COOKIE_SECURE:}
+  # Optional. All three set an installation up without the setup screen (scripted installs); none
+  # leaves it to the screen. Ignored once the installation is set up — they can be removed then.
   seed:
-    username: ${NIDO_SEED_USERNAME}
-    email: ${NIDO_SEED_EMAIL}
-    password: ${NIDO_SEED_PASSWORD}
+    username: ${NIDO_SEED_USERNAME:}
+    email: ${NIDO_SEED_EMAIL:}
+    password: ${NIDO_SEED_PASSWORD:}
   cors:
     allowed-origins: ${NIDO_CORS_ALLOWED_ORIGINS:}
   encryption:

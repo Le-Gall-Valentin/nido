@@ -58,6 +58,14 @@ public class SecurityConfig {
                         "/api/auth/password-reset/request",
                         "/api/auth/password-reset/check",
                         "/api/auth/password-reset/confirm").permitAll()
+                // The first-run setup — used by definition before any account exists. Guarded by the
+                // code printed in the logs; every route but the status answers 404 once it is done.
+                .requestMatchers(HttpMethod.GET, "/api/setup/status").permitAll()
+                .requestMatchers(HttpMethod.POST,
+                        "/api/setup/verify-code",
+                        "/api/setup/encryption-key",
+                        "/api/setup/mail-test",
+                        "/api/setup/complete").permitAll()
                 // /api/** must be evaluated before the SPA fallback so extensionless
                 // paths like /api/users/me are never matched by the GET wildcard.
                 .requestMatchers("/api/**").authenticated()

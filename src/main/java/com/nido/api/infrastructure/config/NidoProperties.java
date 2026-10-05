@@ -1,9 +1,6 @@
 package com.nido.api.infrastructure.config;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
@@ -16,7 +13,7 @@ public record NidoProperties(
     JwtProperties jwt,
     RefreshTokenProperties refreshToken,
     CookieProperties cookie,
-    @Valid SeedProperties seed,
+    SeedProperties seed,
     CorsProperties cors,
     EncryptionProperties encryption,
     SecurityProperties security
@@ -39,11 +36,8 @@ public record NidoProperties(
         Boolean secure
     ) {}
 
-    public record SeedProperties(
-        @NotBlank String username,
-        @NotBlank String email,
-        @NotBlank @Size(min = 8, message = "Seed password must be at least 8 characters") String password
-    ) {}
+    /** All three, or none: checked by StartInstanceHandler. */
+    public record SeedProperties(String username, String email, String password) {}
 
     public record CorsProperties(
         @DefaultValue("") List<String> allowedOrigins

@@ -663,7 +663,12 @@ class ArchRulesTest {
         // instance.infra → mail.application.port.in
         new CrossBcAppDep("instance",
             new String[]{BASE + "mail.application.port.in.."},
-            Set.of("MailSettingsCheckAdapter"))
+            Set.of("MailSettingsCheckAdapter")),
+
+        // instance.infra → identity.application.port.in
+        new CrossBcAppDep("instance",
+            new String[]{BASE + "identity.application.port.in.."},
+            Set.of("InitialAdminAdapter"))
     );
 
     @ParameterizedTest(name = "{0}.infra → {1}: only whitelisted adapters allowed")

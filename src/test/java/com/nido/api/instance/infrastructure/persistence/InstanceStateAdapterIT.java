@@ -11,12 +11,15 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.sql.Types;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Works on the shared database's single row, and puts it back afterwards: every other test of the run
- * starts with the row the seed and the encryption key left there.
+ * starts with the row the seed and the encryption key left there. A row left with another key's
+ * fingerprint would make every context started afterwards refuse to start — and a context that fails
+ * closes the shared containers with it.
  */
 @IntegrationTestConfig
 class InstanceStateAdapterIT {
@@ -29,7 +32,7 @@ class InstanceStateAdapterIT {
     @BeforeEach
     void keep() {
         saved = jdbc.sql("SELECT setup_completed_at, key_fingerprint, key_fingerprint_salt, key_generated FROM instance WHERE id = 1")
-            .query((rs, n) -> new Object[]{rs.getObject(1), rs.getBytes(2), rs.getBytes(3), rs.getBoolean(4)}).single();
+            .query((rs, n) -> new Object[]{rs.getObject(1, OffsetDateTime.class), rs.getBytes(2), rs.getBytes(3), rs.getBoolean(4)}).single();
     }
 
     @AfterEach

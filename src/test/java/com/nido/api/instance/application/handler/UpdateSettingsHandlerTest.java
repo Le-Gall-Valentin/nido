@@ -1,13 +1,10 @@
 package com.nido.api.instance.application.handler;
 
 import com.nido.api.instance.domain.model.InstanceException;
-import com.nido.api.instance.domain.model.MailDraft;
 import com.nido.api.instance.domain.model.MailTestFailure;
 import com.nido.api.instance.domain.model.SettingGroup;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.instance.domain.model.SettingProblem;
-import com.nido.api.instance.domain.port.out.MailSettingsCheckPort;
-import com.nido.api.instance.domain.port.out.SettingsStorePort;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -25,25 +22,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class UpdateSettingsHandlerTest {
 
-    static final class MemoryStore implements SettingsStorePort {
-        final Map<SettingKey, String> rows = new EnumMap<>(SettingKey.class);
-        @Override public Map<SettingKey, String> load() { return Map.copyOf(rows); }
-        @Override public void save(Map<SettingKey, Optional<String>> changes, UUID by, Instant at) {
-            changes.forEach((key, value) -> value.ifPresentOrElse(v -> rows.put(key, v), () -> rows.remove(key)));
-        }
-    }
-
-    static final class FakeMail implements MailSettingsCheckPort {
-        List<SettingProblem> problems = List.of();
-        Optional<MailTestFailure> failure = Optional.empty();
-        MailDraft tried;
-        @Override public List<SettingProblem> problems(MailDraft draft) { return problems; }
-        @Override public Optional<MailTestFailure> sendTest(MailDraft draft, String recipient, Locale locale) { tried = draft; return failure; }
-    }
-
     private final Map<SettingKey, String> environment = new HashMap<>();
-    private final MemoryStore store = new MemoryStore();
-    private final FakeMail mail = new FakeMail();
+    private final InstanceFakes.MemoryStore store = new InstanceFakes.MemoryStore();
+    private final InstanceFakes.FakeMail mail = new InstanceFakes.FakeMail();
     private final UpdateSettingsHandler handler = new UpdateSettingsHandler(() -> environment, store, mail, Clock.systemUTC());
     private final UUID admin = UUID.randomUUID();
 
