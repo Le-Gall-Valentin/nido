@@ -1,0 +1,124 @@
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { MailTestFailedError, SettingsInvalidError } from '@/shared/lib'
+import { renderWithQuery } from '@/shared/test'
+import type { ISettingsApi } from '../model/ISettingsApi'
+import type { InstanceSettings } from '../model/types'
+import { AdminSettingsPage } from './AdminSettingsPage'
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (k: string, o?: object) => (o ? `${k}:${JSON.stringify(o)}` : k) }),
+}))
+
+const SETTINGS: InstanceSettings = {
+  groups: [
+    { group: 'mail', fields: [
+      { key: 'mail.host', value: 'smtp.example.com', source: 'DATABASE', variable: 'NIDO_SMTP_HOST', secret: false, set: true },
+      { key: 'mail.port', value: '587', source: 'DEFAULT', variable: 'NIDO_SMTP_PORT', secret: false, set: true },
+      { key: 'mail.security', value: 'starttls', source: 'DEFAULT', variable: 'NIDO_SMTP_SECURITY', secret: false, set: true },
+      { key: 'mail.username', value: 'jane', source: 'DATABASE', variable: 'NIDO_SMTP_USERNAME', secret: false, set: true },
+      { key: 'mail.password', value: null, source: 'DATABASE', variable: 'NIDO_SMTP_PASSWORD', secret: true, set: true },
+      { key: 'mail.from', value: 'nido@example.com', source: 'DATABASE', variable: 'NIDO_MAIL_FROM', secret: false, set: true },
+    ] },
+    { group: 'public-url', fields: [
+      { key: 'public-url', value: 'https://nido.example.com', source: 'ENVIRONMENT', variable: 'NIDO_APP_URL', secret: false, set: true },
+    ] },
+    { group: 'sessions', fields: [
+      { key: 'sessions.access-token-minutes', value: '15', source: 'DEFAULT', variable: 'NIDO_JWT_EXPIRY_MINUTES', secret: false, set: true },
+      { key: 'sessions.refresh-token-days', value: '30', source: 'DEFAULT', variable: 'NIDO_REFRESH_TOKEN_EXPIRY_DAYS', secret: false, set: true },
+    ] },
+    { group: 'api', fields: [
+      { key: 'api.swagger', value: 'false', source: 'DEFAULT', variable: 'SWAGGER_ENABLED', secret: false, set: true },
+    ] },
+  ],
+}
+
+function open(overrides: Partial<ISettingsApi> = {}) {
+  const api: ISettingsApi = {
+    get: vi.fn().mockResolvedValue(SETTINGS),
+    update: vi.fn().mockResolvedValue(SETTINGS),
+    reset: vi.fn().mockResolvedValue(SETTINGS),
+    testMail: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  }
+  renderWithQuery(<AdminSettingsPage api={api} />)
+  return api
+}
+
+const card = (group: string) => within(screen.getByRole('region', { name: `group.${group}.title` }))
+
+describe('AdminSettingsPage', () => {
+  it('shows where each value comes from and locks what the environment sets', async () => {
+    open()
+    await screen.findByRole('region', { name: 'group.public-url.title' })
+
+    expect((card('public-url').getByLabelText('field.public-url') as HTMLInputElement).disabled).toBe(true)
+    expect(card('public-url').getByText('source.ENVIRONMENT')).not.toBeNull()
+    expect(card('public-url').queryByRole('button', { name: 'action.save' })).toBeNull()
+    expect(card('sessions').getAllByText('source.DEFAULT')).toHaveLength(2)
+  })
+
+  it('never shows the saved password and keeps it when the field is left empty', async () => {
+    const api = open()
+    await screen.findByRole('region', { name: 'group.mail.title' })
+
+    expect((card('mail').getByLabelText('field.mail.password') as HTMLInputElement).value).toBe('')
+    fireEvent.click(card('mail').getByRole('button', { name: 'action.save' }))
+
+    await waitFor(() => expect(api.update).toHaveBeenCalled())
+    expect(vi.mocked(api.update).mock.calls[0][0]).toBe('mail')
+    expect(vi.mocked(api.update).mock.calls[0][1]).not.toHaveProperty('mail.password')
+    expect(vi.mocked(api.update).mock.calls[0][1]).toMatchObject({ 'mail.host': 'smtp.example.com' })
+  })
+
+  it('saves a block and says so', async () => {
+    const api = open()
+    await screen.findByRole('region', { name: 'group.sessions.title' })
+
+    fireEvent.change(card('sessions').getByLabelText('field.sessions.access-token-minutes'), { target: { value: '30' } })
+    fireEvent.click(card('sessions').getByRole('button', { name: 'action.save' }))
+
+    await waitFor(() => expect(api.update).toHaveBeenCalledWith('sessions', {
+      'sessions.access-token-minutes': '30',
+      'sessions.refresh-token-days': '30',
+    }))
+    expect(await card('sessions').findByText('saved')).not.toBeNull()
+  })
+
+  it('shows the problem under its field', async () => {
+    open({ update: vi.fn().mockRejectedValue(new SettingsInvalidError({ 'sessions.access-token-minutes': 'out_of_range' })) })
+    await screen.findByRole('region', { name: 'group.sessions.title' })
+
+    fireEvent.click(card('sessions').getByRole('button', { name: 'action.save' }))
+
+    expect(await card('sessions').findByText('common:setting_problem.out_of_range')).not.toBeNull()
+  })
+
+  it('sends a test with the form and reports what the server answered', async () => {
+    const api = open({ testMail: vi.fn().mockRejectedValue(new MailTestFailedError('authentication_failed', '535 Authentication failed')) })
+    await screen.findByRole('region', { name: 'group.mail.title' })
+
+    fireEvent.click(card('mail').getByRole('button', { name: 'action.test' }))
+
+    expect(await card('mail').findByText('common:mail_failure.authentication_failed — 535 Authentication failed')).not.toBeNull()
+    expect(api.testMail).toHaveBeenCalledWith(expect.objectContaining({ 'mail.host': 'smtp.example.com' }))
+  })
+
+  it('clears the saved password on request', async () => {
+    const api = open()
+    await screen.findByRole('region', { name: 'group.mail.title' })
+
+    fireEvent.click(card('mail').getByRole('button', { name: 'secret.clear' }))
+
+    await waitFor(() => expect(api.reset).toHaveBeenCalledWith('mail', 'mail.password'))
+  })
+
+  it('turns mail off by clearing its server', async () => {
+    const api = open()
+    await screen.findByRole('region', { name: 'group.mail.title' })
+
+    fireEvent.click(card('mail').getByRole('button', { name: 'action.disable_mail' }))
+
+    await waitFor(() => expect(api.reset).toHaveBeenCalledWith('mail', 'mail.host'))
+  })
+})

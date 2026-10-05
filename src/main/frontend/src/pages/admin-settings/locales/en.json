@@ -1,0 +1,69 @@
+{
+  "title": "Instance settings",
+  "subtitle": "What applies to the whole installation. A setting defined by the server's environment shows here but can only be changed there.",
+  "loading": "Loading the settings…",
+  "load_error": "The settings could not be loaded. Reload the page.",
+  "group": {
+    "mail": {
+      "title": "Email",
+      "description": "The server that sends forgotten passwords, invitations and notifications. Without a server, Nido sends no email."
+    },
+    "public-url": {
+      "title": "Public address",
+      "description": "The address members type to open Nido. The links in emails start with it, and it decides whether cookies require HTTPS."
+    },
+    "sessions": {
+      "title": "Sessions",
+      "description": "How long one stays signed in. A change applies to the next sign-ins."
+    },
+    "api": {
+      "title": "API",
+      "description": "The API documentation, for developers. It requires being signed in."
+    }
+  },
+  "field": {
+    "mail.host": "SMTP server",
+    "mail.port": "Port",
+    "mail.security": "Security",
+    "mail.username": "SMTP username",
+    "mail.password": "SMTP password",
+    "mail.from": "Sender",
+    "public-url": "Public address",
+    "sessions.access-token-minutes": "Access token lifetime (minutes)",
+    "sessions.refresh-token-days": "Session lifetime (days)",
+    "api.swagger": "Swagger documentation"
+  },
+  "option": {
+    "starttls": "STARTTLS (port 587)",
+    "tls": "TLS (port 465)",
+    "none": "None"
+  },
+  "source": {
+    "ENVIRONMENT": "Environment",
+    "DEFAULT": "Default",
+    "environment_hint": "Set by the {{variable}} variable: change it on the server."
+  },
+  "secret": {
+    "set": "Set — leave empty to keep it",
+    "clear": "Clear"
+  },
+  "action": {
+    "save": "Save",
+    "reset": "Restore the default",
+    "test": "Send a test",
+    "disable_mail": "Turn email off"
+  },
+  "saved": "Saved.",
+  "mail": {
+    "test_sent": "Test email sent to your address."
+  },
+  "public_url": {
+    "http_warning": "Without HTTPS, passwords and links travel in clear on the network.",
+    "https_from_http": "You are connected over http. After saving, sign in at {{url}}: the current session will no longer be recognised."
+  },
+  "error": {
+    "locked": "This setting is defined by the server's environment.",
+    "too_many": "Too many attempts. Wait a minute.",
+    "server": "Saving failed. Try again."
+  }
+}
