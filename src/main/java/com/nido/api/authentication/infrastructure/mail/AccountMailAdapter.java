@@ -1,6 +1,7 @@
 package com.nido.api.authentication.infrastructure.mail;
 
 import com.nido.api.authentication.domain.model.AccountContact;
+import com.nido.api.authentication.domain.model.AccountInvitationRules;
 import com.nido.api.authentication.domain.port.out.AccountMailPort;
 import com.nido.api.infrastructure.web.MailLanguage;
 import com.nido.api.mail.application.port.in.MailAvailabilityQuery;
@@ -55,6 +56,15 @@ public class AccountMailAdapter implements AccountMailPort {
     public void passwordChanged(AccountContact account) {
         send(account, new PasswordChangedMail(account.username(), LOGIN),
             clock.instant().plus(ALERT_VALIDITY));
+    }
+
+    @Override
+    public void accountInvitation(AccountContact account, String rawToken, Instant expiresAt, String inviterName) {
+        AppPath welcome = new AppPath(AccountInvitationRules.welcomePath(rawToken));
+        long days = AccountInvitationRules.VALIDITY.toDays();
+        send(account, inviterName == null
+            ? new InvitationRenewedMail(account.username(), welcome, days)
+            : new AccountInvitationMail(account.username(), inviterName, welcome, days), expiresAt);
     }
 
     private void send(AccountContact account, MailContent content, Instant expiresAt) {

@@ -3,6 +3,7 @@ package com.nido.api.authentication.infrastructure.mail;
 import com.nido.api.authentication.domain.model.AccountContact;
 import com.nido.api.mail.application.port.in.MailAvailabilityQuery;
 import com.nido.api.mail.application.port.in.SendMailUseCase;
+import com.nido.api.mail.domain.model.AppPath;
 import com.nido.api.mail.domain.model.MailRequest;
 import com.nido.api.mail.domain.model.Recipient;
 import com.nido.api.shared.model.Language;
@@ -67,6 +68,27 @@ class AccountMailAdapterTest {
         assertThat(request.expiresAt()).isEqualTo(Instant.parse("2026-09-29T10:00:00Z"));
         assertThat(request.content()).isInstanceOfSatisfying(PasswordChangedMail.class,
             mail -> assertThat(mail.loginPath().value()).isEqualTo("/login"));
+    }
+
+    @Test
+    void an_invitation_carries_its_link_names_who_invited_and_dies_with_the_link() {
+        Instant expiresAt = Instant.parse("2026-10-05T10:00:00Z");
+
+        new AccountMailAdapter(sendMail, availability, CLOCK).accountInvitation(jane, "RAW-token_1", expiresAt, "bob");
+
+        MailRequest request = sent();
+        assertThat(request.to()).isEqualTo(new Recipient("jane@test.com", "jane"));
+        assertThat(request.expiresAt()).isEqualTo(expiresAt);
+        assertThat(request.content()).isEqualTo(
+            new AccountInvitationMail("jane", "bob", new AppPath("/welcome#token=RAW-token_1"), 7));
+    }
+
+    @Test
+    void an_invitation_without_an_inviter_is_a_renewed_one() {
+        new AccountMailAdapter(sendMail, availability, CLOCK)
+            .accountInvitation(jane, "RAW", Instant.parse("2026-10-05T10:00:00Z"), null);
+
+        assertThat(sent().content()).isEqualTo(new InvitationRenewedMail("jane", new AppPath("/welcome#token=RAW"), 7));
     }
 
     @Test
