@@ -1,3 +1,4 @@
+import '../locales'
 import { useCallback, useState } from 'react'
 import { SettingsInvalidError } from '@/entities/instance-settings'
 import { useLanguage } from '@/shared/lib'

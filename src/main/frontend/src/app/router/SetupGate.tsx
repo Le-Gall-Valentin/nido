@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { SetupPage, setupApi, useSetupStatus, type ISetupApi, type SetupStatus } from '@/pages/setup'
@@ -26,7 +26,10 @@ export function SetupGate({ children, api = setupApi, renderSetup = (status) => 
       <BrowserRouter>
         <Routes>
           {/* Outside the application's own boundary, which sits under the session: without one, a crash here is a blank page. */}
-          <Route path={ROUTES.SETUP} element={<ErrorBoundary>{renderSetup(setup.status)}</ErrorBoundary>} />
+          <Route
+            path={ROUTES.SETUP}
+            element={<ErrorBoundary><Suspense fallback={<Spinner label={t('loading')} />}>{renderSetup(setup.status)}</Suspense></ErrorBoundary>}
+          />
           <Route path="*" element={<Navigate to={ROUTES.SETUP} replace />} />
         </Routes>
       </BrowserRouter>
