@@ -11,6 +11,7 @@ import com.nido.api.notifications.domain.model.NotificationChannel;
 import com.nido.api.notifications.domain.model.NotificationRecipient;
 import com.nido.api.notifications.domain.model.NotificationType;
 import com.nido.api.shared.model.Language;
+import com.nido.api.shared.model.Role;
 import fixtures.notifications.nochannel.NoChannelNotification;
 import fixtures.notifications.valid.GreetingNotification;
 import org.junit.jupiter.api.AfterEach;
@@ -88,7 +89,7 @@ class MailChannelAdapterTest {
 
     @Test
     void the_notification_is_sent_as_the_mail_it_is_with_its_expiry() {
-        adapter().deliver(new NotificationRecipient(janeId, "jane", "jane@test.local", Language.EN, true), GREETING, greeting, EXPIRES_AT);
+        adapter().deliver(new NotificationRecipient(janeId, "jane", "jane@test.local", Language.EN, Role.USER, true), GREETING, greeting, EXPIRES_AT);
 
         MailRequest request = sent();
         assertThat(request.to()).isEqualTo(new Recipient("jane@test.local", "jane"));
@@ -99,29 +100,29 @@ class MailChannelAdapterTest {
 
     @Test
     void it_is_written_in_the_account_language() {
-        adapter().deliver(new NotificationRecipient(janeId, "jane", "jane@test.local", Language.FR, true), GREETING, greeting, null);
+        adapter().deliver(new NotificationRecipient(janeId, "jane", "jane@test.local", Language.FR, Role.USER, true), GREETING, greeting, null);
 
         assertThat(sent().locale()).isEqualTo(Locale.FRENCH);
     }
 
     @Test
     void without_a_language_and_outside_a_request_it_is_written_in_english() {
-        adapter().deliver(new NotificationRecipient(janeId, "jane", "jane@test.local", null, true), GREETING, greeting, null);
+        adapter().deliver(new NotificationRecipient(janeId, "jane", "jane@test.local", null, Role.USER, true), GREETING, greeting, null);
 
         assertThat(sent().locale()).isEqualTo(Locale.ENGLISH);
     }
 
     @Test
     void an_account_without_an_address_gets_nothing() {
-        adapter().deliver(new NotificationRecipient(janeId, "jane", null, Language.FR, true), GREETING, greeting, null);
-        adapter().deliver(new NotificationRecipient(janeId, "jane", "  ", Language.FR, true), GREETING, greeting, null);
+        adapter().deliver(new NotificationRecipient(janeId, "jane", null, Language.FR, Role.USER, true), GREETING, greeting, null);
+        adapter().deliver(new NotificationRecipient(janeId, "jane", "  ", Language.FR, Role.USER, true), GREETING, greeting, null);
 
         verify(sendMail, never()).send(any());
     }
 
     @Test
     void an_account_without_an_address_is_logged_by_its_id_and_the_kind() {
-        adapter().deliver(new NotificationRecipient(janeId, "jane", null, Language.FR, true), GREETING, greeting, null);
+        adapter().deliver(new NotificationRecipient(janeId, "jane", null, Language.FR, Role.USER, true), GREETING, greeting, null);
 
         assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
             .containsExactly("Account " + janeId + " has no address: fixture.greeting not sent");

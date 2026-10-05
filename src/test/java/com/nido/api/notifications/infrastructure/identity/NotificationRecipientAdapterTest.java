@@ -30,7 +30,7 @@ class NotificationRecipientAdapterTest {
             new User(janeId, "jane", "jane@test.local", Role.USER, true, Instant.now(), Language.FR)));
 
         assertThat(new NotificationRecipientAdapter(findUser).find(janeId))
-            .contains(new NotificationRecipient(janeId, "jane", "jane@test.local", Language.FR, true));
+            .contains(new NotificationRecipient(janeId, "jane", "jane@test.local", Language.FR, Role.USER, true));
     }
 
     @Test
