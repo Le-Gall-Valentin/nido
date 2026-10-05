@@ -121,9 +121,10 @@ public class UpdateSettingsHandler implements UpdateSettingsUseCase, SendSetting
     }
 
     /**
-     * The saved SMTP password goes only to the server, and with the protection, it was saved for: whoever
-     * changes either must type it again. Otherwise a stolen administrator session could point mail at a
-     * server of its own — the test button, or simply the next mail — and collect the password.
+     * The saved SMTP password goes only to the server — host and port — and with the protection, it was
+     * saved for: whoever changes any of them must type it again. Otherwise a stolen administrator session
+     * could point mail at a server of its own — another host, or another port of a shared one, localhost
+     * above all — and collect the password with the test button, or simply the next mail.
      */
     static Optional<SettingProblem> passwordLeftBehind(EffectiveSettings before, EffectiveSettings after, SettingsDraft draft) {
         if (draft.changes().containsKey(SettingKey.MAIL_PASSWORD) || after.text(SettingKey.MAIL_PASSWORD).isEmpty()
@@ -133,6 +134,7 @@ public class UpdateSettingsHandler implements UpdateSettingsUseCase, SendSetting
         boolean sameServer = before.text(SettingKey.MAIL_HOST)
                 .map(host -> host.equalsIgnoreCase(after.text(SettingKey.MAIL_HOST).orElseThrow()))
                 .orElse(false)
+            && Objects.equals(before.text(SettingKey.MAIL_PORT), after.text(SettingKey.MAIL_PORT))
             && Objects.equals(before.text(SettingKey.MAIL_SECURITY), after.text(SettingKey.MAIL_SECURITY));
         return sameServer
             ? Optional.empty()

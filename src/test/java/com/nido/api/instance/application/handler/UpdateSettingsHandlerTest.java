@@ -177,6 +177,13 @@ class UpdateSettingsHandlerTest {
         assertThatThrownBy(() -> handler.update(SettingGroup.MAIL, Map.of(SettingKey.MAIL_SECURITY, "none"), admin))
             .isInstanceOfSatisfying(InstanceException.SettingsInvalid.class,
                 invalid -> assertThat(invalid.problems()).contains(RETYPE));
+        // Another port of the same host may be another service — on localhost, anyone's.
+        assertThatThrownBy(() -> handler.update(SettingGroup.MAIL, Map.of(SettingKey.MAIL_PORT, "2525"), admin))
+            .isInstanceOfSatisfying(InstanceException.SettingsInvalid.class,
+                invalid -> assertThat(invalid.problems()).contains(RETYPE));
+        assertThatThrownBy(() -> handler.sendTest(Map.of(SettingKey.MAIL_HOST, "smtp.example.com", SettingKey.MAIL_PORT, "2525"),
+                "jane@example.com", Locale.FRENCH))
+            .isInstanceOf(InstanceException.SettingsInvalid.class);
 
         handler.update(SettingGroup.MAIL, Map.of(SettingKey.MAIL_HOST, "smtp.other.example", SettingKey.MAIL_PASSWORD, "n3w"), admin);
         assertThat(store.rows).containsEntry(SettingKey.MAIL_PASSWORD, "n3w");
