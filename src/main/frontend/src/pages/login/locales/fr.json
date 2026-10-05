@@ -56,7 +56,7 @@
     "unavailable": "Impossible de vérifier cette invitation pour le moment.",
     "invalid": {
       "title": "Cette invitation n'est plus valable",
-      "body": "Le lien a expiré ou a déjà servi. Demandez un nouveau lien à l'administrateur qui vous a invité.",
+      "body": "Le lien a expiré ou a déjà servi. Si vous avez déjà choisi votre mot de passe, connectez-vous. Sinon, demandez un nouveau lien à l'administrateur qui vous a invité.",
       "forgot": "Recevoir un nouveau lien par mail"
     }
   },
