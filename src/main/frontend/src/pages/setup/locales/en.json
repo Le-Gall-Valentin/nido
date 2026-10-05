@@ -63,6 +63,7 @@
     "title": "Your encryption key",
     "lead": "Nido made this key to encrypt two-factor authentication, finances and the calendar. Without it, that data is lost: keep it in a password manager, away from your database backups. It will never be shown again.",
     "provided": "Your encryption key comes from the server's configuration: keep it safe, as you already do.",
+    "copy_failed": "This browser could not copy the key: select it above to copy it, or download it.",
     "saved": "I have put this key somewhere safe",
     "file": {
       "title": "Nido encryption key",

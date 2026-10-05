@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { copyText } from '@/shared/lib'
 import { Alert, Button, CTA_BUTTON_STYLE, Spinner } from '@/shared/ui'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SetupKey } from '../model/types'
@@ -23,7 +24,7 @@ export function KeyStep({ api, code, publicUrl, finishing, finishError, onFinish
   const [key, setKey] = useState<SetupKey | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<boolean | null>(null)
 
   useEffect(() => {
     let current = true
@@ -34,12 +35,7 @@ export function KeyStep({ api, code, publicUrl, finishing, finishError, onFinish
   }, [api, code])
 
   async function copy(value: string) {
-    try {
-      await navigator.clipboard.writeText(value)
-      setCopied(true)
-    } catch {
-      setCopied(false)
-    }
+    setCopied(await copyText(value))
   }
 
   if (loadError) return <Alert variant="error">{t(loadError)}</Alert>
@@ -57,6 +53,7 @@ export function KeyStep({ api, code, publicUrl, finishing, finishError, onFinish
             <Button type="button" onClick={() => void copy(key.key)}>{copied ? t('action.copied') : t('action.copy')}</Button>
             <Button type="button" onClick={() => downloadKeyFile(keyFileText(key.key, publicUrl, new Date(), t))}>{t('action.download')}</Button>
           </div>
+          {copied === false && <p role="status" className="mt-2 text-[12.5px] text-fg-2">{t('key.copy_failed')}</p>}
           <div className="mt-5 flex items-start gap-2.5">
             <input id={checkboxId} type="checkbox" checked={saved} onChange={(event) => setSaved(event.target.checked)} className="mt-1 size-4" />
             <label htmlFor={checkboxId} className="text-sm text-fg-1">{t('key.saved')}</label>

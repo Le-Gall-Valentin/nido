@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Copy, Check, X } from 'lucide-react'
 import { SpaceRolePill, type SpaceInvitation } from '@/entities/space'
-import { formatRelativeTime } from '@/shared/lib'
+import { copyText, formatRelativeTime } from '@/shared/lib'
 
 const STATUS_CLASS: Record<SpaceInvitation['status'], string> = {
   PENDING: 'bg-status-orange-dim text-status-orange',
@@ -52,13 +52,10 @@ function InvitationRow({ invitation, revoking, onRevoke, lang }: RowProps) {
   const invitee = invitation.username ?? t('members.deleted_account')
 
   async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(invitation.code)
+    // Not copied (refused, or a browser without either way to copy): the code stays visible on the row.
+    if (await copyText(invitation.code)) {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
-    } catch {
-      // Clipboard access denied (permissions, insecure context): the code
-      // stays visible on the row for a manual copy.
     }
   }
 

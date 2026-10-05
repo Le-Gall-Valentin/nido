@@ -63,6 +63,7 @@
     "title": "Votre clé de chiffrement",
     "lead": "Nido a créé cette clé pour chiffrer la double authentification, les finances et le calendrier. Sans elle, ces données sont perdues : rangez-la dans un gestionnaire de mots de passe, à l'écart de vos sauvegardes de la base. Elle ne sera plus jamais affichée.",
     "provided": "Votre clé de chiffrement vient de la configuration du serveur : conservez-la précieusement, comme vous le faites déjà.",
+    "copy_failed": "Ce navigateur n'a pas pu copier la clé : sélectionnez-la ci-dessus pour la copier, ou téléchargez-la.",
     "saved": "J'ai rangé cette clé en lieu sûr",
     "file": {
       "title": "Clé de chiffrement de Nido",

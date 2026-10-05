@@ -167,6 +167,19 @@ describe('SetupPage', () => {
     expect(screen.getByLabelText('mail.password').getAttribute('autocomplete')).toBe('new-password')
   })
 
+  it('says how to keep the key when it cannot be copied, as over plain http', async () => {
+    open()
+    await passTheCode()
+    await passTheAdmin()
+    click('action.next')
+    click('action.later')
+    expect(await screen.findByText('the-generated-key')).not.toBeNull()
+
+    click('action.copy')
+
+    expect(await screen.findByText('key.copy_failed')).not.toBeNull()
+  })
+
   it('asks nothing about mail when the server configuration sets it', async () => {
     open(fakeApi(), { ...OPEN, mailLocked: true })
     await passTheCode()
