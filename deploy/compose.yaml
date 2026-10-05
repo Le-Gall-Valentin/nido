@@ -1,0 +1,127 @@
+# Nido — production.
+#
+#   curl -O https://raw.githubusercontent.com/Le-Gall-Valentin/nido/main/deploy/compose.yaml
+#   docker compose up -d
+#   docker compose logs nido      # the setup code — then open http://<this machine>:8080
+#
+# Nothing to fill in: the passwords of the database and of Redis are generated at the first start, in
+# volumes nothing else reads, and Nido generates its own secrets. For HTTPS with a domain name, or to
+# pin the version, see .env.example next to this file.
+
+name: nido
+
+services:
+  # Runs once per start and exits. Generates what does not exist yet, never touches what does.
+  secrets-init:
+    image: alpine:3.20
+    restart: "no"
+    volumes:
+      - nido_secrets:/secrets/nido
+      - redis_secrets:/secrets/redis
+    command:
+      - sh
+      - -euc
+      - |
+        umask 077
+        new_password() { head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 40; }
+        [ -s /secrets/nido/NIDO_DB_PASSWORD ] || new_password > /secrets/nido/NIDO_DB_PASSWORD
+        [ -s /secrets/redis/password ] || new_password > /secrets/redis/password
+        printf 'requirepass %s\n' "$$(cat /secrets/redis/password)" > /secrets/redis/redis.conf
+        printf 'redis://:%s@redis:6379' "$$(cat /secrets/redis/password)" > /secrets/nido/NIDO_REDIS_URL
+        # Nido runs as 10001 and reads its two files as a config tree; Redis drops to 999 before reading
+        # its configuration; Postgres reads its password file as root, before dropping privileges.
+        chown 10001:10001 /secrets/nido/NIDO_DB_PASSWORD /secrets/nido/NIDO_REDIS_URL
+        chmod 400 /secrets/nido/NIDO_DB_PASSWORD /secrets/nido/NIDO_REDIS_URL
+        chown 999 /secrets/redis/redis.conf
+        chmod 400 /secrets/redis/redis.conf /secrets/redis/password
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    depends_on:
+      secrets-init:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_USER: nido
+      POSTGRES_DB: nido
+      POSTGRES_PASSWORD_FILE: /run/nido-secrets/NIDO_DB_PASSWORD
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - nido_secrets:/run/nido-secrets:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nido -d nido"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    depends_on:
+      secrets-init:
+        condition: service_completed_successfully
+    command: ["redis-server", "/run/redis-secrets/redis.conf"]
+    volumes:
+      - redis_data:/data
+      - redis_secrets:/run/redis-secrets:ro
+    healthcheck:
+      # The password through REDISCLI_AUTH, never on a command line other processes can read.
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$(cat /run/redis-secrets/password)\" redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  nido:
+    image: ${NIDO_IMAGE:-ghcr.io/le-gall-valentin/nido:${NIDO_VERSION:-latest}}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NIDO_DB_URL: jdbc:postgresql://postgres:5432/nido
+      NIDO_DB_USER: nido
+    ports:
+      - "${NIDO_LISTEN:-0.0.0.0}:${NIDO_PORT:-8080}:8080"
+    volumes:
+      # Nido's own secrets (JWT, encryption key). Back this volume up — the encryption key away from
+      # the database dumps: see the README.
+      - nido_data:/data
+      # NIDO_DB_PASSWORD and NIDO_REDIS_URL, read as files: they never appear in `docker inspect`.
+      - nido_secrets:/run/secrets:ro
+
+  # HTTPS with automatic certificates: COMPOSE_PROFILES=https and NIDO_DOMAIN in .env.
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["https"]
+    restart: unless-stopped
+    depends_on:
+      - nido
+    environment:
+      NIDO_DOMAIN: ${NIDO_DOMAIN:-}
+    command:
+      - sh
+      - -c
+      - |
+        if [ -z "$$NIDO_DOMAIN" ]; then
+          echo "Set NIDO_DOMAIN in .env to the domain name that points to this machine." >&2
+          exit 1
+        fi
+        exec caddy reverse-proxy --from "$$NIDO_DOMAIN" --to nido:8080
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  nido_data:
+  nido_secrets:
+  redis_secrets:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
