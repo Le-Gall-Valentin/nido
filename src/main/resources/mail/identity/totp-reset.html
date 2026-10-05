@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: mail(#{subject}, #{preheader}, ~{::content})}">
+<body>
+<th:block th:fragment="content">
+  <h1 th:replace="~{components :: heading(#{heading})}"></h1>
+  <p th:replace="~{components :: paragraph(#{greeting(${mail.username})})}"></p>
+  <p th:replace="~{components :: paragraph(#{body(${mail.actorName})})}"></p>
+  <p th:replace="~{components :: paragraph(#{advice})}"></p>
+  <table th:replace="~{components :: button(${appUrl + mail.securityPath.value}, #{action})}"></table>
+  <table th:replace="~{components :: note(#{warning(${mail.actorName})}, 'warning')}"></table>
+  <p th:replace="~{components :: fallbackLink(${appUrl + mail.securityPath.value})}"></p>
+</th:block>
+</body>
+</html>
