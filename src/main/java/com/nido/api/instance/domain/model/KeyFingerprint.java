@@ -23,6 +23,22 @@ public record KeyFingerprint(byte[] hash, byte[] salt) {
     private static final int HASH_BITS = 256;
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    /** Its own copies: bytes held by the caller cannot change it, nor bytes it hands out. */
+    public KeyFingerprint {
+        hash = hash.clone();
+        salt = salt.clone();
+    }
+
+    @Override
+    public byte[] hash() {
+        return hash.clone();
+    }
+
+    @Override
+    public byte[] salt() {
+        return salt.clone();
+    }
+
     public static KeyFingerprint of(String key) {
         byte[] salt = new byte[SALT_BYTES];
         RANDOM.nextBytes(salt);
@@ -30,7 +46,7 @@ public record KeyFingerprint(byte[] hash, byte[] salt) {
     }
 
     static KeyFingerprint of(String key, byte[] salt, int iterations) {
-        return new KeyFingerprint(derive(key, salt, iterations), salt.clone());
+        return new KeyFingerprint(derive(key, salt, iterations), salt);
     }
 
     public boolean matches(String key) {

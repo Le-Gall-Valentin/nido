@@ -36,4 +36,29 @@ class KeyFingerprintTest {
     void it_never_shows_its_bytes() {
         assertThat(KeyFingerprint.of("k".repeat(32), SALT, FAST).toString()).isEqualTo("KeyFingerprint[***]");
     }
+
+    @Test
+    void the_bytes_it_hands_out_cannot_change_it() {
+        String key = "the-key-of-this-installation-32chars";
+        KeyFingerprint fingerprint = KeyFingerprint.of(key);
+
+        fingerprint.hash()[0] ^= 1;
+        fingerprint.salt()[0] ^= 1;
+
+        assertThat(fingerprint.matches(key)).isTrue();
+    }
+
+    @Test
+    void the_bytes_it_was_given_cannot_change_it() {
+        String key = "the-key-of-this-installation-32chars";
+        KeyFingerprint read = KeyFingerprint.of(key);
+        byte[] hash = read.hash();
+        byte[] salt = read.salt();
+        KeyFingerprint fingerprint = new KeyFingerprint(hash, salt);
+
+        hash[0] ^= 1;
+        salt[0] ^= 1;
+
+        assertThat(fingerprint.matches(key)).isTrue();
+    }
 }
