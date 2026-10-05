@@ -614,7 +614,7 @@ class ArchRulesTest {
         // identity.infra → mail.application.port.in
         new CrossBcAppDep("identity",
             new String[]{BASE + "mail.application.port.in.."},
-            Set.of("ProfileMailAdapter", "PendingMailCancellationAdapter")),
+            Set.of("ProfileMailAdapter", "PendingMailCancellationAdapter", "AdminAccountMailAdapter")),
 
         // identity.infra → mfa.application.port.in
         new CrossBcAppDep("identity",
@@ -629,7 +629,7 @@ class ArchRulesTest {
         // identity.infra → notifications.application.port.in
         new CrossBcAppDep("identity",
             new String[]{BASE + "notifications.application.port.in.."},
-            Set.of("NotificationDataDeletionAdapter")),
+            Set.of("NotificationDataDeletionAdapter", "AdminActivityNotificationAdapter")),
 
         // notifications.infra → mail.application.port.in
         new CrossBcAppDep("notifications",

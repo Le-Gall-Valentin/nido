@@ -69,6 +69,11 @@ public class UserIdentityRepositoryAdapter implements UserRepository, UserComman
     }
 
     @Override
+    public List<User> findActiveByRole(Role role) {
+        return jpa.findByRoleAndActiveTrueAndDeletedFalse(role).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public User createProfile(CreateUserProfileCommand command) {
         try {
             UserIdentityEntity e = new UserIdentityEntity();

@@ -27,6 +27,8 @@ public interface UserIdentityJpaRepository extends JpaRepository<UserIdentityEnt
 
     List<UserIdentityEntity> findByIdInAndDeletedFalse(Collection<UUID> ids);
 
+    List<UserIdentityEntity> findByRoleAndActiveTrueAndDeletedFalse(Role role);
+
     @Query("SELECT u FROM UserIdentityEntity u WHERE u.deleted = false")
     Page<UserIdentityEntity> findAllNotDeleted(Pageable pageable);
 

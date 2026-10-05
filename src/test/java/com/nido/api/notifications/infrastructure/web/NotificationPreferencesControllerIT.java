@@ -77,6 +77,27 @@ class NotificationPreferencesControllerIT {
     }
 
     @Test
+    void the_kinds_reserved_to_super_administrators_are_on_their_card_only() throws Exception {
+        mockMvc.perform(get("/api/notifications/preferences").cookie(cookieFor(janeId, Role.ADMIN)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.types[?(@.type == 'identity.account-deactivated')]").isEmpty());
+        mockMvc.perform(get("/api/notifications/preferences").cookie(cookieFor(janeId, Role.SUPER_ADMIN)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.types[?(@.type == 'identity.account-deactivated')].enabled").value(true));
+    }
+
+    @Test
+    void a_kind_reserved_to_super_administrators_cannot_be_switched_by_anyone_else() throws Exception {
+        mockMvc.perform(put("/api/notifications/preferences/types/identity.account-deleted").cookie(cookieFor(janeId, Role.ADMIN))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.title").value("UnknownType"));
+        mockMvc.perform(put("/api/notifications/preferences/types/identity.account-deleted").cookie(cookieFor(janeId, Role.SUPER_ADMIN))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
+            .andExpect(status().isNoContent());
+    }
+
+    @Test
     void an_unknown_kind_is_not_found_with_its_whole_dotted_code() throws Exception {
         mockMvc.perform(put("/api/notifications/preferences/types/fixture.unknown").cookie(cookieFor(janeId))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))

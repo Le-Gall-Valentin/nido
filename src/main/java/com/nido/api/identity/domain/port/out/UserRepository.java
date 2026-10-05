@@ -2,6 +2,7 @@ package com.nido.api.identity.domain.port.out;
 
 import com.nido.api.identity.domain.model.EmailAddress;
 import com.nido.api.identity.domain.model.User;
+import com.nido.api.shared.model.Role;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -17,4 +18,7 @@ public interface UserRepository {
     Optional<User> findByEmail(EmailAddress email);
     Optional<User> findById(UUID id);
     List<User> findByIds(Collection<UUID> ids);
+
+    /** The accounts of this role that are active and not deleted — who is told of what administrators do. */
+    List<User> findActiveByRole(Role role);
 }
