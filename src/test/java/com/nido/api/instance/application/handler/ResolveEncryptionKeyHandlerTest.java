@@ -70,6 +70,18 @@ class ResolveEncryptionKeyHandlerTest {
     }
 
     @Test
+    void a_generated_key_lost_before_the_setup_is_done_is_replaced_by_a_new_one() {
+        handler.resolve(Optional.empty());
+        file.content = null;
+
+        String again = handler.resolve(Optional.empty());
+
+        assertThat(again).isEqualTo(file.content);
+        assertThat(state.generated).isTrue();
+        assertThat(state.fingerprint.matches(again)).isTrue();
+    }
+
+    @Test
     void a_refusal_stops_the_start() {
         state.setupCompleted = true;
 

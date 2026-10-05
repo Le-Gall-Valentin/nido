@@ -50,11 +50,23 @@ class EncryptionKeyDecisionTest {
 
     @Test
     void no_key_where_data_was_encrypted_is_refused_and_says_where_to_put_it() {
-        for (InstanceState state : new InstanceState[]{state(FINGERPRINT, true), state(FINGERPRINT, false), state(null, true)}) {
+        for (InstanceState state : new InstanceState[]{state(FINGERPRINT, true), state(null, true)}) {
             assertThat(EncryptionKeyDecision.decide(Optional.empty(), state, FILE))
                 .isInstanceOfSatisfying(EncryptionKeyDecision.Refuse.class,
                     refuse -> assertThat(refuse.reason()).contains(FILE).contains("NIDO_ENCRYPTION_SECRET"));
         }
+    }
+
+    @Test
+    void a_key_lost_before_the_setup_is_done_is_generated_again_since_nothing_was_encrypted_with_it() {
+        assertThat(EncryptionKeyDecision.decide(Optional.empty(), state(FINGERPRINT, false), FILE))
+            .isInstanceOf(EncryptionKeyDecision.Generate.class);
+    }
+
+    @Test
+    void another_key_given_before_the_setup_is_done_replaces_the_fingerprint() {
+        assertThat(EncryptionKeyDecision.decide(given(OTHER), state(FINGERPRINT, false), FILE))
+            .isEqualTo(new EncryptionKeyDecision.RecordFingerprint(OTHER));
     }
 
     @Test

@@ -4,9 +4,12 @@ import java.util.Optional;
 
 /**
  * What a start does about the encryption key, from the key it was given and what the database
- * remembers. A key is generated only where nothing was ever encrypted: no fingerprint, and the setup
- * not done — an installation is marked set up as soon as it has accounts (migration 064, the seed,
- * the setup screen), so this is the same as "no account" without asking the identity context.
+ * remembers. Until the setup is done, nothing is encrypted: an installation is marked set up as soon
+ * as it has accounts (migration 064, the seed, the setup screen — each in the transaction that creates
+ * the first one), so "not set up" is "no account" without asking the identity context. A fingerprint
+ * recorded before that protects nothing yet: a generated key lost with its volume before the end of
+ * the setup — the one moment it is shown — is simply generated again, instead of a refusal to restore
+ * a key nobody has seen.
  */
 public sealed interface EncryptionKeyDecision {
 
@@ -37,11 +40,14 @@ public sealed interface EncryptionKeyDecision {
             if (state.fingerprint().get().matches(key.value())) {
                 return new Use(key.value());
             }
+            if (!state.setupCompleted()) {
+                return new RecordFingerprint(key.value());
+            }
             return new Refuse("The encryption key from " + key.origin() + " is not the one this database was "
                 + "encrypted with. Nothing was changed. Put back the key this installation used — in "
                 + keyFileLocation + " or in NIDO_ENCRYPTION_SECRET — and start again.");
         }
-        if (state.fingerprint().isEmpty() && !state.setupCompleted()) {
+        if (!state.setupCompleted()) {
             return new Generate();
         }
         return new Refuse("This database holds data encrypted with a key that was not provided. Restore "
