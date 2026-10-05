@@ -53,7 +53,11 @@ NIDO_TRUSTED_PROXIES=172\.31\.250\.1
 ```
 
 so that port 8080 stays local and Nido trusts the client address your proxy passes on (it reaches Nido
-through the Docker gateway, `172.31.250.1`). Then forward to port 8080 with the client's address and scheme:
+through the Docker gateway, `172.31.250.1`). Running Nido without this compose file, set
+`SERVER_TOMCAT_REMOTEIP_INTERNALPROXIES` to your proxy's address (a regular expression, `127\.0\.0\.1` for
+one on the same machine): by default Nido believes any private address, and a client of your network that
+reaches it directly could pass for anyone and dodge the limits on sign-in attempts. Then forward to port
+8080 with the client's address and scheme:
 
 ```nginx
 location / {

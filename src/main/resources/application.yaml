@@ -3,8 +3,10 @@ server:
   # live deployment: every caller in the world, on any continent, charged to a single 172.18.0.1 —
   # which turns every per-IP rate limit into a limit on the whole application at once, and lets five
   # requests a minute keep everybody from logging in. NATIVE has Tomcat rewrite the remote address
-  # from X-Forwarded-For before any of our code runs, and only for a peer inside the private ranges,
-  # so a request that reaches the application directly cannot forge one.
+  # from X-Forwarded-For before any of our code runs — for a peer it trusts only, by default any address
+  # of the private ranges. A client on such a network that reaches Nido directly can therefore forge one:
+  # set SERVER_TOMCAT_REMOTEIP_INTERNALPROXIES to the proxy's own address (deploy/compose.yaml sets it to
+  # Caddy's), and keep Nido's port out of reach of everything but that proxy.
   forward-headers-strategy: NATIVE
 
 spring:
