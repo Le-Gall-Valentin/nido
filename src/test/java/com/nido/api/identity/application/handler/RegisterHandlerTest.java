@@ -166,4 +166,14 @@ class RegisterHandlerTest {
     private User user(UUID id, String username, Role role) {
         return new User(id, username, username + "@test.com", role, true, Instant.now(), null);
     }
+
+    @Test
+    void register_by_a_caller_whose_account_cannot_be_found_creates_nothing() {
+        when(userRepository.findById(callerId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> handler.register(new RegisterCommand("carol", "carol@test.com", Role.USER), callerId, Role.SUPER_ADMIN))
+            .isInstanceOf(IdentityException.InsufficientPermissions.class);
+        verify(userCommandPort, never()).createProfile(any());
+        verify(invitations, never()).invite(any(), any());
+    }
 }

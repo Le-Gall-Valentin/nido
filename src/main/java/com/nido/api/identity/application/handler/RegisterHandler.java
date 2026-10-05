@@ -58,11 +58,13 @@ public class RegisterHandler implements RegisterUseCase {
         if (!RoleHierarchy.canManage(callerRole, command.role())) {
             throw new IdentityException.InsufficientPermissions();
         }
+        // The invitation names who sends it: a caller whose account is gone creates nothing.
+        String inviterName = userRepository.findById(callerId).map(User::username)
+            .orElseThrow(IdentityException.InsufficientPermissions::new);
         User user = userCommandPort.createProfile(
             new CreateUserProfileCommand(command.username(), command.email(), command.role()));
         totpRecordInitPort.initForUser(user.id());
         personalSpaceInitPort.initForUser(user.id());
-        String inviterName = userRepository.findById(callerId).map(User::username).orElse(null);
         InvitationDelivery invitation = invitations.invite(user.id(), inviterName);
         notifier.accountCreated(user, callerId, callerRole);
         log.info("User {} registered with role {} and invited", user.id(), command.role());

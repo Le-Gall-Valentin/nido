@@ -42,8 +42,7 @@ class ResendInvitationHandlerTest {
         handler = new ResendInvitationHandler(userRepository, invitations);
         when(userRepository.findById(callerId))
             .thenReturn(Optional.of(new User(callerId, "bob", "bob@test.com", Role.ADMIN, true, Instant.now(), null)));
-        when(invitations.isInvited(targetId)).thenReturn(true);
-        when(invitations.invite(targetId, "bob")).thenReturn(new InvitationDelivery.Mailed());
+        when(invitations.inviteAgain(targetId, "bob")).thenReturn(Optional.of(new InvitationDelivery.Mailed()));
     }
 
     private void target(Role role, boolean active) {
@@ -60,16 +59,15 @@ class ResendInvitationHandlerTest {
         target(Role.USER, true);
 
         assertThat(resend(Role.ADMIN)).isEqualTo(new InvitationDelivery.Mailed());
-        verify(invitations).invite(targetId, "bob");
+        verify(invitations).inviteAgain(targetId, "bob");
     }
 
     @Test
     void an_account_that_chose_its_password_has_nothing_to_resend() {
         target(Role.USER, true);
-        when(invitations.isInvited(targetId)).thenReturn(false);
+        when(invitations.inviteAgain(targetId, "bob")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> resend(Role.ADMIN)).isInstanceOf(IdentityException.AccountAlreadyJoined.class);
-        verify(invitations, never()).invite(any(), any());
     }
 
     @Test
@@ -77,7 +75,7 @@ class ResendInvitationHandlerTest {
         target(Role.USER, false);
 
         assertThatThrownBy(() -> resend(Role.ADMIN)).isInstanceOf(IdentityException.UserNotActive.class);
-        verify(invitations, never()).invite(any(), any());
+        verify(invitations, never()).inviteAgain(any(), any());
     }
 
     @Test
@@ -98,5 +96,14 @@ class ResendInvitationHandlerTest {
         when(userRepository.findById(targetId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> resend(Role.ADMIN)).isInstanceOf(IdentityException.UserNotFound.class);
+    }
+
+    @Test
+    void a_caller_whose_account_cannot_be_found_invites_nobody() {
+        target(Role.USER, true);
+        when(userRepository.findById(callerId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> resend(Role.ADMIN)).isInstanceOf(IdentityException.InsufficientPermissions.class);
+        verify(invitations, never()).inviteAgain(any(), any());
     }
 }

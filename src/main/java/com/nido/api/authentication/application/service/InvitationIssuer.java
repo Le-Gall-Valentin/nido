@@ -12,6 +12,7 @@ import com.nido.api.shared.annotation.ApplicationService;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Objects;
 
 /**
  * Gives an account a new invitation link, replacing any previous one, and gets it to its holder: by mail when
@@ -41,16 +42,49 @@ public class InvitationIssuer {
         this.clock = clock;
     }
 
-    /** @param inviterName who invites, named in the mail; null for a link asked for again from "forgot password" */
-    public InvitationDelivery issue(AccountContact account, String inviterName) {
+    /**
+     * A new link for the account, replacing any previous one: mailed when mail is on, otherwise handed back.
+     *
+     * @param inviterName the administrator named in the mail; never null
+     */
+    public InvitationDelivery invite(AccountContact account, String inviterName) {
+        Objects.requireNonNull(inviterName, "An invitation names who sends it");
+        NewLink link = newLink(account);
+        if (mail.canSend()) {
+            mail.accountInvitation(account, link.token(), link.expiresAt(), inviterName);
+            return new InvitationDelivery.Mailed();
+        }
+        return new InvitationDelivery.Link(publicUrl.publicUrl().orElse("") + AccountInvitationRules.welcomePath(link.token()));
+    }
+
+    /**
+     * A new link the account asked for from "forgot password", replacing its previous one. It can only leave by
+     * mail: with mail off, nothing changes — a link an administrator handed over keeps working.
+     *
+     * @return whether a new link went out
+     */
+    public boolean renew(AccountContact account) {
+        if (!mail.canSend()) {
+            return false;
+        }
+        NewLink link = newLink(account);
+        mail.invitationRenewed(account, link.token(), link.expiresAt());
+        return true;
+    }
+
+    /** Only the token's hash is stored: the raw token lives as long as this call. */
+    private NewLink newLink(AccountContact account) {
         String token = generator.newToken();
         Instant now = clock.instant();
         Instant expiresAt = now.plus(AccountInvitationRules.VALIDITY);
         invitations.save(account.userId(), hasher.hash(token), now, expiresAt);
-        if (mail.canSend()) {
-            mail.accountInvitation(account, token, expiresAt, inviterName);
-            return new InvitationDelivery.Mailed();
+        return new NewLink(token, expiresAt);
+    }
+
+    private record NewLink(String token, Instant expiresAt) {
+        @Override
+        public String toString() {
+            return "NewLink[expiresAt=" + expiresAt + "]";
         }
-        return new InvitationDelivery.Link(publicUrl.publicUrl().orElse("") + AccountInvitationRules.welcomePath(token));
     }
 }

@@ -82,7 +82,8 @@ public class RequestPasswordResetHandler implements RequestPasswordResetUseCase 
         // waits here until the first has committed its link, then sees it and holds back.
         accountLock.lockFor(account.id());
         Instant now = clock.instant();
-        Optional<AccountInvitation> invitation = invitations.findByUserId(account.id());
+        // Locked: an acceptance committing meanwhile is seen, and the account is then treated as joined.
+        Optional<AccountInvitation> invitation = invitations.lockForUser(account.id());
         if (invitation.isPresent()) {
             renewInvitation(account, invitation.get(), now);
             return;
@@ -102,7 +103,8 @@ public class RequestPasswordResetHandler implements RequestPasswordResetUseCase 
 
     /**
      * An invited account has no password to reset: it gets a new invitation instead, at the pace of reset
-     * links. Mail is on — the reset routes do not exist otherwise — so the link is mailed, never handed back.
+     * links. The reset routes exist only with mail on, but mail can be switched off a moment later: the link
+     * then stays as it was, rather than being replaced by one that never leaves.
      */
     private void renewInvitation(UserProfile account, AccountInvitation invitation, Instant now) {
         if (PasswordResetRules.inCooldown(invitation.createdAt(), now)) {
@@ -110,7 +112,10 @@ public class RequestPasswordResetHandler implements RequestPasswordResetUseCase 
                 PasswordResetRules.COOLDOWN);
             return;
         }
-        issuer.issue(AccountContact.of(account), null);
-        log.info("Invitation of user {} renewed from forgot password", account.id());
+        if (issuer.renew(AccountContact.of(account))) {
+            log.info("Invitation of user {} renewed from forgot password", account.id());
+        } else {
+            log.info("Invitation of user {} not renewed: mail is off", account.id());
+        }
     }
 }

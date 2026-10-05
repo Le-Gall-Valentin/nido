@@ -60,7 +60,7 @@ class RequestPasswordResetHandlerTest {
         handler = new RequestPasswordResetHandler(profiles, tokens, invitations, issuer, generator, hasher, mail, accountLock, Clock.fixed(now, ZoneOffset.UTC));
         when(profiles.findByIdentifier(any())).thenReturn(Optional.empty());
         when(tokens.latestIssuedAt(any())).thenReturn(Optional.empty());
-        when(invitations.findByUserId(any())).thenReturn(Optional.empty());
+        when(invitations.lockForUser(any())).thenReturn(Optional.empty());
         when(generator.newToken()).thenReturn("RAW");
         when(hasher.hash("RAW")).thenReturn("HASH");
     }
@@ -81,12 +81,12 @@ class RequestPasswordResetHandlerTest {
     @Test
     void an_invited_account_gets_a_new_invitation_instead_of_a_reset_link() {
         when(profiles.findByIdentifier("jane")).thenReturn(Optional.of(jane));
-        when(invitations.findByUserId(jane.id()))
+        when(invitations.lockForUser(jane.id()))
             .thenReturn(Optional.of(new AccountInvitation(jane.id(), now.minus(Duration.ofDays(8)), now.minus(Duration.ofDays(1)))));
 
         handler.request("jane");
 
-        verify(issuer).issue(AccountContact.of(jane), null);
+        verify(issuer).renew(AccountContact.of(jane));
         verify(tokens, never()).save(any(), any(), any(), any());
         verify(mail, never()).passwordResetRequested(any(), any(), any(), any());
     }
@@ -94,7 +94,7 @@ class RequestPasswordResetHandlerTest {
     @Test
     void an_invitation_sent_a_moment_ago_is_not_sent_again() {
         when(profiles.findByIdentifier("jane")).thenReturn(Optional.of(jane));
-        when(invitations.findByUserId(jane.id()))
+        when(invitations.lockForUser(jane.id()))
             .thenReturn(Optional.of(new AccountInvitation(jane.id(), now.minusSeconds(60), now.plus(Duration.ofDays(7)))));
 
         handler.request("jane");

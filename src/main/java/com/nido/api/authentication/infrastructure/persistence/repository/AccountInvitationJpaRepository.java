@@ -20,5 +20,9 @@ public interface AccountInvitationJpaRepository extends JpaRepository<AccountInv
     @Query("SELECT i FROM AccountInvitationEntity i WHERE i.tokenHash = :tokenHash")
     Optional<AccountInvitationEntity> findByTokenHashForUpdate(@Param("tokenHash") String tokenHash);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT i FROM AccountInvitationEntity i WHERE i.userId = :userId")
+    Optional<AccountInvitationEntity> findByUserIdForUpdate(@Param("userId") UUID userId);
+
     List<AccountInvitationEntity> findByUserIdIn(Collection<UUID> userIds);
 }

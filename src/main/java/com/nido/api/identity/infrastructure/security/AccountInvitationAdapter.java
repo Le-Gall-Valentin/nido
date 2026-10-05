@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -25,7 +26,17 @@ public class AccountInvitationAdapter implements AccountInvitationPort {
 
     @Override
     public InvitationDelivery invite(UUID userId, String inviterName) {
-        return switch (inviteAccount.invite(userId, inviterName)) {
+        return inIdentityWords(inviteAccount.invite(userId, inviterName));
+    }
+
+    @Override
+    public Optional<InvitationDelivery> inviteAgain(UUID userId, String inviterName) {
+        return inviteAccount.inviteAgain(userId, inviterName).map(AccountInvitationAdapter::inIdentityWords);
+    }
+
+    private static InvitationDelivery inIdentityWords(
+            com.nido.api.authentication.application.dto.InvitationDelivery delivery) {
+        return switch (delivery) {
             case com.nido.api.authentication.application.dto.InvitationDelivery.Mailed ignored ->
                 new InvitationDelivery.Mailed();
             case com.nido.api.authentication.application.dto.InvitationDelivery.Link link ->

@@ -21,9 +21,11 @@ import java.util.Locale;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -84,11 +86,19 @@ class AccountMailAdapterTest {
     }
 
     @Test
-    void an_invitation_without_an_inviter_is_a_renewed_one() {
+    void a_renewed_invitation_has_its_own_wording() {
         new AccountMailAdapter(sendMail, availability, CLOCK)
-            .accountInvitation(jane, "RAW", Instant.parse("2026-10-05T10:00:00Z"), null);
+            .invitationRenewed(jane, "RAW", Instant.parse("2026-10-05T10:00:00Z"));
 
         assertThat(sent().content()).isEqualTo(new InvitationRenewedMail("jane", new AppPath("/welcome#token=RAW"), 7));
+    }
+
+    @Test
+    void an_invitation_without_an_inviter_is_refused_rather_than_sent_in_the_wrong_wording() {
+        assertThatThrownBy(() -> new AccountMailAdapter(sendMail, availability, CLOCK)
+            .accountInvitation(jane, "RAW", Instant.parse("2026-10-05T10:00:00Z"), null))
+            .isInstanceOf(NullPointerException.class);
+        verifyNoInteractions(sendMail);
     }
 
     @Test

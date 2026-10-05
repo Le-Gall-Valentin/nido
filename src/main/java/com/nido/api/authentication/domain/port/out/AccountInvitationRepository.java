@@ -23,6 +23,13 @@ public interface AccountInvitationRepository {
 
     Optional<AccountInvitation> findByUserId(UUID userId);
 
+    /**
+     * The account's invitation, its row locked until the caller's transaction ends, so an acceptance and a
+     * renewal never interleave: empty once the account has chosen its password, even if an acceptance was
+     * committed after this transaction last read the row. Taken before replacing an existing invitation.
+     */
+    Optional<AccountInvitation> lockForUser(UUID userId);
+
     /** The invitations among these accounts, by account; an account without one is absent. */
     Map<UUID, AccountInvitation> findByUserIds(Collection<UUID> userIds);
 

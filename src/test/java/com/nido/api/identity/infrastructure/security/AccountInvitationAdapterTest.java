@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,6 +39,16 @@ class AccountInvitationAdapterTest {
 
         assertThat(adapter().invite(carol, "bob")).isEqualTo(new InvitationDelivery.Mailed());
         assertThat(adapter().invite(carol, "bob")).isEqualTo(new InvitationDelivery.Link("/welcome#token=x"));
+    }
+
+    @Test
+    void asked_again_the_invitation_is_told_in_identity_s_words_or_not_at_all() {
+        when(inviteAccount.inviteAgain(carol, "bob"))
+            .thenReturn(Optional.of(new com.nido.api.authentication.application.dto.InvitationDelivery.Link("/welcome#token=x")))
+            .thenReturn(Optional.empty());
+
+        assertThat(adapter().inviteAgain(carol, "bob")).contains(new InvitationDelivery.Link("/welcome#token=x"));
+        assertThat(adapter().inviteAgain(carol, "bob")).isEmpty();
     }
 
     @Test

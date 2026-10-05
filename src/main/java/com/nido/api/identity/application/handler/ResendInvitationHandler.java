@@ -42,11 +42,11 @@ public class ResendInvitationHandler implements ResendInvitationUseCase {
         if (!target.isActive()) {
             throw new IdentityException.UserNotActive();
         }
-        if (!invitations.isInvited(target.id())) {
-            throw new IdentityException.AccountAlreadyJoined();
-        }
-        String inviterName = userRepository.findById(command.callerId()).map(User::username).orElse(null);
-        InvitationDelivery delivery = invitations.invite(target.id(), inviterName);
+        // The mail names who sends it: a caller whose account is gone invites nobody.
+        String inviterName = userRepository.findById(command.callerId()).map(User::username)
+            .orElseThrow(IdentityException.InsufficientPermissions::new);
+        InvitationDelivery delivery = invitations.inviteAgain(target.id(), inviterName)
+            .orElseThrow(IdentityException.AccountAlreadyJoined::new);
         log.info("Invitation of user {} issued again by caller {}", target.id(), command.callerId());
         return delivery;
     }

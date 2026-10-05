@@ -53,6 +53,12 @@ public class AccountInvitationRepositoryAdapter implements AccountInvitationRepo
     }
 
     @Override
+    public Optional<AccountInvitation> lockForUser(UUID userId) {
+        // A query, not a lookup by key: it reaches the database even when this transaction already holds the row.
+        return jpa.findByUserIdForUpdate(userId).map(AccountInvitationRepositoryAdapter::toDomain);
+    }
+
+    @Override
     public Map<UUID, AccountInvitation> findByUserIds(Collection<UUID> userIds) {
         if (userIds.isEmpty()) {
             return Map.of();

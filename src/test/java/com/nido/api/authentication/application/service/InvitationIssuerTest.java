@@ -22,9 +22,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -54,7 +56,7 @@ class InvitationIssuerTest {
     void with_mail_on_the_link_is_mailed_and_never_handed_back() {
         when(mail.canSend()).thenReturn(true);
 
-        InvitationDelivery delivery = issuer.issue(carol, "bob");
+        InvitationDelivery delivery = issuer.invite(carol, "bob");
 
         assertThat(delivery).isEqualTo(new InvitationDelivery.Mailed());
         verify(invitations).save(carol.userId(), "HASH", NOW, IN_A_WEEK);
@@ -66,7 +68,7 @@ class InvitationIssuerTest {
         when(mail.canSend()).thenReturn(false);
         when(publicUrl.publicUrl()).thenReturn(Optional.of("https://nido.example"));
 
-        InvitationDelivery delivery = issuer.issue(carol, "bob");
+        InvitationDelivery delivery = issuer.invite(carol, "bob");
 
         assertThat(delivery).isEqualTo(new InvitationDelivery.Link("https://nido.example/welcome#token=RAW"));
         verify(invitations).save(carol.userId(), "HASH", NOW, IN_A_WEEK);
@@ -78,7 +80,34 @@ class InvitationIssuerTest {
         when(mail.canSend()).thenReturn(false);
         when(publicUrl.publicUrl()).thenReturn(Optional.empty());
 
-        assertThat(issuer.issue(carol, "bob")).isEqualTo(new InvitationDelivery.Link("/welcome#token=RAW"));
+        assertThat(issuer.invite(carol, "bob")).isEqualTo(new InvitationDelivery.Link("/welcome#token=RAW"));
+    }
+
+    @Test
+    void an_invitation_always_names_who_sends_it() {
+        assertThatThrownBy(() -> issuer.invite(carol, null)).isInstanceOf(NullPointerException.class);
+        verifyNoInteractions(invitations, mail);
+    }
+
+    @Test
+    void a_renewed_link_replaces_the_previous_one_and_is_mailed_in_the_renewed_wording() {
+        when(mail.canSend()).thenReturn(true);
+
+        assertThat(issuer.renew(carol)).isTrue();
+
+        verify(invitations).save(carol.userId(), "HASH", NOW, IN_A_WEEK);
+        verify(mail).invitationRenewed(carol, "RAW", IN_A_WEEK);
+        verify(mail, never()).accountInvitation(any(), any(), any(), any());
+    }
+
+    @Test
+    void with_mail_off_nothing_is_renewed_so_a_link_handed_over_keeps_working() {
+        when(mail.canSend()).thenReturn(false);
+
+        assertThat(issuer.renew(carol)).isFalse();
+
+        verify(invitations, never()).save(any(), any(), any(), any());
+        verify(mail, never()).invitationRenewed(any(), any(), any());
     }
 
     @Test
