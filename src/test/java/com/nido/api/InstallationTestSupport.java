@@ -10,6 +10,7 @@ import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.springframework.boot.SpringApplication;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
@@ -61,6 +62,12 @@ public final class InstallationTestSupport {
     }
 
     public static ConfigurableApplicationContext boot(String database, Path dataDir, String... overrides) {
+        return boot(database, dataDir, List.of(), overrides);
+    }
+
+    /** With listeners on the application, to see what was ready at a given moment of its start. */
+    public static ConfigurableApplicationContext boot(String database, Path dataDir, List<ApplicationListener<?>> listeners,
+                                                      String... overrides) {
         Map<String, String> arguments = new LinkedHashMap<>();
         arguments.put("spring.datasource.url", SharedContainers.jdbcUrl(database));
         arguments.put("spring.datasource.username", SharedContainers.POSTGRES.getUsername());
@@ -86,7 +93,9 @@ public final class InstallationTestSupport {
         }
         // One argument per name: Spring joins repeated ones with commas.
         String[] args = arguments.entrySet().stream().map(e -> "--" + e.getKey() + "=" + e.getValue()).toArray(String[]::new);
-        ConfigurableApplicationContext context = new SpringApplication(NidoApiApplication.class).run(args);
+        SpringApplication application = new SpringApplication(NidoApiApplication.class);
+        application.addListeners(listeners.toArray(ApplicationListener<?>[]::new));
+        ConfigurableApplicationContext context = application.run(args);
         context.getBean(RedisRateLimitBucketStore.class).clearAll();
         return context;
     }

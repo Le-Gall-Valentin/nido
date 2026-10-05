@@ -1,10 +1,14 @@
 package com.nido.api;
 
+import com.nido.api.instance.domain.model.SetupCode;
+import com.nido.api.instance.domain.port.out.SetupCodePort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.server.context.WebServerInitializedEvent;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -14,11 +18,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.nido.api.InstallationTestSupport.boot;
 import static com.nido.api.InstallationTestSupport.mvc;
@@ -122,6 +128,17 @@ class FreshInstallIT {
         Files.delete(keyFile());
 
         assertThatThrownBy(() -> boot(database, dataDir).close()).hasStackTraceContaining("was not provided");
+    }
+
+    @Test
+    void the_code_exists_before_the_server_takes_its_first_request() throws Exception {
+        AtomicReference<Optional<SetupCode>> whenTheServerStarted = new AtomicReference<>();
+        ApplicationListener<WebServerInitializedEvent> listener = event -> whenTheServerStarted.compareAndSet(null,
+            event.getApplicationContext().getBean(SetupCodePort.class).current());
+
+        try (ConfigurableApplicationContext app = boot(database, dataDir, List.of(listener))) {
+            assertThat(whenTheServerStarted.get()).as("a setup screen opened at once asks for a code that exists").isPresent();
+        }
     }
 
     @Test
