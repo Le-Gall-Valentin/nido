@@ -1,6 +1,5 @@
 package com.nido.api.mail.infrastructure.scheduler;
 
-import com.nido.api.infrastructure.config.ConditionalOnMailEnabled;
 import com.nido.api.mail.application.port.in.DispatchPendingMailsUseCase;
 import com.nido.api.mail.domain.port.out.MailDispatchTriggerPort;
 import jakarta.annotation.PreDestroy;
@@ -24,7 +23,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * see their mails.
  */
 @Component
-@ConditionalOnMailEnabled
 public class AfterCommitDispatchTrigger implements MailDispatchTriggerPort {
 
     private static final Logger log = LoggerFactory.getLogger(AfterCommitDispatchTrigger.class);

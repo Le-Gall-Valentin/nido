@@ -1,13 +1,16 @@
 package com.nido.api.mail.application.handler;
 
+import com.nido.api.mail.domain.model.ActiveMail;
 import com.nido.api.mail.domain.model.DeliveryOutcome;
 import com.nido.api.mail.domain.model.OutboxEntry;
 import com.nido.api.mail.domain.model.OutgoingMail;
 import com.nido.api.mail.domain.model.Recipient;
 import com.nido.api.mail.domain.model.RenderedMail;
 import com.nido.api.mail.domain.model.RetryPolicy;
+import com.nido.api.mail.domain.port.out.MailConfigurationPort;
 import com.nido.api.mail.domain.port.out.MailOutboxPort;
 import com.nido.api.mail.domain.port.out.MailTransportPort;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -18,6 +21,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
@@ -25,21 +29,37 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DispatchPendingMailsHandlerTest {
 
+    @Mock MailConfigurationPort configuration;
     @Mock MailOutboxPort outbox;
     @Mock MailTransportPort transport;
 
     private final Instant now = Instant.parse("2026-09-28T10:00:00Z");
 
     private DispatchPendingMailsHandler handler() {
-        return new DispatchPendingMailsHandler(outbox, transport, new RetryPolicy(), Clock.fixed(now, ZoneOffset.UTC));
+        return new DispatchPendingMailsHandler(configuration, outbox, transport, new RetryPolicy(), Clock.fixed(now, ZoneOffset.UTC));
+    }
+
+    @BeforeEach
+    void mailIsOn() {
+        lenient().when(configuration.active()).thenReturn(Optional.of(new ActiveMail("https://nido.example")));
+    }
+
+    @Test
+    void mail_off_claims_nothing() {
+        when(configuration.active()).thenReturn(Optional.empty());
+
+        assertThat(handler().dispatch()).isZero();
+        verifyNoInteractions(outbox, transport);
     }
 
     private static OutboxEntry entry(int attempts, Instant expiresAt) {

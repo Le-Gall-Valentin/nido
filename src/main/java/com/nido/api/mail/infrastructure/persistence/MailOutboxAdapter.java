@@ -1,6 +1,5 @@
 package com.nido.api.mail.infrastructure.persistence;
 
-import com.nido.api.infrastructure.config.ConditionalOnMailEnabled;
 import com.nido.api.mail.domain.model.OutboxEntry;
 import com.nido.api.mail.domain.model.OutgoingMail;
 import com.nido.api.mail.domain.model.Recipient;
@@ -38,7 +37,6 @@ import java.util.UUID;
  * derived once: the salt never rotates, so there is nothing for an expiring cache to pick up.
  */
 @Component
-@ConditionalOnMailEnabled
 public class MailOutboxAdapter implements MailOutboxPort {
 
     private static final Logger log = LoggerFactory.getLogger(MailOutboxAdapter.class);

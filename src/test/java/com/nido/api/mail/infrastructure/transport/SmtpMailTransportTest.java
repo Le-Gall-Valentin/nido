@@ -2,8 +2,7 @@ package com.nido.api.mail.infrastructure.transport;
 
 import com.icegreen.greenmail.util.GreenMail;
 import com.icegreen.greenmail.util.ServerSetupTest;
-import com.nido.api.infrastructure.config.MailProperties;
-import com.nido.api.infrastructure.config.MailProperties.Security;
+import com.nido.api.mail.domain.model.MailSettingsInput;
 import com.nido.api.mail.domain.model.DeliveryOutcome;
 import com.nido.api.mail.domain.model.OutgoingMail;
 import com.nido.api.mail.domain.model.Recipient;
@@ -59,8 +58,8 @@ class SmtpMailTransportTest {
     }
 
     private static MailSettings settings(int port) {
-        return MailSettings.from(new MailProperties("127.0.0.1", port, Security.NONE, null, null,
-            "Nido <nido@test.local>", "http://localhost:5173"));
+        return MailSettings.check(new MailSettingsInput("127.0.0.1", port, "none", null, null,
+            "Nido <nido@test.local>", "http://localhost:5173")).settings().orElseThrow();
     }
 
     private static SmtpMailTransport transportTo(int port) {

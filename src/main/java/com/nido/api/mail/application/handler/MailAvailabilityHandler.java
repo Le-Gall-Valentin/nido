@@ -1,18 +1,19 @@
 package com.nido.api.mail.application.handler;
 
 import com.nido.api.mail.application.port.in.MailAvailabilityQuery;
+import com.nido.api.mail.domain.port.out.MailConfigurationPort;
 
-/** Answers with the mode the configuration chose; one instance per mode. */
+/** Whether a mail could leave right now. */
 public class MailAvailabilityHandler implements MailAvailabilityQuery {
 
-    private final boolean available;
+    private final MailConfigurationPort configuration;
 
-    public MailAvailabilityHandler(boolean available) {
-        this.available = available;
+    public MailAvailabilityHandler(MailConfigurationPort configuration) {
+        this.configuration = configuration;
     }
 
     @Override
     public boolean isAvailable() {
-        return available;
+        return configuration.active().isPresent();
     }
 }

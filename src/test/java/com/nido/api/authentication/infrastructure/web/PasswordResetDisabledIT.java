@@ -11,8 +11,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -43,12 +41,11 @@ class PasswordResetDisabledIT {
 
     @Test
     void the_reset_routes_do_not_exist() throws Exception {
-        // No controller: the request falls through to the static-resource handler, which answers 404
-        // or 405 depending on the path. Either way, nothing was reset and nothing was sent.
+        // Mail off: every route answers 404, and nothing was reset or sent.
         for (String route : new String[]{"request", "check", "confirm"}) {
             mockMvc.perform(post("/api/auth/password-reset/" + route)
                     .contentType(MediaType.APPLICATION_JSON).content("{\"identifier\":\"jane\",\"token\":\"t\"}"))
-                .andExpect(status().is(anyOf(is(404), is(405))));
+                .andExpect(status().isNotFound());
         }
     }
 }

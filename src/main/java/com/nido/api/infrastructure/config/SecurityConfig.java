@@ -52,7 +52,7 @@ public class SecurityConfig {
                 // TOTP challenge verification — authenticated via challenge cookie, not JWT
                 .requestMatchers(HttpMethod.POST, "/api/auth/2fa/verify").permitAll()
                 // What the sign-in pages may offer, and "forgot password" — used by definition by
-                // people who cannot sign in. The reset routes only exist when mail is on.
+                // people who cannot sign in. The reset routes answer 404 while mail is off.
                 .requestMatchers(HttpMethod.GET, "/api/auth/capabilities").permitAll()
                 .requestMatchers(HttpMethod.POST,
                         "/api/auth/password-reset/request",

@@ -1,14 +1,9 @@
 package com.nido.api.mail.infrastructure.render;
 
-import com.nido.api.infrastructure.config.ConditionalOnMailEnabled;
 import com.nido.api.mail.domain.model.MailContent;
 import com.nido.api.mail.domain.model.RenderedMail;
-import com.nido.api.mail.domain.port.out.MailRendererPort;
-import com.nido.api.mail.infrastructure.config.MailSettings;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.dialect.SpringStandardDialect;
@@ -30,20 +25,14 @@ import java.util.Set;
  * caller's transaction then fails with it, which is where a broken template should surface — in a
  * test, not in someone's inbox.
  */
-@Component
-@ConditionalOnMailEnabled
-public class ThymeleafMailRenderer implements MailRendererPort {
+public class ThymeleafMailRenderer {
 
     private static final Set<String> LANGUAGES = Set.of("fr", "en");
 
-    private final TemplateEngine engine = createEngine();
+    /** One engine for every renderer: a renderer per mail costs nothing, the template cache is shared. */
+    private static final TemplateEngine ENGINE = createEngine();
     private final HtmlToTextConverter toText = new HtmlToTextConverter();
     private final String appUrl;
-
-    @Autowired
-    public ThymeleafMailRenderer(MailSettings settings) {
-        this(settings.appUrl().toString());
-    }
 
     /** @param appUrl the app's public address, without a trailing slash */
     public ThymeleafMailRenderer(String appUrl) {
@@ -65,14 +54,13 @@ public class ThymeleafMailRenderer implements MailRendererPort {
         return engine;
     }
 
-    @Override
     public RenderedMail render(MailContent content, Locale locale) {
         Context context = new Context(supported(locale));
         context.setVariable("mail", content);
         context.setVariable("appUrl", appUrl);
         context.setVariable("logoCid", MailBranding.LOGO_CID);
 
-        String html = engine.process(content.template(), context);
+        String html = ENGINE.process(content.template(), context);
         Document document = Jsoup.parse(html);
         String subject = document.title().strip();
         if (subject.isEmpty()) {

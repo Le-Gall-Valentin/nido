@@ -1,9 +1,6 @@
 package com.nido.api.mail.infrastructure.config;
 
-import com.nido.api.infrastructure.config.ConditionalOnMailDisabled;
-import com.nido.api.infrastructure.config.ConditionalOnMailEnabled;
 import com.nido.api.mail.application.handler.CancelPendingMailsHandler;
-import com.nido.api.mail.application.handler.DisabledSendMailHandler;
 import com.nido.api.mail.application.handler.DispatchPendingMailsHandler;
 import com.nido.api.mail.application.handler.MailAvailabilityHandler;
 import com.nido.api.mail.application.handler.SendMailHandler;
@@ -12,74 +9,43 @@ import com.nido.api.mail.application.port.in.DispatchPendingMailsUseCase;
 import com.nido.api.mail.application.port.in.MailAvailabilityQuery;
 import com.nido.api.mail.application.port.in.SendMailUseCase;
 import com.nido.api.mail.domain.model.RetryPolicy;
+import com.nido.api.mail.domain.port.out.MailConfigurationPort;
 import com.nido.api.mail.domain.port.out.MailDispatchTriggerPort;
 import com.nido.api.mail.domain.port.out.MailOutboxPort;
 import com.nido.api.mail.domain.port.out.MailRendererPort;
 import com.nido.api.mail.domain.port.out.MailTransportPort;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Clock;
 
 /**
- * The mail handlers, one set per mode. They are built here rather than scanned as
- * {@code @ApplicationService}s because the application layer may not carry Spring conditions, and
- * scanning would register both implementations of {@code SendMailUseCase} at once.
- *
- * <p>No handler asks "is mail on?": the configuration answers once, by choosing which one exists.
+ * The mail handlers, built here rather than scanned so that the mail context's wiring reads in one
+ * place. None of them is chosen by a switch any more: mail can be turned on and off from the settings
+ * page, so each asks MailConfigurationPort at the moment it acts.
  */
 @Configuration(proxyBeanMethods = false)
 public class MailHandlersConfiguration {
 
-    private static final Logger log = LoggerFactory.getLogger(MailHandlersConfiguration.class);
-
     @Bean
-    @ConditionalOnMailEnabled
-    SendMailUseCase sendMailUseCase(MailRendererPort renderer, MailOutboxPort outbox,
+    SendMailUseCase sendMailUseCase(MailConfigurationPort configuration, MailRendererPort renderer, MailOutboxPort outbox,
                                     MailDispatchTriggerPort trigger, Clock clock) {
-        return new SendMailHandler(renderer, outbox, trigger, clock);
+        return new SendMailHandler(configuration, renderer, outbox, trigger, clock);
     }
 
     @Bean
-    @ConditionalOnMailDisabled
-    SendMailUseCase disabledSendMailUseCase() {
-        log.info("Mail is off (NIDO_SMTP_HOST is not set): no mail will be sent");
-        return new DisabledSendMailHandler();
+    MailAvailabilityQuery mailAvailability(MailConfigurationPort configuration) {
+        return new MailAvailabilityHandler(configuration);
     }
 
     @Bean
-    @ConditionalOnMailEnabled
-    MailAvailabilityQuery mailAvailable() {
-        return new MailAvailabilityHandler(true);
+    DispatchPendingMailsUseCase dispatchPendingMailsUseCase(MailConfigurationPort configuration, MailOutboxPort outbox,
+                                                            MailTransportPort transport, Clock clock) {
+        return new DispatchPendingMailsHandler(configuration, outbox, transport, new RetryPolicy(), clock);
     }
 
     @Bean
-    @ConditionalOnMailDisabled
-    MailAvailabilityQuery mailUnavailable() {
-        return new MailAvailabilityHandler(false);
-    }
-
-    @Bean
-    @ConditionalOnMailEnabled
-    DispatchPendingMailsUseCase dispatchPendingMailsUseCase(MailOutboxPort outbox, MailTransportPort transport, Clock clock) {
-        return new DispatchPendingMailsHandler(outbox, transport, new RetryPolicy(), clock);
-    }
-
-    @Bean
-    @ConditionalOnMailEnabled
     CancelPendingMailsUseCase cancelPendingMailsUseCase(MailOutboxPort outbox) {
         return new CancelPendingMailsHandler(outbox);
-    }
-
-    /**
-     * Mail off: this installation queues nothing. Rows left from a time mail was on are not read — the
-     * outbox adapter does not exist — and would go out if mail were switched back on.
-     */
-    @Bean
-    @ConditionalOnMailDisabled
-    CancelPendingMailsUseCase noPendingMailsToCancel() {
-        return address -> 0;
     }
 }
