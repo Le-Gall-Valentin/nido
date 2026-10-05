@@ -1,5 +1,6 @@
 package com.nido.api.identity.infrastructure.web;
 
+import com.jayway.jsonpath.JsonPath;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.authentication.infrastructure.persistence.entity.UserCredentialEntity;
 import com.nido.api.authentication.infrastructure.persistence.repository.RefreshTokenJpaRepository;
@@ -180,14 +181,16 @@ class UserControllerIT {
         mockMvc.perform(post("/api/users")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"newuser\",\"email\":\"newuser@test.com\",\"password\":\"Securepass1!\",\"role\":\"USER\"}"))
+                .content("{\"username\":\"newuser\",\"email\":\"newuser@test.com\",\"role\":\"USER\"}"))
             .andExpect(status().isCreated())
             .andExpect(header().string("Location", org.hamcrest.Matchers.matchesPattern("/api/users/[0-9a-f-]+")))
             .andExpect(jsonPath("$.username").value("newuser"))
             .andExpect(jsonPath("$.role").value("USER"))
             .andExpect(jsonPath("$.email").value("newuser@test.com"))
             .andExpect(jsonPath("$.totpEnabled").value(false))
-            .andExpect(jsonPath("$.createdAt").isNotEmpty());
+            .andExpect(jsonPath("$.createdAt").isNotEmpty())
+            .andExpect(jsonPath("$.invitation.delivery").value("link"))
+            .andExpect(jsonPath("$.invitation.link").value(org.hamcrest.Matchers.containsString("/welcome#token=")));
     }
 
     @Test
@@ -197,7 +200,7 @@ class UserControllerIT {
         mockMvc.perform(post("/api/users")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"TestUser\",\"email\":\"another@test.com\",\"password\":\"Securepass1!\",\"role\":\"USER\"}"))
+                .content("{\"username\":\"TestUser\",\"email\":\"another@test.com\",\"role\":\"USER\"}"))
             .andExpect(status().isConflict());
     }
 
@@ -208,7 +211,7 @@ class UserControllerIT {
         mockMvc.perform(post("/api/users")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"new@user\",\"email\":\"newuser@test.com\",\"password\":\"Securepass1!\",\"role\":\"USER\"}"))
+                .content("{\"username\":\"new@user\",\"email\":\"newuser@test.com\",\"role\":\"USER\"}"))
             .andExpect(status().isBadRequest());
     }
 
@@ -230,7 +233,7 @@ class UserControllerIT {
         mockMvc.perform(post("/api/users")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"newuser\",\"email\":\"newuser@test.com\",\"password\":\"Securepass1!\",\"role\":\"USER\"}"))
+                .content("{\"username\":\"newuser\",\"email\":\"newuser@test.com\",\"role\":\"USER\"}"))
             .andExpect(status().isForbidden());
     }
 
@@ -238,7 +241,7 @@ class UserControllerIT {
     void register_unauthenticated_returns401() throws Exception {
         mockMvc.perform(post("/api/users")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"newuser\",\"email\":\"newuser@test.com\",\"password\":\"securepass\"}"))
+                .content("{\"username\":\"newuser\",\"email\":\"newuser@test.com\"}"))
             .andExpect(status().isUnauthorized());
     }
 
@@ -249,7 +252,7 @@ class UserControllerIT {
         mockMvc.perform(post("/api/users")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"testuser\",\"email\":\"other@test.com\",\"password\":\"Securepass1!\",\"role\":\"USER\"}"))
+                .content("{\"username\":\"testuser\",\"email\":\"other@test.com\",\"role\":\"USER\"}"))
             .andExpect(status().isConflict());
     }
 
@@ -265,36 +268,13 @@ class UserControllerIT {
     }
 
     @Test
-    void register_weakPassword_returns400() throws Exception {
-        Cookie access = loginAs("superadmin", "adminpass");
-
-        mockMvc.perform(post("/api/users")
-                .cookie(access)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"simpleuser\",\"email\":\"simple@test.com\",\"password\":\"simplepass\",\"role\":\"USER\"}"))
-            .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void register_passwordOverSeventyTwoBytes_returns400() throws Exception {
-        Cookie access = loginAs("superadmin", "adminpass");
-
-        mockMvc.perform(post("/api/users")
-                .cookie(access)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"accented\",\"email\":\"accented@test.com\",\"password\":\""
-                    + SEVENTY_TWO_CHARACTERS_OVER_72_BYTES + "\",\"role\":\"USER\"}"))
-            .andExpect(status().isBadRequest());
-    }
-
-    @Test
     void register_superAdminCannotCreateSuperAdmin_returns403() throws Exception {
         Cookie access = loginAs("superadmin", "adminpass");
 
         mockMvc.perform(post("/api/users")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"newsa\",\"email\":\"newsa@test.com\",\"password\":\"Securepass1!\",\"role\":\"SUPER_ADMIN\"}"))
+                .content("{\"username\":\"newsa\",\"email\":\"newsa@test.com\",\"role\":\"SUPER_ADMIN\"}"))
             .andExpect(status().isForbidden());
     }
 
@@ -1032,6 +1012,71 @@ class UserControllerIT {
         totp.setTotpSecret(encryptorFactory.forUser(userId).encrypt(secret));
         totp.setTotpEnabled(enabled);
         userTotpJpaRepository.save(totp);
+    }
+
+    private record Created(String id, String token) {}
+
+    private Created createInvited(String username) throws Exception {
+        String body = mockMvc.perform(post("/api/users").cookie(loginAs("superadmin", "adminpass"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"" + username + "\",\"email\":\"" + username + "@test.com\",\"role\":\"USER\"}"))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+        return new Created(JsonPath.read(body, "$.id"), tokenOf(JsonPath.read(body, "$.invitation.link")));
+    }
+
+    private static String tokenOf(String link) {
+        return link.substring(link.indexOf("token=") + "token=".length());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions checkInvitation(String token) throws Exception {
+        return mockMvc.perform(post("/api/auth/account-invitation/check")
+            .contentType(MediaType.APPLICATION_JSON).content("{\"token\":\"" + token + "\"}"));
+    }
+
+    @Test
+    void resendInvitation_replacesTheLink_andTheOldOneNoLongerWorks() throws Exception {
+        Created invited = createInvited("newcomer");
+
+        String body = mockMvc.perform(post("/api/users/" + invited.id() + "/invitation")
+                .cookie(loginAs("superadmin", "adminpass")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.delivery").value("link"))
+            .andReturn().getResponse().getContentAsString();
+        String second = tokenOf(JsonPath.read(body, "$.link"));
+
+        checkInvitation(invited.token()).andExpect(status().isGone());
+        checkInvitation(second).andExpect(status().isOk());
+    }
+
+    @Test
+    void resendInvitation_toAnAccountThatChoseItsPassword_returns409() throws Exception {
+        UUID testuserId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").orElseThrow().getId();
+
+        mockMvc.perform(post("/api/users/" + testuserId + "/invitation").cookie(loginAs("superadmin", "adminpass")))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.title").value("AccountAlreadyJoined"));
+    }
+
+    @Test
+    void resendInvitation_asUser_returns403() throws Exception {
+        Created invited = createInvited("newcomer");
+
+        mockMvc.perform(post("/api/users/" + invited.id() + "/invitation").cookie(loginAs("testuser", "password")))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void listUsers_showsTheInvitationOfAnAccountThatHasNotJoined() throws Exception {
+        createInvited("newcomer");
+        Cookie access = loginAs("superadmin", "adminpass");
+
+        mockMvc.perform(get("/api/users").param("search", "newcomer").cookie(access))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].invitation.status").value("pending"))
+            .andExpect(jsonPath("$.content[0].invitation.expiresAt").isNotEmpty());
+        mockMvc.perform(get("/api/users").param("search", "testuser").cookie(access))
+            .andExpect(jsonPath("$.content[0].invitation").value(org.hamcrest.Matchers.nullValue()));
     }
 
     private Cookie loginAs(String username, String password) throws Exception {

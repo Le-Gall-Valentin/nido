@@ -12,6 +12,7 @@ public abstract sealed class IdentityException extends RuntimeException
             IdentityException.CurrentPasswordRequired,
             IdentityException.InvalidCurrentPassword,
             IdentityException.RoleAlreadyAssigned,
+            IdentityException.AccountAlreadyJoined,
             IdentityException.DataIntegrityError {
 
     private IdentityException(String message) { super(message); }
@@ -50,6 +51,11 @@ public abstract sealed class IdentityException extends RuntimeException
 
     public static final class RoleAlreadyAssigned extends IdentityException {
         public RoleAlreadyAssigned() { super("User already has this role"); }
+    }
+
+    /** An invitation resent to an account that already chose its password: there is nothing left to invite to. */
+    public static final class AccountAlreadyJoined extends IdentityException {
+        public AccountAlreadyJoined() { super("This account already chose its password"); }
     }
 
     public static final class DataIntegrityError extends IdentityException {

@@ -59,6 +59,9 @@ public class IdentityExceptionHandler {
             case IdentityException.RoleAlreadyAssigned ex ->
                     response(409, ex, "User already has this role.");
 
+            case IdentityException.AccountAlreadyJoined ex ->
+                    response(409, ex, "This account already chose its password.");
+
             case IdentityException.DataIntegrityError ex -> {
                 log.error("Data integrity violation on {}", request.getRequestURI(), ex);
                 yield response(500, ex, "An unexpected error occurred. Please try again later.");

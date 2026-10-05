@@ -33,6 +33,8 @@ public record User(
 
     public void ensureTotpCanBeResetBy(Role callerRole) { ensureCanBeManagedBy(callerRole); }
 
+    public void ensureInvitationCanBeResentBy(Role callerRole) { ensureCanBeManagedBy(callerRole); }
+
     public void ensureRoleCanBeAssignedBy(Role callerRole, Role newRole) {
         if (!RoleHierarchy.canManage(callerRole, newRole)) {
             throw new IdentityException.InsufficientPermissions();

@@ -6,6 +6,7 @@ import com.nido.api.identity.application.port.in.ChangeMyLanguageUseCase;
 import com.nido.api.identity.application.port.in.ChangeMyPasswordUseCase;
 import com.nido.api.identity.application.port.in.DeleteUserUseCase;
 import com.nido.api.identity.application.port.in.ListUsersUseCase;
+import com.nido.api.identity.application.port.in.ResendInvitationUseCase;
 import com.nido.api.identity.application.port.in.UpdateUserUseCase;
 import com.nido.api.shared.model.Language;
 import com.nido.api.shared.security.AuthenticatedUser;
@@ -20,14 +21,19 @@ import com.nido.api.identity.domain.model.ChangeMyPasswordCommand;
 import com.nido.api.identity.domain.model.DeactivateUserCommand;
 import com.nido.api.identity.domain.model.DeleteUserCommand;
 import com.nido.api.identity.domain.model.RegisterCommand;
+import com.nido.api.identity.domain.model.RegisteredAccount;
+import com.nido.api.identity.domain.model.ResendInvitationCommand;
 import com.nido.api.identity.domain.model.UpdateProfileCommand;
 import com.nido.api.identity.domain.model.UpdateUserCommand;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.model.UserAdminView;
 import com.nido.api.identity.domain.model.UserSelfView;
 import com.nido.api.identity.infrastructure.web.dto.ChangePasswordRequest;
+import com.nido.api.identity.infrastructure.web.dto.InvitationDeliveryResponse;
+import com.nido.api.identity.infrastructure.web.dto.InvitationStateResponse;
 import com.nido.api.identity.infrastructure.web.dto.PageResponse;
 import com.nido.api.identity.infrastructure.web.dto.RegisterRequest;
+import com.nido.api.identity.infrastructure.web.dto.RegisteredUserResponse;
 import com.nido.api.identity.infrastructure.web.dto.UpdateLanguageRequest;
 import com.nido.api.identity.infrastructure.web.dto.UpdateProfileRequest;
 import com.nido.api.identity.infrastructure.web.dto.UpdateUserRequest;
@@ -77,6 +83,7 @@ public class UserController {
     private final DeleteUserUseCase deleteUserUseCase;
     private final UpdateUserUseCase updateUserUseCase;
     private final ChangeMyLanguageUseCase changeMyLanguageUseCase;
+    private final ResendInvitationUseCase resendInvitationUseCase;
 
     public UserController(GetCurrentUserUseCase getCurrentUserUseCase,
                           RegisterUseCase registerUseCase,
@@ -88,7 +95,8 @@ public class UserController {
                           ActivateUserUseCase activateUserUseCase,
                           DeleteUserUseCase deleteUserUseCase,
                           UpdateUserUseCase updateUserUseCase,
-                          ChangeMyLanguageUseCase changeMyLanguageUseCase) {
+                          ChangeMyLanguageUseCase changeMyLanguageUseCase,
+                          ResendInvitationUseCase resendInvitationUseCase) {
         this.getCurrentUserUseCase = getCurrentUserUseCase;
         this.registerUseCase = registerUseCase;
         this.deactivateUserUseCase = deactivateUserUseCase;
@@ -100,6 +108,7 @@ public class UserController {
         this.deleteUserUseCase = deleteUserUseCase;
         this.updateUserUseCase = updateUserUseCase;
         this.changeMyLanguageUseCase = changeMyLanguageUseCase;
+        this.resendInvitationUseCase = resendInvitationUseCase;
     }
 
     @Operation(
@@ -205,7 +214,7 @@ public class UserController {
             result.content().stream()
                 .map(v -> new UserAdminItemResponse(
                     v.id(), v.username(), v.email(), v.role(),
-                    v.isActive(), v.createdAt(), v.totpEnabled()))
+                    v.isActive(), v.createdAt(), v.totpEnabled(), InvitationStateResponse.of(v.invitation())))
                 .toList(),
             result.totalElements(), result.page(), result.size()
         );
@@ -215,7 +224,10 @@ public class UserController {
     @Operation(
         summary = "Créer un utilisateur (admin)",
         description = """
-            Crée un nouvel utilisateur. Accessible aux rôles `ADMIN` et `SUPER_ADMIN`.
+            Crée un compte et l'invite : la personne choisit elle-même son mot de passe par un lien valable 7 jours.
+            Le lien part par mail si l'envoi de mails est configuré (`invitation.delivery` = `mail`) ; sinon il est
+            rendu dans la réponse (`invitation.delivery` = `link`, `invitation.link`) pour que l'administrateur le
+            transmette — il n'est jamais réaffiché. Accessible aux rôles `ADMIN` et `SUPER_ADMIN`.
 
             **Contrainte de rôle** : un `ADMIN` ne peut créer que des utilisateurs avec le rôle `USER`.
             Seul un `SUPER_ADMIN` peut créer un `ADMIN` ou un autre `SUPER_ADMIN`.
@@ -227,12 +239,12 @@ public class UserController {
     @ApiResponses({
         @ApiResponse(
             responseCode = "201",
-            description = "Utilisateur créé — l'URL de la ressource est retournée dans le header `Location`",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserInfoResponse.class))
+            description = "Utilisateur créé et invité — l'URL de la ressource est retournée dans le header `Location`",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = RegisteredUserResponse.class))
         ),
         @ApiResponse(
             responseCode = "400",
-            description = "Corps de requête invalide (champs manquants, format incorrect, contraintes de mot de passe non respectées)",
+            description = "Corps de requête invalide (champs manquants ou format incorrect)",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
         ),
         @ApiResponse(
@@ -259,15 +271,15 @@ public class UserController {
     @PostMapping
     @RateLimiting(max = 20)
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
-    public ResponseEntity<UserInfoResponse> register(@Valid @RequestBody RegisterRequest request,
-                                                     @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
-        User user = registerUseCase.register(
-            new RegisterCommand(request.username(), request.email(), request.password(), request.role()),
-            caller.role()
-        );
+    public ResponseEntity<RegisteredUserResponse> register(@Valid @RequestBody RegisterRequest request,
+                                                           @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
+        RegisteredAccount created = registerUseCase.register(
+            new RegisterCommand(request.username(), request.email(), request.role()), caller.userId(), caller.role());
+        User user = created.user();
         URI location = URI.create("/api/users/" + user.id());
-        return ResponseEntity.created(location).body(new UserInfoResponse(
-            user.id(), user.username(), user.email(), user.role(), user.createdAt(), false, null));
+        return ResponseEntity.created(location).body(new RegisteredUserResponse(
+            user.id(), user.username(), user.email(), user.role(), user.createdAt(), false, null,
+            InvitationDeliveryResponse.of(created.invitation())));
     }
 
     @Operation(
@@ -516,6 +528,40 @@ public class UserController {
             @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
         adminResetTotpUseCase.reset(new AdminResetTotpCommand(id, caller.userId(), caller.role()));
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
+        summary = "Renvoyer l'invitation d'un compte (admin)",
+        description = """
+            Émet un nouveau lien d'invitation, valable 7 jours, pour un compte qui n'a pas encore choisi son mot
+            de passe ; l'ancien lien ne marche plus. Envoyé par mail si l'envoi de mails est configuré, sinon rendu
+            dans la réponse. Mêmes contraintes de rôle que les autres gestes ; le compte doit être actif.
+
+            Rate limit : 10 req/fenêtre.
+            """
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Invitation renouvelée",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = InvitationDeliveryResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Non authentifié",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "403", description = "Rôle insuffisant, son propre compte, ou compte désactivé",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "404", description = "Utilisateur introuvable",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "409", description = "Le compte a déjà choisi son mot de passe",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "429", description = "Trop de requêtes",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    @PostMapping("/{id}/invitation")
+    @RateLimiting(max = 10)
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    public ResponseEntity<InvitationDeliveryResponse> resendInvitation(
+            @Parameter(description = "UUID du compte invité") @PathVariable UUID id,
+            @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
+        return ResponseEntity.ok(InvitationDeliveryResponse.of(
+            resendInvitationUseCase.resend(new ResendInvitationCommand(id, caller.userId(), caller.role()))));
     }
 
     @Operation(

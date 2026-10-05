@@ -1,5 +1,7 @@
 package com.nido.api.identity.application.handler;
 
+import com.nido.api.identity.domain.model.InvitationState;
+import com.nido.api.identity.domain.port.out.AccountInvitationPort;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.model.UserAdminView;
 import com.nido.api.identity.domain.port.out.TotpStatusPort;
@@ -15,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,12 +30,13 @@ class ListUsersHandlerTest {
 
     @Mock UserAdminPort userAdminPort;
     @Mock TotpStatusPort totpStatusPort;
+    @Mock AccountInvitationPort invitations;
 
     private ListUsersHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new ListUsersHandler(userAdminPort, totpStatusPort);
+        handler = new ListUsersHandler(userAdminPort, totpStatusPort, invitations);
     }
 
     @Test
@@ -46,6 +50,8 @@ class ListUsersHandlerTest {
         when(userAdminPort.findAll(0, 20, sort, null))
             .thenReturn(new PageResult<>(List.of(user1, user2), 2L, 0, 20));
         when(totpStatusPort.findTotpEnabledAmong(Set.of(id1, id2))).thenReturn(Set.of(id1));
+        InvitationState pending = new InvitationState(false, Instant.parse("2026-10-12T10:00:00Z"));
+        when(invitations.invitationsAmong(Set.of(id1, id2))).thenReturn(Map.of(id2, pending));
 
         PageResult<UserAdminView> result = handler.listUsers(0, 20, sort, null);
 
@@ -57,6 +63,8 @@ class ListUsersHandlerTest {
         assertThat(view1.isActive()).isTrue();
         assertThat(view2.totpEnabled()).isFalse();
         assertThat(view2.isActive()).isFalse();
+        assertThat(view1.invitation()).isNull();
+        assertThat(view2.invitation()).isEqualTo(pending);
     }
 
     @Test
@@ -70,6 +78,7 @@ class ListUsersHandlerTest {
         assertThat(result.content()).isEmpty();
         assertThat(result.totalElements()).isZero();
         verify(totpStatusPort, never()).findTotpEnabledAmong(any());
+        verify(invitations, never()).invitationsAmong(any());
     }
 
     @Test
