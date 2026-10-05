@@ -36,7 +36,8 @@ class PasswordResetDisabledIT {
     void the_app_is_told_there_is_no_password_reset() throws Exception {
         mockMvc.perform(get("/api/auth/capabilities"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.passwordReset").value(false));
+            .andExpect(jsonPath("$.passwordReset").value(false))
+            .andExpect(jsonPath("$.mail").value(false));
     }
 
     @Test

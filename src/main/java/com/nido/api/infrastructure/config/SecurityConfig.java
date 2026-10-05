@@ -58,6 +58,11 @@ public class SecurityConfig {
                         "/api/auth/password-reset/request",
                         "/api/auth/password-reset/check",
                         "/api/auth/password-reset/confirm").permitAll()
+                // The invitation link — followed by someone who has no password yet. Works with mail off too:
+                // the administrator then passes the link on by other means.
+                .requestMatchers(HttpMethod.POST,
+                        "/api/auth/account-invitation/check",
+                        "/api/auth/account-invitation/accept").permitAll()
                 // The first-run setup — used by definition before any account exists. Guarded by the
                 // code printed in the logs; every route but the status answers 404 once it is done.
                 .requestMatchers(HttpMethod.GET, "/api/setup/status").permitAll()

@@ -1,5 +1,6 @@
 package com.nido.api.authentication.application.service;
 
+import com.nido.api.authentication.domain.port.out.AccountInvitationRepository;
 import com.nido.api.authentication.domain.port.out.PasswordResetTokenRepository;
 import com.nido.api.authentication.domain.port.out.RefreshTokenRevocationPort;
 import com.nido.api.authentication.domain.port.out.UserCredentialPort;
@@ -18,15 +19,17 @@ class DeleteUserDataServiceTest {
     @Mock UserCredentialPort credentials;
     @Mock RefreshTokenRevocationPort refreshTokens;
     @Mock PasswordResetTokenRepository resetTokens;
+    @Mock AccountInvitationRepository invitations;
 
     @Test
-    void a_deleted_account_leaves_no_reset_link_behind() {
+    void a_deleted_account_leaves_no_link_behind() {
         // Accounts are anonymised by an UPDATE, which the foreign key's ON DELETE CASCADE never sees.
         UUID userId = UUID.randomUUID();
 
-        new DeleteUserDataService(credentials, refreshTokens, resetTokens).delete(userId);
+        new DeleteUserDataService(credentials, refreshTokens, resetTokens, invitations).delete(userId);
 
         verify(resetTokens).deleteAllForUser(userId);
+        verify(invitations).deleteForUser(userId);
         verify(refreshTokens).deleteAllForUser(userId);
         verify(credentials).deleteCredential(userId);
     }

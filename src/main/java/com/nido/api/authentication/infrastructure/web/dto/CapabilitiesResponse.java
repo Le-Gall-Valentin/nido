@@ -5,5 +5,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(description = "Ce que les pages de connexion peuvent proposer sur cette installation")
 public record CapabilitiesResponse(
     @Schema(description = "Le mot de passe oublié est disponible (l'envoi de mails est configuré)", example = "true")
-    boolean passwordReset
+    boolean passwordReset,
+
+    @Schema(description = "L'envoi de mails est configuré : les personnes concernées sont prévenues des gestes de l'administration", example = "true")
+    boolean mail
 ) {}

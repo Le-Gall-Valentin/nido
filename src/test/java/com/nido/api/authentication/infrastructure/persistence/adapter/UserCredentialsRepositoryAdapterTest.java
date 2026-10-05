@@ -1,9 +1,14 @@
 package com.nido.api.authentication.infrastructure.persistence.adapter;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.nido.api.authentication.domain.model.UserCredentials;
 import com.nido.api.authentication.domain.model.UserProfile;
 import com.nido.api.authentication.domain.port.out.UserProfilePort;
 import com.nido.api.authentication.infrastructure.persistence.entity.UserCredentialEntity;
+import com.nido.api.authentication.infrastructure.persistence.repository.AccountInvitationJpaRepository;
 import com.nido.api.authentication.infrastructure.persistence.repository.UserCredentialJpaRepository;
 import com.nido.api.shared.model.Role;
 import java.time.Instant;
@@ -12,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -24,6 +30,7 @@ class UserCredentialsRepositoryAdapterTest {
 
     @Mock UserProfilePort userProfilePort;
     @Mock UserCredentialJpaRepository credentialRepo;
+    @Mock AccountInvitationJpaRepository invitations;
 
     private UserCredentialsRepositoryAdapter adapter;
 
@@ -33,7 +40,7 @@ class UserCredentialsRepositoryAdapterTest {
 
     @BeforeEach
     void setUp() {
-        adapter = new UserCredentialsRepositoryAdapter(userProfilePort, credentialRepo);
+        adapter = new UserCredentialsRepositoryAdapter(userProfilePort, credentialRepo, invitations);
     }
 
     private UserCredentialEntity entityWithHash(String hash) {
@@ -98,6 +105,24 @@ class UserCredentialsRepositoryAdapterTest {
         Optional<UserCredentials> result = adapter.findById(userId);
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void an_invited_account_without_credentials_is_not_a_data_integrity_error() {
+        ListAppender<ILoggingEvent> logged = new ListAppender<>();
+        logged.start();
+        Logger logger = (Logger) LoggerFactory.getLogger(UserCredentialsRepositoryAdapter.class);
+        logger.addAppender(logged);
+        try {
+            when(userProfilePort.findById(userId)).thenReturn(Optional.of(userProfile));
+            when(credentialRepo.findById(userId)).thenReturn(Optional.empty());
+            when(invitations.existsById(userId)).thenReturn(true);
+
+            assertThat(adapter.findById(userId)).isEmpty();
+            assertThat(logged.list).noneMatch(event -> event.getLevel() == Level.ERROR);
+        } finally {
+            logger.detachAppender(logged);
+        }
     }
 
     @Test
