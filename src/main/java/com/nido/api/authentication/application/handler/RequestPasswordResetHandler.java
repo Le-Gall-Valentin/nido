@@ -1,5 +1,8 @@
 package com.nido.api.authentication.application.handler;
 
+import com.nido.api.authentication.application.service.InvitationIssuer;
+import com.nido.api.authentication.domain.model.AccountInvitation;
+import com.nido.api.authentication.domain.port.out.AccountInvitationRepository;
 import com.nido.api.authentication.application.port.in.RequestPasswordResetUseCase;
 import com.nido.api.authentication.domain.model.AccountContact;
 import com.nido.api.authentication.domain.model.PasswordResetRules;
@@ -28,6 +31,9 @@ import java.util.Optional;
  *
  * <p>Which account an identifier names — a username, or an address whatever its letter case — is
  * identity's rule ({@code FindUserUseCase#findByIdentifier}); an address belongs to one account at most.
+ *
+ * <p>An invited account — no password yet — gets a new invitation instead of a reset link: the same answer
+ * for the caller, the same pace.
  */
 @ApplicationService
 public class RequestPasswordResetHandler implements RequestPasswordResetUseCase {
@@ -36,6 +42,8 @@ public class RequestPasswordResetHandler implements RequestPasswordResetUseCase 
 
     private final UserProfilePort profiles;
     private final PasswordResetTokenRepository tokens;
+    private final AccountInvitationRepository invitations;
+    private final InvitationIssuer issuer;
     private final ResetTokenGeneratorPort generator;
     private final TokenHashPort hasher;
     private final AccountMailPort mail;
@@ -43,10 +51,13 @@ public class RequestPasswordResetHandler implements RequestPasswordResetUseCase 
     private final Clock clock;
 
     public RequestPasswordResetHandler(UserProfilePort profiles, PasswordResetTokenRepository tokens,
+                                       AccountInvitationRepository invitations, InvitationIssuer issuer,
                                        ResetTokenGeneratorPort generator, TokenHashPort hasher,
                                        AccountMailPort mail, AccountLockPort accountLock, Clock clock) {
         this.profiles = profiles;
         this.tokens = tokens;
+        this.invitations = invitations;
+        this.issuer = issuer;
         this.generator = generator;
         this.hasher = hasher;
         this.mail = mail;
@@ -71,6 +82,11 @@ public class RequestPasswordResetHandler implements RequestPasswordResetUseCase 
         // waits here until the first has committed its link, then sees it and holds back.
         accountLock.lockFor(account.id());
         Instant now = clock.instant();
+        Optional<AccountInvitation> invitation = invitations.findByUserId(account.id());
+        if (invitation.isPresent()) {
+            renewInvitation(account, invitation.get(), now);
+            return;
+        }
         if (tokens.latestIssuedAt(account.id()).filter(last -> PasswordResetRules.inCooldown(last, now)).isPresent()) {
             log.info("Password reset for user {} held back: a link went out less than {} ago",
                 account.id(), PasswordResetRules.COOLDOWN);
@@ -82,5 +98,19 @@ public class RequestPasswordResetHandler implements RequestPasswordResetUseCase 
         tokens.save(account.id(), hasher.hash(token), now, expiresAt);
         mail.passwordResetRequested(AccountContact.of(account), token, expiresAt, PasswordResetRules.VALIDITY);
         log.info("Password reset link issued for user {}", account.id());
+    }
+
+    /**
+     * An invited account has no password to reset: it gets a new invitation instead, at the pace of reset
+     * links. Mail is on — the reset routes do not exist otherwise — so the link is mailed, never handed back.
+     */
+    private void renewInvitation(UserProfile account, AccountInvitation invitation, Instant now) {
+        if (PasswordResetRules.inCooldown(invitation.createdAt(), now)) {
+            log.info("Invitation of user {} held back: one went out less than {} ago", account.id(),
+                PasswordResetRules.COOLDOWN);
+            return;
+        }
+        issuer.issue(AccountContact.of(account), null);
+        log.info("Invitation of user {} renewed from forgot password", account.id());
     }
 }

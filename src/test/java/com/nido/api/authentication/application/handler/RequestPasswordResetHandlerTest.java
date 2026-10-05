@@ -1,5 +1,8 @@
 package com.nido.api.authentication.application.handler;
 
+import com.nido.api.authentication.application.service.InvitationIssuer;
+import com.nido.api.authentication.domain.model.AccountInvitation;
+import com.nido.api.authentication.domain.port.out.AccountInvitationRepository;
 import com.nido.api.authentication.domain.model.AccountContact;
 import com.nido.api.authentication.domain.model.PasswordResetRules;
 import com.nido.api.authentication.domain.model.UserProfile;
@@ -40,6 +43,8 @@ class RequestPasswordResetHandlerTest {
 
     @Mock UserProfilePort profiles;
     @Mock PasswordResetTokenRepository tokens;
+    @Mock AccountInvitationRepository invitations;
+    @Mock InvitationIssuer issuer;
     @Mock ResetTokenGeneratorPort generator;
     @Mock TokenHashPort hasher;
     @Mock AccountMailPort mail;
@@ -52,9 +57,10 @@ class RequestPasswordResetHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new RequestPasswordResetHandler(profiles, tokens, generator, hasher, mail, accountLock, Clock.fixed(now, ZoneOffset.UTC));
+        handler = new RequestPasswordResetHandler(profiles, tokens, invitations, issuer, generator, hasher, mail, accountLock, Clock.fixed(now, ZoneOffset.UTC));
         when(profiles.findByIdentifier(any())).thenReturn(Optional.empty());
         when(tokens.latestIssuedAt(any())).thenReturn(Optional.empty());
+        when(invitations.findByUserId(any())).thenReturn(Optional.empty());
         when(generator.newToken()).thenReturn("RAW");
         when(hasher.hash("RAW")).thenReturn("HASH");
     }
@@ -70,6 +76,31 @@ class RequestPasswordResetHandlerTest {
         order.verify(tokens).save(jane.id(), "HASH", now, now.plus(PasswordResetRules.VALIDITY));
         order.verify(mail).passwordResetRequested(AccountContact.of(jane), "RAW", now.plus(PasswordResetRules.VALIDITY),
             Duration.ofMinutes(30));
+    }
+
+    @Test
+    void an_invited_account_gets_a_new_invitation_instead_of_a_reset_link() {
+        when(profiles.findByIdentifier("jane")).thenReturn(Optional.of(jane));
+        when(invitations.findByUserId(jane.id()))
+            .thenReturn(Optional.of(new AccountInvitation(jane.id(), now.minus(Duration.ofDays(8)), now.minus(Duration.ofDays(1)))));
+
+        handler.request("jane");
+
+        verify(issuer).issue(AccountContact.of(jane), null);
+        verify(tokens, never()).save(any(), any(), any(), any());
+        verify(mail, never()).passwordResetRequested(any(), any(), any(), any());
+    }
+
+    @Test
+    void an_invitation_sent_a_moment_ago_is_not_sent_again() {
+        when(profiles.findByIdentifier("jane")).thenReturn(Optional.of(jane));
+        when(invitations.findByUserId(jane.id()))
+            .thenReturn(Optional.of(new AccountInvitation(jane.id(), now.minusSeconds(60), now.plus(Duration.ofDays(7)))));
+
+        handler.request("jane");
+
+        verifyNoInteractions(issuer);
+        verify(tokens, never()).save(any(), any(), any(), any());
     }
 
     @Test
