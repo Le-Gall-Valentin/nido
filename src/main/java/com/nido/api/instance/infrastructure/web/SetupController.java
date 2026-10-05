@@ -72,7 +72,7 @@ public class SetupController {
     @PostMapping("/mail-test")
     @RateLimiting(max = 5)
     public ResponseEntity<Void> mailTest(@Valid @RequestBody SetupMailTestRequest body) {
-        setup.sendTestMail(body.code(), InstanceSettingsController.keys(body.mail()), body.publicUrl(), body.recipient(),
+        setup.sendTestMail(body.code(), SettingCodes.keys(body.mail()), body.publicUrl(), body.recipient(),
             body.language() == null ? Locale.ENGLISH : Locale.of(body.language()));
         return ResponseEntity.noContent().build();
     }
@@ -85,7 +85,7 @@ public class SetupController {
         Language language = body.admin().language() == null ? null : Language.fromCode(body.admin().language()).orElse(null);
         setup.complete(new CompleteSetupCommand(body.code(),
             new InitialAdmin(body.admin().username().strip(), body.admin().email(), body.admin().password(), language),
-            body.publicUrl(), body.mail() == null ? null : InstanceSettingsController.keys(body.mail()),
+            body.publicUrl(), body.mail() == null ? null : SettingCodes.keys(body.mail()),
             body.encryptionKeySaved()));
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }

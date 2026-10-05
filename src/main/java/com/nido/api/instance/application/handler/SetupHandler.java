@@ -7,7 +7,6 @@ import com.nido.api.instance.domain.model.EffectiveSettings;
 import com.nido.api.instance.domain.model.InstanceException;
 import com.nido.api.instance.domain.model.InstanceState;
 import com.nido.api.instance.domain.model.MailDraft;
-import com.nido.api.instance.domain.model.SettingGroup;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.instance.domain.model.SettingProblem;
 import com.nido.api.instance.domain.model.SettingRules;
@@ -92,13 +91,7 @@ public class SetupHandler implements GetSetupStatusQuery, SetupUseCase {
         if (!draft.problems().isEmpty()) {
             throw new InstanceException.SettingsInvalid(draft.problems());
         }
-        EffectiveSettings tried = settings(draft.applyTo(stored));
-        if (tried.text(SettingKey.MAIL_HOST).isEmpty()) {
-            throw new InstanceException.SettingsInvalid(List.of(new SettingProblem(SettingKey.MAIL_HOST, SettingProblem.REQUIRED)));
-        }
-        mail.sendTest(MailDraft.of(tried), recipient, locale).ifPresent(failure -> {
-            throw new InstanceException.MailTestFailed(failure.reason(), failure.serverReply());
-        });
+        MailTrial.send(mail, settings(draft.applyTo(stored)), recipient, locale);
     }
 
     @Override
@@ -146,13 +139,7 @@ public class SetupHandler implements GetSetupStatusQuery, SetupUseCase {
                 draft.problem(new SettingProblem(SettingKey.PUBLIC_URL, SettingProblem.REQUIRED));
             }
         }
-        mailValues.forEach((key, value) -> {
-            if (key.group() != SettingGroup.MAIL) {
-                throw new InstanceException.UnknownSetting(key.code());
-            }
-            draft.set(key, value);
-        });
-        return draft;
+        return MailTrial.typed(draft, mailValues);
     }
 
     private InstanceState pending(String code) {

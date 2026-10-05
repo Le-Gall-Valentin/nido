@@ -3,6 +3,7 @@ package com.nido.api.instance.domain.model;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -59,6 +60,27 @@ public final class SettingRules {
             problems.add(new SettingProblem(SettingKey.PUBLIC_URL, SettingProblem.PUBLIC_URL_REQUIRED_BY_MAIL));
         }
         return problems;
+    }
+
+    /**
+     * The saved SMTP password goes only to the server — host and port — and with the protection, it was
+     * saved for: whoever changes any of them must type it again. Otherwise a stolen administrator session
+     * could point mail at a server of its own — another host, or another port of a shared one, localhost
+     * above all — and collect the password with the test button, or simply the next mail.
+     */
+    public static Optional<SettingProblem> passwordLeftBehind(EffectiveSettings before, EffectiveSettings after, SettingsDraft draft) {
+        if (draft.changes().containsKey(SettingKey.MAIL_PASSWORD) || after.text(SettingKey.MAIL_PASSWORD).isEmpty()
+                || after.text(SettingKey.MAIL_HOST).isEmpty() || after.locked(SettingKey.MAIL_HOST)) {
+            return Optional.empty();
+        }
+        boolean sameServer = before.text(SettingKey.MAIL_HOST)
+                .map(host -> host.equalsIgnoreCase(after.text(SettingKey.MAIL_HOST).orElseThrow()))
+                .orElse(false)
+            && Objects.equals(before.text(SettingKey.MAIL_PORT), after.text(SettingKey.MAIL_PORT))
+            && Objects.equals(before.text(SettingKey.MAIL_SECURITY), after.text(SettingKey.MAIL_SECURITY));
+        return sameServer
+            ? Optional.empty()
+            : Optional.of(new SettingProblem(SettingKey.MAIL_PASSWORD, SettingProblem.PASSWORD_REQUIRED_FOR_NEW_SERVER));
     }
 
     private static Optional<String> integerProblem(String value, int min, int max) {

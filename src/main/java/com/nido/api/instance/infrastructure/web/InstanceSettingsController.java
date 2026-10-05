@@ -26,9 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.EnumMap;
 import java.util.Locale;
-import java.util.Map;
 
 @Tag(name = "Instance")
 @RestController
@@ -62,7 +60,7 @@ public class InstanceSettingsController {
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public SettingsResponse update(@PathVariable String group, @Valid @RequestBody SettingsValuesRequest body,
                                    @CurrentUser AuthenticatedUser user) {
-        return SettingsResponse.of(update.update(group(group), keys(body.values()), user.userId()));
+        return SettingsResponse.of(update.update(group(group), SettingCodes.keys(body.values()), user.userId()));
     }
 
     @Operation(summary = "Rétablir un réglage", description = "Revient à la valeur par défaut ; efface un secret. Rate limit : 20 req/fenêtre.")
@@ -82,7 +80,7 @@ public class InstanceSettingsController {
     @RateLimiting(max = 5)
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<Void> testMail(@Valid @RequestBody SettingsValuesRequest body, @CurrentUser AuthenticatedUser user) {
-        testMail.sendTest(keys(body.values()), user.email(), locale());
+        testMail.sendTest(SettingCodes.keys(body.values()), user.email(), locale());
         return ResponseEntity.noContent().build();
     }
 
@@ -90,14 +88,7 @@ public class InstanceSettingsController {
         return SettingGroup.fromCode(code).orElseThrow(() -> new InstanceException.UnknownSetting(code));
     }
 
-    static Map<SettingKey, String> keys(Map<String, String> values) {
-        Map<SettingKey, String> keys = new EnumMap<>(SettingKey.class);
-        values.forEach((code, value) -> keys.put(
-            SettingKey.fromCode(code).orElseThrow(() -> new InstanceException.UnknownSetting(code)), value));
-        return keys;
-    }
-
-    static Locale locale() {
+    private static Locale locale() {
         return MailLanguage.requested().map(language -> Locale.of(language.code())).orElse(Locale.ENGLISH);
     }
 }
