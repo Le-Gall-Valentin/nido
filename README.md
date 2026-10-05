@@ -45,7 +45,15 @@ NIDO_LISTEN=127.0.0.1
 then `docker compose up -d`. Caddy obtains and renews the certificate on its own. Enter
 `https://nido.example.com` as Nido's address during the setup.
 
-Behind your own reverse proxy instead, forward to port 8080 and pass the client's address and scheme:
+Behind your own reverse proxy on the same machine instead, add to `.env`:
+
+```bash
+NIDO_LISTEN=127.0.0.1
+NIDO_TRUSTED_PROXIES=172\.31\.250\.1
+```
+
+so that port 8080 stays local and Nido trusts the client address your proxy passes on (it reaches Nido
+through the Docker gateway, `172.31.250.1`). Then forward to port 8080 with the client's address and scheme:
 
 ```nginx
 location / {

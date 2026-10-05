@@ -82,6 +82,11 @@ services:
     environment:
       NIDO_DB_URL: jdbc:postgresql://postgres:5432/nido
       NIDO_DB_USER: nido
+      # Who may tell Nido the client's address (X-Forwarded-For): Caddy, at its fixed address below, and
+      # nobody else. Published directly, port 8080 receives its connections from the Docker gateway — a
+      # private address Tomcat would otherwise trust, letting any client pick the address its rate limits
+      # count. Behind a proxy of your own on this machine, see .env.example.
+      SERVER_TOMCAT_REMOTEIP_INTERNALPROXIES: ${NIDO_TRUSTED_PROXIES:-172\.31\.250\.10}
     ports:
       - "${NIDO_LISTEN:-0.0.0.0}:${NIDO_PORT:-8080}:8080"
     volumes:
@@ -100,6 +105,9 @@ services:
       - nido
     environment:
       NIDO_DOMAIN: ${NIDO_DOMAIN:-}
+    networks:
+      default:
+        ipv4_address: 172.31.250.10
     command:
       - sh
       - -c
@@ -116,6 +124,13 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+
+# A subnet of its own, so that Caddy has a known address — the one Nido trusts as its proxy.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.31.250.0/24
 
 volumes:
   nido_data:
