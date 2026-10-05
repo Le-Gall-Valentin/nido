@@ -106,7 +106,7 @@ NIDO:
   cors:
     allowed-origins: ${NIDO_CORS_ALLOWED_ORIGINS:}
   encryption:
-    secret: ${NIDO_ENCRYPTION_SECRET}
+    secret: ${NIDO_ENCRYPTION_SECRET:}
   # Optional. NIDO_SMTP_HOST empty = no mail at all, and nothing that could send one is built.
   mail:
     host: ${NIDO_SMTP_HOST:}

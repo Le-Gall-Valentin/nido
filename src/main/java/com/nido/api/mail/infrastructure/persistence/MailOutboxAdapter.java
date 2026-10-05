@@ -1,12 +1,12 @@
 package com.nido.api.mail.infrastructure.persistence;
 
 import com.nido.api.infrastructure.config.ConditionalOnMailEnabled;
-import com.nido.api.infrastructure.config.NidoProperties;
 import com.nido.api.mail.domain.model.OutboxEntry;
 import com.nido.api.mail.domain.model.OutgoingMail;
 import com.nido.api.mail.domain.model.Recipient;
 import com.nido.api.mail.domain.model.RenderedMail;
 import com.nido.api.mail.domain.port.out.MailOutboxPort;
+import com.nido.api.shared.security.EncryptionKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +33,7 @@ import java.util.UUID;
  * sending context's) and commits on its own when there is none (claims, from the dispatcher, whose
  * lease must be visible before the SMTP exchange starts).
  *
- * <p>The payload is encrypted with a key derived from NIDO_ENCRYPTION_SECRET and a salt that belongs
+ * <p>The payload is encrypted with a key derived from the instance encryption key and a salt that belongs
  * to the outbox alone, so it can never be mistaken for the finance, calendar or TOTP keys. The key is
  * derived once: the salt never rotates, so there is nothing for an expiring cache to pick up.
  */
@@ -53,8 +53,8 @@ public class MailOutboxAdapter implements MailOutboxPort {
     private final TextEncryptor encryptor;
 
     @Autowired
-    public MailOutboxAdapter(JdbcClient jdbc, ObjectMapper json, NidoProperties properties) {
-        this(jdbc, json, Encryptors.delux(properties.encryption().secret(), SALT));
+    public MailOutboxAdapter(JdbcClient jdbc, ObjectMapper json, EncryptionKey encryptionKey) {
+        this(jdbc, json, Encryptors.delux(encryptionKey.value(), SALT));
     }
 
     MailOutboxAdapter(JdbcClient jdbc, ObjectMapper json, TextEncryptor encryptor) {

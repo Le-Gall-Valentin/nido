@@ -18,7 +18,7 @@ public record NidoProperties(
     CookieProperties cookie,
     @Valid SeedProperties seed,
     CorsProperties cors,
-    @Valid EncryptionProperties encryption,
+    EncryptionProperties encryption,
     SecurityProperties security
 ) {
 
@@ -48,9 +48,7 @@ public record NidoProperties(
         @DefaultValue("") List<String> allowedOrigins
     ) {}
 
-    public record EncryptionProperties(
-        @NotBlank @Size(min = 32, message = "Encryption secret must be at least 32 characters for sufficient entropy") String secret
-    ) {}
+    public record EncryptionProperties(String secret) {}
 
     public record SecurityProperties(
         @Positive @DefaultValue("15") int challengeTtlMinutes,

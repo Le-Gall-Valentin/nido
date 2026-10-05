@@ -30,7 +30,7 @@ import java.util.function.Function;
  * the same request runs.
  *
  * <p>Note that a derived key deliberately never leaves the JVM heap. Putting these in Redis would
- * turn a cache into a keyring: the master secret lives in the environment and the salt in Postgres
+ * turn a cache into a keyring: the master key lives outside the database and the salt in Postgres
  * precisely so that neither store is enough on its own.
  */
 public final class EncryptorCache {
