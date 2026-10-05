@@ -6,6 +6,6 @@ import com.nido.api.mail.domain.model.RenderedMail;
 import java.util.Locale;
 
 public interface MailRendererPort {
-    /** Writes the mail, or throws: a missing message, a missing value or a missing subject is an error. */
-    RenderedMail render(MailContent content, Locale locale);
+    /** Writes the mail, its links starting with {@code appUrl}; throws on a missing message, value or subject. */
+    RenderedMail render(MailContent content, Locale locale, String appUrl);
 }

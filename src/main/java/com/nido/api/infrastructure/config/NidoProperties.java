@@ -1,9 +1,6 @@
 package com.nido.api.infrastructure.config;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
@@ -13,44 +10,40 @@ import java.util.List;
 @Validated
 @ConfigurationProperties(prefix = "nido")
 public record NidoProperties(
-    @Valid JwtProperties jwt,
+    JwtProperties jwt,
     RefreshTokenProperties refreshToken,
     CookieProperties cookie,
-    @Valid SeedProperties seed,
+    SeedProperties seed,
     CorsProperties cors,
-    @Valid EncryptionProperties encryption,
+    EncryptionProperties encryption,
     SecurityProperties security
 ) {
 
+    /** The secret is optional: without one, a secret is generated in the data directory (JwtConfig). */
     public record JwtProperties(
-        @NotBlank String secret,
-        @Positive @DefaultValue("15") int expiryMinutes,
+        String secret,
         @DefaultValue("nido") String issuer,
         @DefaultValue("nido") String audience
     ) {}
 
+    /** The lifetimes are instance settings now; only the purge schedule stays here. */
     public record RefreshTokenProperties(
-        @DefaultValue("30") int expiryDays,
         @DefaultValue("0 0 3 * * *") String purgeCron
     ) {}
 
+    /** Null: decided by the public address (SessionSettingsAdapter). */
     public record CookieProperties(
-        @DefaultValue("true") boolean secure
+        Boolean secure
     ) {}
 
-    public record SeedProperties(
-        @NotBlank String username,
-        @NotBlank String email,
-        @NotBlank @Size(min = 8, message = "Seed password must be at least 8 characters") String password
-    ) {}
+    /** All three, or none: checked by StartInstanceHandler. */
+    public record SeedProperties(String username, String email, String password) {}
 
     public record CorsProperties(
         @DefaultValue("") List<String> allowedOrigins
     ) {}
 
-    public record EncryptionProperties(
-        @NotBlank @Size(min = 32, message = "Encryption secret must be at least 32 characters for sufficient entropy") String secret
-    ) {}
+    public record EncryptionProperties(String secret) {}
 
     public record SecurityProperties(
         @Positive @DefaultValue("15") int challengeTtlMinutes,

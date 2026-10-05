@@ -1,5 +1,6 @@
 import { Component, useRef, useEffect, type ErrorInfo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { copyText } from '@/shared/lib/copyText'
 
 const MAX_RETRIES = 2
 
@@ -48,7 +49,7 @@ function ErrorFallback({ canRetry, onReset, error }: { canRetry: boolean; onRese
           <button
             type="button"
             className="mt-2 text-[11px] text-accent underline"
-            onClick={() => void navigator.clipboard?.writeText(reason)}
+            onClick={() => void copyText(reason)}
           >
             {t('error.copy_details')}
           </button>

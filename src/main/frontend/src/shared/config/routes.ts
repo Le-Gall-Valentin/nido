@@ -3,6 +3,8 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password',
   // Opened from the reset mail: the token follows a '#', so it never reaches a server log.
   RESET_PASSWORD: '/reset-password',
+  // The first-run setup: the only page of an installation not set up yet.
+  SETUP: '/setup',
 
   // Where the app opens: DefaultRedirect resolves it to the current space's dashboard
   HOME: '/',
@@ -12,6 +14,7 @@ export const ROUTES = {
 
   // Administration
   ADMIN_USERS: '/administration/users',
+  ADMIN_SETTINGS: '/administration/settings',
 
   // Account
   ACCOUNT: '/account',

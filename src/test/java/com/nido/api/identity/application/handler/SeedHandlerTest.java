@@ -7,6 +7,7 @@ import com.nido.api.identity.domain.port.out.PersonalSpaceInitPort;
 import com.nido.api.identity.domain.port.out.TotpRecordInitPort;
 import com.nido.api.identity.domain.port.out.UserAdminPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
+import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -49,18 +51,31 @@ class SeedHandlerTest {
             cmd.role() == Role.SUPER_ADMIN
         ))).thenReturn(created);
 
-        handler.seedInitialSuperAdmin("admin", "admin@test.com", "secret");
+        assertThat(handler.seedInitialSuperAdmin("admin", "admin@test.com", "secret", null)).contains(userId);
 
         verify(credentialSetupPort).setup(userId, "secret");
         verify(totpRecordInitPort).initForUser(userId);
         verify(personalSpaceInitPort).initForUser(created.id());
+        verify(userCommandPort, never()).updateLanguage(any(), any());
+    }
+
+    @Test
+    void seedInitialSuperAdmin_withALanguage_recordsIt() {
+        UUID userId = UUID.randomUUID();
+        User created = new User(userId, "admin", "admin@test.com", Role.SUPER_ADMIN, true, Instant.now(), null);
+        when(userAdminPort.isEmpty()).thenReturn(true);
+        when(userCommandPort.createProfile(any())).thenReturn(created);
+
+        handler.seedInitialSuperAdmin("admin", "admin@test.com", "secret", Language.FR);
+
+        verify(userCommandPort).updateLanguage(userId, Language.FR);
     }
 
     @Test
     void seedInitialSuperAdmin_nonEmptyDatabase_skips() {
         when(userAdminPort.isEmpty()).thenReturn(false);
 
-        handler.seedInitialSuperAdmin("admin", "admin@test.com", "secret");
+        assertThat(handler.seedInitialSuperAdmin("admin", "admin@test.com", "secret", null)).isEmpty();
 
         verifyNoInteractions(userCommandPort);
         verifyNoInteractions(credentialSetupPort);
@@ -73,7 +88,7 @@ class SeedHandlerTest {
         when(userCommandPort.createProfile(any())).thenThrow(new IdentityException.UsernameAlreadyExists());
 
         assertThatThrownBy(() ->
-            handler.seedInitialSuperAdmin("admin", "admin@test.com", "secret")
+            handler.seedInitialSuperAdmin("admin", "admin@test.com", "secret", null)
         ).isInstanceOf(IdentityException.UsernameAlreadyExists.class);
     }
 
@@ -86,7 +101,7 @@ class SeedHandlerTest {
         doThrow(new RuntimeException("DB unavailable")).when(credentialSetupPort).setup(userId, "secret");
 
         assertThatThrownBy(() ->
-            handler.seedInitialSuperAdmin("admin", "admin@test.com", "secret")
+            handler.seedInitialSuperAdmin("admin", "admin@test.com", "secret", null)
         ).isInstanceOf(RuntimeException.class)
          .hasMessage("DB unavailable");
     }

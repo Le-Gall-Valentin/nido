@@ -6,7 +6,6 @@ import com.nido.api.authentication.application.port.in.RequestPasswordResetUseCa
 import com.nido.api.authentication.infrastructure.web.dto.ConfirmPasswordResetRequest;
 import com.nido.api.authentication.infrastructure.web.dto.PasswordResetTokenRequest;
 import com.nido.api.authentication.infrastructure.web.dto.RequestPasswordResetRequest;
-import com.nido.api.infrastructure.config.ConditionalOnMailEnabled;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -23,16 +22,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * "Forgot password". Registered only when mail is on: without a way to send the link the routes
- * would promise something the installation cannot do, so they do not exist — a request falls through
- * to the static-resource handler, which refuses it (405 for these POSTs, 404 elsewhere).
+ * "Forgot password". Answers 404 while mail is off — see PasswordResetAvailability: without a way to send
+ * the link the routes would promise something the installation cannot do.
  *
  * <p>The token always travels in a request body — never in a URL — so it appears in no access log.
  */
 @Tag(name = "Authentication")
 @RestController
 @RequestMapping("/api/auth/password-reset")
-@ConditionalOnMailEnabled
 public class PasswordResetController {
 
     private final RequestPasswordResetUseCase requestReset;
@@ -114,4 +111,5 @@ public class PasswordResetController {
         confirmReset.confirm(body.token(), body.newPassword());
         return ResponseEntity.noContent().build();
     }
+
 }

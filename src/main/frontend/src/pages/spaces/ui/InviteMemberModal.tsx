@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Copy, Send } from 'lucide-react'
 import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
+import { copyText } from '@/shared/lib'
 import type { SpaceInvitation , AssignableSpaceRole } from '@/entities/space'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 
@@ -46,12 +47,10 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
 
   async function handleCopy() {
     if (!issued) return
-    try {
-      await navigator.clipboard.writeText(issued.code)
+    // Not copied: the code stays visible for a manual copy.
+    if (await copyText(issued.code)) {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
-    } catch {
-      // Clipboard access denied: the code stays visible for a manual copy.
     }
   }
 

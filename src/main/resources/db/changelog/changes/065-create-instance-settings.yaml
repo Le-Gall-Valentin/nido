@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: 065-create-instance-settings
+      author: nido
+      comment: >
+        Settings changed from the administration page: one row per setting that differs from its
+        default. A variable in the environment always wins over a row here. Secret values (the SMTP
+        password) are stored encrypted with the instance key. No foreign key on updated_by: the
+        author of a change may be deleted, the change stays.
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: instance_settings
+      changes:
+        - createTable:
+            tableName: instance_settings
+            columns:
+              - column:
+                  name: key
+                  type: VARCHAR(64)
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_instance_settings
+                    nullable: false
+              - column:
+                  name: value
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_by
+                  type: UUID
+      rollback:
+        - dropTable:
+            tableName: instance_settings

@@ -2,8 +2,7 @@ package com.nido.api.mail.infrastructure.transport;
 
 import com.icegreen.greenmail.util.GreenMail;
 import com.icegreen.greenmail.util.ServerSetupTest;
-import com.nido.api.infrastructure.config.MailProperties;
-import com.nido.api.infrastructure.config.MailProperties.Security;
+import com.nido.api.mail.domain.model.MailSettingsInput;
 import com.nido.api.mail.domain.model.DeliveryOutcome;
 import com.nido.api.mail.domain.model.OutgoingMail;
 import com.nido.api.mail.domain.model.Recipient;
@@ -29,6 +28,7 @@ import java.net.ServerSocket;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.Properties;
 
@@ -59,8 +59,8 @@ class SmtpMailTransportTest {
     }
 
     private static MailSettings settings(int port) {
-        return MailSettings.from(new MailProperties("127.0.0.1", port, Security.NONE, null, null,
-            "Nido <nido@test.local>", "http://localhost:5173"));
+        return MailSettings.check(new MailSettingsInput("127.0.0.1", port, "none", null, null,
+            "Nido <nido@test.local>", "http://localhost:5173")).settings().orElseThrow();
     }
 
     private static SmtpMailTransport transportTo(int port) {
@@ -119,6 +119,22 @@ class SmtpMailTransportTest {
         assertThat(received.getSubject()).isEqualTo("Réinitialiser votre mot de passe Nido");
         assertThat(((InternetAddress) received.getRecipients(MimeMessage.RecipientType.TO)[0]).getPersonal())
             .isEqualTo("Élodie Dupré");
+    }
+
+    @Test
+    void mail_switched_off_between_the_claim_and_the_send_keeps_the_mail_queued() {
+        SmtpMailTransport transport = new SmtpMailTransport(Optional::empty);
+
+        assertThat(transport.deliver(mail("jane@test.local", null, "Hello")))
+            .isEqualTo(new DeliveryOutcome.TemporaryFailure("MailSwitchedOff"));
+    }
+
+    @Test
+    void the_server_of_the_moment_receives_the_mail() throws Exception {
+        MailSettings current = settings(smtp.getSmtp().getPort());
+        SmtpMailTransport transport = new SmtpMailTransport(() -> Optional.of(current));
+
+        assertThat(transport.deliver(mail("jane@test.local", null, "Hello"))).isInstanceOf(DeliveryOutcome.Sent.class);
     }
 
     @Test

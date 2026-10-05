@@ -1,6 +1,7 @@
 package com.nido.api.authentication.infrastructure.security;
 
-import com.nido.api.infrastructure.config.NidoProperties;
+import com.nido.api.authentication.domain.port.out.RefreshTokenConfigPort;
+import com.nido.api.authentication.domain.port.out.SessionSettingsPort;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseCookie;
@@ -20,22 +21,21 @@ public class CookieService {
 
     private static final long TOTP_CHALLENGE_MAX_AGE_SECONDS = 15 * 60L;
 
-    private final boolean secure;
-    private final long accessMaxAgeSeconds;
-    private final long refreshMaxAgeSeconds;
+    private final SessionSettingsPort sessionSettings;
+    private final RefreshTokenConfigPort refreshTokenConfig;
 
-    public CookieService(NidoProperties properties) {
-        this.secure = properties.cookie().secure();
-        this.accessMaxAgeSeconds = properties.jwt().expiryMinutes() * 60L;
-        this.refreshMaxAgeSeconds = (long) properties.refreshToken().expiryDays() * 86_400L;
+    /** The lifetimes and the Secure flag are read for each cookie: they can change from the settings page. */
+    public CookieService(SessionSettingsPort sessionSettings, RefreshTokenConfigPort refreshTokenConfig) {
+        this.sessionSettings = sessionSettings;
+        this.refreshTokenConfig = refreshTokenConfig;
     }
 
     public ResponseCookie buildAccessCookie(String token) {
-        return build(ACCESS_COOKIE, token, "/api", accessMaxAgeSeconds);
+        return build(ACCESS_COOKIE, token, "/api", sessionSettings.accessTokenMinutes() * 60L);
     }
 
     public ResponseCookie buildRefreshCookie(String token) {
-        return build(REFRESH_COOKIE, token, "/api/auth", refreshMaxAgeSeconds);
+        return build(REFRESH_COOKIE, token, "/api/auth", refreshTokenConfig.refreshTokenExpiryDays() * 86_400L);
     }
 
     public ResponseCookie buildChallengeCookie(String challengeId) {
@@ -65,7 +65,7 @@ public class CookieService {
     private ResponseCookie build(String name, String value, String path, long maxAge) {
         return ResponseCookie.from(name, value)
             .httpOnly(true)
-            .secure(secure)
+            .secure(sessionSettings.secureCookies())
             .path(path)
             .maxAge(Duration.ofSeconds(maxAge))
             .sameSite("Strict")

@@ -64,3 +64,41 @@ jobs:
       - name: Audit build tooling (informational)
         run: npm audit --audit-level=high
         continue-on-error: true
+
+  compose:
+    name: Production compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        run: docker build -t nido:ci .
+
+      # What a newcomer does: the compose file, nothing else. This is where such installations break —
+      # file ownership in the secret volumes, start order — and no other test starts this stack.
+      - name: Start the stack
+        working-directory: deploy
+        env:
+          NIDO_IMAGE: nido:ci
+        run: docker compose up -d
+
+      - name: The setup screen is waiting, with its code in the logs
+        working-directory: deploy
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/api/setup/status > status.json; then break; fi
+            sleep 5
+          done
+          cat status.json
+          grep -q '"required":true' status.json
+          docker compose logs nido | grep -q 'Setup code:'
+
+      - name: Logs
+        if: always()
+        working-directory: deploy
+        run: docker compose logs
+
+      - name: Stop
+        if: always()
+        working-directory: deploy
+        run: docker compose down -v

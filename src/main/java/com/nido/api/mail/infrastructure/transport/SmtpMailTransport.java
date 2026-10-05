@@ -1,15 +1,16 @@
 package com.nido.api.mail.infrastructure.transport;
 
-import com.nido.api.infrastructure.config.ConditionalOnMailEnabled;
 import com.nido.api.mail.domain.model.DeliveryOutcome;
 import com.nido.api.mail.domain.model.OutgoingMail;
 import com.nido.api.mail.domain.port.out.MailTransportPort;
 import com.nido.api.mail.infrastructure.config.MailSettings;
+import com.nido.api.mail.infrastructure.config.MailSettingsSource;
 import com.nido.api.mail.infrastructure.render.MailBranding;
 import jakarta.mail.MessagingException;
 import jakarta.mail.SendFailedException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -21,6 +22,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -33,24 +37,48 @@ import java.util.stream.Stream;
  * someone fixes it — every failure is logged by the dispatcher either way.
  *
  * <p>A reason names exception classes only: their messages quote addresses.
+ *
+ * <p>The SMTP client follows the settings: rebuilt when they change, kept as long as they do not.
  */
 @Component
-@ConditionalOnMailEnabled
 public class SmtpMailTransport implements MailTransportPort {
 
-    private final JavaMailSender sender;
-    private final InternetAddress from;
+    private record Client(MailSettings settings, JavaMailSender sender) {}
 
-    public SmtpMailTransport(JavaMailSender sender, MailSettings settings) {
-        this.sender = sender;
-        this.from = settings.from();
+    private final Supplier<Optional<Client>> client;
+
+    /** The server of the moment: the SMTP client is rebuilt when the settings change, kept otherwise. */
+    @Autowired
+    public SmtpMailTransport(MailSettingsSource source) {
+        AtomicReference<Client> last = new AtomicReference<>();
+        this.client = () -> source.settings().map(settings -> {
+            Client current = last.get();
+            if (current != null && current.settings().equals(settings)) {
+                return current;
+            }
+            Client fresh = new Client(settings, SmtpSenderFactory.create(settings));
+            last.set(fresh);
+            return fresh;
+        });
+    }
+
+    /** One fixed server, whatever the settings say. */
+    SmtpMailTransport(JavaMailSender sender, MailSettings settings) {
+        Client fixed = new Client(settings, sender);
+        this.client = () -> Optional.of(fixed);
     }
 
     @Override
     public DeliveryOutcome deliver(OutgoingMail mail) {
+        Optional<Client> current = client.get();
+        if (current.isEmpty()) {
+            // Switched off between the claim and the send: the mail stays queued for when it comes back.
+            return new DeliveryOutcome.TemporaryFailure("MailSwitchedOff");
+        }
+        JavaMailSender sender = current.get().sender();
         MimeMessage message;
         try {
-            message = compose(mail);
+            message = compose(sender, current.get().settings().from(), mail);
         } catch (MessagingException | UnsupportedEncodingException e) {
             return new DeliveryOutcome.PermanentFailure(describe(e));
         }
@@ -66,7 +94,8 @@ public class SmtpMailTransport implements MailTransportPort {
         }
     }
 
-    private MimeMessage compose(OutgoingMail mail) throws MessagingException, UnsupportedEncodingException {
+    static MimeMessage compose(JavaMailSender sender, InternetAddress from, OutgoingMail mail)
+            throws MessagingException, UnsupportedEncodingException {
         MimeMessage message = sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,
             StandardCharsets.UTF_8.name());

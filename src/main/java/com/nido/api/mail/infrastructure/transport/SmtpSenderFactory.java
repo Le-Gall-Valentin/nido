@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.util.Properties;
 
 /**
- * Builds the SMTP client from nido.mail.*, never from spring.mail.*.
+ * Builds the SMTP client from the mail settings, never from spring.mail.*.
  *
  * <p>STARTTLS is <i>required</i>, not merely enabled: enabled alone lets a server that does not
  * offer it — or a network that strips the offer — carry the password and the mail in clear.

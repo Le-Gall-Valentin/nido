@@ -30,7 +30,7 @@ public class RefreshTokenHandler implements RefreshTokenUseCase {
     private final RefreshTokenIssuerPort refreshTokenPort;
     private final TokenHashPort tokenHashPort;
     private final AccountLockPort accountLock;
-    private final int refreshTokenExpiryDays;
+    private final RefreshTokenConfigPort tokenConfig;
 
     public RefreshTokenHandler(RefreshTokenRepository refreshTokenRepository,
                                RefreshTokenRevocationPort revocationPort,
@@ -47,7 +47,7 @@ public class RefreshTokenHandler implements RefreshTokenUseCase {
         this.refreshTokenPort = refreshTokenPort;
         this.tokenHashPort = tokenHashPort;
         this.accountLock = accountLock;
-        this.refreshTokenExpiryDays = tokenConfig.refreshTokenExpiryDays();
+        this.tokenConfig = tokenConfig;
     }
 
     @Override
@@ -96,7 +96,7 @@ public class RefreshTokenHandler implements RefreshTokenUseCase {
         log.info("Token rotated for user: {}", creds.id());
         return new AuthTokens(
             accessTokenPort.generate(creds),
-            refreshTokenPort.generate(creds, refreshTokenExpiryDays)
+            refreshTokenPort.generate(creds, tokenConfig.refreshTokenExpiryDays())
         );
     }
 }

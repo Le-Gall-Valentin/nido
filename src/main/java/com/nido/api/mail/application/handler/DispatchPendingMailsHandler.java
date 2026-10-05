@@ -4,6 +4,7 @@ import com.nido.api.mail.application.port.in.DispatchPendingMailsUseCase;
 import com.nido.api.mail.domain.model.DeliveryOutcome;
 import com.nido.api.mail.domain.model.OutboxEntry;
 import com.nido.api.mail.domain.model.RetryPolicy;
+import com.nido.api.mail.domain.port.out.MailConfigurationPort;
 import com.nido.api.mail.domain.port.out.MailOutboxPort;
 import com.nido.api.mail.domain.port.out.MailTransportPort;
 import org.slf4j.Logger;
@@ -29,12 +30,15 @@ public class DispatchPendingMailsHandler implements DispatchPendingMailsUseCase 
     static final int BATCH_SIZE = 20;
     static final Duration LEASE = Duration.ofMinutes(2);
 
+    private final MailConfigurationPort configuration;
     private final MailOutboxPort outbox;
     private final MailTransportPort transport;
     private final RetryPolicy retryPolicy;
     private final Clock clock;
 
-    public DispatchPendingMailsHandler(MailOutboxPort outbox, MailTransportPort transport, RetryPolicy retryPolicy, Clock clock) {
+    public DispatchPendingMailsHandler(MailConfigurationPort configuration, MailOutboxPort outbox, MailTransportPort transport,
+                                       RetryPolicy retryPolicy, Clock clock) {
+        this.configuration = configuration;
         this.outbox = outbox;
         this.transport = transport;
         this.retryPolicy = retryPolicy;
@@ -43,6 +47,10 @@ public class DispatchPendingMailsHandler implements DispatchPendingMailsUseCase 
 
     @Override
     public int dispatch() {
+        if (configuration.active().isEmpty()) {
+            // Mail switched off: the queue waits. Switched back on, what has not expired leaves.
+            return 0;
+        }
         int handled = 0;
         List<OutboxEntry> batch;
         do {

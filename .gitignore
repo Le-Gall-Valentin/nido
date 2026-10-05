@@ -63,3 +63,6 @@ docs/
 
 # ── Local MCP server config ────────────────────────────────────
 .mcp.json
+
+# What Nido generates for itself outside Docker (NIDO_DATA_DIR): its secrets, the encryption key among them.
+/data/

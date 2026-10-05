@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
-import { Calendar, CheckSquare, ClipboardList, CookingPot, LayoutDashboard, Lock, Settings, Shield, ShoppingCart, SlidersHorizontal, User, Users, Wallet, UserCircle } from 'lucide-react'
+import { Calendar, CheckSquare, ClipboardList, CookingPot, LayoutDashboard, Lock, Server, Settings, Shield, ShoppingCart, SlidersHorizontal, User, Users, Wallet, UserCircle } from 'lucide-react'
+import { isAdminRole, type UserRole } from '@/entities/user'
 import { ROUTES } from '@/shared/config'
 
 export interface NavItemConfig {
@@ -15,6 +16,8 @@ export interface NavItemConfig {
   icon: LucideIcon
   labelKey: string
   adminOnly?: boolean
+  /** The instance settings concern the whole installation: the super admin alone. */
+  superAdminOnly?: boolean
   children?: NavItemConfig[]
 }
 
@@ -58,6 +61,7 @@ export const NAV_CONFIG: NavItemConfig[] = [
   },
   { id: 'nav:spaces', to: () => ROUTES.SPACES, icon: Users, labelKey: 'nav.groups' },
   { id: 'nav:users', adminOnly: true, to: () => ROUTES.ADMIN_USERS, icon: Shield, labelKey: 'nav.administration' },
+  { id: 'nav:instance-settings', superAdminOnly: true, to: () => ROUTES.ADMIN_SETTINGS, icon: Server, labelKey: 'nav.instance_settings' },
   {
     // The mockup's fourth sub-category, Notifications, has no backing feature
     // (no notification system exists yet) — only the three that map to real
@@ -71,3 +75,10 @@ export const NAV_CONFIG: NavItemConfig[] = [
     ],
   },
 ]
+
+/** Whether the item shows for this role: the administration for admins, the instance settings for the super admin alone. */
+export function isNavItemVisible(item: NavItemConfig, role: UserRole | undefined): boolean {
+  if (item.superAdminOnly) return role === 'SUPER_ADMIN'
+  if (item.adminOnly) return isAdminRole(role)
+  return true
+}

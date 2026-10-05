@@ -72,7 +72,7 @@ class LoginHandlerTest {
     void setUp() {
         // Constructor calls passwordHasher.hash() to precompute the dummy hash — stub it first
         lenient().when(passwordHasher.hash(anyString())).thenReturn("$2a$12$stubbed-dummy-hash-for-tests");
-        when(tokenConfig.refreshTokenExpiryDays()).thenReturn(30);
+        lenient().when(tokenConfig.refreshTokenExpiryDays()).thenReturn(30);
         handler = new LoginHandler(userCredentialsPort, passwordHasher, passwordVerifier, accessTokenPort, refreshTokenPort, tokenConfig, totpChallengeStore, totpStatusQuery);
     }
 

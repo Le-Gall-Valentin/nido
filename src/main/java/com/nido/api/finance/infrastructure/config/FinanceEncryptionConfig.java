@@ -2,8 +2,8 @@ package com.nido.api.finance.infrastructure.config;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.nido.api.infrastructure.config.EncryptorCache;
-import com.nido.api.infrastructure.config.NidoProperties;
 import com.nido.api.space.application.port.in.GetSpaceEncryptionSaltUseCase;
+import com.nido.api.shared.security.EncryptionKey;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.encrypt.Encryptors;
@@ -21,11 +21,11 @@ public class FinanceEncryptionConfig {
     // Same key rotation limitation as TotpEncryptionConfig: changing the master secret
     // requires re-entering every Finance record, since old ciphertext needs the old key.
     @Bean
-    FinanceEncryptorFactory financeEncryptorFactory(NidoProperties properties, GetSpaceEncryptionSaltUseCase getSpaceEncryptionSaltUseCase) {
+    FinanceEncryptorFactory financeEncryptorFactory(EncryptionKey encryptionKey, GetSpaceEncryptionSaltUseCase getSpaceEncryptionSaltUseCase) {
         // Bounded and expiring — see EncryptorCache. Expiry is what makes the salt below re-read
         // periodically instead of being frozen at whatever it was when this instance booted.
         LoadingCache<UUID, TextEncryptor> cache = EncryptorCache.build(id ->
-            Encryptors.delux(properties.encryption().secret(), getSpaceEncryptionSaltUseCase.getEncryptionSalt(id)));
+            Encryptors.delux(encryptionKey.value(), getSpaceEncryptionSaltUseCase.getEncryptionSalt(id)));
         return cache::get;
     }
 }

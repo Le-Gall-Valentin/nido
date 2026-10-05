@@ -1,6 +1,6 @@
 package com.nido.api.authentication.infrastructure.security;
 
-import com.nido.api.infrastructure.config.NidoProperties;
+import com.nido.api.authentication.domain.port.out.SessionSettingsPort;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,16 +18,10 @@ class CookieServiceTest {
 
     @BeforeEach
     void setUp() {
-        var properties = new NidoProperties(
-            new NidoProperties.JwtProperties("secret", 15, "nido", "nido"),
-            new NidoProperties.RefreshTokenProperties(30, "0 0 3 * * *"),
-            new NidoProperties.CookieProperties(false),
-            null,
-            new NidoProperties.CorsProperties(List.of()),
-            new NidoProperties.EncryptionProperties("test-enc-secret"),
-            null
-        );
-        cookieService = new CookieService(properties);
+        cookieService = new CookieService(new SessionSettingsPort() {
+            @Override public int accessTokenMinutes() { return 15; }
+            @Override public boolean secureCookies() { return false; }
+        }, () -> 30);
     }
 
     @Test

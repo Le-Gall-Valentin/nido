@@ -1,6 +1,5 @@
 package com.nido.api.mail.infrastructure.scheduler;
 
-import com.nido.api.infrastructure.config.ConditionalOnMailEnabled;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +10,6 @@ import java.util.concurrent.TimeUnit;
  * time has come, and mails a crash or a restart left behind.
  */
 @Component
-@ConditionalOnMailEnabled
 public class MailDispatchScheduler {
 
     private final AfterCommitDispatchTrigger trigger;

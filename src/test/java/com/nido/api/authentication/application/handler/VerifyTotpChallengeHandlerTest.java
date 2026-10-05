@@ -48,7 +48,7 @@ class VerifyTotpChallengeHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(tokenConfig.refreshTokenExpiryDays()).thenReturn(30);
+        lenient().when(tokenConfig.refreshTokenExpiryDays()).thenReturn(30);
         handler = new VerifyTotpChallengeHandler(
             challengeStore, mfaVerifier, userCredentialsPort,
             accessTokenPort, refreshTokenPort, tokenConfig

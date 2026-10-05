@@ -9,7 +9,14 @@ RUN bash mvnw -B -DskipTests package
 # ---- Runtime stage ----
 FROM eclipse-temurin:21-jre-jammy AS runtime
 WORKDIR /app
-RUN addgroup --system nido && adduser --system --ingroup nido nido
+# A fixed UID: the secrets the production compose generates are written for this user, whatever order
+# the system users happen to be created in. /data holds what Nido generates for itself (its secrets) and
+# is a volume, so that even a bare `docker run` keeps them out of the container's own layer.
+RUN addgroup --system --gid 10001 nido \
+ && adduser --system --uid 10001 --ingroup nido --no-create-home nido \
+ && mkdir /data && chown nido:nido /data
+ENV NIDO_DATA_DIR=/data
+VOLUME /data
 COPY --from=build /app/target/*.jar app.jar
 USER nido
 EXPOSE 8080

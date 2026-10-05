@@ -17,11 +17,11 @@ import java.lang.annotation.Target;
 @IntegrationTestConfig
 @ExtendWith(SharedGreenMail.Starter.class)
 @TestPropertySource(properties = {
-    "nido.mail.host=127.0.0.1",
-    "nido.mail.port=" + SharedGreenMail.PORT,
-    "nido.mail.security=none",
-    "nido.mail.from=Nido <nido@test.local>",
-    "nido.mail.app-url=http://localhost:5173"
+    "NIDO_SMTP_HOST=127.0.0.1",
+    "NIDO_SMTP_PORT=" + SharedGreenMail.PORT,
+    "NIDO_SMTP_SECURITY=none",
+    "NIDO_MAIL_FROM=Nido <nido@test.local>",
+    "NIDO_APP_URL=http://localhost:5173"
 })
 public @interface MailIntegrationTestConfig {
 }

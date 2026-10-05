@@ -12,7 +12,7 @@ public interface NotificationChannelPort {
 
     NotificationChannel channel();
 
-    /** Whether this installation can deliver on the channel at all — mail: NIDO_SMTP_HOST is set. */
+    /** Whether this installation can deliver on the channel at all — mail: configured, from the environment or the settings page. */
     boolean isAvailable();
 
     /**

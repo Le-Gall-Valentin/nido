@@ -1,0 +1,52 @@
+{
+  "title": "Réglages de l'instance",
+  "subtitle": "Ce qui vaut pour toute l'installation. Un réglage défini par l'environnement du serveur s'affiche ici mais ne se change que là-bas.",
+  "loading": "Chargement des réglages…",
+  "load_error": "Les réglages n'ont pas pu être chargés. Rechargez la page.",
+  "group": {
+    "mail": {
+      "title": "Mail",
+      "description": "Le serveur qui envoie les mots de passe oubliés, les invitations et les notifications. Sans serveur, Nido n'envoie aucun mail."
+    },
+    "public-url": {
+      "title": "Adresse publique",
+      "description": "L'adresse que les membres tapent pour ouvrir Nido. Les liens des mails commencent par elle, et elle décide si les cookies exigent HTTPS."
+    },
+    "sessions": {
+      "title": "Sessions",
+      "description": "Combien de temps on reste connecté. Une modification vaut pour les prochaines connexions."
+    },
+    "api": {
+      "title": "API",
+      "description": "La documentation de l'API, pour les développeurs. Elle exige d'être connecté."
+    }
+  },
+  "source": {
+    "ENVIRONMENT": "Environnement",
+    "DEFAULT": "Par défaut",
+    "environment_hint": "Défini par la variable {{variable}} : modifiez-la sur le serveur."
+  },
+  "secret": {
+    "set": "Défini — laissez vide pour le garder",
+    "clear": "Effacer"
+  },
+  "action": {
+    "save": "Enregistrer",
+    "reset": "Rétablir la valeur par défaut",
+    "test": "Envoyer un test",
+    "disable_mail": "Désactiver le mail"
+  },
+  "saved": "Enregistré.",
+  "mail": {
+    "test_sent": "Mail de test envoyé à votre adresse."
+  },
+  "public_url": {
+    "http_warning": "Sans HTTPS, les mots de passe et les liens circulent en clair sur le réseau.",
+    "https_from_http": "Vous êtes connecté en http. Après l'enregistrement, connectez-vous par {{url}} : la session actuelle ne sera plus reconnue."
+  },
+  "error": {
+    "locked": "Ce réglage est défini par l'environnement du serveur.",
+    "too_many": "Trop d'essais. Attendez une minute.",
+    "server": "L'enregistrement a échoué. Réessayez."
+  }
+}

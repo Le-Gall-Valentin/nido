@@ -52,12 +52,20 @@ public class SecurityConfig {
                 // TOTP challenge verification — authenticated via challenge cookie, not JWT
                 .requestMatchers(HttpMethod.POST, "/api/auth/2fa/verify").permitAll()
                 // What the sign-in pages may offer, and "forgot password" — used by definition by
-                // people who cannot sign in. The reset routes only exist when mail is on.
+                // people who cannot sign in. The reset routes answer 404 while mail is off.
                 .requestMatchers(HttpMethod.GET, "/api/auth/capabilities").permitAll()
                 .requestMatchers(HttpMethod.POST,
                         "/api/auth/password-reset/request",
                         "/api/auth/password-reset/check",
                         "/api/auth/password-reset/confirm").permitAll()
+                // The first-run setup — used by definition before any account exists. Guarded by the
+                // code printed in the logs; every route but the status answers 404 once it is done.
+                .requestMatchers(HttpMethod.GET, "/api/setup/status").permitAll()
+                .requestMatchers(HttpMethod.POST,
+                        "/api/setup/verify-code",
+                        "/api/setup/encryption-key",
+                        "/api/setup/mail-test",
+                        "/api/setup/complete").permitAll()
                 // /api/** must be evaluated before the SPA fallback so extensionless
                 // paths like /api/users/me are never matched by the GET wildcard.
                 .requestMatchers("/api/**").authenticated()

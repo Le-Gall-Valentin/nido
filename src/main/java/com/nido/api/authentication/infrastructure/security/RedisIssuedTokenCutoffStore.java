@@ -1,7 +1,7 @@
 package com.nido.api.authentication.infrastructure.security;
 
 import com.nido.api.authentication.domain.port.out.IssuedTokenCutoffPort;
-import com.nido.api.infrastructure.config.NidoProperties;
+import com.nido.api.authentication.domain.port.out.SessionSettingsPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -14,7 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * The cut-off lives in Redis with a TTL equal to the access token's own lifetime, which is what
+ * The cut-off lives in Redis with a TTL equal to the longest lifetime an access token can be given, which is what
  * keeps this from becoming a list that grows: a cut-off older than any token it could reject has
  * nothing left to reject, so Redis forgets it. In steady state the keyspace is empty — an entry
  * exists only in the minutes following an actual demotion or deactivation.
@@ -35,11 +35,12 @@ public class RedisIssuedTokenCutoffStore implements IssuedTokenCutoffPort {
     private final StringRedisTemplate redisTemplate;
     private final Duration retention;
 
-    public RedisIssuedTokenCutoffStore(StringRedisTemplate redisTemplate, NidoProperties properties) {
+    public RedisIssuedTokenCutoffStore(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
-        // One access token lifetime, plus a minute so that clock skew between the issuing and the
-        // checking instance cannot let a token outlive the note that rejects it.
-        this.retention = Duration.ofMinutes(properties.jwt().expiryMinutes() + 1L);
+        // The longest access token the settings allow, plus a minute of clock skew between the issuing
+        // and the checking instance. Not the current setting: shortened after a token was issued, it
+        // would let that token outlive the note that rejects it.
+        this.retention = Duration.ofMinutes(SessionSettingsPort.LONGEST_ACCESS_TOKEN_MINUTES + 1L);
     }
 
     @Override

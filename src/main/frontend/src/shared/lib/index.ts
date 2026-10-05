@@ -9,6 +9,7 @@ export {
 } from './sessionCallbacks'
 export { setSessionHint, clearSessionHint, hasSessionHint } from './sessionHint'
 export { NetworkError, ServerError, RateLimitError, ForbiddenError, NotFoundError } from './apiErrors'
+export { copyText } from './copyText'
 export { isValidPassword, passwordProblem, type PasswordProblem } from './passwordPolicy'
 export { isValidEmail } from './emailPolicy'
 export { isValidUsername, usernameProblem, type UsernameProblem } from './usernamePolicy'

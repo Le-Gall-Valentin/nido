@@ -1,6 +1,7 @@
 package com.nido.api.authentication.infrastructure.security;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.authentication.domain.port.out.SessionSettingsPort;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -45,8 +46,9 @@ class RedisIssuedTokenCutoffStoreIT {
     @Test
     void a_cutoff_expires_on_its_own_so_the_keyspace_cannot_grow() {
         // This is what separates a cut-off note from a revocation list that has to be purged. The
-        // TTL matches the access token's lifetime: once no token predating the cut-off can still be
-        // valid, the note has nothing left to reject.
+        // TTL is the longest lifetime an access token can be given: once no token predating the
+        // cut-off can still be valid, the note has nothing left to reject — whatever the lifetime
+        // setting was when those tokens were issued.
         UUID userId = UUID.randomUUID();
 
         store.cutOffNow(userId);
@@ -56,7 +58,7 @@ class RedisIssuedTokenCutoffStoreIT {
             .as("no TTL at all would make this a list that only ever grows")
             .isNotNull()
             .isGreaterThan(0L)
-            .isLessThanOrEqualTo(Duration.ofMinutes(16).toSeconds());
+            .isLessThanOrEqualTo(Duration.ofMinutes(SessionSettingsPort.LONGEST_ACCESS_TOKEN_MINUTES + 1L).toSeconds());
     }
 
     @Test
