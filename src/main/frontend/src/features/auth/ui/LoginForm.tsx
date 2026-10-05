@@ -8,6 +8,8 @@ import type { LoginOutcome } from '../model/types'
 
 interface LoginFormProps {
   labelId?: string
+  /** Filled in after an accepted invitation: the identifier just shown on the welcome page. */
+  initialIdentifier?: string
   onLoginOutcome?: (outcome: Exclude<LoginOutcome, { kind: 'authenticated' }>) => void
 }
 
@@ -21,11 +23,11 @@ const ERROR_I18N_KEYS = {
   server: 'error.server',
 } as const satisfies Record<NonNullable<ErrorKind>, string>
 
-export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
+export function LoginForm({ labelId, onLoginOutcome, initialIdentifier }: LoginFormProps) {
   const login = useAuth((s) => s.login)
   const { t } = useTranslation('auth')
   const errorAlertId = useId()
-  const [identifier, setIdentifier] = useState('')
+  const [identifier, setIdentifier] = useState(initialIdentifier ?? '')
   const [password, setPassword] = useState('')
   const [errorKind, setErrorKind] = useState<ErrorKind>(null)
   const [retryAfterSeconds, setRetryAfterSeconds] = useState<number | null>(null)
@@ -93,7 +95,7 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
         // "username" is the token password managers fill — it covers an address typed here too.
         autoComplete="username"
         {...VERBATIM_INPUT_PROPS}
-        autoFocus
+        autoFocus={!initialIdentifier}
         className={AUTH_FIELD_CLASS}
         aria-invalid={errorKind !== null}
         aria-describedby={errorKind !== null ? errorAlertId : undefined}
@@ -107,6 +109,7 @@ export function LoginForm({ labelId, onLoginOutcome }: LoginFormProps) {
         placeholder={t('field.password_placeholder')}
         required
         autoComplete="current-password"
+        autoFocus={Boolean(initialIdentifier)}
         className={AUTH_FIELD_CLASS}
         aria-invalid={errorKind !== null}
         aria-describedby={errorKind !== null ? errorAlertId : undefined}

@@ -11,7 +11,7 @@ const mockUseAuth = vi.mocked(useAuth)
 
 beforeEach(() => vi.clearAllMocks())
 
-function setup(mockLogin: ReturnType<typeof vi.fn>, props: { onLoginOutcome?: (outcome: unknown) => void } = {}) {
+function setup(mockLogin: ReturnType<typeof vi.fn>, props: { onLoginOutcome?: (outcome: unknown) => void; initialIdentifier?: string } = {}) {
   const baseState = {
     user: null,
     isInitializing: false,
@@ -28,6 +28,13 @@ function setup(mockLogin: ReturnType<typeof vi.fn>, props: { onLoginOutcome?: (o
 }
 
 describe('LoginForm', () => {
+  it('starts from the identifier it is given, and puts the cursor in the password', () => {
+    const { getByLabelText } = setup(vi.fn(), { initialIdentifier: 'carol' })
+
+    expect((getByLabelText('field.identifier') as HTMLInputElement).value).toBe('carol')
+    expect(document.activeElement).toBe(getByLabelText('field.password'))
+  })
+
   it('calls login with credentials on submit', async () => {
     const mockLogin = vi.fn().mockResolvedValue({ kind: 'authenticated' })
     const { getByLabelText, queryByRole } = setup(mockLogin)

@@ -47,5 +47,18 @@
       "back": "Back to the app"
     }
   },
+  "welcome": {
+    "heading": "Welcome",
+    "title": "Welcome, {{username}}",
+    "subtitle": "Choose the password of your Nido account.",
+    "checking": "Checking the invitation…",
+    "done": "Welcome! Your password is saved, sign in.",
+    "unavailable": "This invitation cannot be checked right now.",
+    "invalid": {
+      "title": "This invitation is no longer valid",
+      "body": "The link expired or was already used. Ask the administrator who invited you for a new one.",
+      "forgot": "Get a new link by email"
+    }
+  },
   "footer": "© 2026 Nido"
 }

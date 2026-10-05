@@ -13,6 +13,7 @@ import { ROUTES } from '@/shared/config'
 import { Alert } from '@/shared/ui'
 import { AuthShell } from './AuthShell'
 import { isPasswordResetDone } from '../model/passwordResetDone'
+import { acceptedInvitationIdentifier } from '../model/invitationAccepted'
 import { useLoginFlow } from './useLoginFlow'
 
 type TotpApi = ITotpVerifyApi & ITotpEnrollApi
@@ -29,6 +30,7 @@ export function LoginPage({ totpApi = defaultTotpApi, passwordResetApi = default
   const location = useLocation()
   const navigate = useNavigate()
   const [resetDone] = useState(() => isPasswordResetDone(location.state))
+  const [welcomed] = useState(() => acceptedInvitationIdentifier(location.state))
   const passwordReset = usePasswordResetAvailability(passwordResetApi)
   const {
     step,
@@ -44,23 +46,24 @@ export function LoginPage({ totpApi = defaultTotpApi, passwordResetApi = default
   } = useLoginFlow()
 
   // History state survives a reload. Once the banner has read it, the reason leaves the entry, so a
-  // reload of the login page does not announce a password change a second time.
+  // reload of the login page does not announce a password change, or a welcome, a second time.
   useEffect(() => {
-    if (resetDone) void navigate(location.pathname, { replace: true, state: null })
-  }, [resetDone, navigate, location.pathname])
+    if (resetDone || welcomed !== null) void navigate(location.pathname, { replace: true, state: null })
+  }, [resetDone, welcomed, navigate, location.pathname])
 
   return (
     <AuthShell>
       {step === 'credentials' && (
         <>
           {resetDone && <Alert variant="success" className="mb-6">{t('reset.done')}</Alert>}
+          {welcomed !== null && <Alert variant="success" className="mb-6">{t('welcome.done')}</Alert>}
           <div className="mb-8">
             <h1 id={TITLE_ID} className="mb-2 text-[28px] font-semibold tracking-tight text-fg-0">
               {t('form.title')}
             </h1>
             <p className="text-sm text-fg-2">{t('form.subtitle')}</p>
           </div>
-          <LoginForm labelId={TITLE_ID} onLoginOutcome={handleLoginOutcome} />
+          <LoginForm labelId={TITLE_ID} onLoginOutcome={handleLoginOutcome} initialIdentifier={welcomed ?? undefined} />
           {passwordReset === 'available' && (
             <p className="mt-4 text-center">
               <Link to={ROUTES.FORGOT_PASSWORD} className="text-[13px] font-semibold text-accent hover:underline">
