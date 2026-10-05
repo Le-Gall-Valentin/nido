@@ -1,4 +1,4 @@
-import { QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { createTestQueryClient } from '@/shared/test'
@@ -39,5 +39,22 @@ describe('usePasswordResetAvailability', () => {
     const { result } = availabilityWith(api(async () => { throw new Error('network') }))
 
     await waitFor(() => expect(result.current).toBe('unavailable'))
+  })
+
+  it('asks again on the next visit, since mail can be switched on from the settings page', async () => {
+    const capabilities = vi.fn()
+      .mockResolvedValueOnce({ passwordReset: false })
+      .mockResolvedValueOnce({ passwordReset: true })
+    // A client that keeps its cache, as the application's does: without it, a second visit asks
+    // again whatever the hook says.
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+
+    const first = renderHook(() => usePasswordResetAvailability(api(capabilities)), { wrapper })
+    await waitFor(() => expect(first.result.current).toBe('unavailable'))
+    first.unmount()
+
+    const second = renderHook(() => usePasswordResetAvailability(api(capabilities)), { wrapper })
+    await waitFor(() => expect(second.result.current).toBe('available'))
   })
 })

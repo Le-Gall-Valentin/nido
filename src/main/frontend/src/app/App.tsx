@@ -3,6 +3,7 @@ import { shouldRetryQuery } from '@/shared/api'
 import { AccountLanguageSync } from '@/features/auth'
 import { ThemeProvider, LanguageProvider, AuthProvider, ErrorBoundary } from './providers'
 import { AppRouter } from './router'
+import { SetupGate } from './router/SetupGate'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,12 +19,14 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <LanguageProvider>
-          <AuthProvider>
-            <AccountLanguageSync />
-            <ErrorBoundary>
-              <AppRouter />
-            </ErrorBoundary>
-          </AuthProvider>
+          <SetupGate>
+            <AuthProvider>
+              <AccountLanguageSync />
+              <ErrorBoundary>
+                <AppRouter />
+              </ErrorBoundary>
+            </AuthProvider>
+          </SetupGate>
         </LanguageProvider>
       </ThemeProvider>
     </QueryClientProvider>

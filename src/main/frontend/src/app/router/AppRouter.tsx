@@ -8,6 +8,7 @@ import { TasksApiProvider, tasksApi } from '@/entities/tasks'
 import { SpacesApiProvider, spacesApi } from '@/features/space-switcher'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AdminRoute } from './AdminRoute'
+import { SuperAdminRoute } from './SuperAdminRoute'
 import { SpaceRoute } from './SpaceRoute'
 import { PublicOnlyRoute } from './PublicOnlyRoute'
 import { RequirePasswordReset } from './RequirePasswordReset'
@@ -15,6 +16,7 @@ import { DefaultRedirect } from './DefaultRedirect'
 import { SpaceIndexRedirect } from './SpaceIndexRedirect'
 
 const AdminUsersPage = lazy(() => import('@/pages/admin-users'))
+const AdminSettingsPage = lazy(() => import('@/pages/admin-settings'))
 const AccountProfilePage = lazy(() => import('@/pages/account'))
 const AccountSecurityPage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountSecurityPage })))
 const AccountPreferencesPage = lazy(() => import('@/pages/account').then((m) => ({ default: m.AccountPreferencesPage })))
@@ -65,6 +67,9 @@ export function AppRouter() {
           }
         />
 
+        {/* An installation already set up has no setup screen any more. */}
+        <Route path={ROUTES.SETUP} element={<Navigate to={ROUTES.LOGIN} replace />} />
+
         {/* Protected — shell layout wraps all authenticated pages */}
         <Route
           element={
@@ -87,6 +92,11 @@ export function AppRouter() {
           {/* Administration (admin-only) */}
           <Route element={<AdminRoute><Outlet /></AdminRoute>}>
             <Route path={ROUTES.ADMIN_USERS} element={<AdminUsersPage />} />
+          </Route>
+
+          {/* Instance settings (super admin only) */}
+          <Route element={<SuperAdminRoute><Outlet /></SuperAdminRoute>}>
+            <Route path={ROUTES.ADMIN_SETTINGS} element={<AdminSettingsPage />} />
           </Route>
 
           <Route path={ROUTES.ACCOUNT} element={<Outlet />}>

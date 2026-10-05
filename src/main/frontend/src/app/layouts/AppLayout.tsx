@@ -6,13 +6,12 @@ import { useAuth } from '@/features/auth'
 import { useCurrentSpaceId } from '@/features/space-switcher'
 import { useOpenTaskCount } from '@/pages/tasks/openTaskCount'
 import { usePaletteItems } from '@/shared/lib'
-import { isAdminRole } from '@/entities/user'
 import { Sidebar } from './Sidebar'
 import { MobileNavDrawer } from './MobileNavDrawer'
 import { GroupAccentStrip } from './GroupAccentStrip'
 import { Topbar } from './Topbar'
 import { CommandPalette } from './CommandPalette'
-import { NAV_CONFIG } from './navConfig'
+import { NAV_CONFIG, isNavItemVisible } from './navConfig'
 import { PaletteSetups } from './paletteSetups'
 
 function PageLoader() {
@@ -38,7 +37,7 @@ export function AppLayout() {
   const openTaskCount = useOpenTaskCount(spaceId)
 
   const visibleNavItems = useMemo(
-    () => NAV_CONFIG.filter((item) => !item.adminOnly || isAdminRole(user?.role)),
+    () => NAV_CONFIG.filter((item) => isNavItemVisible(item, user?.role)),
     [user?.role]
   )
 

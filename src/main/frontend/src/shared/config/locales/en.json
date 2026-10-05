@@ -23,5 +23,29 @@
     "cancel": "Cancel",
     "confirm": "Delete",
     "error": "Something went wrong. Try again."
+  },
+  "setting_problem": {
+    "required": "This field is required.",
+    "not_a_number": "Enter a number.",
+    "out_of_range": "This value is out of the allowed range.",
+    "not_a_boolean": "Invalid value.",
+    "unknown_security": "Choose STARTTLS, TLS or none.",
+    "invalid_url": "Enter a full address, such as https://nido.example.com.",
+    "invalid_address": "Enter an email address, such as Nido <nido@example.com>.",
+    "credentials_go_together": "The username and the password go together.",
+    "access_not_shorter_than_session": "The access token must last less than the session.",
+    "public_url_required_by_mail": "Mail needs the public address for its links: set it first.",
+    "password_required_for_new_server": "Type the password again: it is only reused with the server, port and protection it was saved for.",
+    "unknown": "Value refused."
+  },
+  "mail_failure": {
+    "authentication_failed": "The server refused the username or the password.",
+    "rejected": "The server refused the email.",
+    "connection_refused": "Nothing answers at this address on this port.",
+    "unknown_host": "There is no server by this name.",
+    "timeout": "The server did not answer in time.",
+    "tls_failed": "The encrypted connection failed: check the security and the port.",
+    "not_an_smtp_server": "What answers at this address is not a mail server.",
+    "failed": "The email could not be sent."
   }
 }

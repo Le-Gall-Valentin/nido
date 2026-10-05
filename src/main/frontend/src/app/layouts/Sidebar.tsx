@@ -6,8 +6,7 @@ import { useAuth } from '@/features/auth'
 import { useCurrentSpaceId } from '@/features/space-switcher'
 import { NidoMark } from '@/shared/ui'
 import { ROUTES } from '@/shared/config'
-import { isAdminRole } from '@/entities/user'
-import { NAV_CONFIG } from './navConfig'
+import { NAV_CONFIG, isNavItemVisible } from './navConfig'
 import { NavList } from './NavList'
 
 export const BRAND_LOGO_GRADIENT = 'linear-gradient(135deg, var(--brand-icon-from), var(--brand-icon-to))'
@@ -83,7 +82,7 @@ export function Sidebar({ hasPendingInvitations, openTaskCount }: SidebarProps =
   const { spaceId } = useCurrentSpaceId()
 
   const visibleItems = useMemo(
-    () => NAV_CONFIG.filter((item) => !item.adminOnly || isAdminRole(user?.role)),
+    () => NAV_CONFIG.filter((item) => isNavItemVisible(item, user?.role)),
     [user?.role]
   )
 
