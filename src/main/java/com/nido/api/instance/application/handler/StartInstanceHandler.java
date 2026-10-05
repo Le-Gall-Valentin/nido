@@ -103,7 +103,7 @@ public class StartInstanceHandler implements StartInstanceUseCase {
         } catch (InstanceException.InitialAdminRefused refused) {
             throw new IllegalStateException("NIDO_SEED_USERNAME is not a username Nido accepts: 3 to 50 characters, no @");
         }
-        log.info("Initial SUPER_ADMIN '{}' created from NIDO_SEED_*", seed.username());
+        log.info("The installation was set up from NIDO_SEED_*: they are ignored from now on and can be removed");
         if (state.keyGenerated()) {
             log.warn("The encryption key was generated in {} and this installation skipped the setup screen that shows "
                 + "it: back that file up, away from your database dumps.", keyFile.location());

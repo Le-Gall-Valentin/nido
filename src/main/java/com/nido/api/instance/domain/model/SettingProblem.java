@@ -1,8 +1,9 @@
 package com.nido.api.instance.domain.model;
 
 /**
- * What is wrong with one setting. {@code code} is shared with the frontend, which words it: keep the
- * constants and the {@code errors.*} keys of the setup and settings pages in step.
+ * What is wrong with one setting. {@code code} is shared with the frontend, which words it in its
+ * instance-settings entity ({@code problem.*}): keep the constants and those keys in step — a code the
+ * pages do not know yet is worded as unknown, never shown raw.
  */
 public record SettingProblem(SettingKey key, String code) {
     public static final String REQUIRED = "required";

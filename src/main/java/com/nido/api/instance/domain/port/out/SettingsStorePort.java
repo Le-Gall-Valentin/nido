@@ -14,7 +14,8 @@ public interface SettingsStorePort {
 
     /**
      * In the caller's transaction: a present value is stored, an empty one deletes its row. Readers see
-     * the change once it commits. {@code by} may be null — the setup screen saves before any account exists.
+     * the change once it commits. {@code by}: the account that made the change — for the setup screen, the
+     * administrator it has just created; null only where no account made it.
      */
     void save(Map<SettingKey, Optional<String>> changes, UUID by, Instant at);
 }
