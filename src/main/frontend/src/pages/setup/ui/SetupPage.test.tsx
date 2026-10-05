@@ -77,6 +77,7 @@ describe('SetupPage', () => {
       encryptionKeySaved: true,
     })
     expect(signIn).toHaveBeenCalledWith('jane', 'Str0ng!Password')
+    expect(api.encryptionKey).toHaveBeenCalledTimes(1)
   })
 
   it('says when the code is not the one in the logs', async () => {
@@ -248,6 +249,49 @@ describe('SetupPage', () => {
     click('action.finish')
 
     await waitFor(() => expect(api.complete).toHaveBeenCalledWith(expect.objectContaining({ mail: null })))
+  })
+
+  it('asks for the new code when Nido restarted meanwhile, then finishes where it stopped', async () => {
+    const complete = vi.fn()
+      .mockRejectedValueOnce(new SetupCodeInvalidError())
+      .mockResolvedValueOnce(undefined)
+    const { goTo } = open(fakeApi({ complete }))
+    await passTheCode()
+    await passTheAdmin()
+    click('action.next')
+    click('action.later')
+    fireEvent.click(await screen.findByLabelText('key.saved'))
+    click('action.finish')
+
+    expect(await screen.findByText('errors.code_changed')).not.toBeNull()
+    type('code.field', 'NEW1-NEW2-NEW3')
+    click('action.next')
+    fireEvent.click(await screen.findByLabelText('key.saved'))
+    click('action.finish')
+
+    await waitFor(() => expect(goTo).toHaveBeenCalledWith('/'))
+    expect(complete).toHaveBeenLastCalledWith(expect.objectContaining({
+      code: 'NEW1-NEW2-NEW3',
+      admin: expect.objectContaining({ username: 'jane' }),
+    }))
+  })
+
+  it('asks for the new code when the key cannot be read with the old one', async () => {
+    const encryptionKey = vi.fn()
+      .mockRejectedValueOnce(new SetupCodeInvalidError())
+      .mockResolvedValue({ source: 'GENERATED', key: 'the-generated-key' })
+    open(fakeApi({ encryptionKey }))
+    await passTheCode()
+    await passTheAdmin()
+    click('action.next')
+    click('action.later')
+
+    expect(await screen.findByText('errors.code_changed')).not.toBeNull()
+    type('code.field', 'NEW1-NEW2-NEW3')
+    click('action.next')
+
+    expect(await screen.findByText('the-generated-key')).not.toBeNull()
+    expect(encryptionKey).toHaveBeenLastCalledWith('NEW1-NEW2-NEW3')
   })
 
   it('asks nothing about mail when the server configuration sets it', async () => {

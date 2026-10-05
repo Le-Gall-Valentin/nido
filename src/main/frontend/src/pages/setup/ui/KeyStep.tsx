@@ -4,6 +4,7 @@ import { copyText } from '@/shared/lib'
 import { Alert, Button, CTA_BUTTON_STYLE, Spinner } from '@/shared/ui'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SetupKey } from '../model/types'
+import { SetupCodeInvalidError } from '../model/errors'
 import { describeSetupError } from '../lib/describeSetupError'
 import { downloadKeyFile, keyFileText } from '../lib/keyFile'
 import { ACTIONS_CLASS, LEAD_CLASS, TITLE_CLASS } from './styles'
@@ -16,9 +17,11 @@ interface Props {
   finishError: string | null
   onFinish: (keySaved: boolean) => void
   onBack: () => void
+  /** The code was refused: Nido restarted and has another one. */
+  onCodeExpired: () => void
 }
 
-export function KeyStep({ api, code, publicUrl, finishing, finishError, onFinish, onBack }: Props) {
+export function KeyStep({ api, code, publicUrl, finishing, finishError, onFinish, onBack, onCodeExpired }: Props) {
   const { t } = useTranslation('setup')
   const checkboxId = useId()
   const [key, setKey] = useState<SetupKey | null>(null)
@@ -30,9 +33,13 @@ export function KeyStep({ api, code, publicUrl, finishing, finishError, onFinish
     let current = true
     api.encryptionKey(code)
       .then((answer) => { if (current) setKey(answer) })
-      .catch((error: unknown) => { if (current) setLoadError(describeSetupError(error)) })
+      .catch((error: unknown) => {
+        if (!current) return
+        if (error instanceof SetupCodeInvalidError) onCodeExpired()
+        else setLoadError(describeSetupError(error))
+      })
     return () => { current = false }
-  }, [api, code])
+  }, [api, code, onCodeExpired])
 
   async function copy(value: string) {
     setCopied(await copyText(value))

@@ -4,6 +4,7 @@ import { MailTestFailedError, SettingsInvalidError, useLanguage } from '@/shared
 import { Alert, Button, CTA_BUTTON_STYLE, Input, PasswordInput } from '@/shared/ui'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SettingValues } from '../model/types'
+import { SetupCodeInvalidError } from '../model/errors'
 import { describeSetupError } from '../lib/describeSetupError'
 import { ACTIONS_CLASS, FIELD_ERROR_CLASS, LEAD_CLASS, TITLE_CLASS } from './styles'
 
@@ -17,12 +18,14 @@ interface Props {
   serverProblems?: Record<string, string>
   onNext: (mail: SettingValues | null) => void
   onBack: () => void
+  /** The code was refused: Nido restarted and has another one. */
+  onCodeExpired: () => void
 }
 
 const DEFAULTS: SettingValues = { 'mail.port': '587', 'mail.security': 'starttls' }
 const SECURITIES = ['starttls', 'tls', 'none'] as const
 
-export function MailStep({ api, code, publicUrl, recipient, locked, initial, serverProblems = {}, onNext, onBack }: Props) {
+export function MailStep({ api, code, publicUrl, recipient, locked, initial, serverProblems = {}, onNext, onBack, onCodeExpired }: Props) {
   const { t } = useTranslation(['setup', 'common'])
   const { language } = useLanguage()
   const [values, setValues] = useState<SettingValues>(initial ?? DEFAULTS)
@@ -43,7 +46,8 @@ export function MailStep({ api, code, publicUrl, recipient, locked, initial, ser
       await api.testMail({ code, mail: values, publicUrl, recipient, language })
       setNotice(t('mail.test_sent', { recipient }))
     } catch (error) {
-      if (error instanceof SettingsInvalidError) setProblems(error.errors)
+      if (error instanceof SetupCodeInvalidError) onCodeExpired()
+      else if (error instanceof SettingsInvalidError) setProblems(error.errors)
       else if (error instanceof MailTestFailedError) {
         setFailure([t(`common:mail_failure.${error.reason}`), error.serverReply].filter(Boolean).join(' — '))
       }

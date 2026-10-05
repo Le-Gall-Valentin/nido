@@ -5,7 +5,14 @@ import type { ISetupApi } from '../model/ISetupApi'
 import { describeSetupError } from '../lib/describeSetupError'
 import { LEAD_CLASS, PRIMARY_CLASS, TITLE_CLASS } from './styles'
 
-export function CodeStep({ api, onVerified }: { api: ISetupApi; onVerified: (code: string) => void }) {
+interface Props {
+  api: ISetupApi
+  /** Why the code is asked again, when it is (a translation key). */
+  notice?: string | null
+  onVerified: (code: string) => void
+}
+
+export function CodeStep({ api, notice = null, onVerified }: Props) {
   const { t } = useTranslation('setup')
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -30,6 +37,7 @@ export function CodeStep({ api, onVerified }: { api: ISetupApi; onVerified: (cod
   return (
     <form onSubmit={(event) => void submit(event)} noValidate>
       <h1 className={TITLE_CLASS}>{t('code.title')}</h1>
+      {notice && <Alert variant="warning" className="mb-4">{t(notice)}</Alert>}
       <p className={LEAD_CLASS}>{t('code.lead')}</p>
       <pre className="mb-5 overflow-x-auto rounded-lg bg-bg-2 px-3 py-2 text-[13px] text-fg-1">docker compose logs nido</pre>
       <Input

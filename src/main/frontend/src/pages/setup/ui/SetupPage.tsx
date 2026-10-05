@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { SettingsInvalidError, useLanguage } from '@/shared/lib'
 import { setupApi } from '../api/setupApi'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SettingValues, SetupAdmin, SetupStatus } from '../model/types'
+import { SetupCodeInvalidError } from '../model/errors'
 import { describeSetupError } from '../lib/describeSetupError'
 import { signInAfterSetup } from '../lib/signInAfterSetup'
 import { AddressStep } from './AddressStep'
@@ -36,6 +37,16 @@ export function SetupPage({ status, api = setupApi, signIn = signInAfterSetup, g
   const [problems, setProblems] = useState<Record<string, string>>({})
   const [finishing, setFinishing] = useState(false)
   const [finishError, setFinishError] = useState<string | null>(null)
+  // Nido restarted during the setup: its code changed. Asked again, then back where it stopped.
+  const [resumeAt, setResumeAt] = useState<SetupStep | null>(null)
+
+  const codeExpired = useCallback((at: SetupStep) => {
+    setResumeAt(at)
+    setStep('code')
+  }, [])
+  // Stable: KeyStep reads its key again when they change.
+  const mailCodeExpired = useCallback(() => codeExpired('mail'), [codeExpired])
+  const keyCodeExpired = useCallback(() => codeExpired('key'), [codeExpired])
 
   async function finish(keySaved: boolean) {
     setFinishing(true)
@@ -44,7 +55,9 @@ export function SetupPage({ status, api = setupApi, signIn = signInAfterSetup, g
       await api.complete({ code, admin, publicUrl, mail, encryptionKeySaved: keySaved })
     } catch (error) {
       setFinishing(false)
-      if (error instanceof SettingsInvalidError) {
+      if (error instanceof SetupCodeInvalidError) {
+        codeExpired('key')
+      } else if (error instanceof SettingsInvalidError) {
         setProblems(error.errors)
         setStep(Object.keys(error.errors).some((key) => key.startsWith('mail.')) ? 'mail' : 'address')
       } else {
@@ -62,7 +75,13 @@ export function SetupPage({ status, api = setupApi, signIn = signInAfterSetup, g
 
   return (
     <SetupFrame step={step}>
-      {step === 'code' && <CodeStep api={api} onVerified={(verified) => { setCode(verified); setStep('admin') }} />}
+      {step === 'code' && (
+        <CodeStep
+          api={api}
+          notice={resumeAt ? 'errors.code_changed' : null}
+          onVerified={(verified) => { setCode(verified); setStep(resumeAt ?? 'admin'); setResumeAt(null) }}
+        />
+      )}
       {step === 'admin' && <AdminStep initial={admin} onNext={(next) => { setAdmin(next); setStep('address') }} />}
       {step === 'address' && (
         <AddressStep
@@ -83,6 +102,7 @@ export function SetupPage({ status, api = setupApi, signIn = signInAfterSetup, g
           initial={mail}
           serverProblems={problems}
           onBack={() => setStep('address')}
+          onCodeExpired={mailCodeExpired}
           onNext={(values) => { setMail(values); setProblems({}); setStep('key') }}
         />
       )}
@@ -94,6 +114,7 @@ export function SetupPage({ status, api = setupApi, signIn = signInAfterSetup, g
           finishing={finishing}
           finishError={finishError}
           onBack={() => setStep('mail')}
+          onCodeExpired={keyCodeExpired}
           onFinish={(keySaved) => void finish(keySaved)}
         />
       )}
