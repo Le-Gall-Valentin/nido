@@ -120,6 +120,7 @@ class InstanceSettingsControllerIT {
         mvc.perform(post("/api/admin/settings/mail/test").cookie(superAdmin).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"values\":{\"mail.host\":\"127.0.0.1\",\"mail.port\":\"1\",\"mail.security\":\"none\",\"mail.from\":\"nido@test.local\"}}"))
             .andExpect(status().is(422))
-            .andExpect(jsonPath("$.error_code").value("MAIL_TEST_FAILED"));
+            .andExpect(jsonPath("$.error_code").value("MAIL_TEST_FAILED"))
+            .andExpect(jsonPath("$.reason").value("connection_refused"));
     }
 }

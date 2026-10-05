@@ -15,4 +15,5 @@ public record SettingProblem(SettingKey key, String code) {
     public static final String CREDENTIALS_GO_TOGETHER = "credentials_go_together";
     public static final String ACCESS_NOT_SHORTER_THAN_SESSION = "access_not_shorter_than_session";
     public static final String PUBLIC_URL_REQUIRED_BY_MAIL = "public_url_required_by_mail";
+    public static final String PASSWORD_REQUIRED_FOR_NEW_SERVER = "password_required_for_new_server";
 }

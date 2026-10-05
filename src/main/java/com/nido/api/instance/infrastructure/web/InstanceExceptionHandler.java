@@ -39,7 +39,8 @@ public class InstanceExceptionHandler {
             case InstanceException.SettingLockedByEnvironment ex ->
                 new Answer(HttpStatus.CONFLICT, "SETTING_LOCKED_BY_ENVIRONMENT", ex.getMessage());
             case InstanceException.MailTestFailed ex ->
-                new Answer(HttpStatus.valueOf(422), "MAIL_TEST_FAILED", ex.detail());
+                new Answer(HttpStatus.valueOf(422), "MAIL_TEST_FAILED",
+                    ex.serverReply() != null ? ex.serverReply() : "The test mail could not be sent.");
             case InstanceException.EncryptionKeyNotSaved ex ->
                 new Answer(HttpStatus.BAD_REQUEST, "ENCRYPTION_KEY_NOT_SAVED", ex.getMessage());
             case InstanceException.InitialAdminRefused ex ->
@@ -52,6 +53,9 @@ public class InstanceExceptionHandler {
         }
         if (e instanceof InstanceException.SettingsInvalid invalid) {
             problem.setProperty("errors", errors(invalid.problems()));
+        }
+        if (e instanceof InstanceException.MailTestFailed failed) {
+            problem.setProperty("reason", failed.reason());
         }
         if (e instanceof InstanceException.SettingLockedByEnvironment locked) {
             problem.setProperty("setting", locked.key().code());

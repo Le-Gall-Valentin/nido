@@ -2,6 +2,7 @@ package com.nido.api.instance.infrastructure.mail;
 
 import com.nido.api.instance.domain.model.InstanceException;
 import com.nido.api.instance.domain.model.MailDraft;
+import com.nido.api.instance.domain.model.MailTestFailure;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.instance.domain.model.SettingProblem;
 import com.nido.api.instance.domain.port.out.MailSettingsCheckPort;
@@ -46,12 +47,12 @@ public class MailSettingsCheckAdapter implements MailSettingsCheckPort {
     }
 
     @Override
-    public Optional<String> sendTest(MailDraft draft, String recipient, Locale locale) {
+    public Optional<MailTestFailure> sendTest(MailDraft draft, String recipient, Locale locale) {
         return switch (check.sendTest(input(draft), new Recipient(recipient, null), locale)) {
             case TestMailOutcome.Sent sent -> Optional.empty();
             case TestMailOutcome.Invalid invalid ->
                 throw new InstanceException.SettingsInvalid(invalid.problems().stream().map(MailSettingsCheckAdapter::problem).toList());
-            case TestMailOutcome.Failed failed -> Optional.of(failed.detail());
+            case TestMailOutcome.Failed failed -> Optional.of(new MailTestFailure(failed.reason(), failed.serverReply()));
         };
     }
 

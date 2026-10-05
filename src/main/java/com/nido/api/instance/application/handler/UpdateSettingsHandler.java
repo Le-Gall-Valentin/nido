@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationService
@@ -75,6 +77,7 @@ public class UpdateSettingsHandler implements UpdateSettingsUseCase, SendSetting
             after = resolve(draft.applyTo(stored));
             problems.addAll(SettingRules.crossProblems(after));
             if (group == SettingGroup.MAIL && after.text(SettingKey.MAIL_HOST).isPresent() && !after.locked(SettingKey.MAIL_HOST)) {
+                passwordLeftBehind(resolve(stored), after, draft).ifPresent(problems::add);
                 problems.addAll(mail.problems(MailDraft.of(after)));
             }
         }
@@ -107,11 +110,33 @@ public class UpdateSettingsHandler implements UpdateSettingsUseCase, SendSetting
             if (tried.text(SettingKey.MAIL_HOST).isEmpty()) {
                 throw new InstanceException.SettingsInvalid(List.of(new SettingProblem(SettingKey.MAIL_HOST, SettingProblem.REQUIRED)));
             }
+            passwordLeftBehind(current, tried, typed).ifPresent(problem -> {
+                throw new InstanceException.SettingsInvalid(List.of(problem));
+            });
             draft = MailDraft.of(tried);
         }
-        mail.sendTest(draft, recipient, locale).ifPresent(detail -> {
-            throw new InstanceException.MailTestFailed(detail);
+        mail.sendTest(draft, recipient, locale).ifPresent(failure -> {
+            throw new InstanceException.MailTestFailed(failure.reason(), failure.serverReply());
         });
+    }
+
+    /**
+     * The saved SMTP password goes only to the server, and with the protection, it was saved for: whoever
+     * changes either must type it again. Otherwise a stolen administrator session could point mail at a
+     * server of its own — the test button, or simply the next mail — and collect the password.
+     */
+    static Optional<SettingProblem> passwordLeftBehind(EffectiveSettings before, EffectiveSettings after, SettingsDraft draft) {
+        if (draft.changes().containsKey(SettingKey.MAIL_PASSWORD) || after.text(SettingKey.MAIL_PASSWORD).isEmpty()
+                || after.text(SettingKey.MAIL_HOST).isEmpty() || after.locked(SettingKey.MAIL_HOST)) {
+            return Optional.empty();
+        }
+        boolean sameServer = before.text(SettingKey.MAIL_HOST)
+                .map(host -> host.equalsIgnoreCase(after.text(SettingKey.MAIL_HOST).orElseThrow()))
+                .orElse(false)
+            && Objects.equals(before.text(SettingKey.MAIL_SECURITY), after.text(SettingKey.MAIL_SECURITY));
+        return sameServer
+            ? Optional.empty()
+            : Optional.of(new SettingProblem(SettingKey.MAIL_PASSWORD, SettingProblem.PASSWORD_REQUIRED_FOR_NEW_SERVER));
     }
 
     private EffectiveSettings resolve(Map<SettingKey, String> stored) {

@@ -2,6 +2,7 @@ package com.nido.api.instance.application.handler;
 
 import com.nido.api.instance.domain.model.InstanceException;
 import com.nido.api.instance.domain.model.MailDraft;
+import com.nido.api.instance.domain.model.MailTestFailure;
 import com.nido.api.instance.domain.model.SettingGroup;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.instance.domain.model.SettingProblem;
@@ -34,10 +35,10 @@ class UpdateSettingsHandlerTest {
 
     static final class FakeMail implements MailSettingsCheckPort {
         List<SettingProblem> problems = List.of();
-        Optional<String> failure = Optional.empty();
+        Optional<MailTestFailure> failure = Optional.empty();
         MailDraft tried;
         @Override public List<SettingProblem> problems(MailDraft draft) { return problems; }
-        @Override public Optional<String> sendTest(MailDraft draft, String recipient, Locale locale) { tried = draft; return failure; }
+        @Override public Optional<MailTestFailure> sendTest(MailDraft draft, String recipient, Locale locale) { tried = draft; return failure; }
     }
 
     private final Map<SettingKey, String> environment = new HashMap<>();
@@ -104,6 +105,7 @@ class UpdateSettingsHandlerTest {
     @Test
     void an_empty_password_field_keeps_the_saved_password_and_reset_clears_it() {
         store.rows.put(SettingKey.PUBLIC_URL, "https://nido.example.com");
+        store.rows.put(SettingKey.MAIL_HOST, "smtp.example.com");
         store.rows.put(SettingKey.MAIL_PASSWORD, "s3cret");
 
         handler.update(SettingGroup.MAIL, Map.of(SettingKey.MAIL_HOST, "smtp.example.com", SettingKey.MAIL_USERNAME, "jane",
@@ -123,16 +125,17 @@ class UpdateSettingsHandlerTest {
     @Test
     void the_test_mail_uses_the_form_with_the_saved_password_and_reports_the_server() {
         store.rows.put(SettingKey.PUBLIC_URL, "https://nido.example.com");
+        store.rows.put(SettingKey.MAIL_HOST, "smtp.example.com");
         store.rows.put(SettingKey.MAIL_PASSWORD, "s3cret");
-        mail.failure = Optional.of("535 Authentication failed");
+        mail.failure = Optional.of(new MailTestFailure("authentication_failed", "535 Authentication failed"));
 
         assertThatThrownBy(() -> handler.sendTest(Map.of(SettingKey.MAIL_HOST, "smtp.example.com", SettingKey.MAIL_USERNAME, "jane",
                 SettingKey.MAIL_PASSWORD, "", SettingKey.MAIL_FROM, "nido@example.com"), "jane@example.com", Locale.FRENCH))
             .isInstanceOfSatisfying(InstanceException.MailTestFailed.class,
-                failed -> assertThat(failed.detail()).isEqualTo("535 Authentication failed"));
+                failed -> assertThat(failed.serverReply()).isEqualTo("535 Authentication failed"));
         assertThat(mail.tried.password()).isEqualTo("s3cret");
         assertThat(mail.tried.host()).isEqualTo("smtp.example.com");
-        assertThat(store.rows).doesNotContainKey(SettingKey.MAIL_HOST);
+        assertThat(store.rows).containsEntry(SettingKey.MAIL_HOST, "smtp.example.com");
     }
 
     @Test
@@ -140,5 +143,52 @@ class UpdateSettingsHandlerTest {
         assertThatThrownBy(() -> handler.sendTest(Map.of(), "jane@example.com", Locale.FRENCH))
             .isInstanceOfSatisfying(InstanceException.SettingsInvalid.class, invalid ->
                 assertThat(invalid.problems()).containsExactly(new SettingProblem(SettingKey.MAIL_HOST, SettingProblem.REQUIRED)));
+    }
+
+    private void aServerIsSaved() {
+        store.rows.put(SettingKey.PUBLIC_URL, "https://nido.example.com");
+        store.rows.put(SettingKey.MAIL_HOST, "smtp.example.com");
+        store.rows.put(SettingKey.MAIL_USERNAME, "jane");
+        store.rows.put(SettingKey.MAIL_PASSWORD, "s3cret");
+        store.rows.put(SettingKey.MAIL_FROM, "nido@example.com");
+    }
+
+    private static final SettingProblem RETYPE =
+        new SettingProblem(SettingKey.MAIL_PASSWORD, SettingProblem.PASSWORD_REQUIRED_FOR_NEW_SERVER);
+
+    @Test
+    void the_saved_password_is_never_tried_on_another_server() {
+        aServerIsSaved();
+
+        assertThatThrownBy(() -> handler.sendTest(Map.of(SettingKey.MAIL_HOST, "smtp.attacker.example",
+                SettingKey.MAIL_PASSWORD, ""), "jane@example.com", Locale.FRENCH))
+            .isInstanceOfSatisfying(InstanceException.SettingsInvalid.class,
+                invalid -> assertThat(invalid.problems()).containsExactly(RETYPE));
+        assertThat(mail.tried).isNull();
+    }
+
+    @Test
+    void the_saved_password_does_not_follow_the_mail_to_another_server_or_a_weaker_protection() {
+        aServerIsSaved();
+
+        assertThatThrownBy(() -> handler.update(SettingGroup.MAIL, Map.of(SettingKey.MAIL_HOST, "smtp.attacker.example"), admin))
+            .isInstanceOfSatisfying(InstanceException.SettingsInvalid.class,
+                invalid -> assertThat(invalid.problems()).contains(RETYPE));
+        assertThatThrownBy(() -> handler.update(SettingGroup.MAIL, Map.of(SettingKey.MAIL_SECURITY, "none"), admin))
+            .isInstanceOfSatisfying(InstanceException.SettingsInvalid.class,
+                invalid -> assertThat(invalid.problems()).contains(RETYPE));
+
+        handler.update(SettingGroup.MAIL, Map.of(SettingKey.MAIL_HOST, "smtp.other.example", SettingKey.MAIL_PASSWORD, "n3w"), admin);
+        assertThat(store.rows).containsEntry(SettingKey.MAIL_PASSWORD, "n3w");
+    }
+
+    @Test
+    void the_saved_password_stays_with_the_server_it_was_saved_for() {
+        aServerIsSaved();
+
+        handler.update(SettingGroup.MAIL, Map.of(SettingKey.MAIL_HOST, "SMTP.example.com", SettingKey.MAIL_SECURITY, "STARTTLS",
+            SettingKey.MAIL_FROM, "Nido <nido@example.com>"), admin);
+
+        assertThat(store.rows).containsEntry(SettingKey.MAIL_PASSWORD, "s3cret");
     }
 }

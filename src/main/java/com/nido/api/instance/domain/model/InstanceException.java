@@ -44,14 +44,17 @@ public abstract sealed class InstanceException extends RuntimeException
         public SettingKey key() { return key; }
     }
 
-    /** {@code detail} is the SMTP server's answer: shown to the administrator, never logged. */
+    /** {@code serverReply}: what the SMTP server answered, when it answered — shown to the administrator, never logged. */
     public static final class MailTestFailed extends InstanceException {
-        private final String detail;
-        public MailTestFailed(String detail) {
-            super("The test mail could not be sent");
-            this.detail = detail;
+        private final String reason;
+        private final String serverReply;
+        public MailTestFailed(String reason, String serverReply) {
+            super("The test mail could not be sent: " + reason);
+            this.reason = reason;
+            this.serverReply = serverReply;
         }
-        public String detail() { return detail; }
+        public String reason() { return reason; }
+        public String serverReply() { return serverReply; }
     }
 
     public static final class EncryptionKeyNotSaved extends InstanceException {

@@ -34,9 +34,9 @@ class CheckMailSettingsHandlerTest {
     @Test
     void a_configuration_that_holds_is_tried() {
         CheckMailSettingsHandler handler = new CheckMailSettingsHandler(input -> List.of(),
-            (input, to, locale) -> new TestMailOutcome.Failed("535 Authentication failed"));
+            (input, to, locale) -> new TestMailOutcome.Failed(TestMailOutcome.AUTHENTICATION_FAILED, "535 Authentication failed"));
 
-        assertThat(handler.sendTest(INPUT, JANE, Locale.FRENCH)).isEqualTo(new TestMailOutcome.Failed("535 Authentication failed"));
+        assertThat(handler.sendTest(INPUT, JANE, Locale.FRENCH)).isEqualTo(new TestMailOutcome.Failed(TestMailOutcome.AUTHENTICATION_FAILED, "535 Authentication failed"));
         assertThat(handler.problems(INPUT)).isEmpty();
     }
 }
