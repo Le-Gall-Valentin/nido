@@ -21,6 +21,7 @@ import { EditUserRoleModal } from './EditUserRoleModal'
 import { DeleteUserModal } from './DeleteUserModal'
 import { ResetTotpModal } from './ResetTotpModal'
 import { ResendInvitationModal } from './ResendInvitationModal'
+import { DeactivateUserModal } from './DeactivateUserModal'
 import { ProtectionRulesPanel } from './ProtectionRulesPanel'
 
 interface AdminUsersPageProps {
@@ -54,6 +55,7 @@ function AdminUsersPageContent() {
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null)
   const [resetTotpTarget, setResetTotpTarget] = useState<AdminUser | null>(null)
   const [resendTarget, setResendTarget] = useState<AdminUser | null>(null)
+  const [deactivateTarget, setDeactivateTarget] = useState<AdminUser | null>(null)
 
   const createUser = useCreateUser()
   const updateUserRole = useUpdateUserRole()
@@ -71,6 +73,11 @@ function AdminUsersPageContent() {
 
   function handleToggle(user: AdminUser) {
     setToggleError(false)
+    // Deactivating cuts someone off and tells them by mail: confirmed first. Reactivating is harmless.
+    if (user.isActive) {
+      setDeactivateTarget(user)
+      return
+    }
     toggleActive.mutate(user, { onError: () => setToggleError(true) })
   }
 
@@ -189,6 +196,7 @@ function AdminUsersPageContent() {
         <EditUserRoleModal
           target={editTarget}
           caller={currentUser}
+          mail={mail}
           onClose={() => setEditTarget(null)}
           onUpdate={(id, role) => updateUserRole.mutateAsync({ id, role })}
           onSuccess={() => setEditTarget(null)}
@@ -198,6 +206,7 @@ function AdminUsersPageContent() {
       {deleteTarget && (
         <DeleteUserModal
           user={deleteTarget}
+          mail={mail}
           onClose={() => setDeleteTarget(null)}
           onDelete={deleteUser.mutateAsync}
           onSuccess={handleDeleteSuccess}
@@ -207,6 +216,7 @@ function AdminUsersPageContent() {
       {resetTotpTarget && (
         <ResetTotpModal
           user={resetTotpTarget}
+          mail={mail}
           onClose={() => setResetTotpTarget(null)}
           onReset={resetTotp.mutateAsync}
           onSuccess={() => setResetTotpTarget(null)}
@@ -219,6 +229,16 @@ function AdminUsersPageContent() {
           mail={mail}
           onClose={() => setResendTarget(null)}
           onResend={resendInvitation.mutateAsync}
+        />
+      )}
+
+      {deactivateTarget && (
+        <DeactivateUserModal
+          user={deactivateTarget}
+          mail={mail}
+          onClose={() => setDeactivateTarget(null)}
+          onDeactivate={(user) => toggleActive.mutateAsync(user)}
+          onSuccess={() => setDeactivateTarget(null)}
         />
       )}
     </div>

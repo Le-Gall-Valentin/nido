@@ -2,16 +2,19 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDeleteModal } from '@/shared/ui'
 import type { AdminUser } from '@/entities/user'
+import type { MailAvailability } from '@/features/password-reset'
 import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
+import { MailNotice } from './MailNotice'
 
 interface DeleteUserModalProps {
   user: AdminUser
+  mail: MailAvailability
   onClose: () => void
   onDelete: (id: string) => Promise<void>
   onSuccess: () => void
 }
 
-export function DeleteUserModal({ user, onClose, onDelete, onSuccess }: DeleteUserModalProps) {
+export function DeleteUserModal({ user, mail, onClose, onDelete, onSuccess }: DeleteUserModalProps) {
   const { t } = useTranslation('adminUsers')
   const [isLoading, setIsLoading] = useState(false)
   const [errorKey, setErrorKey] = useState<string | null>(null)
@@ -56,6 +59,7 @@ export function DeleteUserModal({ user, onClose, onDelete, onSuccess }: DeleteUs
         {' '}·{' '}
         <span className="font-semibold">{t(`user.role.${user.role}`, { ns: 'shell' })}</span>
       </div>
+      <MailNotice user={user} mail={mail} isDeletion />
     </ConfirmDeleteModal>
   )
 }

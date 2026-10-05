@@ -101,6 +101,25 @@
       "rate_limit": "Too many attempts. Please try again later."
     }
   },
+  "deactivate": {
+    "title": "Deactivate {{username}}'s account?",
+    "body": "{{username}} will not be able to sign in while the account stays deactivated. Their data is kept.",
+    "cancel": "Cancel",
+    "submit": "Deactivate",
+    "error": {
+      "forbidden": "You are not allowed to deactivate this account.",
+      "not_found": "User not found.",
+      "server": "Something went wrong. Please try again.",
+      "network": "Network unavailable.",
+      "rate_limit": "Too many attempts. Please try again later."
+    }
+  },
+  "notice": {
+    "mail": "An email will tell {{username}}.",
+    "no_mail": "Mail is not set up: no email will tell {{username}}.",
+    "invited": "{{username}} has not joined Nido yet: no email will be sent.",
+    "invitation_cancelled": "An email will tell {{username}} that their invitation is cancelled."
+  },
   "edit_role": {
     "title": "Edit role of {{username}}",
     "role": "New role",

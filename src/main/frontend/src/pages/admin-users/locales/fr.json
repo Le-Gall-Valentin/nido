@@ -101,6 +101,25 @@
       "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard."
     }
   },
+  "deactivate": {
+    "title": "Désactiver le compte de {{username}} ?",
+    "body": "{{username}} ne pourra plus se connecter tant que son compte restera désactivé. Ses données sont conservées.",
+    "cancel": "Annuler",
+    "submit": "Désactiver",
+    "error": {
+      "forbidden": "Vous n'avez pas les droits nécessaires pour désactiver ce compte.",
+      "not_found": "Utilisateur introuvable.",
+      "server": "Une erreur est survenue. Veuillez réessayer.",
+      "network": "Réseau indisponible.",
+      "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard."
+    }
+  },
+  "notice": {
+    "mail": "Un mail préviendra {{username}}.",
+    "no_mail": "Le mail n'est pas configuré : aucun mail ne préviendra {{username}}.",
+    "invited": "{{username}} n'a pas encore rejoint Nido : aucun mail ne partira.",
+    "invitation_cancelled": "Un mail préviendra {{username}} que son invitation est annulée."
+  },
   "edit_role": {
     "title": "Modifier le rôle de {{username}}",
     "role": "Nouveau rôle",

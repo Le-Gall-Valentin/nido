@@ -2,18 +2,21 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, Dialog, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { User, AdminUser } from '@/entities/user'
+import type { MailAvailability } from '@/features/password-reset'
 import { assignableRoles } from '../lib/permissions'
 import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
+import { MailNotice } from './MailNotice'
 
 interface EditUserRoleModalProps {
   target: AdminUser
+  mail: MailAvailability
   caller: User
   onClose: () => void
   onUpdate: (id: string, role: 'USER' | 'ADMIN') => Promise<void>
   onSuccess: (newRole: 'USER' | 'ADMIN') => void
 }
 
-export function EditUserRoleModal({ target, caller, onClose, onUpdate, onSuccess }: EditUserRoleModalProps) {
+export function EditUserRoleModal({ target, caller, mail, onClose, onUpdate, onSuccess }: EditUserRoleModalProps) {
   const { t } = useTranslation('adminUsers')
 
   const availableRoles = assignableRoles(caller.role)
@@ -77,6 +80,10 @@ export function EditUserRoleModal({ target, caller, onClose, onUpdate, onSuccess
               <option key={r} value={r}>{t(`user.role.${r}`, { ns: 'shell' })}</option>
             ))}
           </select>
+        </div>
+
+        <div className="mt-3">
+          <MailNotice user={target} mail={mail} />
         </div>
 
         {errorKey && (

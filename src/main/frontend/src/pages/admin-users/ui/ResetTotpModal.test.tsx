@@ -32,7 +32,7 @@ function setup(overrides: { onReset?: () => Promise<void> } = {}) {
   const onSuccess = vi.fn()
   const onReset = overrides.onReset ?? vi.fn().mockResolvedValue(undefined)
   const result = render(
-    <ResetTotpModal user={TARGET} onClose={onClose} onReset={onReset} onSuccess={onSuccess} />
+    <ResetTotpModal mail="available" user={TARGET} onClose={onClose} onReset={onReset} onSuccess={onSuccess} />
   )
   return { ...result, onClose, onSuccess, onReset }
 }

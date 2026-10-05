@@ -21,7 +21,7 @@ function setup(overrides: { onDelete?: () => Promise<void> } = {}) {
   const onSuccess = vi.fn()
   const onDelete = overrides.onDelete ?? vi.fn().mockResolvedValue(undefined)
   const result = render(
-    <DeleteUserModal user={TARGET} onClose={onClose} onDelete={onDelete} onSuccess={onSuccess} />
+    <DeleteUserModal mail="available" user={TARGET} onClose={onClose} onDelete={onDelete} onSuccess={onSuccess} />
   )
   return { ...result, onClose, onSuccess, onDelete }
 }

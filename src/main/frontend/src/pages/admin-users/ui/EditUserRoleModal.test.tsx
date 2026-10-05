@@ -45,7 +45,7 @@ function setup(target: AdminUser, caller: User, overrides: { onUpdate?: () => Pr
   const onSuccess = vi.fn()
   const onUpdate = overrides.onUpdate ?? vi.fn().mockResolvedValue(undefined)
   const result = render(
-    <EditUserRoleModal target={target} caller={caller} onClose={onClose} onUpdate={onUpdate} onSuccess={onSuccess} />
+    <EditUserRoleModal mail="available" target={target} caller={caller} onClose={onClose} onUpdate={onUpdate} onSuccess={onSuccess} />
   )
   return { ...result, onClose, onSuccess, onUpdate }
 }

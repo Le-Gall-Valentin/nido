@@ -36,6 +36,7 @@ vi.mock('@/features/password-reset', () => ({ useMailAvailability: () => 'availa
 
 vi.mock('./UsersTable', () => ({
   UsersTable: (props: {
+    users: AdminUser[]
     isLoading: boolean
     onEditRole: (u: AdminUser) => void
     onDelete: (u: AdminUser) => void
@@ -49,7 +50,7 @@ vi.mock('./UsersTable', () => ({
         <button data-testid="trigger-edit" onClick={() => props.onEditRole(MOCK_USER)}>edit</button>
         <button data-testid="trigger-delete" onClick={() => props.onDelete(MOCK_USER)}>delete</button>
         <button data-testid="trigger-totp" onClick={() => props.onResetTotp(MOCK_USER)}>totp</button>
-        <button data-testid="trigger-toggle" onClick={() => props.onToggleActive(MOCK_USER)}>toggle</button>
+        <button data-testid="trigger-toggle" onClick={() => props.onToggleActive(props.users[0])}>toggle</button>
         <button data-testid="trigger-resend" onClick={() => props.onResendInvitation(MOCK_USER)}>resend</button>
       </div>
     )
@@ -81,6 +82,16 @@ vi.mock('./DeleteUserModal', () => ({
     <div data-testid="delete-modal">
       <button onClick={onClose}>close-delete</button>
       <button onClick={onSuccess}>success-delete</button>
+    </div>
+  ),
+}))
+
+vi.mock('./DeactivateUserModal', () => ({
+  DeactivateUserModal: ({ user, onDeactivate, onSuccess }: {
+    user: AdminUser; onDeactivate: (u: AdminUser) => Promise<void>; onSuccess: () => void
+  }) => (
+    <div data-testid="deactivate-modal">
+      <button data-testid="confirm-deactivate" onClick={() => { void onDeactivate(user).then(onSuccess, () => {}) }}>confirm</button>
     </div>
   ),
 }))
@@ -240,20 +251,37 @@ describe('AdminUsersPage — search', () => {
   })
 })
 
-describe('AdminUsersPage — optimistic toggle', () => {
-  it('calls deactivateUser when toggling an active user', async () => {
+describe('AdminUsersPage — activation toggle', () => {
+  it('asks for confirmation before deactivating an active user', async () => {
     const { findByTestId } = setup()
     await findByTestId('users-table')
+
     fireEvent.click(document.querySelector('[data-testid="trigger-toggle"]')!)
+    expect(await findByTestId('deactivate-modal')).not.toBeNull()
+    expect(mockApi.deactivateUser).not.toHaveBeenCalled()
+
+    fireEvent.click(document.querySelector('[data-testid="confirm-deactivate"]')!)
     await waitFor(() => expect(mockApi.deactivateUser).toHaveBeenCalledWith('u1'))
   })
 
-  it('shows mutation_error banner when toggle API fails', async () => {
-    mockApi.deactivateUser.mockRejectedValue(new Error('fail'))
+  it('reactivates an inactive user at once', async () => {
+    mockApi.listUsers.mockResolvedValue({ ...MOCK_PAGE, content: [{ ...MOCK_USER, isActive: false }] })
+    const { findByTestId } = setup()
+    await findByTestId('users-table')
+
+    fireEvent.click(document.querySelector('[data-testid="trigger-toggle"]')!)
+
+    await waitFor(() => expect(mockApi.activateUser).toHaveBeenCalledWith('u1'))
+  })
+
+  it('shows mutation_error banner when a reactivation fails', async () => {
+    mockApi.listUsers.mockResolvedValue({ ...MOCK_PAGE, content: [{ ...MOCK_USER, isActive: false }] })
+    mockApi.activateUser.mockRejectedValue(new Error('fail'))
     const { findByTestId, findByRole } = setup()
     await findByTestId('users-table')
+
     fireEvent.click(document.querySelector('[data-testid="trigger-toggle"]')!)
-    const alert = await findByRole('alert')
-    expect(alert.textContent).toContain('mutation_error')
+
+    expect((await findByRole('alert')).textContent).toContain('mutation_error')
   })
 })
