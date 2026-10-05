@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { SettingSource } from '../model/types'
+import type { SettingSource } from '@/entities/instance-settings'
 
 /** Where a value comes from. A value saved from this page carries no badge: it is the ordinary case. */
 export function SourceBadge({ source, variable }: { source: SettingSource; variable: string }) {

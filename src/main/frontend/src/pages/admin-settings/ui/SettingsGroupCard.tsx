@@ -7,7 +7,7 @@ import { RateLimitError } from '@/shared/lib'
 import { Alert, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { SETTINGS_KEY } from '../model/fields'
 import type { ISettingsApi } from '../model/ISettingsApi'
-import type { InstanceSettings, SettingField, SettingsGroup } from '../model/types'
+import type { InstanceSettings, SettingField, SettingsGroup } from '@/entities/instance-settings'
 import { SettingFieldRow } from './SettingFieldRow'
 
 function initialValues(group: SettingsGroup): Record<string, string> {

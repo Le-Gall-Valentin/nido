@@ -1,4 +1,6 @@
 import './locales'
+export type { SettingSource, SettingField, SettingsGroup, SettingsGroupCode, InstanceSettings } from './model/types'
 export { SettingsInvalidError, SettingLockedError, MailTestFailedError } from './model/errors'
 export { toInstanceError } from './api/toInstanceError'
 export { useSettingWording } from './lib/useSettingWording'
+export { SettingInput } from './ui/SettingInput'

@@ -134,8 +134,8 @@ describe('SetupPage', () => {
     await passTheCode()
     await passTheAdmin()
     click('action.next')
-    type('mail.host', 'smtp.example.com')
-    type('mail.from', 'Nido <nido@example.com>')
+    type('field.mail.host', 'smtp.example.com')
+    type('field.mail.from', 'Nido <nido@example.com>')
 
     click('action.test')
 
@@ -147,9 +147,9 @@ describe('SetupPage', () => {
     await passTheCode()
     await passTheAdmin()
     click('action.next')
-    type('mail.host', 'smtp.example.com')
+    type('field.mail.host', 'smtp.example.com')
 
-    const form = screen.getByLabelText('mail.password').closest('form')
+    const form = screen.getByLabelText('field.mail.password').closest('form')
     expect(form).not.toBeNull()
     fireEvent.submit(form!)
 
@@ -162,10 +162,10 @@ describe('SetupPage', () => {
     await passTheAdmin()
     click('action.next')
 
-    for (const field of ['mail.host', 'mail.port', 'mail.username', 'mail.from']) {
+    for (const field of ['field.mail.host', 'field.mail.port', 'field.mail.username', 'field.mail.from']) {
       expect(screen.getByLabelText(field).getAttribute('autocomplete')).toBe('off')
     }
-    expect(screen.getByLabelText('mail.password').getAttribute('autocomplete')).toBe('new-password')
+    expect(screen.getByLabelText('field.mail.password').getAttribute('autocomplete')).toBe('new-password')
   })
 
   it('says how to keep the key when it cannot be copied, as over plain http', async () => {
@@ -215,7 +215,7 @@ describe('SetupPage', () => {
     click('action.next')
 
     expect(screen.getByText('address.invalid')).not.toBeNull()
-    expect(screen.queryByLabelText('mail.host')).toBeNull()
+    expect(screen.queryByLabelText('field.mail.host')).toBeNull()
   })
 
   it('wants a server before going on with mail, and says where the test went', async () => {
@@ -227,7 +227,7 @@ describe('SetupPage', () => {
     click('action.next')
     expect(screen.getByText('problem.required')).not.toBeNull()
 
-    type('mail.host', 'smtp.example.com')
+    type('field.mail.host', 'smtp.example.com')
     click('action.test')
     expect(await screen.findByText('mail.test_sent:{"recipient":"jane@example.fr"}')).not.toBeNull()
     expect(api.testMail).toHaveBeenCalledWith(expect.objectContaining({ recipient: 'jane@example.fr', language: 'fr' }))
@@ -314,7 +314,7 @@ describe('SetupPage', () => {
     click('action.next')
 
     expect(await screen.findByText('mail.locked')).not.toBeNull()
-    expect(screen.queryByLabelText('mail.host')).toBeNull()
+    expect(screen.queryByLabelText('field.mail.host')).toBeNull()
   })
 
   it('goes back to the address when the server refuses it at the end', async () => {

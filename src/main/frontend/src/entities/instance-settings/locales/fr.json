@@ -22,5 +22,22 @@
     "tls_failed": "La connexion chiffrée a échoué : vérifiez la sécurité et le port.",
     "not_an_smtp_server": "Ce qui répond à cette adresse n'est pas un serveur de mail.",
     "failed": "Le mail n'a pas pu partir."
+  },
+  "field": {
+    "mail.host": "Serveur SMTP",
+    "mail.port": "Port",
+    "mail.security": "Sécurité",
+    "mail.username": "Identifiant SMTP",
+    "mail.password": "Mot de passe SMTP",
+    "mail.from": "Expéditeur",
+    "public-url": "Adresse publique",
+    "sessions.access-token-minutes": "Durée du jeton d'accès (minutes)",
+    "sessions.refresh-token-days": "Durée de la session (jours)",
+    "api.swagger": "Documentation Swagger"
+  },
+  "option": {
+    "starttls": "STARTTLS (port 587)",
+    "tls": "TLS (port 465)",
+    "none": "Aucune"
   }
 }

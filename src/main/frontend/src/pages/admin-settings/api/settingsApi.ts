@@ -1,7 +1,7 @@
 import { toInstanceError } from '@/entities/instance-settings'
 import { client } from '@/shared/api'
 import type { ISettingsApi } from '../model/ISettingsApi'
-import type { InstanceSettings } from '../model/types'
+import type { InstanceSettings } from '@/entities/instance-settings'
 
 export const settingsApi: ISettingsApi = {
   async get() {

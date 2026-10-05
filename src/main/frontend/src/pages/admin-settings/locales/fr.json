@@ -21,23 +21,6 @@
       "description": "La documentation de l'API, pour les développeurs. Elle exige d'être connecté."
     }
   },
-  "field": {
-    "mail.host": "Serveur SMTP",
-    "mail.port": "Port",
-    "mail.security": "Sécurité",
-    "mail.username": "Identifiant SMTP",
-    "mail.password": "Mot de passe SMTP",
-    "mail.from": "Expéditeur",
-    "public-url": "Adresse publique",
-    "sessions.access-token-minutes": "Durée du jeton d'accès (minutes)",
-    "sessions.refresh-token-days": "Durée de la session (jours)",
-    "api.swagger": "Documentation Swagger"
-  },
-  "option": {
-    "starttls": "STARTTLS (port 587)",
-    "tls": "TLS (port 465)",
-    "none": "Aucune"
-  },
   "source": {
     "ENVIRONMENT": "Environnement",
     "DEFAULT": "Par défaut",

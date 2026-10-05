@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { MailTestFailedError, SettingsInvalidError } from '@/entities/instance-settings'
 import { renderWithQuery } from '@/shared/test'
 import type { ISettingsApi } from '../model/ISettingsApi'
-import type { InstanceSettings } from '../model/types'
+import type { InstanceSettings } from '@/entities/instance-settings'
 import { AdminSettingsPage } from './AdminSettingsPage'
 
 vi.mock('react-i18next', () => ({

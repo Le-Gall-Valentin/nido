@@ -22,5 +22,22 @@
     "tls_failed": "The encrypted connection failed: check the security and the port.",
     "not_an_smtp_server": "What answers at this address is not a mail server.",
     "failed": "The email could not be sent."
+  },
+  "field": {
+    "mail.host": "SMTP server",
+    "mail.port": "Port",
+    "mail.security": "Security",
+    "mail.username": "SMTP username",
+    "mail.password": "SMTP password",
+    "mail.from": "Sender",
+    "public-url": "Public address",
+    "sessions.access-token-minutes": "Access token lifetime (minutes)",
+    "sessions.refresh-token-days": "Session lifetime (days)",
+    "api.swagger": "Swagger documentation"
+  },
+  "option": {
+    "starttls": "STARTTLS (port 587)",
+    "tls": "TLS (port 465)",
+    "none": "None"
   }
 }

@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MailTestFailedError, SettingsInvalidError, useSettingWording } from '@/entities/instance-settings'
+import { MailTestFailedError, SettingInput, SettingsInvalidError, useSettingWording } from '@/entities/instance-settings'
 import { useLanguage } from '@/shared/lib'
-import { Alert, Button, CTA_BUTTON_STYLE, Input, PasswordInput } from '@/shared/ui'
+import { Alert, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SettingValues } from '../model/types'
 import { SetupCodeInvalidError } from '../model/errors'
@@ -24,7 +24,6 @@ interface Props {
 }
 
 const DEFAULTS: SettingValues = { 'mail.port': '587', 'mail.security': 'starttls' }
-const SECURITIES = ['starttls', 'tls', 'none'] as const
 
 export function MailStep({ api, code, publicUrl, recipient, locked, initial, serverProblems = {}, onNext, onBack, onCodeExpired }: Props) {
   const { t } = useTranslation('setup')
@@ -37,6 +36,9 @@ export function MailStep({ api, code, publicUrl, recipient, locked, initial, ser
   const [testing, setTesting] = useState(false)
 
   const set = (key: string) => (value: string) => setValues((current) => ({ ...current, [key]: value }))
+  const field = (key: string, placeholder?: string) => (
+    <SettingInput settingKey={key} value={values[key] ?? ''} onChange={set(key)} placeholder={placeholder} />
+  )
   const problem = (key: string) => problems[key] && <p className={FIELD_ERROR_CLASS}>{wording.problem(problems[key])}</p>
 
   async function test() {
@@ -85,36 +87,26 @@ export function MailStep({ api, code, publicUrl, recipient, locked, initial, ser
       <p className={LEAD_CLASS}>{t('mail.lead')}</p>
       <div className="flex flex-col gap-4">
         <div>
-          <Input label={t('mail.host')} name="mail-host" value={values['mail.host'] ?? ''} onChange={(e) => set('mail.host')(e.target.value)} spellCheck={false} autoComplete="off" />
+          {field('mail.host')}
           {problem('mail.host')}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Input label={t('mail.port')} name="mail-port" inputMode="numeric" value={values['mail.port'] ?? ''} onChange={(e) => set('mail.port')(e.target.value)} autoComplete="off" />
+            {field('mail.port')}
             {problem('mail.port')}
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="mail-security" className="text-[13px] font-semibold text-fg-1">{t('mail.security')}</label>
-            <select
-              id="mail-security"
-              value={values['mail.security'] ?? 'starttls'}
-              onChange={(e) => set('mail.security')(e.target.value)}
-              className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3 py-[11px] text-[14.5px] text-fg-0"
-            >
-              {SECURITIES.map((security) => <option key={security} value={security}>{t(`mail.security_${security}`)}</option>)}
-            </select>
-          </div>
+          <div>{field('mail.security')}</div>
         </div>
         <div>
-          <Input label={t('mail.username')} name="mail-username" value={values['mail.username'] ?? ''} onChange={(e) => set('mail.username')(e.target.value)} autoComplete="off" />
+          {field('mail.username')}
           {problem('mail.username')}
         </div>
         <div>
-          <PasswordInput label={t('mail.password')} name="mail-password" value={values['mail.password'] ?? ''} onChange={(e) => set('mail.password')(e.target.value)} autoComplete="new-password" />
+          {field('mail.password')}
           {problem('mail.password')}
         </div>
         <div>
-          <Input label={t('mail.from')} name="mail-from" value={values['mail.from'] ?? ''} placeholder={t('mail.from_placeholder')} onChange={(e) => set('mail.from')(e.target.value)} autoComplete="off" />
+          {field('mail.from', t('mail.from_placeholder'))}
           {problem('mail.from')}
           {problem('public-url')}
         </div>
