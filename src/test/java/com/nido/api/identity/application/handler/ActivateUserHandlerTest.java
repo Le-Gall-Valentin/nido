@@ -1,5 +1,6 @@
 package com.nido.api.identity.application.handler;
 
+import com.nido.api.identity.application.service.AdminGestureNotifier;
 import com.nido.api.identity.domain.model.ActivateUserCommand;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
@@ -25,6 +26,7 @@ class ActivateUserHandlerTest {
 
     @Mock UserRepository userRepository;
     @Mock UserCommandPort userCommandPort;
+    @Mock AdminGestureNotifier notifier;
 
     private ActivateUserHandler handler;
 
@@ -33,7 +35,7 @@ class ActivateUserHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new ActivateUserHandler(userRepository, userCommandPort);
+        handler = new ActivateUserHandler(userRepository, userCommandPort, notifier);
     }
 
     @Test
@@ -111,5 +113,15 @@ class ActivateUserHandlerTest {
 
     private User inactive(UUID id, Role role) {
         return new User(id, "u-" + id, id + "@test.com", role, false, Instant.now(), null);
+    }
+
+    @Test
+    void activate_tells_who_should_hear_of_it() {
+        User target = inactive(targetId, Role.USER);
+        when(userRepository.findById(targetId)).thenReturn(Optional.of(target));
+
+        handler.activate(new ActivateUserCommand(targetId, callerId, Role.ADMIN));
+
+        verify(notifier).reactivated(target, callerId, Role.ADMIN);
     }
 }

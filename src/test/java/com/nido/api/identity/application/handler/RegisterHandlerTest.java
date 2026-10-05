@@ -1,5 +1,6 @@
 package com.nido.api.identity.application.handler;
 
+import com.nido.api.identity.application.service.AdminGestureNotifier;
 import com.nido.api.identity.domain.model.CreateUserProfileCommand;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.InvitationDelivery;
@@ -33,6 +34,7 @@ class RegisterHandlerTest {
     @Mock UserCommandPort userCommandPort;
     @Mock UserRepository userRepository;
     @Mock AccountInvitationPort invitations;
+    @Mock AdminGestureNotifier notifier;
     @Mock TotpRecordInitPort totpRecordInitPort;
     @Mock PersonalSpaceInitPort personalSpaceInitPort;
 
@@ -42,7 +44,7 @@ class RegisterHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new RegisterHandler(userCommandPort, userRepository, invitations, totpRecordInitPort, personalSpaceInitPort);
+        handler = new RegisterHandler(userCommandPort, userRepository, invitations, totpRecordInitPort, personalSpaceInitPort, notifier);
         lenient().when(userRepository.findById(callerId))
             .thenReturn(Optional.of(new User(callerId, "root", "root@test.com", Role.SUPER_ADMIN, true, Instant.now(), null)));
         lenient().when(invitations.invite(any(), any())).thenReturn(new InvitationDelivery.Mailed());
@@ -103,6 +105,7 @@ class RegisterHandlerTest {
 
         assertThat(result.role()).isEqualTo(Role.USER);
         verify(invitations).invite(created.id(), "root");
+        verify(notifier).accountCreated(created, callerId, Role.ADMIN);
     }
 
     @Test

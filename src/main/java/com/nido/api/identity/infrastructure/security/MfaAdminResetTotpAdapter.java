@@ -16,7 +16,7 @@ public class MfaAdminResetTotpAdapter implements MfaAdminResetTotpPort {
     }
 
     @Override
-    public void disableTotpIfEnabled(UUID userId) {
-        adminDisableTotpUseCase.disableIfEnabled(userId);
+    public boolean disableTotpIfEnabled(UUID userId) {
+        return adminDisableTotpUseCase.disableIfEnabled(userId);
     }
 }

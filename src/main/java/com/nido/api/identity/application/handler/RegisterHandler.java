@@ -1,5 +1,6 @@
 package com.nido.api.identity.application.handler;
 
+import com.nido.api.identity.application.service.AdminGestureNotifier;
 import com.nido.api.identity.application.port.in.RegisterUseCase;
 import com.nido.api.identity.domain.model.CreateUserProfileCommand;
 import com.nido.api.identity.domain.model.IdentityException;
@@ -31,17 +32,20 @@ public class RegisterHandler implements RegisterUseCase {
     private final AccountInvitationPort invitations;
     private final TotpRecordInitPort totpRecordInitPort;
     private final PersonalSpaceInitPort personalSpaceInitPort;
+    private final AdminGestureNotifier notifier;
 
     public RegisterHandler(UserCommandPort userCommandPort,
                            UserRepository userRepository,
                            AccountInvitationPort invitations,
                            TotpRecordInitPort totpRecordInitPort,
-                           PersonalSpaceInitPort personalSpaceInitPort) {
+                           PersonalSpaceInitPort personalSpaceInitPort,
+                           AdminGestureNotifier notifier) {
         this.userCommandPort = userCommandPort;
         this.userRepository = userRepository;
         this.invitations = invitations;
         this.totpRecordInitPort = totpRecordInitPort;
         this.personalSpaceInitPort = personalSpaceInitPort;
+        this.notifier = notifier;
     }
 
     /**
@@ -60,6 +64,7 @@ public class RegisterHandler implements RegisterUseCase {
         personalSpaceInitPort.initForUser(user.id());
         String inviterName = userRepository.findById(callerId).map(User::username).orElse(null);
         InvitationDelivery invitation = invitations.invite(user.id(), inviterName);
+        notifier.accountCreated(user, callerId, callerRole);
         log.info("User {} registered with role {} and invited", user.id(), command.role());
         return new RegisteredAccount(user, invitation);
     }

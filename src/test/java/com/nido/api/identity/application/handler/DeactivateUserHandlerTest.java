@@ -1,5 +1,6 @@
 package com.nido.api.identity.application.handler;
 
+import com.nido.api.identity.application.service.AdminGestureNotifier;
 import com.nido.api.identity.domain.model.DeactivateUserCommand;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
@@ -27,6 +28,7 @@ class DeactivateUserHandlerTest {
     @Mock UserRepository userRepository;
     @Mock UserCommandPort userCommandPort;
     @Mock TokenInvalidationPort tokenInvalidationPort;
+    @Mock AdminGestureNotifier notifier;
 
     private DeactivateUserHandler handler;
 
@@ -35,7 +37,7 @@ class DeactivateUserHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new DeactivateUserHandler(userRepository, userCommandPort, tokenInvalidationPort);
+        handler = new DeactivateUserHandler(userRepository, userCommandPort, tokenInvalidationPort, notifier);
     }
 
     @Test
@@ -133,5 +135,15 @@ class DeactivateUserHandlerTest {
 
     private User inactiveUser(UUID id, Role role) {
         return new User(id, "user-" + id, id + "@test.com", role, false, Instant.now(), null);
+    }
+
+    @Test
+    void deactivate_tells_who_should_hear_of_it() {
+        User target = user(targetId, Role.USER);
+        when(userRepository.findById(targetId)).thenReturn(Optional.of(target));
+
+        handler.deactivate(new DeactivateUserCommand(targetId, callerId, Role.ADMIN));
+
+        verify(notifier).deactivated(target, callerId, Role.ADMIN);
     }
 }

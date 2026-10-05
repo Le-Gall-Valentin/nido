@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -180,7 +181,8 @@ class SpaceInvitationNotificationIT {
         mockMvc.perform(delete("/api/users/" + aliceId).cookie(cookieFor(rootId, Role.SUPER_ADMIN)))
             .andExpect(status().isNoContent());
 
-        assertThat(textOf(theOnlyMail())).contains(aliceName
+        // alice is told too, her account being deleted: the invitee's is one of two mails.
+        assertThat(textOf(theMailTo(carolName + "@test.local", 2))).contains(aliceName
             + " a quitté Nido et l’espace « Chez nous » a été supprimé : votre invitation n’est plus valable.");
     }
 
@@ -208,6 +210,14 @@ class SpaceInvitationNotificationIT {
             request.header("Accept-Language", inviterLanguage);
         }
         return mockMvc.perform(request);
+    }
+
+    /** Waits for {@code count} mails and returns the one sent to {@code address} — the others went elsewhere. */
+    private MimeMessage theMailTo(String address, int count) {
+        assertThat(SharedGreenMail.server().waitForIncomingEmail(10_000, count)).isTrue();
+        return Arrays.stream(SharedGreenMail.server().getReceivedMessages())
+            .filter(message -> SpaceNotificationITSupport.recipientOf(message).equals(address))
+            .findFirst().orElseThrow();
     }
 
     private MimeMessage theOnlyMail() {

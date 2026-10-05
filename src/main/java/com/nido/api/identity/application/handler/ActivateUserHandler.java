@@ -1,5 +1,6 @@
 package com.nido.api.identity.application.handler;
 
+import com.nido.api.identity.application.service.AdminGestureNotifier;
 import com.nido.api.identity.application.port.in.ActivateUserUseCase;
 import com.nido.api.identity.domain.model.ActivateUserCommand;
 import com.nido.api.identity.domain.model.IdentityException;
@@ -18,10 +19,13 @@ public class ActivateUserHandler implements ActivateUserUseCase {
 
     private final UserRepository userRepository;
     private final UserCommandPort userCommandPort;
+    private final AdminGestureNotifier notifier;
 
-    public ActivateUserHandler(UserRepository userRepository, UserCommandPort userCommandPort) {
+    public ActivateUserHandler(UserRepository userRepository, UserCommandPort userCommandPort,
+                               AdminGestureNotifier notifier) {
         this.userRepository = userRepository;
         this.userCommandPort = userCommandPort;
+        this.notifier = notifier;
     }
 
     @Override
@@ -35,6 +39,7 @@ public class ActivateUserHandler implements ActivateUserUseCase {
         target.ensureCanBeActivatedBy(command.callerRole());
         target.ensureInactive();
         userCommandPort.activate(command.targetUserId());
+        notifier.reactivated(target, command.callerId(), command.callerRole());
         log.info("User {} activated by caller {} with role {}",
             command.targetUserId(), command.callerId(), command.callerRole());
     }

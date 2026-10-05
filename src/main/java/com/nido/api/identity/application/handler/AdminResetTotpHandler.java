@@ -1,5 +1,6 @@
 package com.nido.api.identity.application.handler;
 
+import com.nido.api.identity.application.service.AdminGestureNotifier;
 import com.nido.api.identity.application.port.in.AdminResetTotpUseCase;
 import com.nido.api.identity.domain.model.AdminResetTotpCommand;
 import com.nido.api.identity.domain.model.IdentityException;
@@ -18,10 +19,13 @@ public class AdminResetTotpHandler implements AdminResetTotpUseCase {
 
     private final UserRepository userRepository;
     private final MfaAdminResetTotpPort mfaResetTotp;
+    private final AdminGestureNotifier notifier;
 
-    public AdminResetTotpHandler(UserRepository userRepository, MfaAdminResetTotpPort mfaResetTotp) {
+    public AdminResetTotpHandler(UserRepository userRepository, MfaAdminResetTotpPort mfaResetTotp,
+                                 AdminGestureNotifier notifier) {
         this.userRepository = userRepository;
         this.mfaResetTotp = mfaResetTotp;
+        this.notifier = notifier;
     }
 
     @Override
@@ -33,7 +37,9 @@ public class AdminResetTotpHandler implements AdminResetTotpUseCase {
         User target = userRepository.findById(command.targetUserId())
             .orElseThrow(IdentityException.UserNotFound::new);
         target.ensureTotpCanBeResetBy(command.callerRole());
-        mfaResetTotp.disableTotpIfEnabled(command.targetUserId());
+        if (mfaResetTotp.disableTotpIfEnabled(command.targetUserId())) {
+            notifier.totpReset(target, command.callerId(), command.callerRole());
+        }
         log.info("TOTP reset for user {} by caller {}", command.targetUserId(), command.callerId());
     }
 }
