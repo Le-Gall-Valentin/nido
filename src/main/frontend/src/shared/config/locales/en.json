@@ -30,7 +30,7 @@
     "out_of_range": "This value is out of the allowed range.",
     "not_a_boolean": "Invalid value.",
     "unknown_security": "Choose STARTTLS, TLS or none.",
-    "invalid_url": "Enter a full address, such as https://nido.example.com.",
+    "invalid_url": "Enter the address of the server, with no path after the name, such as https://nido.example.com.",
     "invalid_address": "Enter an email address, such as Nido <nido@example.com>.",
     "credentials_go_together": "The username and the password go together.",
     "access_not_shorter_than_session": "The access token must last less than the session.",

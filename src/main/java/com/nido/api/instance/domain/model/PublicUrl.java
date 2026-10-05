@@ -9,7 +9,9 @@ import java.util.Optional;
  * The address people reach Nido at: the links in mails start with it, and whether it is https decides
  * the cookies' Secure flag. Plain http is accepted for any host — on a home network the whole app is
  * http anyway, and refusing would only stop the installation; the pages warn instead. Kept without a
- * trailing slash, scheme and host in lower case.
+ * trailing slash, scheme and host in lower case. No path: Nido answers at the root of its host only —
+ * its pages, /api and the cookies' paths all start at / — so the links of an address with a path would
+ * lead nowhere.
  */
 public record PublicUrl(String value) {
 
@@ -29,11 +31,11 @@ public record PublicUrl(String value) {
             return Optional.empty();
         }
         String path = uri.getRawPath() == null ? "" : uri.getRawPath();
-        while (path.endsWith("/")) {
-            path = path.substring(0, path.length() - 1);
+        if (!path.isEmpty() && !path.equals("/")) {
+            return Optional.empty();
         }
         String port = uri.getPort() == -1 ? "" : ":" + uri.getPort();
-        return Optional.of(new PublicUrl(scheme + "://" + uri.getHost().toLowerCase(Locale.ROOT) + port + path));
+        return Optional.of(new PublicUrl(scheme + "://" + uri.getHost().toLowerCase(Locale.ROOT) + port));
     }
 
     public boolean secure() {

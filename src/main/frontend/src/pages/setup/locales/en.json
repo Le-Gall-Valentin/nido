@@ -39,7 +39,7 @@
     "title": "Nido's address",
     "lead": "The address members will type to open Nido. The links in emails start with it.",
     "field": "Public address",
-    "invalid": "Enter a full address, such as https://nido.example.com.",
+    "invalid": "Enter the address of the server, with no path after the name, such as https://nido.example.com.",
     "http_warning": "Without HTTPS, passwords and links travel in clear on the network. The README explains how to turn HTTPS on.",
     "locked": "This address is set by the server's configuration (NIDO_APP_URL)."
   },

@@ -39,7 +39,7 @@
     "title": "L'adresse de Nido",
     "lead": "L'adresse que les membres taperont pour ouvrir Nido. Les liens des mails commencent par elle.",
     "field": "Adresse publique",
-    "invalid": "Saisissez une adresse complète, comme https://nido.example.com.",
+    "invalid": "Saisissez l'adresse du serveur, sans chemin après le nom, comme https://nido.example.com.",
     "http_warning": "Sans HTTPS, les mots de passe et les liens circulent en clair sur le réseau. Le fichier README explique comment activer HTTPS.",
     "locked": "Cette adresse est définie par la configuration du serveur (NIDO_APP_URL)."
   },

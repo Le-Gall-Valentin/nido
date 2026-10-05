@@ -16,7 +16,6 @@ class PublicUrlTest {
         "HTTPS://nido.example.com,         https://nido.example.com",
         "http://192.168.1.10:8080,         http://192.168.1.10:8080",
         "http://localhost:5173/,           http://localhost:5173",
-        "https://example.com/nido/,        https://example.com/nido",
         "'  https://nido.example.com  ',   https://nido.example.com",
     })
     void an_address_is_kept_in_one_canonical_form(String typed, String kept) {
@@ -26,7 +25,9 @@ class PublicUrlTest {
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {"  ", "nido.example.com", "ftp://nido.example.com", "https://", "https://jane:pw@nido.example.com",
-        "https://nido.example.com/?a=b", "https://nido.example.com/#top", "mailto:jane@example.com", "https://exa mple.com"})
+        "https://nido.example.com/?a=b", "https://nido.example.com/#top", "mailto:jane@example.com", "https://exa mple.com",
+        // Nido answers at the root of its host only: its pages, /api and the cookies' paths all start at /.
+        "https://example.com/nido", "https://example.com/nido/"})
     void anything_else_is_not_an_address(String typed) {
         assertThat(PublicUrl.parse(typed)).isEmpty();
     }

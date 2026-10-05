@@ -30,7 +30,7 @@
     "out_of_range": "Cette valeur est hors des limites permises.",
     "not_a_boolean": "Valeur invalide.",
     "unknown_security": "Choisissez STARTTLS, TLS ou aucune.",
-    "invalid_url": "Saisissez une adresse complète, comme https://nido.example.com.",
+    "invalid_url": "Saisissez l'adresse du serveur, sans chemin après le nom, comme https://nido.example.com.",
     "invalid_address": "Saisissez une adresse mail, comme Nido <nido@example.com>.",
     "credentials_go_together": "L'identifiant et le mot de passe vont ensemble.",
     "access_not_shorter_than_session": "Le jeton d'accès doit durer moins longtemps que la session.",
