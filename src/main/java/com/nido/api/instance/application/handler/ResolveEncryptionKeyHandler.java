@@ -30,15 +30,19 @@ public class ResolveEncryptionKeyHandler implements ResolveEncryptionKeyUseCase 
     @Override
     @Transactional
     public String resolve(Optional<String> configuredKey) {
-        Optional<ProvidedKey> provided = configuredKey
+        Optional<ProvidedKey> configured = configuredKey
             .filter(key -> !key.isBlank())
-            .map(key -> new ProvidedKey(key, "NIDO_ENCRYPTION_SECRET"))
+            .map(key -> new ProvidedKey(key, "NIDO_ENCRYPTION_SECRET"));
+        Optional<ProvidedKey> provided = configured
             .or(() -> keyFile.read().map(key -> new ProvidedKey(key, keyFile.location())));
+        // A key of the data directory is the one Nido generated — or one put there in its place: the setup
+        // shows it, even when the start that wrote it stopped before recording its fingerprint.
+        boolean fromDataDirectory = configured.isEmpty() && provided.isPresent();
         InstanceState state = instanceState.load();
         return switch (EncryptionKeyDecision.decide(provided, state, keyFile.location())) {
             case EncryptionKeyDecision.Use use -> use.key();
             case EncryptionKeyDecision.RecordFingerprint record -> {
-                instanceState.recordFingerprint(KeyFingerprint.of(record.key()), false);
+                instanceState.recordFingerprint(KeyFingerprint.of(record.key()), fromDataDirectory);
                 log.info("Encryption key fingerprint recorded: from now on, a start with another key is refused");
                 yield record.key();
             }

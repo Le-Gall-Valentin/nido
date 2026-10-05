@@ -82,6 +82,17 @@ class ResolveEncryptionKeyHandlerTest {
     }
 
     @Test
+    void a_key_found_in_the_data_directory_without_fingerprint_is_shown_as_generated() {
+        // The start that wrote it stopped before recording its fingerprint: the setup must still show it.
+        file.content = "generated-key-of-forty-four-characters-xxxx=";
+
+        handler.resolve(Optional.empty());
+
+        assertThat(state.generated).isTrue();
+        assertThat(state.fingerprint.matches(file.content)).isTrue();
+    }
+
+    @Test
     void a_refusal_stops_the_start() {
         state.setupCompleted = true;
 
