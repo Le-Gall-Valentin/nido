@@ -64,6 +64,8 @@ export function SettingFieldRow({ field, value, problem, busy, onChange, onReset
         value={value}
         disabled={locked}
         inputMode={kind.kind === 'number' ? 'numeric' : undefined}
+        // Next to a password field, a password manager takes any text field for the user's own sign-in.
+        autoComplete="off"
         spellCheck={false}
         title={locked ? t('source.environment_hint', { variable: field.variable }) : undefined}
         onChange={(event) => onChange(event.target.value)}

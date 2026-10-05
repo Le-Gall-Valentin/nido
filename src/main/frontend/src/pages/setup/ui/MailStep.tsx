@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MailTestFailedError, SettingsInvalidError, useLanguage } from '@/shared/lib'
 import { Alert, Button, CTA_BUTTON_STYLE, Input, PasswordInput } from '@/shared/ui'
@@ -53,7 +53,8 @@ export function MailStep({ api, code, publicUrl, recipient, locked, initial, ser
     }
   }
 
-  function next() {
+  function submit(event: FormEvent) {
+    event.preventDefault()
     if (!values['mail.host']?.trim()) {
       setProblems({ 'mail.host': 'required' })
       return
@@ -75,17 +76,17 @@ export function MailStep({ api, code, publicUrl, recipient, locked, initial, ser
   }
 
   return (
-    <div>
+    <form onSubmit={submit} noValidate>
       <h1 className={TITLE_CLASS}>{t('mail.title')}</h1>
       <p className={LEAD_CLASS}>{t('mail.lead')}</p>
       <div className="flex flex-col gap-4">
         <div>
-          <Input label={t('mail.host')} name="mail-host" value={values['mail.host'] ?? ''} onChange={(e) => set('mail.host')(e.target.value)} spellCheck={false} />
+          <Input label={t('mail.host')} name="mail-host" value={values['mail.host'] ?? ''} onChange={(e) => set('mail.host')(e.target.value)} spellCheck={false} autoComplete="off" />
           {problem('mail.host')}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Input label={t('mail.port')} name="mail-port" inputMode="numeric" value={values['mail.port'] ?? ''} onChange={(e) => set('mail.port')(e.target.value)} />
+            <Input label={t('mail.port')} name="mail-port" inputMode="numeric" value={values['mail.port'] ?? ''} onChange={(e) => set('mail.port')(e.target.value)} autoComplete="off" />
             {problem('mail.port')}
           </div>
           <div className="flex flex-col gap-1.5">
@@ -109,7 +110,7 @@ export function MailStep({ api, code, publicUrl, recipient, locked, initial, ser
           {problem('mail.password')}
         </div>
         <div>
-          <Input label={t('mail.from')} name="mail-from" value={values['mail.from'] ?? ''} placeholder={t('mail.from_placeholder')} onChange={(e) => set('mail.from')(e.target.value)} />
+          <Input label={t('mail.from')} name="mail-from" value={values['mail.from'] ?? ''} placeholder={t('mail.from_placeholder')} onChange={(e) => set('mail.from')(e.target.value)} autoComplete="off" />
           {problem('mail.from')}
           {problem('public-url')}
         </div>
@@ -121,9 +122,9 @@ export function MailStep({ api, code, publicUrl, recipient, locked, initial, ser
         <Button type="button" onClick={onBack}>{t('action.back')}</Button>
         <div className="flex flex-col-reverse gap-2 sm:flex-row">
           <Button type="button" onClick={() => onNext(null)}>{t('action.later')}</Button>
-          <Button type="button" className="border-transparent" style={CTA_BUTTON_STYLE} onClick={next}>{t('action.next')}</Button>
+          <Button type="submit" className="border-transparent" style={CTA_BUTTON_STYLE}>{t('action.next')}</Button>
         </div>
       </div>
-    </div>
+    </form>
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { PASSWORD_RESET_CAPABILITY_KEY } from '@/features/password-reset'
@@ -78,6 +78,11 @@ export function SettingsGroupCard({ group, api }: { group: SettingsGroup; api: I
     }
   }
 
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (editable && !busy) void run(() => api.update(group.group, toSend(group.fields, values)))
+  }
+
   const publicUrl = values['public-url'] ?? ''
 
   return (
@@ -85,52 +90,52 @@ export function SettingsGroupCard({ group, api }: { group: SettingsGroup; api: I
       <h2 id={titleId} className="text-[17px] font-semibold text-fg-0">{t(`group.${group.group}.title`)}</h2>
       <p className="mt-1 text-[13.5px] leading-relaxed text-fg-2">{t(`group.${group.group}.description`)}</p>
 
-      <div className="mt-5 flex flex-col gap-4">
-        {group.fields.map((field) => (
-          <SettingFieldRow
-            key={field.key}
-            field={field}
-            value={values[field.key] ?? ''}
-            problem={problems[field.key]}
-            busy={busy}
-            onChange={(value) => setValues((current) => ({ ...current, [field.key]: value }))}
-            onReset={() => void run(() => api.reset(group.group, field.key))}
-          />
-        ))}
-      </div>
-
-      {group.group === 'public-url' && publicUrl.toLowerCase().startsWith('http://') && (
-        <Alert variant="warning" className="mt-4">{t('public_url.http_warning')}</Alert>
-      )}
-      {group.group === 'public-url' && publicUrl.toLowerCase().startsWith('https://') && window.location.protocol === 'http:' && (
-        <Alert variant="warning" className="mt-4">{t('public_url.https_from_http', { url: publicUrl })}</Alert>
-      )}
-      {group.group === 'mail' && problems['public-url'] && (
-        <p className="mt-3 text-[12.5px] text-status-red">{t(`common:setting_problem.${problems['public-url']}`)}</p>
-      )}
-
-      {notice && <Alert variant="success" className="mt-4">{notice}</Alert>}
-      {failure && <Alert variant="error" className="mt-4">{failure}</Alert>}
-
-      {editable && (
-        <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
-          {group.group === 'mail' && mailHost?.source === 'DATABASE' && (
-            <Button type="button" disabled={busy} onClick={() => void run(() => api.reset('mail', 'mail.host'))}>{t('action.disable_mail')}</Button>
-          )}
-          {group.group === 'mail' && (
-            <Button type="button" disabled={busy} onClick={() => void sendTest()}>{t('action.test')}</Button>
-          )}
-          <Button
-            type="button"
-            className="border-transparent"
-            style={CTA_BUTTON_STYLE}
-            isLoading={busy}
-            onClick={() => void run(() => api.update(group.group, toSend(group.fields, values)))}
-          >
-            {t('action.save')}
-          </Button>
+      {/* A form, so that Enter saves the block and the browser knows what the password belongs to. */}
+      <form onSubmit={submit} noValidate>
+        <div className="mt-5 flex flex-col gap-4">
+          {group.fields.map((field) => (
+            <SettingFieldRow
+              key={field.key}
+              field={field}
+              value={values[field.key] ?? ''}
+              problem={problems[field.key]}
+              busy={busy}
+              onChange={(value) => setValues((current) => ({ ...current, [field.key]: value }))}
+              onReset={() => void run(() => api.reset(group.group, field.key))}
+            />
+          ))}
         </div>
-      )}
+
+        {group.group === 'public-url' && publicUrl.toLowerCase().startsWith('http://') && (
+          <Alert variant="warning" className="mt-4">{t('public_url.http_warning')}</Alert>
+        )}
+        {group.group === 'public-url' && publicUrl.toLowerCase().startsWith('https://') && window.location.protocol === 'http:' && (
+          <Alert variant="warning" className="mt-4">{t('public_url.https_from_http', { url: publicUrl })}</Alert>
+        )}
+        {group.group === 'mail' && problems['public-url'] && (
+          <p className="mt-3 text-[12.5px] text-status-red">{t(`common:setting_problem.${problems['public-url']}`)}</p>
+        )}
+
+        {notice && <Alert variant="success" className="mt-4">{notice}</Alert>}
+        {failure && <Alert variant="error" className="mt-4">{failure}</Alert>}
+
+        {/* The test stays when the environment sets the mail: it is how to check that configuration. */}
+        {(editable || group.group === 'mail') && (
+          <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+            {group.group === 'mail' && mailHost?.source === 'DATABASE' && (
+              <Button type="button" disabled={busy} onClick={() => void run(() => api.reset('mail', 'mail.host'))}>{t('action.disable_mail')}</Button>
+            )}
+            {group.group === 'mail' && (
+              <Button type="button" disabled={busy} onClick={() => void sendTest()}>{t('action.test')}</Button>
+            )}
+            {editable && (
+              <Button type="submit" className="border-transparent" style={CTA_BUTTON_STYLE} isLoading={busy}>
+                {t('action.save')}
+              </Button>
+            )}
+          </div>
+        )}
+      </form>
     </section>
   )
 }

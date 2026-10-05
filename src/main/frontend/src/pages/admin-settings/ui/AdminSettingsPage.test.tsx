@@ -104,6 +104,43 @@ describe('AdminSettingsPage', () => {
     expect(api.testMail).toHaveBeenCalledWith(expect.objectContaining({ 'mail.host': 'smtp.example.com' }))
   })
 
+  it('tests the mail the environment sets, though nothing in it can be changed here', async () => {
+    const locked: InstanceSettings = {
+      groups: SETTINGS.groups.map((group) => group.group !== 'mail' ? group : {
+        ...group,
+        fields: group.fields.map((field) => ({ ...field, source: 'ENVIRONMENT' as const })),
+      }),
+    }
+    const api = open({ get: vi.fn().mockResolvedValue(locked) })
+    await screen.findByRole('region', { name: 'group.mail.title' })
+
+    expect(card('mail').queryByRole('button', { name: 'action.save' })).toBeNull()
+    fireEvent.click(card('mail').getByRole('button', { name: 'action.test' }))
+
+    await waitFor(() => expect(api.testMail).toHaveBeenCalledWith({}))
+    expect(await card('mail').findByText('mail.test_sent')).not.toBeNull()
+  })
+
+  it('keeps the password in the form of its block, where Enter saves the block', async () => {
+    const api = open()
+    await screen.findByRole('region', { name: 'group.mail.title' })
+
+    const form = card('mail').getByLabelText('field.mail.password').closest('form')
+    expect(form).not.toBeNull()
+    fireEvent.submit(form!)
+
+    await waitFor(() => expect(api.update).toHaveBeenCalledWith('mail', expect.objectContaining({ 'mail.host': 'smtp.example.com' })))
+  })
+
+  it('keeps password managers from filling the administrator\'s own sign-in into the mail server fields', async () => {
+    open()
+    await screen.findByRole('region', { name: 'group.mail.title' })
+
+    expect(card('mail').getByLabelText('field.mail.username').getAttribute('autocomplete')).toBe('off')
+    expect(card('mail').getByLabelText('field.mail.host').getAttribute('autocomplete')).toBe('off')
+    expect(card('mail').getByLabelText('field.mail.password').getAttribute('autocomplete')).toBe('new-password')
+  })
+
   it('clears the saved password on request', async () => {
     const api = open()
     await screen.findByRole('region', { name: 'group.mail.title' })

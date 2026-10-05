@@ -141,6 +141,32 @@ describe('SetupPage', () => {
     expect(await screen.findByText('common:mail_failure.authentication_failed — 535 Authentication failed')).not.toBeNull()
   })
 
+  it('keeps the mail password in a form, where Enter moves on like Continue', async () => {
+    open()
+    await passTheCode()
+    await passTheAdmin()
+    click('action.next')
+    type('mail.host', 'smtp.example.com')
+
+    const form = screen.getByLabelText('mail.password').closest('form')
+    expect(form).not.toBeNull()
+    fireEvent.submit(form!)
+
+    expect(await screen.findByText('the-generated-key')).not.toBeNull()
+  })
+
+  it('keeps password managers from filling the new administrator into the mail server fields', async () => {
+    open()
+    await passTheCode()
+    await passTheAdmin()
+    click('action.next')
+
+    for (const field of ['mail.host', 'mail.port', 'mail.username', 'mail.from']) {
+      expect(screen.getByLabelText(field).getAttribute('autocomplete')).toBe('off')
+    }
+    expect(screen.getByLabelText('mail.password').getAttribute('autocomplete')).toBe('new-password')
+  })
+
   it('asks nothing about mail when the server configuration sets it', async () => {
     open(fakeApi(), { ...OPEN, mailLocked: true })
     await passTheCode()
