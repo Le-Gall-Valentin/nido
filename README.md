@@ -79,9 +79,9 @@ Pin the version with `NIDO_VERSION=0.12.0` in `.env`, so that `pull` never moves
 
 Back up two things, **and keep them apart**:
 
-- **the database**: `docker compose exec postgres pg_dump -U nido nido > nido.sql`;
+- **the database**: `docker compose exec -T postgres pg_dump -U nido nido > nido.sql`;
 - **the encryption key**: the one the setup showed you, or the file `/data/secrets/encryption-key` of the
-  `nido_data` volume.
+  `nido_data` volume — `docker compose cp nido:/data/secrets/encryption-key ./nido-encryption-key` copies it out.
 
 Nido encrypts sensitive data with that key, and keeps the key out of the database on purpose: a stolen
 database dump alone reveals nothing. Stored together, the two would undo that.
@@ -119,8 +119,8 @@ then stays out of `docker inspect`.
 ## I can't sign in any more
 
 Most often, Nido's address was set to `https://…` before HTTPS worked: the browser refuses the cookies
-over plain http. Add `NIDO_COOKIE_SECURE=false` to the `environment` of the `nido` service, restart, sign
-in, fix the address on the settings page, then remove the variable.
+over plain http. Add `NIDO_COOKIE_SECURE=false` to the `.env` next to `compose.yaml`, `docker compose up -d`,
+sign in, fix the address on the settings page, then remove the line and `docker compose up -d` again.
 
 ## Development
 

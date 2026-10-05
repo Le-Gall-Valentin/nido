@@ -87,6 +87,9 @@ services:
       # private address Tomcat would otherwise trust, letting any client pick the address its rate limits
       # count. Behind a proxy of your own on this machine, see .env.example.
       SERVER_TOMCAT_REMOTEIP_INTERNALPROXIES: ${NIDO_TRUSTED_PROXIES:-172\.31\.250\.10}
+      # Empty: the cookies are Secure when Nido's address is https. NIDO_COOKIE_SECURE=false in .env is
+      # the way back in after an https address was saved before HTTPS worked — see the README.
+      NIDO_COOKIE_SECURE: ${NIDO_COOKIE_SECURE:-}
     ports:
       - "${NIDO_LISTEN:-0.0.0.0}:${NIDO_PORT:-8080}:8080"
     volumes:
