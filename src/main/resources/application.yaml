@@ -10,6 +10,12 @@ server:
 spring:
   application:
     name: nido
+  # Docker secrets: every file under /run/secrets is read as the variable it is named after
+  # (/run/secrets/NIDO_DB_PASSWORD → NIDO_DB_PASSWORD). A secret passed this way stays out of
+  # `docker inspect` and out of the process environment. A variable of the same name still wins.
+  # Optional: the directory does not exist outside a container.
+  config:
+    import: optional:configtree:/run/secrets/
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
@@ -86,7 +92,7 @@ springdoc:
 
 NIDO:
   jwt:
-    secret: ${NIDO_JWT_SECRET}
+    secret: ${NIDO_JWT_SECRET:}
     expiry-minutes: ${NIDO_JWT_EXPIRY_MINUTES:15}
   refresh-token:
     expiry-days: ${NIDO_REFRESH_TOKEN_EXPIRY_DAYS:30}

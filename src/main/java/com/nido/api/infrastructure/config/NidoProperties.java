@@ -23,7 +23,7 @@ public record NidoProperties(
 ) {
 
     public record JwtProperties(
-        @NotBlank String secret,
+        String secret,
         @Positive @DefaultValue("15") int expiryMinutes,
         @DefaultValue("nido") String issuer,
         @DefaultValue("nido") String audience
