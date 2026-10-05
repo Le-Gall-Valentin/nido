@@ -85,6 +85,20 @@ describe('AdminSettingsPage', () => {
     expect(await card('sessions').findByText('saved')).not.toBeNull()
   })
 
+  it('keeps what is being typed in a block when another block is saved', async () => {
+    const saved = structuredClone(SETTINGS)
+    saved.groups[3].fields[0] = { ...saved.groups[3].fields[0], value: 'true', source: 'DATABASE' }
+    open({ update: vi.fn().mockResolvedValue(saved) })
+    await screen.findByRole('region', { name: 'group.sessions.title' })
+
+    fireEvent.change(card('sessions').getByLabelText('field.sessions.access-token-minutes'), { target: { value: '45' } })
+    fireEvent.click(card('api').getByRole('switch'))
+    fireEvent.click(card('api').getByRole('button', { name: 'action.save' }))
+
+    expect(await card('api').findByText('saved')).not.toBeNull()
+    expect((card('sessions').getByLabelText('field.sessions.access-token-minutes') as HTMLInputElement).value).toBe('45')
+  })
+
   it('shows the problem under its field', async () => {
     open({ update: vi.fn().mockRejectedValue(new SettingsInvalidError({ 'sessions.access-token-minutes': 'out_of_range' })) })
     await screen.findByRole('region', { name: 'group.sessions.title' })
