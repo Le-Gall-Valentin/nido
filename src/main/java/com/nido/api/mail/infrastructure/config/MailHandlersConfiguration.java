@@ -1,10 +1,12 @@
 package com.nido.api.mail.infrastructure.config;
 
 import com.nido.api.mail.application.handler.CancelPendingMailsHandler;
+import com.nido.api.mail.application.handler.CheckMailSettingsHandler;
 import com.nido.api.mail.application.handler.DispatchPendingMailsHandler;
 import com.nido.api.mail.application.handler.MailAvailabilityHandler;
 import com.nido.api.mail.application.handler.SendMailHandler;
 import com.nido.api.mail.application.port.in.CancelPendingMailsUseCase;
+import com.nido.api.mail.application.port.in.CheckMailSettingsUseCase;
 import com.nido.api.mail.application.port.in.DispatchPendingMailsUseCase;
 import com.nido.api.mail.application.port.in.MailAvailabilityQuery;
 import com.nido.api.mail.application.port.in.SendMailUseCase;
@@ -13,7 +15,9 @@ import com.nido.api.mail.domain.port.out.MailConfigurationPort;
 import com.nido.api.mail.domain.port.out.MailDispatchTriggerPort;
 import com.nido.api.mail.domain.port.out.MailOutboxPort;
 import com.nido.api.mail.domain.port.out.MailRendererPort;
+import com.nido.api.mail.domain.port.out.MailSettingsValidatorPort;
 import com.nido.api.mail.domain.port.out.MailTransportPort;
+import com.nido.api.mail.domain.port.out.TestMailPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -47,5 +51,10 @@ public class MailHandlersConfiguration {
     @Bean
     CancelPendingMailsUseCase cancelPendingMailsUseCase(MailOutboxPort outbox) {
         return new CancelPendingMailsHandler(outbox);
+    }
+
+    @Bean
+    CheckMailSettingsUseCase checkMailSettingsUseCase(MailSettingsValidatorPort validator, TestMailPort testMail) {
+        return new CheckMailSettingsHandler(validator, testMail);
     }
 }
