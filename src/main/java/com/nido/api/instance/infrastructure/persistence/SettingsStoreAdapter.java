@@ -40,7 +40,13 @@ public class SettingsStoreAdapter implements SettingsStorePort {
 
     private final JdbcClient jdbc;
     private final TextEncryptor encryptor;
-    private final AtomicReference<Map<SettingKey, String>> cache = new AtomicReference<>();
+    /**
+     * The values, or none to read again. A fresh holder at each change: a read kept only if the holder
+     * it started from is still in place, so a query that ran before a change committed never caches.
+     */
+    private record Cached(Map<SettingKey, String> values) {}
+
+    private final AtomicReference<Cached> cache = new AtomicReference<>(new Cached(null));
 
     @Autowired
     public SettingsStoreAdapter(JdbcClient jdbc, EncryptionKey encryptionKey) {
@@ -54,22 +60,27 @@ public class SettingsStoreAdapter implements SettingsStorePort {
 
     @Override
     public Map<SettingKey, String> load() {
-        Map<SettingKey, String> cached = cache.get();
-        if (cached != null) {
-            return cached;
+        Cached seen = cache.get();
+        if (seen.values() != null) {
+            return seen.values();
         }
+        Map<SettingKey, String> values = read();
+        cache.compareAndSet(seen, new Cached(values));
+        return values;
+    }
+
+    /** The rows as they are now. */
+    Map<SettingKey, String> read() {
         EnumMap<SettingKey, String> loaded = new EnumMap<>(SettingKey.class);
         jdbc.sql("SELECT key, value FROM instance_settings")
             .query((rs, rowNum) -> Map.entry(rs.getString("key"), rs.getString("value")))
             .list()
-            .forEach(row -> SettingKey.fromCode(row.getKey()).ifPresent(key -> read(key, row.getValue())
+            .forEach(row -> SettingKey.fromCode(row.getKey()).ifPresent(key -> decode(key, row.getValue())
                 .ifPresent(value -> loaded.put(key, value))));
-        Map<SettingKey, String> frozen = Collections.unmodifiableMap(loaded);
-        cache.set(frozen);
-        return frozen;
+        return Collections.unmodifiableMap(loaded);
     }
 
-    private Optional<String> read(SettingKey key, String stored) {
+    private Optional<String> decode(SettingKey key, String stored) {
         if (!key.secret()) {
             return Optional.of(stored);
         }
@@ -101,13 +112,13 @@ public class SettingsStoreAdapter implements SettingsStorePort {
 
     private void forgetWhenDone() {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            cache.set(null);
+            cache.set(new Cached(null));
             return;
         }
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCompletion(int status) {
-                cache.set(null);
+                cache.set(new Cached(null));
             }
         });
     }

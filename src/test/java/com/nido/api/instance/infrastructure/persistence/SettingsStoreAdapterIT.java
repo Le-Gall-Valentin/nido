@@ -3,6 +3,7 @@ package com.nido.api.instance.infrastructure.persistence;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.instance.InstanceSettingsTestSupport;
 import com.nido.api.instance.domain.model.SettingKey;
+import com.nido.api.shared.security.EncryptionKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,6 +26,7 @@ class SettingsStoreAdapterIT {
     @Autowired SettingsStoreAdapter store;
     @Autowired JdbcClient jdbc;
     @Autowired TransactionTemplate transactions;
+    @Autowired EncryptionKey encryptionKey;
 
     @AfterEach
     void clean() {
@@ -67,6 +70,27 @@ class SettingsStoreAdapterIT {
             status.setRollbackOnly();
         });
         assertThat(store.load()).containsEntry(SettingKey.MAIL_HOST, "committed");
+    }
+
+    @Test
+    void a_read_that_raced_a_change_does_not_keep_the_old_values() {
+        store.save(Map.of(SettingKey.MAIL_HOST, Optional.of("before")), null, Instant.now());
+        AtomicBoolean raced = new AtomicBoolean();
+        SettingsStoreAdapter racing = new SettingsStoreAdapter(jdbc, encryptionKey) {
+            @Override
+            Map<SettingKey, String> read() {
+                Map<SettingKey, String> seen = super.read();
+                if (raced.compareAndSet(false, true)) {
+                    // Another request saves and commits between this one's query and its caching.
+                    transactions.executeWithoutResult(status ->
+                        save(Map.of(SettingKey.MAIL_HOST, Optional.of("after")), null, Instant.now()));
+                }
+                return seen;
+            }
+        };
+
+        assertThat(racing.load()).containsEntry(SettingKey.MAIL_HOST, "before");
+        assertThat(racing.load()).containsEntry(SettingKey.MAIL_HOST, "after");
     }
 
     @Test
