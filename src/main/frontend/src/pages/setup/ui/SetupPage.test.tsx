@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { MailTestFailedError, SettingsInvalidError } from '@/shared/lib'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SetupStatus } from '../model/types'
-import { SetupAlreadyDoneError, SetupCodeInvalidError } from '../model/errors'
+import { AdminRefusedError, SetupAlreadyDoneError, SetupCodeInvalidError } from '../model/errors'
 import { SetupPage } from './SetupPage'
 
 vi.mock('react-i18next', () => ({
@@ -292,6 +292,19 @@ describe('SetupPage', () => {
 
     expect(await screen.findByText('the-generated-key')).not.toBeNull()
     expect(encryptionKey).toHaveBeenLastCalledWith('NEW1-NEW2-NEW3')
+  })
+
+  it('goes back to the administrator when the server refuses it at the end', async () => {
+    open(fakeApi({ complete: vi.fn().mockRejectedValue(new AdminRefusedError()) }))
+    await passTheCode()
+    await passTheAdmin()
+    click('action.next')
+    click('action.later')
+    fireEvent.click(await screen.findByLabelText('key.saved'))
+    click('action.finish')
+
+    expect(await screen.findByText('errors.admin_refused')).not.toBeNull()
+    expect((screen.getByLabelText('admin.username') as HTMLInputElement).value).toBe('jane')
   })
 
   it('asks nothing about mail when the server configuration sets it', async () => {

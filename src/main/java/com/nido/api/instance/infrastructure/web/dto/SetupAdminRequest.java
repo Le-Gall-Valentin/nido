@@ -5,12 +5,12 @@ import com.nido.api.shared.validation.StrongPassword;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 @Schema(description = "Le premier compte SUPER_ADMIN")
 public record SetupAdminRequest(
-    @NotBlank @Size(min = 3, max = 50) @Pattern(regexp = "[^@]*", message = "must not contain @") String username,
+    // Its rule is identity's, written once in the domain: a username it refuses comes back as INITIAL_ADMIN_REFUSED.
+    @NotBlank String username,
     @NotBlank @Email @Size(max = 254) String email,
     @StrongPassword String password,
     @LanguageCode String language

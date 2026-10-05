@@ -2,7 +2,7 @@ import { AxiosError, AxiosHeaders } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { client } from '@/shared/api'
 import { MailTestFailedError, ServerError, SettingsInvalidError } from '@/shared/lib'
-import { KeyNotSavedError, SetupAlreadyDoneError, SetupCodeInvalidError } from '../model/errors'
+import { AdminRefusedError, KeyNotSavedError, SetupAlreadyDoneError, SetupCodeInvalidError } from '../model/errors'
 import { setupApi } from './setupApi'
 
 vi.mock('@/shared/api', async (importOriginal) => {
@@ -61,6 +61,8 @@ describe('setupApi', () => {
     await expect(setupApi.verifyCode('x')).rejects.toBeInstanceOf(SetupAlreadyDoneError)
     vi.mocked(client.post).mockRejectedValueOnce(refused(400, { error_code: 'ENCRYPTION_KEY_NOT_SAVED' }))
     await expect(setupApi.complete({} as never)).rejects.toBeInstanceOf(KeyNotSavedError)
+    vi.mocked(client.post).mockRejectedValueOnce(refused(400, { error_code: 'INITIAL_ADMIN_REFUSED' }))
+    await expect(setupApi.complete({} as never)).rejects.toBeInstanceOf(AdminRefusedError)
     vi.mocked(client.post).mockRejectedValueOnce(refused(400, { error_code: 'SETTINGS_INVALID', errors: { 'public-url': 'invalid_url' } }))
     await expect(setupApi.complete({} as never)).rejects.toBeInstanceOf(SettingsInvalidError)
   })

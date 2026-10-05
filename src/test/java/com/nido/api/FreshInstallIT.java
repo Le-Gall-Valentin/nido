@@ -90,6 +90,10 @@ class FreshInstallIT {
             mvc.perform(post("/api/setup/complete").contentType(MediaType.APPLICATION_JSON).content(complete(code, "jane", false)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error_code").value("ENCRYPTION_KEY_NOT_SAVED"));
+            // The rule of a username is identity's, written once: the setup page is told which field it refused.
+            mvc.perform(post("/api/setup/complete").contentType(MediaType.APPLICATION_JSON).content(complete(code, "ab", true)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value("INITIAL_ADMIN_REFUSED"));
             mvc.perform(post("/api/setup/complete").contentType(MediaType.APPLICATION_JSON).content(complete(code, "jane", true)))
                 .andExpect(status().isCreated());
 

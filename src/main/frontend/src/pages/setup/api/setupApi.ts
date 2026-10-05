@@ -1,12 +1,13 @@
 import { client, toInstanceError } from '@/shared/api'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SetupKey, SetupStatus } from '../model/types'
-import { KeyNotSavedError, SetupAlreadyDoneError, SetupCodeInvalidError } from '../model/errors'
+import { AdminRefusedError, KeyNotSavedError, SetupAlreadyDoneError, SetupCodeInvalidError } from '../model/errors'
 
 function setupError(error: unknown): Error {
   return toInstanceError(error, (status, code) => {
     if (code === 'SETUP_CODE_INVALID') return new SetupCodeInvalidError()
     if (code === 'ENCRYPTION_KEY_NOT_SAVED') return new KeyNotSavedError()
+    if (code === 'INITIAL_ADMIN_REFUSED') return new AdminRefusedError()
     if (status === 404) return new SetupAlreadyDoneError()
     return null
   })

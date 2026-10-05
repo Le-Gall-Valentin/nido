@@ -80,6 +80,7 @@
   "errors": {
     "code_invalid": "Ce n'est pas le code écrit dans les journaux. Vérifiez-le : il change à chaque redémarrage.",
     "code_changed": "Nido a redémarré entre-temps : saisissez le nouveau code, écrit dans les journaux. Vos réponses sont gardées.",
+    "admin_refused": "Le serveur a refusé ce compte : l'identifiant fait 3 à 50 caractères, sans @.",
     "already_done": "Nido est déjà installé.",
     "too_many": "Trop d'essais. Attendez une minute avant de réessayer.",
     "network": "Le serveur ne répond pas. Vérifiez qu'il tourne toujours.",

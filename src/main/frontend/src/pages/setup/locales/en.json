@@ -80,6 +80,7 @@
   "errors": {
     "code_invalid": "This is not the code written in the logs. Check it: it changes at every restart.",
     "code_changed": "Nido restarted meanwhile: enter the new code from the logs. Your answers are kept.",
+    "admin_refused": "The server refused this account: the username is 3 to 50 characters, without @.",
     "already_done": "Nido is already set up.",
     "too_many": "Too many attempts. Wait a minute before trying again.",
     "network": "The server does not answer. Check that it is still running.",

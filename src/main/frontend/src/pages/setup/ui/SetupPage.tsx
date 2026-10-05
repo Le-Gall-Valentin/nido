@@ -3,7 +3,7 @@ import { SettingsInvalidError, useLanguage } from '@/shared/lib'
 import { setupApi } from '../api/setupApi'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SettingValues, SetupAdmin, SetupStatus } from '../model/types'
-import { SetupCodeInvalidError } from '../model/errors'
+import { AdminRefusedError, SetupCodeInvalidError } from '../model/errors'
 import { describeSetupError } from '../lib/describeSetupError'
 import { signInAfterSetup } from '../lib/signInAfterSetup'
 import { AddressStep } from './AddressStep'
@@ -37,6 +37,7 @@ export function SetupPage({ status, api = setupApi, signIn = signInAfterSetup, g
   const [problems, setProblems] = useState<Record<string, string>>({})
   const [finishing, setFinishing] = useState(false)
   const [finishError, setFinishError] = useState<string | null>(null)
+  const [adminError, setAdminError] = useState<string | null>(null)
   // Nido restarted during the setup: its code changed. Asked again, then back where it stopped.
   const [resumeAt, setResumeAt] = useState<SetupStep | null>(null)
 
@@ -57,6 +58,9 @@ export function SetupPage({ status, api = setupApi, signIn = signInAfterSetup, g
       setFinishing(false)
       if (error instanceof SetupCodeInvalidError) {
         codeExpired('key')
+      } else if (error instanceof AdminRefusedError) {
+        setAdminError('errors.admin_refused')
+        setStep('admin')
       } else if (error instanceof SettingsInvalidError) {
         setProblems(error.errors)
         setStep(Object.keys(error.errors).some((key) => key.startsWith('mail.')) ? 'mail' : 'address')
@@ -82,7 +86,9 @@ export function SetupPage({ status, api = setupApi, signIn = signInAfterSetup, g
           onVerified={(verified) => { setCode(verified); setStep(resumeAt ?? 'admin'); setResumeAt(null) }}
         />
       )}
-      {step === 'admin' && <AdminStep initial={admin} onNext={(next) => { setAdmin(next); setStep('address') }} />}
+      {step === 'admin' && (
+        <AdminStep initial={admin} serverError={adminError} onNext={(next) => { setAdmin(next); setAdminError(null); setStep('address') }} />
+      )}
       {step === 'address' && (
         <AddressStep
           initial={publicUrl}

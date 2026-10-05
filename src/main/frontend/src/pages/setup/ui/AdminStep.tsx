@@ -1,16 +1,18 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isValidEmail, passwordProblem, useLanguage, usernameProblem } from '@/shared/lib'
-import { Button, CTA_BUTTON_STYLE, Input, PasswordInput } from '@/shared/ui'
+import { Alert, Button, CTA_BUTTON_STYLE, Input, PasswordInput } from '@/shared/ui'
 import type { SetupAdmin } from '../model/types'
 import { ACTIONS_CLASS, FIELD_ERROR_CLASS, LEAD_CLASS, TITLE_CLASS } from './styles'
 
 interface Props {
   initial: SetupAdmin
+  /** Why the server refused this account at the end, when it did (a translation key). */
+  serverError?: string | null
   onNext: (admin: SetupAdmin) => void
 }
 
-export function AdminStep({ initial, onNext }: Props) {
+export function AdminStep({ initial, serverError = null, onNext }: Props) {
   const { t } = useTranslation('setup')
   const { language } = useLanguage()
   const [username, setUsername] = useState(initial.username)
@@ -41,6 +43,7 @@ export function AdminStep({ initial, onNext }: Props) {
     <form onSubmit={submit} noValidate>
       <h1 className={TITLE_CLASS}>{t('admin.title')}</h1>
       <p className={LEAD_CLASS}>{t('admin.lead')}</p>
+      {serverError && <Alert variant="error" className="mb-4">{t(serverError)}</Alert>}
       <div className="flex flex-col gap-4">
         <div>
           <Input label={t('admin.username')} name="admin-username" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" maxLength={50} />
