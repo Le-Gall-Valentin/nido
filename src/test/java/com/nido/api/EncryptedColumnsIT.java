@@ -23,4 +23,10 @@ class EncryptedColumnsIT {
             "SELECT count(*) FROM pg_constraint WHERE conname = 'chk_finance_categories_label_xor'", Long.class))
             .isZero();
     }
+
+    @Test
+    void no_column_of_the_perimeter_is_left_in_clear_and_the_required_ones_are_required() {
+        assertThat(PlaintextPerimeter.columnsInClear(jdbc)).isEmpty();
+        assertThat(PlaintextPerimeter.requiredEncryptedColumnsAcceptingNull(jdbc)).isEmpty();
+    }
 }
