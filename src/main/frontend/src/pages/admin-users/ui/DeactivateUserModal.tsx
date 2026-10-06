@@ -1,9 +1,8 @@
-import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, Button, Dialog } from '@/shared/ui'
 import type { AdminUser } from '@/entities/user'
 import type { MailAvailability } from '@/entities/capabilities'
-import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
+import { useDialogSubmit } from '../lib/useDialogSubmit'
 import { MailNotice } from './MailNotice'
 
 interface DeactivateUserModalProps {
@@ -20,24 +19,13 @@ interface DeactivateUserModalProps {
  */
 export function DeactivateUserModal({ user, mail, onClose, onDeactivate, onSuccess }: DeactivateUserModalProps) {
   const { t } = useTranslation('adminUsers')
-  const [isLoading, setIsLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<string | null>(null)
-  const pendingRef = useRef(false)
+  const { submit, isLoading, errorKey } = useDialogSubmit('deactivate')
 
-  async function handleSubmit() {
-    if (pendingRef.current) return
-    pendingRef.current = true
-    setIsLoading(true)
-    setErrorKey(null)
-    try {
+  function handleSubmit() {
+    void submit(async () => {
       await onDeactivate(user)
       onSuccess()
-    } catch (error) {
-      setErrorKey(mapApiErrorToKey(error, 'deactivate'))
-    } finally {
-      pendingRef.current = false
-      setIsLoading(false)
-    }
+    })
   }
 
   const title = t('deactivate.title', { username: user.username })

@@ -1,10 +1,9 @@
-import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Key } from 'lucide-react'
 import { Alert, Dialog, Button } from '@/shared/ui'
 import type { AdminUser } from '@/entities/user'
 import type { MailAvailability } from '@/entities/capabilities'
-import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
+import { useDialogSubmit } from '../lib/useDialogSubmit'
 import { MailNotice } from './MailNotice'
 
 interface ResetTotpModalProps {
@@ -17,28 +16,17 @@ interface ResetTotpModalProps {
 
 export function ResetTotpModal({ user, mail, onClose, onReset, onSuccess }: ResetTotpModalProps) {
   const { t } = useTranslation('adminUsers')
-  const [isLoading, setIsLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<string | null>(null)
-  const pendingRef = useRef(false)
+  const { submit, isLoading, errorKey, clearError } = useDialogSubmit('reset_totp')
 
-  async function handleSubmit() {
-    if (pendingRef.current) return
-    pendingRef.current = true
-    setIsLoading(true)
-    setErrorKey(null)
-    try {
+  function handleSubmit() {
+    void submit(async () => {
       await onReset(user.id)
       onSuccess()
-    } catch (error) {
-      setErrorKey(mapApiErrorToKey(error, 'reset_totp'))
-    } finally {
-      pendingRef.current = false
-      setIsLoading(false)
-    }
+    })
   }
 
   function handleClose() {
-    setErrorKey(null)
+    clearError()
     onClose()
   }
 

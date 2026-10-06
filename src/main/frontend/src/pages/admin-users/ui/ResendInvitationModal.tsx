@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Send } from 'lucide-react'
 import { Alert, Button, Dialog, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { AdminUser, InvitationDelivery } from '@/entities/user'
 import type { MailAvailability } from '@/entities/capabilities'
-import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
+import { useDialogSubmit } from '../lib/useDialogSubmit'
 import { InvitationResult } from './InvitationResult'
 
 interface ResendInvitationModalProps {
@@ -19,23 +19,12 @@ export function ResendInvitationModal({ user, mail, onClose, onResend }: ResendI
   const { t } = useTranslation('adminUsers')
   const byMail = mail === 'available'
   const [delivery, setDelivery] = useState<InvitationDelivery | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<string | null>(null)
-  const pendingRef = useRef(false)
+  const { submit, isLoading, errorKey } = useDialogSubmit('resend')
 
-  async function handleSubmit() {
-    if (pendingRef.current) return
-    pendingRef.current = true
-    setIsLoading(true)
-    setErrorKey(null)
-    try {
+  function handleSubmit() {
+    void submit(async () => {
       setDelivery(await onResend(user.id))
-    } catch (error) {
-      setErrorKey(mapApiErrorToKey(error, 'resend'))
-    } finally {
-      pendingRef.current = false
-      setIsLoading(false)
-    }
+    })
   }
 
   if (delivery) {

@@ -1,10 +1,10 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import { isValidEmail, isValidUsername, usernameProblem } from '@/shared/lib'
 import type { InvitationDelivery, User } from '@/entities/user'
 import { assignableRoles } from '../lib/permissions'
-import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
+import { useDialogSubmit } from '../lib/useDialogSubmit'
 import { InvitationResult } from './InvitationResult'
 
 interface CreateUserModalProps {
@@ -22,10 +22,8 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<'USER' | 'ADMIN'>('USER')
-  const [isLoading, setIsLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<string | null>(null)
+  const { submit, isLoading, errorKey, clearError } = useDialogSubmit('create')
   const [created, setCreated] = useState<{ username: string; email: string; delivery: InvitationDelivery } | null>(null)
-  const pendingRef = useRef(false)
 
   const trimmedUsername = username.trim()
   const trimmedEmail = email.trim()
@@ -35,25 +33,17 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
   const emailInvalid = trimmedEmail.length > 0 && !isValidEmail(trimmedEmail)
   const canSubmit = isValidUsername(trimmedUsername) && isValidEmail(trimmedEmail)
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!canSubmit || pendingRef.current) return
-    pendingRef.current = true
-    setIsLoading(true)
-    setErrorKey(null)
-    try {
+    if (!canSubmit) return
+    void submit(async () => {
       const delivery = await onCreate(trimmedUsername, trimmedEmail, role)
       setCreated({ username: trimmedUsername, email: trimmedEmail, delivery })
-    } catch (error) {
-      setErrorKey(mapApiErrorToKey(error, 'create'))
-    } finally {
-      pendingRef.current = false
-      setIsLoading(false)
-    }
+    })
   }
 
   function handleClose() {
-    setErrorKey(null)
+    clearError()
     if (created) {
       onSuccess()
       return
