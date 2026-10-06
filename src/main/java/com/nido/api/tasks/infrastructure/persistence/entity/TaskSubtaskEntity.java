@@ -28,8 +28,8 @@ public class TaskSubtaskEntity {
     @Column(nullable = false)
     private int position;
 
-    @Column(nullable = false, length = 200)
-    private String text;
+    @Column(name = "text_encrypted", nullable = false)
+    private String textEncrypted;
 
     @Column(nullable = false)
     private boolean done;

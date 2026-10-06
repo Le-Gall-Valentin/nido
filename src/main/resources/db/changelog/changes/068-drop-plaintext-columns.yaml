@@ -62,3 +62,119 @@ databaseChangeLog:
               - column:
                   name: name
                   type: VARCHAR(60)
+  - changeSet:
+      id: 068-drop-plaintext-tasks
+      author: nido
+      comment: The second half of 067 for tasks — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "tasks still holds titles in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM tasks WHERE title IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: tasks
+            columnName: title
+        - addNotNullConstraint:
+            tableName: tasks
+            columnName: title_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: tasks
+            columnName: title_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: tasks
+            columns:
+              - column:
+                  name: title
+                  type: VARCHAR(200)
+  - changeSet:
+      id: 068-drop-plaintext-task-subtasks
+      author: nido
+      comment: The second half of 067 for task_subtasks — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "task_subtasks still holds texts in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM task_subtasks WHERE text IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: task_subtasks
+            columnName: text
+        - addNotNullConstraint:
+            tableName: task_subtasks
+            columnName: text_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: task_subtasks
+            columnName: text_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: task_subtasks
+            columns:
+              - column:
+                  name: text
+                  type: VARCHAR(200)
+  - changeSet:
+      id: 068-drop-plaintext-recurring-task-series
+      author: nido
+      comment: The second half of 067 for recurring_task_series — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "recurring_task_series still holds titles in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM recurring_task_series WHERE title IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: recurring_task_series
+            columnName: title
+        - addNotNullConstraint:
+            tableName: recurring_task_series
+            columnName: title_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: recurring_task_series
+            columnName: title_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: recurring_task_series
+            columns:
+              - column:
+                  name: title
+                  type: VARCHAR(200)
+  - changeSet:
+      id: 068-drop-plaintext-recurring-task-series-subtask-templates
+      author: nido
+      comment: The second half of 067 for recurring_task_series_subtask_templates — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "recurring_task_series_subtask_templates still holds texts in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM recurring_task_series_subtask_templates WHERE text IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: recurring_task_series_subtask_templates
+            columnName: text
+        - addNotNullConstraint:
+            tableName: recurring_task_series_subtask_templates
+            columnName: text_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: recurring_task_series_subtask_templates
+            columnName: text_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: recurring_task_series_subtask_templates
+            columns:
+              - column:
+                  name: text
+                  type: VARCHAR(200)

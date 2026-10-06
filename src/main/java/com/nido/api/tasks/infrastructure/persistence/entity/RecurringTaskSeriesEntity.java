@@ -30,8 +30,8 @@ public class RecurringTaskSeriesEntity {
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
 
-    @Column(nullable = false, length = 200)
-    private String title;
+    @Column(name = "title_encrypted", nullable = false)
+    private String titleEncrypted;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)

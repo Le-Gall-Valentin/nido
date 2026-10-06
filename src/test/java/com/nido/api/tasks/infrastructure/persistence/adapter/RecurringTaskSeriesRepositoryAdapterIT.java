@@ -3,6 +3,7 @@ package com.nido.api.tasks.infrastructure.persistence.adapter;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -15,6 +16,8 @@ import com.nido.api.tasks.domain.model.UpdateRecurringTaskSeriesCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -28,6 +31,8 @@ class RecurringTaskSeriesRepositoryAdapterIT {
     @Autowired RecurringTaskSeriesRepositoryAdapter adapter;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired UserIdentityJpaRepository userJpaRepository;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired SpaceEncryptorFactory encryptors;
 
     private UUID spaceId;
     private UUID aliceId;
@@ -140,5 +145,19 @@ class RecurringTaskSeriesRepositoryAdapterIT {
     @Test
     void lockForMaterialization_does_not_throw_when_called_outside_any_prior_lock() {
         adapter.lockForMaterialization(spaceId);
+    }
+
+    @Test
+    void the_title_and_the_subtask_templates_are_stored_encrypted() {
+        RecurringTaskSeries created = adapter.create(new CreateRecurringTaskSeriesCommand(spaceId, "Sortir les poubelles",
+            TaskPriority.MED, List.of("Trier le verre"), RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0,
+            LocalDate.of(2026, 10, 5), null, List.of(aliceId), aliceId));
+        TextEncryptor key = encryptors.forSpace(spaceId);
+
+        assertThat(key.decrypt(jdbc.queryForObject("SELECT title_encrypted FROM recurring_task_series WHERE id = ?",
+            String.class, created.id()))).isEqualTo("Sortir les poubelles");
+        assertThat(jdbc.queryForList("SELECT text_encrypted FROM recurring_task_series_subtask_templates WHERE series_id = ?",
+                String.class, created.id()))
+            .extracting(key::decrypt).containsExactly("Trier le verre");
     }
 }

@@ -3,6 +3,7 @@ package com.nido.api.tasks.infrastructure.persistence.adapter;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -18,6 +19,8 @@ import com.nido.api.tasks.domain.model.UpdateTaskCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -32,6 +35,8 @@ class TaskRepositoryAdapterIT {
     @Autowired TaskRepositoryAdapter adapter;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired UserIdentityJpaRepository userJpaRepository;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired SpaceEncryptorFactory encryptors;
 
     private UUID spaceId;
     private UUID aliceId;
@@ -193,5 +198,33 @@ class TaskRepositoryAdapterIT {
         adapter.createAll(List.of());
 
         assertThat(adapter.findBySpaceId(spaceId)).isEmpty();
+    }
+
+    @Test
+    void the_title_and_the_subtasks_are_stored_encrypted_with_the_key_of_the_space() {
+        Task created = adapter.create(new CreateTaskCommand(spaceId, "Rendez-vous oncologue", TaskPriority.HIGH, null,
+            List.of(), List.of(new SubtaskInput("Apporter l’ordonnance", false)), null, aliceId));
+        TextEncryptor key = encryptors.forSpace(spaceId);
+
+        String title = jdbc.queryForObject("SELECT title_encrypted FROM tasks WHERE id = ?", String.class, created.id());
+        assertThat(title).doesNotContain("oncologue");
+        assertThat(key.decrypt(title)).isEqualTo("Rendez-vous oncologue");
+        assertThat(jdbc.queryForList("SELECT text_encrypted FROM task_subtasks WHERE task_id = ?", String.class, created.id()))
+            .extracting(key::decrypt).containsExactly("Apporter l’ordonnance");
+    }
+
+    @Test
+    void editing_the_subtasks_encrypts_the_new_texts() {
+        Task created = adapter.create(new CreateTaskCommand(spaceId, "Ménage", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskInput("Cuisine", false)), null, aliceId));
+        UUID kitchen = created.subtasks().getFirst().id();
+
+        Task updated = adapter.update(new UpdateTaskCommand(created.id(), spaceId, "Ménage", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskEdit(kitchen, "Cuisine et four"), new SubtaskEdit(null, "Salle de bain 🛁"))));
+
+        assertThat(updated.subtasks()).extracting(Subtask::text).containsExactly("Cuisine et four", "Salle de bain 🛁");
+        assertThat(jdbc.queryForList("SELECT text_encrypted FROM task_subtasks WHERE task_id = ? ORDER BY position",
+                String.class, created.id()))
+            .extracting(encryptors.forSpace(spaceId)::decrypt).containsExactly("Cuisine et four", "Salle de bain 🛁");
     }
 }

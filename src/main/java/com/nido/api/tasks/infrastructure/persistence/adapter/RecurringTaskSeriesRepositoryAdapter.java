@@ -1,5 +1,6 @@
 package com.nido.api.tasks.infrastructure.persistence.adapter;
 
+import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
 import com.nido.api.tasks.domain.model.CreateRecurringTaskSeriesCommand;
 import com.nido.api.tasks.domain.model.RecurringTaskSeries;
 import com.nido.api.tasks.domain.model.RecurringTaskSeriesSchedule;
@@ -12,6 +13,7 @@ import com.nido.api.tasks.infrastructure.persistence.entity.RecurringTaskSeriesS
 import com.nido.api.tasks.infrastructure.persistence.repository.RecurringTaskSeriesJpaRepository;
 import com.nido.api.tasks.infrastructure.persistence.repository.RecurringTaskSeriesMemberJpaRepository;
 import com.nido.api.tasks.infrastructure.persistence.repository.RecurringTaskSeriesSubtaskTemplateJpaRepository;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,13 +27,16 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
     private final RecurringTaskSeriesJpaRepository series;
     private final RecurringTaskSeriesMemberJpaRepository members;
     private final RecurringTaskSeriesSubtaskTemplateJpaRepository subtaskTemplates;
+    private final SpaceEncryptorFactory encryptors;
 
     public RecurringTaskSeriesRepositoryAdapter(RecurringTaskSeriesJpaRepository series,
                                                  RecurringTaskSeriesMemberJpaRepository members,
-                                                 RecurringTaskSeriesSubtaskTemplateJpaRepository subtaskTemplates) {
+                                                 RecurringTaskSeriesSubtaskTemplateJpaRepository subtaskTemplates,
+                                                 SpaceEncryptorFactory encryptors) {
         this.series = series;
         this.members = members;
         this.subtaskTemplates = subtaskTemplates;
+        this.encryptors = encryptors;
     }
 
     @Override
@@ -52,9 +57,10 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
     @Override
     @Transactional
     public RecurringTaskSeries create(CreateRecurringTaskSeriesCommand command) {
+        TextEncryptor encryptor = encryptors.forSpace(command.spaceId());
         RecurringTaskSeriesEntity e = new RecurringTaskSeriesEntity();
         e.setSpaceId(command.spaceId());
-        e.setTitle(command.title());
+        e.setTitleEncrypted(encryptor.encrypt(command.title()));
         e.setPriority(command.priority());
         e.setIntervalType(command.intervalType());
         e.setIntervalCount(command.intervalCount());
@@ -66,7 +72,7 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
         e.setCurrentRotationIndex(0);
         e.setCreatedBy(command.creatorUserId());
         RecurringTaskSeriesEntity saved = series.saveAndFlush(e);
-        saveMembersAndTemplates(saved.getId(), command.rotationMemberIds(), command.subtaskTemplates());
+        saveMembersAndTemplates(saved.getId(), encryptor, command.rotationMemberIds(), command.subtaskTemplates());
         return findById(saved.getId()).orElseThrow(TaskException.TaskNotFound::new);
     }
 
@@ -74,7 +80,8 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
     @Transactional
     public RecurringTaskSeries update(UpdateRecurringTaskSeriesCommand command) {
         RecurringTaskSeriesEntity e = series.findById(command.seriesId()).orElseThrow(TaskException.RecurringSeriesNotFound::new);
-        e.setTitle(command.title());
+        TextEncryptor encryptor = encryptors.forSpace(e.getSpaceId());
+        e.setTitleEncrypted(encryptor.encrypt(command.title()));
         e.setPriority(command.priority());
         e.setIntervalType(command.intervalType());
         e.setIntervalCount(command.intervalCount());
@@ -87,7 +94,7 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
         members.flush();
         subtaskTemplates.deleteBySeriesId(saved.getId());
         subtaskTemplates.flush();
-        saveMembersAndTemplates(saved.getId(), command.rotationMemberIds(), command.subtaskTemplates());
+        saveMembersAndTemplates(saved.getId(), encryptor, command.rotationMemberIds(), command.subtaskTemplates());
         return findById(saved.getId()).orElseThrow(TaskException.TaskNotFound::new);
     }
 
@@ -113,7 +120,8 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
         series.lockMaterialization("tasks-materialize|" + spaceId);
     }
 
-    private void saveMembersAndTemplates(UUID seriesId, List<UUID> rotationMemberIds, List<String> subtaskTemplateTexts) {
+    private void saveMembersAndTemplates(UUID seriesId, TextEncryptor encryptor, List<UUID> rotationMemberIds,
+                                         List<String> subtaskTemplateTexts) {
         for (int i = 0; i < rotationMemberIds.size(); i++) {
             RecurringTaskSeriesMemberEntity me = new RecurringTaskSeriesMemberEntity();
             me.setSeriesId(seriesId);
@@ -125,7 +133,7 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
             RecurringTaskSeriesSubtaskTemplateEntity te = new RecurringTaskSeriesSubtaskTemplateEntity();
             te.setSeriesId(seriesId);
             te.setPosition(i);
-            te.setText(subtaskTemplateTexts.get(i));
+            te.setTextEncrypted(encryptor.encrypt(subtaskTemplateTexts.get(i)));
             subtaskTemplates.save(te);
         }
         members.flush();
@@ -133,11 +141,12 @@ public class RecurringTaskSeriesRepositoryAdapter implements RecurringTaskSeries
     }
 
     private RecurringTaskSeries toDomain(RecurringTaskSeriesEntity e) {
+        TextEncryptor encryptor = encryptors.forSpace(e.getSpaceId());
         List<UUID> rotationMemberIds = members.findBySeriesIdOrderByPositionAsc(e.getId()).stream()
             .map(RecurringTaskSeriesMemberEntity::getUserId).toList();
         List<String> templates = subtaskTemplates.findBySeriesIdOrderByPositionAsc(e.getId()).stream()
-            .map(RecurringTaskSeriesSubtaskTemplateEntity::getText).toList();
-        return new RecurringTaskSeries(e.getId(), e.getSpaceId(), e.getTitle(), e.getPriority(), templates,
+            .map(t -> encryptor.decrypt(t.getTextEncrypted())).toList();
+        return new RecurringTaskSeries(e.getId(), e.getSpaceId(), encryptor.decrypt(e.getTitleEncrypted()), e.getPriority(), templates,
             e.getIntervalType(), e.getIntervalCount(), e.getLeadIntervalType(), e.getLeadIntervalCount(),
             e.getAnchorDate(), e.getEndDate(), e.getOccurrenceCount(), rotationMemberIds, e.getCurrentRotationIndex(),
             e.getCreatedBy());
