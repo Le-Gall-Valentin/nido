@@ -28,6 +28,6 @@ public class RecipeStepEntity {
     @Column(nullable = false)
     private int position;
 
-    @Column(nullable = false, length = 2000)
-    private String text;
+    @Column(name = "text_encrypted", nullable = false)
+    private String textEncrypted;
 }

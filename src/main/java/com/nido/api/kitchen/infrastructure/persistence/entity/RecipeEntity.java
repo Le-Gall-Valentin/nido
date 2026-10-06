@@ -34,11 +34,11 @@ public class RecipeEntity {
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
 
-    @Column(nullable = false, length = 120)
-    private String name;
+    @Column(name = "name_encrypted", nullable = false)
+    private String nameEncrypted;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+    @Column(name = "description_encrypted")
+    private String descriptionEncrypted;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -53,8 +53,8 @@ public class RecipeEntity {
     @Column(nullable = false)
     private boolean favorite;
 
-    @Column(columnDefinition = "TEXT")
-    private String note;
+    @Column(name = "note_encrypted")
+    private String noteEncrypted;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

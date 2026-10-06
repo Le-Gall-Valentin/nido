@@ -178,3 +178,102 @@ databaseChangeLog:
               - column:
                   name: text
                   type: VARCHAR(200)
+  - changeSet:
+      id: 068-drop-plaintext-kitchen-recipes
+      author: nido
+      comment: The second half of 067 for kitchen_recipes — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "kitchen_recipes still holds texts in clear: they are encrypted after this start, and the columns are dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM kitchen_recipes WHERE name IS NOT NULL OR description IS NOT NULL OR note IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: kitchen_recipes
+            columns:
+              - column:
+                  name: name
+              - column:
+                  name: description
+              - column:
+                  name: note
+        - addNotNullConstraint:
+            tableName: kitchen_recipes
+            columnName: name_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: kitchen_recipes
+            columnName: name_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: kitchen_recipes
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(120)
+              - column:
+                  name: description
+                  type: TEXT
+              - column:
+                  name: note
+                  type: TEXT
+  - changeSet:
+      id: 068-drop-plaintext-kitchen-recipe-ingredients
+      author: nido
+      comment: The second half of 067 for kitchen_recipe_ingredients — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "kitchen_recipe_ingredients still holds names in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM kitchen_recipe_ingredients WHERE name IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: kitchen_recipe_ingredients
+            columnName: name
+        - addNotNullConstraint:
+            tableName: kitchen_recipe_ingredients
+            columnName: name_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: kitchen_recipe_ingredients
+            columnName: name_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: kitchen_recipe_ingredients
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(120)
+  - changeSet:
+      id: 068-drop-plaintext-kitchen-recipe-steps
+      author: nido
+      comment: The second half of 067 for kitchen_recipe_steps — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "kitchen_recipe_steps still holds texts in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM kitchen_recipe_steps WHERE text IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: kitchen_recipe_steps
+            columnName: text
+        - addNotNullConstraint:
+            tableName: kitchen_recipe_steps
+            columnName: text_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: kitchen_recipe_steps
+            columnName: text_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: kitchen_recipe_steps
+            columns:
+              - column:
+                  name: text
+                  type: VARCHAR(2000)

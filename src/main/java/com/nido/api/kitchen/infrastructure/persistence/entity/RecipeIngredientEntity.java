@@ -32,8 +32,8 @@ public class RecipeIngredientEntity {
     @Column(nullable = false)
     private int position;
 
-    @Column(nullable = false, length = 120)
-    private String name;
+    @Column(name = "name_encrypted", nullable = false)
+    private String nameEncrypted;
 
     @Column(nullable = false, precision = 10, scale = 3)
     private BigDecimal quantity;

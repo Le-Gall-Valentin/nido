@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface RecipeJpaRepository extends JpaRepository<RecipeEntity, UUID> {
-    List<RecipeEntity> findBySpaceIdOrderByNameAsc(UUID spaceId);
+    List<RecipeEntity> findBySpaceId(UUID spaceId);
 
     @Modifying(clearAutomatically = true)
     @Query("update RecipeEntity r set r.favorite = :favorite where r.id = :id")
