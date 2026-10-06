@@ -3,6 +3,7 @@ package com.nido.api.infrastructure.config;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.nido.api.instance.application.port.in.ConfirmEncryptionKeyUseCase;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,8 +30,9 @@ class EncryptionBackfillRunnerTest {
     private final EncryptionBackfill tasks = mock(EncryptionBackfill.class);
     private final ExistingCiphertextCheck finance = mock(ExistingCiphertextCheck.class);
     private final TableVacuum vacuum = mock(TableVacuum.class);
+    private final ConfirmEncryptionKeyUseCase key = mock(ConfirmEncryptionKeyUseCase.class);
     private final EncryptionBackfillRunner runner =
-        new EncryptionBackfillRunner(List.of(shopping, tasks), List.of(finance), vacuum);
+        new EncryptionBackfillRunner(List.of(shopping, tasks), List.of(finance), vacuum, key);
 
     private final Logger logger = (Logger) LoggerFactory.getLogger(EncryptionBackfillRunner.class);
     private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
@@ -93,5 +95,37 @@ class EncryptionBackfillRunnerTest {
         verify(vacuum).vacuumFull(Set.of("shopping_items"));
         assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
             .containsExactly("Encrypted 2 rows of shopping_items that earlier versions stored in clear");
+    }
+
+    @Test
+    void a_key_new_to_the_installation_is_checked_even_with_nothing_left_in_clear() {
+        when(key.recordedAtThisStart()).thenReturn(true);
+
+        runner.afterSingletonsInstantiated();
+
+        verify(finance).verify();
+        verify(shopping, never()).run();
+        verify(tasks, never()).run();
+        verifyNoInteractions(vacuum);
+    }
+
+    @Test
+    void a_new_key_that_does_not_decrypt_has_its_fingerprint_taken_back_so_the_right_key_can_start_next() {
+        when(key.recordedAtThisStart()).thenReturn(true);
+        doThrow(new IllegalStateException("does not decrypt")).when(finance).verify();
+
+        assertThatThrownBy(runner::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
+
+        verify(key).forgetFingerprintRecordedAtThisStart();
+    }
+
+    @Test
+    void a_known_key_that_does_not_decrypt_keeps_its_fingerprint() {
+        when(shopping.pending()).thenReturn(true);
+        doThrow(new IllegalStateException("does not decrypt")).when(finance).verify();
+
+        assertThatThrownBy(runner::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
+
+        verify(key, never()).forgetFingerprintRecordedAtThisStart();
     }
 }

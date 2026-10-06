@@ -1,5 +1,6 @@
 package com.nido.api.instance.application.handler;
 
+import com.nido.api.instance.application.port.in.ConfirmEncryptionKeyUseCase;
 import com.nido.api.instance.application.port.in.ResolveEncryptionKeyUseCase;
 import com.nido.api.instance.domain.model.EncryptionKeyDecision;
 import com.nido.api.instance.domain.model.InstanceState;
@@ -15,12 +16,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 @ApplicationService
-public class ResolveEncryptionKeyHandler implements ResolveEncryptionKeyUseCase {
+public class ResolveEncryptionKeyHandler implements ResolveEncryptionKeyUseCase, ConfirmEncryptionKeyUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(ResolveEncryptionKeyHandler.class);
 
     private final InstanceStatePort instanceState;
     private final KeyFilePort keyFile;
+
+    /** The fingerprint this start recorded for a key it was given, until the data confirms it. */
+    private KeyFingerprint recordedAtThisStart;
 
     public ResolveEncryptionKeyHandler(InstanceStatePort instanceState, KeyFilePort keyFile) {
         this.instanceState = instanceState;
@@ -42,7 +46,8 @@ public class ResolveEncryptionKeyHandler implements ResolveEncryptionKeyUseCase 
         return switch (EncryptionKeyDecision.decide(provided, state, keyFile.location())) {
             case EncryptionKeyDecision.Use use -> use.key();
             case EncryptionKeyDecision.RecordFingerprint record -> {
-                instanceState.recordFingerprint(KeyFingerprint.of(record.key()), fromDataDirectory);
+                recordedAtThisStart = KeyFingerprint.of(record.key());
+                instanceState.recordFingerprint(recordedAtThisStart, fromDataDirectory);
                 log.info("Encryption key fingerprint recorded: from now on, a start with another key is refused");
                 yield record.key();
             }
@@ -55,5 +60,21 @@ public class ResolveEncryptionKeyHandler implements ResolveEncryptionKeyUseCase 
             }
             case EncryptionKeyDecision.Refuse refuse -> throw new IllegalStateException(refuse.reason());
         };
+    }
+
+    @Override
+    public boolean recordedAtThisStart() {
+        return recordedAtThisStart != null;
+    }
+
+    @Override
+    @Transactional
+    public void forgetFingerprintRecordedAtThisStart() {
+        if (recordedAtThisStart != null) {
+            instanceState.forgetFingerprint(recordedAtThisStart);
+            recordedAtThisStart = null;
+            log.warn("The encryption key fingerprint recorded at this start was erased: the data already encrypted "
+                + "does not decrypt with that key");
+        }
     }
 }

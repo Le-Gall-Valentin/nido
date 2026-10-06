@@ -24,6 +24,7 @@ class ResolveEncryptionKeyHandlerTest {
         @Override public InstanceState load() { return new InstanceState(Optional.ofNullable(fingerprint), generated, setupCompleted); }
         @Override public void recordFingerprint(KeyFingerprint f, boolean g) { fingerprint = f; generated = g; }
         @Override public boolean markSetupCompleted(Instant at) { boolean was = setupCompleted; setupCompleted = true; return !was; }
+        @Override public void forgetFingerprint(KeyFingerprint f) { if (fingerprint == f) { fingerprint = null; generated = false; } }
     }
 
     static final class FakeFile implements KeyFilePort {
@@ -99,5 +100,31 @@ class ResolveEncryptionKeyHandlerTest {
         assertThatThrownBy(() -> handler.resolve(null))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("/data/secrets/encryption-key");
+    }
+
+    @Test
+    void a_key_given_to_an_installation_that_never_recorded_one_is_new_and_can_be_taken_back() {
+        // An installation older than 0.12: set up, data in it, no fingerprint.
+        state.setupCompleted = true;
+
+        handler.resolve(KEY);
+
+        assertThat(handler.recordedAtThisStart()).isTrue();
+        handler.forgetFingerprintRecordedAtThisStart();
+        assertThat(state.fingerprint).isNull();
+        assertThat(handler.recordedAtThisStart()).isFalse();
+    }
+
+    @Test
+    void the_key_the_fingerprint_already_knows_is_not_new_and_nothing_is_taken_back() {
+        state.setupCompleted = true;
+        state.fingerprint = KeyFingerprint.of(KEY);
+        KeyFingerprint known = state.fingerprint;
+
+        handler.resolve(KEY);
+        handler.forgetFingerprintRecordedAtThisStart();
+
+        assertThat(handler.recordedAtThisStart()).isFalse();
+        assertThat(state.fingerprint).isSameAs(known);
     }
 }

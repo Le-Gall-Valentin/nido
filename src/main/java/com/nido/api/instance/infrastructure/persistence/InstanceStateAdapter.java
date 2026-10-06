@@ -51,6 +51,16 @@ public class InstanceStateAdapter implements InstanceStatePort {
     }
 
     @Override
+    public void forgetFingerprint(KeyFingerprint fingerprint) {
+        jdbc.sql("""
+                UPDATE instance SET key_fingerprint = NULL, key_fingerprint_salt = NULL, key_generated = false
+                WHERE id = 1 AND key_fingerprint = :hash
+                """)
+            .param("hash", fingerprint.hash())
+            .update();
+    }
+
+    @Override
     public boolean markSetupCompleted(Instant at) {
         return jdbc.sql("UPDATE instance SET setup_completed_at = :at WHERE id = 1 AND setup_completed_at IS NULL")
             .param("at", OffsetDateTime.ofInstant(at, ZoneOffset.UTC))

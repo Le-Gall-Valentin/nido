@@ -36,6 +36,7 @@ final class InstanceFakes {
         @Override public InstanceState load() { return new InstanceState(Optional.ofNullable(fingerprint), keyGenerated, setupCompleted); }
         @Override public void recordFingerprint(KeyFingerprint f, boolean generated) { fingerprint = f; keyGenerated = generated; }
         @Override public boolean markSetupCompleted(Instant at) { boolean was = setupCompleted; setupCompleted = true; return !was; }
+        @Override public void forgetFingerprint(KeyFingerprint f) { if (fingerprint == f) { fingerprint = null; keyGenerated = false; } }
     }
 
     static final class MemoryStore implements SettingsStorePort {

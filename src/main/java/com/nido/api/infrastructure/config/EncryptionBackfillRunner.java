@@ -1,5 +1,6 @@
 package com.nido.api.infrastructure.config;
 
+import com.nido.api.instance.application.port.in.ConfirmEncryptionKeyUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -28,20 +29,29 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
     private final List<EncryptionBackfill> backfills;
     private final List<ExistingCiphertextCheck> checks;
     private final TableVacuum vacuum;
+    private final ConfirmEncryptionKeyUseCase key;
 
     public EncryptionBackfillRunner(List<EncryptionBackfill> backfills, List<ExistingCiphertextCheck> checks,
-                                    TableVacuum vacuum) {
+                                    TableVacuum vacuum, ConfirmEncryptionKeyUseCase key) {
         this.backfills = backfills;
         this.checks = checks;
         this.vacuum = vacuum;
+        this.key = key;
     }
 
     @Override
     public void afterSingletonsInstantiated() {
-        if (backfills.stream().noneMatch(EncryptionBackfill::pending)) {
+        boolean pending = backfills.stream().anyMatch(EncryptionBackfill::pending);
+        // A key whose fingerprint this start recorded is only taken on the data's word: an installation older
+        // than 0.12 never recorded one, and keeping the fingerprint of a wrong key would lock the right one out.
+        boolean newKey = key.recordedAtThisStart();
+        if (!pending && !newKey) {
             return;
         }
-        checks.forEach(ExistingCiphertextCheck::verify);
+        verifyExistingCiphertext(newKey);
+        if (!pending) {
+            return;
+        }
         Set<String> rewritten = new LinkedHashSet<>();
         for (EncryptionBackfill backfill : backfills) {
             backfill.run().forEach((table, rows) -> {
@@ -52,5 +62,16 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
             });
         }
         vacuum.vacuumFull(rewritten);
+    }
+
+    private void verifyExistingCiphertext(boolean newKey) {
+        try {
+            checks.forEach(ExistingCiphertextCheck::verify);
+        } catch (RuntimeException refused) {
+            if (newKey) {
+                key.forgetFingerprintRecordedAtThisStart();
+            }
+            throw refused;
+        }
     }
 }

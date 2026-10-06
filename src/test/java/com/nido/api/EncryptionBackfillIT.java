@@ -206,13 +206,17 @@ class EncryptionBackfillIT {
     }
 
     @Test
-    void a_key_that_does_not_decrypt_what_is_already_encrypted_encrypts_nothing() throws Exception {
+    void a_key_that_does_not_decrypt_what_is_already_encrypted_encrypts_nothing_and_the_right_key_still_starts() throws Exception {
         writtenInClearByAnEarlierVersion();
         long before = PlaintextPerimeter.valuesInClear(db);
 
         assertThatThrownBy(() -> start(OTHER).close()).hasStackTraceContaining("does not decrypt");
 
         assertThat(PlaintextPerimeter.valuesInClear(db)).isEqualTo(before);
+        // The refusal says to start with the right key: that start must not be refused in turn.
+        try (ConfigurableApplicationContext app = start(KEY)) {
+            everythingReadsAsItWasWritten(app);
+        }
     }
 
     @Test
