@@ -29,7 +29,8 @@ vi.mock('@/features/auth', () => ({
   useAuth: (...args: unknown[]) => mockUseAuth(...args),
 }))
 
-vi.mock('@/features/password-reset', () => ({ useMailAvailability: () => 'available' }))
+const mailAvailability = vi.hoisted(() => ({ current: 'available' as 'loading' | 'available' | 'unavailable' }))
+vi.mock('@/entities/capabilities', () => ({ useMailAvailability: () => mailAvailability.current }))
 
 // The concrete api is injected through the slice's DIP context, so the fake is
 // provided via AdminUsersApiProvider rather than module-mocked.
@@ -166,6 +167,7 @@ function setup() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mailAvailability.current = 'available'
   mockApi.listUsers.mockResolvedValue(MOCK_PAGE)
   mockApi.deactivateUser.mockResolvedValue(undefined)
   mockApi.activateUser.mockResolvedValue(undefined)
@@ -368,5 +370,16 @@ describe('AdminUsersPage — each dialog reaches the API', () => {
     fireEvent.click(getByText('resend-it'))
 
     await waitFor(() => expect(mockApi.resendInvitation).toHaveBeenCalledWith('u1'))
+  })
+})
+
+describe('AdminUsersPage — mail availability', () => {
+  it('waits to know whether mail is on before listing the accounts, so no action changes its name under the pointer', async () => {
+    mailAvailability.current = 'loading'
+    const { findByTestId, queryByTestId } = setup()
+
+    expect(await findByTestId('skeleton')).toBeDefined()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(queryByTestId('users-table')).toBeNull()
   })
 })
