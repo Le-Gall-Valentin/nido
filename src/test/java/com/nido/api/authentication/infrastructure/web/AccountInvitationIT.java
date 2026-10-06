@@ -15,6 +15,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -155,5 +156,40 @@ class AccountInvitationIT {
         mockMvc.perform(get("/api/auth/capabilities"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.mail").value(false));
+    }
+
+    @Test
+    void checking_a_link_is_limited_to_ten_requests_a_window_per_address() throws Exception {
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/api/auth/account-invitation/check").with(from("198.51.100.31"))
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"token\":\"guess-" + i + "\"}"))
+                .andExpect(status().isGone());
+        }
+
+        mockMvc.perform(post("/api/auth/account-invitation/check").with(from("198.51.100.31"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"token\":\"guess-10\"}"))
+            .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void accepting_a_link_is_limited_to_ten_requests_a_window_per_address() throws Exception {
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/api/auth/account-invitation/accept").with(from("198.51.100.32"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"token\":\"guess-" + i + "\",\"password\":\"" + PASSWORD + "\"}"))
+                .andExpect(status().isGone());
+        }
+
+        mockMvc.perform(post("/api/auth/account-invitation/accept").with(from("198.51.100.32"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"guess-10\",\"password\":\"" + PASSWORD + "\"}"))
+            .andExpect(status().isTooManyRequests());
+    }
+
+    private static RequestPostProcessor from(String address) {
+        return request -> {
+            request.setRemoteAddr(address);
+            return request;
+        };
     }
 }

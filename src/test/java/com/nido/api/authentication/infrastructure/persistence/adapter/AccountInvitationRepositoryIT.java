@@ -9,6 +9,7 @@ import com.nido.api.shared.model.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
@@ -66,6 +67,34 @@ class AccountInvitationRepositoryIT {
         assertThat(invitations.findByHash(hash('a'))).isEmpty();
         assertThat(invitations.findByHash(hash('b'))).hasValueSatisfying(invitation ->
             assertThat(invitation.createdAt()).isEqualTo(now.plusSeconds(60)));
+    }
+
+    @Test
+    void locking_finds_the_invitation_of_the_account_and_nothing_for_one_without() {
+        invitations.save(userId, hash('a'), now, now.plus(Duration.ofDays(7)));
+        UUID joined = saveUser();
+
+        Optional<AccountInvitation> invited = transactions.execute(status -> invitations.lockForUser(userId));
+        Optional<AccountInvitation> none = transactions.execute(status -> invitations.lockForUser(joined));
+
+        assertThat(invited).contains(new AccountInvitation(userId, now, now.plus(Duration.ofDays(7))));
+        assertThat(none).isEmpty();
+    }
+
+    @Test
+    void locking_sees_an_acceptance_committed_after_this_transaction_read_the_row() {
+        invitations.save(userId, hash('a'), now, now.plus(Duration.ofDays(7)));
+        TransactionTemplate meanwhile = new TransactionTemplate(transactions.getTransactionManager());
+        meanwhile.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+        Optional<AccountInvitation> locked = transactions.execute(status -> {
+            assertThat(invitations.findByUserId(userId)).isPresent();
+            // The account chooses its password in another transaction, which commits.
+            meanwhile.executeWithoutResult(other -> invitations.consumeByHash(hash('a')));
+            return invitations.lockForUser(userId);
+        });
+
+        assertThat(locked).isEmpty();
     }
 
     @Test

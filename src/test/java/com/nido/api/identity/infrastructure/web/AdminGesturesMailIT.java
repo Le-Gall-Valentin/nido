@@ -6,6 +6,9 @@ import com.nido.api.SharedGreenMail;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
+import com.nido.api.mfa.infrastructure.config.TotpEncryptorFactory;
+import com.nido.api.mfa.infrastructure.persistence.entity.UserTotpEntity;
+import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
 import com.nido.api.shared.model.Role;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.AfterEach;
@@ -30,6 +33,7 @@ import static com.nido.api.ReceivedMails.to;
 import static com.nido.api.TestAccessTokens.cookieFor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -45,6 +49,8 @@ class AdminGesturesMailIT {
     @Autowired UserIdentityJpaRepository users;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired JdbcClient jdbc;
+    @Autowired UserTotpJpaRepository totps;
+    @Autowired TotpEncryptorFactory encryptorFactory;
 
     private MockMvc mockMvc;
     private String suffix;
@@ -141,5 +147,36 @@ class AdminGesturesMailIT {
         assertThat(subjectOf(toDave.get(1))).isEqualTo("Votre invitation à Nido a été annulée");
         assertThat(allTo(address("alice"), 2)).extracting(mail -> subjectOf(mail))
             .contains(name("bob") + " a annulé l’invitation de " + name("dave"));
+    }
+
+    @Test
+    void an_admin_resetting_a_second_factor_tells_its_holder_and_the_super_administrators() throws Exception {
+        UserTotpEntity totp = new UserTotpEntity();
+        totp.setUserId(carolId);
+        totp.setTotpSecret(encryptorFactory.forUser(carolId).encrypt("JBSWY3DPEHPK3PXP"));
+        totp.setTotpEnabled(true);
+        totps.save(totp);
+
+        mockMvc.perform(post("/api/users/" + carolId + "/2fa/reset").cookie(cookieFor(bobId, Role.ADMIN)))
+            .andExpect(status().isNoContent());
+
+        MimeMessage toCarol = to(address("carol"));
+        assertThat(subjectOf(toCarol)).isEqualTo("La double authentification de votre compte Nido a été désactivée");
+        assertThat(textOf(toCarol)).contains(name("bob") + " a réinitialisé la double authentification de votre compte.");
+        assertThat(subjectOf(to(address("alice"))))
+            .isEqualTo(name("bob") + " a réinitialisé la 2FA de " + name("carol"));
+    }
+
+    @Test
+    void a_role_change_tells_its_holder_it_applies_at_once() throws Exception {
+        mockMvc.perform(patch("/api/users/" + carolId).cookie(cookieFor(aliceId, Role.SUPER_ADMIN))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"ADMIN\"}"))
+            .andExpect(status().isNoContent());
+
+        MimeMessage toCarol = to(address("carol"));
+        assertThat(subjectOf(toCarol)).isEqualTo("Vous êtes maintenant administrateur de Nido");
+        assertThat(textOf(toCarol)).contains(name("alice") + " vous a nommé administrateur.",
+            "Le changement s’applique tout de suite.");
     }
 }
