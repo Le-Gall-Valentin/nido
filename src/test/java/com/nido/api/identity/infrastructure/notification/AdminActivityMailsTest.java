@@ -49,7 +49,7 @@ class AdminActivityMailsTest {
             .isEqualTo("bob a désactivé le compte de carol");
         assertThat(fr(new AccountReactivatedNotification("alice", "bob", "carol", USERS)).subject())
             .isEqualTo("bob a réactivé le compte de carol");
-        assertThat(fr(new AccountDeletedNotification("alice", "bob", "carol", USERS)).subject())
+        assertThat(fr(new AccountDeletedNotification("alice", "bob", "carol", false, USERS)).subject())
             .isEqualTo("bob a supprimé le compte de carol");
         assertThat(fr(new AccountTotpResetNotification("alice", "bob", "carol", USERS)).subject())
             .isEqualTo("bob a réinitialisé la 2FA de carol");
@@ -59,5 +59,18 @@ class AdminActivityMailsTest {
             .isEqualTo("bob deactivated carol’s account");
         assertThat(en(new AccountTotpResetNotification("alice", "bob", "carol", USERS)).subject())
             .isEqualTo("bob reset carol’s two-factor authentication");
+    }
+
+    @Test
+    void deleting_an_account_that_never_joined_is_told_as_a_cancelled_invitation() {
+        RenderedMail invited = fr(new AccountDeletedNotification("alice", "bob", "carol", true, USERS));
+        assertThat(invited.subject()).isEqualTo("bob a annulé l’invitation de carol");
+        assertThat(invited.text())
+            .contains("bob a supprimé le compte de carol, qui n’avait pas encore rejoint Nido : son invitation est annulée.")
+            .doesNotContain("données personnelles");
+        assertThat(en(new AccountDeletedNotification("alice", "bob", "carol", true, USERS)).subject())
+            .isEqualTo("bob cancelled carol’s invitation");
+        assertThat(fr(new AccountDeletedNotification("alice", "bob", "carol", false, USERS)).text())
+            .contains("bob a supprimé le compte de carol et ses données personnelles.");
     }
 }

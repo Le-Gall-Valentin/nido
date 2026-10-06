@@ -16,8 +16,11 @@ public interface AdminActivityNotificationPort {
 
     void accountReactivated(List<User> readers, String actorName, String accountName);
 
-    /** @param accountName read before the anonymisation: the deleted account is named, as everywhere else */
-    void accountDeleted(List<User> readers, String actorName, String accountName);
+    /**
+     * @param accountName read before the anonymisation: the deleted account is named, as everywhere else
+     * @param wasInvited  the account never joined: its invitation is what ends
+     */
+    void accountDeleted(List<User> readers, String actorName, String accountName, boolean wasInvited);
 
     void totpReset(List<User> readers, String actorName, String accountName);
 }

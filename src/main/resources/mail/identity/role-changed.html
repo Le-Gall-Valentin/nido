@@ -8,9 +8,9 @@
   <th:block th:with="body=#{${mail.nowAdmin ? 'body.admin' : 'body.user'}(${mail.actorName})}">
     <p th:replace="~{components :: paragraph(${body})}"></p>
   </th:block>
-  <p th:replace="~{components :: paragraph(#{relogin})}"></p>
-  <table th:replace="~{components :: button(${appUrl + mail.loginPath.value}, #{action})}"></table>
-  <p th:replace="~{components :: fallbackLink(${appUrl + mail.loginPath.value})}"></p>
+  <p th:replace="~{components :: paragraph(#{applies})}"></p>
+  <table th:replace="~{components :: button(${appUrl + mail.appPath.value}, #{action})}"></table>
+  <p th:replace="~{components :: fallbackLink(${appUrl + mail.appPath.value})}"></p>
 </th:block>
 </body>
 </html>

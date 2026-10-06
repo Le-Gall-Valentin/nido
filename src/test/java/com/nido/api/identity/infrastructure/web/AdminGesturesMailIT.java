@@ -140,6 +140,6 @@ class AdminGesturesMailIT {
         List<MimeMessage> toDave = allTo(address("dave"), 2);
         assertThat(subjectOf(toDave.get(1))).isEqualTo("Votre invitation à Nido a été annulée");
         assertThat(allTo(address("alice"), 2)).extracting(mail -> subjectOf(mail))
-            .contains(name("bob") + " a supprimé le compte de " + name("dave"));
+            .contains(name("bob") + " a annulé l’invitation de " + name("dave"));
     }
 }

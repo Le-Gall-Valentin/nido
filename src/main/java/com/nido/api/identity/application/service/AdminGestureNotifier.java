@@ -99,7 +99,7 @@ public class AdminGestureNotifier {
             } else {
                 mails.deleted(account, actor);
             }
-            tellSuperAdministrators(actorRole, readers -> activity.accountDeleted(readers, actor, account.username()));
+            tellSuperAdministrators(actorRole, readers -> activity.accountDeleted(readers, actor, account.username(), wasInvited));
         });
     }
 

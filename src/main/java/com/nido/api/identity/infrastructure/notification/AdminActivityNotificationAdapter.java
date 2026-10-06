@@ -42,8 +42,9 @@ public class AdminActivityNotificationAdapter implements AdminActivityNotificati
     }
 
     @Override
-    public void accountDeleted(List<User> readers, String actorName, String accountName) {
-        readers.forEach(reader -> tell(reader, new AccountDeletedNotification(reader.username(), actorName, accountName, USERS)));
+    public void accountDeleted(List<User> readers, String actorName, String accountName, boolean wasInvited) {
+        readers.forEach(reader ->
+            tell(reader, new AccountDeletedNotification(reader.username(), actorName, accountName, wasInvited, USERS)));
     }
 
     @Override

@@ -60,7 +60,7 @@ class AdminAccountMailAdapterTest {
     @Test
     void a_promotion_and_a_demotion_are_told_apart() {
         adapter().roleChanged(carol, "alice", Role.ADMIN);
-        assertThat(sent().content()).isEqualTo(new RoleChangedMail("carol", "alice", true, new AppPath("/login")));
+        assertThat(sent().content()).isEqualTo(new RoleChangedMail("carol", "alice", true, new AppPath("/")));
     }
 
     @Test
@@ -82,7 +82,7 @@ class AdminAccountMailAdapterTest {
         assertThat(requests.getAllValues()).extracting(MailRequest::content).containsExactly(
             new AccountReactivatedMail("carol", "bob", new AppPath("/login")),
             new AccountDeletedMail("carol", "bob"),
-            new AccountInvitationCancelledMail("carol", "bob"));
+            new InvitationCancelledMail("carol", "bob"));
     }
 
     @Test

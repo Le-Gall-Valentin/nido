@@ -28,6 +28,7 @@ public class AdminAccountMailAdapter implements AdminAccountMailPort {
     /** An alert that outlives its moment is worse than none: a queue kept while mail was off must not deliver it weeks late. */
     private static final Duration ALERT_VALIDITY = Duration.ofHours(24);
     private static final AppPath LOGIN = new AppPath("/login");
+    private static final AppPath HOME = new AppPath("/");
     private static final AppPath SECURITY = new AppPath("/account/security");
 
     private final SendMailUseCase sendMail;
@@ -40,7 +41,7 @@ public class AdminAccountMailAdapter implements AdminAccountMailPort {
 
     @Override
     public void roleChanged(User account, String actorName, Role newRole) {
-        send(account, new RoleChangedMail(account.username(), actorName, newRole == Role.ADMIN, LOGIN));
+        send(account, new RoleChangedMail(account.username(), actorName, newRole == Role.ADMIN, HOME));
     }
 
     @Override
@@ -65,7 +66,7 @@ public class AdminAccountMailAdapter implements AdminAccountMailPort {
 
     @Override
     public void invitationCancelled(User account, String actorName) {
-        send(account, new AccountInvitationCancelledMail(account.username(), actorName));
+        send(account, new InvitationCancelledMail(account.username(), actorName));
     }
 
     private void send(User account, MailContent content) {

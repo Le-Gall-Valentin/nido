@@ -115,7 +115,7 @@ class AdminGestureNotifierTest {
 
         verify(mails).deleted(carol, "bob");
         verify(mails, never()).invitationCancelled(any(), any());
-        verify(activity).accountDeleted(List.of(alice, root), "bob", "carol");
+        verify(activity).accountDeleted(List.of(alice, root), "bob", "carol", false);
     }
 
     @Test
@@ -145,5 +145,13 @@ class AdminGestureNotifierTest {
         notifier.deactivated(carol, unknown, Role.ADMIN);
 
         verifyNoInteractions(mails, activity);
+    }
+
+    @Test
+    void an_administrator_deleting_an_invited_account_is_told_as_a_cancelled_invitation() {
+        notifier.deleted(carol, true, bob.id(), Role.ADMIN);
+
+        verify(mails).invitationCancelled(carol, "bob");
+        verify(activity).accountDeleted(List.of(alice, root), "bob", "carol", true);
     }
 }

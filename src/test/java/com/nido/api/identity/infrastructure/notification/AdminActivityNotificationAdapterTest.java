@@ -52,13 +52,13 @@ class AdminActivityNotificationAdapterTest {
 
         adapter.accountCreated(List.of(alice), "bob", "carol");
         adapter.accountReactivated(List.of(alice), "bob", "carol");
-        adapter.accountDeleted(List.of(alice), "bob", "carol");
+        adapter.accountDeleted(List.of(alice), "bob", "carol", true);
         adapter.totpReset(List.of(alice), "bob", "carol");
 
         assertThat(sent(4)).extracting(NotificationRequest::notification).containsExactly(
             new AccountCreatedNotification("alice", "bob", "carol", USERS),
             new AccountReactivatedNotification("alice", "bob", "carol", USERS),
-            new AccountDeletedNotification("alice", "bob", "carol", USERS),
+            new AccountDeletedNotification("alice", "bob", "carol", true, USERS),
             new AccountTotpResetNotification("alice", "bob", "carol", USERS));
     }
 }

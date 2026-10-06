@@ -14,6 +14,7 @@ class AdminAccountMailsTest {
 
     private static final ThymeleafMailRenderer RENDERER = new ThymeleafMailRenderer("https://nido.example");
     private static final AppPath LOGIN = new AppPath("/login");
+    private static final AppPath HOME = new AppPath("/");
 
     private static RenderedMail fr(MailContent mail) {
         return RENDERER.render(mail, Locale.FRENCH);
@@ -25,21 +26,30 @@ class AdminAccountMailsTest {
 
     @Test
     void a_promotion_says_what_it_opens() {
-        assertThat(fr(new RoleChangedMail("carol", "alice", true, LOGIN)).subject())
+        assertThat(fr(new RoleChangedMail("carol", "alice", true, HOME)).subject())
             .isEqualTo("Vous êtes maintenant administrateur de Nido");
-        assertThat(fr(new RoleChangedMail("carol", "alice", true, LOGIN)).text())
-            .contains("Bonjour carol,", "alice vous a nommé administrateur.", "Se connecter\nhttps://nido.example/login");
-        assertThat(en(new RoleChangedMail("carol", "alice", true, LOGIN)).subject())
+        assertThat(fr(new RoleChangedMail("carol", "alice", true, HOME)).text())
+            .contains("Bonjour carol,", "alice vous a nommé administrateur.", "Ouvrir Nido\nhttps://nido.example/");
+        assertThat(en(new RoleChangedMail("carol", "alice", true, HOME)).subject())
             .isEqualTo("You are now a Nido administrator");
     }
 
     @Test
+    void a_role_change_applies_at_once_without_signing_in_again() {
+        // Only the access token is cut off: the session refreshes by itself and carries the new role.
+        assertThat(fr(new RoleChangedMail("carol", "alice", true, HOME)).text())
+            .contains("Le changement s’applique tout de suite.").doesNotContain("reconnecter");
+        assertThat(en(new RoleChangedMail("carol", "alice", false, HOME)).text())
+            .contains("The change applies right away.").doesNotContain("sign in again");
+    }
+
+    @Test
     void a_demotion_says_what_it_takes_away() {
-        assertThat(fr(new RoleChangedMail("carol", "alice", false, LOGIN)).subject())
+        assertThat(fr(new RoleChangedMail("carol", "alice", false, HOME)).subject())
             .isEqualTo("Vous n’êtes plus administrateur de Nido");
-        assertThat(fr(new RoleChangedMail("carol", "alice", false, LOGIN)).text())
+        assertThat(fr(new RoleChangedMail("carol", "alice", false, HOME)).text())
             .contains("alice vous a retiré le rôle d’administrateur.");
-        assertThat(en(new RoleChangedMail("carol", "alice", false, LOGIN)).subject())
+        assertThat(en(new RoleChangedMail("carol", "alice", false, HOME)).subject())
             .isEqualTo("You are no longer a Nido administrator");
     }
 
@@ -80,11 +90,11 @@ class AdminAccountMailsTest {
 
     @Test
     void a_cancelled_invitation_says_the_link_no_longer_works() {
-        assertThat(fr(new AccountInvitationCancelledMail("carol", "bob")).subject())
+        assertThat(fr(new InvitationCancelledMail("carol", "bob")).subject())
             .isEqualTo("Votre invitation à Nido a été annulée");
-        assertThat(fr(new AccountInvitationCancelledMail("carol", "bob")).text())
+        assertThat(fr(new InvitationCancelledMail("carol", "bob")).text())
             .contains("bob a annulé votre invitation à rejoindre Nido. Le lien que vous avez reçu ne fonctionne plus.");
-        assertThat(en(new AccountInvitationCancelledMail("carol", "bob")).subject())
+        assertThat(en(new InvitationCancelledMail("carol", "bob")).subject())
             .isEqualTo("Your invitation to Nido was cancelled");
     }
 
@@ -95,6 +105,6 @@ class AdminAccountMailsTest {
         assertThat(new AccountDeactivatedMail("u", "a").template()).isEqualTo("identity/account-deactivated");
         assertThat(new AccountReactivatedMail("u", "a", LOGIN).template()).isEqualTo("identity/account-reactivated");
         assertThat(new AccountDeletedMail("u", "a").template()).isEqualTo("identity/account-deleted");
-        assertThat(new AccountInvitationCancelledMail("u", "a").template()).isEqualTo("identity/invitation-cancelled");
+        assertThat(new InvitationCancelledMail("u", "a").template()).isEqualTo("identity/invitation-cancelled");
     }
 }
