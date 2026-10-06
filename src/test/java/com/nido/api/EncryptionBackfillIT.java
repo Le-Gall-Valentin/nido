@@ -264,4 +264,20 @@ class EncryptionBackfillIT {
         assertThat(filenode("finance_categories")).as("encrypted by the start cut short, vacuumed by this one")
             .isNotEqualTo(financeFiles);
     }
+
+    @Test
+    void the_two_factor_secrets_already_encrypted_refuse_a_wrong_key_too() throws Exception {
+        // An installation older than 0.12 whose only encrypted data is a two-factor secret.
+        InstallationTestSupport.migrateUpTo(database, "064-");
+        admin = id("INSERT INTO users (username, email, role) VALUES ('admin', 'admin@example.fr', 'SUPER_ADMIN') RETURNING id");
+        String userSalt = admin.toString().replace("-", "");
+        db.update("INSERT INTO user_totp (user_id, totp_secret, totp_enabled) VALUES (?, ?, true)",
+            admin, Encryptors.delux(KEY, userSalt).encrypt("JBSWY3DPEHPK3PXP"));
+
+        assertThatThrownBy(() -> start(OTHER).close()).hasStackTraceContaining("does not decrypt the two-factor secrets");
+
+        try (ConfigurableApplicationContext ignored = start(KEY)) {
+            // the right key starts
+        }
+    }
 }
