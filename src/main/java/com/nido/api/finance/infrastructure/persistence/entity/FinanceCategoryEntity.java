@@ -28,12 +28,11 @@ public class FinanceCategoryEntity {
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
 
-    /** Populated only when {@link #isDefault} is true — a system label, not user data. */
-    @Column(length = 60)
-    private String label;
-
-    /** Populated only when {@link #isDefault} is false. */
-    @Column(name = "label_encrypted")
+    /**
+     * Every label, the defaults' included: a default category can be renamed, and what its owner types
+     * then is theirs.
+     */
+    @Column(name = "label_encrypted", nullable = false)
     private String labelEncrypted;
 
     @Column(nullable = false, length = 7)

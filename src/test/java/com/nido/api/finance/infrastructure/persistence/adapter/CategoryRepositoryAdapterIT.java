@@ -8,6 +8,7 @@ import com.nido.api.finance.domain.model.UpdateCategoryCommand;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceCategoryJpaRepository;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -28,6 +29,7 @@ class CategoryRepositoryAdapterIT {
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired UserIdentityJpaRepository userJpaRepository;
     @Autowired TransactionRepositoryAdapter transactionAdapter;
+    @Autowired SpaceEncryptorFactory encryptors;
 
     private UUID spaceId;
 
@@ -61,13 +63,25 @@ class CategoryRepositoryAdapterIT {
     }
 
     @Test
-    void a_default_category_stores_its_label_in_clear_text() {
+    void a_default_category_stores_its_label_encrypted_like_any_other() {
         Category created = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils", TransactionType.EXPENSE), true);
 
         assertThat(created.label()).isEqualTo("Alimentation");
         assertThat(created.isDefault()).isTrue();
-        assertThat(jpaRepository.findById(created.id()).orElseThrow().getLabel()).isEqualTo("Alimentation");
-        assertThat(jpaRepository.findById(created.id()).orElseThrow().getLabelEncrypted()).isNull();
+        String stored = jpaRepository.findById(created.id()).orElseThrow().getLabelEncrypted();
+        assertThat(stored).isNotNull().doesNotContain("Alimentation");
+        assertThat(encryptors.forSpace(spaceId).decrypt(stored)).isEqualTo("Alimentation");
+    }
+
+    @Test
+    void renaming_a_default_category_keeps_the_new_label_encrypted() {
+        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Alimentation", "#f59e0b", "Utensils", TransactionType.EXPENSE), true);
+
+        adapter.update(new UpdateCategoryCommand(created.id(), spaceId, "Cantine des enfants", "#f59e0b", "Utensils"));
+
+        String stored = jpaRepository.findById(created.id()).orElseThrow().getLabelEncrypted();
+        assertThat(stored).doesNotContain("Cantine");
+        assertThat(adapter.findById(created.id()).orElseThrow().label()).isEqualTo("Cantine des enfants");
     }
 
     @Test
@@ -78,7 +92,6 @@ class CategoryRepositoryAdapterIT {
         assertThat(created.isDefault()).isFalse();
         String rawStoredValue = jpaRepository.findById(created.id()).orElseThrow().getLabelEncrypted();
         assertThat(rawStoredValue).isNotNull().doesNotContain("Ma catégorie perso");
-        assertThat(jpaRepository.findById(created.id()).orElseThrow().getLabel()).isNull();
     }
 
     @Test

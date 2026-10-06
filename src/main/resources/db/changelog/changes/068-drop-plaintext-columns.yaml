@@ -277,3 +277,33 @@ databaseChangeLog:
               - column:
                   name: text
                   type: VARCHAR(2000)
+  - changeSet:
+      id: 068-drop-plaintext-finance-categories
+      author: nido
+      comment: >
+        The second half of 067 for finance_categories — see 068-drop-plaintext-shopping-items. Every label is encrypted from now on, the defaults' included.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "finance_categories still holds labels in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM finance_categories WHERE label IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: finance_categories
+            columnName: label
+        - addNotNullConstraint:
+            tableName: finance_categories
+            columnName: label_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: finance_categories
+            columnName: label_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: finance_categories
+            columns:
+              - column:
+                  name: label
+                  type: VARCHAR(60)
