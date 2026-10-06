@@ -1,11 +1,6 @@
 package com.nido.api;
 
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 import com.nido.api.finance.domain.model.Category;
-import com.nido.api.infrastructure.config.EncryptionBackfillRunner;
-import com.nido.api.instance.application.handler.ResolveEncryptionKeyHandler;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.kitchen.domain.model.Recipe;
 import com.nido.api.kitchen.domain.model.RecipeIngredient;
@@ -25,7 +20,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.server.context.WebServerInitializedEvent;
 import org.springframework.context.ApplicationListener;
@@ -204,23 +198,16 @@ class EncryptionBackfillIT {
 
     @Test
     void a_new_installation_has_its_final_schema_from_the_first_start_and_rewrites_nothing() {
-        Logger runner = (Logger) LoggerFactory.getLogger(EncryptionBackfillRunner.class);
-        Logger keys = (Logger) LoggerFactory.getLogger(ResolveEncryptionKeyHandler.class);
-        ListAppender<ILoggingEvent> logged = new ListAppender<>();
-        logged.start();
-        runner.addAppender(logged);
-        keys.addAppender(logged);
         try (ConfigurableApplicationContext ignored = InstallationTestSupport.boot(database, dataDir,
                 "spring.jpa.hibernate.ddl-auto=validate")) {
             assertThat(PlaintextPerimeter.columnsInClear(db)).isEmpty();
             assertThat(PlaintextPerimeter.requiredEncryptedColumnsAcceptingNull(db)).isEmpty();
-            assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
-                .as("the capture sees the start: the key it generated is announced")
-                .anyMatch(line -> line.startsWith("No encryption key was provided"))
-                .noneMatch(line -> line.startsWith("Encrypted"));
-        } finally {
-            runner.detachAppender(logged);
-            keys.detachAppender(logged);
+            // A table keeps the files it was created with until something rewrites it — VACUUM FULL among others.
+            assertThat(db.queryForList("""
+                    SELECT relname FROM pg_class
+                    WHERE relkind = 'r' AND relname = ANY (?) AND relfilenode <> oid""", String.class,
+                    (Object) PlaintextPerimeter.COLUMNS.stream().map(PlaintextPerimeter.Column::table).distinct().toArray(String[]::new)))
+                .as("tables of the perimeter rewritten on a new installation").isEmpty();
         }
     }
 
