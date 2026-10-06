@@ -2,6 +2,7 @@ package com.nido.api.identity.infrastructure.web;
 
 import com.jayway.jsonpath.JsonPath;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nido.api.TestSpaces;
 import com.nido.api.authentication.infrastructure.persistence.entity.UserCredentialEntity;
 import com.nido.api.authentication.infrastructure.persistence.repository.RefreshTokenJpaRepository;
 import com.nido.api.authentication.infrastructure.persistence.repository.UserCredentialJpaRepository;
@@ -306,7 +307,7 @@ class UserControllerIT {
 
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName("Chez Superadmin");
+        TestSpaces.name(space, "Chez Superadmin");
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         space.setCreatedBy(adminId);

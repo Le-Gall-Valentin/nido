@@ -2,6 +2,7 @@ package com.nido.api.kitchen.infrastructure.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
@@ -350,7 +351,7 @@ class RecipeControllerIT {
     private UUID saveSharedSpace(String name) {
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName(name);
+        TestSpaces.name(space, name);
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         return spaces.saveAndFlush(space).getId();

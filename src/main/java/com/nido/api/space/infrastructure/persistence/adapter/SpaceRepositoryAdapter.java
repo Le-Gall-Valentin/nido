@@ -1,5 +1,6 @@
 package com.nido.api.space.infrastructure.persistence.adapter;
 
+import com.nido.api.infrastructure.config.SpaceKeyCache;
 import com.nido.api.shared.model.PageResult;
 import com.nido.api.space.domain.model.CreateSharedSpaceCommand;
 import com.nido.api.space.domain.model.Space;
@@ -24,6 +25,7 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
@@ -42,20 +44,22 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
 
     private final SpaceJpaRepository spaces;
     private final SpaceMemberJpaRepository members;
+    private final SpaceKeyCache keys;
 
-    public SpaceRepositoryAdapter(SpaceJpaRepository spaces, SpaceMemberJpaRepository members) {
+    public SpaceRepositoryAdapter(SpaceJpaRepository spaces, SpaceMemberJpaRepository members, SpaceKeyCache keys) {
         this.spaces = spaces;
         this.members = members;
+        this.keys = keys;
     }
 
     @Override
     public Optional<Space> findById(UUID spaceId) {
-        return spaces.findById(spaceId).map(SpaceRepositoryAdapter::toDomain);
+        return spaces.findById(spaceId).map(this::toSpace);
     }
 
     @Override
     public Optional<Space> findPersonalOwnedBy(UUID userId) {
-        return spaces.findByPersonalOwnerId(userId).map(SpaceRepositoryAdapter::toDomain);
+        return spaces.findByPersonalOwnerId(userId).map(this::toSpace);
     }
 
     @Override
@@ -69,7 +73,7 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
         Map<UUID, Long> counts = members.countBySpaceIds(roleBySpace.keySet()).stream()
             .collect(Collectors.toMap(MemberCount::spaceId, MemberCount::total));
         return spaces.findAllById(roleBySpace.keySet()).stream()
-            .map(e -> new SpaceSummaryView(e.getId(), e.getType(), e.getName(), e.getAccent(), e.getGlyph(),
+            .map(e -> new SpaceSummaryView(e.getId(), e.getType(), nameOf(e), e.getAccent(), e.getGlyph(),
                 ZoneId.of(e.getTimezone()),
                 roleBySpace.get(e.getId()), counts.getOrDefault(e.getId(), 0L)))
             // l'espace perso d'abord, puis les groupes par nom
@@ -86,7 +90,7 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
     @Override
     public List<Space> findByIds(Collection<UUID> spaceIds) {
         return spaces.findAllById(spaceIds).stream()
-            .map(SpaceRepositoryAdapter::toDomain)
+            .map(this::toSpace)
             .toList();
     }
 
@@ -103,7 +107,7 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
             : members.countBySpaceIds(found.getContent().stream().map(SpaceEntity::getId).toList()).stream()
                 .collect(Collectors.toMap(MemberCount::spaceId, MemberCount::total));
         List<SpaceAdminView> content = found.getContent().stream()
-            .map(e -> new SpaceAdminView(e.getId(), e.getType(), e.getName(),
+            .map(e -> new SpaceAdminView(e.getId(), e.getType(), nameOf(e),
                 counts.getOrDefault(e.getId(), 0L), e.getCreatedBy(), e.getCreatedAt()))
             .toList();
         return new PageResult<>(content, found.getTotalElements(), page, size);
@@ -113,7 +117,8 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
     public Space createPersonal(UUID ownerUserId) {
         SpaceEntity e = new SpaceEntity();
         e.setType(SpaceType.PERSONAL);
-        e.setName(PERSONAL_SPACE_NAME);
+        e.setEncryptionSalt(SpaceEntity.newEncryptionSalt());
+        e.setNameEncrypted(keys.forNewSpace(e.getEncryptionSalt()).encrypt(PERSONAL_SPACE_NAME));
         e.setAccent(SpaceAppearance.PERSONAL_ACCENT);
         e.setGlyph(SpaceAppearance.PERSONAL_GLYPH);
         e.setPersonalOwnerId(ownerUserId);
@@ -125,8 +130,11 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
     public Space createShared(CreateSharedSpaceCommand command) {
         SpaceEntity e = new SpaceEntity();
         e.setType(SpaceType.SHARED);
-        e.setName(command.name());
-        e.setDescription(command.description());
+        // The salt before the insert: the name is encrypted with it, and the row has no id to cache a key under yet.
+        e.setEncryptionSalt(SpaceEntity.newEncryptionSalt());
+        TextEncryptor encryptor = keys.forNewSpace(e.getEncryptionSalt());
+        e.setNameEncrypted(encryptor.encrypt(command.name()));
+        e.setDescriptionEncrypted(command.description() == null ? null : encryptor.encrypt(command.description()));
         e.setAccent(command.accent());
         e.setGlyph(command.glyph());
         e.setCreatedBy(command.creatorUserId());
@@ -140,8 +148,11 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
             .orElseThrow(SpaceException.SpaceNotFound::new);
         // Modification partielle : seuls les champs fournis sont appliqués. Une description
         // vide est un effacement explicite, à distinguer d'une absence.
-        if (command.name() != null) e.setName(command.name());
-        if (command.description() != null) e.setDescription(command.description().isEmpty() ? null : command.description());
+        TextEncryptor encryptor = encryptorOf(e);
+        if (command.name() != null) e.setNameEncrypted(encryptor.encrypt(command.name()));
+        if (command.description() != null) {
+            e.setDescriptionEncrypted(command.description().isEmpty() ? null : encryptor.encrypt(command.description()));
+        }
         if (command.accent() != null) e.setAccent(command.accent());
         if (command.glyph() != null) e.setGlyph(command.glyph());
         if (command.timezone() != null) e.setTimezone(command.timezone().getId());
@@ -215,7 +226,7 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
 
     private Space save(SpaceEntity e) {
         try {
-            return toDomain(spaces.saveAndFlush(e));
+            return toSpace(spaces.saveAndFlush(e));
         } catch (DataIntegrityViolationException ex) {
             throw resolveConstraintViolation(ex);
         }
@@ -233,8 +244,18 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
         return new SpaceException.DataIntegrityError();
     }
 
-    private static Space toDomain(SpaceEntity e) {
-        return new Space(e.getId(), e.getType(), e.getName(), e.getDescription(),
+    private TextEncryptor encryptorOf(SpaceEntity e) {
+        return keys.forSpace(e.getId(), e::getEncryptionSalt);
+    }
+
+    private String nameOf(SpaceEntity e) {
+        return encryptorOf(e).decrypt(e.getNameEncrypted());
+    }
+
+    private Space toSpace(SpaceEntity e) {
+        TextEncryptor encryptor = encryptorOf(e);
+        String description = e.getDescriptionEncrypted() == null ? null : encryptor.decrypt(e.getDescriptionEncrypted());
+        return new Space(e.getId(), e.getType(), encryptor.decrypt(e.getNameEncrypted()), description,
             e.getAccent(), e.getGlyph(), e.getPersonalOwnerId(),
             ZoneId.of(e.getTimezone()), e.getCreatedAt());
     }

@@ -1,6 +1,7 @@
 package com.nido.api.finance.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
@@ -52,7 +53,7 @@ class TransactionRepositoryAdapterIT {
 
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName("Chez Valentin");
+        TestSpaces.name(space, "Chez Valentin");
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         spaceId = spaceJpaRepository.saveAndFlush(space).getId();
@@ -217,7 +218,7 @@ class TransactionRepositoryAdapterIT {
     void findSplitsBySpaceId_stays_inside_its_own_space() {
         SpaceEntity other = new SpaceEntity();
         other.setType(SpaceType.SHARED);
-        other.setName("Ailleurs");
+        TestSpaces.name(other, "Ailleurs");
         other.setAccent("#c17a5c");
         other.setGlyph("🏠");
         UUID otherSpaceId = spaceJpaRepository.saveAndFlush(other).getId();

@@ -1,6 +1,7 @@
 package com.nido.api.kitchen.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
 import com.nido.api.kitchen.domain.model.CreateRecipeCommand;
 import com.nido.api.kitchen.domain.model.KitchenException;
@@ -41,7 +42,7 @@ class KitchenRecipeRepositoryAdapterIT {
         spaceJpaRepository.deleteAll();
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName("Chez Valentin");
+        TestSpaces.name(space, "Chez Valentin");
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         spaceId = spaceJpaRepository.saveAndFlush(space).getId();
@@ -113,7 +114,7 @@ class KitchenRecipeRepositoryAdapterIT {
         adapter.create(bolognaise());
         SpaceEntity otherSpace = new SpaceEntity();
         otherSpace.setType(SpaceType.SHARED);
-        otherSpace.setName("Autre groupe");
+        TestSpaces.name(otherSpace, "Autre groupe");
         otherSpace.setAccent("#4a7fa0");
         otherSpace.setGlyph("🌿");
         UUID otherSpaceId = spaceJpaRepository.saveAndFlush(otherSpace).getId();
@@ -182,7 +183,7 @@ class KitchenRecipeRepositoryAdapterIT {
         // How a recipe is moved or copied: MoveRecipeHandler and CopyRecipeHandler create it in the destination.
         SpaceEntity otherSpace = new SpaceEntity();
         otherSpace.setType(SpaceType.SHARED);
-        otherSpace.setName("Autre groupe");
+        TestSpaces.name(otherSpace, "Autre groupe");
         otherSpace.setAccent("#c17a5c");
         otherSpace.setGlyph("🏡");
         UUID otherSpaceId = spaceJpaRepository.saveAndFlush(otherSpace).getId();

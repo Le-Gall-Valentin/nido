@@ -2,6 +2,7 @@ package com.nido.api.space.infrastructure.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
@@ -393,7 +394,7 @@ class SpaceControllerIT {
     protected UUID savePersonalSpace(UUID ownerId) {
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.PERSONAL);
-        space.setName("Perso");
+        TestSpaces.name(space, "Perso");
         space.setAccent("#8a7d6b");
         space.setGlyph("👤");
         space.setPersonalOwnerId(ownerId);
@@ -406,7 +407,7 @@ class SpaceControllerIT {
     protected UUID saveSharedSpace(String name, UUID creatorId) {
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName(name);
+        TestSpaces.name(space, name);
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         space.setCreatedBy(creatorId);

@@ -1,6 +1,7 @@
 package com.nido.api.calendar.infrastructure.persistence;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.shared.model.Role;
@@ -37,7 +38,7 @@ class CalendarSchemaIT {
     void setUp() {
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName("Colocation");
+        TestSpaces.name(space, "Colocation");
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         spaceId = spaces.saveAndFlush(space).getId();

@@ -3,6 +3,7 @@ package com.nido.api.dashboard.infrastructure.web;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
@@ -328,7 +329,7 @@ class DashboardControllerIT {
     private UUID saveSpace(SpaceType type, String name, UUID personalOwnerId) {
         SpaceEntity space = new SpaceEntity();
         space.setType(type);
-        space.setName(name);
+        TestSpaces.name(space, name);
         space.setAccent(type == SpaceType.PERSONAL ? "#8a7d6b" : "#c17a5c");
         space.setGlyph(type == SpaceType.PERSONAL ? "👤" : "🏡");
         if (personalOwnerId != null) {

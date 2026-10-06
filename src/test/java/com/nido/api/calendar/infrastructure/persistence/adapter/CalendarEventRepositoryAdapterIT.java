@@ -1,6 +1,7 @@
 package com.nido.api.calendar.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CreateEventCommand;
 import com.nido.api.calendar.domain.model.CreateRecurringEventSeriesCommand;
@@ -56,7 +57,7 @@ class CalendarEventRepositoryAdapterIT {
     void setUp() {
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName("Colocation");
+        TestSpaces.name(space, "Colocation");
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         spaceId = spaces.saveAndFlush(space).getId();
@@ -111,7 +112,7 @@ class CalendarEventRepositoryAdapterIT {
     void doesNotReturnAnEventOfAnotherSpace() {
         SpaceEntity other = new SpaceEntity();
         other.setType(SpaceType.SHARED);
-        other.setName("Ailleurs");
+        TestSpaces.name(other, "Ailleurs");
         other.setAccent("#4a7fa0");
         other.setGlyph("🏠");
         UUID otherSpaceId = spaces.saveAndFlush(other).getId();

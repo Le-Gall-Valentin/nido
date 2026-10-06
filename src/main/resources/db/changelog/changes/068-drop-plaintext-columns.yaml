@@ -307,3 +307,39 @@ databaseChangeLog:
               - column:
                   name: label
                   type: VARCHAR(60)
+  - changeSet:
+      id: 068-drop-plaintext-spaces
+      author: nido
+      comment: The second half of 067 for spaces — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "spaces still holds names or descriptions in clear: they are encrypted after this start, and the columns are dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM spaces WHERE name IS NOT NULL OR description IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: spaces
+            columns:
+              - column:
+                  name: name
+              - column:
+                  name: description
+        - addNotNullConstraint:
+            tableName: spaces
+            columnName: name_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: spaces
+            columnName: name_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: spaces
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(80)
+              - column:
+                  name: description
+                  type: VARCHAR(280)

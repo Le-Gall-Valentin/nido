@@ -30,11 +30,11 @@ public class SpaceEntity {
     @Column(nullable = false, length = 20)
     private SpaceType type;
 
-    @Column(nullable = false, length = 80)
-    private String name;
+    @Column(name = "name_encrypted", nullable = false)
+    private String nameEncrypted;
 
-    @Column(length = 280)
-    private String description;
+    @Column(name = "description_encrypted")
+    private String descriptionEncrypted;
 
     @Column(nullable = false, length = 7)
     private String accent;
@@ -61,8 +61,9 @@ public class SpaceEntity {
     /**
      * JPA allows exactly one of these per entity, so both defaults live here.
      *
-     * <p>Every space needs a stable per-space encryption salt before Finance can derive a key for
-     * it — generated here rather than at every call site so no caller can forget it.
+     * <p>Every space needs a stable per-space encryption salt before any of its data can be encrypted.
+     * The adapter now draws it itself, before encrypting the name; this stays as the net for a row
+     * inserted without one, so no caller can forget it.
      *
      * <p>The timezone column has a database default, which an INSERT naming the column defeats:
      * Hibernate writes the field as it stands, and a null field becomes an explicit NULL against a
@@ -76,9 +77,17 @@ public class SpaceEntity {
             timezone = "Europe/Paris";
         }
         if (encryptionSalt == null) {
-            byte[] bytes = new byte[16];
-            new SecureRandom().nextBytes(bytes);
-            encryptionSalt = HexFormat.of().formatHex(bytes);
+            encryptionSalt = newEncryptionSalt();
         }
+    }
+
+    /**
+     * A new space's random salt. The adapter draws it before the insert, to encrypt the name with it;
+     * {@link #applyDefaults} draws one for a row that arrives without.
+     */
+    public static String newEncryptionSalt() {
+        byte[] bytes = new byte[16];
+        new SecureRandom().nextBytes(bytes);
+        return HexFormat.of().formatHex(bytes);
     }
 }

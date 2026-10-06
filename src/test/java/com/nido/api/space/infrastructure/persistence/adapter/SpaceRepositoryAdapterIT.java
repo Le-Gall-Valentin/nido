@@ -3,6 +3,7 @@ package com.nido.api.space.infrastructure.persistence.adapter;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.CreateSharedSpaceCommand;
 import com.nido.api.space.domain.model.Space;
@@ -10,14 +11,18 @@ import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceSummaryView;
 import com.nido.api.space.domain.model.SpaceType;
+import com.nido.api.space.domain.model.UpdateSpaceCommand;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceMemberJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
 
 import java.util.List;
 import java.time.ZoneId;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +35,8 @@ class SpaceRepositoryAdapterIT {
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired SpaceMemberJpaRepository spaceMemberJpaRepository;
     @Autowired UserIdentityJpaRepository userIdentityJpaRepository;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired SpaceEncryptorFactory encryptors;
 
     private UUID alice;
     private UUID bob;
@@ -176,5 +183,40 @@ class SpaceRepositoryAdapterIT {
         user.setEmail(username + "@test.com");
         user.setRole(Role.USER);
         return userIdentityJpaRepository.saveAndFlush(user).getId();
+    }
+
+    @Test
+    void a_shared_space_keeps_its_name_and_description_encrypted_with_its_own_key() {
+        Space space = adapter.createShared(new CreateSharedSpaceCommand("Famille Le Gall 🏡", "Rue des Lilas",
+            "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
+
+        Map<String, Object> row = jdbc.queryForMap("SELECT name_encrypted, description_encrypted FROM spaces WHERE id = ?", space.id());
+        TextEncryptor key = encryptors.forSpace(space.id());
+        assertThat((String) row.get("name_encrypted")).doesNotContain("Famille");
+        assertThat(key.decrypt((String) row.get("name_encrypted"))).isEqualTo("Famille Le Gall 🏡");
+        assertThat(key.decrypt((String) row.get("description_encrypted"))).isEqualTo("Rue des Lilas");
+        assertThat(adapter.findById(space.id()).orElseThrow())
+            .extracting(Space::name, Space::description).containsExactly("Famille Le Gall 🏡", "Rue des Lilas");
+    }
+
+    @Test
+    void the_personal_space_name_is_encrypted_too() {
+        Space space = adapter.createPersonal(alice);
+
+        String stored = jdbc.queryForObject("SELECT name_encrypted FROM spaces WHERE id = ?", String.class, space.id());
+
+        assertThat(encryptors.forSpace(space.id()).decrypt(stored)).isEqualTo("Perso");
+    }
+
+    @Test
+    void renaming_re_encrypts_and_an_empty_description_clears_it() {
+        Space space = adapter.createShared(new CreateSharedSpaceCommand("Coloc", "Avant", "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
+
+        adapter.update(new UpdateSpaceCommand(space.id(), "Coloc rue Y", "", null, null, null));
+
+        Space updated = adapter.findById(space.id()).orElseThrow();
+        assertThat(updated.name()).isEqualTo("Coloc rue Y");
+        assertThat(updated.description()).isNull();
+        assertThat(jdbc.queryForObject("SELECT description_encrypted FROM spaces WHERE id = ?", String.class, space.id())).isNull();
     }
 }
