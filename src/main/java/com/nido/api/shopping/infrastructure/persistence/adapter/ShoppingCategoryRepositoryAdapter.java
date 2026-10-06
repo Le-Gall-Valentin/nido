@@ -1,5 +1,6 @@
 package com.nido.api.shopping.infrastructure.persistence.adapter;
 
+import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
 import com.nido.api.shopping.domain.model.ShoppingCategory;
 import com.nido.api.shopping.domain.model.ShoppingException;
 import com.nido.api.shopping.domain.port.out.ShoppingCategoryRepository;
@@ -16,15 +17,17 @@ import java.util.UUID;
 public class ShoppingCategoryRepositoryAdapter implements ShoppingCategoryRepository {
 
     private final ShoppingCategoryJpaRepository categories;
+    private final SpaceEncryptorFactory encryptors;
 
-    public ShoppingCategoryRepositoryAdapter(ShoppingCategoryJpaRepository categories) {
+    public ShoppingCategoryRepositoryAdapter(ShoppingCategoryJpaRepository categories, SpaceEncryptorFactory encryptors) {
         this.categories = categories;
+        this.encryptors = encryptors;
     }
 
     @Override
     public List<ShoppingCategory> findBySpaceId(UUID spaceId) {
         return categories.findBySpaceIdOrderByPositionAsc(spaceId).stream()
-            .map(ShoppingCategoryRepositoryAdapter::toDomain).toList();
+            .map(this::toDomain).toList();
     }
 
     @Override
@@ -43,7 +46,7 @@ public class ShoppingCategoryRepositoryAdapter implements ShoppingCategoryReposi
     public ShoppingCategory create(UUID spaceId, String name, boolean fallback) {
         ShoppingCategoryEntity e = new ShoppingCategoryEntity();
         e.setSpaceId(spaceId);
-        e.setName(name);
+        e.setNameEncrypted(encryptors.forSpace(spaceId).encrypt(name));
         e.setFallback(fallback);
         e.setPosition((int) categories.countBySpaceId(spaceId));
         return toDomain(categories.saveAndFlush(e));
@@ -51,13 +54,13 @@ public class ShoppingCategoryRepositoryAdapter implements ShoppingCategoryReposi
 
     @Override
     public Optional<ShoppingCategory> findById(UUID categoryId) {
-        return categories.findById(categoryId).map(ShoppingCategoryRepositoryAdapter::toDomain);
+        return categories.findById(categoryId).map(this::toDomain);
     }
 
     @Override
     public ShoppingCategory rename(UUID categoryId, String name) {
         ShoppingCategoryEntity e = categories.findById(categoryId).orElseThrow(ShoppingException.CategoryNotFound::new);
-        e.setName(name);
+        e.setNameEncrypted(encryptors.forSpace(e.getSpaceId()).encrypt(name));
         return toDomain(categories.saveAndFlush(e));
     }
 
@@ -67,7 +70,8 @@ public class ShoppingCategoryRepositoryAdapter implements ShoppingCategoryReposi
         categories.flush();
     }
 
-    private static ShoppingCategory toDomain(ShoppingCategoryEntity e) {
-        return new ShoppingCategory(e.getId(), e.getSpaceId(), e.getName(), e.getPosition(), e.isFallback());
+    private ShoppingCategory toDomain(ShoppingCategoryEntity e) {
+        return new ShoppingCategory(e.getId(), e.getSpaceId(),
+            encryptors.forSpace(e.getSpaceId()).decrypt(e.getNameEncrypted()), e.getPosition(), e.isFallback());
     }
 }

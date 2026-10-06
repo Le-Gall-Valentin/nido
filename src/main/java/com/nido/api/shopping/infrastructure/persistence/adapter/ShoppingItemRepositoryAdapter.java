@@ -1,5 +1,6 @@
 package com.nido.api.shopping.infrastructure.persistence.adapter;
 
+import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
 import com.nido.api.shopping.domain.model.AddShoppingItemCommand;
 import com.nido.api.shopping.domain.model.ShoppingException;
 import com.nido.api.shopping.domain.model.ShoppingItem;
@@ -18,25 +19,27 @@ import java.util.UUID;
 public class ShoppingItemRepositoryAdapter implements ShoppingItemRepository {
 
     private final ShoppingItemJpaRepository items;
+    private final SpaceEncryptorFactory encryptors;
 
-    public ShoppingItemRepositoryAdapter(ShoppingItemJpaRepository items) {
+    public ShoppingItemRepositoryAdapter(ShoppingItemJpaRepository items, SpaceEncryptorFactory encryptors) {
         this.items = items;
+        this.encryptors = encryptors;
     }
 
     @Override
     public List<ShoppingItem> findBySpaceId(UUID spaceId) {
-        return items.findBySpaceIdOrderByPositionAsc(spaceId).stream().map(ShoppingItemRepositoryAdapter::toDomain).toList();
+        return items.findBySpaceIdOrderByPositionAsc(spaceId).stream().map(this::toDomain).toList();
     }
 
     @Override
     public List<ShoppingItem> findBySpaceIdAndDoneFalse(UUID spaceId) {
         return items.findBySpaceIdAndDoneFalseOrderByPositionAsc(spaceId).stream()
-            .map(ShoppingItemRepositoryAdapter::toDomain).toList();
+            .map(this::toDomain).toList();
     }
 
     @Override
     public Optional<ShoppingItem> findById(UUID itemId) {
-        return items.findById(itemId).map(ShoppingItemRepositoryAdapter::toDomain);
+        return items.findById(itemId).map(this::toDomain);
     }
 
     @Override
@@ -45,7 +48,7 @@ public class ShoppingItemRepositoryAdapter implements ShoppingItemRepository {
         ShoppingItemEntity e = new ShoppingItemEntity();
         e.setSpaceId(command.spaceId());
         e.setCategoryId(command.categoryId());
-        e.setName(command.name());
+        e.setNameEncrypted(encryptors.forSpace(command.spaceId()).encrypt(command.name()));
         e.setQuantity(command.quantity());
         e.setUnit(command.unit());
         e.setDone(false);
@@ -57,7 +60,8 @@ public class ShoppingItemRepositoryAdapter implements ShoppingItemRepository {
     public ShoppingItem update(UpdateShoppingItemCommand command) {
         ShoppingItemEntity e = items.findById(command.itemId()).orElseThrow(ShoppingException.ItemNotFound::new);
         e.setCategoryId(command.categoryId());
-        e.setName(command.name());
+        // The key of the space the row is stored in, whatever the command says.
+        e.setNameEncrypted(encryptors.forSpace(e.getSpaceId()).encrypt(command.name()));
         e.setQuantity(command.quantity());
         e.setUnit(command.unit());
         return toDomain(items.saveAndFlush(e));
@@ -94,7 +98,9 @@ public class ShoppingItemRepositoryAdapter implements ShoppingItemRepository {
         items.reassignCategory(fromCategoryId, toCategoryId);
     }
 
-    private static ShoppingItem toDomain(ShoppingItemEntity e) {
-        return new ShoppingItem(e.getId(), e.getSpaceId(), e.getCategoryId(), e.getName(), e.getQuantity(), e.getUnit(), e.isDone(), e.getPosition());
+    private ShoppingItem toDomain(ShoppingItemEntity e) {
+        return new ShoppingItem(e.getId(), e.getSpaceId(), e.getCategoryId(),
+            encryptors.forSpace(e.getSpaceId()).decrypt(e.getNameEncrypted()),
+            e.getQuantity(), e.getUnit(), e.isDone(), e.getPosition());
     }
 }

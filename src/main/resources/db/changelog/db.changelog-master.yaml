@@ -200,3 +200,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/067-encrypt-plaintext-columns.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/068-drop-plaintext-columns.yaml
+      relativeToChangelogFile: false

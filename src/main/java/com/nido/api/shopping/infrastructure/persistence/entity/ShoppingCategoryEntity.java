@@ -25,8 +25,8 @@ public class ShoppingCategoryEntity {
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
 
-    @Column(nullable = false, length = 60)
-    private String name;
+    @Column(name = "name_encrypted", nullable = false)
+    private String nameEncrypted;
 
     @Column(nullable = false)
     private int position;

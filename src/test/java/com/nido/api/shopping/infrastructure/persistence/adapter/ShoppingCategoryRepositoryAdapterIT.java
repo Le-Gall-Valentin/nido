@@ -1,6 +1,7 @@
 package com.nido.api.shopping.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
 import com.nido.api.shopping.domain.model.ShoppingCategory;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -8,6 +9,7 @@ import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaReposito
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.UUID;
 
@@ -18,6 +20,8 @@ class ShoppingCategoryRepositoryAdapterIT {
 
     @Autowired ShoppingCategoryRepositoryAdapter adapter;
     @Autowired SpaceJpaRepository spaceJpaRepository;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired SpaceEncryptorFactory encryptors;
 
     private UUID spaceId;
 
@@ -84,5 +88,17 @@ class ShoppingCategoryRepositoryAdapterIT {
         spaceJpaRepository.flush();
 
         assertThat(adapter.findById(created.id())).isEmpty();
+    }
+
+    @Test
+    void the_name_is_stored_encrypted_with_the_key_of_its_space_and_renaming_re_encrypts_it() {
+        ShoppingCategory created = adapter.create(spaceId, "Fruits & légumes", false);
+
+        adapter.rename(created.id(), "Primeur 🍎");
+
+        String stored = jdbc.queryForObject("SELECT name_encrypted FROM shopping_categories WHERE id = ?", String.class, created.id());
+        assertThat(stored).doesNotContain("Primeur");
+        assertThat(encryptors.forSpace(spaceId).decrypt(stored)).isEqualTo("Primeur 🍎");
+        assertThat(adapter.findById(created.id()).orElseThrow().name()).isEqualTo("Primeur 🍎");
     }
 }

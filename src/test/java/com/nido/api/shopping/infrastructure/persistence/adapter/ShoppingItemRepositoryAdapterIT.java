@@ -1,6 +1,7 @@
 package com.nido.api.shopping.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
 import com.nido.api.shopping.domain.model.AddShoppingItemCommand;
 import com.nido.api.shopping.domain.model.ShoppingItem;
 import com.nido.api.shopping.domain.model.UpdateShoppingItemCommand;
@@ -11,6 +12,7 @@ import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaReposito
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -24,6 +26,8 @@ class ShoppingItemRepositoryAdapterIT {
     @Autowired ShoppingItemRepositoryAdapter adapter;
     @Autowired ShoppingCategoryRepositoryAdapter categoryAdapter;
     @Autowired SpaceJpaRepository spaceJpaRepository;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired SpaceEncryptorFactory encryptors;
 
     private UUID spaceId;
     private UUID categoryId;
@@ -161,5 +165,17 @@ class ShoppingItemRepositoryAdapterIT {
         spaceJpaRepository.flush();
 
         assertThat(adapter.findById(created.id())).isEmpty();
+    }
+
+    @Test
+    void the_name_is_stored_encrypted_with_the_key_of_its_space_and_an_edit_re_encrypts_it() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Crème fraîche", null, null));
+
+        adapter.update(new UpdateShoppingItemCommand(created.id(), spaceId, categoryId, "Crème fraîche 🥛", null, null));
+
+        String stored = jdbc.queryForObject("SELECT name_encrypted FROM shopping_items WHERE id = ?", String.class, created.id());
+        assertThat(stored).doesNotContain("Crème");
+        assertThat(encryptors.forSpace(spaceId).decrypt(stored)).isEqualTo("Crème fraîche 🥛");
+        assertThat(adapter.findById(created.id()).orElseThrow().name()).isEqualTo("Crème fraîche 🥛");
     }
 }

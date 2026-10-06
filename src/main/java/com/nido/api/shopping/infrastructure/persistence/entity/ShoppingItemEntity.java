@@ -32,8 +32,8 @@ public class ShoppingItemEntity {
     @Column(name = "category_id", nullable = false)
     private UUID categoryId;
 
-    @Column(nullable = false, length = 120)
-    private String name;
+    @Column(name = "name_encrypted", nullable = false)
+    private String nameEncrypted;
 
     @Column(precision = 10, scale = 3)
     private BigDecimal quantity;

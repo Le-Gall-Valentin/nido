@@ -1,0 +1,64 @@
+databaseChangeLog:
+  - changeSet:
+      id: 068-drop-plaintext-shopping-items
+      author: nido
+      comment: >
+        The second half of 067, one table per changeset: once no row holds a value in clear, the column
+        in clear goes and the encrypted one becomes required. The values are encrypted by
+        EncryptionBackfillRunner, which needs the encryption key and so runs after Liquibase. On an
+        upgrade, the precondition fails at the first start (onFail CONTINUE records nothing) and holds at
+        the next; on a new installation the table is empty and the changeset runs at once.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "shopping_items still holds names in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM shopping_items WHERE name IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: shopping_items
+            columnName: name
+        - addNotNullConstraint:
+            tableName: shopping_items
+            columnName: name_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: shopping_items
+            columnName: name_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: shopping_items
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(120)
+  - changeSet:
+      id: 068-drop-plaintext-shopping-categories
+      author: nido
+      comment: The second half of 067 for shopping_categories — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "shopping_categories still holds names in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM shopping_categories WHERE name IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: shopping_categories
+            columnName: name
+        - addNotNullConstraint:
+            tableName: shopping_categories
+            columnName: name_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: shopping_categories
+            columnName: name_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: shopping_categories
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(60)
