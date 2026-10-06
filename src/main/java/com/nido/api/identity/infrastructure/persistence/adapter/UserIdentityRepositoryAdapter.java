@@ -109,13 +109,13 @@ public class UserIdentityRepositoryAdapter implements UserRepository, UserComman
     }
 
     @Override
-    public void deactivate(UUID userId) {
-        jpa.deactivateById(userId);
+    public boolean deactivate(UUID userId) {
+        return jpa.deactivateById(userId) == 1;
     }
 
     @Override
-    public void activate(UUID userId) {
-        jpa.activateById(userId);
+    public boolean activate(UUID userId) {
+        return jpa.activateById(userId) == 1;
     }
 
     @Override

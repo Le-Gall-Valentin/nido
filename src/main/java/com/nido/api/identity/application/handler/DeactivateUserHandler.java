@@ -41,7 +41,11 @@ public class DeactivateUserHandler implements DeactivateUserUseCase {
             .orElseThrow(IdentityException.UserNotFound::new);
         target.ensureActive();
         target.ensureCanBeDeactivatedBy(command.callerRole());
-        userCommandPort.deactivate(command.targetUserId());
+        // The account was loaded active, but another administrator may have deactivated it since: then its
+        // holder was told already, and this gesture is refused rather than told twice.
+        if (!userCommandPort.deactivate(command.targetUserId())) {
+            throw new IdentityException.UserAlreadyInactive();
+        }
         // Refreshing is already refused for an inactive account; this is what stops the access
         // token the user is holding right now, which is the whole point of deactivating.
         tokenInvalidationPort.invalidateIssuedTokens(command.targetUserId());

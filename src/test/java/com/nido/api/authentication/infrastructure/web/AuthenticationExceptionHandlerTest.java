@@ -139,4 +139,14 @@ class AuthenticationExceptionHandlerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getProperties()).containsEntry("error_code", "reset_link_invalid");
     }
+
+    @Test
+    void handle_accountAlreadyJoined_returns409() {
+        var response = handler.handle(new AuthenticationException.AccountAlreadyJoined(), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getDetail()).isEqualTo("This account already chose its password.");
+        assertThat(response.getBody().getProperties()).containsEntry("error_code", "account_already_joined");
+    }
 }

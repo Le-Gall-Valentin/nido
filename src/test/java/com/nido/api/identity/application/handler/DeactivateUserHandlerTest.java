@@ -38,6 +38,7 @@ class DeactivateUserHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new DeactivateUserHandler(userRepository, userCommandPort, tokenInvalidationPort, notifier);
+        lenient().when(userCommandPort.deactivate(any())).thenReturn(true);
     }
 
     @Test
@@ -145,5 +146,16 @@ class DeactivateUserHandlerTest {
         handler.deactivate(new DeactivateUserCommand(targetId, callerId, Role.ADMIN));
 
         verify(notifier).deactivated(target, callerId, Role.ADMIN);
+    }
+
+    @Test
+    void a_deactivation_another_administrator_made_a_moment_earlier_is_refused_and_tells_nobody() {
+        // Both loaded the account while it was active; the other one's update got there first.
+        when(userRepository.findById(targetId)).thenReturn(Optional.of(user(targetId, Role.USER)));
+        when(userCommandPort.deactivate(targetId)).thenReturn(false);
+
+        assertThatThrownBy(() -> handler.deactivate(new DeactivateUserCommand(targetId, callerId, Role.ADMIN)))
+            .isInstanceOf(IdentityException.UserAlreadyInactive.class);
+        verifyNoInteractions(notifier, tokenInvalidationPort);
     }
 }

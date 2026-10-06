@@ -66,4 +66,15 @@ class UserIdentityRepositoryAdapterIT {
 
         assertThat(repositoryAdapter.findActiveByRole(Role.SUPER_ADMIN)).extracting(User::id).containsExactly(kept);
     }
+
+    @Test
+    void deactivating_or_reactivating_says_whether_it_changed_anything() {
+        UUID id = repositoryAdapter.createProfile(
+            new CreateUserProfileCommand("switched", "switched@example.com", Role.USER)).id();
+
+        assertThat(repositoryAdapter.deactivate(id)).isTrue();
+        assertThat(repositoryAdapter.deactivate(id)).isFalse();
+        assertThat(repositoryAdapter.activate(id)).isTrue();
+        assertThat(repositoryAdapter.activate(id)).isFalse();
+    }
 }

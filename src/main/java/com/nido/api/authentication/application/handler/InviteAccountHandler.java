@@ -7,6 +7,7 @@ import com.nido.api.authentication.domain.model.AccountContact;
 import com.nido.api.authentication.domain.model.AuthenticationException;
 import com.nido.api.authentication.domain.model.UserProfile;
 import com.nido.api.authentication.domain.port.out.AccountInvitationRepository;
+import com.nido.api.authentication.domain.port.out.UserCredentialPort;
 import com.nido.api.authentication.domain.port.out.UserProfilePort;
 import com.nido.api.shared.annotation.ApplicationService;
 import org.slf4j.Logger;
@@ -18,7 +19,8 @@ import java.util.UUID;
 
 /**
  * Invites an account identity created, or invites it again. Which accounts may be invited — and by whom — is
- * identity's rule; this only issues the link, in the caller's transaction.
+ * identity's rule; this only issues the link, in the caller's transaction, and never to an account that already
+ * has a password: accepting the link would replace it.
  */
 @ApplicationService
 public class InviteAccountHandler implements InviteAccountUseCase {
@@ -27,12 +29,14 @@ public class InviteAccountHandler implements InviteAccountUseCase {
 
     private final UserProfilePort profiles;
     private final AccountInvitationRepository invitations;
+    private final UserCredentialPort credentials;
     private final InvitationIssuer issuer;
 
     public InviteAccountHandler(UserProfilePort profiles, AccountInvitationRepository invitations,
-                                InvitationIssuer issuer) {
+                                UserCredentialPort credentials, InvitationIssuer issuer) {
         this.profiles = profiles;
         this.invitations = invitations;
+        this.credentials = credentials;
         this.issuer = issuer;
     }
 
@@ -40,6 +44,10 @@ public class InviteAccountHandler implements InviteAccountUseCase {
     @Transactional
     public InvitationDelivery invite(UUID userId, String inviterName) {
         UserProfile account = profiles.findById(userId).orElseThrow(AuthenticationException.UserNotFound::new);
+        // An invitation sets a password: given to an account that has one, its link would replace it.
+        if (credentials.hasCredential(userId)) {
+            throw new AuthenticationException.AccountAlreadyJoined();
+        }
         InvitationDelivery delivery = issuer.invite(AccountContact.of(account), inviterName);
         log.info("Invitation issued for user {} ({})", userId, how(delivery));
         return delivery;
@@ -49,7 +57,7 @@ public class InviteAccountHandler implements InviteAccountUseCase {
     @Transactional
     public Optional<InvitationDelivery> inviteAgain(UUID userId, String inviterName) {
         // Locked first: an acceptance committing meanwhile is then seen, instead of a replacement that finds no row.
-        if (invitations.lockForUser(userId).isEmpty()) {
+        if (invitations.lockForUser(userId).isEmpty() || credentials.hasCredential(userId)) {
             log.info("Invitation of user {} not issued again: the account has chosen its password", userId);
             return Optional.empty();
         }

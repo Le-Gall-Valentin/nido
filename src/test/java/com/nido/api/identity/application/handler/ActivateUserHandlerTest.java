@@ -36,6 +36,7 @@ class ActivateUserHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new ActivateUserHandler(userRepository, userCommandPort, notifier);
+        lenient().when(userCommandPort.activate(any())).thenReturn(true);
     }
 
     @Test
@@ -123,5 +124,15 @@ class ActivateUserHandlerTest {
         handler.activate(new ActivateUserCommand(targetId, callerId, Role.ADMIN));
 
         verify(notifier).reactivated(target, callerId, Role.ADMIN);
+    }
+
+    @Test
+    void a_reactivation_another_administrator_made_a_moment_earlier_is_refused_and_tells_nobody() {
+        when(userRepository.findById(targetId)).thenReturn(Optional.of(inactive(targetId, Role.USER)));
+        when(userCommandPort.activate(targetId)).thenReturn(false);
+
+        assertThatThrownBy(() -> handler.activate(new ActivateUserCommand(targetId, callerId, Role.ADMIN)))
+            .isInstanceOf(IdentityException.UserAlreadyActive.class);
+        verifyNoInteractions(notifier);
     }
 }

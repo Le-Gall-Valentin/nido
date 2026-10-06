@@ -9,10 +9,15 @@ import java.util.UUID;
 
 public interface UserCommandPort {
     User createProfile(CreateUserProfileCommand command);
-    void deactivate(UUID userId);
+    /**
+     * @return false when the account was already inactive — another administrator got there first, even after
+     *         this one loaded it
+     */
+    boolean deactivate(UUID userId);
     void updateProfile(UpdateProfileCommand command);
     void updateRole(UUID userId, Role currentRole, Role newRole);
-    void activate(UUID userId);
+    /** @return false when the account was already active — see {@link #deactivate} */
+    boolean activate(UUID userId);
     void deleteGdpr(UUID userId);
     void updateLanguage(UUID userId, Language language);
 }

@@ -17,6 +17,11 @@ public class UserCredentialAdapter implements UserCredentialPort {
     }
 
     @Override
+    public boolean hasCredential(UUID userId) {
+        return jpa.existsById(userId);
+    }
+
+    @Override
     public void saveCredential(UUID userId, String passwordHash) {
         UserCredentialEntity e = new UserCredentialEntity();
         e.setUserId(userId);

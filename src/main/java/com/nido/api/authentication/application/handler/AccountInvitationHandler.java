@@ -61,6 +61,11 @@ public class AccountInvitationHandler implements CheckAccountInvitationUseCase, 
     @Transactional
     public void accept(String token, String password) {
         UserProfile account = accountOf(hash(token).flatMap(invitations::consumeByHash), clock.instant());
+        if (credentials.hasCredential(account.id())) {
+            // An invitation next to a password: never let the link replace it. Refused, so the transaction rolls back.
+            log.error("Data integrity: user {} has both an invitation and a password", account.id());
+            throw new AuthenticationException.InvalidInvitationToken();
+        }
         credentials.saveCredential(account.id(), passwordHasher.hash(password));
         log.info("Invitation accepted by user {}", account.id());
     }

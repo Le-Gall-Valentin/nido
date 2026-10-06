@@ -102,4 +102,14 @@ class AccountInvitationHandlerTest {
         assertThatThrownBy(() -> handler.check("RAW")).isInstanceOf(AuthenticationException.InvalidInvitationToken.class);
         assertThatThrownBy(() -> handler.check("RAW")).isInstanceOf(AuthenticationException.InvalidInvitationToken.class);
     }
+
+    @Test
+    void a_link_never_replaces_a_password_the_account_already_has() {
+        when(invitations.consumeByHash("HASH")).thenReturn(Optional.of(live));
+        when(credentials.hasCredential(carol.id())).thenReturn(true);
+
+        assertThatThrownBy(() -> handler.accept("RAW", "Welcome-Home-1"))
+            .isInstanceOf(AuthenticationException.InvalidInvitationToken.class);
+        verify(credentials, never()).saveCredential(any(), any());
+    }
 }
