@@ -11,7 +11,7 @@ vi.mock('react-i18next', () => ({
 describe('ForgotPasswordPage', () => {
   it('asks for an identifier, then says a link may be on its way — without saying whether the account exists', async () => {
     const api: IPasswordResetApi = {
-      capabilities: vi.fn(), requestReset: vi.fn().mockResolvedValue(undefined), checkToken: vi.fn(), confirmReset: vi.fn(),
+      requestReset: vi.fn().mockResolvedValue(undefined), checkToken: vi.fn(), confirmReset: vi.fn(),
     }
     render(<MemoryRouter><ForgotPasswordPage api={api} /></MemoryRouter>)
 
@@ -26,7 +26,7 @@ describe('ForgotPasswordPage', () => {
 
   it('announces the confirmation from a region that was there before it', async () => {
     const api: IPasswordResetApi = {
-      capabilities: vi.fn(), requestReset: vi.fn().mockResolvedValue(undefined), checkToken: vi.fn(), confirmReset: vi.fn(),
+      requestReset: vi.fn().mockResolvedValue(undefined), checkToken: vi.fn(), confirmReset: vi.fn(),
     }
     const { container } = render(<MemoryRouter><ForgotPasswordPage api={api} /></MemoryRouter>)
     // A live region mounted with its content is not reliably read out: it must exist first.
@@ -40,7 +40,7 @@ describe('ForgotPasswordPage', () => {
   })
 
   it('leads back to the login page', () => {
-    const api = { capabilities: vi.fn(), requestReset: vi.fn(), checkToken: vi.fn(), confirmReset: vi.fn() }
+    const api = { requestReset: vi.fn(), checkToken: vi.fn(), confirmReset: vi.fn() }
     render(<MemoryRouter><ForgotPasswordPage api={api} /></MemoryRouter>)
 
     expect(screen.getByRole('link', { name: 'forgot.back' }).getAttribute('href')).toBe('/login')

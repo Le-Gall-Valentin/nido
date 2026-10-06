@@ -81,4 +81,12 @@ describe('InvitationList — interactions', () => {
     fireEvent.click(screen.getByLabelText(/action_copy/))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('NIDO-ABC123'))
   })
+
+  it('says so when the browser could not copy the code', async () => {
+    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) } })
+    render(<InvitationList invitations={[PENDING]} onRevoke={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText(/action_copy/))
+
+    expect(await screen.findByRole('status')).toHaveProperty('textContent', 'invitations.copy_failed')
+  })
 })

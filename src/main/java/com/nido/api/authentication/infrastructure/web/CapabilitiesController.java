@@ -1,5 +1,6 @@
 package com.nido.api.authentication.infrastructure.web;
 
+import com.nido.api.authentication.application.dto.AuthCapabilities;
 import com.nido.api.authentication.application.port.in.GetAuthCapabilitiesUseCase;
 import com.nido.api.authentication.infrastructure.web.dto.CapabilitiesResponse;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
@@ -25,11 +26,12 @@ public class CapabilitiesController {
 
     @Operation(
         summary = "Fonctionnalités de connexion disponibles",
-        description = "Indique si le mot de passe oublié est disponible (l'envoi de mails est configuré). Rate limit : 30 req/fenêtre."
+        description = "Indique si le mot de passe oublié est disponible et si l'envoi de mails est configuré. Rate limit : 30 req/fenêtre."
     )
     @GetMapping("/api/auth/capabilities")
     @RateLimiting(max = 30)
     public ResponseEntity<CapabilitiesResponse> capabilities() {
-        return ResponseEntity.ok(new CapabilitiesResponse(capabilities.capabilities().passwordReset()));
+        AuthCapabilities found = capabilities.capabilities();
+        return ResponseEntity.ok(new CapabilitiesResponse(found.passwordReset(), found.mail()));
     }
 }

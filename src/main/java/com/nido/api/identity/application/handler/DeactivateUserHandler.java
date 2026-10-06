@@ -1,5 +1,6 @@
 package com.nido.api.identity.application.handler;
 
+import com.nido.api.identity.application.service.AdminGestureNotifier;
 import com.nido.api.identity.application.port.in.DeactivateUserUseCase;
 import com.nido.api.identity.domain.model.DeactivateUserCommand;
 import com.nido.api.identity.domain.model.IdentityException;
@@ -20,12 +21,14 @@ public class DeactivateUserHandler implements DeactivateUserUseCase {
     private final UserRepository userRepository;
     private final UserCommandPort userCommandPort;
     private final TokenInvalidationPort tokenInvalidationPort;
+    private final AdminGestureNotifier notifier;
 
     public DeactivateUserHandler(UserRepository userRepository, UserCommandPort userCommandPort,
-                                 TokenInvalidationPort tokenInvalidationPort) {
+                                 TokenInvalidationPort tokenInvalidationPort, AdminGestureNotifier notifier) {
         this.userRepository = userRepository;
         this.userCommandPort = userCommandPort;
         this.tokenInvalidationPort = tokenInvalidationPort;
+        this.notifier = notifier;
     }
 
     @Override
@@ -38,10 +41,15 @@ public class DeactivateUserHandler implements DeactivateUserUseCase {
             .orElseThrow(IdentityException.UserNotFound::new);
         target.ensureActive();
         target.ensureCanBeDeactivatedBy(command.callerRole());
-        userCommandPort.deactivate(command.targetUserId());
+        // The account was loaded active, but another administrator may have deactivated it since: then its
+        // holder was told already, and this gesture is refused rather than told twice.
+        if (!userCommandPort.deactivate(command.targetUserId())) {
+            throw new IdentityException.UserAlreadyInactive();
+        }
         // Refreshing is already refused for an inactive account; this is what stops the access
         // token the user is holding right now, which is the whole point of deactivating.
         tokenInvalidationPort.invalidateIssuedTokens(command.targetUserId());
+        notifier.deactivated(target, command.callerId(), command.callerRole());
         log.info("User {} deactivated by caller {} with role {}",
             command.targetUserId(), command.callerId(), command.callerRole());
     }

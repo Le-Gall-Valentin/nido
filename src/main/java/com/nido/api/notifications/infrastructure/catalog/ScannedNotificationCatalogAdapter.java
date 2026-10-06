@@ -6,6 +6,7 @@ import com.nido.api.notifications.domain.model.NotificationKind;
 import com.nido.api.notifications.domain.model.NotificationType;
 import com.nido.api.notifications.domain.port.out.NotificationCatalogPort;
 import com.nido.api.notifications.domain.port.out.NotificationChannelPort;
+import com.nido.api.shared.model.Role;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanFactory;
@@ -17,9 +18,11 @@ import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ClassUtils;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The catalogue, filled by discovery: at startup, every class of the application that implements
@@ -58,10 +61,16 @@ public class ScannedNotificationCatalogAdapter implements NotificationCatalogPor
         ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
         scanner.addIncludeFilter(new AssignableTypeFilter(Notification.class));
         Map<Class<? extends Notification>, NotificationType> byClass = new HashMap<>();
+        Map<NotificationType, Set<Role>> reservedTo = new HashMap<>();
         for (String basePackage : basePackages) {
             for (BeanDefinition candidate : scanner.findCandidateComponents(basePackage)) {
                 Class<? extends Notification> notificationClass = load(candidate.getBeanClassName());
-                byClass.put(notificationClass, declaredKind(notificationClass, channels));
+                NotificationType type = declaredKind(notificationClass, channels);
+                byClass.put(notificationClass, type);
+                Role[] roles = notificationClass.getAnnotation(NotificationKind.class).roles();
+                if (roles.length > 0) {
+                    reservedTo.put(type, Set.copyOf(Arrays.asList(roles)));
+                }
             }
         }
         if (byClass.isEmpty()) {
@@ -70,7 +79,7 @@ public class ScannedNotificationCatalogAdapter implements NotificationCatalogPor
             throw new IllegalStateException("No notification found under " + basePackages
                 + ": the scan could not read the application's classes");
         }
-        return new NotificationCatalog(byClass);
+        return new NotificationCatalog(byClass, reservedTo);
     }
 
     private static NotificationType declaredKind(Class<? extends Notification> notificationClass,

@@ -45,7 +45,7 @@ public class NotificationPreferencesController {
     }
 
     @Operation(summary = "Mes préférences de notification",
-        description = "Les canaux disponibles sur cette installation (aucun sans mail configuré) et tous les types de notification, chacun avec son état. Rate limit : 60 req/fenêtre.")
+        description = "Les canaux disponibles sur cette installation (aucun sans mail configuré) et les types de notification ouverts à votre rôle, chacun avec son état. Rate limit : 60 req/fenêtre.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Préférences"),
         @ApiResponse(responseCode = "401", description = "Non authentifié",
@@ -57,7 +57,7 @@ public class NotificationPreferencesController {
     @RateLimiting(max = 60)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<NotificationPreferencesResponse> get(@Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
-        return ResponseEntity.ok(NotificationPreferencesResponse.of(getPreferences.get(caller.userId())));
+        return ResponseEntity.ok(NotificationPreferencesResponse.of(getPreferences.get(caller.userId(), caller.role())));
     }
 
     @Operation(summary = "Activer ou couper un canal",
@@ -91,7 +91,7 @@ public class NotificationPreferencesController {
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
         @ApiResponse(responseCode = "401", description = "Non authentifié",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
-        @ApiResponse(responseCode = "404", description = "Type inconnu",
+        @ApiResponse(responseCode = "404", description = "Type inconnu ou réservé à un autre rôle",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
         @ApiResponse(responseCode = "429", description = "Trop de requêtes",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
@@ -102,7 +102,7 @@ public class NotificationPreferencesController {
     public ResponseEntity<Void> changeType(@PathVariable("type") String type,
                                            @Valid @RequestBody ChangeNotificationPreferenceRequest request,
                                            @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
-        changePreference.changeType(caller.userId(), type, request.enabled());
+        changePreference.changeType(caller.userId(), caller.role(), type, request.enabled());
         return ResponseEntity.noContent().build();
     }
 }

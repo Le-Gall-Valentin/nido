@@ -1,19 +1,22 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, Dialog, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { User, AdminUser } from '@/entities/user'
+import type { MailAvailability } from '@/entities/capabilities'
 import { assignableRoles } from '../lib/permissions'
-import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
+import { useDialogSubmit } from '../lib/useDialogSubmit'
+import { MailNotice } from './MailNotice'
 
 interface EditUserRoleModalProps {
   target: AdminUser
+  mail: MailAvailability
   caller: User
   onClose: () => void
   onUpdate: (id: string, role: 'USER' | 'ADMIN') => Promise<void>
   onSuccess: (newRole: 'USER' | 'ADMIN') => void
 }
 
-export function EditUserRoleModal({ target, caller, onClose, onUpdate, onSuccess }: EditUserRoleModalProps) {
+export function EditUserRoleModal({ target, caller, mail, onClose, onUpdate, onSuccess }: EditUserRoleModalProps) {
   const { t } = useTranslation('adminUsers')
 
   const availableRoles = assignableRoles(caller.role)
@@ -25,32 +28,22 @@ export function EditUserRoleModal({ target, caller, onClose, onUpdate, onSuccess
   const initialRole: 'USER' | 'ADMIN' = target.role === 'SUPER_ADMIN' ? 'USER' : target.role
 
   const [role, setRole] = useState<'USER' | 'ADMIN'>(initialRole)
-  const [isLoading, setIsLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<string | null>(null)
-  const pendingRef = useRef(false)
+  const { submit, isLoading, errorKey, clearError } = useDialogSubmit('edit_role')
 
   // Backend returns 409 RoleAlreadyAssigned on a no-op — block it upfront.
   const submitDisabled = !isEditableTarget || role === target.role
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (submitDisabled || pendingRef.current) return
-    pendingRef.current = true
-    setIsLoading(true)
-    setErrorKey(null)
-    try {
+    if (submitDisabled) return
+    void submit(async () => {
       await onUpdate(target.id, role)
       onSuccess(role)
-    } catch (error) {
-      setErrorKey(mapApiErrorToKey(error, 'edit_role'))
-    } finally {
-      pendingRef.current = false
-      setIsLoading(false)
-    }
+    })
   }
 
   function handleClose() {
-    setErrorKey(null)
+    clearError()
     onClose()
   }
 
@@ -77,6 +70,10 @@ export function EditUserRoleModal({ target, caller, onClose, onUpdate, onSuccess
               <option key={r} value={r}>{t(`user.role.${r}`, { ns: 'shell' })}</option>
             ))}
           </select>
+        </div>
+
+        <div className="mt-3">
+          <MailNotice user={target} mail={mail} />
         </div>
 
         {errorKey && (

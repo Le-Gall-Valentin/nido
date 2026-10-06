@@ -1,15 +1,19 @@
 import { useTranslation } from 'react-i18next'
-import { Key, Pencil, Trash2 } from 'lucide-react'
+import { Key, Pencil, Send, Trash2 } from 'lucide-react'
 import type { User, AdminUser } from '@/entities/user'
-import { canDelete, canResetTotp, canEditRole } from '../lib/permissions'
+import type { MailAvailability } from '@/entities/capabilities'
+import { canDelete, canResetTotp, canEditRole, canResendInvitation } from '../lib/permissions'
 import { permissionDenialTitle } from './permissionDenialTitle'
 
 interface UserActionsProps {
   user: AdminUser
   currentUser: User
+  /** Without mail, a new invitation link is shown to be passed on rather than sent: the action says so. */
+  mail: MailAvailability
   onEditRole: (user: AdminUser) => void
   onResetTotp: (user: AdminUser) => void
   onDelete: (user: AdminUser) => void
+  onResendInvitation: (user: AdminUser) => void
   /** 'sm' for the dense desktop table, 'md' for touch-friendly card targets. */
   size?: 'sm' | 'md'
   className?: string
@@ -17,13 +21,15 @@ interface UserActionsProps {
 
 const BUTTON_SIZE = { sm: 'size-7', md: 'size-9' } as const
 
-/** Reset 2FA / edit role / delete buttons shared by the table and card layouts; self-gating on permissions. */
+/** Resend invitation / reset 2FA / edit role / delete buttons shared by the table and card layouts; self-gating on permissions. */
 export function UserActions({
   user,
   currentUser,
+  mail,
   onEditRole,
   onResetTotp,
   onDelete,
+  onResendInvitation,
   size = 'sm',
   className = '',
 }: UserActionsProps) {
@@ -31,13 +37,26 @@ export function UserActions({
   const totpCheck = canResetTotp(currentUser, user)
   const editCheck = canEditRole(currentUser, user)
   const deleteCheck = canDelete(currentUser, user)
+  const resendCheck = canResendInvitation(currentUser, user)
 
   const resetLabel = t('table.btn_reset_totp', { username: user.username })
   const editLabel = t('table.btn_edit', { username: user.username })
   const deleteLabel = t('table.btn_delete')
+  const resendLabel = t(mail === 'available' ? 'table.btn_resend' : 'table.btn_new_link', { username: user.username })
 
   return (
     <div className={`flex items-center gap-1 ${className}`}>
+      {user.invitation && (
+        <ActionButton
+          label={resendLabel}
+          title={permissionDenialTitle(resendCheck, t, resendLabel)}
+          disabled={!resendCheck.ok}
+          size={size}
+          onClick={() => onResendInvitation(user)}
+        >
+          <Send className="size-3.5" />
+        </ActionButton>
+      )}
       <ActionButton
         label={resetLabel}
         title={permissionDenialTitle(totpCheck, t, resetLabel)}

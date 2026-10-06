@@ -188,7 +188,8 @@ class PasswordResetIT {
     void the_app_is_told_password_reset_exists() throws Exception {
         mockMvc.perform(get("/api/auth/capabilities"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.passwordReset").value(true));
+            .andExpect(jsonPath("$.passwordReset").value(true))
+            .andExpect(jsonPath("$.mail").value(true));
     }
 
     @Test

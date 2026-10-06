@@ -2,6 +2,7 @@ import { render, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { UsersCardList } from './UsersCardList'
 import type { AdminUser , User } from '@/entities/user'
+import type { MailAvailability } from '@/entities/capabilities'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -13,8 +14,8 @@ vi.mock('react-i18next', () => ({
 const SA: User = { id: 'sa', username: 'superadmin', email: 'sa@test.com', role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: true }
 
 const USERS: AdminUser[] = [
-  { ...SA, isActive: true },
-  { id: 'u1', username: 'testuser', email: 'test@test.com', role: 'USER', isActive: true, createdAt: '2024-02-01T00:00:00Z', totpEnabled: true },
+  { ...SA, isActive: true, invitation: null },
+  { id: 'u1', username: 'testuser', email: 'test@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-02-01T00:00:00Z', totpEnabled: true },
 ]
 
 const HANDLERS = {
@@ -22,11 +23,12 @@ const HANDLERS = {
   onEditRole: vi.fn(),
   onResetTotp: vi.fn(),
   onDelete: vi.fn(),
+  onResendInvitation: vi.fn(),
 }
 
-function setup(users: AdminUser[] = USERS, isLoading = false, currentUser: User = SA) {
+function setup(users: AdminUser[] = USERS, isLoading = false, currentUser: User = SA, mail: MailAvailability = 'available') {
   return render(
-    <UsersCardList users={users} isLoading={isLoading} currentUser={currentUser} {...HANDLERS} />
+    <UsersCardList users={users} isLoading={isLoading} currentUser={currentUser} mail={mail} {...HANDLERS} />
   )
 }
 
@@ -80,5 +82,11 @@ describe('UsersCardList', () => {
     const userDelete = within(userCard).getByLabelText('table.btn_delete') as HTMLButtonElement
     expect(saDelete.disabled).toBe(true)
     expect(userDelete.disabled).toBe(false)
+  })
+
+  it('names the card action after how the new link will leave', () => {
+    const invited: AdminUser = { ...USERS[1], invitation: { status: 'pending', expiresAt: '2026-10-12T00:00:00Z' } }
+    const { getByLabelText } = setup([invited], false, SA, 'unavailable')
+    expect(getByLabelText('table.btn_new_link:testuser')).not.toBeNull()
   })
 })

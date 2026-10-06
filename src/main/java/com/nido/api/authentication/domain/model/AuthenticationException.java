@@ -12,6 +12,8 @@ public abstract sealed class AuthenticationException extends RuntimeException
             AuthenticationException.TotpMaxAttemptsExceeded,
             AuthenticationException.InvalidCurrentPassword,
             AuthenticationException.InvalidResetToken,
+            AuthenticationException.InvalidInvitationToken,
+            AuthenticationException.AccountAlreadyJoined,
             AuthenticationException.DataIntegrityError {
 
     private AuthenticationException(String message) {
@@ -61,6 +63,16 @@ public abstract sealed class AuthenticationException extends RuntimeException
     /** Expired, already used, replaced by a newer one, or never issued: one answer for all of them. */
     public static final class InvalidResetToken extends AuthenticationException {
         public InvalidResetToken() { super("Password reset link is no longer valid"); }
+    }
+
+    /** Expired, already used, replaced by a newer one, never issued, or its account is off: one answer for all. */
+    public static final class InvalidInvitationToken extends AuthenticationException {
+        public InvalidInvitationToken() { super("Invitation link is no longer valid"); }
+    }
+
+    /** An invitation for an account that already chose its password: there is nothing left to invite to. */
+    public static final class AccountAlreadyJoined extends AuthenticationException {
+        public AccountAlreadyJoined() { super("This account already chose its password"); }
     }
 
     public static final class DataIntegrityError extends AuthenticationException {

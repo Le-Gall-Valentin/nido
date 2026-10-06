@@ -2,9 +2,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import axios, { type AxiosError } from 'axios'
 import { client } from '@/shared/api'
-import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
+import { InvalidLinkError, NetworkError, RateLimitError, ServerError, WeakPasswordError } from '@/shared/lib'
 import { passwordResetApi } from './passwordResetApi'
-import { InvalidResetLinkError, WeakPasswordError } from '../model/errors'
 
 vi.mock('@/shared/api', () => ({ client: { get: vi.fn(), post: vi.fn() } }))
 
@@ -20,13 +19,6 @@ describe('passwordResetApi', () => {
   beforeEach(() => {
     mocked.get.mockReset()
     mocked.post.mockReset()
-  })
-
-  it('asks what the sign-in pages may offer', async () => {
-    mocked.get.mockResolvedValue({ data: { passwordReset: true } })
-
-    await expect(passwordResetApi.capabilities()).resolves.toEqual({ passwordReset: true })
-    expect(mocked.get).toHaveBeenCalledWith('/auth/capabilities')
   })
 
   it('sends the identifier as typed', async () => {
@@ -49,8 +41,8 @@ describe('passwordResetApi', () => {
   it('reads 410 as a link that no longer works, on check and on confirm', async () => {
     mocked.post.mockRejectedValue(axiosError(410))
 
-    await expect(passwordResetApi.checkToken('t')).rejects.toBeInstanceOf(InvalidResetLinkError)
-    await expect(passwordResetApi.confirmReset('t', 'NewPassw0rd!')).rejects.toBeInstanceOf(InvalidResetLinkError)
+    await expect(passwordResetApi.checkToken('t')).rejects.toBeInstanceOf(InvalidLinkError)
+    await expect(passwordResetApi.confirmReset('t', 'NewPassw0rd!')).rejects.toBeInstanceOf(InvalidLinkError)
     expect(mocked.post).toHaveBeenLastCalledWith('/auth/password-reset/confirm', { token: 't', newPassword: 'NewPassw0rd!' })
   })
 
@@ -64,7 +56,7 @@ describe('passwordResetApi', () => {
     mocked.post.mockRejectedValue(axiosError(500))
     await expect(passwordResetApi.checkToken('t')).rejects.toBeInstanceOf(ServerError)
 
-    mocked.get.mockRejectedValue(axiosError())
-    await expect(passwordResetApi.capabilities()).rejects.toBeInstanceOf(NetworkError)
+    mocked.post.mockRejectedValue(axiosError())
+    await expect(passwordResetApi.requestReset('jane')).rejects.toBeInstanceOf(NetworkError)
   })
 })

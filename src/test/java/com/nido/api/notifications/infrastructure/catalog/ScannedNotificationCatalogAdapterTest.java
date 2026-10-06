@@ -9,6 +9,7 @@ import com.nido.api.notifications.domain.model.NotificationCatalog;
 import com.nido.api.notifications.domain.model.NotificationType;
 import com.nido.api.notifications.domain.port.out.NotificationChannelPort;
 import com.nido.api.notifications.infrastructure.channel.mail.MailChannelAdapter;
+import com.nido.api.shared.model.Role;
 import fixtures.notifications.valid.GreetingNotification;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +52,16 @@ class ScannedNotificationCatalogAdapterTest {
         assertThat(catalog.types()).extracting(NotificationType::code)
             .containsExactly("agenda.reminder", "fixture.greeting");
         assertThat(catalog.typeOf(GreetingNotification.class)).isEqualTo(new NotificationType("fixture.greeting"));
+    }
+
+    @Test
+    void a_kind_declared_for_some_roles_is_open_to_those_roles_only() {
+        NotificationCatalog catalog = scan("fixtures.notifications.reserved");
+        NotificationType warden = new NotificationType("fixture.warden");
+
+        assertThat(catalog.isOpenTo(warden, Role.SUPER_ADMIN)).isTrue();
+        assertThat(catalog.isOpenTo(warden, Role.ADMIN)).isFalse();
+        assertThat(catalog.typesFor(Role.USER)).isEmpty();
     }
 
     @Test

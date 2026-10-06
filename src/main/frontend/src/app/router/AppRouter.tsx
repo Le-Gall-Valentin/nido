@@ -1,6 +1,6 @@
 import { lazy } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
-import { ForgotPasswordPage, LoginPage, ResetPasswordPage } from '@/pages/login'
+import { ForgotPasswordPage, LoginPage, ResetPasswordPage, WelcomePage } from '@/pages/login'
 import { ROUTES } from '@/shared/config'
 import { AppLayout, SpaceLayout } from '@/app/layouts'
 import { SpaceApiProvider, SpaceMembersApiProvider, spaceApi } from '@/entities/space'
@@ -65,6 +65,12 @@ export function AppRouter() {
               <ResetPasswordPage />
             </RequirePasswordReset>
           }
+        />
+        <Route
+          path={ROUTES.WELCOME}
+          // Not PublicOnlyRoute, as for a reset link; and not behind RequirePasswordReset: an invitation works
+          // without mail, the administrator passing the link on by other means.
+          element={<WelcomePage />}
         />
 
         {/* An installation already set up has no setup screen any more. */}

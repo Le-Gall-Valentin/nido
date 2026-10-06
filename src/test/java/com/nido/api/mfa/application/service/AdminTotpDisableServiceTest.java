@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,7 +38,7 @@ class AdminTotpDisableServiceTest {
         UserTotpProfile profile = new UserTotpProfile(userId,true, Optional.of("SECRET"));
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
 
-        service.disableIfEnabled(userId);
+        assertThat(service.disableIfEnabled(userId)).isTrue();
 
         verify(userTotpLifecyclePort).disableTotp(userId);
     }
@@ -47,7 +48,7 @@ class AdminTotpDisableServiceTest {
         UserTotpProfile profile = new UserTotpProfile(userId,false, Optional.empty());
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
 
-        service.disableIfEnabled(userId);
+        assertThat(service.disableIfEnabled(userId)).isFalse();
 
         verify(userTotpLifecyclePort, never()).disableTotp(any());
     }
@@ -56,7 +57,7 @@ class AdminTotpDisableServiceTest {
     void disableIfEnabled_userAbsent_noOp() {
         when(userTotpQuery.findById(userId)).thenReturn(Optional.empty());
 
-        service.disableIfEnabled(userId);
+        assertThat(service.disableIfEnabled(userId)).isFalse();
 
         verify(userTotpLifecyclePort, never()).disableTotp(any());
     }

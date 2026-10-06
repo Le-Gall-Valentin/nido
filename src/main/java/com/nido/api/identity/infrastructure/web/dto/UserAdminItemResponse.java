@@ -26,5 +26,8 @@ public record UserAdminItemResponse(
     Instant createdAt,
 
     @Schema(description = "Indique si l'authentification à deux facteurs est activée", example = "false")
-    boolean totpEnabled
+    boolean totpEnabled,
+
+    @Schema(description = "L'invitation, tant que le compte n'a pas choisi son mot de passe ; null ensuite", nullable = true)
+    InvitationStateResponse invitation
 ) {}

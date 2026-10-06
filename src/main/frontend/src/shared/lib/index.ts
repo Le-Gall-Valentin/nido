@@ -8,8 +8,11 @@ export {
   setLoginSuccessCallback, notifyLoginSuccess,
 } from './sessionCallbacks'
 export { setSessionHint, clearSessionHint, hasSessionHint } from './sessionHint'
-export { NetworkError, ServerError, RateLimitError, ForbiddenError, NotFoundError } from './apiErrors'
+export { NetworkError, ServerError, RateLimitError, ForbiddenError, NotFoundError, InvalidLinkError, WeakPasswordError } from './apiErrors'
+export { toApiError, linkGone } from './toApiError'
+export type { LinkCheckState } from './linkCheck'
 export { copyText } from './copyText'
+export { useCopy } from './useCopy'
 export { isValidPassword, passwordProblem, type PasswordProblem } from './passwordPolicy'
 export { isValidEmail } from './emailPolicy'
 export { isValidUsername, usernameProblem, type UsernameProblem } from './usernamePolicy'

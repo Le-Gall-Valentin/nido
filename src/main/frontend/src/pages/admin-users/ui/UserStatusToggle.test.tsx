@@ -10,7 +10,7 @@ vi.mock('react-i18next', () => ({
 const SA: User = { id: 'sa', username: 'sa', email: 'sa@test.com', role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: true }
 
 function target(overrides: Partial<AdminUser> = {}): AdminUser {
-  return { id: 'u1', username: 'alice', email: 'alice@test.com', role: 'USER', isActive: true, createdAt: '2024-01-01T00:00:00Z', totpEnabled: false, ...overrides }
+  return { id: 'u1', username: 'alice', email: 'alice@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', totpEnabled: false, ...overrides }
 }
 
 function setup(currentUser: User, user: AdminUser) {
@@ -22,17 +22,17 @@ beforeEach(() => { vi.clearAllMocks() })
 
 describe('UserStatusToggle', () => {
   it('reflects the active state via aria-checked', () => {
-    const { getByRole } = setup(SA, target({ isActive: true }))
+    const { getByRole } = setup(SA, target({ isActive: true, invitation: null }))
     expect(getByRole('switch').getAttribute('aria-checked')).toBe('true')
   })
 
   it('uses the deactivate label when active', () => {
-    const { getByRole } = setup(SA, target({ isActive: true }))
+    const { getByRole } = setup(SA, target({ isActive: true, invitation: null }))
     expect(getByRole('switch').getAttribute('aria-label')).toBe('table.toggle_deactivate')
   })
 
   it('uses the activate label when inactive', () => {
-    const { getByRole } = setup(SA, target({ isActive: false }))
+    const { getByRole } = setup(SA, target({ isActive: false, invitation: null }))
     expect(getByRole('switch').getAttribute('aria-label')).toBe('table.toggle_activate')
   })
 

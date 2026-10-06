@@ -6,6 +6,7 @@ import com.nido.api.notifications.domain.model.NotificationException;
 import com.nido.api.notifications.domain.model.NotificationType;
 import com.nido.api.notifications.domain.port.out.NotificationChannelPort;
 import com.nido.api.notifications.domain.port.out.NotificationPreferencesRepository;
+import com.nido.api.shared.model.Role;
 import fixtures.notifications.valid.GreetingNotification;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +18,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -67,16 +69,31 @@ class ChangeNotificationPreferenceHandlerTest {
 
     @Test
     void a_catalogued_kind_is_saved_with_the_time() {
-        handler(true).changeType(janeId, "fixture.greeting", false);
+        handler(true).changeType(janeId, Role.USER, "fixture.greeting", false);
 
         verify(preferences).saveType(janeId, GREETING, false, NOW);
     }
 
     @Test
-    void a_kind_the_catalogue_does_not_know_is_unknown_even_when_malformed() {
-        assertThatThrownBy(() -> handler(true).changeType(janeId, "fixture.unknown", true))
+    void a_kind_reserved_to_another_role_is_unknown_to_this_account() {
+        NotificationCatalog reserved = new NotificationCatalog(Map.of(GreetingNotification.class, GREETING),
+            Map.of(GREETING, Set.of(Role.SUPER_ADMIN)));
+        ChangeNotificationPreferenceHandler handler =
+            new ChangeNotificationPreferenceHandler(() -> reserved, preferences, List.of(), CLOCK);
+
+        assertThatThrownBy(() -> handler.changeType(janeId, Role.ADMIN, "fixture.greeting", false))
             .isInstanceOf(NotificationException.UnknownType.class);
-        assertThatThrownBy(() -> handler(true).changeType(janeId, "Not A Code", true))
+        verifyNoInteractions(preferences);
+
+        handler.changeType(janeId, Role.SUPER_ADMIN, "fixture.greeting", false);
+        verify(preferences).saveType(janeId, GREETING, false, NOW);
+    }
+
+    @Test
+    void a_kind_the_catalogue_does_not_know_is_unknown_even_when_malformed() {
+        assertThatThrownBy(() -> handler(true).changeType(janeId, Role.USER, "fixture.unknown", true))
+            .isInstanceOf(NotificationException.UnknownType.class);
+        assertThatThrownBy(() -> handler(true).changeType(janeId, Role.USER, "Not A Code", true))
             .isInstanceOf(NotificationException.UnknownType.class);
         verifyNoInteractions(preferences);
     }

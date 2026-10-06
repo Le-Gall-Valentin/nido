@@ -11,5 +11,7 @@ public record UserAdminView(
     Role role,
     boolean isActive,
     Instant createdAt,
-    boolean totpEnabled
+    boolean totpEnabled,
+    /** Null once the account chose its password. */
+    InvitationState invitation
 ) {}

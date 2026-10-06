@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: mail(#{${mail.wasInvited ? 'subject.invited' : 'subject'}(${mail.actorName}, ${mail.accountName})}, #{preheader}, ~{::content})}">
+<body>
+<th:block th:fragment="content">
+  <h1 th:replace="~{components :: heading(#{${mail.wasInvited ? 'heading.invited' : 'heading'}})}"></h1>
+  <p th:replace="~{components :: paragraph(#{greeting(${mail.username})})}"></p>
+  <th:block th:with="body=#{${mail.wasInvited ? 'body.invited' : 'body'}(${mail.actorName}, ${mail.accountName})}">
+    <p th:replace="~{components :: paragraph(${body})}"></p>
+  </th:block>
+  <table th:replace="~{components :: button(${appUrl + mail.usersPath.value}, #{action})}"></table>
+  <p th:replace="~{components :: fallbackLink(${appUrl + mail.usersPath.value})}"></p>
+  <p th:replace="~{notifications/manage :: manage}"></p>
+</th:block>
+</body>
+</html>

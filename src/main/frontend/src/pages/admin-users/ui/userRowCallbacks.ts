@@ -10,4 +10,5 @@ export interface UserRowCallbacks {
   onEditRole: (user: AdminUser) => void
   onResetTotp: (user: AdminUser) => void
   onDelete: (user: AdminUser) => void
+  onResendInvitation: (user: AdminUser) => void
 }

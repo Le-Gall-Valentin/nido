@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mapApiErrorToKey } from './mapApiErrorToKey'
-import { ConflictError, RoleAlreadyAssignedError } from '@/entities/user'
+import { AlreadyInactiveError, ConflictError, RoleAlreadyAssignedError } from '@/entities/user'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
 
 describe('mapApiErrorToKey', () => {
@@ -10,6 +10,10 @@ describe('mapApiErrorToKey', () => {
 
   it('maps RoleAlreadyAssignedError', () => {
     expect(mapApiErrorToKey(new RoleAlreadyAssignedError(), 'edit_role')).toBe('edit_role.error.already_assigned')
+  })
+
+  it('maps AlreadyInactiveError', () => {
+    expect(mapApiErrorToKey(new AlreadyInactiveError(), 'deactivate')).toBe('deactivate.error.already_inactive')
   })
 
   it('maps ForbiddenError', () => {

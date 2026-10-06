@@ -63,6 +63,12 @@ public class AuthenticationExceptionHandler {
             case AuthenticationException.InvalidResetToken ignored ->
                     response(410, "This password reset link is no longer valid.", "reset_link_invalid");
 
+            case AuthenticationException.InvalidInvitationToken ignored ->
+                    response(410, "This invitation link is no longer valid.", "invitation_link_invalid");
+
+            case AuthenticationException.AccountAlreadyJoined ignored ->
+                    response(409, "This account already chose its password.", "account_already_joined");
+
             case AuthenticationException.DataIntegrityError ex -> {
                 log.error("Data integrity violation on {}", request.getRequestURI(), ex);
                 yield response(500, "An unexpected error occurred. Please try again later.");

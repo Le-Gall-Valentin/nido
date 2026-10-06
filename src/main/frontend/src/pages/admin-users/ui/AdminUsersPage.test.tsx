@@ -22,22 +22,28 @@ const mockApi = vi.hoisted(() => ({
   deactivateUser: vi.fn(),
   resetTotp: vi.fn(),
   deleteUser: vi.fn(),
+  resendInvitation: vi.fn(),
 }))
 
 vi.mock('@/features/auth', () => ({
   useAuth: (...args: unknown[]) => mockUseAuth(...args),
 }))
 
+const mailAvailability = vi.hoisted(() => ({ current: 'available' as 'loading' | 'available' | 'unavailable' }))
+vi.mock('@/entities/capabilities', () => ({ useMailAvailability: () => mailAvailability.current }))
+
 // The concrete api is injected through the slice's DIP context, so the fake is
 // provided via AdminUsersApiProvider rather than module-mocked.
 
 vi.mock('./UsersTable', () => ({
   UsersTable: (props: {
+    users: AdminUser[]
     isLoading: boolean
     onEditRole: (u: AdminUser) => void
     onDelete: (u: AdminUser) => void
     onResetTotp: (u: AdminUser) => void
     onToggleActive: (u: AdminUser) => void
+    onResendInvitation: (u: AdminUser) => void
   }) => {
     if (props.isLoading) return <div data-testid="skeleton" />
     return (
@@ -45,7 +51,8 @@ vi.mock('./UsersTable', () => ({
         <button data-testid="trigger-edit" onClick={() => props.onEditRole(MOCK_USER)}>edit</button>
         <button data-testid="trigger-delete" onClick={() => props.onDelete(MOCK_USER)}>delete</button>
         <button data-testid="trigger-totp" onClick={() => props.onResetTotp(MOCK_USER)}>totp</button>
-        <button data-testid="trigger-toggle" onClick={() => props.onToggleActive(MOCK_USER)}>toggle</button>
+        <button data-testid="trigger-toggle" onClick={() => props.onToggleActive(props.users[0])}>toggle</button>
+        <button data-testid="trigger-resend" onClick={() => props.onResendInvitation(MOCK_USER)}>resend</button>
       </div>
     )
   },
@@ -58,31 +65,81 @@ vi.mock('./UsersCardList', () => ({
 }))
 
 vi.mock('./CreateUserModal', () => ({
-  CreateUserModal: ({ onClose }: { onClose: () => void }) => (
+  CreateUserModal: ({ onClose, onCreate, onSuccess }: {
+    onClose: () => void
+    onCreate: (u: string, e: string, r: 'USER' | 'ADMIN') => Promise<unknown>
+    onSuccess: () => void
+  }) => (
     <div data-testid="create-modal">
       <button onClick={onClose}>close-create</button>
+      <button onClick={() => { void onCreate('carol', 'carol@test.com', 'ADMIN').then(onSuccess) }}>create</button>
     </div>
   ),
 }))
 
 vi.mock('./EditUserRoleModal', () => ({
-  EditUserRoleModal: ({ onClose }: { onClose: () => void }) => (
-    <div data-testid="edit-modal"><button onClick={onClose}>close-edit</button></div>
+  EditUserRoleModal: ({ target, onClose, onUpdate, onSuccess }: {
+    target: AdminUser
+    onClose: () => void
+    onUpdate: (id: string, role: 'USER' | 'ADMIN') => Promise<unknown>
+    onSuccess: () => void
+  }) => (
+    <div data-testid="edit-modal">
+      <button onClick={onClose}>close-edit</button>
+      <button onClick={() => { void onUpdate(target.id, 'ADMIN').then(onSuccess) }}>update</button>
+    </div>
   ),
 }))
 
 vi.mock('./DeleteUserModal', () => ({
-  DeleteUserModal: ({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) => (
+  DeleteUserModal: ({ user, onClose, onDelete, onSuccess }: {
+    user: AdminUser
+    onClose: () => void
+    onDelete: (id: string) => Promise<unknown>
+    onSuccess: () => void
+  }) => (
     <div data-testid="delete-modal">
       <button onClick={onClose}>close-delete</button>
       <button onClick={onSuccess}>success-delete</button>
+      <button onClick={() => { void onDelete(user.id).then(onSuccess) }}>delete-it</button>
+    </div>
+  ),
+}))
+
+vi.mock('./DeactivateUserModal', () => ({
+  DeactivateUserModal: ({ user, onDeactivate, onSuccess }: {
+    user: AdminUser; onDeactivate: (u: AdminUser) => Promise<void>; onSuccess: () => void
+  }) => (
+    <div data-testid="deactivate-modal">
+      <button data-testid="confirm-deactivate" onClick={() => { void onDeactivate(user).then(onSuccess, () => {}) }}>confirm</button>
+    </div>
+  ),
+}))
+
+vi.mock('./ResendInvitationModal', () => ({
+  ResendInvitationModal: ({ user, onClose, onResend }: {
+    user: AdminUser
+    onClose: () => void
+    onResend: (id: string) => Promise<{ delivery: string }>
+  }) => (
+    <div data-testid="resend-modal">
+      <button onClick={onClose}>close-resend</button>
+      <button onClick={() => { void onResend(user.id) }}>resend-it</button>
     </div>
   ),
 }))
 
 vi.mock('./ResetTotpModal', () => ({
-  ResetTotpModal: ({ onClose }: { onClose: () => void }) => (
-    <div data-testid="totp-modal"><button onClick={onClose}>close-totp</button></div>
+  ResetTotpModal: ({ user, onClose, onReset, onSuccess }: {
+    user: AdminUser
+    onClose: () => void
+    onReset: (id: string) => Promise<unknown>
+    onSuccess: () => void
+  }) => (
+    <div data-testid="totp-modal">
+      <button onClick={onClose}>close-totp</button>
+      <button onClick={() => { void onReset(user.id).then(onSuccess) }}>reset-it</button>
+    </div>
   ),
 }))
 
@@ -92,7 +149,7 @@ const MOCK_CURRENT_USER: User = {
 }
 const MOCK_USER: AdminUser = {
   id: 'u1', username: 'alice', email: 'alice@test.com',
-  role: 'USER', isActive: true, createdAt: '2024-02-01T00:00:00Z', totpEnabled: false,
+  role: 'USER', isActive: true, invitation: null, createdAt: '2024-02-01T00:00:00Z', totpEnabled: false,
 }
 const MOCK_PAGE: UsersPage = {
   content: [MOCK_USER],
@@ -110,13 +167,15 @@ function setup() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mailAvailability.current = 'available'
   mockApi.listUsers.mockResolvedValue(MOCK_PAGE)
   mockApi.deactivateUser.mockResolvedValue(undefined)
   mockApi.activateUser.mockResolvedValue(undefined)
   mockApi.deleteUser.mockResolvedValue(undefined)
   mockApi.resetTotp.mockResolvedValue(undefined)
   mockApi.updateUserRole.mockResolvedValue(undefined)
-  mockApi.createUser.mockResolvedValue(undefined)
+  mockApi.createUser.mockResolvedValue({ delivery: 'mail' })
+  mockApi.resendInvitation.mockResolvedValue({ delivery: 'mail' })
 })
 
 describe('AdminUsersPage — loading', () => {
@@ -195,6 +254,15 @@ describe('AdminUsersPage — reset totp modal', () => {
   })
 })
 
+describe('AdminUsersPage — resend invitation modal', () => {
+  it('opens ResendInvitationModal when resend triggered', async () => {
+    const { findByTestId } = setup()
+    await findByTestId('users-table')
+    fireEvent.click(document.querySelector('[data-testid="trigger-resend"]')!)
+    expect(await findByTestId('resend-modal')).not.toBeNull()
+  })
+})
+
 describe('AdminUsersPage — search', () => {
   it('fetches without search initially', async () => {
     const { findByTestId } = setup()
@@ -219,20 +287,99 @@ describe('AdminUsersPage — search', () => {
   })
 })
 
-describe('AdminUsersPage — optimistic toggle', () => {
-  it('calls deactivateUser when toggling an active user', async () => {
+describe('AdminUsersPage — activation toggle', () => {
+  it('asks for confirmation before deactivating an active user', async () => {
     const { findByTestId } = setup()
     await findByTestId('users-table')
+
     fireEvent.click(document.querySelector('[data-testid="trigger-toggle"]')!)
+    expect(await findByTestId('deactivate-modal')).not.toBeNull()
+    expect(mockApi.deactivateUser).not.toHaveBeenCalled()
+
+    fireEvent.click(document.querySelector('[data-testid="confirm-deactivate"]')!)
     await waitFor(() => expect(mockApi.deactivateUser).toHaveBeenCalledWith('u1'))
   })
 
-  it('shows mutation_error banner when toggle API fails', async () => {
-    mockApi.deactivateUser.mockRejectedValue(new Error('fail'))
+  it('reactivates an inactive user at once', async () => {
+    mockApi.listUsers.mockResolvedValue({ ...MOCK_PAGE, content: [{ ...MOCK_USER, isActive: false }] })
+    const { findByTestId } = setup()
+    await findByTestId('users-table')
+
+    fireEvent.click(document.querySelector('[data-testid="trigger-toggle"]')!)
+
+    await waitFor(() => expect(mockApi.activateUser).toHaveBeenCalledWith('u1'))
+  })
+
+  it('shows mutation_error banner when a reactivation fails', async () => {
+    mockApi.listUsers.mockResolvedValue({ ...MOCK_PAGE, content: [{ ...MOCK_USER, isActive: false }] })
+    mockApi.activateUser.mockRejectedValue(new Error('fail'))
     const { findByTestId, findByRole } = setup()
     await findByTestId('users-table')
+
     fireEvent.click(document.querySelector('[data-testid="trigger-toggle"]')!)
-    const alert = await findByRole('alert')
-    expect(alert.textContent).toContain('mutation_error')
+
+    expect((await findByRole('alert')).textContent).toContain('mutation_error')
+  })
+})
+
+describe('AdminUsersPage — each dialog reaches the API', () => {
+  it('creates the account with what the dialog collected, then closes it', async () => {
+    const { findByTestId, getByText, queryByTestId } = setup()
+    await findByTestId('users-table')
+    fireEvent.click(getByText('action.create'))
+    fireEvent.click(getByText('create'))
+
+    await waitFor(() => expect(mockApi.createUser).toHaveBeenCalledWith('carol', 'carol@test.com', 'ADMIN'))
+    await waitFor(() => expect(queryByTestId('create-modal')).toBeNull())
+  })
+
+  it('changes the role of the account the row named, then closes the dialog', async () => {
+    const { findByTestId, getByText, getByTestId, queryByTestId } = setup()
+    await findByTestId('users-table')
+    fireEvent.click(getByTestId('trigger-edit'))
+    fireEvent.click(getByText('update'))
+
+    await waitFor(() => expect(mockApi.updateUserRole).toHaveBeenCalledWith('u1', 'ADMIN'))
+    await waitFor(() => expect(queryByTestId('edit-modal')).toBeNull())
+  })
+
+  it('deletes the account the row named', async () => {
+    const { findByTestId, getByText, getByTestId, queryByTestId } = setup()
+    await findByTestId('users-table')
+    fireEvent.click(getByTestId('trigger-delete'))
+    fireEvent.click(getByText('delete-it'))
+
+    await waitFor(() => expect(mockApi.deleteUser).toHaveBeenCalledWith('u1'))
+    await waitFor(() => expect(queryByTestId('delete-modal')).toBeNull())
+  })
+
+  it('resets the second factor of the account the row named, then closes the dialog', async () => {
+    const { findByTestId, getByText, getByTestId, queryByTestId } = setup()
+    await findByTestId('users-table')
+    fireEvent.click(getByTestId('trigger-totp'))
+    fireEvent.click(getByText('reset-it'))
+
+    await waitFor(() => expect(mockApi.resetTotp).toHaveBeenCalledWith('u1'))
+    await waitFor(() => expect(queryByTestId('totp-modal')).toBeNull())
+  })
+
+  it('sends again the invitation of the account the row named', async () => {
+    const { findByTestId, getByText, getByTestId } = setup()
+    await findByTestId('users-table')
+    fireEvent.click(getByTestId('trigger-resend'))
+    fireEvent.click(getByText('resend-it'))
+
+    await waitFor(() => expect(mockApi.resendInvitation).toHaveBeenCalledWith('u1'))
+  })
+})
+
+describe('AdminUsersPage — mail availability', () => {
+  it('waits to know whether mail is on before listing the accounts, so no action changes its name under the pointer', async () => {
+    mailAvailability.current = 'loading'
+    const { findByTestId, queryByTestId } = setup()
+
+    expect(await findByTestId('skeleton')).toBeDefined()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(queryByTestId('users-table')).toBeNull()
   })
 })

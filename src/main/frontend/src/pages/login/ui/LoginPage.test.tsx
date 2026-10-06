@@ -9,9 +9,10 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/features/auth', () => ({
-  LoginForm: ({ labelId, onLoginOutcome }: { labelId?: string; onLoginOutcome?: (o: unknown) => void }) => (
+  LoginForm: ({ labelId, onLoginOutcome, initialIdentifier }: { labelId?: string; onLoginOutcome?: (o: unknown) => void; initialIdentifier?: string }) => (
     <div>
       <form aria-label="login" aria-labelledby={labelId} />
+      <output data-testid="identifier">{initialIdentifier ?? ''}</output>
       <button onClick={() => onLoginOutcome?.({ kind: 'totp_required', username: 'alice' })}>trigger-totp</button>
       <button onClick={() => onLoginOutcome?.({ kind: 'enrollment_proposed', user: { id: '1', username: 'alice', role: 'USER' } })}>trigger-enroll</button>
     </div>
@@ -43,9 +44,9 @@ vi.mock('@/features/totp', () => ({
 
 const availability = vi.hoisted(() => ({ current: 'unavailable' as 'loading' | 'available' | 'unavailable' }))
 
-vi.mock('@/features/password-reset', () => ({
+vi.mock('@/entities/capabilities', () => ({
   usePasswordResetAvailability: () => availability.current,
-  passwordResetApi: {},
+  capabilitiesApi: {},
 }))
 
 const mockFinalizeLogin = vi.fn()
@@ -190,6 +191,22 @@ describe('LoginPage', () => {
 
       expect(screen.queryByRole('link', { name: 'forgot.link' })).toBeNull()
       expect(screen.getByText('help.contact_admin')).not.toBeNull()
+    })
+
+    it('after an accepted invitation, welcomes once and fills in the identifier', async () => {
+      render(
+        <MemoryRouter initialEntries={[{ pathname: '/login', state: { invitation: 'accepted', identifier: 'carol' } }]}>
+          <Routes>
+            <Route path="/login" element={<><LoginPage totpApi={mockTotpApi} /><Where /></>} />
+          </Routes>
+        </MemoryRouter>,
+      )
+
+      expect(screen.getByText('welcome.done')).not.toBeNull()
+      expect(screen.getByTestId('identifier').textContent).toBe('carol')
+      await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('null'))
+      expect(screen.getByText('welcome.done')).not.toBeNull()
+      expect(screen.getByTestId('identifier').textContent).toBe('carol')
     })
 
     it('shows the success banner once and takes its reason out of the history entry', async () => {

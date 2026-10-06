@@ -3,6 +3,8 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password',
   // Opened from the reset mail: the token follows a '#', so it never reaches a server log.
   RESET_PASSWORD: '/reset-password',
+  // Opened from an invitation: the account chooses its first password. Token after '#', as for a reset.
+  WELCOME: '/welcome',
   // The first-run setup: the only page of an installation not set up yet.
   SETUP: '/setup',
 

@@ -21,7 +21,9 @@
     "btn_edit": "Edit role of {{username}}",
     "btn_delete": "Delete account",
     "empty": "No users found.",
-    "meta": "{{email}} · member since {{date}}"
+    "meta": "{{email}} · member since {{date}}",
+    "btn_resend": "Resend {{username}}'s invitation",
+    "btn_new_link": "New invitation link for {{username}}"
   },
   "close": "Close",
   "search": {
@@ -35,7 +37,8 @@
     "insufficient": "Action reserved for administrators.",
     "totp_not_enabled": "2FA is not enabled on this account.",
     "target_inactive": "The account must be active to change its role.",
-    "no_assignable_role": "No other role can be assigned to this user."
+    "no_assignable_role": "No other role can be assigned to this user.",
+    "target_inactive_invitation": "The account must be active to resend its invitation."
   },
   "load_error": "Unable to load the users list. Please try again.",
   "mutation_error": "An error occurred. The changes have been reverted.",
@@ -48,11 +51,11 @@
   },
   "create": {
     "title": "Create a user",
+    "intro": "They will receive a link to choose their own password.",
     "username": "Username",
     "username_placeholder": "firstname.lastname",
     "email": "Email",
     "email_placeholder": "user@acme.io",
-    "password": "Initial password",
     "role": "Role",
     "role_note": "The Super administrator role cannot be assigned manually — it is unique and permanent.",
     "cancel": "Cancel",
@@ -66,11 +69,59 @@
       "rate_limit": "Too many attempts. Please try again later.",
       "username_length": "Username must be between 3 and 50 characters.",
       "username_at": "Username cannot contain @.",
-      "email_invalid": "Please enter a valid email address.",
-      "password_too_short": "Password must be at least 8 characters.",
-      "password_too_long": "Password must be at most 72 characters, fewer with accents or emoji.",
-      "password_weak": "Password must contain an uppercase letter, a digit and a special character."
+      "email_invalid": "Please enter a valid email address."
     }
+  },
+  "invitation": {
+    "created_title": "Account created",
+    "mailed": "An invitation went to {{email}}. {{username}} will find a link in it, valid for 7 days, to choose their password.",
+    "link_intro": "Mail is not set up: pass this link on to {{username}} (text message, chat…). It lets them choose their password and stays valid for 7 days.",
+    "link_label": "Invitation link",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copy_failed": "This browser could not copy the link: select it above to copy it.",
+    "once": "This link will not be shown again. To get another one, generate a new invitation link.",
+    "done": "Done",
+    "pending": "Invitation pending",
+    "expired": "Invitation expired"
+  },
+  "resend": {
+    "title_mail": "Resend {{username}}'s invitation?",
+    "title_link": "New invitation link for {{username}}?",
+    "body_mail": "A new link, valid for 7 days, will be emailed. The previous one will stop working.",
+    "body_link": "A new link, valid for 7 days, will be shown for you to pass on. The previous one will stop working.",
+    "cancel": "Cancel",
+    "submit_mail": "Resend",
+    "submit_link": "Generate the link",
+    "done_title": "Invitation renewed",
+    "error": {
+      "already_joined": "This person already chose their password.",
+      "forbidden": "You are not allowed to resend this invitation.",
+      "not_found": "User not found.",
+      "server": "Something went wrong. Please try again.",
+      "network": "Network unavailable.",
+      "rate_limit": "Too many attempts. Please try again later."
+    }
+  },
+  "deactivate": {
+    "title": "Deactivate {{username}}'s account?",
+    "body": "{{username}} will not be able to sign in while the account stays deactivated. Their data is kept.",
+    "cancel": "Cancel",
+    "submit": "Deactivate",
+    "error": {
+      "already_inactive": "This account is already deactivated.",
+      "forbidden": "You are not allowed to deactivate this account.",
+      "not_found": "User not found.",
+      "server": "Something went wrong. Please try again.",
+      "network": "Network unavailable.",
+      "rate_limit": "Too many attempts. Please try again later."
+    }
+  },
+  "notice": {
+    "mail": "An email will tell {{username}}.",
+    "no_mail": "Mail is not set up: no email will tell {{username}}.",
+    "invited": "{{username}} has not joined Nido yet: no email will be sent.",
+    "invitation_cancelled": "An email will tell {{username}} that their invitation is cancelled."
   },
   "edit_role": {
     "title": "Edit role of {{username}}",

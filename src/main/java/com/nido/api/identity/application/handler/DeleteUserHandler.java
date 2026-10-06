@@ -1,9 +1,11 @@
 package com.nido.api.identity.application.handler;
 
 import com.nido.api.identity.application.port.in.DeleteUserUseCase;
+import com.nido.api.identity.application.service.AdminGestureNotifier;
 import com.nido.api.identity.domain.model.DeleteUserCommand;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
+import com.nido.api.identity.domain.port.out.AccountInvitationPort;
 import com.nido.api.identity.domain.port.out.CredentialDeletionPort;
 import com.nido.api.identity.domain.port.out.NotificationDataDeletionPort;
 import com.nido.api.identity.domain.port.out.PendingMailCancellationPort;
@@ -30,6 +32,8 @@ public class DeleteUserHandler implements DeleteUserUseCase {
     private final NotificationDataDeletionPort notificationDataDeletionPort;
     private final PendingMailCancellationPort pendingMailCancellationPort;
     private final TokenInvalidationPort tokenInvalidationPort;
+    private final AccountInvitationPort invitations;
+    private final AdminGestureNotifier notifier;
 
     public DeleteUserHandler(UserRepository userRepository,
                              UserCommandPort userCommandPort,
@@ -38,7 +42,9 @@ public class DeleteUserHandler implements DeleteUserUseCase {
                              SpaceDataDeletionPort spaceDataDeletionPort,
                              NotificationDataDeletionPort notificationDataDeletionPort,
                              PendingMailCancellationPort pendingMailCancellationPort,
-                             TokenInvalidationPort tokenInvalidationPort) {
+                             TokenInvalidationPort tokenInvalidationPort,
+                             AccountInvitationPort invitations,
+                             AdminGestureNotifier notifier) {
         this.userRepository = userRepository;
         this.userCommandPort = userCommandPort;
         this.credentialDeletionPort = credentialDeletionPort;
@@ -47,6 +53,8 @@ public class DeleteUserHandler implements DeleteUserUseCase {
         this.notificationDataDeletionPort = notificationDataDeletionPort;
         this.pendingMailCancellationPort = pendingMailCancellationPort;
         this.tokenInvalidationPort = tokenInvalidationPort;
+        this.invitations = invitations;
+        this.notifier = notifier;
     }
 
     @Override
@@ -58,6 +66,8 @@ public class DeleteUserHandler implements DeleteUserUseCase {
         User target = userRepository.findById(command.targetUserId())
             .orElseThrow(IdentityException.UserNotFound::new);
         target.ensureCanBeDeletedBy(command.callerRole());
+        // Read before the credentials go: deleting them takes the invitation with them.
+        boolean wasInvited = invitations.isInvited(target.id());
         userCommandPort.deleteGdpr(command.targetUserId());
         credentialDeletionPort.deleteCredentials(command.targetUserId());
         totpDeletionPort.deleteTotpData(command.targetUserId());
@@ -70,6 +80,8 @@ public class DeleteUserHandler implements DeleteUserUseCase {
         // Everything about the user is gone, except the access token in their browser — nothing in
         // it consults the database, so it would keep authenticating a user who no longer exists.
         tokenInvalidationPort.invalidateIssuedTokens(command.targetUserId());
+        // Queued after the withdrawal of the mails still waiting for this address, or it would withdraw itself.
+        notifier.deleted(target, wasInvited, command.callerId(), command.callerRole());
         log.info("GDPR delete performed by caller {} with role {}",
             command.callerId(), command.callerRole());
     }

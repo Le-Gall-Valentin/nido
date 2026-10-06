@@ -1,5 +1,6 @@
 package com.nido.api.mfa.application.handler;
 
+import com.nido.api.mfa.domain.port.out.TotpMailPort;
 import com.nido.api.mfa.application.dto.DisableTotpCommand;
 import com.nido.api.mfa.domain.model.MfaException;
 import com.nido.api.mfa.domain.model.UserTotpProfile;
@@ -30,6 +31,7 @@ class DisableTotpHandlerTest {
     @Mock UserTotpLifecyclePort userTotpLifecyclePort;
     @Mock TotpCodeValidatorPort codeValidator;
     @Mock TotpCodeReplayPort codeReplay;
+    @Mock TotpMailPort mails;
 
     private DisableTotpHandler handler;
 
@@ -38,7 +40,7 @@ class DisableTotpHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new DisableTotpHandler(userTotpQuery, userTotpLifecyclePort, codeValidator, codeReplay, pendingEnrolment);
+        handler = new DisableTotpHandler(userTotpQuery, userTotpLifecyclePort, codeValidator, codeReplay, pendingEnrolment, mails);
     }
 
     @Test
@@ -52,6 +54,7 @@ class DisableTotpHandlerTest {
             .doesNotThrowAnyException();
 
         verify(userTotpLifecyclePort).disableTotp(userId);
+        verify(mails).totpDisabled(userId);
     }
 
     @Test
@@ -90,6 +93,7 @@ class DisableTotpHandlerTest {
 
         assertThatThrownBy(() -> handler.disable(new DisableTotpCommand(userId, "000000")))
             .isInstanceOf(MfaException.TotpCodeInvalid.class);
+        verifyNoInteractions(mails);
     }
 
     @Test

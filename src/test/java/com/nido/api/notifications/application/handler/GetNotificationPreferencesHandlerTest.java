@@ -9,6 +9,7 @@ import com.nido.api.notifications.domain.model.NotificationPreferencesView.TypeS
 import com.nido.api.notifications.domain.model.NotificationType;
 import com.nido.api.notifications.domain.port.out.NotificationChannelPort;
 import com.nido.api.notifications.domain.port.out.NotificationPreferencesRepository;
+import com.nido.api.shared.model.Role;
 import fixtures.notifications.valid.GreetingNotification;
 import fixtures.notifications.valid.ReminderNotification;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,7 +48,7 @@ class GetNotificationPreferencesHandlerTest {
     }
 
     private NotificationPreferencesView view(NotificationChannelPort channel) {
-        return new GetNotificationPreferencesHandler(() -> CATALOG, preferences, List.of(channel)).get(janeId);
+        return new GetNotificationPreferencesHandler(() -> CATALOG, preferences, List.of(channel)).get(janeId, Role.USER);
     }
 
     @Test
@@ -78,6 +80,20 @@ class GetNotificationPreferencesHandlerTest {
 
         assertThat(view.channels()).containsExactly(new ChannelSetting(NotificationChannel.EMAIL, false));
         assertThat(view.types()).containsExactly(new TypeSetting(REMINDER, true), new TypeSetting(GREETING, false));
+    }
+
+    @Test
+    void a_kind_reserved_to_another_role_is_not_on_the_card() {
+        when(preferences.find(janeId)).thenReturn(NotificationPreferences.DEFAULTS);
+        NotificationCatalog reserved = new NotificationCatalog(
+            Map.of(GreetingNotification.class, GREETING, ReminderNotification.class, REMINDER),
+            Map.of(GREETING, Set.of(Role.SUPER_ADMIN)));
+        GetNotificationPreferencesHandler handler =
+            new GetNotificationPreferencesHandler(() -> reserved, preferences, List.of(mail(true)));
+
+        assertThat(handler.get(janeId, Role.USER).types()).extracting(TypeSetting::type).containsExactly(REMINDER);
+        assertThat(handler.get(janeId, Role.SUPER_ADMIN).types()).extracting(TypeSetting::type)
+            .containsExactly(REMINDER, GREETING);
     }
 
     @Test

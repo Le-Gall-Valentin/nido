@@ -1,6 +1,9 @@
 package com.nido.api.authentication.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.authentication.application.dto.InvitationDelivery;
+import com.nido.api.authentication.application.port.in.AcceptAccountInvitationUseCase;
+import com.nido.api.authentication.application.port.in.InviteAccountUseCase;
 import com.nido.api.authentication.application.port.in.RefreshTokenUseCase;
 import com.nido.api.authentication.application.port.in.RequestPasswordResetUseCase;
 import com.nido.api.authentication.domain.model.UserCredentials;
@@ -22,6 +25,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -43,6 +47,8 @@ class AccountRacesIT {
     @Autowired RefreshTokenIssuerPort issuer;
     @Autowired UserCredentialsPort credentialsPort;
     @Autowired RequestPasswordResetUseCase requestReset;
+    @Autowired InviteAccountUseCase invite;
+    @Autowired AcceptAccountInvitationUseCase acceptInvitation;
     @Autowired RefreshTokenJpaRepository refreshTokens;
     @Autowired PasswordResetTokenJpaRepository resetTokens;
     @Autowired UserIdentityJpaRepository users;
@@ -124,6 +130,88 @@ class AccountRacesIT {
             releaseA.countDown();
             pool.shutdownNow();
         }
+    }
+
+    @Test
+    void forgot_password_typed_while_the_invitation_is_accepted_waits_then_finds_the_account_joined() throws Exception {
+        Invited invited = invitedAccount();
+        // Past the pace of reset links, so "forgot password" would renew the invitation.
+        jdbc.sql("UPDATE account_invitations SET created_at = created_at - INTERVAL '10 minutes' WHERE user_id = :id")
+            .param("id", invited.userId()).update();
+        CountDownLatch aAccepted = new CountDownLatch(1);
+        CountDownLatch releaseA = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            // A: the invited person choosing a password, caught between taking the link and its commit.
+            Future<?> a = pool.submit(() -> transactions.executeWithoutResult(status -> {
+                acceptInvitation.accept(invited.token(), "Welcome-Home-1");
+                aAccepted.countDown();
+                awaitQuietly(releaseA);
+            }));
+            assertThat(aAccepted.await(10, TimeUnit.SECONDS)).isTrue();
+
+            // B: "forgot password" typed for that account at that very moment.
+            Future<?> b = pool.submit(() -> requestReset.request(invited.username()));
+            awaitWaitingOrDone(b);
+            releaseA.countDown();
+            a.get(15, TimeUnit.SECONDS);
+            b.get(15, TimeUnit.SECONDS);
+
+            assertThat(invitationsOf(invited.userId())).isZero();
+            assertThat(credentials.existsById(invited.userId())).isTrue();
+        } finally {
+            releaseA.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void an_invitation_asked_for_again_while_it_is_accepted_waits_then_finds_the_account_joined() throws Exception {
+        Invited invited = invitedAccount();
+        CountDownLatch aAccepted = new CountDownLatch(1);
+        CountDownLatch releaseA = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            // A: the invited person choosing a password, caught between taking the link and its commit.
+            Future<?> a = pool.submit(() -> transactions.executeWithoutResult(status -> {
+                acceptInvitation.accept(invited.token(), "Welcome-Home-1");
+                aAccepted.countDown();
+                awaitQuietly(releaseA);
+            }));
+            assertThat(aAccepted.await(10, TimeUnit.SECONDS)).isTrue();
+
+            // B: an administrator sending the invitation again at that very moment.
+            Future<Optional<InvitationDelivery>> b = pool.submit(() -> invite.inviteAgain(invited.userId(), "root"));
+            awaitWaitingOrDone(b);
+            releaseA.countDown();
+            a.get(15, TimeUnit.SECONDS);
+
+            assertThat(b.get(15, TimeUnit.SECONDS)).isEmpty();
+            assertThat(invitationsOf(invited.userId())).isZero();
+        } finally {
+            releaseA.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    private record Invited(UUID userId, String username, String token) {}
+
+    /** An account created by an administrator that has not chosen its password yet. Mail is off: the link comes back. */
+    private Invited invitedAccount() {
+        UserIdentityEntity user = new UserIdentityEntity();
+        String name = "invited-" + UUID.randomUUID();
+        user.setUsername(name);
+        user.setEmail(name + "@test.com");
+        user.setRole(Role.USER);
+        user.setActive(true);
+        UUID id = users.saveAndFlush(user).getId();
+        String url = ((InvitationDelivery.Link) invite.invite(id, "root")).url();
+        return new Invited(id, name, url.substring(url.indexOf("token=") + "token=".length()));
+    }
+
+    private int invitationsOf(UUID id) {
+        return jdbc.sql("SELECT count(*) FROM account_invitations WHERE user_id = :id")
+            .param("id", id).query(Integer.class).single();
     }
 
     /** B either queues behind A's lock — what serialising means — or, without one, runs to the end. */

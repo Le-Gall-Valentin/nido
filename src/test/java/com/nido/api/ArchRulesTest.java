@@ -608,17 +608,28 @@ class ArchRulesTest {
         new CrossBcAppDep("identity",
             new String[]{BASE + "authentication.application.port.in..", BASE + "authentication.application.dto.."},
             Set.of("CredentialSetupAdapter", "CredentialChangeAdapter", "CredentialDeletionAdapter",
-                   "TokenInvalidationAdapter", "PasswordCheckAdapter", "AccountRecoveryAdapter")),
+                   "TokenInvalidationAdapter", "PasswordCheckAdapter", "AccountRecoveryAdapter",
+                   "AccountInvitationAdapter")),
 
         // identity.infra → mail.application.port.in
         new CrossBcAppDep("identity",
             new String[]{BASE + "mail.application.port.in.."},
-            Set.of("ProfileMailAdapter", "PendingMailCancellationAdapter")),
+            Set.of("ProfileMailAdapter", "PendingMailCancellationAdapter", "AdminAccountMailAdapter")),
 
         // identity.infra → mfa.application.port.in
         new CrossBcAppDep("identity",
             new String[]{BASE + "mfa.application.port.in.."},
             Set.of("TotpRecordInitAdapter", "MfaAdminResetTotpAdapter", "IdentityTotpStatusAdapter", "TotpDeletionAdapter")),
+
+        // mfa.infra → identity.application.port.in
+        new CrossBcAppDep("mfa",
+            new String[]{BASE + "identity.application.port.in.."},
+            Set.of("TotpMailAdapter")),
+
+        // mfa.infra → mail.application.port.in
+        new CrossBcAppDep("mfa",
+            new String[]{BASE + "mail.application.port.in.."},
+            Set.of("TotpMailAdapter")),
 
         // identity.infra → space.application.port.in
         new CrossBcAppDep("identity",
@@ -628,7 +639,7 @@ class ArchRulesTest {
         // identity.infra → notifications.application.port.in
         new CrossBcAppDep("identity",
             new String[]{BASE + "notifications.application.port.in.."},
-            Set.of("NotificationDataDeletionAdapter")),
+            Set.of("NotificationDataDeletionAdapter", "AdminActivityNotificationAdapter")),
 
         // notifications.infra → mail.application.port.in
         new CrossBcAppDep("notifications",
@@ -658,7 +669,7 @@ class ArchRulesTest {
         // authentication.infra → instance.application.port.in
         new CrossBcAppDep("authentication",
             new String[]{BASE + "instance.application.port.in.."},
-            Set.of("SessionSettingsAdapter")),
+            Set.of("SessionSettingsAdapter", "PublicUrlAdapter")),
 
         // instance.infra → mail.application.port.in
         new CrossBcAppDep("instance",

@@ -4,21 +4,14 @@ import { Plus } from 'lucide-react'
 import { Alert, Button, DebouncedSearchInput, Pagination, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { pageAfterRemoval } from '@/shared/lib'
 import { useAuth } from '@/features/auth'
-import type { AdminUser , IAdminUsersApi } from '@/entities/user'
-import { adminUsersApi , AdminUsersApiProvider , useUsers ,
-  useCreateUser,
-  useUpdateUserRole,
-  useDeleteUser,
-  useResetTotp,
-  useToggleUserActive,
-} from '@/entities/user'
+import type { AdminUser, IAdminUsersApi } from '@/entities/user'
+import { adminUsersApi, AdminUsersApiProvider, useToggleUserActive, useUsers } from '@/entities/user'
+import { useMailAvailability } from '@/entities/capabilities'
 import { UsersTable } from './UsersTable'
 import { UsersCardList } from './UsersCardList'
-import { CreateUserModal } from './CreateUserModal'
-import { EditUserRoleModal } from './EditUserRoleModal'
-import { DeleteUserModal } from './DeleteUserModal'
-import { ResetTotpModal } from './ResetTotpModal'
+import { UserDialogs, type UserDialog } from './UserDialogs'
 import { ProtectionRulesPanel } from './ProtectionRulesPanel'
+import type { UserRowCallbacks } from './userRowCallbacks'
 
 interface AdminUsersPageProps {
   /** Composition seam: defaults to the real implementation; tests inject a fake. */
@@ -46,16 +39,11 @@ function AdminUsersPageContent() {
   const { data, isPending, isError: loadError, isPlaceholderData } = useUsers(page, search)
 
   const [toggleError, setToggleError] = useState(false)
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<AdminUser | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null)
-  const [resetTotpTarget, setResetTotpTarget] = useState<AdminUser | null>(null)
+  const [dialog, setDialog] = useState<UserDialog>(null)
+  const closeDialog = () => setDialog(null)
 
-  const createUser = useCreateUser()
-  const updateUserRole = useUpdateUserRole()
-  const deleteUser = useDeleteUser()
-  const resetTotp = useResetTotp()
   const toggleActive = useToggleUserActive(page, search)
+  const mail = useMailAvailability()
 
   // Settled value only: the field below keeps the keystrokes, so this runs once the typing stops.
   const handleSearch = useCallback((value: string) => {
@@ -65,12 +53,25 @@ function AdminUsersPageContent() {
 
   function handleToggle(user: AdminUser) {
     setToggleError(false)
+    // Deactivating cuts someone off and tells them by mail: confirmed first. Reactivating is harmless.
+    if (user.isActive) {
+      setDialog({ kind: 'deactivate', user })
+      return
+    }
     toggleActive.mutate(user, { onError: () => setToggleError(true) })
   }
 
-  function handleDeleteSuccess() {
+  function handleDeleted() {
     setPage(pageAfterRemoval(page, data?.content.length ?? 0, isPlaceholderData))
-    setDeleteTarget(null)
+    closeDialog()
+  }
+
+  const rowCallbacks: UserRowCallbacks = {
+    onToggleActive: handleToggle,
+    onEditRole: (user) => setDialog({ kind: 'edit_role', user }),
+    onResetTotp: (user) => setDialog({ kind: 'reset_totp', user }),
+    onDelete: (user) => setDialog({ kind: 'delete', user }),
+    onResendInvitation: (user) => setDialog({ kind: 'resend', user }),
   }
 
   if (!currentUser) return null
@@ -81,6 +82,8 @@ function AdminUsersPageContent() {
   const pageSize = data?.size ?? 20
   const totalPages = totalElements > 0 ? Math.ceil(totalElements / pageSize) : 1
   const showPagination = !isPending && totalPages > 1
+  // Each row names its invitation action after how a new link would leave: listed once that is known.
+  const isLoading = isPending || mail === 'loading'
 
   return (
     <div className="mx-auto max-w-[1180px] px-5 py-6 md:px-10 md:py-[34px]">
@@ -93,7 +96,7 @@ function AdminUsersPageContent() {
           </p>
         </div>
         <Button
-          onClick={() => setCreateOpen(true)}
+          onClick={() => setDialog({ kind: 'create' })}
           className="self-start shrink-0 border-transparent font-semibold"
           style={{ ...CTA_BUTTON_STYLE, boxShadow: 'var(--btn-primary-shadow)' }}
         >
@@ -130,25 +133,21 @@ function AdminUsersPageContent() {
       <div className="hidden md:block">
         <UsersTable
           users={users}
-          isLoading={isPending}
+          isLoading={isLoading}
           currentUser={currentUser}
+          mail={mail}
           pendingToggleId={pendingToggleId}
-          onToggleActive={handleToggle}
-          onEditRole={setEditTarget}
-          onResetTotp={setResetTotpTarget}
-          onDelete={setDeleteTarget}
+          {...rowCallbacks}
         />
       </div>
       <div className="md:hidden">
         <UsersCardList
           users={users}
-          isLoading={isPending}
+          isLoading={isLoading}
           currentUser={currentUser}
+          mail={mail}
           pendingToggleId={pendingToggleId}
-          onToggleActive={handleToggle}
-          onEditRole={setEditTarget}
-          onResetTotp={setResetTotpTarget}
-          onDelete={setDeleteTarget}
+          {...rowCallbacks}
         />
       </div>
 
@@ -167,43 +166,15 @@ function AdminUsersPageContent() {
         </div>
       )}
 
-      {/* Modals */}
-      {createOpen && (
-        <CreateUserModal
-          caller={currentUser}
-          onClose={() => setCreateOpen(false)}
-          onCreate={(u, e, p, r) => createUser.mutateAsync({ username: u, email: e, password: p, role: r })}
-          onSuccess={() => { setPage(0); setCreateOpen(false) }}
-        />
-      )}
-
-      {editTarget && (
-        <EditUserRoleModal
-          target={editTarget}
-          caller={currentUser}
-          onClose={() => setEditTarget(null)}
-          onUpdate={(id, role) => updateUserRole.mutateAsync({ id, role })}
-          onSuccess={() => setEditTarget(null)}
-        />
-      )}
-
-      {deleteTarget && (
-        <DeleteUserModal
-          user={deleteTarget}
-          onClose={() => setDeleteTarget(null)}
-          onDelete={deleteUser.mutateAsync}
-          onSuccess={handleDeleteSuccess}
-        />
-      )}
-
-      {resetTotpTarget && (
-        <ResetTotpModal
-          user={resetTotpTarget}
-          onClose={() => setResetTotpTarget(null)}
-          onReset={resetTotp.mutateAsync}
-          onSuccess={() => setResetTotpTarget(null)}
-        />
-      )}
+      <UserDialogs
+        dialog={dialog}
+        caller={currentUser}
+        mail={mail}
+        onClose={closeDialog}
+        onCreated={() => { setPage(0); closeDialog() }}
+        onDeleted={handleDeleted}
+        onDeactivate={(user) => toggleActive.mutateAsync(user)}
+      />
     </div>
   )
 }

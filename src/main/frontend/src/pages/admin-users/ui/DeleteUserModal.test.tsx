@@ -13,7 +13,7 @@ vi.mock('react-i18next', () => ({
 
 const TARGET: AdminUser = {
   id: 'u-1', username: 'alice', email: 'alice@test.com',
-  role: 'USER', isActive: true, createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
+  role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
 }
 
 function setup(overrides: { onDelete?: () => Promise<void> } = {}) {
@@ -21,7 +21,7 @@ function setup(overrides: { onDelete?: () => Promise<void> } = {}) {
   const onSuccess = vi.fn()
   const onDelete = overrides.onDelete ?? vi.fn().mockResolvedValue(undefined)
   const result = render(
-    <DeleteUserModal user={TARGET} onClose={onClose} onDelete={onDelete} onSuccess={onSuccess} />
+    <DeleteUserModal mail="available" user={TARGET} onClose={onClose} onDelete={onDelete} onSuccess={onSuccess} />
   )
   return { ...result, onClose, onSuccess, onDelete }
 }

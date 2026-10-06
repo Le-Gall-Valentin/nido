@@ -12,12 +12,18 @@ export function useCreateUser() {
   const api = useAdminUsersApi()
   const invalidate = useInvalidateUsers()
   return useMutation({
-    mutationFn: ({ username, email, password, role }: {
-      username: string
-      email: string
-      password: string
-      role: 'USER' | 'ADMIN'
-    }) => api.createUser(username, email, password, role),
+    mutationFn: ({ username, email, role }: { username: string; email: string; role: 'USER' | 'ADMIN' }) =>
+      api.createUser(username, email, role),
+    onSuccess: invalidate,
+  })
+}
+
+export function useResendInvitation() {
+  const api = useAdminUsersApi()
+  const invalidate = useInvalidateUsers()
+  return useMutation({
+    mutationFn: (id: string) => api.resendInvitation(id),
+    // The badge goes from "expired" back to "pending".
     onSuccess: invalidate,
   })
 }

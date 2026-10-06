@@ -21,6 +21,6 @@ public class NotificationRecipientAdapter implements NotificationRecipientPort {
     @Override
     public Optional<NotificationRecipient> find(UUID userId) {
         return findUser.findById(userId).map(user ->
-            new NotificationRecipient(user.id(), user.username(), user.email(), user.language(), user.isActive()));
+            new NotificationRecipient(user.id(), user.username(), user.email(), user.language(), user.role(), user.isActive()));
     }
 }

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Copy, Send } from 'lucide-react'
 import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
-import { copyText } from '@/shared/lib'
+import { useCopy } from '@/shared/lib'
 import type { SpaceInvitation , AssignableSpaceRole } from '@/entities/space'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 
@@ -22,7 +22,7 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
   const [isLoading, setIsLoading] = useState(false)
   const [errorKey, setErrorKey] = useState<string[] | null>(null)
   const [issued, setIssued] = useState<SpaceInvitation | null>(null)
-  const [copied, setCopied] = useState(false)
+  const { copy, copied, failed } = useCopy()
   const pendingRef = useRef(false)
 
   const trimmedIdentifier = identifier.trim()
@@ -45,15 +45,6 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
     }
   }
 
-  async function handleCopy() {
-    if (!issued) return
-    // Not copied: the code stays visible for a manual copy.
-    if (await copyText(issued.code)) {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    }
-  }
-
   function handleClose() {
     setErrorKey(null)
     if (issued) onSuccess()
@@ -71,12 +62,14 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
         <p className="mb-1.5 text-xs text-fg-3">{t('invite.code_hint')}</p>
         <button
           type="button"
-          onClick={() => { void handleCopy() }}
+          onClick={() => { void copy(issued.code) }}
           className="mb-5 flex w-full items-center justify-center gap-2 rounded-[10px] border-[1.5px] border-dashed border-border bg-bg-2 px-3.5 py-3 font-mono text-base font-semibold tracking-wide text-fg-0 transition-colors hover:bg-bg-3"
         >
           {copied ? <Check className="size-4 text-status-green" /> : <Copy className="size-4" />}
           {issued.code}
         </button>
+        {/* Not copied: the code stays on the button, to copy by hand — and the person is told. */}
+        {failed && <p role="status" className="-mt-3 mb-5 text-[12.5px] text-fg-2">{t('invite.copy_failed')}</p>}
 
         <div className="flex justify-end">
           <Button

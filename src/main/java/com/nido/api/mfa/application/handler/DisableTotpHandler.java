@@ -1,5 +1,6 @@
 package com.nido.api.mfa.application.handler;
 
+import com.nido.api.mfa.domain.port.out.TotpMailPort;
 import com.nido.api.mfa.application.dto.DisableTotpCommand;
 import com.nido.api.mfa.application.port.in.DisableTotpUseCase;
 import com.nido.api.mfa.domain.model.MfaException;
@@ -20,17 +21,20 @@ public class DisableTotpHandler implements DisableTotpUseCase {
     private final PendingTotpEnrolmentPort pendingEnrolment;
     private final TotpCodeValidatorPort codeValidator;
     private final TotpCodeReplayPort codeReplay;
+    private final TotpMailPort mails;
 
     public DisableTotpHandler(UserTotpQueryPort userTotpQuery,
                               UserTotpLifecyclePort userTotpLifecyclePort,
                               TotpCodeValidatorPort codeValidator,
                               TotpCodeReplayPort codeReplay,
-                               PendingTotpEnrolmentPort pendingEnrolment) {
+                               PendingTotpEnrolmentPort pendingEnrolment,
+                               TotpMailPort mails) {
         this.userTotpQuery = userTotpQuery;
         this.userTotpLifecyclePort = userTotpLifecyclePort;
         this.pendingEnrolment = pendingEnrolment;
         this.codeValidator = codeValidator;
         this.codeReplay = codeReplay;
+        this.mails = mails;
     }
 
     @Override
@@ -47,5 +51,6 @@ public class DisableTotpHandler implements DisableTotpUseCase {
         // Turning 2FA off should not leave a half-started replacement behind.
         pendingEnrolment.discard(command.userId());
         userTotpLifecyclePort.disableTotp(command.userId());
+        mails.totpDisabled(command.userId());
     }
 }

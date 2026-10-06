@@ -24,7 +24,7 @@ vi.mock('@/shared/ui', () => ({
 
 const TARGET: AdminUser = {
   id: 'u-1', username: 'alice', email: 'alice@test.com',
-  role: 'USER', isActive: true, createdAt: '2024-01-01T00:00:00Z', totpEnabled: true,
+  role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', totpEnabled: true,
 }
 
 function setup(overrides: { onReset?: () => Promise<void> } = {}) {
@@ -32,7 +32,7 @@ function setup(overrides: { onReset?: () => Promise<void> } = {}) {
   const onSuccess = vi.fn()
   const onReset = overrides.onReset ?? vi.fn().mockResolvedValue(undefined)
   const result = render(
-    <ResetTotpModal user={TARGET} onClose={onClose} onReset={onReset} onSuccess={onSuccess} />
+    <ResetTotpModal mail="available" user={TARGET} onClose={onClose} onReset={onReset} onSuccess={onSuccess} />
   )
   return { ...result, onClose, onSuccess, onReset }
 }

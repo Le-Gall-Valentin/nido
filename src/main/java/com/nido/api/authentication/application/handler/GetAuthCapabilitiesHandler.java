@@ -16,6 +16,7 @@ public class GetAuthCapabilitiesHandler implements GetAuthCapabilitiesUseCase {
 
     @Override
     public AuthCapabilities capabilities() {
-        return new AuthCapabilities(accountMail.canSend());
+        boolean canSend = accountMail.canSend();
+        return new AuthCapabilities(canSend, canSend);
     }
 }

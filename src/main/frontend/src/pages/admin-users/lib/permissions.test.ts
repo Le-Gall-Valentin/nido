@@ -7,6 +7,7 @@ import {
   canDelete,
   canResetTotp,
   canEditRole,
+  canResendInvitation,
 } from './permissions'
 import type { User, AdminUser, UserRole } from '@/entities/user'
 
@@ -15,7 +16,7 @@ function makeUser(id: string, role: UserRole): User {
 }
 
 function makeAdminUser(id: string, role: UserRole, overrides: Partial<AdminUser> = {}): AdminUser {
-  return { ...makeUser(id, role), isActive: true, ...overrides }
+  return { ...makeUser(id, role), isActive: true, invitation: null, ...overrides }
 }
 
 const SUPER_ADMIN = makeUser('sa', 'SUPER_ADMIN')
@@ -88,27 +89,27 @@ describe('canDeactivate', () => {
 
 describe('canActivate', () => {
   it('denies self', () => {
-    expect(canActivate(ADMIN, makeAdminUser('a1', 'ADMIN', { isActive: false }))).toEqual({ ok: false, reason: 'self' })
+    expect(canActivate(ADMIN, makeAdminUser('a1', 'ADMIN', { isActive: false, invitation: null }))).toEqual({ ok: false, reason: 'self' })
   })
 
   it('denies SUPER_ADMIN target with super_admin_protected', () => {
-    expect(canActivate(SUPER_ADMIN, makeAdminUser('sa2', 'SUPER_ADMIN', { isActive: false }))).toEqual({ ok: false, reason: 'super_admin_protected' })
+    expect(canActivate(SUPER_ADMIN, makeAdminUser('sa2', 'SUPER_ADMIN', { isActive: false, invitation: null }))).toEqual({ ok: false, reason: 'super_admin_protected' })
   })
 
   it('denies ADMIN on inactive ADMIN', () => {
-    expect(canActivate(ADMIN, makeAdminUser('a2', 'ADMIN', { isActive: false }))).toEqual({ ok: false, reason: 'admin_cannot_manage_admin' })
+    expect(canActivate(ADMIN, makeAdminUser('a2', 'ADMIN', { isActive: false, invitation: null }))).toEqual({ ok: false, reason: 'admin_cannot_manage_admin' })
   })
 
   it('denies USER caller', () => {
-    expect(canActivate(USER, makeAdminUser('u2', 'USER', { isActive: false }))).toEqual({ ok: false, reason: 'insufficient' })
+    expect(canActivate(USER, makeAdminUser('u2', 'USER', { isActive: false, invitation: null }))).toEqual({ ok: false, reason: 'insufficient' })
   })
 
   it('allows SUPER_ADMIN on inactive USER', () => {
-    expect(canActivate(SUPER_ADMIN, makeAdminUser('u2', 'USER', { isActive: false }))).toEqual({ ok: true })
+    expect(canActivate(SUPER_ADMIN, makeAdminUser('u2', 'USER', { isActive: false, invitation: null }))).toEqual({ ok: true })
   })
 
   it('allows ADMIN on inactive USER', () => {
-    expect(canActivate(ADMIN, makeAdminUser('u2', 'USER', { isActive: false }))).toEqual({ ok: true })
+    expect(canActivate(ADMIN, makeAdminUser('u2', 'USER', { isActive: false, invitation: null }))).toEqual({ ok: true })
   })
 })
 
@@ -178,7 +179,7 @@ describe('canEditRole', () => {
   })
 
   it('denies inactive target (backend UserNotActive)', () => {
-    expect(canEditRole(SUPER_ADMIN, makeAdminUser('u2', 'USER', { isActive: false }))).toEqual({ ok: false, reason: 'target_inactive' })
+    expect(canEditRole(SUPER_ADMIN, makeAdminUser('u2', 'USER', { isActive: false, invitation: null }))).toEqual({ ok: false, reason: 'target_inactive' })
   })
 
   it('denies SUPER_ADMIN target', () => {
@@ -206,5 +207,24 @@ describe('canEditRole', () => {
     // ever assign more than USER, editing a USER would become meaningful again.
     expect(canManage('ADMIN', 'USER')).toBe(true)
     expect(assignableRoles('ADMIN')).toEqual(['USER'])
+  })
+})
+
+describe('canResendInvitation', () => {
+  const invited = makeAdminUser('u1', 'USER', { invitation: { status: 'expired', expiresAt: '2026-10-01T00:00:00Z' } })
+
+  it('lets an administrator invite again an account they manage', () => {
+    expect(canResendInvitation(ADMIN, invited)).toEqual({ ok: true })
+  })
+
+  it('refuses for a deactivated account, whose link would be refused', () => {
+    expect(canResendInvitation(ADMIN, { ...invited, isActive: false }))
+      .toEqual({ ok: false, reason: 'target_inactive_invitation' })
+  })
+
+  it('refuses what the hierarchy refuses', () => {
+    expect(canResendInvitation(ADMIN, { ...invited, role: 'ADMIN' }))
+      .toEqual({ ok: false, reason: 'admin_cannot_manage_admin' })
+    expect(canResendInvitation(ADMIN, { ...invited, id: 'a1' })).toEqual({ ok: false, reason: 'self' })
   })
 })

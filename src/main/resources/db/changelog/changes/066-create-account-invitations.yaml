@@ -1,0 +1,55 @@
+databaseChangeLog:
+  - changeSet:
+      id: 066-create-account-invitations
+      author: nido
+      comment: >
+        The link an invited account follows to choose its first password. One row per account at most: a new
+        link replaces the previous one. The row lives until the password is chosen or the account is deleted;
+        an expired one is kept, so the administration can say the invitation expired. Only the SHA-256 of the
+        token is stored. While an account has a row it has no user_credentials row.
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: account_invitations
+      changes:
+        - createTable:
+            tableName: account_invitations
+            columns:
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_account_invitations
+              - column:
+                  name: token_hash
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: TIMESTAMPTZ
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: account_invitations
+            columnNames: token_hash
+            constraintName: uq_account_invitations_token_hash
+        - addForeignKeyConstraint:
+            baseTableName: account_invitations
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_account_invitations_user
+            onDelete: CASCADE
+      rollback:
+        - dropTable:
+            tableName: account_invitations
+            cascadeConstraints: true

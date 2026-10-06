@@ -14,4 +14,10 @@ public interface AccountMailPort {
     void passwordResetRequested(AccountContact account, String rawToken, Instant expiresAt, Duration validity);
 
     void passwordChanged(AccountContact account);
+
+    /** The link an invited account follows to choose its first password, dying with it, naming who invited it. */
+    void accountInvitation(AccountContact account, String rawToken, Instant expiresAt, String inviterName);
+
+    /** A new link an invited account asked for from "forgot password": the mail only offers it. */
+    void invitationRenewed(AccountContact account, String rawToken, Instant expiresAt);
 }

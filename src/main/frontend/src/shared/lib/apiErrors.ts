@@ -22,3 +22,12 @@ export class RateLimitError extends Error {
     this.retryAfterSeconds = retryAfterSeconds
   }
 }
+/** A one-time link — reset or invitation — that expired, was used, was replaced or never existed: 410. */
+export class InvalidLinkError extends Error {
+  constructor() { super('This link is no longer valid'); this.name = 'InvalidLinkError' }
+}
+
+/** A password the server's rules refuse. */
+export class WeakPasswordError extends Error {
+  constructor() { super('Password does not follow the rules'); this.name = 'WeakPasswordError' }
+}

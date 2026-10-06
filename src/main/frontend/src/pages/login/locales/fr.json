@@ -7,7 +7,7 @@
   },
   "panel": {
     "encrypted": "Chiffré et sécurisé",
-    "twofa": "2FA obligatoire"
+    "twofa": "2FA disponible"
   },
   "form": {
     "title": "Bon retour",
@@ -45,6 +45,19 @@
       "body": "Vous êtes connecté en tant que {{username}}. Déconnectez-vous pour utiliser ce lien.",
       "sign_out": "Se déconnecter et utiliser ce lien",
       "back": "Revenir à l'application"
+    }
+  },
+  "welcome": {
+    "heading": "Bienvenue",
+    "title": "Bienvenue, {{username}}",
+    "subtitle": "Choisissez le mot de passe de votre compte Nido.",
+    "checking": "Vérification de l'invitation…",
+    "done": "Bienvenue ! Votre mot de passe est enregistré, connectez-vous.",
+    "unavailable": "Impossible de vérifier cette invitation pour le moment.",
+    "invalid": {
+      "title": "Cette invitation n'est plus valable",
+      "body": "Le lien a expiré ou a déjà servi. Si vous avez déjà choisi votre mot de passe, connectez-vous. Sinon, demandez un nouveau lien à l'administrateur qui vous a invité.",
+      "forgot": "Recevoir un nouveau lien par mail"
     }
   },
   "footer": "© 2026 Nido"

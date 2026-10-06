@@ -1,7 +1,7 @@
 import { isAxiosError } from 'axios'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
-import type { AdminUser } from '../model/types'
+import type { AdminUser, InvitationDelivery } from '../model/types'
 import type { IAdminUsersApi, UsersPage } from '../model/IAdminUsersApi'
 
 export type { AdminUser }
@@ -9,6 +9,14 @@ export type { UsersPage }
 
 export class ConflictError extends Error {
   constructor() { super('Username or email already taken'); this.name = 'ConflictError' }
+}
+
+export class AlreadyJoinedError extends Error {
+  constructor() { super('This account already chose its password'); this.name = 'AlreadyJoinedError' }
+}
+
+export class AlreadyInactiveError extends Error {
+  constructor() { super('This account is already deactivated'); this.name = 'AlreadyInactiveError' }
 }
 
 export class RoleAlreadyAssignedError extends Error {
@@ -39,16 +47,21 @@ export const adminUsersApi: IAdminUsersApi = {
     }
   },
 
-  async createUser(
-    username: string,
-    email: string,
-    password: string,
-    role: 'USER' | 'ADMIN',
-  ): Promise<void> {
+  async createUser(username: string, email: string, role: 'USER' | 'ADMIN'): Promise<InvitationDelivery> {
     try {
-      await client.post('/users', { username, email, password, role })
+      const res = await client.post<{ invitation: InvitationDelivery }>('/users', { username, email, role })
+      return res.data.invitation
     } catch (error) {
       handleError(error, () => { throw new ConflictError() })
+    }
+  },
+
+  async resendInvitation(id: string): Promise<InvitationDelivery> {
+    try {
+      const res = await client.post<InvitationDelivery>(`/users/${id}/invitation`)
+      return res.data
+    } catch (error) {
+      handleError(error, () => { throw new AlreadyJoinedError() })
     }
   },
 
@@ -72,7 +85,7 @@ export const adminUsersApi: IAdminUsersApi = {
     try {
       await client.post(`/users/${id}/deactivate`)
     } catch (error) {
-      handleError(error)
+      handleError(error, () => { throw new AlreadyInactiveError() })
     }
   },
 

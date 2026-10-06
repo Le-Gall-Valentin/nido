@@ -1,5 +1,6 @@
 package com.nido.api.mfa.application.handler;
 
+import com.nido.api.mfa.domain.port.out.TotpMailPort;
 import com.nido.api.mfa.application.dto.ConfirmTotpCommand;
 import com.nido.api.mfa.domain.model.MfaException;
 import com.nido.api.mfa.domain.model.UserTotpProfile;
@@ -31,6 +32,7 @@ class ConfirmTotpHandlerTest {
     @Mock TotpCodeReplayPort codeReplay;
     @Mock TotpConfirmAttemptPort confirmAttemptPort;
     @Mock PendingTotpEnrolmentPort pendingEnrolment;
+    @Mock TotpMailPort mails;
 
     private ConfirmTotpHandler handler;
 
@@ -40,7 +42,7 @@ class ConfirmTotpHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new ConfirmTotpHandler(userTotpQuery, codeValidator, userTotpLifecyclePort,
-                                         codeReplay, confirmAttemptPort, pendingEnrolment);
+                                         codeReplay, confirmAttemptPort, pendingEnrolment, mails);
     }
 
     @Test
@@ -55,6 +57,7 @@ class ConfirmTotpHandlerTest {
             .doesNotThrowAnyException();
 
         verify(userTotpLifecyclePort).enableTotp(userId, secret);
+        verify(mails).totpEnabled(userId);
     }
 
     @Test
@@ -77,6 +80,7 @@ class ConfirmTotpHandlerTest {
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "000000")))
             .isInstanceOf(MfaException.TotpCodeInvalid.class);
+        verifyNoInteractions(mails);
     }
 
     @Test

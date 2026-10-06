@@ -1,5 +1,6 @@
 package com.nido.api.identity.application.handler;
 
+import com.nido.api.identity.application.service.AdminGestureNotifier;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.UpdateUserCommand;
 import com.nido.api.identity.domain.model.User;
@@ -27,6 +28,7 @@ class UpdateUserHandlerTest {
     @Mock UserRepository userRepository;
     @Mock UserCommandPort userCommandPort;
     @Mock TokenInvalidationPort tokenInvalidationPort;
+    @Mock AdminGestureNotifier notifier;
 
     private UpdateUserHandler handler;
 
@@ -35,7 +37,7 @@ class UpdateUserHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new UpdateUserHandler(userRepository, userCommandPort, tokenInvalidationPort);
+        handler = new UpdateUserHandler(userRepository, userCommandPort, tokenInvalidationPort, notifier);
     }
 
     @Test
@@ -65,6 +67,7 @@ class UpdateUserHandlerTest {
 
         verifyNoInteractions(userRepository);
         verifyNoInteractions(userCommandPort);
+        verifyNoInteractions(notifier);
     }
 
     @Test
@@ -154,5 +157,15 @@ class UpdateUserHandlerTest {
 
     private User inactive(UUID id, Role role) {
         return new User(id, "u-" + id, id + "@test.com", role, false, Instant.now(), null);
+    }
+
+    @Test
+    void update_tells_the_holder_of_their_new_role() {
+        User target = active(targetId, Role.USER);
+        when(userRepository.findById(targetId)).thenReturn(Optional.of(target));
+
+        handler.update(new UpdateUserCommand(targetId, callerId, Role.SUPER_ADMIN, Role.ADMIN));
+
+        verify(notifier).roleChanged(target, Role.ADMIN, callerId);
     }
 }

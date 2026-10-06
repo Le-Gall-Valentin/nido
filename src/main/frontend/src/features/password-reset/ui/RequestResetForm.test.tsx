@@ -10,7 +10,7 @@ vi.mock('react-i18next', () => ({
 
 function setup(requestReset: IPasswordResetApi['requestReset']) {
   const onSent = vi.fn()
-  const api: IPasswordResetApi = { capabilities: vi.fn(), requestReset, checkToken: vi.fn(), confirmReset: vi.fn() }
+  const api: IPasswordResetApi = { requestReset, checkToken: vi.fn(), confirmReset: vi.fn() }
   render(<RequestResetForm api={api} onSent={onSent} />)
   const field = () => screen.getByLabelText('field.identifier')
   const submit = () => fireEvent.click(screen.getByRole('button', { name: 'action.send' }))

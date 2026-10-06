@@ -151,8 +151,9 @@ class SpaceLifeNotificationIT {
         mockMvc.perform(delete("/api/users/" + aliceId).cookie(cookieFor(saveSuperAdmin(), Role.SUPER_ADMIN)))
             .andExpect(status().isNoContent());
 
-        Map<String, MimeMessage> mails = mailsByRecipient(2);
-        assertThat(mails).containsOnlyKeys(address("bob"), address("carol"));
+        Map<String, MimeMessage> mails = mailsByRecipient(3);
+        assertThat(mails).containsOnlyKeys(address("alice"), address("bob"), address("carol"));
+        assertThat(mails.get(address("alice")).getSubject()).isEqualTo("Votre compte Nido a été supprimé");
         assertThat(mails.get(address("bob")).getSubject()).isEqualTo("Vous êtes propriétaire de Chez nous");
         assertThat(textOf(mails.get(address("bob"))))
             .contains(name("alice") + " a quitté Nido : vous êtes maintenant propriétaire de l’espace « Chez nous ».");
@@ -168,8 +169,9 @@ class SpaceLifeNotificationIT {
         mockMvc.perform(delete("/api/users/" + carolId).cookie(cookieFor(saveSuperAdmin(), Role.SUPER_ADMIN)))
             .andExpect(status().isNoContent());
 
-        Map<String, MimeMessage> mails = mailsByRecipient(2);
-        assertThat(mails).containsOnlyKeys(address("alice"), address("bob"));
+        Map<String, MimeMessage> mails = mailsByRecipient(3);
+        assertThat(mails).containsOnlyKeys(address("alice"), address("bob"), address("carol"));
+        assertThat(mails.get(address("carol")).getSubject()).isEqualTo("Votre compte Nido a été supprimé");
         assertThat(mails.get(address("alice")).getSubject()).isEqualTo(name("carol") + " a quitté Chez nous");
         assertThat(textOf(mails.get(address("bob"))))
             .contains(name("carol") + " a quitté Nido et ne fait plus partie de l’espace « Chez nous ».");
@@ -185,8 +187,9 @@ class SpaceLifeNotificationIT {
         mockMvc.perform(delete("/api/users/" + carolId).cookie(cookieFor(saveSuperAdmin(), Role.SUPER_ADMIN)))
             .andExpect(status().isNoContent());
 
-        // The erasure's own mails, due now, go out: waited for here, they cannot reach the next test.
-        assertThat(mailsByRecipient(2)).containsOnlyKeys(address("alice"), address("bob"));
+        // The erasure's own mails, due now, go out — carol's goodbye too, queued after the withdrawal: waited
+        // for here, they cannot reach the next test.
+        assertThat(mailsByRecipient(3)).containsOnlyKeys(address("alice"), address("bob"), address("carol"));
         assertThat(outbox.claimDue(later, 20, Duration.ofMinutes(1)))
             .filteredOn(entry -> entry.kind().equals("it/waiting"))
             .extracting(entry -> entry.mail().to().address())

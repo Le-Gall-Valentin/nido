@@ -7,7 +7,7 @@
   },
   "panel": {
     "encrypted": "Encrypted and secure",
-    "twofa": "2FA required"
+    "twofa": "2FA available"
   },
   "form": {
     "title": "Welcome back",
@@ -45,6 +45,19 @@
       "body": "You are signed in as {{username}}. Sign out to use this link.",
       "sign_out": "Sign out and use this link",
       "back": "Back to the app"
+    }
+  },
+  "welcome": {
+    "heading": "Welcome",
+    "title": "Welcome, {{username}}",
+    "subtitle": "Choose the password of your Nido account.",
+    "checking": "Checking the invitation…",
+    "done": "Welcome! Your password is saved, sign in.",
+    "unavailable": "This invitation cannot be checked right now.",
+    "invalid": {
+      "title": "This invitation is no longer valid",
+      "body": "The link expired or was already used. If you already chose your password, sign in. Otherwise, ask the administrator who invited you for a new one.",
+      "forgot": "Get a new link by email"
     }
   },
   "footer": "© 2026 Nido"

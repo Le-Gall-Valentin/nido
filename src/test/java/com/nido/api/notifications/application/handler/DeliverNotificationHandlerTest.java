@@ -1,5 +1,6 @@
 package com.nido.api.notifications.application.handler;
 
+import com.nido.api.notifications.domain.model.NotificationCatalog;
 import com.nido.api.notifications.domain.model.NotificationChannel;
 import com.nido.api.notifications.domain.model.NotificationPreferences;
 import com.nido.api.notifications.domain.model.NotificationRecipient;
@@ -9,6 +10,7 @@ import com.nido.api.notifications.domain.port.out.NotificationChannelPort;
 import com.nido.api.notifications.domain.port.out.NotificationPreferencesRepository;
 import com.nido.api.notifications.domain.port.out.NotificationRecipientPort;
 import com.nido.api.shared.model.Language;
+import com.nido.api.shared.model.Role;
 import fixtures.notifications.valid.GreetingNotification;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +24,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,16 +41,17 @@ class DeliverNotificationHandlerTest {
 
     private static final NotificationType GREETING = new NotificationType("fixture.greeting");
     private static final Instant EXPIRES_AT = Instant.parse("2026-10-09T10:00:00Z");
+    private static final NotificationCatalog CATALOG = new NotificationCatalog(Map.of(GreetingNotification.class, GREETING));
 
     @Mock NotificationRecipientPort recipients;
     @Mock NotificationPreferencesRepository preferences;
 
     private final UUID janeId = UUID.randomUUID();
-    private final NotificationRecipient jane = new NotificationRecipient(janeId, "jane", "jane@test.local", Language.FR, true);
+    private final NotificationRecipient jane = new NotificationRecipient(janeId, "jane", "jane@test.local", Language.FR, Role.USER, true);
     private final GreetingNotification greeting = new GreetingNotification("jane");
 
     private DeliverNotificationHandler handler(NotificationChannelPort... channels) {
-        return new DeliverNotificationHandler(recipients, preferences, List.of(channels));
+        return new DeliverNotificationHandler(() -> CATALOG, recipients, preferences, List.of(channels));
     }
 
     /** A mail channel; lenient, since a test that stops early never asks it everything. */
@@ -101,9 +105,23 @@ class DeliverNotificationHandlerTest {
     void a_deactivated_account_is_told_nothing() {
         NotificationChannelPort mail = channel(true);
         when(recipients.find(janeId))
-            .thenReturn(Optional.of(new NotificationRecipient(janeId, "jane", "jane@test.local", Language.FR, false)));
+            .thenReturn(Optional.of(new NotificationRecipient(janeId, "jane", "jane@test.local", Language.FR, Role.USER, false)));
 
         deliverTo(handler(mail));
+
+        verify(mail, never()).deliver(any(), any(), any(), any());
+        verifyNoInteractions(preferences);
+    }
+
+    @Test
+    void a_kind_the_account_s_role_is_not_open_to_is_not_delivered() {
+        NotificationChannelPort mail = channel(true);
+        when(recipients.find(janeId)).thenReturn(Optional.of(jane));
+        NotificationCatalog reserved = new NotificationCatalog(Map.of(GreetingNotification.class, GREETING),
+            Map.of(GREETING, Set.of(Role.SUPER_ADMIN)));
+
+        new DeliverNotificationHandler(() -> reserved, recipients, preferences, List.of(mail))
+            .deliver(GREETING, new NotificationRequest(janeId, greeting, EXPIRES_AT), null);
 
         verify(mail, never()).deliver(any(), any(), any(), any());
         verifyNoInteractions(preferences);
@@ -154,13 +172,13 @@ class DeliverNotificationHandlerTest {
     @Test
     void an_account_without_a_language_is_written_to_in_the_language_of_whoever_acts() {
         NotificationChannelPort mail = channel(true);
-        NotificationRecipient speechless = new NotificationRecipient(janeId, "jane", "jane@test.local", null, true);
+        NotificationRecipient speechless = new NotificationRecipient(janeId, "jane", "jane@test.local", null, Role.USER, true);
         when(recipients.find(janeId)).thenReturn(Optional.of(speechless));
         when(preferences.find(janeId)).thenReturn(NotificationPreferences.DEFAULTS);
 
         handler(mail).deliver(GREETING, new NotificationRequest(janeId, greeting, EXPIRES_AT), Language.FR);
 
-        verify(mail).deliver(new NotificationRecipient(janeId, "jane", "jane@test.local", Language.FR, true),
+        verify(mail).deliver(new NotificationRecipient(janeId, "jane", "jane@test.local", Language.FR, Role.USER, true),
             GREETING, greeting, EXPIRES_AT);
     }
 

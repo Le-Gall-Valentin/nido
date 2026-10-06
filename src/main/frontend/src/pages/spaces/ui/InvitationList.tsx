@@ -1,8 +1,7 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Copy, Check, X } from 'lucide-react'
 import { SpaceRolePill, type SpaceInvitation } from '@/entities/space'
-import { copyText, formatRelativeTime } from '@/shared/lib'
+import { formatRelativeTime, useCopy } from '@/shared/lib'
 
 const STATUS_CLASS: Record<SpaceInvitation['status'], string> = {
   PENDING: 'bg-status-orange-dim text-status-orange',
@@ -47,17 +46,9 @@ interface RowProps {
 
 function InvitationRow({ invitation, revoking, onRevoke, lang }: RowProps) {
   const { t } = useTranslation('spaces')
-  const [copied, setCopied] = useState(false)
+  const { copy, copied, failed } = useCopy()
   // An invitee the server can no longer name is an anonymised account, as in the member list.
   const invitee = invitation.username ?? t('members.deleted_account')
-
-  async function handleCopy() {
-    // Not copied (refused, or a browser without either way to copy): the code stays visible on the row.
-    if (await copyText(invitation.code)) {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    }
-  }
 
   return (
     <li className="flex flex-wrap items-center gap-3 px-[18px] py-3.5">
@@ -79,7 +70,7 @@ function InvitationRow({ invitation, revoking, onRevoke, lang }: RowProps) {
 
       <button
         type="button"
-        onClick={() => { void handleCopy() }}
+        onClick={() => { void copy(invitation.code) }}
         aria-label={t('invitations.action_copy', { code: invitation.code })}
         className="flex items-center gap-1.5 rounded-[8px] border border-border bg-bg-1 px-2.5 py-1.5 font-mono text-xs text-fg-1 transition-colors hover:bg-bg-2"
       >
@@ -98,6 +89,8 @@ function InvitationRow({ invitation, revoking, onRevoke, lang }: RowProps) {
           <X className="size-4" />
         </button>
       )}
+      {/* Not copied: the code stays on the row, to copy by hand — and the person is told. */}
+      {failed && <p role="status" className="w-full text-[12.5px] text-fg-2">{t('invitations.copy_failed')}</p>}
     </li>
   )
 }

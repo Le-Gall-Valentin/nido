@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: mail(#{subject}, #{preheader}, ~{::content})}">
+<body>
+<th:block th:fragment="content">
+  <h1 th:replace="~{components :: heading(#{heading})}"></h1>
+  <p th:replace="~{components :: paragraph(#{greeting(${mail.username})})}"></p>
+  <p th:replace="~{components :: paragraph(#{body(${mail.actorName})})}"></p>
+  <table th:replace="~{components :: note(#{kept}, 'info')}"></table>
+  <p th:replace="~{components :: paragraph(#{contact(${mail.actorName})})}"></p>
+</th:block>
+</body>
+</html>

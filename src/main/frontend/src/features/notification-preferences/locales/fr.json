@@ -11,7 +11,8 @@
     }
   },
   "group": {
-    "space": "Espaces"
+    "space": "Espaces",
+    "identity": "Administration"
   },
   "type": {
     "space": {
@@ -54,6 +55,28 @@
       "owner-changed": {
         "label": "Nouveau propriétaire",
         "description": "Quand un de vos espaces change de propriétaire"
+      }
+    },
+    "identity": {
+      "account-created": {
+        "label": "Compte créé",
+        "description": "Quand un administrateur invite quelqu'un à rejoindre Nido"
+      },
+      "account-deactivated": {
+        "label": "Compte désactivé",
+        "description": "Quand un administrateur désactive un compte"
+      },
+      "account-reactivated": {
+        "label": "Compte réactivé",
+        "description": "Quand un administrateur réactive un compte"
+      },
+      "account-deleted": {
+        "label": "Compte supprimé",
+        "description": "Quand un administrateur supprime un compte"
+      },
+      "account-2fa-reset": {
+        "label": "2FA réinitialisée",
+        "description": "Quand un administrateur réinitialise la double authentification d'un compte"
       }
     }
   },

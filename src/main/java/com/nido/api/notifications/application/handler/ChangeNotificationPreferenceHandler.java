@@ -1,6 +1,7 @@
 package com.nido.api.notifications.application.handler;
 
 import com.nido.api.notifications.application.port.in.ChangeNotificationPreferenceUseCase;
+import com.nido.api.notifications.domain.model.NotificationCatalog;
 import com.nido.api.notifications.domain.model.NotificationChannel;
 import com.nido.api.notifications.domain.model.NotificationException;
 import com.nido.api.notifications.domain.model.NotificationType;
@@ -8,6 +9,7 @@ import com.nido.api.notifications.domain.port.out.NotificationCatalogPort;
 import com.nido.api.notifications.domain.port.out.NotificationChannelPort;
 import com.nido.api.notifications.domain.port.out.NotificationPreferencesRepository;
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.shared.model.Role;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -45,8 +47,10 @@ public class ChangeNotificationPreferenceHandler implements ChangeNotificationPr
 
     @Override
     @Transactional
-    public void changeType(UUID userId, String typeCode, boolean enabled) {
-        NotificationType type = catalog.catalog().find(typeCode)
+    public void changeType(UUID userId, Role role, String typeCode, boolean enabled) {
+        NotificationCatalog known = catalog.catalog();
+        NotificationType type = known.find(typeCode)
+            .filter(found -> known.isOpenTo(found, role))
             .orElseThrow(NotificationException.UnknownType::new);
         preferences.saveType(userId, type, enabled, clock.instant());
     }

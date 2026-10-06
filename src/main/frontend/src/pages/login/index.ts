@@ -1,4 +1,5 @@
 export { LoginPage } from './ui/LoginPage'
 export { ForgotPasswordPage } from './ui/ForgotPasswordPage'
 export { ResetPasswordPage } from './ui/ResetPasswordPage'
+export { WelcomePage } from './ui/WelcomePage'
 import './locales'

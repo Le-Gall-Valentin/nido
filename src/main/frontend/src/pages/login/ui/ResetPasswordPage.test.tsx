@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { StoreApi } from 'zustand'
 import * as auth from '@/features/auth'
 import type { User } from '@/entities/user'
-import { InvalidResetLinkError, type IPasswordResetApi } from '@/features/password-reset'
-import { NetworkError } from '@/shared/lib'
+import type { IPasswordResetApi } from '@/features/password-reset'
+import { InvalidLinkError, NetworkError } from '@/shared/lib'
 import { createTestQueryClient } from '@/shared/test'
 import { ResetPasswordPage } from './ResetPasswordPage'
 
@@ -57,7 +57,7 @@ function OpenAnotherLink() {
 
 function open(url: string, api: Partial<IPasswordResetApi>, { strict = false } = {}) {
   const full: IPasswordResetApi = {
-    capabilities: vi.fn(), requestReset: vi.fn(), checkToken: vi.fn().mockResolvedValue(undefined), confirmReset: vi.fn(), ...api,
+    requestReset: vi.fn(), checkToken: vi.fn().mockResolvedValue(undefined), confirmReset: vi.fn(), ...api,
   }
   const tree = (
     <QueryClientProvider client={createTestQueryClient()}>
@@ -106,7 +106,7 @@ describe('ResetPasswordPage', () => {
   })
 
   it('says so when the link no longer works', async () => {
-    open('/reset-password#token=abc', { checkToken: vi.fn().mockRejectedValue(new InvalidResetLinkError()) })
+    open('/reset-password#token=abc', { checkToken: vi.fn().mockRejectedValue(new InvalidLinkError()) })
 
     await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('reset.invalid.title'))
   })
@@ -134,7 +134,7 @@ describe('ResetPasswordPage', () => {
   })
 
   it('says aloud that the link stopped working while the new password was typed', async () => {
-    const confirmReset = vi.fn().mockRejectedValue(new InvalidResetLinkError())
+    const confirmReset = vi.fn().mockRejectedValue(new InvalidLinkError())
     open('/reset-password#token=abc', { confirmReset })
     await screen.findByLabelText('field.new_password')
 
@@ -148,7 +148,7 @@ describe('ResetPasswordPage', () => {
   })
 
   it('follows a newer link opened in the same tab instead of keeping the old token', async () => {
-    const checkToken = vi.fn((token: string) => (token === 'abc' ? Promise.reject(new InvalidResetLinkError()) : Promise.resolve()))
+    const checkToken = vi.fn((token: string) => (token === 'abc' ? Promise.reject(new InvalidLinkError()) : Promise.resolve()))
     open('/reset-password#token=abc', { checkToken })
     await waitFor(() => expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('reset.invalid.title'))
 

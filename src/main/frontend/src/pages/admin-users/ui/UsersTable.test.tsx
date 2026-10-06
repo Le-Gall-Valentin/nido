@@ -2,6 +2,7 @@ import { render, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { UsersTable } from './UsersTable'
 import type { AdminUser , User } from '@/entities/user'
+import type { MailAvailability } from '@/entities/capabilities'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, string>) => {
@@ -19,10 +20,10 @@ const SA: User = { id: 'sa', username: 'superadmin', email: 'sa@test.com', role:
 const ADMIN: User = { id: 'a1', username: 'adminuser', email: 'admin@test.com', role: 'ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false }
 
 const USERS: AdminUser[] = [
-  { ...SA, isActive: true },
-  { ...ADMIN, isActive: true },
-  { id: 'u1', username: 'testuser', email: 'test@test.com', role: 'USER', isActive: true, createdAt: '2024-02-01T00:00:00Z', totpEnabled: true },
-  { id: 'u2', username: 'inactive', email: 'inactive@test.com', role: 'USER', isActive: false, createdAt: '2024-03-01T00:00:00Z', totpEnabled: false },
+  { ...SA, isActive: true, invitation: null },
+  { ...ADMIN, isActive: true, invitation: null },
+  { id: 'u1', username: 'testuser', email: 'test@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-02-01T00:00:00Z', totpEnabled: true },
+  { id: 'u2', username: 'inactive', email: 'inactive@test.com', role: 'USER', isActive: false, invitation: null, createdAt: '2024-03-01T00:00:00Z', totpEnabled: false },
 ]
 
 const DEFAULT_HANDLERS = {
@@ -30,14 +31,16 @@ const DEFAULT_HANDLERS = {
   onEditRole: vi.fn(),
   onResetTotp: vi.fn(),
   onDelete: vi.fn(),
+  onResendInvitation: vi.fn(),
 }
 
-function setup(currentUser: User = SA, users: AdminUser[] = USERS, isLoading = false) {
+function setup(currentUser: User = SA, users: AdminUser[] = USERS, isLoading = false, mail: MailAvailability = 'available') {
   return render(
     <UsersTable
       users={users}
       isLoading={isLoading}
       currentUser={currentUser}
+      mail={mail}
       {...DEFAULT_HANDLERS}
     />
   )
@@ -145,5 +148,13 @@ describe('UsersTable — button permissions', () => {
     const saRow = rows[0] // SUPER_ADMIN
     const editBtn = saRow.querySelector('[aria-label^="table.btn_edit"]') as HTMLButtonElement
     expect(editBtn?.disabled).toBe(true)
+  })
+})
+
+describe('UsersTable — invitations', () => {
+  it('names the row action after how the new link will leave', () => {
+    const invited: AdminUser = { ...USERS[2], invitation: { status: 'pending', expiresAt: '2026-10-12T00:00:00Z' } }
+    const { getByLabelText } = setup(SA, [invited], false, 'unavailable')
+    expect(getByLabelText('table.btn_new_link:testuser')).not.toBeNull()
   })
 })

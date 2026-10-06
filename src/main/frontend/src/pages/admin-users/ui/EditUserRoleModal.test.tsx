@@ -26,7 +26,7 @@ vi.mock('@/shared/ui', () => ({
 
 const TARGET_USER: AdminUser = {
   id: 'u-t', username: 'bob', email: 'bob@test.com',
-  role: 'USER', isActive: true, createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
+  role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
 }
 const TARGET_ADMIN: AdminUser = { ...TARGET_USER, id: 'a-t', username: 'carol', role: 'ADMIN' }
 const TARGET_SUPER_ADMIN: AdminUser = { ...TARGET_USER, id: 'sa-t', username: 'root', role: 'SUPER_ADMIN' }
@@ -45,7 +45,7 @@ function setup(target: AdminUser, caller: User, overrides: { onUpdate?: () => Pr
   const onSuccess = vi.fn()
   const onUpdate = overrides.onUpdate ?? vi.fn().mockResolvedValue(undefined)
   const result = render(
-    <EditUserRoleModal target={target} caller={caller} onClose={onClose} onUpdate={onUpdate} onSuccess={onSuccess} />
+    <EditUserRoleModal mail="available" target={target} caller={caller} onClose={onClose} onUpdate={onUpdate} onSuccess={onSuccess} />
   )
   return { ...result, onClose, onSuccess, onUpdate }
 }

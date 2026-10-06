@@ -1,10 +1,12 @@
 package com.nido.api.notifications.domain.model;
 
+import com.nido.api.shared.model.Role;
 import fixtures.notifications.valid.GreetingNotification;
 import fixtures.notifications.valid.ReminderNotification;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,6 +46,25 @@ class NotificationCatalogTest {
         assertThatThrownBy(() -> empty.typeOf(GreetingNotification.class))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining(GreetingNotification.class.getName());
+    }
+
+    @Test
+    void a_kind_without_roles_is_open_to_everyone() {
+        assertThat(catalog.isOpenTo(GREETING, Role.USER)).isTrue();
+        assertThat(catalog.typesFor(Role.USER)).containsExactly(REMINDER, GREETING);
+    }
+
+    @Test
+    void a_reserved_kind_is_open_to_its_roles_only_and_listed_for_them_alone() {
+        NotificationCatalog reserved = new NotificationCatalog(
+            Map.of(GreetingNotification.class, GREETING, ReminderNotification.class, REMINDER),
+            Map.of(GREETING, Set.of(Role.SUPER_ADMIN)));
+
+        assertThat(reserved.isOpenTo(GREETING, Role.SUPER_ADMIN)).isTrue();
+        assertThat(reserved.isOpenTo(GREETING, Role.ADMIN)).isFalse();
+        assertThat(reserved.typesFor(Role.USER)).containsExactly(REMINDER);
+        assertThat(reserved.typesFor(Role.SUPER_ADMIN)).containsExactly(REMINDER, GREETING);
+        assertThat(reserved.types()).containsExactly(REMINDER, GREETING);
     }
 
     @Test

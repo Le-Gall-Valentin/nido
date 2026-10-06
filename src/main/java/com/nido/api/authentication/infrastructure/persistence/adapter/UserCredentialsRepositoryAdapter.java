@@ -2,6 +2,7 @@ package com.nido.api.authentication.infrastructure.persistence.adapter;
 
 import com.nido.api.authentication.domain.model.UserCredentials;
 import com.nido.api.authentication.domain.model.UserProfile;
+import com.nido.api.authentication.domain.port.out.AccountInvitationRepository;
 import com.nido.api.authentication.domain.port.out.UserCredentialsPort;
 import com.nido.api.authentication.domain.port.out.UserProfilePort;
 import com.nido.api.authentication.infrastructure.persistence.repository.UserCredentialJpaRepository;
@@ -19,11 +20,14 @@ public class UserCredentialsRepositoryAdapter implements UserCredentialsPort {
 
     private final UserProfilePort userProfilePort;
     private final UserCredentialJpaRepository credentialRepo;
+    private final AccountInvitationRepository invitations;
 
     public UserCredentialsRepositoryAdapter(UserProfilePort userProfilePort,
-                                            UserCredentialJpaRepository credentialRepo) {
+                                            UserCredentialJpaRepository credentialRepo,
+                                            AccountInvitationRepository invitations) {
         this.userProfilePort = userProfilePort;
         this.credentialRepo = credentialRepo;
+        this.invitations = invitations;
     }
 
     @Override
@@ -38,7 +42,8 @@ public class UserCredentialsRepositoryAdapter implements UserCredentialsPort {
 
     private Optional<UserCredentials> resolveCredentials(UserProfile profile) {
         var cred = credentialRepo.findById(profile.id());
-        if (cred.isEmpty()) {
+        // No credentials is the normal state of an invited account until it chooses its password.
+        if (cred.isEmpty() && invitations.findByUserId(profile.id()).isEmpty()) {
             log.error("Data integrity: profile {} ({}) has no credentials", profile.id(), profile.username());
         }
         return cred.map(c -> toUserCredentials(profile, c.getPasswordHash()));

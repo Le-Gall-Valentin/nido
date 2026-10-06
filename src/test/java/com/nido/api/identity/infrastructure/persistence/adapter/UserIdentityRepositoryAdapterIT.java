@@ -51,4 +51,30 @@ class UserIdentityRepositoryAdapterIT {
 
         assertThat(found).extracting(User::username).containsExactly("carol");
     }
+
+    @Test
+    void findActiveByRole_keepsOnlyActiveAccountsOfThatRoleThatAreNotDeleted() {
+        UUID kept = repositoryAdapter.createProfile(
+            new CreateUserProfileCommand("root", "root@example.com", Role.SUPER_ADMIN)).id();
+        UUID off = repositoryAdapter.createProfile(
+            new CreateUserProfileCommand("dormant", "dormant@example.com", Role.SUPER_ADMIN)).id();
+        UUID gone = repositoryAdapter.createProfile(
+            new CreateUserProfileCommand("former", "former@example.com", Role.SUPER_ADMIN)).id();
+        repositoryAdapter.createProfile(new CreateUserProfileCommand("admin", "admin@example.com", Role.ADMIN));
+        repositoryAdapter.deactivate(off);
+        repositoryAdapter.deleteGdpr(gone);
+
+        assertThat(repositoryAdapter.findActiveByRole(Role.SUPER_ADMIN)).extracting(User::id).containsExactly(kept);
+    }
+
+    @Test
+    void deactivating_or_reactivating_says_whether_it_changed_anything() {
+        UUID id = repositoryAdapter.createProfile(
+            new CreateUserProfileCommand("switched", "switched@example.com", Role.USER)).id();
+
+        assertThat(repositoryAdapter.deactivate(id)).isTrue();
+        assertThat(repositoryAdapter.deactivate(id)).isFalse();
+        assertThat(repositoryAdapter.activate(id)).isTrue();
+        assertThat(repositoryAdapter.activate(id)).isFalse();
+    }
 }

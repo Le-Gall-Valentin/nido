@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: mail(#{${mail.nowAdmin ? 'subject.admin' : 'subject.user'}}, #{preheader}, ~{::content})}">
+<body>
+<th:block th:fragment="content">
+  <h1 th:replace="~{components :: heading(#{heading})}"></h1>
+  <p th:replace="~{components :: paragraph(#{greeting(${mail.username})})}"></p>
+  <th:block th:with="body=#{${mail.nowAdmin ? 'body.admin' : 'body.user'}(${mail.actorName})}">
+    <p th:replace="~{components :: paragraph(${body})}"></p>
+  </th:block>
+  <p th:replace="~{components :: paragraph(#{applies})}"></p>
+  <table th:replace="~{components :: button(${appUrl + mail.appPath.value}, #{action})}"></table>
+  <p th:replace="~{components :: fallbackLink(${appUrl + mail.appPath.value})}"></p>
+</th:block>
+</body>
+</html>

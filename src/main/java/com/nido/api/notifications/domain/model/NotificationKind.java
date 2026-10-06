@@ -1,5 +1,7 @@
 package com.nido.api.notifications.domain.model;
 
+import com.nido.api.shared.model.Role;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -18,4 +20,11 @@ public @interface NotificationKind {
 
     /** {@code <context>.<name>}, in lower case: {@code "space.invitation"}. Stored, and exchanged with the client. */
     String value();
+
+    /**
+     * The roles that may receive this kind; empty — the default — means every account. A reserved kind is
+     * left off the preferences card of every other role, cannot be switched by them, and is never delivered
+     * to an account that no longer has one of these roles.
+     */
+    Role[] roles() default {};
 }

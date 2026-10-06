@@ -1,40 +1,31 @@
-import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ConfirmDeleteModal } from '@/shared/ui'
 import type { AdminUser } from '@/entities/user'
-import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
+import type { MailAvailability } from '@/entities/capabilities'
+import { useDialogSubmit } from '../lib/useDialogSubmit'
+import { MailNotice } from './MailNotice'
 
 interface DeleteUserModalProps {
   user: AdminUser
+  mail: MailAvailability
   onClose: () => void
   onDelete: (id: string) => Promise<void>
   onSuccess: () => void
 }
 
-export function DeleteUserModal({ user, onClose, onDelete, onSuccess }: DeleteUserModalProps) {
+export function DeleteUserModal({ user, mail, onClose, onDelete, onSuccess }: DeleteUserModalProps) {
   const { t } = useTranslation('adminUsers')
-  const [isLoading, setIsLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<string | null>(null)
-  const pendingRef = useRef(false)
+  const { submit, isLoading, errorKey, clearError } = useDialogSubmit('delete')
 
-  async function handleSubmit() {
-    if (pendingRef.current) return
-    pendingRef.current = true
-    setIsLoading(true)
-    setErrorKey(null)
-    try {
+  function handleSubmit() {
+    void submit(async () => {
       await onDelete(user.id)
       onSuccess()
-    } catch (error) {
-      setErrorKey(mapApiErrorToKey(error, 'delete'))
-    } finally {
-      pendingRef.current = false
-      setIsLoading(false)
-    }
+    })
   }
 
   function handleClose() {
-    setErrorKey(null)
+    clearError()
     onClose()
   }
 
@@ -56,6 +47,7 @@ export function DeleteUserModal({ user, onClose, onDelete, onSuccess }: DeleteUs
         {' '}·{' '}
         <span className="font-semibold">{t(`user.role.${user.role}`, { ns: 'shell' })}</span>
       </div>
+      <MailNotice user={user} mail={mail} isDeletion />
     </ConfirmDeleteModal>
   )
 }

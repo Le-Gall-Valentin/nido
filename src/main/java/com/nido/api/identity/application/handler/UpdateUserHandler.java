@@ -1,5 +1,6 @@
 package com.nido.api.identity.application.handler;
 
+import com.nido.api.identity.application.service.AdminGestureNotifier;
 import com.nido.api.identity.application.port.in.UpdateUserUseCase;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.UpdateUserCommand;
@@ -20,12 +21,14 @@ public class UpdateUserHandler implements UpdateUserUseCase {
     private final UserRepository userRepository;
     private final UserCommandPort userCommandPort;
     private final TokenInvalidationPort tokenInvalidationPort;
+    private final AdminGestureNotifier notifier;
 
     public UpdateUserHandler(UserRepository userRepository, UserCommandPort userCommandPort,
-                             TokenInvalidationPort tokenInvalidationPort) {
+                             TokenInvalidationPort tokenInvalidationPort, AdminGestureNotifier notifier) {
         this.userRepository = userRepository;
         this.userCommandPort = userCommandPort;
         this.tokenInvalidationPort = tokenInvalidationPort;
+        this.notifier = notifier;
     }
 
     @Override
@@ -46,6 +49,7 @@ public class UpdateUserHandler implements UpdateUserUseCase {
         // The new role is in the database, but the demoted user is still carrying a token that
         // says the old one. Without this, it keeps saying it until that token expires.
         tokenInvalidationPort.invalidateIssuedTokens(command.targetUserId());
+        notifier.roleChanged(target, command.newRole(), command.callerId());
         log.info("User {} role changed from {} to {} by caller {} with role {}",
             command.targetUserId(), target.role(), command.newRole(), command.callerId(), command.callerRole());
     }

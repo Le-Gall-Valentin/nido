@@ -1,16 +1,20 @@
 import { useTranslation } from 'react-i18next'
 import type { User, AdminUser } from '@/entities/user'
+import type { MailAvailability } from '@/entities/capabilities'
 import { RolePill, UserAvatar } from '@/entities/user'
 import { formatUserDate } from '../lib/formatUserDate'
 import { UserStatusToggle } from './UserStatusToggle'
 import { UserActions } from './UserActions'
 import { TotpBadge } from './TotpBadge'
+import { InvitationBadge } from './InvitationBadge'
 import type { UserRowCallbacks } from './userRowCallbacks'
 
 interface UsersCardListProps extends UserRowCallbacks {
   users: AdminUser[]
   isLoading: boolean
   currentUser: User
+  /** Whether a new invitation link would be mailed or shown: the row's action is named after it. */
+  mail: MailAvailability
   /** Id of the user whose active/inactive toggle is currently in flight. */
   pendingToggleId?: string | null
 }
@@ -20,11 +24,13 @@ export function UsersCardList({
   users,
   isLoading,
   currentUser,
+  mail,
   pendingToggleId,
   onToggleActive,
   onEditRole,
   onResetTotp,
   onDelete,
+  onResendInvitation,
 }: UsersCardListProps) {
   const { t, i18n } = useTranslation('adminUsers')
 
@@ -61,6 +67,7 @@ export function UsersCardList({
           <UserCard
             user={user}
             currentUser={currentUser}
+            mail={mail}
             youLabel={t('table.you')}
             roleLabel={t(`user.role.${user.role}`, { ns: 'shell' })}
             createdLabel={t('table.col_created')}
@@ -70,6 +77,7 @@ export function UsersCardList({
             onEditRole={onEditRole}
             onResetTotp={onResetTotp}
             onDelete={onDelete}
+            onResendInvitation={onResendInvitation}
           />
         </li>
       ))}
@@ -80,6 +88,7 @@ export function UsersCardList({
 interface UserCardProps extends UserRowCallbacks {
   user: AdminUser
   currentUser: User
+  mail: MailAvailability
   youLabel: string
   roleLabel: string
   createdLabel: string
@@ -90,6 +99,7 @@ interface UserCardProps extends UserRowCallbacks {
 function UserCard({
   user,
   currentUser,
+  mail,
   youLabel,
   roleLabel,
   createdLabel,
@@ -99,6 +109,7 @@ function UserCard({
   onEditRole,
   onResetTotp,
   onDelete,
+  onResendInvitation,
 }: UserCardProps) {
   const isMe = user.id === currentUser.id
 
@@ -122,6 +133,7 @@ function UserCard({
       {/* Status / 2FA / created */}
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-bg-3 pt-3">
         <UserStatusToggle user={user} currentUser={currentUser} onToggle={onToggleActive} isPending={isToggling} />
+        {user.invitation && <InvitationBadge invitation={user.invitation} />}
         <TotpBadge enabled={user.totpEnabled} />
         <span className="text-[12.5px] text-fg-3">
           {createdLabel} · {createdDate}
@@ -133,9 +145,11 @@ function UserCard({
         <UserActions
           user={user}
           currentUser={currentUser}
+          mail={mail}
           onEditRole={onEditRole}
           onResetTotp={onResetTotp}
           onDelete={onDelete}
+          onResendInvitation={onResendInvitation}
           size="md"
         />
       </div>
