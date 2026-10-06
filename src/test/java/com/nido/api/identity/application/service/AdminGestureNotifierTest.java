@@ -103,7 +103,7 @@ class AdminGestureNotifierTest {
 
     @Test
     void a_creation_is_told_to_the_super_administrators_only_the_invitation_being_its_own_mail() {
-        notifier.accountCreated(carol, bob.id(), Role.ADMIN);
+        notifier.accountCreated(carol, "bob", Role.ADMIN);
 
         verify(activity).accountCreated(List.of(alice, root), "bob", "carol");
         verifyNoInteractions(mails);

@@ -48,4 +48,20 @@ class MailModelTest {
         assertThat(entry.isExpiredAt(expiresAt)).isTrue();
         assertThat(new OutboxEntry(entry.id(), entry.kind(), entry.mail(), 0, null).isExpiredAt(expiresAt)).isFalse();
     }
+
+    @Test
+    void a_mail_to_an_account_goes_to_its_address_and_nowhere_without_one() {
+        Instant expiresAt = Instant.parse("2026-10-06T10:00:00Z");
+        SampleMail content = new SampleMail("jane");
+
+        assertThat(MailRequest.forAccount("jane@example.com", "jane", Locale.FRENCH, content, expiresAt))
+            .contains(new MailRequest(new Recipient("jane@example.com", "jane"), Locale.FRENCH, content, expiresAt));
+        assertThat(MailRequest.forAccount(null, "jane", Locale.FRENCH, content, expiresAt)).isEmpty();
+        assertThat(MailRequest.forAccount("  ", "jane", Locale.FRENCH, content, expiresAt)).isEmpty();
+    }
+
+    @Test
+    void an_alert_is_worth_sending_for_a_day() {
+        assertThat(MailRequest.ALERT_VALIDITY).isEqualTo(java.time.Duration.ofHours(24));
+    }
 }

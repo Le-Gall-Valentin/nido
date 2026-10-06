@@ -49,9 +49,9 @@ public class AdminGestureNotifier {
         this.activity = activity;
     }
 
-    public void accountCreated(User account, UUID actorId, Role actorRole) {
-        nameOf(actorId).ifPresent(actor ->
-            tellSuperAdministrators(actorRole, readers -> activity.accountCreated(readers, actor, account.username())));
+    /** @param actorName already read by the creation, which refuses an administrator it cannot name */
+    public void accountCreated(User account, String actorName, Role actorRole) {
+        tellSuperAdministrators(actorRole, readers -> activity.accountCreated(readers, actorName, account.username()));
     }
 
     public void roleChanged(User account, Role newRole, UUID actorId) {

@@ -44,13 +44,6 @@ class SessionSettingsAdapterTest {
     }
 
     @Test
-    void the_public_address_is_the_setting_when_there_is_one() {
-        assertThat(adapter(null).publicUrl()).isEmpty();
-        stored.put(SettingKey.PUBLIC_URL, "https://nido.example.com");
-        assertThat(adapter(null).publicUrl()).contains("https://nido.example.com");
-    }
-
-    @Test
     void nido_cookie_secure_has_the_last_word_whatever_the_address() {
         stored.put(SettingKey.PUBLIC_URL, "https://nido.example.com");
         assertThat(adapter(false).secureCookies()).as("the way back in after an https address saved too early").isFalse();

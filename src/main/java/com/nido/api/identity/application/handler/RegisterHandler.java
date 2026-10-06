@@ -66,7 +66,7 @@ public class RegisterHandler implements RegisterUseCase {
         totpRecordInitPort.initForUser(user.id());
         personalSpaceInitPort.initForUser(user.id());
         InvitationDelivery invitation = invitations.invite(user.id(), inviterName);
-        notifier.accountCreated(user, callerId, callerRole);
+        notifier.accountCreated(user, inviterName, callerRole);
         log.info("User {} registered with role {} and invited", user.id(), command.role());
         return new RegisteredAccount(user, invitation);
     }

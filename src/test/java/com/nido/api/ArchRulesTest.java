@@ -669,7 +669,7 @@ class ArchRulesTest {
         // authentication.infra → instance.application.port.in
         new CrossBcAppDep("authentication",
             new String[]{BASE + "instance.application.port.in.."},
-            Set.of("SessionSettingsAdapter")),
+            Set.of("SessionSettingsAdapter", "PublicUrlAdapter")),
 
         // instance.infra → mail.application.port.in
         new CrossBcAppDep("instance",

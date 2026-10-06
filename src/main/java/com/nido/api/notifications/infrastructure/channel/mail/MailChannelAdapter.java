@@ -5,7 +5,6 @@ import com.nido.api.mail.application.port.in.MailAvailabilityQuery;
 import com.nido.api.mail.application.port.in.SendMailUseCase;
 import com.nido.api.mail.domain.model.MailContent;
 import com.nido.api.mail.domain.model.MailRequest;
-import com.nido.api.mail.domain.model.Recipient;
 import com.nido.api.notifications.domain.model.Notification;
 import com.nido.api.notifications.domain.model.NotificationChannel;
 import com.nido.api.notifications.domain.model.NotificationRecipient;
@@ -56,11 +55,9 @@ public class MailChannelAdapter implements NotificationChannelPort {
     public void deliver(NotificationRecipient recipient, NotificationType type, Notification notification,
                         Instant expiresAt) {
         MailContent content = (MailContent) notification;
-        if (recipient.email() == null || recipient.email().isBlank()) {
-            log.warn("Account {} has no address: {} not sent", recipient.userId(), type.code());
-            return;
-        }
-        sendMail.send(new MailRequest(new Recipient(recipient.email(), recipient.username()),
-            MailLanguage.resolve(recipient.language()), content, expiresAt));
+        MailRequest.forAccount(recipient.email(), recipient.username(), MailLanguage.resolve(recipient.language()),
+                content, expiresAt)
+            .ifPresentOrElse(sendMail::send,
+                () -> log.warn("Account {} has no address: {} not sent", recipient.userId(), type.code()));
     }
 }

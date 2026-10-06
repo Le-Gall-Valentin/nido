@@ -105,7 +105,7 @@ class RegisterHandlerTest {
 
         assertThat(result.role()).isEqualTo(Role.USER);
         verify(invitations).invite(created.id(), "root");
-        verify(notifier).accountCreated(created, callerId, Role.ADMIN);
+        verify(notifier).accountCreated(created, "root", Role.ADMIN);
     }
 
     @Test
