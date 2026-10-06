@@ -20,6 +20,10 @@ import java.util.Set;
  * <p>A failure stops the start, like a refused key: the rows encrypted before it stay encrypted, and the
  * next start resumes. Once 068 has dropped the columns in clear, nothing is pending, and this costs a
  * few catalog queries.
+ *
+ * <p>Keep it, with {@link PlaintextTableEncryptor} and the modules' backfills, for as long as an installation
+ * may upgrade from 0.13.0 or earlier straight to the current version: without them, 067 would add the
+ * encrypted columns, 068 would wait for ever, and the adapters would read nothing but NULL.
  */
 @Component
 public class EncryptionBackfillRunner implements SmartInitializingSingleton {
