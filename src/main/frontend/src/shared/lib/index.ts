@@ -12,6 +12,7 @@ export { NetworkError, ServerError, RateLimitError, ForbiddenError, NotFoundErro
 export { toApiError, linkGone } from './toApiError'
 export type { LinkCheckState } from './linkCheck'
 export { copyText } from './copyText'
+export { useCopy } from './useCopy'
 export { isValidPassword, passwordProblem, type PasswordProblem } from './passwordPolicy'
 export { isValidEmail } from './emailPolicy'
 export { isValidUsername, usernameProblem, type UsernameProblem } from './usernamePolicy'

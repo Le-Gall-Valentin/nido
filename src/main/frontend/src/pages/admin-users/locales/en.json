@@ -79,6 +79,7 @@
     "link_label": "Invitation link",
     "copy": "Copy",
     "copied": "Copied",
+    "copy_failed": "This browser could not copy the link: select it above to copy it.",
     "once": "This link will not be shown again. To get another one, generate a new invitation link.",
     "done": "Done",
     "pending": "Invitation pending",

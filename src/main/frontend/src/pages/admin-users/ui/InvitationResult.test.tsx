@@ -7,10 +7,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 const copyText = vi.hoisted(() => vi.fn())
-vi.mock('@/shared/lib', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/shared/lib')>()),
-  copyText,
-}))
+vi.mock('@/shared/lib/copyText', () => ({ copyText }))
 
 describe('InvitationResult', () => {
   it('says the invitation was mailed, and shows no link', () => {
@@ -37,5 +34,15 @@ describe('InvitationResult', () => {
 
     await waitFor(() => expect(copyText).toHaveBeenCalledWith('https://nido.example/welcome#token=abc'))
     expect(await screen.findByRole('button', { name: 'invitation.copied' })).not.toBeNull()
+  })
+
+  it('says so when the browser could not copy the link, which stays there to copy by hand', async () => {
+    copyText.mockResolvedValue(false)
+    render(<InvitationResult username="carol" email="carol@test.com"
+      delivery={{ delivery: 'link', link: 'https://nido.example/welcome#token=abc' }} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'invitation.copy' }))
+
+    expect((await screen.findByText('invitation.copy_failed')).getAttribute('role')).toBe('status')
   })
 })

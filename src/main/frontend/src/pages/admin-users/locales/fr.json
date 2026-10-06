@@ -79,6 +79,7 @@
     "link_label": "Lien d'invitation",
     "copy": "Copier",
     "copied": "Copié",
+    "copy_failed": "Ce navigateur n'a pas pu copier le lien : sélectionnez-le ci-dessus pour le copier.",
     "once": "Ce lien ne sera plus affiché. Pour en obtenir un autre, générez un nouveau lien d'invitation.",
     "done": "Terminé",
     "pending": "Invitation en attente",

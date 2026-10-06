@@ -102,6 +102,16 @@ describe('InviteMemberModal — success flow', () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('NIDO-XYZ789'))
   })
 
+  it('says so when the browser could not copy the code', async () => {
+    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) } })
+    const { getByLabelText, getByText, findByText, findByRole } = setup()
+    fireEvent.change(getByLabelText('invite.identifier'), { target: { value: 'carol@test.com' } })
+    fireEvent.click(getByText('invite.submit'))
+    fireEvent.click(await findByText('NIDO-XYZ789'))
+
+    expect(await findByRole('status')).toHaveProperty('textContent', 'invite.copy_failed')
+  })
+
   it('calls onSuccess when Done is clicked after issuing', async () => {
     const { getByLabelText, getByText, findByText, onSuccess } = setup()
     fireEvent.change(getByLabelText('invite.identifier'), { target: { value: 'carol@test.com' } })

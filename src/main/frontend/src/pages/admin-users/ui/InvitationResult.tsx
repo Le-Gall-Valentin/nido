@@ -1,8 +1,7 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Copy } from 'lucide-react'
 import { Alert, Button } from '@/shared/ui'
-import { copyText } from '@/shared/lib'
+import { useCopy } from '@/shared/lib'
 import type { InvitationDelivery } from '@/entities/user'
 
 interface InvitationResultProps {
@@ -17,7 +16,7 @@ interface InvitationResultProps {
  */
 export function InvitationResult({ username, email, delivery }: InvitationResultProps) {
   const { t } = useTranslation('adminUsers')
-  const [copied, setCopied] = useState(false)
+  const { copy, copied, failed } = useCopy()
 
   if (delivery.delivery === 'mail') {
     return <p className="text-sm leading-relaxed text-fg-2">{t('invitation.mailed', { username, email })}</p>
@@ -25,14 +24,6 @@ export function InvitationResult({ username, email, delivery }: InvitationResult
 
   // Only a path when the installation does not know its public address: this page's address stands in.
   const link = new URL(delivery.link, window.location.origin).toString()
-
-  async function handleCopy() {
-    // Not copied: the link stays in its field, selected on focus, for a manual copy.
-    if (await copyText(link)) {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    }
-  }
 
   return (
     <div>
@@ -46,13 +37,15 @@ export function InvitationResult({ username, email, delivery }: InvitationResult
           onFocus={(e) => e.currentTarget.select()}
           className="min-w-0 flex-1 rounded-[10px] border-[1.5px] border-border bg-bg-2 px-3 py-2.5 font-mono text-xs text-fg-0"
         />
-        <Button type="button" onClick={() => { void handleCopy() }} className="shrink-0">
+        <Button type="button" onClick={() => { void copy(link) }} className="shrink-0">
           {copied
             ? <Check className="size-4 text-status-green" aria-hidden="true" />
             : <Copy className="size-4" aria-hidden="true" />}
           {copied ? t('invitation.copied') : t('invitation.copy')}
         </Button>
       </div>
+      {/* Not copied: the link stays in its field, selected on focus, for a manual copy — and the person is told. */}
+      {failed && <p role="status" className="mt-2 text-[12.5px] text-fg-2">{t('invitation.copy_failed')}</p>}
       <Alert variant="warning" className="mt-3">{t('invitation.once')}</Alert>
     </div>
   )

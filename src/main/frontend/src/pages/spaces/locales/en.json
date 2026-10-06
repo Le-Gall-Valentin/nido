@@ -67,6 +67,7 @@
       "REVOKED": "Revoked"
     },
     "action_copy": "Copy code {{code}}",
+    "copy_failed": "This browser could not copy the code: copy it as shown.",
     "action_revoke": "Revoke invitation for {{username}}"
   },
   "create": {
@@ -117,6 +118,7 @@
     "success_title": "Invitation sent",
     "success_body": "{{username}} now has an invitation waiting on their groups page.",
     "code_hint": "Reference code (not needed to join)",
+    "copy_failed": "This browser could not copy the code: copy it as shown.",
     "done": "Done"
   },
   "leave": {

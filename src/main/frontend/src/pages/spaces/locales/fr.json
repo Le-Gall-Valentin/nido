@@ -67,6 +67,7 @@
       "REVOKED": "Révoquée"
     },
     "action_copy": "Copier le code {{code}}",
+    "copy_failed": "Ce navigateur n'a pas pu copier le code : recopiez-le tel qu'il s'affiche.",
     "action_revoke": "Révoquer l'invitation de {{username}}"
   },
   "create": {
@@ -117,6 +118,7 @@
     "success_title": "Invitation envoyée",
     "success_body": "{{username}} a désormais une invitation qui l'attend sur sa page de groupes.",
     "code_hint": "Code de référence (inutile pour rejoindre)",
+    "copy_failed": "Ce navigateur n'a pas pu copier le code : recopiez-le tel qu'il s'affiche.",
     "done": "Terminé"
   },
   "leave": {
