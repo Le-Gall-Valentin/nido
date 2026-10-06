@@ -1,5 +1,4 @@
-import { NetworkError, RateLimitError } from '@/shared/lib'
-import { WeakPasswordError } from './errors'
+import { NetworkError, RateLimitError, WeakPasswordError } from '@/shared/lib'
 
 export interface FormError {
   key: string

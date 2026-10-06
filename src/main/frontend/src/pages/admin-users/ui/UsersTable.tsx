@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { User, AdminUser } from '@/entities/user'
-import type { MailAvailability } from '@/features/password-reset'
+import type { MailAvailability } from '@/entities/capabilities'
 import { RolePill, UserAvatar } from '@/entities/user'
 import { formatUserDate } from '../lib/formatUserDate'
 import { UserStatusToggle } from './UserStatusToggle'

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Key, Pencil, Send, Trash2 } from 'lucide-react'
 import type { User, AdminUser } from '@/entities/user'
-import type { MailAvailability } from '@/features/password-reset'
+import type { MailAvailability } from '@/entities/capabilities'
 import { canDelete, canResetTotp, canEditRole, canResendInvitation } from '../lib/permissions'
 import { permissionDenialTitle } from './permissionDenialTitle'
 

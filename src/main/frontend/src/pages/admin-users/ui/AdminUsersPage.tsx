@@ -13,7 +13,7 @@ import { adminUsersApi , AdminUsersApiProvider , useUsers ,
   useToggleUserActive,
   useResendInvitation,
 } from '@/entities/user'
-import { useMailAvailability } from '@/features/password-reset'
+import { useMailAvailability } from '@/entities/capabilities'
 import { UsersTable } from './UsersTable'
 import { UsersCardList } from './UsersCardList'
 import { CreateUserModal } from './CreateUserModal'

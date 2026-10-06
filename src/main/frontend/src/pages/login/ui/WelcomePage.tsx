@@ -3,14 +3,16 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, Clock } from 'lucide-react'
 import {
-  NewPasswordForm,
   accountInvitationApi as defaultApi,
-  passwordResetApi as defaultPasswordResetApi,
   useInvitationLinkCheck,
-  usePasswordResetAvailability,
   type IAccountInvitationApi,
-  type IPasswordResetApi,
-} from '@/features/password-reset'
+} from '@/features/account-invitation'
+import { NewPasswordForm } from '@/features/password-reset'
+import {
+  capabilitiesApi as defaultCapabilitiesApi,
+  usePasswordResetAvailability,
+  type ICapabilitiesApi,
+} from '@/entities/capabilities'
 import { useAuth } from '@/features/auth'
 import { ROUTES } from '@/shared/config'
 import { Alert, Button, Spinner, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE } from '@/shared/ui'
@@ -24,7 +26,7 @@ type Step = 'checking' | 'signed_in' | 'form' | 'invalid' | 'unavailable'
 
 interface WelcomePageProps {
   api?: IAccountInvitationApi
-  passwordResetApi?: IPasswordResetApi
+  capabilitiesApi?: ICapabilitiesApi
 }
 
 /**
@@ -33,7 +35,7 @@ interface WelcomePageProps {
  * checked at once, so nobody types a password twice to learn the invitation had expired. Works without mail:
  * the administrator then passed the link on by other means.
  */
-export function WelcomePage({ api = defaultApi, passwordResetApi = defaultPasswordResetApi }: WelcomePageProps = {}) {
+export function WelcomePage({ api = defaultApi, capabilitiesApi = defaultCapabilitiesApi }: WelcomePageProps = {}) {
   const { t } = useTranslation('login')
   const location = useLocation()
   const navigate = useNavigate()
@@ -52,7 +54,7 @@ export function WelcomePage({ api = defaultApi, passwordResetApi = defaultPasswo
   const logout = useAuth((s) => s.logout)
   const step: Step = isRestoringSession ? 'checking' : user ? 'signed_in' : linkStep
   // "Forgot password" sends an invited account a new invitation — offered only where it exists, with mail on.
-  const passwordReset = usePasswordResetAvailability(passwordResetApi)
+  const passwordReset = usePasswordResetAvailability(capabilitiesApi)
 
   useEffect(() => {
     if (location.hash) void navigate({ pathname: location.pathname, search: location.search }, { replace: true })

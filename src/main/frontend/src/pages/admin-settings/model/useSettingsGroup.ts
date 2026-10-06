@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { PASSWORD_RESET_CAPABILITY_KEY } from '@/features/password-reset'
+import { CAPABILITIES_KEY } from '@/entities/capabilities'
 import {
   MailTestFailedError, SettingLockedError, SettingsInvalidError, useSettingWording,
   type InstanceSettings, type SettingField, type SettingsGroup,
@@ -77,7 +77,7 @@ export function useSettingsGroup(group: SettingsGroup, api: ISettingsApi): Setti
     void attempt(async () => {
       queryClient.setQueryData(SETTINGS_KEY, await change())
       // Mail switched on or off changes what the sign-in page offers.
-      void queryClient.invalidateQueries({ queryKey: PASSWORD_RESET_CAPABILITY_KEY })
+      void queryClient.invalidateQueries({ queryKey: CAPABILITIES_KEY })
       return t('saved')
     })
   }

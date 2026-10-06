@@ -5,8 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { StoreApi } from 'zustand'
 import * as auth from '@/features/auth'
 import type { User } from '@/entities/user'
-import { InvalidResetLinkError, type IAccountInvitationApi, type IPasswordResetApi } from '@/features/password-reset'
-import { NetworkError } from '@/shared/lib'
+import type { IAccountInvitationApi } from '@/features/account-invitation'
+import type { ICapabilitiesApi } from '@/entities/capabilities'
+import { InvalidLinkError, NetworkError } from '@/shared/lib'
 import { createTestQueryClient } from '@/shared/test'
 import { WelcomePage } from './WelcomePage'
 
@@ -51,15 +52,12 @@ function open(url: string, api: Partial<IAccountInvitationApi>, { mail = true } 
   const full: IAccountInvitationApi = {
     checkInvitation: vi.fn().mockResolvedValue('carol'), acceptInvitation: vi.fn().mockResolvedValue(undefined), ...api,
   }
-  const passwordResetApi: IPasswordResetApi = {
-    capabilities: vi.fn().mockResolvedValue({ passwordReset: mail, mail }),
-    requestReset: vi.fn(), checkToken: vi.fn(), confirmReset: vi.fn(),
-  }
+  const capabilitiesApi: ICapabilitiesApi = { capabilities: vi.fn().mockResolvedValue({ passwordReset: mail, mail }) }
   render(
     <QueryClientProvider client={createTestQueryClient()}>
       <MemoryRouter initialEntries={[url]}>
         <Routes>
-          <Route path="/welcome" element={<><WelcomePage api={full} passwordResetApi={passwordResetApi} /><Where /></>} />
+          <Route path="/welcome" element={<><WelcomePage api={full} capabilitiesApi={capabilitiesApi} /><Where /></>} />
           <Route path="/login" element={<Where />} />
         </Routes>
       </MemoryRouter>
@@ -95,21 +93,21 @@ describe('WelcomePage', () => {
   })
 
   it('says a refused link is over, and offers a new one by mail where forgot password exists', async () => {
-    open('/welcome#token=abc', { checkInvitation: vi.fn().mockRejectedValue(new InvalidResetLinkError()) })
+    open('/welcome#token=abc', { checkInvitation: vi.fn().mockRejectedValue(new InvalidLinkError()) })
 
     expect(await screen.findByText('welcome.invalid.title')).not.toBeNull()
     expect(await screen.findByRole('link', { name: 'welcome.invalid.forgot' })).not.toBeNull()
   })
 
   it('offers no new link by mail without mail', async () => {
-    open('/welcome#token=abc', { checkInvitation: vi.fn().mockRejectedValue(new InvalidResetLinkError()) }, { mail: false })
+    open('/welcome#token=abc', { checkInvitation: vi.fn().mockRejectedValue(new InvalidLinkError()) }, { mail: false })
 
     await screen.findByText('welcome.invalid.title')
     await waitFor(() => expect(screen.queryByRole('link', { name: 'welcome.invalid.forgot' })).toBeNull())
   })
 
   it('says the link is over when it stops working while the password is typed', async () => {
-    open('/welcome#token=abc', { acceptInvitation: vi.fn().mockRejectedValue(new InvalidResetLinkError()) })
+    open('/welcome#token=abc', { acceptInvitation: vi.fn().mockRejectedValue(new InvalidLinkError()) })
     await screen.findByLabelText('field.new_password')
 
     type('field.new_password', 'Welcome-Home-1')

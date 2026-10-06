@@ -2,9 +2,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import axios, { type AxiosError } from 'axios'
 import { client } from '@/shared/api'
-import { NetworkError, RateLimitError } from '@/shared/lib'
+import { InvalidLinkError, NetworkError, RateLimitError, WeakPasswordError } from '@/shared/lib'
 import { accountInvitationApi } from './accountInvitationApi'
-import { InvalidResetLinkError, WeakPasswordError } from '../model/errors'
 
 vi.mock('@/shared/api', () => ({ client: { get: vi.fn(), post: vi.fn() } }))
 
@@ -37,8 +36,8 @@ describe('accountInvitationApi', () => {
   it('reads 410 as a link that no longer works, on check and on accept', async () => {
     mocked.post.mockRejectedValueOnce(axiosError(410)).mockRejectedValueOnce(axiosError(410))
 
-    await expect(accountInvitationApi.checkInvitation('abc')).rejects.toBeInstanceOf(InvalidResetLinkError)
-    await expect(accountInvitationApi.acceptInvitation('abc', 'Welcome-Home-1')).rejects.toBeInstanceOf(InvalidResetLinkError)
+    await expect(accountInvitationApi.checkInvitation('abc')).rejects.toBeInstanceOf(InvalidLinkError)
+    await expect(accountInvitationApi.acceptInvitation('abc', 'Welcome-Home-1')).rejects.toBeInstanceOf(InvalidLinkError)
   })
 
   it('reads 400 on accept as a password the rules refuse', async () => {

@@ -1,12 +1,11 @@
 import React, { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, Button, Input, PasswordInput, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
-import { isValidPassword, passwordProblem } from '@/shared/lib'
-import { InvalidResetLinkError } from '../model/errors'
+import { InvalidLinkError, isValidPassword, passwordProblem } from '@/shared/lib'
 import { describeError, type FormError } from '../model/describeError'
 
 interface Props {
-  /** Saves the password with the link the page holds. @throws InvalidResetLinkError, WeakPasswordError */
+  /** Saves the password with the link the page holds. @throws InvalidLinkError, WeakPasswordError */
   onSave: (password: string) => Promise<void>
   /** The account's username: handed to password managers, so they store the password under the right name. */
   username?: string
@@ -48,7 +47,7 @@ export function NewPasswordForm({ onSave, username, labelId, onDone, onInvalid }
       await onSave(password)
       onDone()
     } catch (err) {
-      if (err instanceof InvalidResetLinkError) {
+      if (err instanceof InvalidLinkError) {
         onInvalid()
         return
       }

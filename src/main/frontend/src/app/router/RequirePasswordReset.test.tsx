@@ -1,13 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
-import type { IPasswordResetApi } from '@/features/password-reset'
+import { describe, expect, it } from 'vitest'
+import type { ICapabilitiesApi } from '@/entities/capabilities'
 import { createTestQueryClient } from '@/shared/test'
 import { RequirePasswordReset } from './RequirePasswordReset'
 
-function openForgotPage(capabilities: IPasswordResetApi['capabilities']) {
-  const api: IPasswordResetApi = { capabilities, requestReset: vi.fn(), checkToken: vi.fn(), confirmReset: vi.fn() }
+function openForgotPage(capabilities: ICapabilitiesApi['capabilities']) {
+  const api: ICapabilitiesApi = { capabilities }
   render(
     <QueryClientProvider client={createTestQueryClient()}>
       <MemoryRouter initialEntries={['/forgot-password']}>

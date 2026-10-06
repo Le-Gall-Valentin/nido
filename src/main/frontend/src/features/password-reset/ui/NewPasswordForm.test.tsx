@@ -1,8 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { NetworkError } from '@/shared/lib'
+import { InvalidLinkError, NetworkError, WeakPasswordError } from '@/shared/lib'
 import type { IPasswordResetApi } from '../model/IPasswordResetApi'
-import { InvalidResetLinkError, WeakPasswordError } from '../model/errors'
 import { NewPasswordForm } from './NewPasswordForm'
 
 vi.mock('react-i18next', () => ({
@@ -89,7 +88,7 @@ describe('NewPasswordForm', () => {
   })
 
   it('hands a link that stopped working back to the page', async () => {
-    const { type, save, onInvalid, onDone } = setup(vi.fn().mockRejectedValue(new InvalidResetLinkError()))
+    const { type, save, onInvalid, onDone } = setup(vi.fn().mockRejectedValue(new InvalidLinkError()))
 
     type('field.new_password', 'NewPassw0rd!')
     type('field.confirm', 'NewPassw0rd!')

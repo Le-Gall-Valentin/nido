@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Send } from 'lucide-react'
 import { Alert, Button, Dialog, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { AdminUser, InvitationDelivery } from '@/entities/user'
-import type { MailAvailability } from '@/features/password-reset'
+import type { MailAvailability } from '@/entities/capabilities'
 import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
 import { InvitationResult } from './InvitationResult'
 

@@ -2,14 +2,13 @@ import { StrictMode, type ReactNode } from 'react'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
-import { NetworkError } from '@/shared/lib'
+import { InvalidLinkError, NetworkError } from '@/shared/lib'
 import { createTestQueryClient } from '@/shared/test'
 import type { IPasswordResetApi } from './IPasswordResetApi'
-import { InvalidResetLinkError } from './errors'
 import { useResetLinkCheck } from './useResetLinkCheck'
 
 function apiWith(checkToken: IPasswordResetApi['checkToken']): IPasswordResetApi {
-  return { capabilities: vi.fn(), requestReset: vi.fn(), checkToken, confirmReset: vi.fn() }
+  return { requestReset: vi.fn(), checkToken, confirmReset: vi.fn() }
 }
 
 function check(token: string | null, api: IPasswordResetApi, strict = false) {
@@ -38,7 +37,7 @@ describe('useResetLinkCheck', () => {
   })
 
   it('is invalid when the server says the link no longer works', async () => {
-    const { result } = check('abc', apiWith(vi.fn().mockRejectedValue(new InvalidResetLinkError())))
+    const { result } = check('abc', apiWith(vi.fn().mockRejectedValue(new InvalidLinkError())))
 
     await waitFor(() => expect(result.current.state).toBe('invalid'))
   })

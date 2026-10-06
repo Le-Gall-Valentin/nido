@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, Button, Dialog } from '@/shared/ui'
 import type { AdminUser } from '@/entities/user'
-import type { MailAvailability } from '@/features/password-reset'
+import type { MailAvailability } from '@/entities/capabilities'
 import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
 import { MailNotice } from './MailNotice'
 

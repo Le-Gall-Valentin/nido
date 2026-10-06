@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Key } from 'lucide-react'
 import { Alert, Dialog, Button } from '@/shared/ui'
 import type { AdminUser } from '@/entities/user'
-import type { MailAvailability } from '@/features/password-reset'
+import type { MailAvailability } from '@/entities/capabilities'
 import { mapApiErrorToKey } from '../lib/mapApiErrorToKey'
 import { MailNotice } from './MailNotice'
 

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Mail } from 'lucide-react'
 import type { AdminUser } from '@/entities/user'
-import type { MailAvailability } from '@/features/password-reset'
+import type { MailAvailability } from '@/entities/capabilities'
 
 interface MailNoticeProps {
   user: AdminUser

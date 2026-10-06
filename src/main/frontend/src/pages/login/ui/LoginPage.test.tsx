@@ -44,9 +44,9 @@ vi.mock('@/features/totp', () => ({
 
 const availability = vi.hoisted(() => ({ current: 'unavailable' as 'loading' | 'available' | 'unavailable' }))
 
-vi.mock('@/features/password-reset', () => ({
+vi.mock('@/entities/capabilities', () => ({
   usePasswordResetAvailability: () => availability.current,
-  passwordResetApi: {},
+  capabilitiesApi: {},
 }))
 
 const mockFinalizeLogin = vi.fn()

@@ -1,7 +1,6 @@
 import { client } from '@/shared/api'
+import { linkGone, toApiError, WeakPasswordError } from '@/shared/lib'
 import type { IAccountInvitationApi } from '../model/IAccountInvitationApi'
-import { WeakPasswordError } from '../model/errors'
-import { linkNoLongerWorks, toError } from './apiErrors'
 
 export const accountInvitationApi: IAccountInvitationApi = {
   async checkInvitation(token: string): Promise<string> {
@@ -9,7 +8,7 @@ export const accountInvitationApi: IAccountInvitationApi = {
       const { data } = await client.post<{ username: string }>('/auth/account-invitation/check', { token })
       return data.username
     } catch (error) {
-      throw toError(error, linkNoLongerWorks)
+      throw toApiError(error, linkGone)
     }
   },
 
@@ -17,7 +16,7 @@ export const accountInvitationApi: IAccountInvitationApi = {
     try {
       await client.post('/auth/account-invitation/accept', { token, password })
     } catch (error) {
-      throw toError(error, (status) => linkNoLongerWorks(status) ?? (status === 400 ? new WeakPasswordError() : null))
+      throw toApiError(error, (status) => linkGone(status) ?? (status === 400 ? new WeakPasswordError() : null))
     }
   },
 }

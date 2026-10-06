@@ -4,11 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { LoginForm } from '@/features/auth'
 import { TotpVerifyStep, TotpEnrollProposal, TotpSetupFlow, totpApi as defaultTotpApi } from '@/features/totp'
 import type { ITotpVerifyApi, ITotpEnrollApi } from '@/features/totp'
-import {
-  passwordResetApi as defaultPasswordResetApi,
-  usePasswordResetAvailability,
-  type IPasswordResetApi,
-} from '@/features/password-reset'
+import { capabilitiesApi as defaultCapabilitiesApi, usePasswordResetAvailability, type ICapabilitiesApi } from '@/entities/capabilities'
 import { ROUTES } from '@/shared/config'
 import { Alert } from '@/shared/ui'
 import { AuthShell } from './AuthShell'
@@ -22,16 +18,16 @@ const TITLE_ID = 'login-title'
 
 interface LoginPageProps {
   totpApi?: TotpApi
-  passwordResetApi?: IPasswordResetApi
+  capabilitiesApi?: ICapabilitiesApi
 }
 
-export function LoginPage({ totpApi = defaultTotpApi, passwordResetApi = defaultPasswordResetApi }: LoginPageProps = {}) {
+export function LoginPage({ totpApi = defaultTotpApi, capabilitiesApi = defaultCapabilitiesApi }: LoginPageProps = {}) {
   const { t } = useTranslation('login')
   const location = useLocation()
   const navigate = useNavigate()
   const [resetDone] = useState(() => isPasswordResetDone(location.state))
   const [welcomed] = useState(() => acceptedInvitationIdentifier(location.state))
-  const passwordReset = usePasswordResetAvailability(passwordResetApi)
+  const passwordReset = usePasswordResetAvailability(capabilitiesApi)
   const {
     step,
     pendingUser,

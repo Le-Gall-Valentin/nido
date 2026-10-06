@@ -2,9 +2,8 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { createTestQueryClient } from '@/shared/test'
-import { NetworkError } from '@/shared/lib'
+import { InvalidLinkError, NetworkError } from '@/shared/lib'
 import type { IAccountInvitationApi } from './IAccountInvitationApi'
-import { InvalidResetLinkError } from './errors'
 import { useInvitationLinkCheck } from './useInvitationLinkCheck'
 
 function check(token: string | null, checkInvitation: IAccountInvitationApi['checkInvitation']) {
@@ -31,7 +30,7 @@ describe('useInvitationLinkCheck', () => {
   })
 
   it('is invalid when the server refuses the link', async () => {
-    const { result } = check('abc', async () => { throw new InvalidResetLinkError() })
+    const { result } = check('abc', async () => { throw new InvalidLinkError() })
 
     await waitFor(() => expect(result.current.state).toBe('invalid'))
     expect(result.current.username).toBeNull()

@@ -2,14 +2,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { createTestQueryClient } from '@/shared/test'
-import type { IPasswordResetApi } from './IPasswordResetApi'
-import { useMailAvailability, usePasswordResetAvailability } from './usePasswordResetAvailability'
+import type { ICapabilitiesApi } from './ICapabilitiesApi'
+import { useMailAvailability, usePasswordResetAvailability } from './useCapabilities'
 
-function api(capabilities: IPasswordResetApi['capabilities']): IPasswordResetApi {
-  return { capabilities, requestReset: vi.fn(), checkToken: vi.fn(), confirmReset: vi.fn() }
+function api(capabilities: ICapabilitiesApi['capabilities']): ICapabilitiesApi {
+  return { capabilities }
 }
 
-function availabilityWith(fake: IPasswordResetApi) {
+function availabilityWith(fake: ICapabilitiesApi) {
   const client = createTestQueryClient()
   return renderHook(() => usePasswordResetAvailability(fake), {
     wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,

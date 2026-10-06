@@ -1,9 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
+import { InvalidLinkError, type LinkCheckState } from '@/shared/lib'
 import { passwordResetApi } from '../api/passwordResetApi'
 import type { IPasswordResetApi } from './IPasswordResetApi'
-import { InvalidResetLinkError } from './errors'
-
-export type ResetLinkState = 'checking' | 'valid' | 'invalid' | 'unavailable'
 
 /**
  * Whether a reset link still works, asked once when the page opens — so nobody types a new password
@@ -17,7 +15,7 @@ export type ResetLinkState = 'checking' | 'valid' | 'invalid' | 'unavailable'
 export function useResetLinkCheck(
   token: string | null,
   api: IPasswordResetApi = passwordResetApi,
-): { state: ResetLinkState; retry: () => void } {
+): { state: LinkCheckState; retry: () => void } {
   const { isPending, isError, error, refetch } = useQuery({
     queryKey: ['auth', 'reset-link', token],
     queryFn: async () => {
@@ -33,6 +31,6 @@ export function useResetLinkCheck(
 
   if (token === null) return { state: 'invalid', retry }
   if (isPending) return { state: 'checking', retry }
-  if (isError) return { state: error instanceof InvalidResetLinkError ? 'invalid' : 'unavailable', retry }
+  if (isError) return { state: error instanceof InvalidLinkError ? 'invalid' : 'unavailable', retry }
   return { state: 'valid', retry }
 }
