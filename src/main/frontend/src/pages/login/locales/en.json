@@ -7,7 +7,7 @@
   },
   "panel": {
     "encrypted": "Encrypted and secure",
-    "twofa": "2FA required"
+    "twofa": "2FA available"
   },
   "form": {
     "title": "Welcome back",

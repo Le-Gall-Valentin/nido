@@ -7,7 +7,7 @@
   },
   "panel": {
     "encrypted": "Chiffré et sécurisé",
-    "twofa": "2FA obligatoire"
+    "twofa": "2FA disponible"
   },
   "form": {
     "title": "Bon retour",
