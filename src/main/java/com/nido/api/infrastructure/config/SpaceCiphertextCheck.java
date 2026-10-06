@@ -31,12 +31,23 @@ public final class SpaceCiphertextCheck implements ExistingCiphertextCheck {
     }
 
     private void decrypt(Sample sample) {
+        TextEncryptor key = keyOf(sample.spaceId());
         try {
-            keyOfSpace.apply(sample.spaceId()).decrypt(sample.value());
+            key.decrypt(sample.value());
         } catch (RuntimeException e) {
             throw new IllegalStateException("The encryption key does not decrypt the " + what
                 + " already encrypted in space " + sample.spaceId() + ": nothing was encrypted with it. "
                 + "Start with the key this database was encrypted with.");
+        }
+    }
+
+    /** A salt that yields no key is not a wrong key: saying so would send the operator the wrong way. */
+    private TextEncryptor keyOf(UUID spaceId) {
+        try {
+            return keyOfSpace.apply(spaceId);
+        } catch (RuntimeException e) {
+            throw new IllegalStateException("Could not derive the key of space " + spaceId + " ("
+                + e.getClass().getSimpleName() + "): its salt may be damaged. Nothing was encrypted.");
         }
     }
 

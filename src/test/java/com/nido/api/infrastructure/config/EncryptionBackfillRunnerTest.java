@@ -86,13 +86,15 @@ class EncryptionBackfillRunnerTest {
     }
 
     @Test
-    void only_the_tables_it_rewrote_are_vacuumed_and_logged() {
+    void every_table_of_the_backfill_is_vacuumed_and_only_the_rewritten_ones_are_logged() {
+        // A start cut short leaves tables encrypted then, whose columns in clear 068 has since dropped
+        // without rewriting them: their earlier versions in clear are still in their files.
         when(shopping.pending()).thenReturn(true);
         when(shopping.run()).thenReturn(Map.of("shopping_items", 2, "shopping_categories", 0));
 
         runner.afterSingletonsInstantiated();
 
-        verify(vacuum).vacuumFull(Set.of("shopping_items"));
+        verify(vacuum).vacuumFull(Set.of("shopping_items", "shopping_categories"));
         assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
             .containsExactly("Encrypted 2 rows of shopping_items that earlier versions stored in clear");
     }

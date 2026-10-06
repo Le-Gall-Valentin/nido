@@ -2,30 +2,38 @@ package com.nido.api.infrastructure.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.ConnectionCallback;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.sql.SQLWarning;
+import java.sql.Statement;
 import java.util.Collection;
 import java.util.regex.Pattern;
 
 /**
  * Rewrites a table once its values in clear are encrypted. An UPDATE leaves the version it replaces in
  * the table's files, in clear, until something reuses the space — a plain VACUUM only marks it reusable.
- * VACUUM FULL writes the live rows to new files and removes the old ones.
+ * VACUUM FULL writes the live rows to new files and removes the old ones; ANALYZE replaces the statistics
+ * autoanalyze kept of the column, most common values included.
  *
- * <p>It locks the table exclusively, which is why it runs before the application serves anyone. Only the
- * table's owner may run it: anyone else gets the command in a warning, the data itself being encrypted
- * already.
+ * <p>It locks the table exclusively, which is why it runs before the application serves anyone, and waits
+ * at most {@link #LOCK_TIMEOUT} for that lock: a backup running at that moment holds the table for
+ * minutes. Whatever stops it — that wait, a role Postgres does not allow, a full disk — is a warning with
+ * the command to run, not a failed start: the data itself is encrypted already.
  */
 @Component
 public class TableVacuum {
 
+    static final String LOCK_TIMEOUT = "10s";
+
     private static final Logger log = LoggerFactory.getLogger(TableVacuum.class);
     private static final Pattern IDENTIFIER = Pattern.compile("[a-z][a-z_]*");
 
-    private final JdbcClient jdbc;
+    private final JdbcTemplate jdbc;
 
-    public TableVacuum(JdbcClient jdbc) {
+    public TableVacuum(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
@@ -34,20 +42,32 @@ public class TableVacuum {
             if (!IDENTIFIER.matcher(table).matches()) {
                 throw new IllegalArgumentException("Not a plain SQL identifier: " + table);
             }
-            if (ownedByUs(table)) {
-                // Outside any transaction, which VACUUM refuses: this connection is in autocommit.
-                jdbc.sql("VACUUM FULL " + table).update();
-            } else {
-                log.warn("The values of {} are encrypted, but their earlier versions in clear stay in its files "
-                    + "until its owner runs: VACUUM FULL {};", table, table);
+            try {
+                String skipped = jdbc.execute((ConnectionCallback<String>) connection -> {
+                    // One connection for the three statements, outside any transaction, which VACUUM refuses:
+                    // a connection of the pool outside a transaction is in autocommit.
+                    try (Statement statement = connection.createStatement()) {
+                        statement.execute("SET lock_timeout = '" + LOCK_TIMEOUT + "'");
+                        try {
+                            statement.execute("VACUUM (FULL, ANALYZE) " + table);
+                            SQLWarning warning = statement.getWarnings();
+                            return warning == null ? null : warning.getMessage();
+                        } finally {
+                            statement.execute("RESET lock_timeout");
+                        }
+                    }
+                });
+                if (skipped != null) {
+                    warnNotVacuumed(table, skipped);
+                }
+            } catch (DataAccessException e) {
+                warnNotVacuumed(table, e.getMostSpecificCause().getMessage());
             }
         }
     }
 
-    private boolean ownedByUs(String table) {
-        return Boolean.TRUE.equals(jdbc.sql(
-                "SELECT pg_get_userbyid(relowner) = current_user FROM pg_class WHERE oid = to_regclass(:table)")
-            .param("table", table)
-            .query(Boolean.class).single());
+    private static void warnNotVacuumed(String table, String why) {
+        log.warn("The values of {} are encrypted, but their earlier versions in clear stay in its files ({}). "
+            + "Run, as a role allowed to: VACUUM (FULL, ANALYZE) {};", table, why, table);
     }
 }

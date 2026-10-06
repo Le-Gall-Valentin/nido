@@ -1,9 +1,13 @@
 package com.nido.api.infrastructure.config;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.nido.api.IntegrationTestConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.encrypt.Encryptors;
@@ -181,5 +185,75 @@ class EncryptionBackfillPartsIT {
 
     private long filenode() {
         return jdbc.sql("SELECT pg_relation_filenode('backfill_probes')").query(Long.class).single();
+    }
+
+    @Test
+    void vacuum_also_refreshes_the_statistics_that_held_values_in_clear() {
+        for (int i = 0; i < 20; i++) {
+            probe(A, "Secret de famille", null);
+        }
+        jdbc.sql("ANALYZE backfill_probes").update();
+        assertThat(statisticsOfLabel()).as("what autoanalyze keeps of the column").contains("Secret de famille");
+
+        encryptor.encrypt(PROBES, EncryptionBackfillPartsIT::keyOf);
+        vacuum.vacuumFull(List.of("backfill_probes"));
+
+        assertThat(statisticsOfLabel()).doesNotContain("Secret de famille");
+    }
+
+    @Test
+    void a_table_owned_by_another_role_is_vacuumed_when_postgres_allows_it() {
+        jdbc.sql("""
+            DO $$ BEGIN
+              IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'backfill_other_owner') THEN
+                CREATE ROLE backfill_other_owner;
+              END IF;
+            END $$""").update();
+        jdbc.sql("ALTER TABLE backfill_probes OWNER TO backfill_other_owner").update();
+        long before = filenode();
+
+        // The test user is a superuser: Postgres lets it vacuum a table it does not own.
+        vacuum.vacuumFull(List.of("backfill_probes"));
+
+        assertThat(filenode()).isNotEqualTo(before);
+    }
+
+    @Test
+    void a_vacuum_that_cannot_run_warns_with_the_command_instead_of_stopping_the_start() {
+        Logger logger = (Logger) LoggerFactory.getLogger(TableVacuum.class);
+        ListAppender<ILoggingEvent> logged = new ListAppender<>();
+        logged.start();
+        logger.addAppender(logged);
+        try {
+            assertThatCode(() -> vacuum.vacuumFull(List.of("backfill_absent"))).doesNotThrowAnyException();
+
+            assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
+                .anySatisfy(line -> assertThat(line).contains("VACUUM (FULL, ANALYZE) backfill_absent"));
+        } finally {
+            logger.detachAppender(logged);
+        }
+    }
+
+    @Test
+    void a_key_that_cannot_be_derived_is_not_reported_as_a_wrong_key() {
+        jdbc.sql("INSERT INTO backfill_probes (space_id, label_encrypted) VALUES (:s, :v)")
+            .param("s", A).param("v", SPACE_A.encrypt("Loyer")).update();
+        String oneValuePerSpace = """
+            SELECT DISTINCT ON (space_id) space_id, label_encrypted AS value
+            FROM backfill_probes WHERE label_encrypted IS NOT NULL ORDER BY space_id""";
+
+        assertThatThrownBy(new SpaceCiphertextCheck(jdbc, space -> {
+                throw new IllegalArgumentException("Detected a Non-hex character");
+            }, "probes", oneValuePerSpace)::verify)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Could not derive the key of space " + A)
+            .satisfies(failure -> assertThat(failure.getMessage()).doesNotContain("does not decrypt"));
+    }
+
+    private String statisticsOfLabel() {
+        return jdbc.sql("""
+                SELECT coalesce(most_common_vals::text, '') || coalesce(histogram_bounds::text, '')
+                FROM pg_stats WHERE tablename = 'backfill_probes' AND attname = 'label'""")
+            .query(String.class).optional().orElse("");
     }
 }

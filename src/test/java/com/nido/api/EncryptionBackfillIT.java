@@ -235,4 +235,33 @@ class EncryptionBackfillIT {
         failure.printStackTrace(new PrintWriter(out));
         return out.toString();
     }
+
+    @Test
+    void a_first_start_cut_short_is_finished_by_the_next_and_its_tables_are_vacuumed_too() throws Exception {
+        // What a first start leaves when it stops halfway: 067 applied, finance done, shopping half done.
+        InstallationTestSupport.migrateUpTo(database, "068-");
+        admin = id("INSERT INTO users (username, email, role) VALUES ('admin', 'admin@example.fr', 'SUPER_ADMIN') RETURNING id");
+        db.update("UPDATE instance SET setup_completed_at = now() WHERE id = 1");
+        spaceA = id("INSERT INTO spaces (type, name_encrypted, accent, glyph, encryption_salt) "
+            + "VALUES ('SHARED', ?, '#c17a5c', '🏡', ?) RETURNING id", Encryptors.delux(KEY, SALT_A).encrypt("Famille"), SALT_A);
+        db.update("INSERT INTO finance_categories (space_id, label_encrypted, color, icon, type, is_default) "
+            + "VALUES (?, ?, '#f59e0b', 'Utensils', 'EXPENSE', true)", spaceA, Encryptors.delux(KEY, SALT_A).encrypt("Alimentation"));
+        UUID aisle = id("INSERT INTO shopping_categories (space_id, name_encrypted, position) VALUES (?, ?, 0) RETURNING id",
+            spaceA, Encryptors.delux(KEY, SALT_A).encrypt("Épicerie"));
+        db.update("INSERT INTO shopping_items (space_id, category_id, name_encrypted, position) VALUES (?, ?, ?, 0)",
+            spaceA, aisle, Encryptors.delux(KEY, SALT_A).encrypt("Pâtes"));
+        db.update("INSERT INTO shopping_items (space_id, category_id, name, position) VALUES (?, ?, 'Riz', 1)", spaceA, aisle);
+        long financeFiles = filenode("finance_categories");
+
+        try (ConfigurableApplicationContext app = start(KEY)) {
+            assertThat(app.getBean(ShoppingItemRepository.class).findBySpaceId(spaceA))
+                .extracting(ShoppingItem::name).containsExactly("Pâtes", "Riz");
+            assertThat(app.getBean(CategoryRepository.class).findBySpaceId(spaceA))
+                .extracting(Category::label).containsExactly("Alimentation");
+        }
+
+        assertThat(PlaintextPerimeter.valuesInClear(db)).isZero();
+        assertThat(filenode("finance_categories")).as("encrypted by the start cut short, vacuumed by this one")
+            .isNotEqualTo(financeFiles);
+    }
 }

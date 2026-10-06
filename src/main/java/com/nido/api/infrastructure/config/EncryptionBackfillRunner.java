@@ -52,16 +52,18 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
         if (!pending) {
             return;
         }
-        Set<String> rewritten = new LinkedHashSet<>();
+        // Every table of the backfill, not only those rewritten now: a start cut short leaves tables it
+        // encrypted, whose columns in clear 068 has since dropped without rewriting them.
+        Set<String> tables = new LinkedHashSet<>();
         for (EncryptionBackfill backfill : backfills) {
             backfill.run().forEach((table, rows) -> {
                 if (rows > 0) {
                     log.info("Encrypted {} rows of {} that earlier versions stored in clear", rows, table);
-                    rewritten.add(table);
                 }
+                tables.add(table);
             });
         }
-        vacuum.vacuumFull(rewritten);
+        vacuum.vacuumFull(tables);
     }
 
     private void verifyExistingCiphertext(boolean newKey) {
