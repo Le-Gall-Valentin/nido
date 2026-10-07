@@ -1,7 +1,9 @@
 package com.nido.api.space.infrastructure.persistence.entity;
 
 import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.space.domain.model.SpaceType;
+import com.nido.api.space.infrastructure.persistence.SpaceSalt;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,9 +11,7 @@ import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.HexFormat;
 import java.util.UUID;
 
 @Entity
@@ -26,8 +26,12 @@ public class SpaceEntity extends AssignedUuidEntity {
     @Column(nullable = false, length = 20)
     private SpaceType type;
 
+    public static final SealedColumn NAME = SealedColumn.ofSpaceItself("spaces", "name_encrypted").withClearColumn("name");
+
     @Column(name = "name_encrypted", nullable = false)
     private String nameEncrypted;
+
+    public static final SealedColumn DESCRIPTION = SealedColumn.ofSpaceItself("spaces", "description_encrypted").withClearColumn("description");
 
     @Column(name = "description_encrypted")
     private String descriptionEncrypted;
@@ -57,8 +61,8 @@ public class SpaceEntity extends AssignedUuidEntity {
     /**
      * JPA allows exactly one of these per entity, so both defaults live here.
      *
-     * <p>Every space needs a stable per-space encryption salt before any of its data can be encrypted.
-     * The adapter now draws it itself, before encrypting the name; this stays as the net for a row
+     * <p>Every space needs a stable per-space encryption salt before any of its data can be sealed.
+     * The adapter draws it itself, before sealing the name; this stays as the net for a row
      * inserted without one, so no caller can forget it.
      *
      * <p>The timezone column has a database default, which an INSERT naming the column defeats:
@@ -73,17 +77,7 @@ public class SpaceEntity extends AssignedUuidEntity {
             timezone = "Europe/Paris";
         }
         if (encryptionSalt == null) {
-            encryptionSalt = newEncryptionSalt();
+            encryptionSalt = SpaceSalt.random();
         }
-    }
-
-    /**
-     * A new space's random salt. The adapter draws it before the insert, to encrypt the name with it;
-     * {@link #applyDefaults} draws one for a row that arrives without.
-     */
-    public static String newEncryptionSalt() {
-        byte[] bytes = new byte[16];
-        new SecureRandom().nextBytes(bytes);
-        return HexFormat.of().formatHex(bytes);
     }
 }

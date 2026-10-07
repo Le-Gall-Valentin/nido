@@ -1,10 +1,12 @@
 package com.nido.api;
 
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.space.infrastructure.persistence.SpaceSalt;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import org.springframework.security.crypto.encrypt.Encryptors;
 
 /**
- * A space row written straight through JPA — the way many tests set one up — with its name encrypted as
+ * A space row written straight through JPA — the way many tests set one up — with its name sealed as
  * the application would: SpaceRepositoryAdapter is not there to do it.
  */
 public final class TestSpaces {
@@ -14,11 +16,12 @@ public final class TestSpaces {
 
     private TestSpaces() {}
 
-    /** Gives the space a salt if it has none yet, then its name, encrypted with that salt and the test key. */
+    /** Gives the space a salt if it has none yet, then its name, sealed with that salt and the test key. */
     public static void name(SpaceEntity space, String name) {
         if (space.getEncryptionSalt() == null) {
-            space.setEncryptionSalt(SpaceEntity.newEncryptionSalt());
+            space.setEncryptionSalt(SpaceSalt.random());
         }
-        space.setNameEncrypted(Encryptors.delux(ENCRYPTION_KEY, space.getEncryptionSalt()).encrypt(name));
+        space.setNameEncrypted(SpaceSealer.of(Encryptors.delux(ENCRYPTION_KEY, space.getEncryptionSalt()))
+            .seal(SpaceEntity.NAME, space.getId(), name));
     }
 }

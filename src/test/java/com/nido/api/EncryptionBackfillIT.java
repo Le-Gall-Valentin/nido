@@ -234,7 +234,7 @@ class EncryptionBackfillIT {
             + "VALUES ('SHARED', 'Secret de famille', '#c17a5c', '🏡', 'not-a-hex-salt-not-a-hex-salt-00') RETURNING id");
 
         assertThatThrownBy(() -> start(KEY).close())
-            .hasStackTraceContaining("Could not encrypt row " + broken + " of spaces")
+            .hasStackTraceContaining("Could not seal row " + broken + " of spaces.name_encrypted")
             .satisfies(failure -> assertThat(stackTraceOf(failure)).doesNotContain("Secret de famille"));
     }
 

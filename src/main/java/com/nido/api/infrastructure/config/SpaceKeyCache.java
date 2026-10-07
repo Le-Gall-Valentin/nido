@@ -16,8 +16,8 @@ import java.util.function.Supplier;
  * one cache of them.
  *
  * <p>Takes the salt from its caller instead of looking it up: the space module reads it in the very row
- * it decrypts, and asking the space module for it from here would loop back into the space module's own
- * repository. Every other module goes through {@link SpaceEncryptorFactory}.
+ * it opens, and asking the space module for it from here would loop back into the space module's own
+ * repository. Every other module goes through {@link com.nido.api.infrastructure.sealing.SpaceSealers}.
  */
 @Component
 public class SpaceKeyCache {
@@ -29,17 +29,12 @@ public class SpaceKeyCache {
         this.encryptionKey = encryptionKey;
     }
 
-    /** The salt is only read when the key is not cached already. */
+    /**
+     * The salt is only read when the key is not cached already. It is read inside the cache's computation, so
+     * the supplier must never decrypt anything: the computation would call back into this cache.
+     */
     public TextEncryptor forSpace(UUID spaceId, Supplier<String> salt) {
         return keys.get(spaceId, id -> derive(salt.get()));
-    }
-
-    /**
-     * For a space that has no id yet: its name is encrypted before its row is inserted. Not cached —
-     * there is nothing to cache it under — and a space is created rarely enough for one derivation.
-     */
-    public TextEncryptor forNewSpace(String salt) {
-        return derive(salt);
     }
 
     private TextEncryptor derive(String salt) {

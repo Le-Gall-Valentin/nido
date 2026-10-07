@@ -1,6 +1,8 @@
 package com.nido.api.space.infrastructure.persistence.adapter;
 
 import com.nido.api.infrastructure.config.SpaceKeyCache;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.shared.model.NameOrdering;
 import com.nido.api.shared.model.PageResult;
 import com.nido.api.space.domain.model.CreateSharedSpaceCommand;
 import com.nido.api.space.domain.model.Space;
@@ -16,6 +18,7 @@ import com.nido.api.space.domain.port.out.SpaceAdminPort;
 import com.nido.api.space.domain.port.out.SpaceCommandPort;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
 import com.nido.api.space.domain.port.out.SpaceRepository;
+import com.nido.api.space.infrastructure.persistence.SpaceSalt;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceMemberEntity;
 import com.nido.api.space.infrastructure.persistence.repository.MemberCount;
@@ -25,7 +28,6 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
@@ -78,7 +80,7 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
                 roleBySpace.get(e.getId()), counts.getOrDefault(e.getId(), 0L)))
             // l'espace perso d'abord, puis les groupes par nom
             .sorted(Comparator.comparing((SpaceSummaryView v) -> v.type() != SpaceType.PERSONAL)
-                .thenComparing(SpaceSummaryView::name, String.CASE_INSENSITIVE_ORDER))
+                .thenComparing(SpaceSummaryView::name, NameOrdering.comparator()))
             .toList();
     }
 
@@ -117,8 +119,8 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
     public Space createPersonal(UUID ownerUserId) {
         SpaceEntity e = new SpaceEntity();
         e.setType(SpaceType.PERSONAL);
-        e.setEncryptionSalt(SpaceEntity.newEncryptionSalt());
-        e.setNameEncrypted(keys.forNewSpace(e.getEncryptionSalt()).encrypt(PERSONAL_SPACE_NAME));
+        e.setEncryptionSalt(SpaceSalt.random());
+        e.setNameEncrypted(sealerOf(e).seal(SpaceEntity.NAME, e.getId(), PERSONAL_SPACE_NAME));
         e.setAccent(SpaceAppearance.PERSONAL_ACCENT);
         e.setGlyph(SpaceAppearance.PERSONAL_GLYPH);
         e.setPersonalOwnerId(ownerUserId);
@@ -130,11 +132,11 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
     public Space createShared(CreateSharedSpaceCommand command) {
         SpaceEntity e = new SpaceEntity();
         e.setType(SpaceType.SHARED);
-        // The salt before the insert: the name is encrypted with it, and the row has no id to cache a key under yet.
-        e.setEncryptionSalt(SpaceEntity.newEncryptionSalt());
-        TextEncryptor encryptor = keys.forNewSpace(e.getEncryptionSalt());
-        e.setNameEncrypted(encryptor.encrypt(command.name()));
-        e.setDescriptionEncrypted(command.description() == null ? null : encryptor.encrypt(command.description()));
+        // The salt before the insert: the name is sealed with it.
+        e.setEncryptionSalt(SpaceSalt.random());
+        SpaceSealer sealer = sealerOf(e);
+        e.setNameEncrypted(sealer.seal(SpaceEntity.NAME, e.getId(), command.name()));
+        e.setDescriptionEncrypted(sealer.sealNullable(SpaceEntity.DESCRIPTION, e.getId(), command.description()));
         e.setAccent(command.accent());
         e.setGlyph(command.glyph());
         e.setCreatedBy(command.creatorUserId());
@@ -148,10 +150,11 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
             .orElseThrow(SpaceException.SpaceNotFound::new);
         // Modification partielle : seuls les champs fournis sont appliqués. Une description
         // vide est un effacement explicite, à distinguer d'une absence.
-        TextEncryptor encryptor = encryptorOf(e);
-        if (command.name() != null) e.setNameEncrypted(encryptor.encrypt(command.name()));
+        SpaceSealer sealer = sealerOf(e);
+        if (command.name() != null) e.setNameEncrypted(sealer.seal(SpaceEntity.NAME, e.getId(), command.name()));
         if (command.description() != null) {
-            e.setDescriptionEncrypted(command.description().isEmpty() ? null : encryptor.encrypt(command.description()));
+            e.setDescriptionEncrypted(command.description().isEmpty() ? null
+                : sealer.seal(SpaceEntity.DESCRIPTION, e.getId(), command.description()));
         }
         if (command.accent() != null) e.setAccent(command.accent());
         if (command.glyph() != null) e.setGlyph(command.glyph());
@@ -244,18 +247,20 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
         return new SpaceException.DataIntegrityError();
     }
 
-    private TextEncryptor encryptorOf(SpaceEntity e) {
-        return keys.forSpace(e.getId(), e::getEncryptionSalt);
+    // Built on the key cache with the row's own salt rather than through SpaceSealers, which asks this module for the
+    // salt: the space module would depend on itself through a bean.
+    private SpaceSealer sealerOf(SpaceEntity e) {
+        return SpaceSealer.of(keys.forSpace(e.getId(), e::getEncryptionSalt));
     }
 
     private String nameOf(SpaceEntity e) {
-        return encryptorOf(e).decrypt(e.getNameEncrypted());
+        return sealerOf(e).open(SpaceEntity.NAME, e.getId(), e.getNameEncrypted());
     }
 
     private Space toSpace(SpaceEntity e) {
-        TextEncryptor encryptor = encryptorOf(e);
-        String description = e.getDescriptionEncrypted() == null ? null : encryptor.decrypt(e.getDescriptionEncrypted());
-        return new Space(e.getId(), e.getType(), encryptor.decrypt(e.getNameEncrypted()), description,
+        SpaceSealer sealer = sealerOf(e);
+        return new Space(e.getId(), e.getType(), sealer.open(SpaceEntity.NAME, e.getId(), e.getNameEncrypted()),
+            sealer.openNullable(SpaceEntity.DESCRIPTION, e.getId(), e.getDescriptionEncrypted()),
             e.getAccent(), e.getGlyph(), e.getPersonalOwnerId(),
             ZoneId.of(e.getTimezone()), e.getCreatedAt());
     }

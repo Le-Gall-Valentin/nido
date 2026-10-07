@@ -3,7 +3,9 @@ package com.nido.api.space.infrastructure.persistence.adapter;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
-import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
+import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.CreateSharedSpaceCommand;
 import com.nido.api.space.domain.model.Space;
@@ -12,13 +14,13 @@ import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceSummaryView;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.domain.model.UpdateSpaceCommand;
+import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceMemberJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.encrypt.TextEncryptor;
 
 import java.util.List;
 import java.time.ZoneId;
@@ -36,7 +38,7 @@ class SpaceRepositoryAdapterIT {
     @Autowired SpaceMemberJpaRepository spaceMemberJpaRepository;
     @Autowired UserIdentityJpaRepository userIdentityJpaRepository;
     @Autowired JdbcTemplate jdbc;
-    @Autowired SpaceEncryptorFactory encryptors;
+    @Autowired SpaceSealers sealers;
 
     private UUID alice;
     private UUID bob;
@@ -191,10 +193,10 @@ class SpaceRepositoryAdapterIT {
             "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
 
         Map<String, Object> row = jdbc.queryForMap("SELECT name_encrypted, description_encrypted FROM spaces WHERE id = ?", space.id());
-        TextEncryptor key = encryptors.forSpace(space.id());
-        assertThat((String) row.get("name_encrypted")).doesNotContain("Famille");
-        assertThat(key.decrypt((String) row.get("name_encrypted"))).isEqualTo("Famille Le Gall 🏡");
-        assertThat(key.decrypt((String) row.get("description_encrypted"))).isEqualTo("Rue des Lilas");
+        SpaceSealer sealer = sealers.forSpace(space.id());
+        assertThat((String) row.get("name_encrypted")).startsWith("v2:").doesNotContain("Famille");
+        assertThat(sealer.open(SpaceEntity.NAME, space.id(), (String) row.get("name_encrypted"))).isEqualTo("Famille Le Gall 🏡");
+        assertThat(sealer.open(SpaceEntity.DESCRIPTION, space.id(), (String) row.get("description_encrypted"))).isEqualTo("Rue des Lilas");
         assertThat(adapter.findById(space.id()).orElseThrow())
             .extracting(Space::name, Space::description).containsExactly("Famille Le Gall 🏡", "Rue des Lilas");
     }
@@ -205,7 +207,7 @@ class SpaceRepositoryAdapterIT {
 
         String stored = jdbc.queryForObject("SELECT name_encrypted FROM spaces WHERE id = ?", String.class, space.id());
 
-        assertThat(encryptors.forSpace(space.id()).decrypt(stored)).isEqualTo("Perso");
+        assertThat(sealers.forSpace(space.id()).open(SpaceEntity.NAME, space.id(), stored)).isEqualTo("Perso");
     }
 
     @Test
@@ -218,5 +220,37 @@ class SpaceRepositoryAdapterIT {
         assertThat(updated.name()).isEqualTo("Coloc rue Y");
         assertThat(updated.description()).isNull();
         assertThat(jdbc.queryForObject("SELECT description_encrypted FROM spaces WHERE id = ?", String.class, space.id())).isNull();
+    }
+
+    @Test
+    void a_new_description_is_sealed_too() {
+        Space space = adapter.createShared(new CreateSharedSpaceCommand("Coloc", null, "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
+
+        adapter.update(new UpdateSpaceCommand(space.id(), null, "Rue des Lilas", null, null, null));
+
+        String stored = jdbc.queryForObject("SELECT description_encrypted FROM spaces WHERE id = ?", String.class, space.id());
+        assertThat(stored).startsWith("v2:").doesNotContain("Lilas");
+        assertThat(sealers.forSpace(space.id()).open(SpaceEntity.DESCRIPTION, space.id(), stored)).isEqualTo("Rue des Lilas");
+        assertThat(adapter.findById(space.id()).orElseThrow().description()).isEqualTo("Rue des Lilas");
+    }
+
+    @Test
+    void my_shared_spaces_come_in_french_alphabetical_order_after_the_personal_one() {
+        adapter.add(adapter.createPersonal(alice).id(), alice, SpaceRole.OWNER); // createPersonal adds no membership
+        for (String name : List.of("Zeste", "éclair", "abricot")) {
+            Space space = adapter.createShared(new CreateSharedSpaceCommand(name, null, "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
+            adapter.add(space.id(), alice, SpaceRole.OWNER);
+        }
+
+        assertThat(adapter.findMySpaces(alice)).extracting(SpaceSummaryView::name).containsExactly("Perso", "abricot", "éclair", "Zeste");
+    }
+
+    @Test
+    void a_name_or_a_description_moved_to_the_other_column_is_refused() {
+        Space space = adapter.createShared(new CreateSharedSpaceCommand("Coloc", "Rue des Lilas", "#c17a5c", "🏡", alice,
+            ZoneId.of("Europe/Paris")));
+        jdbc.update("UPDATE spaces SET name_encrypted = description_encrypted WHERE id = ?", space.id());
+
+        assertThatThrownBy(() -> adapter.findById(space.id())).isInstanceOf(SealedValueRejected.class);
     }
 }

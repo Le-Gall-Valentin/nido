@@ -1,20 +1,16 @@
 package com.nido.api.space.infrastructure.config;
 
-import com.nido.api.infrastructure.config.EncryptionBackfill;
-import com.nido.api.infrastructure.config.PlaintextTable;
-import com.nido.api.infrastructure.config.PlaintextTableEncryptor;
-import com.nido.api.infrastructure.config.PlaintextTablesBackfill;
-import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
+import com.nido.api.infrastructure.sealing.SealedColumns;
+import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration(proxyBeanMethods = false)
 public class SpaceEncryptionBackfillConfig {
 
-    /** The names and descriptions versions before 0.13.1 stored in clear — see EncryptionBackfillRunner. */
+    /** The columns of spaces that hold sealed values — see SealedValueMigration. */
     @Bean
-    EncryptionBackfill spaceEncryptionBackfill(PlaintextTableEncryptor encryptor, SpaceEncryptorFactory spaces) {
-        return new PlaintextTablesBackfill(encryptor, spaces::forSpace,
-            PlaintextTable.ofSpaceItself("spaces", "name", "description"));
+    SealedColumns spaceSealedColumns() {
+        return SealedColumns.of(SpaceEntity.NAME, SpaceEntity.DESCRIPTION);
     }
 }
