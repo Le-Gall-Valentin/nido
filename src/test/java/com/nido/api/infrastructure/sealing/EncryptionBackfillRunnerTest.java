@@ -3,9 +3,6 @@ package com.nido.api.infrastructure.sealing;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import com.nido.api.instance.application.port.in.ForgetEncryptionKeyFingerprintUseCase;
-import com.nido.api.instance.domain.model.KeyFingerprint;
-import com.nido.api.instance.domain.model.ResolvedEncryptionKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,7 +10,6 @@ import org.mockito.InOrder;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,13 +34,13 @@ class EncryptionBackfillRunnerTest {
     private final SealingLock lock = mock(SealingLock.class);
     private final PendingVacuum pendingVacuum = mock(PendingVacuum.class);
     private final TableVacuum vacuum = mock(TableVacuum.class);
-    private final ForgetEncryptionKeyFingerprintUseCase forget = mock(ForgetEncryptionKeyFingerprintUseCase.class);
-    private final KeyFingerprint fingerprint = KeyFingerprint.of("the-key-of-this-start");
-    private final EncryptionBackfillRunner runner = runner(Optional.empty());
+    private final StartKey knownKey = mock(StartKey.class);
+    private final StartKey newKey = mock(StartKey.class);
+    private final EncryptionBackfillRunner runner = runner(knownKey);
 
-    private EncryptionBackfillRunner runner(Optional<KeyFingerprint> recordedAtThisStart) {
+    private EncryptionBackfillRunner runner(StartKey key) {
         return new EncryptionBackfillRunner(List.of(SealedColumns.of(titles), SealedColumns.of(items)), List.of(finance), migration,
-            sealers, lock, vacuum, pendingVacuum, new ResolvedEncryptionKey("the-key-of-this-start", recordedAtThisStart), forget);
+            sealers, lock, vacuum, pendingVacuum, key);
     }
 
     private final Logger logger = (Logger) LoggerFactory.getLogger(EncryptionBackfillRunner.class);
@@ -52,6 +48,7 @@ class EncryptionBackfillRunnerTest {
 
     @BeforeEach
     void listen() {
+        when(newKey.fingerprintRecordedAtThisStart()).thenReturn(true);
         logged.start();
         logger.addAppender(logged);
         doAnswer(call -> {
@@ -127,7 +124,7 @@ class EncryptionBackfillRunnerTest {
 
     @Test
     void a_key_new_to_the_installation_is_checked_even_with_nothing_left_to_seal() {
-        runner(Optional.of(fingerprint)).afterSingletonsInstantiated();
+        runner(newKey).afterSingletonsInstantiated();
 
         verify(finance).verify();
         verify(migration, never()).migrate(any(), any());
@@ -138,9 +135,9 @@ class EncryptionBackfillRunnerTest {
     void a_new_key_that_does_not_decrypt_has_its_fingerprint_taken_back_so_the_right_key_can_start_next() {
         doThrow(new IllegalStateException("does not decrypt")).when(finance).verify();
 
-        assertThatThrownBy(runner(Optional.of(fingerprint))::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
+        assertThatThrownBy(runner(newKey)::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
 
-        verify(forget).forget(fingerprint);
+        verify(newKey).forgetFingerprintRecordedAtThisStart();
     }
 
     @Test
@@ -150,7 +147,7 @@ class EncryptionBackfillRunnerTest {
 
         assertThatThrownBy(runner::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
 
-        verifyNoInteractions(forget);
+        verify(knownKey, never()).forgetFingerprintRecordedAtThisStart();
     }
 
     @Test
