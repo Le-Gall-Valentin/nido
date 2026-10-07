@@ -6,7 +6,9 @@ import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CreateEventCommand;
 import com.nido.api.calendar.domain.model.CreateRecurringEventSeriesCommand;
 import com.nido.api.calendar.domain.model.RecurrenceInterval;
+import com.nido.api.calendar.domain.model.RecurringEventSeries;
 import com.nido.api.calendar.domain.model.UpdateEventCommand;
+import com.nido.api.calendar.domain.model.UpdateRecurringEventSeriesCommand;
 import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
 import com.nido.api.calendar.domain.port.out.EventExclusionRepository;
 import com.nido.api.calendar.domain.port.out.RecurringEventSeriesRepository;
@@ -160,6 +162,37 @@ class CalendarEventRepositoryAdapterIT {
         assertThat(updated.participantIds()).isEmpty();
         assertThat(events.findById(created.id())).get()
             .extracting(CalendarEvent::participantIds).isEqualTo(List.of());
+    }
+
+    @Test
+    void anUpdatedEventReadsBackItsDescriptionAndPlace() {
+        CalendarEvent created = events.create(plainEvent("Dentiste", LocalDate.of(2026, 3, 2)));
+
+        events.update(new UpdateEventCommand(
+            created.id(), "Dentiste", "Détartrage", "Cabinet du Dr Martin", true, LocalDate.of(2026, 3, 2), null,
+            LocalDate.of(2026, 3, 2), null, null, List.of()));
+
+        assertThat(events.findById(created.id())).get()
+            .extracting(CalendarEvent::description, CalendarEvent::location)
+            .containsExactly("Détartrage", "Cabinet du Dr Martin");
+    }
+
+    @Test
+    void aSeriesKeepsItsDescriptionAndPlaceWhenCreatedAndWhenUpdated() {
+        UUID seriesId = series.create(new CreateRecurringEventSeriesCommand(
+            spaceId, "Piano", "Solfège", "Conservatoire", false, LocalTime.of(18, 0), LocalTime.of(19, 0), 0, null,
+            RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 2, 3), null, List.of(), aliceId)).id();
+        assertThat(series.findById(seriesId)).get()
+            .extracting(RecurringEventSeries::description, RecurringEventSeries::location)
+            .containsExactly("Solfège", "Conservatoire");
+
+        series.update(new UpdateRecurringEventSeriesCommand(
+            seriesId, "Piano", "Gammes", "Salle 2", false, LocalTime.of(18, 0), LocalTime.of(19, 0), 0, null,
+            RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 2, 3), null, List.of()));
+
+        assertThat(series.findById(seriesId)).get()
+            .extracting(RecurringEventSeries::description, RecurringEventSeries::location)
+            .containsExactly("Gammes", "Salle 2");
     }
 
     @Test

@@ -12,6 +12,7 @@ import com.nido.api.finance.domain.model.RecurrenceInterval;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
+import com.nido.api.finance.domain.model.UpdateRecurringSeriesCommand;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceRecurringSeriesJpaRepository;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
@@ -150,5 +151,23 @@ class RecurringTransactionSeriesRepositoryAdapterIT {
 
         Transaction survived = transactionAdapter.findById(materialized.id()).orElseThrow();
         assertThat(survived.recurringSeriesId()).isNull();
+    }
+
+    @Test
+    void an_updated_series_reads_back_its_new_label_and_amount() {
+        RecurringTransactionSeries created = adapter.create(new CreateRecurringSeriesCommand(
+            spaceId, "Loyer", new BigDecimal("800.00"), TransactionType.EXPENSE, categoryId, aliceId,
+            List.of(new ContributionInput(aliceId, null)), RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null),
+            List.of(new Contribution(aliceId, new BigDecimal("800.00"))));
+
+        adapter.update(new UpdateRecurringSeriesCommand(created.id(), spaceId, "Loyer 2027", new BigDecimal("825.00"),
+            TransactionType.EXPENSE, categoryId, aliceId, List.of(new ContributionInput(aliceId, null)),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null),
+            List.of(new Contribution(aliceId, new BigDecimal("825.00"))));
+
+        RecurringTransactionSeries reread = adapter.findById(created.id()).orElseThrow();
+        assertThat(reread.label()).isEqualTo("Loyer 2027");
+        assertThat(reread.amount()).isEqualByComparingTo("825.00");
+        assertThat(reread.contributors()).extracting(Contribution::shareAmount).containsExactly(new BigDecimal("825.00"));
     }
 }

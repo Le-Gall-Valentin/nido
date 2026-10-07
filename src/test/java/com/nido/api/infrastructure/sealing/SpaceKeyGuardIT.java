@@ -86,6 +86,14 @@ class SpaceKeyGuardIT {
     }
 
     @Test
+    void a_sealed_value_that_opens_but_belongs_elsewhere_still_proves_the_key() {
+        // Only the right key opens it at all: where it belongs is the reading's business, not the key check's.
+        row(SpaceSealer.of(KEY).seal(LABEL, UUID.randomUUID(), "moved here"), null);
+
+        assertThatCode(guard(KEY)::verify).doesNotThrowAnyException();
+    }
+
+    @Test
     void a_key_that_cannot_be_derived_is_not_reported_as_a_wrong_key() {
         row(KEY.encrypt("Loyer"), null);
         SpaceKeyGuard guard = new SpaceKeyGuard(jdbc, space -> {
