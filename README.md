@@ -107,10 +107,20 @@ error, and the log has an ERROR line naming the table, the column and the row, n
 The value of finance_transactions.amount_encrypted in row 3f… belongs to another place
 ```
 
-To get the page back, put that row right: restore it from a backup taken before the change or, if you can do without
-it, delete the row. The same goes for the start that updates to 0.14.0: if it stops on
-`Could not seal row … of <table>.<column>`, that row is the one to restore or delete, then start again — the work
-already done is kept.
+To get the page back, put that value right, in this order of preference:
+
+1. Restore the row from a backup taken before the change.
+2. If the column may be empty — the description of a space, a recipe or an event, the note of a recipe, the place of
+   an event, recurring events included — empty it: `UPDATE <table> SET <column> = NULL WHERE id = '<row>';`
+3. Otherwise, if you can do without the row, delete it — knowing that Postgres deletes what depends on it too:
+   - **never delete a row of `spaces`**: it is the whole space, with everything in it. Restore it instead;
+   - a finance category takes its transactions, budget and recurring transactions with it, a shopping aisle its
+     items, a recurring event its events;
+   - a task, a recipe, a transaction or a savings goal only takes what belongs to it: subtasks, ingredients, steps
+     and menu entries, shares, contributions.
+
+The same goes for the start that updates to 0.14.0: if it stops on `Could not seal row … of <table>.<column>`, put that
+row right the same way, then start again — the work already done is kept.
 
 ## Settings
 
