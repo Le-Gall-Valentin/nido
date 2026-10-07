@@ -378,4 +378,22 @@ class RecipeControllerIT {
             .compact();
         return new Cookie("access_token", token);
     }
+
+    @Test
+    void half_an_emoji_in_a_step_or_an_ingredient_is_a_bad_request() throws Exception {
+        String recipe = """
+            {"name":"Œufs","category":"PLAT","minutes":5,"referencePortions":1,
+             "ingredients":[{"name":"%s","quantity":2,"unit":"PIECE"}],"steps":["%s"]}
+            """;
+        String egg = "\\ud83e\\udd5a";
+        String halfAnEgg = "\\ud83e";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(recipe.formatted(egg, egg)))
+            .andExpect(status().isCreated());
+        for (String body : new String[] {recipe.formatted(egg, halfAnEgg), recipe.formatted(halfAnEgg, egg)}) {
+            mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                    .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+        }
+    }
 }
