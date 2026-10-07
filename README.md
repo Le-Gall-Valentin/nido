@@ -25,8 +25,9 @@ The logs show a setup code:
 Open `http://<this machine>:8080`, enter the code, and follow the steps: your administrator account,
 Nido's address, email if you wish, and your encryption key.
 
-**Save the encryption key the last step shows.** It encrypts two-factor authentication, finances and the
-calendar. It is shown once; keep it in a password manager.
+**Save the encryption key the last step shows.** It encrypts what your household keeps in Nido — finances,
+calendar, shopping lists, tasks, recipes, the names of your spaces — and two-factor authentication. It is shown
+once; keep it in a password manager.
 
 Nothing else to fill in: the database and Redis passwords are generated at the first start, and so are
 Nido's own secrets. The code changes at every restart.
@@ -79,6 +80,9 @@ docker compose up -d
 
 Pin the version with `NIDO_VERSION=0.12.0` in `.env`, so that `pull` never moves you to a new version by surprise.
 
+Before updating to 0.14.0, back up the database (see below): its first start rewrites every encrypted value, and
+the previous version cannot read them afterwards.
+
 ## Backups
 
 Back up two things, **and keep them apart**:
@@ -90,8 +94,8 @@ Back up two things, **and keep them apart**:
 Nido encrypts sensitive data with that key, and keeps the key out of the database on purpose: a stolen
 database dump alone reveals nothing. Stored together, the two would undo that.
 
-Losing the key makes two-factor authentication, finances and the calendar unreadable. Nido refuses to
-start with a key that is not the one its data was encrypted with, rather than writing data nobody can read.
+Losing the key makes all of that unreadable. Nido refuses to start with a key that is not the one its data was
+encrypted with, rather than writing data nobody can read.
 
 ## Settings
 

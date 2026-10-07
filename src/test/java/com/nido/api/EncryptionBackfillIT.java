@@ -1,7 +1,14 @@
 package com.nido.api;
 
+import com.nido.api.calendar.domain.model.CalendarEvent;
+import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
 import com.nido.api.finance.domain.model.Category;
+import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
+import com.nido.api.finance.domain.port.out.TransactionRepository;
+import com.nido.api.infrastructure.sealing.SealedColumn;
+import com.nido.api.infrastructure.sealing.SealedColumns;
+import com.nido.api.infrastructure.sealing.SealedValueRejected;
 import com.nido.api.kitchen.domain.model.Recipe;
 import com.nido.api.kitchen.domain.model.RecipeIngredient;
 import com.nido.api.kitchen.domain.port.out.RecipeRepository;
@@ -21,27 +28,35 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.logging.LoggingSystem;
 import org.springframework.boot.web.server.context.WebServerInitializedEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.security.crypto.encrypt.Encryptors;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 /**
- * 0.13.1 on a database written by an earlier version. What that version stored in clear is encrypted at
- * the first start, before anyone can be served, and the columns that held it go at the next start. Every
- * start validates the schema as production does — the shared test context does not.
+ * 0.14.0 on a database written by an earlier version. What that version stored in clear, and what it encrypted
+ * without the place it belongs to, is sealed at the first start, before anyone can be served, and the columns that
+ * held values in clear go at the next start. Every start validates the schema as production does — the shared test
+ * context does not.
  *
  * <p>The earlier version is 0.11's schema (migrated up to 064), so this is also an installation that
  * skips versions: the tables of the perimeter have not changed since.
@@ -114,8 +129,13 @@ class EncryptionBackfillIT {
             + "VALUES (?, 'Alimentation', '#f59e0b', 'Utensils', 'EXPENSE', true)", spaceA);
         db.update("INSERT INTO finance_categories (space_id, label, color, icon, type, is_default) "
             + "VALUES (?, 'Cantine des enfants', '#6366f1', 'Home', 'EXPENSE', true)", spaceA);
-        db.update("INSERT INTO finance_categories (space_id, label_encrypted, color, icon, type, is_default) "
-            + "VALUES (?, ?, '#ec4899', 'Star', 'EXPENSE', false)", spaceA, Encryptors.delux(KEY, SALT_A).encrypt("Vacances"));
+        TextEncryptor v1 = Encryptors.delux(KEY, SALT_A);
+        UUID holidays = id("INSERT INTO finance_categories (space_id, label_encrypted, color, icon, type, is_default) "
+            + "VALUES (?, ?, '#ec4899', 'Star', 'EXPENSE', false) RETURNING id", spaceA, v1.encrypt("Vacances"));
+        for (String[] spent : new String[][] {{"Loyer", "850.00"}, {"Café", "3.50"}}) {
+            db.update("INSERT INTO finance_transactions (space_id, label_encrypted, amount_encrypted, type, category_id, date) "
+                + "VALUES (?, ?, ?, 'EXPENSE', ?, DATE '2026-10-01')", spaceA, v1.encrypt(spent[0]), v1.encrypt(spent[1]), holidays);
+        }
         db.update("INSERT INTO calendar_events (space_id, title_encrypted, all_day, start_date, end_date, created_by) "
             + "VALUES (?, ?, true, DATE '2026-10-06', DATE '2026-10-06', ?)", spaceB, Encryptors.delux(KEY, SALT_B).encrypt("Dîner chez Mamie"), admin);
     }
@@ -143,6 +163,62 @@ class EncryptionBackfillIT {
         assertThat(recipe.steps()).containsExactly("Battre les œufs");
         assertThat(app.getBean(CategoryRepository.class).findBySpaceId(spaceA)).extracting(Category::label)
             .containsExactlyInAnyOrder("Alimentation", "Cantine des enfants", "Vacances");
+        assertThat(app.getBean(TransactionRepository.class).findAllBySpaceId(spaceA))
+            .extracting(Transaction::label, t -> t.amount().toPlainString())
+            .containsExactlyInAnyOrder(tuple("Loyer", "850.00"), tuple("Café", "3.50"));
+        assertThat(app.getBean(CalendarEventRepository.class)
+                .findBySpaceIdOverlapping(spaceB, LocalDate.of(2026, 10, 6), LocalDate.of(2026, 10, 6)))
+            .extracting(CalendarEvent::title).containsExactly("Dîner chez Mamie");
+    }
+
+    @Test
+    void after_the_upgrade_every_value_is_sealed_amounts_look_alike_and_a_swap_is_refused() throws Exception {
+        writtenInClearByAnEarlierVersion();
+        try (ConfigurableApplicationContext app = start(KEY)) {
+            for (SealedColumns columns : app.getBeansOfType(SealedColumns.class).values()) {
+                for (SealedColumn column : columns.columns()) {
+                    assertThat(db.queryForObject("SELECT count(*) FROM " + column.table() + " WHERE " + column.column()
+                        + " IS NOT NULL AND " + column.column() + " NOT LIKE 'v2:%'", Long.class)).as(column.toString()).isZero();
+                }
+            }
+            assertThat(db.queryForList("SELECT DISTINCT length(amount_encrypted) FROM finance_transactions", Integer.class))
+                .as("3.50 and 850.00 take the same room").hasSize(1);
+
+            db.update("""
+                UPDATE finance_transactions t SET amount_encrypted = o.amount_encrypted FROM finance_transactions o
+                WHERE t.space_id = o.space_id AND t.id <> o.id""");
+
+            assertThatThrownBy(() -> app.getBean(TransactionRepository.class).findAllBySpaceId(spaceA))
+                .isInstanceOf(SealedValueRejected.class);
+        }
+    }
+
+    @Test
+    void two_instances_starting_together_both_start() throws Exception {
+        // Liquibase's own lock makes the second wait for the first's migrations, and the sealing lock then makes it
+        // find nothing left. Two migrations overlapping, and both succeeding, is SealedValueMigrationIT's to show.
+        writtenInClearByAnEarlierVersion();
+        // Spring Boot sets logging up for the whole JVM at every start, which two starts at once cannot share: both
+        // keep the logging of the test run instead. Two processes, as in production, have one each.
+        String loggingSystem = System.setProperty(LoggingSystem.SYSTEM_PROPERTY, LoggingSystem.NONE);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            List<Future<ConfigurableApplicationContext>> starts = List.of(pool.submit(() -> start(KEY)), pool.submit(() -> start(KEY)));
+            for (Future<ConfigurableApplicationContext> started : starts) {
+                started.get().close();
+            }
+        } finally {
+            pool.shutdown();
+            if (loggingSystem == null) {
+                System.clearProperty(LoggingSystem.SYSTEM_PROPERTY);
+            } else {
+                System.setProperty(LoggingSystem.SYSTEM_PROPERTY, loggingSystem);
+            }
+        }
+
+        assertThat(PlaintextPerimeter.valuesInClear(db)).isZero();
+        assertThat(db.queryForObject("SELECT count(*) FROM finance_transactions WHERE amount_encrypted NOT LIKE 'v2:%'", Long.class))
+            .isZero();
     }
 
     private long filenode(String table) {
