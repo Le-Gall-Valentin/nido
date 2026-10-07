@@ -1,9 +1,13 @@
 package com.nido.api.infrastructure.sealing;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
@@ -15,6 +19,7 @@ import java.sql.Statement;
 public class SealingLock {
 
     private static final String KEY = "hashtext('nido-sealed-values')";
+    private static final Logger log = LoggerFactory.getLogger(SealingLock.class);
 
     private final JdbcTemplate jdbc;
 
@@ -25,7 +30,10 @@ public class SealingLock {
     public void whileHeld(Runnable work) {
         jdbc.execute((ConnectionCallback<Void>) connection -> {
             try (Statement statement = connection.createStatement()) {
-                statement.execute("SELECT pg_advisory_lock(" + KEY + ")");
+                if (!taken(statement)) {
+                    log.info("Another instance is sealing values: waiting for it to finish");
+                    statement.execute("SELECT pg_advisory_lock(" + KEY + ")");
+                }
                 try {
                     work.run();
                 } finally {
@@ -34,5 +42,11 @@ public class SealingLock {
             }
             return null;
         });
+    }
+
+    private static boolean taken(Statement statement) throws SQLException {
+        try (ResultSet result = statement.executeQuery("SELECT pg_try_advisory_lock(" + KEY + ")")) {
+            return result.next() && result.getBoolean(1);
+        }
     }
 }
