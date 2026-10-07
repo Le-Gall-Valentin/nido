@@ -3,6 +3,7 @@ package com.nido.api.infrastructure.sealing;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * A column whose values are sealed — see {@link SpaceSealer}. Declared once, in its entity, next to its mapping;
@@ -10,6 +11,9 @@ import java.util.UUID;
  * factories only, from names checked to be plain identifiers.
  */
 public final class SealedColumn {
+
+    private static final Pattern REFERENCE = Pattern.compile("[a-z][a-z_]*\\.[a-z][a-z_]*:"
+        + "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
 
     private final String table;
     private final String column;
@@ -60,6 +64,11 @@ public final class SealedColumn {
 
     public String referenceFor(UUID rowId) {
         return table + "." + column + ":" + Objects.requireNonNull(rowId, "rowId");
+    }
+
+    /** Whether a text has the shape of a {@link #referenceFor reference}: what only a sealing could have written. */
+    static boolean isReference(String text) {
+        return REFERENCE.matcher(text).matches();
     }
 
     /** The SQL expression giving a row's space, over the table aliased {@code t} and its {@link #join()}. */

@@ -53,6 +53,18 @@ class SpaceSealerTest {
     }
 
     @Test
+    void a_claimed_place_that_is_no_place_never_reaches_the_log() {
+        // Only a ciphertext of the format before 0.14.0 — a text someone typed — can claim such a place.
+        String typed = SpaceSealer.PREFIX + KEY.encrypt(Envelope.wrap("Loyer\nERROR forged line", "850.00"));
+
+        assertThatThrownBy(() -> sealer.open(AMOUNT, rent, typed))
+            .isInstanceOfSatisfying(SealedValueRejected.class, e -> {
+                assertThat(e.reason()).isEqualTo(SealedValueRejected.Reason.MALFORMED);
+                assertThat(e.getMessage()).doesNotContain("forged");
+            });
+    }
+
+    @Test
     void the_nullable_forms_keep_null_as_null() {
         assertThat(sealer.sealNullable(LABEL, rent, null)).isNull();
         assertThat(sealer.openNullable(LABEL, rent, null)).isNull();

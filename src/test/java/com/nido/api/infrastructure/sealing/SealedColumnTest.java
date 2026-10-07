@@ -33,4 +33,14 @@ class SealedColumnTest {
             .isInstanceOf(IllegalArgumentException.class);
         assertThat(SealedColumn.ofSpace("tasks", "title_encrypted").withClearColumn("title").clearColumn()).contains("title");
     }
+
+    @Test
+    void only_what_a_sealing_writes_has_the_shape_of_a_reference() {
+        UUID id = UUID.fromString("6f1d7c4e-0000-4000-8000-000000000001");
+        assertThat(SealedColumn.isReference(SealedColumn.ofSpace("tasks", "title_encrypted").referenceFor(id))).isTrue();
+        for (String text : new String[] {"", "Loyer", "tasks.title_encrypted", "tasks.title_encrypted:" + id + "\nforged",
+                "Tasks.title_encrypted:" + id, "tasks.title_encrypted:" + id.toString().toUpperCase()}) {
+            assertThat(SealedColumn.isReference(text)).as(text).isFalse();
+        }
+    }
 }
