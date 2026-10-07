@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.security.crypto.encrypt.Encryptors;
 
 import java.util.List;
@@ -94,6 +95,24 @@ class TableVacuumIT {
         vacuum.vacuumFull("vacuum_probes");
 
         assertThat(filenode()).isNotEqualTo(before);
+    }
+
+    @Test
+    void a_pool_that_hands_out_connections_in_a_transaction_still_gets_its_vacuum_and_its_connection_back_as_it_was() throws Exception {
+        // VACUUM refuses to run inside a transaction: autocommit is forced for it, whatever the pool says.
+        SingleConnectionDataSource inATransaction = new SingleConnectionDataSource(SharedContainers.POSTGRES.getJdbcUrl(),
+            SharedContainers.POSTGRES.getUsername(), SharedContainers.POSTGRES.getPassword(), true);
+        inATransaction.setAutoCommit(false);
+        try {
+            long before = filenode();
+
+            assertThat(new TableVacuum(new JdbcTemplate(inATransaction)).vacuumFull("vacuum_probes")).isTrue();
+
+            assertThat(filenode()).isNotEqualTo(before);
+            assertThat(inATransaction.getConnection().getAutoCommit()).isFalse();
+        } finally {
+            inATransaction.destroy();
+        }
     }
 
     @Test

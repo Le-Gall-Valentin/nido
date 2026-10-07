@@ -24,6 +24,32 @@ class EnvelopeTest {
     }
 
     @Test
+    void a_value_that_fills_its_bucket_exactly_comes_back_without_padding() {
+        for (String value : new String[] {"x".repeat(32), "x".repeat(64), "é".repeat(16), "🥚".repeat(8)}) {
+            String envelope = Envelope.wrap(HERE, value);
+
+            assertThat(envelope).doesNotEndWith("#");
+            assertThat(Envelope.unwrap(HERE, envelope)).isEqualTo(value);
+        }
+    }
+
+    @Test
+    void a_value_ending_like_the_padding_keeps_its_own_end() {
+        for (String value : new String[] {"#", "C#", "##", "Recette n°3 #" + "#".repeat(18), "#".repeat(32)}) {
+            assertThat(Envelope.unwrap(HERE, Envelope.wrap(HERE, value))).isEqualTo(value);
+        }
+    }
+
+    @Test
+    void a_length_of_nine_characters_that_are_not_all_digits_is_refused_as_no_envelope() {
+        for (String length : new String[] {"00000000x", "-00000005", "+00000005", "0000 0005"}) {
+            String broken = HERE + "|" + length + "|Loyer" + "#".repeat(27);
+
+            assertThatThrownBy(() -> Envelope.unwrap(HERE, broken)).isInstanceOf(EnvelopeRejected.class);
+        }
+    }
+
+    @Test
     void every_amount_takes_the_same_room() {
         assertThat(bytes(Envelope.wrap(HERE, "3.50")))
             .isEqualTo(bytes(Envelope.wrap(HERE, "12500.00")))

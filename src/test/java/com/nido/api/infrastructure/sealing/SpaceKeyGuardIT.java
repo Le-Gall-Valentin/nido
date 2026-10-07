@@ -45,8 +45,12 @@ class SpaceKeyGuardIT {
     }
 
     private void row(String label, String note) {
-        jdbc.sql("INSERT INTO guard_probes (space_id, label_encrypted, note_encrypted) VALUES (:s, :l, :n)")
-            .param("s", A).param("l", label).param("n", note).update();
+        row(UUID.randomUUID(), label, note);
+    }
+
+    private void row(UUID id, String label, String note) {
+        jdbc.sql("INSERT INTO guard_probes (id, space_id, label_encrypted, note_encrypted) VALUES (:id, :s, :l, :n)")
+            .param("id", id).param("s", A).param("l", label).param("n", note).update();
     }
 
     @Test
@@ -78,9 +82,10 @@ class SpaceKeyGuardIT {
 
     @Test
     void one_damaged_value_among_good_ones_is_not_taken_for_a_wrong_key() {
-        row("not-a-ciphertext", null);
-        row(KEY.encrypt("Loyer"), null);
-        row(SpaceSealer.of(KEY).seal(LABEL, UUID.randomUUID(), "moved here"), null);
+        // The damaged one sorts first: it is sampled whatever the number of samples.
+        row(UUID.fromString("00000000-0000-4000-8000-000000000001"), "not-a-ciphertext", null);
+        row(UUID.fromString("00000000-0000-4000-8000-000000000002"), KEY.encrypt("Loyer"), null);
+        row(UUID.fromString("00000000-0000-4000-8000-000000000003"), SpaceSealer.of(KEY).seal(LABEL, UUID.randomUUID(), "moved here"), null);
 
         assertThatCode(guard(KEY)::verify).doesNotThrowAnyException();
     }

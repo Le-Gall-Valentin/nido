@@ -10,12 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTestConfig
 class SealingLockIT {
@@ -64,6 +66,20 @@ class SealingLockIT {
             assertThat(logged.list).isEmpty();
         } finally {
             logger.detachAppender(logged);
+        }
+    }
+
+    @Test
+    void work_that_fails_gives_the_lock_back() throws Exception {
+        assertThatThrownBy(() -> lock.whileHeld(() -> {
+            throw new IllegalStateException("could not seal");
+        })).hasMessage("could not seal");
+
+        try (Connection otherInstance = dataSource.getConnection(); Statement statement = otherInstance.createStatement();
+             ResultSet taken = statement.executeQuery("SELECT pg_try_advisory_lock(hashtext('nido-sealed-values'))")) {
+            taken.next();
+            assertThat(taken.getBoolean(1)).as("free for the next instance").isTrue();
+            statement.execute("SELECT pg_advisory_unlock(hashtext('nido-sealed-values'))");
         }
     }
 }
