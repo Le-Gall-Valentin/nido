@@ -142,4 +142,22 @@ class CategoryRepositoryAdapterIT {
 
         assertThat(adapter.findById(created.id())).isEmpty();
     }
+
+    @Test
+    void an_update_seals_under_the_space_of_the_category_whatever_the_command_says() {
+        Category created = adapter.create(new CreateCategoryCommand(spaceId, "Ancien nom", "#ec4899", "Star", TransactionType.EXPENSE), false);
+
+        adapter.update(new UpdateCategoryCommand(created.id(), anotherSpace(), "Nouveau nom", "#22c55e", "Heart"));
+
+        assertThat(adapter.findById(created.id()).orElseThrow().label()).isEqualTo("Nouveau nom");
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
+    }
 }

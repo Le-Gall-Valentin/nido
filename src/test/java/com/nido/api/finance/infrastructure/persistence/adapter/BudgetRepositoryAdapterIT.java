@@ -7,7 +7,9 @@ import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.CreateCategoryCommand;
 import com.nido.api.finance.domain.model.SetBudgetCommand;
 import com.nido.api.finance.domain.model.TransactionType;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceBudgetEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceBudgetJpaRepository;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
@@ -27,6 +29,7 @@ class BudgetRepositoryAdapterIT {
     @Autowired FinanceBudgetJpaRepository jpaRepository;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired CategoryRepositoryAdapter categoryAdapter;
+    @Autowired SpaceSealers sealers;
 
     private UUID spaceId;
     private UUID categoryId;
@@ -53,6 +56,7 @@ class BudgetRepositoryAdapterIT {
         assertThat(created.monthlyLimit()).isEqualByComparingTo("450.00");
         String rawStoredValue = jpaRepository.findByCategoryId(categoryId).orElseThrow().getMonthlyLimitEncrypted();
         assertThat(rawStoredValue).isNotNull().doesNotContain("450.00");
+        assertThat(sealers.forSpace(spaceId).open(FinanceBudgetEntity.MONTHLY_LIMIT, created.id(), rawStoredValue)).isEqualTo("450.00");
     }
 
     @Test

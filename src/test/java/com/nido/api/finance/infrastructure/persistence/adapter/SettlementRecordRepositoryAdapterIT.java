@@ -4,9 +4,11 @@ import com.nido.api.IntegrationTestConfig;
 import com.nido.api.TestSpaces;
 import com.nido.api.finance.domain.model.CreateSettlementCommand;
 import com.nido.api.finance.domain.model.SettlementRecord;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceSettlementRecordEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceSettlementRecordJpaRepository;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -29,6 +31,7 @@ class SettlementRecordRepositoryAdapterIT {
     @Autowired FinanceSettlementRecordJpaRepository jpaRepository;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired UserIdentityJpaRepository userJpaRepository;
+    @Autowired SpaceSealers sealers;
 
     private UUID spaceId;
     private UUID aliceId;
@@ -67,6 +70,7 @@ class SettlementRecordRepositoryAdapterIT {
         assertThat(created.toMemberId()).isEqualTo(aliceId);
         String rawAmount = jpaRepository.findById(created.id()).orElseThrow().getAmountEncrypted();
         assertThat(rawAmount).doesNotContain("20.00");
+        assertThat(sealers.forSpace(spaceId).open(FinanceSettlementRecordEntity.AMOUNT, created.id(), rawAmount)).isEqualTo("20.00");
     }
 
     @Test

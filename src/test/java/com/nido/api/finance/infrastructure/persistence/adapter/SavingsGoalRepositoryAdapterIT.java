@@ -6,9 +6,13 @@ import com.nido.api.finance.domain.model.AddSavingsContributionCommand;
 import com.nido.api.finance.domain.model.CreateSavingsGoalCommand;
 import com.nido.api.finance.domain.model.SavingsGoal;
 import com.nido.api.finance.domain.model.UpdateSavingsGoalCommand;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceSavingsContributionEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceSavingsGoalEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceSavingsGoalJpaRepository;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -16,6 +20,7 @@ import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaReposito
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,6 +35,8 @@ class SavingsGoalRepositoryAdapterIT {
     @Autowired FinanceSavingsGoalJpaRepository jpaRepository;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired UserIdentityJpaRepository userJpaRepository;
+    @Autowired SpaceSealers sealers;
+    @Autowired JdbcTemplate jdbc;
 
     private UUID spaceId;
     private UUID aliceId;
@@ -61,6 +68,23 @@ class SavingsGoalRepositoryAdapterIT {
         assertThat(created.targetAmount()).isEqualByComparingTo("2000.00");
         String rawName = jpaRepository.findById(created.id()).orElseThrow().getNameEncrypted();
         assertThat(rawName).doesNotContain("Vacances");
+    }
+
+    @Test
+    void the_name_the_target_and_each_contribution_are_stored_sealed_to_their_rows() {
+        SavingsGoal goal = adapter.create(new CreateSavingsGoalCommand(spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯"));
+        adapter.addContribution(new AddSavingsContributionCommand(goal.id(), spaceId, aliceId, new BigDecimal("100.00"), LocalDate.of(2026, 1, 5)));
+        adapter.addContribution(new AddSavingsContributionCommand(goal.id(), spaceId, aliceId, new BigDecimal("40.00"), LocalDate.of(2026, 2, 5)));
+        SpaceSealer sealer = sealers.forSpace(spaceId);
+
+        String name = jdbc.queryForObject("SELECT name_encrypted FROM finance_savings_goals WHERE id = ?", String.class, goal.id());
+        String target = jdbc.queryForObject("SELECT target_amount_encrypted FROM finance_savings_goals WHERE id = ?", String.class, goal.id());
+        assertThat(sealer.open(FinanceSavingsGoalEntity.NAME, goal.id(), name)).isEqualTo("Vacances");
+        assertThat(sealer.open(FinanceSavingsGoalEntity.TARGET_AMOUNT, goal.id(), target)).isEqualTo("2000.00");
+        assertThat(jdbc.query("SELECT id, amount_encrypted FROM finance_savings_contributions WHERE goal_id = ?",
+                (rs, rowNum) -> sealer.open(FinanceSavingsContributionEntity.AMOUNT, rs.getObject("id", UUID.class),
+                    rs.getString("amount_encrypted")), goal.id()))
+            .containsExactlyInAnyOrder("100.00", "40.00");
     }
 
     @Test

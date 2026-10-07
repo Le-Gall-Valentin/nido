@@ -192,4 +192,22 @@ class ShoppingItemRepositoryAdapterIT {
 
         assertThatThrownBy(() -> adapter.findById(rice.id())).isInstanceOf(SealedValueRejected.class);
     }
+
+    @Test
+    void an_update_seals_under_the_space_of_the_item_whatever_the_command_says() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", new BigDecimal("500"), MeasurementUnit.GRAM));
+
+        adapter.update(new UpdateShoppingItemCommand(created.id(), anotherSpace(), categoryId, "Pâtes complètes", null, null));
+
+        assertThat(adapter.findById(created.id()).orElseThrow().name()).isEqualTo("Pâtes complètes");
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
+    }
 }

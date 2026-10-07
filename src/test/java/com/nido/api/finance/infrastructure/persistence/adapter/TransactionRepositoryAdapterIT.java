@@ -281,12 +281,14 @@ class TransactionRepositoryAdapterIT {
     // ─── Scellement : chaque montant est attaché à sa ligne ─────────────────
 
     @Test
-    void the_amount_and_the_shares_are_stored_sealed_to_their_rows() {
+    void the_label_the_amount_and_the_shares_are_stored_sealed_to_their_rows() {
         Transaction rent = save("Loyer", new BigDecimal("850.00"), aliceId, List.of(new Contribution(aliceId, new BigDecimal("850.00"))));
         SpaceSealer sealer = sealers.forSpace(spaceId);
 
+        String label = jdbc.queryForObject("SELECT label_encrypted FROM finance_transactions WHERE id = ?", String.class, rent.id());
         String amount = jdbc.queryForObject("SELECT amount_encrypted FROM finance_transactions WHERE id = ?", String.class, rent.id());
         assertThat(amount).startsWith("v2:");
+        assertThat(sealer.open(FinanceTransactionEntity.LABEL, rent.id(), label)).isEqualTo("Loyer");
         assertThat(sealer.open(FinanceTransactionEntity.AMOUNT, rent.id(), amount)).isEqualTo("850.00");
         assertThat(jdbc.query("SELECT id, share_amount_encrypted FROM finance_transaction_contributors WHERE transaction_id = ?",
                 (rs, rowNum) -> sealer.open(FinanceTransactionContributorEntity.SHARE_AMOUNT, rs.getObject("id", UUID.class),

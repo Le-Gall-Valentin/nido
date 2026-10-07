@@ -209,4 +209,30 @@ class KitchenRecipeRepositoryAdapterIT {
         assertThatThrownBy(() -> sealers.forSpace(spaceId).open(RecipeEntity.NAME, moved.id(), stored))
             .isInstanceOf(SealedValueRejected.class);
     }
+
+    @Test
+    void an_update_seals_under_the_space_of_the_recipe_whatever_the_command_says() {
+        Recipe created = adapter.create(bolognaise());
+
+        adapter.update(new UpdateRecipeCommand(created.id(), anotherSpace(), "Pâtes bolo maison", "Version maison.",
+            RecipeCategory.PLAT, 40, 4,
+            List.of(new RecipeIngredient("Pâtes", BigDecimal.valueOf(400), MeasurementUnit.GRAM)),
+            List.of("Une seule étape."), "Se congèle bien."));
+
+        Recipe reread = adapter.findById(created.id()).orElseThrow();
+        assertThat(reread.name()).isEqualTo("Pâtes bolo maison");
+        assertThat(reread.description()).isEqualTo("Version maison.");
+        assertThat(reread.ingredients()).extracting(RecipeIngredient::name).containsExactly("Pâtes");
+        assertThat(reread.steps()).containsExactly("Une seule étape.");
+        assertThat(reread.note()).isEqualTo("Se congèle bien.");
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
+    }
 }

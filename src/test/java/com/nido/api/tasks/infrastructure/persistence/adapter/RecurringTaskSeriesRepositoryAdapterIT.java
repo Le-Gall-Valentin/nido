@@ -180,4 +180,30 @@ class RecurringTaskSeriesRepositoryAdapterIT {
 
         assertThatThrownBy(() -> adapter.findById(created.id())).isInstanceOf(SealedValueRejected.class);
     }
+
+    @Test
+    void an_update_seals_under_the_space_of_the_series_whatever_the_command_says() {
+        RecurringTaskSeries created = adapter.create(new CreateRecurringTaskSeriesCommand(
+            spaceId, "Sortir les poubelles", TaskPriority.MED, List.of("Vérifier le tri"),
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0,
+            LocalDate.of(2026, 1, 7), null, List.of(aliceId), aliceId));
+
+        adapter.update(new UpdateRecurringTaskSeriesCommand(
+            created.id(), anotherSpace(), "Sortir le compost", TaskPriority.MED, List.of("Rincer le bac"),
+            RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0,
+            LocalDate.of(2026, 1, 7), null, List.of(aliceId)));
+
+        RecurringTaskSeries reread = adapter.findById(created.id()).orElseThrow();
+        assertThat(reread.title()).isEqualTo("Sortir le compost");
+        assertThat(reread.subtaskTemplates()).containsExactly("Rincer le bac");
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
+    }
 }

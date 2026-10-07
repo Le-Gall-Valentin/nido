@@ -261,4 +261,26 @@ class TaskRepositoryAdapterIT {
         return jdbc.query("SELECT id, text_encrypted FROM task_subtasks WHERE task_id = ? ORDER BY position",
             (rs, rowNum) -> sealer.open(TaskSubtaskEntity.TEXT, rs.getObject("id", UUID.class), rs.getString("text_encrypted")), taskId);
     }
+
+    @Test
+    void an_update_seals_under_the_space_of_the_task_whatever_the_command_says() {
+        Task created = adapter.create(new CreateTaskCommand(spaceId, "Ménage", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskInput("Cuisine", false)), null, aliceId));
+
+        adapter.update(new UpdateTaskCommand(created.id(), anotherSpace(), "Grand ménage", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskEdit(created.subtasks().getFirst().id(), "Cuisine et four"), new SubtaskEdit(null, "Salle de bain"))));
+
+        Task reread = adapter.findById(created.id()).orElseThrow();
+        assertThat(reread.title()).isEqualTo("Grand ménage");
+        assertThat(reread.subtasks()).extracting(Subtask::text).containsExactly("Cuisine et four", "Salle de bain");
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
+    }
 }

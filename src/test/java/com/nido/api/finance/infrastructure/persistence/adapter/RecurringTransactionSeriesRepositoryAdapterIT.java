@@ -13,9 +13,14 @@ import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.model.UpdateRecurringSeriesCommand;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceRecurringSeriesContributorEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceRecurringSeriesEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceRecurringSeriesJpaRepository;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -23,6 +28,7 @@ import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaReposito
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,6 +36,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTestConfig
 class RecurringTransactionSeriesRepositoryAdapterIT {
@@ -40,6 +47,8 @@ class RecurringTransactionSeriesRepositoryAdapterIT {
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired UserIdentityJpaRepository userJpaRepository;
     @Autowired CategoryRepositoryAdapter categoryAdapter;
+    @Autowired SpaceSealers sealers;
+    @Autowired JdbcTemplate jdbc;
 
     private UUID spaceId;
     private UUID aliceId;
@@ -91,6 +100,42 @@ class RecurringTransactionSeriesRepositoryAdapterIT {
         assertThat(created.lastMaterializedDate()).isNull();
         String rawLabel = jpaRepository.findById(created.id()).orElseThrow().getLabelEncrypted();
         assertThat(rawLabel).doesNotContain("Loyer");
+    }
+
+    private RecurringTransactionSeries rentSharedByAliceAndBob() {
+        return adapter.create(new CreateRecurringSeriesCommand(
+            spaceId, "Loyer", new BigDecimal("800.00"), TransactionType.EXPENSE, categoryId, aliceId,
+            List.of(new ContributionInput(aliceId, null), new ContributionInput(bobId, null)),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null),
+            List.of(new Contribution(aliceId, new BigDecimal("400.00")), new Contribution(bobId, new BigDecimal("400.00"))));
+    }
+
+    @Test
+    void the_label_the_amount_and_the_shares_are_stored_sealed_to_their_rows() {
+        RecurringTransactionSeries rent = rentSharedByAliceAndBob();
+        SpaceSealer sealer = sealers.forSpace(spaceId);
+
+        String label = jdbc.queryForObject("SELECT label_encrypted FROM finance_recurring_transaction_series WHERE id = ?",
+            String.class, rent.id());
+        String amount = jdbc.queryForObject("SELECT amount_encrypted FROM finance_recurring_transaction_series WHERE id = ?",
+            String.class, rent.id());
+        assertThat(sealer.open(FinanceRecurringSeriesEntity.LABEL, rent.id(), label)).isEqualTo("Loyer");
+        assertThat(sealer.open(FinanceRecurringSeriesEntity.AMOUNT, rent.id(), amount)).isEqualTo("800.00");
+        assertThat(jdbc.query("SELECT id, share_amount_encrypted FROM finance_recurring_series_contributors WHERE series_id = ?",
+                (rs, rowNum) -> sealer.open(FinanceRecurringSeriesContributorEntity.SHARE_AMOUNT, rs.getObject("id", UUID.class),
+                    rs.getString("share_amount_encrypted")), rent.id()))
+            .containsExactly("400.00", "400.00");
+    }
+
+    @Test
+    void a_share_copied_from_another_contributor_is_refused_even_when_it_is_the_same_amount() {
+        RecurringTransactionSeries rent = rentSharedByAliceAndBob();
+        jdbc.update("""
+            UPDATE finance_recurring_series_contributors SET share_amount_encrypted =
+              (SELECT share_amount_encrypted FROM finance_recurring_series_contributors WHERE series_id = ? AND user_id = ?)
+            WHERE series_id = ? AND user_id = ?""", rent.id(), aliceId, rent.id(), bobId);
+
+        assertThatThrownBy(() -> adapter.findById(rent.id())).isInstanceOf(SealedValueRejected.class);
     }
 
     @Test

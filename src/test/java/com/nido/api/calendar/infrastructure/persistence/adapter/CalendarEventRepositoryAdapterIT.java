@@ -17,6 +17,7 @@ import com.nido.api.calendar.infrastructure.persistence.entity.CalendarRecurring
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
 import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
@@ -86,11 +87,16 @@ class CalendarEventRepositoryAdapterIT {
 
         String storedTitle = jdbc.queryForObject(
             "SELECT title_encrypted FROM calendar_events WHERE id = ?", String.class, created.id());
+        String storedDescription = jdbc.queryForObject(
+            "SELECT description_encrypted FROM calendar_events WHERE id = ?", String.class, created.id());
         String storedLocation = jdbc.queryForObject(
             "SELECT location_encrypted FROM calendar_events WHERE id = ?", String.class, created.id());
         assertThat(storedTitle).startsWith("v2:").doesNotContain("oncologue");
+        assertThat(storedDescription).doesNotContain("résultats");
         assertThat(storedLocation).doesNotContain("Saint-Louis");
         assertThat(sealers.forSpace(spaceId).open(CalendarEventEntity.TITLE, created.id(), storedTitle)).isEqualTo("RDV oncologue");
+        assertThat(sealers.forSpace(spaceId).open(CalendarEventEntity.DESCRIPTION, created.id(), storedDescription))
+            .isEqualTo("Apporter les résultats");
         assertThat(sealers.forSpace(spaceId).open(CalendarEventEntity.LOCATION, created.id(), storedLocation)).isEqualTo("Hôpital Saint-Louis");
 
         assertThat(events.findById(created.id())).get()
@@ -287,6 +293,21 @@ class CalendarEventRepositoryAdapterIT {
         assertThat(stored).startsWith("v2:").doesNotContain("Piano");
         assertThat(sealers.forSpace(spaceId).open(CalendarRecurringEventSeriesEntity.TITLE, seriesId, stored)).isEqualTo("Piano");
         assertThat(series.findById(seriesId)).get().extracting(s -> s.title()).isEqualTo("Piano");
+    }
+
+    @Test
+    void a_series_stores_its_description_and_place_sealed_to_their_own_columns() {
+        UUID seriesId = series.create(new CreateRecurringEventSeriesCommand(
+            spaceId, "Piano", "Solfège", "Conservatoire", false, LocalTime.of(18, 0), LocalTime.of(19, 0), 0, null,
+            RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 2, 3), null, List.of(), aliceId)).id();
+        SpaceSealer sealer = sealers.forSpace(spaceId);
+
+        String description = jdbc.queryForObject(
+            "SELECT description_encrypted FROM calendar_recurring_event_series WHERE id = ?", String.class, seriesId);
+        String location = jdbc.queryForObject(
+            "SELECT location_encrypted FROM calendar_recurring_event_series WHERE id = ?", String.class, seriesId);
+        assertThat(sealer.open(CalendarRecurringEventSeriesEntity.DESCRIPTION, seriesId, description)).isEqualTo("Solfège");
+        assertThat(sealer.open(CalendarRecurringEventSeriesEntity.LOCATION, seriesId, location)).isEqualTo("Conservatoire");
     }
 
     @Test
