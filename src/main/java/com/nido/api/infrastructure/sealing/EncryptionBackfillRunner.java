@@ -43,12 +43,13 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
     private final SpaceSealers sealers;
     private final SealingLock lock;
     private final TableVacuum vacuum;
+    private final PendingVacuum pendingVacuum;
     private final ResolvedEncryptionKey key;
     private final ForgetEncryptionKeyFingerprintUseCase forget;
 
     public EncryptionBackfillRunner(List<SealedColumns> sealedColumns, List<ExistingCiphertextCheck> checks,
                                     SealedValueMigration migration, SpaceSealers sealers, SealingLock lock,
-                                    TableVacuum vacuum, ResolvedEncryptionKey key,
+                                    TableVacuum vacuum, PendingVacuum pendingVacuum, ResolvedEncryptionKey key,
                                     ForgetEncryptionKeyFingerprintUseCase forget) {
         this.sealedColumns = sealedColumns;
         this.checks = checks;
@@ -56,6 +57,7 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
         this.sealers = sealers;
         this.lock = lock;
         this.vacuum = vacuum;
+        this.pendingVacuum = pendingVacuum;
         this.key = key;
         this.forget = forget;
     }
@@ -66,27 +68,31 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
         // A key whose fingerprint this start recorded is only taken on the data's word: an installation older
         // than 0.12 never recorded one, and keeping the fingerprint of a wrong key would lock the right one out.
         boolean newKey = key.recordedAtThisStart().isPresent();
-        if (!anythingPending(columns) && !newKey) {
+        if (!anythingPending(columns) && !pendingVacuum.isOwed() && !newKey) {
             return;
         }
         lock.whileHeld(() -> {
             // Another instance may have done the work while this one waited for the lock.
             boolean pending = anythingPending(columns);
             verifyExistingCiphertext();
-            if (!pending) {
+            if (pending) {
+                // Owed before the first row is rewritten: a start stopped from here on leaves it to the next one.
+                pendingVacuum.owe();
+                for (SealedColumn column : columns) {
+                    int rows = migration.migrate(column, sealers);
+                    if (rows > 0) {
+                        log.info("Sealed {} values of {} that earlier versions stored", rows, column);
+                    }
+                }
+            } else if (!pendingVacuum.isOwed()) {
                 return;
             }
             // Every table declared, not only those rewritten now: a start cut short leaves tables it sealed,
             // whose columns in clear 068 has since dropped without rewriting them.
             Set<String> tables = new LinkedHashSet<>();
-            for (SealedColumn column : columns) {
-                int rows = migration.migrate(column, sealers);
-                if (rows > 0) {
-                    log.info("Sealed {} values of {} that earlier versions stored", rows, column);
-                }
-                tables.add(column.table());
-            }
+            columns.forEach(column -> tables.add(column.table()));
             vacuum.vacuumFull(tables);
+            pendingVacuum.settle();
         });
     }
 

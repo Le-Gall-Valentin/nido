@@ -194,6 +194,25 @@ class EncryptionBackfillIT {
     }
 
     @Test
+    void a_start_stopped_before_its_vacuum_leaves_it_to_the_next() throws Exception {
+        writtenInClearByAnEarlierVersion();
+        try (ConfigurableApplicationContext ignored = start(KEY)) {
+            // seals, vacuums, and owes nothing
+        }
+        assertThat(db.queryForObject("SELECT vacuum_owed FROM sealing_state", Boolean.class)).isFalse();
+        // What a start stopped after its last batch and before its VACUUM leaves: nothing left to seal.
+        db.update("UPDATE sealing_state SET vacuum_owed = true");
+        long transactionFiles = filenode("finance_transactions");
+
+        try (ConfigurableApplicationContext ignored = start(KEY)) {
+            // the next start
+        }
+
+        assertThat(filenode("finance_transactions")).as("vacuumed by the next start").isNotEqualTo(transactionFiles);
+        assertThat(db.queryForObject("SELECT vacuum_owed FROM sealing_state", Boolean.class)).isFalse();
+    }
+
+    @Test
     void two_instances_starting_together_both_start() throws Exception {
         // Liquibase's own lock makes the second wait for the first's migrations, and the sealing lock then makes it
         // find nothing left. Two migrations overlapping, and both succeeding, is SealedValueMigrationIT's to show.

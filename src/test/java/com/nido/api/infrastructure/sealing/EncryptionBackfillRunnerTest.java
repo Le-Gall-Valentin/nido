@@ -36,6 +36,7 @@ class EncryptionBackfillRunnerTest {
     private final SealedValueMigration migration = mock(SealedValueMigration.class);
     private final SpaceSealers sealers = space -> { throw new AssertionError("not used"); };
     private final SealingLock lock = mock(SealingLock.class);
+    private final PendingVacuum pendingVacuum = mock(PendingVacuum.class);
     private final TableVacuum vacuum = mock(TableVacuum.class);
     private final ForgetEncryptionKeyFingerprintUseCase forget = mock(ForgetEncryptionKeyFingerprintUseCase.class);
     private final KeyFingerprint fingerprint = KeyFingerprint.of("the-key-of-this-start");
@@ -43,7 +44,7 @@ class EncryptionBackfillRunnerTest {
 
     private EncryptionBackfillRunner runner(Optional<KeyFingerprint> recordedAtThisStart) {
         return new EncryptionBackfillRunner(List.of(SealedColumns.of(titles), SealedColumns.of(items)), List.of(finance), migration,
-            sealers, lock, vacuum, new ResolvedEncryptionKey("the-key-of-this-start", recordedAtThisStart), forget);
+            sealers, lock, vacuum, pendingVacuum, new ResolvedEncryptionKey("the-key-of-this-start", recordedAtThisStart), forget);
     }
 
     private final Logger logger = (Logger) LoggerFactory.getLogger(EncryptionBackfillRunner.class);
@@ -149,5 +150,31 @@ class EncryptionBackfillRunnerTest {
         assertThatThrownBy(runner::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
 
         verifyNoInteractions(forget);
+    }
+
+    @Test
+    void the_vacuum_is_owed_before_the_first_row_is_rewritten_and_settled_once_it_ran() {
+        when(migration.pending(titles)).thenReturn(true);
+
+        runner.afterSingletonsInstantiated();
+
+        InOrder order = inOrder(pendingVacuum, migration, vacuum);
+        order.verify(pendingVacuum).owe();
+        order.verify(migration).migrate(titles, sealers);
+        order.verify(vacuum).vacuumFull(Set.of("tasks", "shopping_items"));
+        order.verify(pendingVacuum).settle();
+    }
+
+    @Test
+    void a_vacuum_a_stopped_start_still_owes_is_run_with_nothing_left_to_seal() {
+        // A start stopped after its last batch and before its VACUUM: nothing is pending any more.
+        when(pendingVacuum.isOwed()).thenReturn(true);
+
+        runner.afterSingletonsInstantiated();
+
+        InOrder order = inOrder(vacuum, pendingVacuum);
+        order.verify(vacuum).vacuumFull(Set.of("tasks", "shopping_items"));
+        order.verify(pendingVacuum).settle();
+        verify(migration, never()).migrate(any(), any());
     }
 }
