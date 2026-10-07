@@ -9,11 +9,17 @@ public interface InstanceStatePort {
 
     InstanceState load();
 
-    /** Joins the caller's transaction. */
+    /** Records it unconfirmed — see {@link #confirmFingerprint} — in the caller's transaction. */
     void recordFingerprint(KeyFingerprint fingerprint, boolean generated);
 
-    /** Erases the fingerprint if it is still this one, in the caller's transaction. */
-    void forgetFingerprint(KeyFingerprint fingerprint);
+    /** Marks it confirmed if it is still the one in place, in the caller's transaction. True when this call did. */
+    boolean confirmFingerprint(KeyFingerprint fingerprint);
+
+    /**
+     * Erases it if it is still the one in place and nothing confirmed it, in the caller's transaction. True when this
+     * call erased it.
+     */
+    boolean forgetFingerprint(KeyFingerprint fingerprint);
 
     /**
      * Ends the setup, in the caller's transaction. True when this call ended it; false when it was

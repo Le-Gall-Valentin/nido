@@ -1,6 +1,5 @@
 package com.nido.api.instance.application.handler;
 
-import com.nido.api.instance.application.port.in.ForgetEncryptionKeyFingerprintUseCase;
 import com.nido.api.instance.application.port.in.ResolveEncryptionKeyUseCase;
 import com.nido.api.instance.domain.model.EncryptionKeyDecision;
 import com.nido.api.instance.domain.model.InstanceState;
@@ -17,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 @ApplicationService
-public class ResolveEncryptionKeyHandler implements ResolveEncryptionKeyUseCase, ForgetEncryptionKeyFingerprintUseCase {
+public class ResolveEncryptionKeyHandler implements ResolveEncryptionKeyUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(ResolveEncryptionKeyHandler.class);
 
@@ -42,9 +41,10 @@ public class ResolveEncryptionKeyHandler implements ResolveEncryptionKeyUseCase,
         boolean fromDataDirectory = configured.isEmpty() && provided.isPresent();
         InstanceState state = instanceState.load();
         return switch (EncryptionKeyDecision.decide(provided, state, keyFile.location())) {
-            case EncryptionKeyDecision.Use use -> new ResolvedEncryptionKey(use.key(), Optional.empty());
+            // Still on the data's word if the start that recorded it stopped before its key check.
+            case EncryptionKeyDecision.Use use -> new ResolvedEncryptionKey(use.key(), state.unconfirmedFingerprint());
             case EncryptionKeyDecision.RecordFingerprint record -> {
-                // Taken on the data's word: the key check gives this back to forget() if the data refuses the key.
+                // Taken on the data's word: the key check confirms it, or takes it back if the data refuses the key.
                 KeyFingerprint recorded = KeyFingerprint.of(record.key());
                 instanceState.recordFingerprint(recorded, fromDataDirectory);
                 log.info("Encryption key fingerprint recorded: from now on, a start with another key is refused");
@@ -52,20 +52,15 @@ public class ResolveEncryptionKeyHandler implements ResolveEncryptionKeyUseCase,
             }
             case EncryptionKeyDecision.Generate generate -> {
                 String key = keyFile.create();
-                instanceState.recordFingerprint(KeyFingerprint.of(key), true);
+                KeyFingerprint generated = KeyFingerprint.of(key);
+                instanceState.recordFingerprint(generated, true);
+                // Before the setup nothing is encrypted yet: no data has a word to give on this key.
+                instanceState.confirmFingerprint(generated);
                 log.warn("No encryption key was provided: one was generated in {}. Back it up, away from your "
                     + "database dumps — without it, the encrypted data cannot be read.", keyFile.location());
                 yield new ResolvedEncryptionKey(key, Optional.empty());
             }
             case EncryptionKeyDecision.Refuse refuse -> throw new IllegalStateException(refuse.reason());
         };
-    }
-
-    @Override
-    @Transactional
-    public void forget(KeyFingerprint fingerprint) {
-        instanceState.forgetFingerprint(fingerprint);
-        log.warn("The encryption key fingerprint recorded at this start was erased: the data already encrypted "
-            + "does not decrypt with that key");
     }
 }

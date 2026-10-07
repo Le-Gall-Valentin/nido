@@ -2,6 +2,7 @@ package com.nido.api.instance.infrastructure.config;
 
 import com.nido.api.infrastructure.config.NidoProperties;
 import com.nido.api.infrastructure.sealing.StartKey;
+import com.nido.api.instance.application.port.in.ConfirmEncryptionKeyFingerprintUseCase;
 import com.nido.api.instance.application.port.in.ForgetEncryptionKeyFingerprintUseCase;
 import com.nido.api.instance.application.port.in.ResolveEncryptionKeyUseCase;
 import com.nido.api.instance.domain.model.ResolvedEncryptionKey;
@@ -32,16 +33,22 @@ public class EncryptionKeyConfiguration {
 
     /** The key of this start as the key check sees it — see StartKey. */
     @Bean
-    StartKey startKey(ResolvedEncryptionKey resolved, ForgetEncryptionKeyFingerprintUseCase forget) {
+    StartKey startKey(ResolvedEncryptionKey resolved, ConfirmEncryptionKeyFingerprintUseCase confirmFingerprint,
+                      ForgetEncryptionKeyFingerprintUseCase forgetFingerprint) {
         return new StartKey() {
             @Override
-            public boolean fingerprintRecordedAtThisStart() {
-                return resolved.recordedAtThisStart().isPresent();
+            public boolean awaitsConfirmation() {
+                return resolved.awaitingConfirmation().isPresent();
             }
 
             @Override
-            public void forgetFingerprintRecordedAtThisStart() {
-                resolved.recordedAtThisStart().ifPresent(forget::forget);
+            public void confirm() {
+                resolved.awaitingConfirmation().ifPresent(confirmFingerprint::confirm);
+            }
+
+            @Override
+            public void forget() {
+                resolved.awaitingConfirmation().ifPresent(forgetFingerprint::forget);
             }
         };
     }

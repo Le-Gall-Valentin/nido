@@ -6,6 +6,7 @@ import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
+import com.nido.api.infrastructure.sealing.EncryptionBackfillRunner;
 import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.infrastructure.sealing.SealedColumns;
 import com.nido.api.infrastructure.sealing.SealedValueRejected;
@@ -27,6 +28,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.boot.context.event.ApplicationPreparedEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.logging.LoggingSystem;
 import org.springframework.boot.web.server.context.WebServerInitializedEvent;
@@ -317,6 +320,31 @@ class EncryptionBackfillIT {
 
         assertThat(PlaintextPerimeter.valuesInClear(db)).isEqualTo(before);
         // The refusal says to start with the right key: that start must not be refused in turn.
+        try (ConfigurableApplicationContext app = start(KEY)) {
+            everythingReadsAsItWasWritten(app);
+        }
+    }
+
+    @Test
+    void a_wrong_key_whose_start_stopped_before_its_key_check_is_still_taken_back_and_the_right_key_starts() throws Exception {
+        // The start records the fingerprint of the key it was given, then stops for a reason of its own — here, just
+        // before the key check — so the data never had its say on that key.
+        writtenInClearByAnEarlierVersion();
+        ApplicationListener<ApplicationPreparedEvent> stoppingBeforeTheKeyCheck = event -> event.getApplicationContext()
+            .getBeanFactory().addBeanPostProcessor(new BeanPostProcessor() {
+                @Override
+                public Object postProcessBeforeInitialization(Object bean, String name) {
+                    if (bean instanceof EncryptionBackfillRunner) {
+                        throw new IllegalStateException("stopped before its key check");
+                    }
+                    return bean;
+                }
+            });
+        assertThatThrownBy(() -> InstallationTestSupport.boot(database, dataDir, List.of(stoppingBeforeTheKeyCheck), arguments(OTHER)).close())
+            .hasStackTraceContaining("stopped before its key check");
+
+        assertThatThrownBy(() -> start(OTHER).close()).hasStackTraceContaining("does not decrypt");
+
         try (ConfigurableApplicationContext app = start(KEY)) {
             everythingReadsAsItWasWritten(app);
         }

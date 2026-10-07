@@ -60,16 +60,16 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
     @Override
     public void afterSingletonsInstantiated() {
         List<SealedColumn> columns = sealedColumns.stream().flatMap(declared -> declared.columns().stream()).toList();
-        // A key whose fingerprint this start recorded is only taken on the data's word: an installation older
+        // A key whose fingerprint the data has yet to confirm is only taken on the data's word: an installation older
         // than 0.12 never recorded one, and keeping the fingerprint of a wrong key would lock the right one out.
-        boolean newKey = key.fingerprintRecordedAtThisStart();
-        if (!anythingPending(columns) && !pendingVacuum.isOwed() && !newKey) {
+        boolean unconfirmedKey = key.awaitsConfirmation();
+        if (!anythingPending(columns) && !pendingVacuum.isOwed() && !unconfirmedKey) {
             return;
         }
         lock.whileHeld(() -> {
             // Another instance may have done the work while this one waited for the lock.
             boolean pending = anythingPending(columns);
-            verifyExistingCiphertext(newKey);
+            verifyExistingCiphertext(unconfirmedKey);
             if (pending) {
                 // Owed before the first row is rewritten: a start stopped from here on leaves it to the next one.
                 pendingVacuum.owe();
@@ -98,14 +98,17 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
         return columns.stream().anyMatch(migration::pending);
     }
 
-    private void verifyExistingCiphertext(boolean newKey) {
+    private void verifyExistingCiphertext(boolean unconfirmedKey) {
         try {
             checks.forEach(ExistingCiphertextCheck::verify);
         } catch (RuntimeException refused) {
-            if (newKey) {
-                key.forgetFingerprintRecordedAtThisStart();
+            if (unconfirmedKey) {
+                key.forget();
             }
             throw refused;
+        }
+        if (unconfirmedKey) {
+            key.confirm();
         }
     }
 }

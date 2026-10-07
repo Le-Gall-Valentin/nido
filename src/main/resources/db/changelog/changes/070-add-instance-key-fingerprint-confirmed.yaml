@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 070-add-instance-key-fingerprint-confirmed
+      author: nido
+      comment: >
+        Whether the data already encrypted has confirmed the key whose fingerprint is recorded. A start that records
+        the fingerprint of an installation that had none takes the key on the data's word: until the key check has
+        opened that data with it, the fingerprint can be taken back — by a later start too, when the one that recorded
+        it stopped before its key check. A fingerprint recorded before this column has served ever since: confirmed.
+      changes:
+        - addColumn:
+            tableName: instance
+            columns:
+              - column:
+                  name: key_fingerprint_confirmed
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropColumn:
+            tableName: instance
+            columnName: key_fingerprint_confirmed

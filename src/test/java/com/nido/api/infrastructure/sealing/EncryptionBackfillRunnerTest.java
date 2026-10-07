@@ -35,7 +35,7 @@ class EncryptionBackfillRunnerTest {
     private final PendingVacuum pendingVacuum = mock(PendingVacuum.class);
     private final TableVacuum vacuum = mock(TableVacuum.class);
     private final StartKey knownKey = mock(StartKey.class);
-    private final StartKey newKey = mock(StartKey.class);
+    private final StartKey unconfirmedKey = mock(StartKey.class);
     private final EncryptionBackfillRunner runner = runner(knownKey);
 
     private EncryptionBackfillRunner runner(StartKey key) {
@@ -48,7 +48,7 @@ class EncryptionBackfillRunnerTest {
 
     @BeforeEach
     void listen() {
-        when(newKey.fingerprintRecordedAtThisStart()).thenReturn(true);
+        when(unconfirmedKey.awaitsConfirmation()).thenReturn(true);
         logged.start();
         logger.addAppender(logged);
         doAnswer(call -> {
@@ -123,21 +123,35 @@ class EncryptionBackfillRunnerTest {
     }
 
     @Test
-    void a_key_new_to_the_installation_is_checked_even_with_nothing_left_to_seal() {
-        runner(newKey).afterSingletonsInstantiated();
+    void a_key_the_data_has_yet_to_confirm_is_checked_even_with_nothing_left_to_seal_and_confirmed_once_it_opens() {
+        runner(unconfirmedKey).afterSingletonsInstantiated();
 
-        verify(finance).verify();
+        InOrder order = inOrder(finance, unconfirmedKey);
+        order.verify(finance).verify();
+        order.verify(unconfirmedKey).confirm();
+        verify(unconfirmedKey, never()).forget();
         verify(migration, never()).migrate(any(), any());
         verifyNoInteractions(vacuum);
     }
 
     @Test
-    void a_new_key_that_does_not_decrypt_has_its_fingerprint_taken_back_so_the_right_key_can_start_next() {
+    void a_key_confirmed_already_is_neither_confirmed_again_nor_taken_back() {
+        when(migration.pending(titles)).thenReturn(true);
+
+        runner.afterSingletonsInstantiated();
+
+        verify(knownKey, never()).confirm();
+        verify(knownKey, never()).forget();
+    }
+
+    @Test
+    void an_unconfirmed_key_that_does_not_decrypt_has_its_fingerprint_taken_back_so_the_right_key_can_start_next() {
         doThrow(new IllegalStateException("does not decrypt")).when(finance).verify();
 
-        assertThatThrownBy(runner(newKey)::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
+        assertThatThrownBy(runner(unconfirmedKey)::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
 
-        verify(newKey).forgetFingerprintRecordedAtThisStart();
+        verify(unconfirmedKey).forget();
+        verify(unconfirmedKey, never()).confirm();
     }
 
     @Test
@@ -147,7 +161,7 @@ class EncryptionBackfillRunnerTest {
 
         assertThatThrownBy(runner::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
 
-        verify(knownKey, never()).forgetFingerprintRecordedAtThisStart();
+        verify(knownKey, never()).forget();
     }
 
     @Test

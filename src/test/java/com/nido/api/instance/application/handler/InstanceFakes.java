@@ -31,12 +31,32 @@ final class InstanceFakes {
 
     static final class MemoryState implements InstanceStatePort {
         KeyFingerprint fingerprint;
+        boolean fingerprintConfirmed = true;
         boolean keyGenerated;
         boolean setupCompleted;
-        @Override public InstanceState load() { return new InstanceState(Optional.ofNullable(fingerprint), keyGenerated, setupCompleted); }
-        @Override public void recordFingerprint(KeyFingerprint f, boolean generated) { fingerprint = f; keyGenerated = generated; }
+        @Override public InstanceState load() {
+            return new InstanceState(Optional.ofNullable(fingerprint), fingerprintConfirmed, keyGenerated, setupCompleted);
+        }
+        @Override public void recordFingerprint(KeyFingerprint f, boolean generated) {
+            fingerprint = f;
+            fingerprintConfirmed = false;
+            keyGenerated = generated;
+        }
+        @Override public boolean confirmFingerprint(KeyFingerprint f) {
+            boolean confirms = f.equals(fingerprint) && !fingerprintConfirmed;
+            fingerprintConfirmed |= confirms;
+            return confirms;
+        }
+        @Override public boolean forgetFingerprint(KeyFingerprint f) {
+            if (!f.equals(fingerprint) || fingerprintConfirmed) {
+                return false;
+            }
+            fingerprint = null;
+            fingerprintConfirmed = true;
+            keyGenerated = false;
+            return true;
+        }
         @Override public boolean markSetupCompleted(Instant at) { boolean was = setupCompleted; setupCompleted = true; return !was; }
-        @Override public void forgetFingerprint(KeyFingerprint f) { if (fingerprint == f) { fingerprint = null; keyGenerated = false; } }
     }
 
     static final class MemoryStore implements SettingsStorePort {

@@ -1,6 +1,7 @@
 package com.nido.api.instance.infrastructure.config;
 
 import com.nido.api.infrastructure.sealing.StartKey;
+import com.nido.api.instance.application.port.in.ConfirmEncryptionKeyFingerprintUseCase;
 import com.nido.api.instance.application.port.in.ForgetEncryptionKeyFingerprintUseCase;
 import com.nido.api.instance.domain.model.KeyFingerprint;
 import com.nido.api.instance.domain.model.ResolvedEncryptionKey;
@@ -15,26 +16,32 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 class EncryptionKeyConfigurationTest {
 
+    private final ConfirmEncryptionKeyFingerprintUseCase confirm = mock(ConfirmEncryptionKeyFingerprintUseCase.class);
     private final ForgetEncryptionKeyFingerprintUseCase forget = mock(ForgetEncryptionKeyFingerprintUseCase.class);
 
-    @Test
-    void the_key_check_learns_a_fingerprint_recorded_at_this_start_and_can_take_it_back() {
-        KeyFingerprint recorded = KeyFingerprint.of("the-key-of-this-start");
-        StartKey key = new EncryptionKeyConfiguration()
-            .startKey(new ResolvedEncryptionKey("the-key-of-this-start", Optional.of(recorded)), forget);
-
-        assertThat(key.fingerprintRecordedAtThisStart()).isTrue();
-        key.forgetFingerprintRecordedAtThisStart();
-        verify(forget).forget(recorded);
+    private StartKey startKey(Optional<KeyFingerprint> awaiting) {
+        return new EncryptionKeyConfiguration().startKey(new ResolvedEncryptionKey("the-key-of-this-start", awaiting), confirm, forget);
     }
 
     @Test
-    void a_key_the_installation_already_knew_has_nothing_to_take_back() {
-        StartKey key = new EncryptionKeyConfiguration()
-            .startKey(new ResolvedEncryptionKey("the-key-of-this-start", Optional.empty()), forget);
+    void the_key_check_passes_its_verdict_on_a_fingerprint_awaiting_it() {
+        KeyFingerprint awaiting = KeyFingerprint.of("the-key-of-this-start");
+        StartKey key = startKey(Optional.of(awaiting));
 
-        assertThat(key.fingerprintRecordedAtThisStart()).isFalse();
-        key.forgetFingerprintRecordedAtThisStart();
-        verifyNoInteractions(forget);
+        assertThat(key.awaitsConfirmation()).isTrue();
+        key.confirm();
+        key.forget();
+        verify(confirm).confirm(awaiting);
+        verify(forget).forget(awaiting);
+    }
+
+    @Test
+    void a_key_confirmed_already_has_nothing_to_confirm_or_take_back() {
+        StartKey key = startKey(Optional.empty());
+
+        assertThat(key.awaitsConfirmation()).isFalse();
+        key.confirm();
+        key.forget();
+        verifyNoInteractions(confirm, forget);
     }
 }

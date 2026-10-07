@@ -1,13 +1,10 @@
 package com.nido.api.instance.application.handler;
 
-import com.nido.api.instance.domain.model.InstanceState;
 import com.nido.api.instance.domain.model.KeyFingerprint;
 import com.nido.api.instance.domain.model.ResolvedEncryptionKey;
-import com.nido.api.instance.domain.port.out.InstanceStatePort;
 import com.nido.api.instance.domain.port.out.KeyFilePort;
 import org.junit.jupiter.api.Test;
 
-import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,17 +14,6 @@ class ResolveEncryptionKeyHandlerTest {
 
     private static final String KEY = "the-key-of-this-installation-32chars";
 
-    static final class FakeState implements InstanceStatePort {
-        KeyFingerprint fingerprint;
-        boolean generated;
-        boolean setupCompleted;
-
-        @Override public InstanceState load() { return new InstanceState(Optional.ofNullable(fingerprint), generated, setupCompleted); }
-        @Override public void recordFingerprint(KeyFingerprint f, boolean g) { fingerprint = f; generated = g; }
-        @Override public boolean markSetupCompleted(Instant at) { boolean was = setupCompleted; setupCompleted = true; return !was; }
-        @Override public void forgetFingerprint(KeyFingerprint f) { if (fingerprint == f) { fingerprint = null; generated = false; } }
-    }
-
     static final class FakeFile implements KeyFilePort {
         String content;
         @Override public Optional<String> read() { return Optional.ofNullable(content); }
@@ -35,7 +21,7 @@ class ResolveEncryptionKeyHandlerTest {
         @Override public String location() { return "/data/secrets/encryption-key"; }
     }
 
-    private final FakeState state = new FakeState();
+    private final InstanceFakes.MemoryState state = new InstanceFakes.MemoryState();
     private final FakeFile file = new FakeFile();
     private final ResolveEncryptionKeyHandler handler = new ResolveEncryptionKeyHandler(state, file);
 
@@ -44,7 +30,7 @@ class ResolveEncryptionKeyHandlerTest {
         String key = handler.resolve(null).value();
 
         assertThat(key).isEqualTo(file.content);
-        assertThat(state.generated).isTrue();
+        assertThat(state.keyGenerated).isTrue();
         assertThat(state.fingerprint.matches(key)).isTrue();
     }
 
@@ -54,7 +40,7 @@ class ResolveEncryptionKeyHandlerTest {
 
         assertThat(handler.resolve(KEY).value()).isEqualTo(KEY);
         assertThat(state.fingerprint.matches(KEY)).isTrue();
-        assertThat(state.generated).isFalse();
+        assertThat(state.keyGenerated).isFalse();
     }
 
     @Test
@@ -79,7 +65,7 @@ class ResolveEncryptionKeyHandlerTest {
         String again = handler.resolve(null).value();
 
         assertThat(again).isEqualTo(file.content);
-        assertThat(state.generated).isTrue();
+        assertThat(state.keyGenerated).isTrue();
         assertThat(state.fingerprint.matches(again)).isTrue();
     }
 
@@ -90,7 +76,7 @@ class ResolveEncryptionKeyHandlerTest {
 
         handler.resolve(null).value();
 
-        assertThat(state.generated).isTrue();
+        assertThat(state.keyGenerated).isTrue();
         assertThat(state.fingerprint.matches(file.content)).isTrue();
     }
 
@@ -110,21 +96,33 @@ class ResolveEncryptionKeyHandlerTest {
 
         ResolvedEncryptionKey resolved = handler.resolve(KEY);
 
-        assertThat(resolved.recordedAtThisStart()).hasValueSatisfying(recorded -> assertThat(recorded).isSameAs(state.fingerprint));
-        handler.forget(resolved.recordedAtThisStart().orElseThrow());
-        assertThat(state.fingerprint).isNull();
+        assertThat(resolved.awaitingConfirmation()).hasValueSatisfying(recorded -> assertThat(recorded).isEqualTo(state.fingerprint));
+        assertThat(state.fingerprintConfirmed).isFalse();
     }
 
     @Test
-    void the_key_the_fingerprint_already_knows_comes_back_without_one_and_nothing_else_is_forgotten() {
+    void a_fingerprint_no_key_check_confirmed_still_awaits_the_data_at_the_next_start() {
+        // The start that recorded it stopped before its key check: the next one must still be able to take it back.
+        state.setupCompleted = true;
+        KeyFingerprint recorded = handler.resolve(KEY).awaitingConfirmation().orElseThrow();
+
+        ResolvedEncryptionKey next = handler.resolve(KEY);
+
+        assertThat(next.awaitingConfirmation()).contains(recorded);
+    }
+
+    @Test
+    void the_key_a_confirmed_fingerprint_knows_comes_back_with_nothing_awaiting() {
         state.setupCompleted = true;
         state.fingerprint = KeyFingerprint.of(KEY);
-        KeyFingerprint known = state.fingerprint;
 
-        assertThat(handler.resolve(KEY).recordedAtThisStart()).isEmpty();
-        handler.forget(KeyFingerprint.of(KEY));
+        assertThat(handler.resolve(KEY).awaitingConfirmation()).isEmpty();
+    }
 
-        assertThat(state.fingerprint).isSameAs(known);
+    @Test
+    void a_generated_key_awaits_no_confirmation_since_nothing_is_encrypted_before_the_setup() {
+        assertThat(handler.resolve(null).awaitingConfirmation()).isEmpty();
+        assertThat(state.fingerprintConfirmed).isTrue();
     }
 
     @Test

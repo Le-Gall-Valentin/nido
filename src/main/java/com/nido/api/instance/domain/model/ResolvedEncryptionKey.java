@@ -4,15 +4,16 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * The key this start resolved, and the fingerprint it recorded for it when the installation had none. That fingerprint
- * is only taken on the data's word: the key check gives it back to {@code ForgetEncryptionKeyFingerprintUseCase} when
- * the data already encrypted proves the key wrong, or the right key would be refused at the next start.
+ * The key this start resolved, and its fingerprint while the data already encrypted has yet to confirm it: recorded
+ * for an installation that had none, at this start or at one that stopped before its key check. The key check settles
+ * it — {@code ConfirmEncryptionKeyFingerprintUseCase} when the data opens with the key,
+ * {@code ForgetEncryptionKeyFingerprintUseCase} when it does not, or the right key would be refused at the next start.
  */
-public record ResolvedEncryptionKey(String value, Optional<KeyFingerprint> recordedAtThisStart) {
+public record ResolvedEncryptionKey(String value, Optional<KeyFingerprint> awaitingConfirmation) {
 
     public ResolvedEncryptionKey {
         Objects.requireNonNull(value, "value");
-        Objects.requireNonNull(recordedAtThisStart, "recordedAtThisStart");
+        Objects.requireNonNull(awaitingConfirmation, "awaitingConfirmation");
     }
 
     /** The key itself never reaches a log through this. */
