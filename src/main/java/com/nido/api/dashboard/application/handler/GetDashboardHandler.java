@@ -10,6 +10,7 @@ import com.nido.api.dashboard.domain.model.SourceResult;
 import com.nido.api.dashboard.domain.port.out.DashboardPreparation;
 import com.nido.api.dashboard.domain.port.out.DashboardSource;
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.shared.security.StoredValueRejected;
 import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.space.application.port.in.GetSpaceUseCase;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -70,8 +71,13 @@ public class GetDashboardHandler implements GetDashboardUseCase {
             try {
                 preparation.prepare(caller);
             } catch (RuntimeException e) {
-                log.warn("Dashboard preparation {} failed in space {}; reading what exists",
-                    preparation.getClass().getSimpleName(), caller.spaceId(), e);
+                if (e instanceof StoredValueRejected refused) {
+                    log.error("Dashboard preparation {} refused a stored value in space {}; reading what exists: {}",
+                        preparation.getClass().getSimpleName(), caller.spaceId(), refused.getMessage());
+                } else {
+                    log.warn("Dashboard preparation {} failed in space {}; reading what exists",
+                        preparation.getClass().getSimpleName(), caller.spaceId(), e);
+                }
             }
         }
 
@@ -83,7 +89,13 @@ public class GetDashboardHandler implements GetDashboardUseCase {
             try {
                 result = source.read(context);
             } catch (RuntimeException e) {
-                log.warn("Dashboard source {} failed in space {}", source.kind(), caller.spaceId(), e);
+                if (e instanceof StoredValueRejected refused) {
+                    // Unavailable like any failure, but as loud as a page would be: the data was tampered with.
+                    log.error("Dashboard source {} refused a stored value in space {}: {}", source.kind(), caller.spaceId(),
+                        refused.getMessage());
+                } else {
+                    log.warn("Dashboard source {} failed in space {}", source.kind(), caller.spaceId(), e);
+                }
                 // Recorded even for a kind without a card: the response hides it from the cards but
                 // reports the dashboard incomplete (Dashboard#complete).
                 cards.put(source.kind(), new CardResult.Unavailable());

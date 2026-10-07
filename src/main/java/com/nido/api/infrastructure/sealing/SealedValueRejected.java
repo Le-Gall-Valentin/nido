@@ -1,12 +1,14 @@
 package com.nido.api.infrastructure.sealing;
 
+import com.nido.api.shared.security.StoredValueRejected;
+
 import java.util.UUID;
 
 /**
  * A stored value refused on reading: not where it was sealed, or not a sealed value at all. Names its place and
  * the reason — never the value.
  */
-public class SealedValueRejected extends IllegalStateException {
+public class SealedValueRejected extends StoredValueRejected {
 
     public enum Reason {
         NOT_SEALED("is not a sealed value"),
