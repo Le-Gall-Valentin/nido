@@ -6,6 +6,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.infrastructure.sealing.SealedValueRejected;
 import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.shared.security.StoredValueRejected;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -15,7 +16,9 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.web.method.annotation.ExceptionHandlerMethodResolver;
 
+import java.lang.reflect.Method;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,5 +51,14 @@ class SealedValueRejectedHandlingTest {
         } finally {
             logger.detachAppender(logged);
         }
+    }
+
+    @Test
+    void every_stored_value_refused_is_answered_alike_whoever_refused_it() {
+        // The web layer knows the shared kind of refusal, not the sealing that raises it today.
+        StoredValueRejected refused = new StoredValueRejected("The value of x in row y does not decrypt") {};
+
+        assertThat(new ExceptionHandlerMethodResolver(GlobalExceptionHandler.class).resolveMethod(refused))
+            .extracting(Method::getName).isEqualTo("handleRejectedValue");
     }
 }
