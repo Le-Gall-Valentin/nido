@@ -1,17 +1,17 @@
 package com.nido.api.tasks.infrastructure.persistence.entity;
 
+import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.tasks.domain.model.RecurrenceInterval;
 import com.nido.api.tasks.domain.model.TaskPriority;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -21,17 +21,15 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-public class RecurringTaskSeriesEntity {
-
-    @Id
-    @UuidGenerator
-    private UUID id;
+public class RecurringTaskSeriesEntity extends AssignedUuidEntity {
 
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
 
-    @Column(nullable = false, length = 200)
-    private String title;
+    public static final SealedColumn TITLE = SealedColumn.ofSpace("recurring_task_series", "title_encrypted").withClearColumn("title");
+
+    @Column(name = "title_encrypted", nullable = false)
+    private String titleEncrypted;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)

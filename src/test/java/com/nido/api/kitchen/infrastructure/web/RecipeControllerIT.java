@@ -2,6 +2,7 @@ package com.nido.api.kitchen.infrastructure.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
@@ -350,7 +351,7 @@ class RecipeControllerIT {
     private UUID saveSharedSpace(String name) {
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName(name);
+        TestSpaces.name(space, name);
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         return spaces.saveAndFlush(space).getId();
@@ -376,5 +377,23 @@ class RecipeControllerIT {
             .signWith(Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
             .compact();
         return new Cookie("access_token", token);
+    }
+
+    @Test
+    void half_an_emoji_in_a_step_or_an_ingredient_is_a_bad_request() throws Exception {
+        String recipe = """
+            {"name":"Œufs","category":"PLAT","minutes":5,"referencePortions":1,
+             "ingredients":[{"name":"%s","quantity":2,"unit":"PIECE"}],"steps":["%s"]}
+            """;
+        String egg = "\\ud83e\\udd5a";
+        String halfAnEgg = "\\ud83e";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(recipe.formatted(egg, egg)))
+            .andExpect(status().isCreated());
+        for (String body : new String[] {recipe.formatted(egg, halfAnEgg), recipe.formatted(halfAnEgg, egg)}) {
+            mockMvc.perform(post("/api/spaces/" + spaceId + "/kitchen/recipes")
+                    .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+        }
     }
 }

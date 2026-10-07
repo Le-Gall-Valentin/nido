@@ -1,5 +1,6 @@
 package com.nido.api.infrastructure.config;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.Ticker;
 import org.junit.jupiter.api.Test;
@@ -116,5 +117,19 @@ class EncryptorCacheTest {
         assertThat(derivations.get())
             .as("a key read continuously must still be re-derived roughly once per TTL")
             .isGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    void the_cache_without_a_loader_expires_like_the_others() {
+        FakeTicker ticker = new FakeTicker();
+        Cache<UUID, TextEncryptor> cache = EncryptorCache.buildWithoutLoader(ticker);
+        AtomicInteger derivations = new AtomicInteger();
+        UUID key = UUID.randomUUID();
+
+        cache.get(key, k -> { derivations.incrementAndGet(); return anyEncryptor(); });
+        ticker.advance(EncryptorCache.ENTRY_TTL.plusSeconds(1));
+        cache.get(key, k -> { derivations.incrementAndGet(); return anyEncryptor(); });
+
+        assertThat(derivations).hasValue(2);
     }
 }

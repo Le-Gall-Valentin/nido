@@ -1,17 +1,16 @@
 package com.nido.api.space.infrastructure.persistence.entity;
 
+import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.space.domain.model.SpaceType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.HexFormat;
 import java.util.UUID;
 
 @Entity
@@ -20,21 +19,21 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class SpaceEntity {
-
-    @Id
-    @UuidGenerator
-    private UUID id;
+public class SpaceEntity extends AssignedUuidEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private SpaceType type;
 
-    @Column(nullable = false, length = 80)
-    private String name;
+    public static final SealedColumn NAME = SealedColumn.ofSpaceItself("spaces", "name_encrypted").withClearColumn("name");
 
-    @Column(length = 280)
-    private String description;
+    @Column(name = "name_encrypted", nullable = false)
+    private String nameEncrypted;
+
+    public static final SealedColumn DESCRIPTION = SealedColumn.ofSpaceItself("spaces", "description_encrypted").withClearColumn("description");
+
+    @Column(name = "description_encrypted")
+    private String descriptionEncrypted;
 
     @Column(nullable = false, length = 7)
     private String accent;
@@ -59,10 +58,9 @@ public class SpaceEntity {
     private Instant createdAt;
 
     /**
-     * JPA allows exactly one of these per entity, so both defaults live here.
-     *
-     * <p>Every space needs a stable per-space encryption salt before Finance can derive a key for
-     * it — generated here rather than at every call site so no caller can forget it.
+     * No default for the encryption salt: a space's name is sealed with it before the row is
+     * inserted, so the adapter draws it first (SpaceSalt) — a salt drawn here would come after a
+     * name sealed without one, and the column refuses a row that has none.
      *
      * <p>The timezone column has a database default, which an INSERT naming the column defeats:
      * Hibernate writes the field as it stands, and a null field becomes an explicit NULL against a
@@ -74,11 +72,6 @@ public class SpaceEntity {
     void applyDefaults() {
         if (timezone == null) {
             timezone = "Europe/Paris";
-        }
-        if (encryptionSalt == null) {
-            byte[] bytes = new byte[16];
-            new SecureRandom().nextBytes(bytes);
-            encryptionSalt = HexFormat.of().formatHex(bytes);
         }
     }
 }

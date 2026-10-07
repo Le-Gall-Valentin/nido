@@ -1,5 +1,7 @@
 package com.nido.api.kitchen.infrastructure.persistence.adapter;
 
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.kitchen.domain.model.CreateRecipeCommand;
 import com.nido.api.kitchen.domain.model.KitchenException;
 import com.nido.api.kitchen.domain.model.Recipe;
@@ -28,13 +30,16 @@ public class KitchenRecipeRepositoryAdapter implements RecipeRepository {
     private final RecipeJpaRepository recipes;
     private final RecipeIngredientJpaRepository ingredients;
     private final RecipeStepJpaRepository steps;
+    private final SpaceSealers sealers;
 
     public KitchenRecipeRepositoryAdapter(RecipeJpaRepository recipes,
                                           RecipeIngredientJpaRepository ingredients,
-                                          RecipeStepJpaRepository steps) {
+                                          RecipeStepJpaRepository steps,
+                                          SpaceSealers sealers) {
         this.recipes = recipes;
         this.ingredients = ingredients;
         this.steps = steps;
+        this.sealers = sealers;
     }
 
     @Override
@@ -44,7 +49,7 @@ public class KitchenRecipeRepositoryAdapter implements RecipeRepository {
 
     @Override
     public List<Recipe> findBySpaceId(UUID spaceId) {
-        return toDomainList(recipes.findBySpaceIdOrderByNameAsc(spaceId));
+        return toDomainList(recipes.findBySpaceId(spaceId));
     }
 
     @Override
@@ -55,17 +60,18 @@ public class KitchenRecipeRepositoryAdapter implements RecipeRepository {
     @Override
     @Transactional
     public Recipe create(CreateRecipeCommand command) {
+        SpaceSealer sealer = sealers.forSpace(command.spaceId());
         RecipeEntity e = new RecipeEntity();
         e.setSpaceId(command.spaceId());
-        e.setName(command.name());
-        e.setDescription(command.description());
+        e.setNameEncrypted(sealer.seal(RecipeEntity.NAME, e.getId(), command.name()));
+        e.setDescriptionEncrypted(sealer.sealNullable(RecipeEntity.DESCRIPTION, e.getId(), command.description()));
         e.setCategory(command.category());
         e.setMinutes(command.minutes());
         e.setReferencePortions(command.referencePortions());
         e.setFavorite(false);
-        e.setNote(command.note());
+        e.setNoteEncrypted(sealer.sealNullable(RecipeEntity.NOTE, e.getId(), command.note()));
         RecipeEntity saved = recipes.saveAndFlush(e);
-        saveIngredientsAndSteps(saved.getId(), command.ingredients(), command.steps());
+        saveIngredientsAndSteps(saved.getId(), sealer, command.ingredients(), command.steps());
         return findById(saved.getId()).orElseThrow(KitchenException.RecipeNotFound::new);
     }
 
@@ -73,16 +79,17 @@ public class KitchenRecipeRepositoryAdapter implements RecipeRepository {
     @Transactional
     public Recipe update(UpdateRecipeCommand command) {
         RecipeEntity e = recipes.findById(command.recipeId()).orElseThrow(KitchenException.RecipeNotFound::new);
-        e.setName(command.name());
-        e.setDescription(command.description());
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
+        e.setNameEncrypted(sealer.seal(RecipeEntity.NAME, e.getId(), command.name()));
+        e.setDescriptionEncrypted(sealer.sealNullable(RecipeEntity.DESCRIPTION, e.getId(), command.description()));
         e.setCategory(command.category());
         e.setMinutes(command.minutes());
         e.setReferencePortions(command.referencePortions());
-        e.setNote(command.note());
+        e.setNoteEncrypted(sealer.sealNullable(RecipeEntity.NOTE, e.getId(), command.note()));
         recipes.saveAndFlush(e);
         ingredients.deleteByRecipeId(e.getId());
         steps.deleteByRecipeId(e.getId());
-        saveIngredientsAndSteps(e.getId(), command.ingredients(), command.steps());
+        saveIngredientsAndSteps(e.getId(), sealer, command.ingredients(), command.steps());
         return findById(e.getId()).orElseThrow(KitchenException.RecipeNotFound::new);
     }
 
@@ -100,13 +107,14 @@ public class KitchenRecipeRepositoryAdapter implements RecipeRepository {
         }
     }
 
-    private void saveIngredientsAndSteps(UUID recipeId, List<RecipeIngredient> ingredientList, List<String> stepList) {
+    private void saveIngredientsAndSteps(UUID recipeId, SpaceSealer sealer, List<RecipeIngredient> ingredientList,
+                                         List<String> stepList) {
         for (int i = 0; i < ingredientList.size(); i++) {
             RecipeIngredient ri = ingredientList.get(i);
             RecipeIngredientEntity ie = new RecipeIngredientEntity();
             ie.setRecipeId(recipeId);
             ie.setPosition(i);
-            ie.setName(ri.name());
+            ie.setNameEncrypted(sealer.seal(RecipeIngredientEntity.NAME, ie.getId(), ri.name()));
             ie.setQuantity(ri.quantity());
             ie.setUnit(ri.unit());
             ingredients.save(ie);
@@ -115,7 +123,7 @@ public class KitchenRecipeRepositoryAdapter implements RecipeRepository {
             RecipeStepEntity se = new RecipeStepEntity();
             se.setRecipeId(recipeId);
             se.setPosition(i);
-            se.setText(stepList.get(i));
+            se.setTextEncrypted(sealer.seal(RecipeStepEntity.TEXT, se.getId(), stepList.get(i)));
             steps.save(se);
         }
         ingredients.flush();
@@ -147,11 +155,15 @@ public class KitchenRecipeRepositoryAdapter implements RecipeRepository {
     }
 
     private Recipe toDomain(RecipeEntity e, List<RecipeIngredientEntity> ingredientEntities, List<RecipeStepEntity> stepEntities) {
-        return new Recipe(e.getId(), e.getSpaceId(), e.getName(), e.getDescription(), e.getCategory(), e.getMinutes(), e.getReferencePortions(),
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
+        return new Recipe(e.getId(), e.getSpaceId(), sealer.open(RecipeEntity.NAME, e.getId(), e.getNameEncrypted()),
+            sealer.openNullable(RecipeEntity.DESCRIPTION, e.getId(), e.getDescriptionEncrypted()), e.getCategory(), e.getMinutes(), e.getReferencePortions(),
             e.isFavorite(),
-            ingredientEntities.stream().map(i -> new RecipeIngredient(i.getName(), i.getQuantity(), i.getUnit())).toList(),
-            stepEntities.stream().map(RecipeStepEntity::getText).toList(),
-            e.getNote(),
+            ingredientEntities.stream()
+                .map(i -> new RecipeIngredient(sealer.open(RecipeIngredientEntity.NAME, i.getId(), i.getNameEncrypted()), i.getQuantity(),
+                    i.getUnit())).toList(),
+            stepEntities.stream().map(s -> sealer.open(RecipeStepEntity.TEXT, s.getId(), s.getTextEncrypted())).toList(),
+            sealer.openNullable(RecipeEntity.NOTE, e.getId(), e.getNoteEncrypted()),
             e.getCreatedAt(), e.getUpdatedAt());
     }
 }

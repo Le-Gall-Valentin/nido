@@ -1,6 +1,8 @@
 package com.nido.api.finance.infrastructure.persistence.entity;
 
 import com.nido.api.finance.domain.model.TransactionType;
+import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -9,9 +11,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.UuidGenerator;
 
-import jakarta.persistence.Id;
 import java.util.UUID;
 
 @Entity
@@ -19,21 +19,18 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-public class FinanceCategoryEntity {
-
-    @Id
-    @UuidGenerator
-    private UUID id;
+public class FinanceCategoryEntity extends AssignedUuidEntity {
 
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
 
-    /** Populated only when {@link #isDefault} is true — a system label, not user data. */
-    @Column(length = 60)
-    private String label;
+    /**
+     * Every label, the defaults' included: a default category can be renamed, and what its owner types
+     * then is theirs.
+     */
+    public static final SealedColumn LABEL = SealedColumn.ofSpace("finance_categories", "label_encrypted").withClearColumn("label");
 
-    /** Populated only when {@link #isDefault} is false. */
-    @Column(name = "label_encrypted")
+    @Column(name = "label_encrypted", nullable = false)
     private String labelEncrypted;
 
     @Column(nullable = false, length = 7)

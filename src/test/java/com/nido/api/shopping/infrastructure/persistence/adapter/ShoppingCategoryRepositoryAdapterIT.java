@@ -1,23 +1,31 @@
 package com.nido.api.shopping.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
+import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shopping.domain.model.ShoppingCategory;
+import com.nido.api.shopping.infrastructure.persistence.entity.ShoppingCategoryEntity;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTestConfig
 class ShoppingCategoryRepositoryAdapterIT {
 
     @Autowired ShoppingCategoryRepositoryAdapter adapter;
     @Autowired SpaceJpaRepository spaceJpaRepository;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired SpaceSealers sealers;
 
     private UUID spaceId;
 
@@ -25,7 +33,7 @@ class ShoppingCategoryRepositoryAdapterIT {
     void setUp() {
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName("Chez Valentin");
+        TestSpaces.name(space, "Chez Valentin");
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         spaceId = spaceJpaRepository.saveAndFlush(space).getId();
@@ -84,5 +92,27 @@ class ShoppingCategoryRepositoryAdapterIT {
         spaceJpaRepository.flush();
 
         assertThat(adapter.findById(created.id())).isEmpty();
+    }
+
+    @Test
+    void the_name_is_stored_encrypted_with_the_key_of_its_space_and_renaming_re_encrypts_it() {
+        ShoppingCategory created = adapter.create(spaceId, "Fruits & légumes", false);
+
+        adapter.rename(created.id(), "Primeur 🍎");
+
+        String stored = jdbc.queryForObject("SELECT name_encrypted FROM shopping_categories WHERE id = ?", String.class, created.id());
+        assertThat(stored).startsWith("v2:").doesNotContain("Primeur");
+        assertThat(sealers.forSpace(spaceId).open(ShoppingCategoryEntity.NAME, created.id(), stored)).isEqualTo("Primeur 🍎");
+        assertThat(adapter.findById(created.id()).orElseThrow().name()).isEqualTo("Primeur 🍎");
+    }
+
+    @Test
+    void a_name_copied_from_another_aisle_is_refused() {
+        ShoppingCategory fruits = adapter.create(spaceId, "Fruits", false);
+        ShoppingCategory bakery = adapter.create(spaceId, "Boulangerie", false);
+        jdbc.update("UPDATE shopping_categories SET name_encrypted = (SELECT name_encrypted FROM shopping_categories WHERE id = ?) WHERE id = ?",
+            fruits.id(), bakery.id());
+
+        assertThatThrownBy(() -> adapter.findById(bakery.id())).isInstanceOf(SealedValueRejected.class);
     }
 }

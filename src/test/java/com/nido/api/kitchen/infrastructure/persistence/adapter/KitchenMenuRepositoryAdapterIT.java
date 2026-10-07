@@ -1,6 +1,8 @@
 package com.nido.api.kitchen.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.kitchen.domain.model.AddMenuEntryCommand;
 import com.nido.api.kitchen.domain.model.MenuEntry;
 import com.nido.api.kitchen.domain.model.RecipeCategory;
@@ -32,6 +34,7 @@ class KitchenMenuRepositoryAdapterIT {
     @Autowired KitchenMenuRepositoryAdapter adapter;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired RecipeJpaRepository recipeJpaRepository;
+    @Autowired SpaceSealers sealers;
 
     private UUID spaceId;
     private UUID recipeId;
@@ -40,14 +43,14 @@ class KitchenMenuRepositoryAdapterIT {
     void setUp() {
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName("Chez Valentin");
+        TestSpaces.name(space, "Chez Valentin");
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         spaceId = spaceJpaRepository.saveAndFlush(space).getId();
 
         RecipeEntity recipe = new RecipeEntity();
         recipe.setSpaceId(spaceId);
-        recipe.setName("Pâtes bolognaise");
+        recipe.setNameEncrypted(sealers.forSpace(spaceId).seal(RecipeEntity.NAME, recipe.getId(), "Pâtes bolognaise"));
         recipe.setCategory(RecipeCategory.PLAT);
         recipe.setMinutes(35);
         recipe.setReferencePortions(4);

@@ -197,3 +197,18 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/066-create-account-invitations.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/067-encrypt-plaintext-columns.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/068-drop-plaintext-columns.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/069-create-sealing-state.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/070-add-instance-key-fingerprint-confirmed.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/071-track-vacuum-owed-per-table.yaml
+      relativeToChangelogFile: false

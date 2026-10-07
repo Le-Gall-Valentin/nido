@@ -1,5 +1,9 @@
 package com.nido.api.dashboard.application.handler;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.nido.api.dashboard.domain.model.AgendaCard;
 import com.nido.api.dashboard.domain.model.AttentionItem;
 import com.nido.api.dashboard.domain.model.AttentionKind;
@@ -10,6 +14,7 @@ import com.nido.api.dashboard.domain.model.DashboardContext;
 import com.nido.api.dashboard.domain.model.SourceResult;
 import com.nido.api.dashboard.domain.port.out.DashboardPreparation;
 import com.nido.api.dashboard.domain.port.out.DashboardSource;
+import com.nido.api.shared.security.StoredValueRejected;
 import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.space.application.port.in.GetSpaceUseCase;
 import com.nido.api.space.domain.model.SpaceDetailView;
@@ -17,6 +22,7 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceType;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -74,6 +80,34 @@ class GetDashboardHandlerTest {
 
         assertThat(dashboard.cards().get(CardKind.FINANCE)).isInstanceOf(CardResult.Unavailable.class);
         assertThat(dashboard.cards().get(CardKind.AGENDA)).isEqualTo(new CardResult.Ok(EMPTY_AGENDA));
+    }
+
+    @Test
+    void aRefusedStoredValueIsLoggedAsAnErrorAndOnlyItsCardIsUnavailable() {
+        // Shown as unavailable like any failure, but raised as loudly as a page would raise it: the data was tampered with.
+        var handler = handler(SpaceType.SHARED, List.of(caller -> { throw refused("finance_budgets.monthly_limit_encrypted"); }), List.of(
+            source(CardKind.FINANCE, context -> { throw refused("finance_transactions.amount_encrypted"); }),
+            source(CardKind.AGENDA, context -> SourceResult.of(EMPTY_AGENDA))));
+        Logger logger = (Logger) LoggerFactory.getLogger(GetDashboardHandler.class);
+        ListAppender<ILoggingEvent> logged = new ListAppender<>();
+        logged.start();
+        logger.addAppender(logged);
+        try {
+            Dashboard dashboard = handler.get(member);
+
+            assertThat(dashboard.cards().get(CardKind.FINANCE)).isInstanceOf(CardResult.Unavailable.class);
+            assertThat(dashboard.cards().get(CardKind.AGENDA)).isEqualTo(new CardResult.Ok(EMPTY_AGENDA));
+            assertThat(logged.list).hasSize(2).allSatisfy(line -> assertThat(line.getLevel()).isEqualTo(Level.ERROR));
+            assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
+                .anySatisfy(line -> assertThat(line).contains("finance_budgets.monthly_limit_encrypted"))
+                .anySatisfy(line -> assertThat(line).contains("finance_transactions.amount_encrypted"));
+        } finally {
+            logger.detachAppender(logged);
+        }
+    }
+
+    private static StoredValueRejected refused(String place) {
+        return new StoredValueRejected("The value of " + place + " in row 1 belongs to another place") {};
     }
 
     @Test

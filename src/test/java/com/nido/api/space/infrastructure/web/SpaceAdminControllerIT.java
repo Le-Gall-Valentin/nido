@@ -1,6 +1,7 @@
 package com.nido.api.space.infrastructure.web;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
@@ -65,7 +66,7 @@ class SpaceAdminControllerIT {
 
         SpaceEntity populated = new SpaceEntity();
         populated.setType(SpaceType.SHARED);
-        populated.setName("Chez Valentin");
+        TestSpaces.name(populated, "Chez Valentin");
         populated.setAccent("#c17a5c");
         populated.setGlyph("🏡");
         populated.setCreatedBy(userId);
@@ -78,7 +79,7 @@ class SpaceAdminControllerIT {
 
         SpaceEntity empty = new SpaceEntity();
         empty.setType(SpaceType.SHARED);
-        empty.setName("Groupe orphelin");
+        TestSpaces.name(empty, "Groupe orphelin");
         empty.setAccent("#4a7fa0");
         empty.setGlyph("🏠");
         emptySpaceId = spaces.saveAndFlush(empty).getId();

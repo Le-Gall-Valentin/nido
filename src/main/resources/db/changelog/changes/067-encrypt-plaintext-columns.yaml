@@ -1,0 +1,208 @@
+databaseChangeLog:
+  - changeSet:
+      id: 067-encrypt-plaintext-columns
+      author: nido
+      comment: >
+        Shopping lists, tasks, recipes, space names and the labels of default finance categories were
+        stored in clear while finance and the calendar were encrypted. Each of these texts gets an
+        encrypted column next to the one in clear, which stops being required so that it can be emptied.
+        The encryption needs the key, which is only known after Liquibase: EncryptionBackfillRunner does
+        it at start, before the application serves anyone, and 068 drops the columns in clear once they
+        are empty. The finance check that kept a default category's label in clear goes too.
+      changes:
+        - addColumn:
+            tableName: shopping_items
+            columns:
+              - column:
+                  name: name_encrypted
+                  type: TEXT
+        - addColumn:
+            tableName: shopping_categories
+            columns:
+              - column:
+                  name: name_encrypted
+                  type: TEXT
+        - addColumn:
+            tableName: tasks
+            columns:
+              - column:
+                  name: title_encrypted
+                  type: TEXT
+        - addColumn:
+            tableName: task_subtasks
+            columns:
+              - column:
+                  name: text_encrypted
+                  type: TEXT
+        - addColumn:
+            tableName: recurring_task_series
+            columns:
+              - column:
+                  name: title_encrypted
+                  type: TEXT
+        - addColumn:
+            tableName: recurring_task_series_subtask_templates
+            columns:
+              - column:
+                  name: text_encrypted
+                  type: TEXT
+        - addColumn:
+            tableName: kitchen_recipes
+            columns:
+              - column:
+                  name: name_encrypted
+                  type: TEXT
+              - column:
+                  name: description_encrypted
+                  type: TEXT
+              - column:
+                  name: note_encrypted
+                  type: TEXT
+        - addColumn:
+            tableName: kitchen_recipe_ingredients
+            columns:
+              - column:
+                  name: name_encrypted
+                  type: TEXT
+        - addColumn:
+            tableName: kitchen_recipe_steps
+            columns:
+              - column:
+                  name: text_encrypted
+                  type: TEXT
+        - addColumn:
+            tableName: spaces
+            columns:
+              - column:
+                  name: name_encrypted
+                  type: TEXT
+              - column:
+                  name: description_encrypted
+                  type: TEXT
+        - dropNotNullConstraint:
+            tableName: shopping_items
+            columnName: name
+            columnDataType: VARCHAR(120)
+        - dropNotNullConstraint:
+            tableName: shopping_categories
+            columnName: name
+            columnDataType: VARCHAR(60)
+        - dropNotNullConstraint:
+            tableName: tasks
+            columnName: title
+            columnDataType: VARCHAR(200)
+        - dropNotNullConstraint:
+            tableName: task_subtasks
+            columnName: text
+            columnDataType: VARCHAR(200)
+        - dropNotNullConstraint:
+            tableName: recurring_task_series
+            columnName: title
+            columnDataType: VARCHAR(200)
+        - dropNotNullConstraint:
+            tableName: recurring_task_series_subtask_templates
+            columnName: text
+            columnDataType: VARCHAR(200)
+        - dropNotNullConstraint:
+            tableName: kitchen_recipes
+            columnName: name
+            columnDataType: VARCHAR(120)
+        - dropNotNullConstraint:
+            tableName: kitchen_recipe_ingredients
+            columnName: name
+            columnDataType: VARCHAR(120)
+        - dropNotNullConstraint:
+            tableName: kitchen_recipe_steps
+            columnName: text
+            columnDataType: VARCHAR(2000)
+        - dropNotNullConstraint:
+            tableName: spaces
+            columnName: name
+            columnDataType: VARCHAR(80)
+        - sql:
+            sql: ALTER TABLE finance_categories DROP CONSTRAINT chk_finance_categories_label_xor
+      rollback:
+        - comment: "Only meaningful before EncryptionBackfillRunner emptied the columns in clear: the NOT NULL constraints fail after."
+        - sql:
+            sql: ALTER TABLE finance_categories ADD CONSTRAINT chk_finance_categories_label_xor CHECK ((is_default AND label IS NOT NULL AND label_encrypted IS NULL) OR (NOT is_default AND label IS NULL AND label_encrypted IS NOT NULL))
+            splitStatements: false
+        - addNotNullConstraint:
+            tableName: shopping_items
+            columnName: name
+            columnDataType: VARCHAR(120)
+        - addNotNullConstraint:
+            tableName: shopping_categories
+            columnName: name
+            columnDataType: VARCHAR(60)
+        - addNotNullConstraint:
+            tableName: tasks
+            columnName: title
+            columnDataType: VARCHAR(200)
+        - addNotNullConstraint:
+            tableName: task_subtasks
+            columnName: text
+            columnDataType: VARCHAR(200)
+        - addNotNullConstraint:
+            tableName: recurring_task_series
+            columnName: title
+            columnDataType: VARCHAR(200)
+        - addNotNullConstraint:
+            tableName: recurring_task_series_subtask_templates
+            columnName: text
+            columnDataType: VARCHAR(200)
+        - addNotNullConstraint:
+            tableName: kitchen_recipes
+            columnName: name
+            columnDataType: VARCHAR(120)
+        - addNotNullConstraint:
+            tableName: kitchen_recipe_ingredients
+            columnName: name
+            columnDataType: VARCHAR(120)
+        - addNotNullConstraint:
+            tableName: kitchen_recipe_steps
+            columnName: text
+            columnDataType: VARCHAR(2000)
+        - addNotNullConstraint:
+            tableName: spaces
+            columnName: name
+            columnDataType: VARCHAR(80)
+        - dropColumn:
+            tableName: shopping_items
+            columnName: name_encrypted
+        - dropColumn:
+            tableName: shopping_categories
+            columnName: name_encrypted
+        - dropColumn:
+            tableName: tasks
+            columnName: title_encrypted
+        - dropColumn:
+            tableName: task_subtasks
+            columnName: text_encrypted
+        - dropColumn:
+            tableName: recurring_task_series
+            columnName: title_encrypted
+        - dropColumn:
+            tableName: recurring_task_series_subtask_templates
+            columnName: text_encrypted
+        - dropColumn:
+            tableName: kitchen_recipes
+            columns:
+              - column:
+                  name: name_encrypted
+              - column:
+                  name: description_encrypted
+              - column:
+                  name: note_encrypted
+        - dropColumn:
+            tableName: kitchen_recipe_ingredients
+            columnName: name_encrypted
+        - dropColumn:
+            tableName: kitchen_recipe_steps
+            columnName: text_encrypted
+        - dropColumn:
+            tableName: spaces
+            columns:
+              - column:
+                  name: name_encrypted
+              - column:
+                  name: description_encrypted

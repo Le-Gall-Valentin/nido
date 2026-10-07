@@ -1,31 +1,27 @@
 package com.nido.api.finance.infrastructure.config;
 
-import com.github.benmanes.caffeine.cache.LoadingCache;
-import com.nido.api.infrastructure.config.EncryptorCache;
-import com.nido.api.space.application.port.in.GetSpaceEncryptionSaltUseCase;
-import com.nido.api.shared.security.EncryptionKey;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceBudgetEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceCategoryEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceRecurringSeriesContributorEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceRecurringSeriesEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceSavingsContributionEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceSavingsGoalEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceSettlementRecordEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionContributorEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionEntity;
+import com.nido.api.infrastructure.sealing.SealedColumns;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.crypto.encrypt.Encryptors;
-import org.springframework.security.crypto.encrypt.TextEncryptor;
 
-import java.util.UUID;
-
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class FinanceEncryptionConfig {
 
-    // Per-space salt read from spaces.encryption_salt (a random value generated at space
-    // creation — see SpaceEntity#generateEncryptionSaltIfMissing), not derived from the space
-    // UUID itself: unlike TOTP's per-user salt, Finance data is sensitive enough that the
-    // salt must not be guessable from an id already visible in every API URL.
-    // Same key rotation limitation as TotpEncryptionConfig: changing the master secret
-    // requires re-entering every Finance record, since old ciphertext needs the old key.
+    /** The columns of finance that hold sealed values — see SealedValueMigration and SpaceKeyGuard. */
     @Bean
-    FinanceEncryptorFactory financeEncryptorFactory(EncryptionKey encryptionKey, GetSpaceEncryptionSaltUseCase getSpaceEncryptionSaltUseCase) {
-        // Bounded and expiring — see EncryptorCache. Expiry is what makes the salt below re-read
-        // periodically instead of being frozen at whatever it was when this instance booted.
-        LoadingCache<UUID, TextEncryptor> cache = EncryptorCache.build(id ->
-            Encryptors.delux(encryptionKey.value(), getSpaceEncryptionSaltUseCase.getEncryptionSalt(id)));
-        return cache::get;
+    SealedColumns financeSealedColumns() {
+        return SealedColumns.of(FinanceCategoryEntity.LABEL, FinanceTransactionEntity.LABEL, FinanceTransactionEntity.AMOUNT,
+            FinanceTransactionContributorEntity.SHARE_AMOUNT, FinanceRecurringSeriesEntity.LABEL, FinanceRecurringSeriesEntity.AMOUNT,
+            FinanceRecurringSeriesContributorEntity.SHARE_AMOUNT, FinanceBudgetEntity.MONTHLY_LIMIT, FinanceSavingsGoalEntity.NAME,
+            FinanceSavingsGoalEntity.TARGET_AMOUNT, FinanceSavingsContributionEntity.AMOUNT, FinanceSettlementRecordEntity.AMOUNT);
     }
 }

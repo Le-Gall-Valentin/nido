@@ -5,6 +5,7 @@ import com.nido.api.instance.domain.model.EncryptionKeyDecision;
 import com.nido.api.instance.domain.model.InstanceState;
 import com.nido.api.instance.domain.model.KeyFingerprint;
 import com.nido.api.instance.domain.model.ProvidedKey;
+import com.nido.api.instance.domain.model.ResolvedEncryptionKey;
 import com.nido.api.instance.domain.port.out.InstanceStatePort;
 import com.nido.api.instance.domain.port.out.KeyFilePort;
 import com.nido.api.shared.annotation.ApplicationService;
@@ -29,7 +30,7 @@ public class ResolveEncryptionKeyHandler implements ResolveEncryptionKeyUseCase 
 
     @Override
     @Transactional
-    public String resolve(String configuredKey) {
+    public ResolvedEncryptionKey resolve(String configuredKey) {
         Optional<ProvidedKey> configured = Optional.ofNullable(configuredKey)
             .filter(key -> !key.isBlank())
             .map(key -> new ProvidedKey(key, "NIDO_ENCRYPTION_SECRET"));
@@ -40,18 +41,24 @@ public class ResolveEncryptionKeyHandler implements ResolveEncryptionKeyUseCase 
         boolean fromDataDirectory = configured.isEmpty() && provided.isPresent();
         InstanceState state = instanceState.load();
         return switch (EncryptionKeyDecision.decide(provided, state, keyFile.location())) {
-            case EncryptionKeyDecision.Use use -> use.key();
+            // Still on the data's word if the start that recorded it stopped before its key check.
+            case EncryptionKeyDecision.Use use -> new ResolvedEncryptionKey(use.key(), state.unconfirmedFingerprint());
             case EncryptionKeyDecision.RecordFingerprint record -> {
-                instanceState.recordFingerprint(KeyFingerprint.of(record.key()), fromDataDirectory);
+                // Taken on the data's word: the key check confirms it, or takes it back if the data refuses the key.
+                KeyFingerprint recorded = KeyFingerprint.of(record.key());
+                instanceState.recordFingerprint(recorded, fromDataDirectory);
                 log.info("Encryption key fingerprint recorded: from now on, a start with another key is refused");
-                yield record.key();
+                yield new ResolvedEncryptionKey(record.key(), Optional.of(recorded));
             }
             case EncryptionKeyDecision.Generate generate -> {
                 String key = keyFile.create();
-                instanceState.recordFingerprint(KeyFingerprint.of(key), true);
+                KeyFingerprint generated = KeyFingerprint.of(key);
+                instanceState.recordFingerprint(generated, true);
+                // Before the setup nothing is encrypted yet: no data has a word to give on this key.
+                instanceState.confirmFingerprint(generated);
                 log.warn("No encryption key was provided: one was generated in {}. Back it up, away from your "
                     + "database dumps — without it, the encrypted data cannot be read.", keyFile.location());
-                yield key;
+                yield new ResolvedEncryptionKey(key, Optional.empty());
             }
             case EncryptionKeyDecision.Refuse refuse -> throw new IllegalStateException(refuse.reason());
         };

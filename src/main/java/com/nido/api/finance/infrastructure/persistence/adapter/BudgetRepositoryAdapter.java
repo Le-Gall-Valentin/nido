@@ -3,13 +3,12 @@ package com.nido.api.finance.infrastructure.persistence.adapter;
 import com.nido.api.finance.domain.model.Budget;
 import com.nido.api.finance.domain.model.SetBudgetCommand;
 import com.nido.api.finance.domain.port.out.BudgetRepository;
-import com.nido.api.finance.infrastructure.config.FinanceEncryptorFactory;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceBudgetEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceBudgetJpaRepository;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,32 +17,36 @@ import java.util.UUID;
 public class BudgetRepositoryAdapter implements BudgetRepository {
 
     private final FinanceBudgetJpaRepository budgets;
-    private final FinanceEncryptorFactory encryptorFactory;
+    private final SpaceSealers sealers;
 
-    public BudgetRepositoryAdapter(FinanceBudgetJpaRepository budgets, FinanceEncryptorFactory encryptorFactory) {
+    public BudgetRepositoryAdapter(FinanceBudgetJpaRepository budgets, SpaceSealers sealers) {
         this.budgets = budgets;
-        this.encryptorFactory = encryptorFactory;
+        this.sealers = sealers;
     }
 
     @Override
     public List<Budget> findBySpaceId(UUID spaceId) {
-        return budgets.findBySpaceId(spaceId).stream().map(e -> toDomain(e, spaceId)).toList();
+        return budgets.findBySpaceId(spaceId).stream().map(this::toDomain).toList();
     }
 
     @Override
     public Optional<Budget> findByCategoryId(UUID categoryId) {
-        return budgets.findByCategoryId(categoryId).map(e -> toDomain(e, e.getSpaceId()));
+        return budgets.findByCategoryId(categoryId).map(this::toDomain);
     }
 
     @Override
     @Transactional
     public Budget upsert(SetBudgetCommand command) {
-        FinanceBudgetEntity e = budgets.findByCategoryId(command.categoryId()).orElseGet(FinanceBudgetEntity::new);
-        e.setSpaceId(command.spaceId());
-        e.setCategoryId(command.categoryId());
-        e.setMonthlyLimitEncrypted(encryptorFactory.forSpace(command.spaceId()).encrypt(command.monthlyLimit().toPlainString()));
-        FinanceBudgetEntity saved = budgets.saveAndFlush(e);
-        return toDomain(saved, command.spaceId());
+        FinanceBudgetEntity e = budgets.findByCategoryId(command.categoryId()).orElseGet(() -> {
+            FinanceBudgetEntity created = new FinanceBudgetEntity();
+            created.setSpaceId(command.spaceId());
+            created.setCategoryId(command.categoryId());
+            return created;
+        });
+        // The key of the space the row is stored in, whatever the command says.
+        e.setMonthlyLimitEncrypted(SealedAmounts.seal(sealers.forSpace(e.getSpaceId()), FinanceBudgetEntity.MONTHLY_LIMIT, e.getId(),
+            command.monthlyLimit()));
+        return toDomain(budgets.saveAndFlush(e));
     }
 
     @Override
@@ -53,8 +56,8 @@ public class BudgetRepositoryAdapter implements BudgetRepository {
         budgets.flush();
     }
 
-    private Budget toDomain(FinanceBudgetEntity e, UUID spaceId) {
-        String decrypted = encryptorFactory.forSpace(spaceId).decrypt(e.getMonthlyLimitEncrypted());
-        return new Budget(e.getId(), e.getSpaceId(), e.getCategoryId(), new BigDecimal(decrypted));
+    private Budget toDomain(FinanceBudgetEntity e) {
+        return new Budget(e.getId(), e.getSpaceId(), e.getCategoryId(),
+            SealedAmounts.open(sealers.forSpace(e.getSpaceId()), FinanceBudgetEntity.MONTHLY_LIMIT, e.getId(), e.getMonthlyLimitEncrypted()));
     }
 }

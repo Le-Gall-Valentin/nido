@@ -5,9 +5,9 @@ import com.nido.api.finance.domain.model.CreateCategoryCommand;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.UpdateCategoryCommand;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
-import com.nido.api.finance.infrastructure.config.FinanceEncryptorFactory;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceCategoryEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceCategoryJpaRepository;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,16 +19,16 @@ import java.util.UUID;
 public class CategoryRepositoryAdapter implements CategoryRepository {
 
     private final FinanceCategoryJpaRepository categories;
-    private final FinanceEncryptorFactory encryptorFactory;
+    private final SpaceSealers sealers;
 
-    public CategoryRepositoryAdapter(FinanceCategoryJpaRepository categories, FinanceEncryptorFactory encryptorFactory) {
+    public CategoryRepositoryAdapter(FinanceCategoryJpaRepository categories, SpaceSealers sealers) {
         this.categories = categories;
-        this.encryptorFactory = encryptorFactory;
+        this.sealers = sealers;
     }
 
     @Override
     public List<Category> findBySpaceId(UUID spaceId) {
-        return categories.findBySpaceId(spaceId).stream().map(e -> toDomain(e, spaceId)).toList();
+        return categories.findBySpaceId(spaceId).stream().map(this::toDomain).toList();
     }
 
     @Override
@@ -44,7 +44,7 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
 
     @Override
     public Optional<Category> findById(UUID categoryId) {
-        return categories.findById(categoryId).map(e -> toDomain(e, e.getSpaceId()));
+        return categories.findById(categoryId).map(this::toDomain);
     }
 
     @Override
@@ -53,23 +53,23 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
         FinanceCategoryEntity e = new FinanceCategoryEntity();
         e.setSpaceId(command.spaceId());
         e.setDefault(isDefault);
-        applyLabel(e, command.spaceId(), command.label(), isDefault);
+        e.setLabelEncrypted(sealers.forSpace(command.spaceId()).seal(FinanceCategoryEntity.LABEL, e.getId(), command.label()));
         e.setColor(command.color());
         e.setIcon(command.icon());
         e.setType(command.type());
         FinanceCategoryEntity saved = categories.saveAndFlush(e);
-        return toDomain(saved, command.spaceId());
+        return toDomain(saved);
     }
 
     @Override
     @Transactional
     public Category update(UpdateCategoryCommand command) {
         FinanceCategoryEntity e = categories.findById(command.categoryId()).orElseThrow(FinanceException.CategoryNotFound::new);
-        applyLabel(e, command.spaceId(), command.label(), e.isDefault());
+        e.setLabelEncrypted(sealers.forSpace(e.getSpaceId()).seal(FinanceCategoryEntity.LABEL, e.getId(), command.label()));
         e.setColor(command.color());
         e.setIcon(command.icon());
         FinanceCategoryEntity saved = categories.saveAndFlush(e);
-        return toDomain(saved, command.spaceId());
+        return toDomain(saved);
     }
 
     @Override
@@ -83,18 +83,8 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
         return categories.existsTransactionForCategory(categoryId);
     }
 
-    private void applyLabel(FinanceCategoryEntity e, UUID spaceId, String label, boolean isDefault) {
-        if (isDefault) {
-            e.setLabel(label);
-            e.setLabelEncrypted(null);
-        } else {
-            e.setLabelEncrypted(encryptorFactory.forSpace(spaceId).encrypt(label));
-            e.setLabel(null);
-        }
-    }
-
-    private Category toDomain(FinanceCategoryEntity e, UUID spaceId) {
-        String label = e.isDefault() ? e.getLabel() : encryptorFactory.forSpace(spaceId).decrypt(e.getLabelEncrypted());
+    private Category toDomain(FinanceCategoryEntity e) {
+        String label = sealers.forSpace(e.getSpaceId()).open(FinanceCategoryEntity.LABEL, e.getId(), e.getLabelEncrypted());
         return new Category(e.getId(), e.getSpaceId(), label, e.getColor(), e.getIcon(), e.isDefault(), e.getType());
     }
 }

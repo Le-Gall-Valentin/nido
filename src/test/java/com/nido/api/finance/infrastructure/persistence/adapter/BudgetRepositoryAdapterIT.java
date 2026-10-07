@@ -1,12 +1,15 @@
 package com.nido.api.finance.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.finance.domain.model.Budget;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.CreateCategoryCommand;
 import com.nido.api.finance.domain.model.SetBudgetCommand;
 import com.nido.api.finance.domain.model.TransactionType;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceBudgetEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceBudgetJpaRepository;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
@@ -26,6 +29,7 @@ class BudgetRepositoryAdapterIT {
     @Autowired FinanceBudgetJpaRepository jpaRepository;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired CategoryRepositoryAdapter categoryAdapter;
+    @Autowired SpaceSealers sealers;
 
     private UUID spaceId;
     private UUID categoryId;
@@ -35,7 +39,7 @@ class BudgetRepositoryAdapterIT {
         spaceJpaRepository.deleteAll();
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName("Chez Valentin");
+        TestSpaces.name(space, "Chez Valentin");
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         spaceId = spaceJpaRepository.saveAndFlush(space).getId();
@@ -52,6 +56,7 @@ class BudgetRepositoryAdapterIT {
         assertThat(created.monthlyLimit()).isEqualByComparingTo("450.00");
         String rawStoredValue = jpaRepository.findByCategoryId(categoryId).orElseThrow().getMonthlyLimitEncrypted();
         assertThat(rawStoredValue).isNotNull().doesNotContain("450.00");
+        assertThat(sealers.forSpace(spaceId).open(FinanceBudgetEntity.MONTHLY_LIMIT, created.id(), rawStoredValue)).isEqualTo("450.00");
     }
 
     @Test
@@ -78,5 +83,24 @@ class BudgetRepositoryAdapterIT {
         adapter.deleteByCategoryId(categoryId);
 
         assertThat(adapter.findByCategoryId(categoryId)).isEmpty();
+    }
+
+    @Test
+    void an_update_keeps_the_budget_in_its_space_and_seals_under_it_whatever_the_command_says() {
+        adapter.upsert(new SetBudgetCommand(spaceId, categoryId, new BigDecimal("450.00")));
+
+        adapter.upsert(new SetBudgetCommand(anotherSpace(), categoryId, new BigDecimal("500.00")));
+
+        assertThat(adapter.findBySpaceId(spaceId)).singleElement()
+            .satisfies(budget -> assertThat(budget.monthlyLimit()).isEqualByComparingTo("500.00"));
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
     }
 }

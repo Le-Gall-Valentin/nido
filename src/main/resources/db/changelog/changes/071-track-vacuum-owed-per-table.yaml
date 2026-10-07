@@ -1,0 +1,65 @@
+databaseChangeLog:
+  - changeSet:
+      id: 071-track-vacuum-owed-per-table
+      author: nido
+      comment: >
+        The VACUUM owed once values are sealed, table by table rather than as the single flag of 069, each with the file
+        the table was in when the debt was recorded. A table whose VACUUM keeps failing — a role Postgres does not allow,
+        a lock always held — no longer makes every start rewrite every table again; and a table rewritten since, by the
+        command the warning gives to run by hand, is settled: its file changed. What 069 owed is carried over, and a
+        069 that cannot tell — its row gone — counts as owing it. The valid checksum is the one of the first draft of
+        this changeset, which development databases ran before that last rule, unreleased.
+      validCheckSum: 9:421ec06defc1e8f05e3431e716ef8086
+      changes:
+        - createTable:
+            tableName: sealing_vacuum_owed
+            columns:
+              - column:
+                  name: table_name
+                  type: VARCHAR(63)
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_sealing_vacuum_owed
+                    nullable: false
+              - column:
+                  name: filenode
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: >
+              INSERT INTO sealing_vacuum_owed (table_name, filenode)
+              SELECT t, pg_relation_filenode(to_regclass(t))::bigint
+              FROM unnest(ARRAY['shopping_items', 'shopping_categories', 'tasks', 'task_subtasks', 'recurring_task_series',
+                                'recurring_task_series_subtask_templates', 'kitchen_recipes', 'kitchen_recipe_ingredients',
+                                'kitchen_recipe_steps', 'spaces', 'finance_categories', 'finance_transactions',
+                                'finance_transaction_contributors', 'finance_recurring_transaction_series',
+                                'finance_recurring_series_contributors', 'finance_budgets', 'finance_savings_goals',
+                                'finance_savings_contributions', 'finance_settlement_records', 'calendar_events',
+                                'calendar_recurring_event_series']) t
+              WHERE to_regclass(t) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM sealing_state WHERE NOT vacuum_owed)
+        - dropTable:
+            tableName: sealing_state
+      rollback:
+        - createTable:
+            tableName: sealing_state
+            columns:
+              - column:
+                  name: id
+                  type: SMALLINT
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_sealing_state
+                    nullable: false
+              - column:
+                  name: vacuum_owed
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE sealing_state ADD CONSTRAINT chk_sealing_state_single_row CHECK (id = 1)
+        - sql:
+            sql: INSERT INTO sealing_state (id, vacuum_owed) SELECT 1, EXISTS (SELECT 1 FROM sealing_vacuum_owed)
+        - dropTable:
+            tableName: sealing_vacuum_owed

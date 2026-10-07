@@ -11,6 +11,7 @@ import java.util.UUID;
 
 public interface RecipeRepository {
     Optional<Recipe> findById(UUID recipeId);
+    /** In no particular order: the names are sealed, so the order is the caller's to set. */
     List<Recipe> findBySpaceId(UUID spaceId);
     List<Recipe> findByIds(Collection<UUID> recipeIds);
     Recipe create(CreateRecipeCommand command);

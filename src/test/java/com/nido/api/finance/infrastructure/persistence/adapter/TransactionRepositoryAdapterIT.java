@@ -1,12 +1,14 @@
 package com.nido.api.finance.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
 import com.nido.api.finance.domain.model.CreateCategoryCommand;
 import com.nido.api.finance.domain.model.CreateTransactionCommand;
 import com.nido.api.finance.domain.model.SplitTransaction;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionContributorEntity;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionEntity;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
@@ -14,6 +16,9 @@ import com.nido.api.finance.domain.model.UpdateTransactionCommand;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransactionJpaRepository;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -21,6 +26,7 @@ import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaReposito
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -39,6 +45,8 @@ class TransactionRepositoryAdapterIT {
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired UserIdentityJpaRepository userJpaRepository;
     @Autowired CategoryRepositoryAdapter categoryAdapter;
+    @Autowired SpaceSealers sealers;
+    @Autowired JdbcTemplate jdbc;
 
     private UUID spaceId;
     private UUID aliceId;
@@ -52,7 +60,7 @@ class TransactionRepositoryAdapterIT {
 
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName("Chez Valentin");
+        TestSpaces.name(space, "Chez Valentin");
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         spaceId = spaceJpaRepository.saveAndFlush(space).getId();
@@ -217,7 +225,7 @@ class TransactionRepositoryAdapterIT {
     void findSplitsBySpaceId_stays_inside_its_own_space() {
         SpaceEntity other = new SpaceEntity();
         other.setType(SpaceType.SHARED);
-        other.setName("Ailleurs");
+        TestSpaces.name(other, "Ailleurs");
         other.setAccent("#c17a5c");
         other.setGlyph("🏠");
         UUID otherSpaceId = spaceJpaRepository.saveAndFlush(other).getId();
@@ -268,5 +276,68 @@ class TransactionRepositoryAdapterIT {
         assertThatThrownBy(() -> adapter.findAllBySpaceId(spaceId))
             .as("the full read does decrypt the label — otherwise this test proves nothing")
             .isInstanceOf(RuntimeException.class);
+    }
+
+    // ─── Scellement : chaque montant est attaché à sa ligne ─────────────────
+
+    @Test
+    void the_label_the_amount_and_the_shares_are_stored_sealed_to_their_rows() {
+        Transaction rent = save("Loyer", new BigDecimal("850.00"), aliceId, List.of(new Contribution(aliceId, new BigDecimal("850.00"))));
+        SpaceSealer sealer = sealers.forSpace(spaceId);
+
+        String label = jdbc.queryForObject("SELECT label_encrypted FROM finance_transactions WHERE id = ?", String.class, rent.id());
+        String amount = jdbc.queryForObject("SELECT amount_encrypted FROM finance_transactions WHERE id = ?", String.class, rent.id());
+        assertThat(amount).startsWith("v2:");
+        assertThat(sealer.open(FinanceTransactionEntity.LABEL, rent.id(), label)).isEqualTo("Loyer");
+        assertThat(sealer.open(FinanceTransactionEntity.AMOUNT, rent.id(), amount)).isEqualTo("850.00");
+        assertThat(jdbc.query("SELECT id, share_amount_encrypted FROM finance_transaction_contributors WHERE transaction_id = ?",
+                (rs, rowNum) -> sealer.open(FinanceTransactionContributorEntity.SHARE_AMOUNT, rs.getObject("id", UUID.class),
+                    rs.getString("share_amount_encrypted")), rent.id()))
+            .containsExactly("850.00");
+    }
+
+    @Test
+    void an_amount_copied_from_another_transaction_is_refused_in_every_read() {
+        Transaction rent = save("Loyer", new BigDecimal("850.00"), aliceId, List.of(new Contribution(bobId, new BigDecimal("850.00"))));
+        Transaction coffee = save("Café", new BigDecimal("3.50"), aliceId, List.of(new Contribution(bobId, new BigDecimal("3.50"))));
+        jdbc.update("UPDATE finance_transactions SET amount_encrypted = (SELECT amount_encrypted FROM finance_transactions WHERE id = ?) WHERE id = ?",
+            rent.id(), coffee.id());
+
+        assertThatThrownBy(() -> adapter.findById(coffee.id())).isInstanceOf(SealedValueRejected.class);
+        assertThatThrownBy(() -> adapter.findSplitsBySpaceId(spaceId)).isInstanceOf(SealedValueRejected.class);
+    }
+
+    @Test
+    void a_share_copied_from_another_contributor_is_refused_even_when_it_is_the_same_amount() {
+        Transaction rent = save("Loyer", new BigDecimal("850.00"), aliceId,
+            List.of(new Contribution(aliceId, new BigDecimal("425.00")), new Contribution(bobId, new BigDecimal("425.00"))));
+        jdbc.update("""
+            UPDATE finance_transaction_contributors SET share_amount_encrypted =
+              (SELECT share_amount_encrypted FROM finance_transaction_contributors WHERE transaction_id = ? AND user_id = ?)
+            WHERE transaction_id = ? AND user_id = ?""", rent.id(), aliceId, rent.id(), bobId);
+
+        assertThatThrownBy(() -> adapter.findById(rent.id())).isInstanceOf(SealedValueRejected.class);
+        assertThatThrownBy(() -> adapter.findSplitsBySpaceId(spaceId)).isInstanceOf(SealedValueRejected.class);
+    }
+
+    @Test
+    void an_update_seals_under_the_space_of_the_row_whatever_the_command_says() {
+        Transaction rent = save("Loyer", new BigDecimal("850.00"), aliceId, List.of(new Contribution(aliceId, new BigDecimal("850.00"))));
+
+        adapter.update(new UpdateTransactionCommand(rent.id(), anotherSpace(), "Loyer octobre", new BigDecimal("860.00"),
+                TransactionType.EXPENSE, categoryId, LocalDate.of(2026, 1, 15), aliceId, List.of(new ContributionInput(aliceId, null))),
+            List.of(new Contribution(aliceId, new BigDecimal("860.00"))));
+
+        assertThat(adapter.findById(rent.id()).orElseThrow())
+            .extracting(Transaction::label, t -> t.amount().toPlainString()).containsExactly("Loyer octobre", "860.00");
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
     }
 }

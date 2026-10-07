@@ -6,12 +6,12 @@ import com.nido.api.calendar.domain.model.RecurrenceInterval;
 import com.nido.api.calendar.domain.model.RecurringEventSeries;
 import com.nido.api.calendar.domain.model.UpdateRecurringEventSeriesCommand;
 import com.nido.api.calendar.domain.port.out.RecurringEventSeriesRepository;
-import com.nido.api.calendar.infrastructure.config.CalendarEncryptorFactory;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarRecurringEventSeriesEntity;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarRecurringEventSeriesParticipantEntity;
 import com.nido.api.calendar.infrastructure.persistence.repository.CalendarRecurringEventSeriesJpaRepository;
 import com.nido.api.calendar.infrastructure.persistence.repository.CalendarRecurringEventSeriesParticipantJpaRepository;
-import org.springframework.security.crypto.encrypt.TextEncryptor;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,15 +29,15 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
 
     private final CalendarRecurringEventSeriesJpaRepository series;
     private final CalendarRecurringEventSeriesParticipantJpaRepository participants;
-    private final CalendarEncryptorFactory encryptorFactory;
+    private final SpaceSealers sealers;
 
     public RecurringEventSeriesRepositoryAdapter(
             CalendarRecurringEventSeriesJpaRepository series,
             CalendarRecurringEventSeriesParticipantJpaRepository participants,
-            CalendarEncryptorFactory encryptorFactory) {
+            SpaceSealers sealers) {
         this.series = series;
         this.participants = participants;
-        this.encryptorFactory = encryptorFactory;
+        this.sealers = sealers;
     }
 
     @Override
@@ -63,12 +63,12 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
     @Override
     @Transactional
     public RecurringEventSeries create(CreateRecurringEventSeriesCommand command) {
-        TextEncryptor encryptor = encryptorFactory.forSpace(command.spaceId());
+        SpaceSealer sealer = sealers.forSpace(command.spaceId());
         CalendarRecurringEventSeriesEntity entity = new CalendarRecurringEventSeriesEntity();
         entity.setSpaceId(command.spaceId());
-        entity.setTitleEncrypted(encryptor.encrypt(command.title()));
-        entity.setDescriptionEncrypted(encryptOrNull(encryptor, command.description()));
-        entity.setLocationEncrypted(encryptOrNull(encryptor, command.location()));
+        entity.setTitleEncrypted(sealer.seal(CalendarRecurringEventSeriesEntity.TITLE, entity.getId(), command.title()));
+        entity.setDescriptionEncrypted(sealer.sealNullable(CalendarRecurringEventSeriesEntity.DESCRIPTION, entity.getId(), command.description()));
+        entity.setLocationEncrypted(sealer.sealNullable(CalendarRecurringEventSeriesEntity.LOCATION, entity.getId(), command.location()));
         apply(entity, command.allDay(), command.startTime(), command.endTime(), command.durationDays(),
             command.color(), command.intervalType(), command.intervalCount(), command.anchorDate(), command.endDate());
         entity.setStartsOn(command.startsOn());
@@ -83,10 +83,10 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
     public RecurringEventSeries update(UpdateRecurringEventSeriesCommand command) {
         CalendarRecurringEventSeriesEntity entity = series.findById(command.seriesId())
             .orElseThrow(CalendarException.RecurringEventSeriesNotFound::new);
-        TextEncryptor encryptor = encryptorFactory.forSpace(entity.getSpaceId());
-        entity.setTitleEncrypted(encryptor.encrypt(command.title()));
-        entity.setDescriptionEncrypted(encryptOrNull(encryptor, command.description()));
-        entity.setLocationEncrypted(encryptOrNull(encryptor, command.location()));
+        SpaceSealer sealer = sealers.forSpace(entity.getSpaceId());
+        entity.setTitleEncrypted(sealer.seal(CalendarRecurringEventSeriesEntity.TITLE, entity.getId(), command.title()));
+        entity.setDescriptionEncrypted(sealer.sealNullable(CalendarRecurringEventSeriesEntity.DESCRIPTION, entity.getId(), command.description()));
+        entity.setLocationEncrypted(sealer.sealNullable(CalendarRecurringEventSeriesEntity.LOCATION, entity.getId(), command.location()));
         apply(entity, command.allDay(), command.startTime(), command.endTime(), command.durationDays(),
             command.color(), command.intervalType(), command.intervalCount(), command.anchorDate(), command.endDate());
         CalendarRecurringEventSeriesEntity saved = series.saveAndFlush(entity);
@@ -141,21 +141,13 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
             .map(CalendarRecurringEventSeriesParticipantEntity::getUserId).toList();
     }
 
-    private static String encryptOrNull(TextEncryptor encryptor, String value) {
-        return value == null ? null : encryptor.encrypt(value);
-    }
-
-    private static String decryptOrNull(TextEncryptor encryptor, String value) {
-        return value == null ? null : encryptor.decrypt(value);
-    }
-
     private RecurringEventSeries toDomain(CalendarRecurringEventSeriesEntity e, List<UUID> participantIds) {
-        TextEncryptor encryptor = encryptorFactory.forSpace(e.getSpaceId());
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
         return new RecurringEventSeries(
             e.getId(), e.getSpaceId(),
-            encryptor.decrypt(e.getTitleEncrypted()),
-            decryptOrNull(encryptor, e.getDescriptionEncrypted()),
-            decryptOrNull(encryptor, e.getLocationEncrypted()),
+            sealer.open(CalendarRecurringEventSeriesEntity.TITLE, e.getId(), e.getTitleEncrypted()),
+            sealer.openNullable(CalendarRecurringEventSeriesEntity.DESCRIPTION, e.getId(), e.getDescriptionEncrypted()),
+            sealer.openNullable(CalendarRecurringEventSeriesEntity.LOCATION, e.getId(), e.getLocationEncrypted()),
             e.isAllDay(), e.getStartTime(), e.getEndTime(), e.getDurationDays(), e.getColor(),
             e.getIntervalType(), e.getIntervalCount(), e.getAnchorDate(), e.getEndDate(), e.getStartsOn(),
             participantIds, e.getCreatedBy(), e.getCreatedAt());

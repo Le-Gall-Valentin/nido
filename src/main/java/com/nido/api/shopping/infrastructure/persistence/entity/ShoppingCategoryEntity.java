@@ -1,13 +1,13 @@
 package com.nido.api.shopping.infrastructure.persistence.entity;
 
+import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.UuidGenerator;
 
 import java.util.UUID;
 
@@ -16,17 +16,15 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-public class ShoppingCategoryEntity {
-
-    @Id
-    @UuidGenerator
-    private UUID id;
+public class ShoppingCategoryEntity extends AssignedUuidEntity {
 
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
 
-    @Column(nullable = false, length = 60)
-    private String name;
+    public static final SealedColumn NAME = SealedColumn.ofSpace("shopping_categories", "name_encrypted").withClearColumn("name");
+
+    @Column(name = "name_encrypted", nullable = false)
+    private String nameEncrypted;
 
     @Column(nullable = false)
     private int position;

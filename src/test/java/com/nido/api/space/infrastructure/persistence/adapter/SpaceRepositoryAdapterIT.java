@@ -3,6 +3,9 @@ package com.nido.api.space.infrastructure.persistence.adapter;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.CreateSharedSpaceCommand;
 import com.nido.api.space.domain.model.Space;
@@ -10,17 +13,22 @@ import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceSummaryView;
 import com.nido.api.space.domain.model.SpaceType;
+import com.nido.api.space.domain.model.UpdateSpaceCommand;
+import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceMemberJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 import java.time.ZoneId;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTestConfig
@@ -30,6 +38,8 @@ class SpaceRepositoryAdapterIT {
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired SpaceMemberJpaRepository spaceMemberJpaRepository;
     @Autowired UserIdentityJpaRepository userIdentityJpaRepository;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired SpaceSealers sealers;
 
     private UUID alice;
     private UUID bob;
@@ -96,7 +106,7 @@ class SpaceRepositoryAdapterIT {
     }
 
     @Test
-    void findMySpaces_returns_the_personal_space_first_with_role_and_member_count() {
+    void findMySpaces_returns_every_space_of_the_member_with_role_and_member_count() {
         Space personal = adapter.createPersonal(alice);
         adapter.add(personal.id(), alice, SpaceRole.OWNER);
         Space shared = adapter.createShared(
@@ -106,12 +116,10 @@ class SpaceRepositoryAdapterIT {
 
         List<SpaceSummaryView> mine = adapter.findMySpaces(alice);
 
-        assertThat(mine).hasSize(2);
-        assertThat(mine.get(0).type()).isEqualTo(SpaceType.PERSONAL);
-        assertThat(mine.get(0).memberCount()).isEqualTo(1);
-        assertThat(mine.get(1).name()).isEqualTo("Chez Valentin");
-        assertThat(mine.get(1).myRole()).isEqualTo(SpaceRole.OWNER);
-        assertThat(mine.get(1).memberCount()).isEqualTo(2);
+        // In no particular order: ListMySpacesHandler sorts them.
+        assertThat(mine).extracting(SpaceSummaryView::type, SpaceSummaryView::name, SpaceSummaryView::myRole, SpaceSummaryView::memberCount)
+            .containsExactlyInAnyOrder(tuple(SpaceType.PERSONAL, personal.name(), SpaceRole.OWNER, 1L),
+                tuple(SpaceType.SHARED, "Chez Valentin", SpaceRole.OWNER, 2L));
         assertThat(adapter.findMySpaces(bob)).hasSize(1);
     }
 
@@ -176,5 +184,61 @@ class SpaceRepositoryAdapterIT {
         user.setEmail(username + "@test.com");
         user.setRole(Role.USER);
         return userIdentityJpaRepository.saveAndFlush(user).getId();
+    }
+
+    @Test
+    void a_shared_space_keeps_its_name_and_description_encrypted_with_its_own_key() {
+        Space space = adapter.createShared(new CreateSharedSpaceCommand("Famille Le Gall 🏡", "Rue des Lilas",
+            "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
+
+        Map<String, Object> row = jdbc.queryForMap("SELECT name_encrypted, description_encrypted FROM spaces WHERE id = ?", space.id());
+        SpaceSealer sealer = sealers.forSpace(space.id());
+        assertThat((String) row.get("name_encrypted")).startsWith("v2:").doesNotContain("Famille");
+        assertThat(sealer.open(SpaceEntity.NAME, space.id(), (String) row.get("name_encrypted"))).isEqualTo("Famille Le Gall 🏡");
+        assertThat(sealer.open(SpaceEntity.DESCRIPTION, space.id(), (String) row.get("description_encrypted"))).isEqualTo("Rue des Lilas");
+        assertThat(adapter.findById(space.id()).orElseThrow())
+            .extracting(Space::name, Space::description).containsExactly("Famille Le Gall 🏡", "Rue des Lilas");
+    }
+
+    @Test
+    void the_personal_space_name_is_encrypted_too() {
+        Space space = adapter.createPersonal(alice);
+
+        String stored = jdbc.queryForObject("SELECT name_encrypted FROM spaces WHERE id = ?", String.class, space.id());
+
+        assertThat(sealers.forSpace(space.id()).open(SpaceEntity.NAME, space.id(), stored)).isEqualTo("Perso");
+    }
+
+    @Test
+    void renaming_re_encrypts_and_an_empty_description_clears_it() {
+        Space space = adapter.createShared(new CreateSharedSpaceCommand("Coloc", "Avant", "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
+
+        adapter.update(new UpdateSpaceCommand(space.id(), "Coloc rue Y", "", null, null, null));
+
+        Space updated = adapter.findById(space.id()).orElseThrow();
+        assertThat(updated.name()).isEqualTo("Coloc rue Y");
+        assertThat(updated.description()).isNull();
+        assertThat(jdbc.queryForObject("SELECT description_encrypted FROM spaces WHERE id = ?", String.class, space.id())).isNull();
+    }
+
+    @Test
+    void a_new_description_is_sealed_too() {
+        Space space = adapter.createShared(new CreateSharedSpaceCommand("Coloc", null, "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
+
+        adapter.update(new UpdateSpaceCommand(space.id(), null, "Rue des Lilas", null, null, null));
+
+        String stored = jdbc.queryForObject("SELECT description_encrypted FROM spaces WHERE id = ?", String.class, space.id());
+        assertThat(stored).startsWith("v2:").doesNotContain("Lilas");
+        assertThat(sealers.forSpace(space.id()).open(SpaceEntity.DESCRIPTION, space.id(), stored)).isEqualTo("Rue des Lilas");
+        assertThat(adapter.findById(space.id()).orElseThrow().description()).isEqualTo("Rue des Lilas");
+    }
+
+    @Test
+    void a_name_or_a_description_moved_to_the_other_column_is_refused() {
+        Space space = adapter.createShared(new CreateSharedSpaceCommand("Coloc", "Rue des Lilas", "#c17a5c", "🏡", alice,
+            ZoneId.of("Europe/Paris")));
+        jdbc.update("UPDATE spaces SET name_encrypted = description_encrypted WHERE id = ?", space.id());
+
+        assertThatThrownBy(() -> adapter.findById(space.id())).isInstanceOf(SealedValueRejected.class);
     }
 }

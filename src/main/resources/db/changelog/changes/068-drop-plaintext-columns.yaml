@@ -1,0 +1,345 @@
+databaseChangeLog:
+  - changeSet:
+      id: 068-drop-plaintext-shopping-items
+      author: nido
+      comment: >
+        The second half of 067, one table per changeset: once no row holds a value in clear, the column
+        in clear goes and the encrypted one becomes required. The values are encrypted by
+        EncryptionBackfillRunner, which needs the encryption key and so runs after Liquibase. On an
+        upgrade, the precondition fails at the first start (onFail CONTINUE records nothing) and holds at
+        the next; on a new installation the table is empty and the changeset runs at once.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "shopping_items still holds names in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM shopping_items WHERE name IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: shopping_items
+            columnName: name
+        - addNotNullConstraint:
+            tableName: shopping_items
+            columnName: name_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: shopping_items
+            columnName: name_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: shopping_items
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(120)
+  - changeSet:
+      id: 068-drop-plaintext-shopping-categories
+      author: nido
+      comment: The second half of 067 for shopping_categories — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "shopping_categories still holds names in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM shopping_categories WHERE name IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: shopping_categories
+            columnName: name
+        - addNotNullConstraint:
+            tableName: shopping_categories
+            columnName: name_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: shopping_categories
+            columnName: name_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: shopping_categories
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(60)
+  - changeSet:
+      id: 068-drop-plaintext-tasks
+      author: nido
+      comment: The second half of 067 for tasks — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "tasks still holds titles in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM tasks WHERE title IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: tasks
+            columnName: title
+        - addNotNullConstraint:
+            tableName: tasks
+            columnName: title_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: tasks
+            columnName: title_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: tasks
+            columns:
+              - column:
+                  name: title
+                  type: VARCHAR(200)
+  - changeSet:
+      id: 068-drop-plaintext-task-subtasks
+      author: nido
+      comment: The second half of 067 for task_subtasks — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "task_subtasks still holds texts in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM task_subtasks WHERE text IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: task_subtasks
+            columnName: text
+        - addNotNullConstraint:
+            tableName: task_subtasks
+            columnName: text_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: task_subtasks
+            columnName: text_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: task_subtasks
+            columns:
+              - column:
+                  name: text
+                  type: VARCHAR(200)
+  - changeSet:
+      id: 068-drop-plaintext-recurring-task-series
+      author: nido
+      comment: The second half of 067 for recurring_task_series — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "recurring_task_series still holds titles in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM recurring_task_series WHERE title IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: recurring_task_series
+            columnName: title
+        - addNotNullConstraint:
+            tableName: recurring_task_series
+            columnName: title_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: recurring_task_series
+            columnName: title_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: recurring_task_series
+            columns:
+              - column:
+                  name: title
+                  type: VARCHAR(200)
+  - changeSet:
+      id: 068-drop-plaintext-recurring-task-series-subtask-templates
+      author: nido
+      comment: The second half of 067 for recurring_task_series_subtask_templates — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "recurring_task_series_subtask_templates still holds texts in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM recurring_task_series_subtask_templates WHERE text IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: recurring_task_series_subtask_templates
+            columnName: text
+        - addNotNullConstraint:
+            tableName: recurring_task_series_subtask_templates
+            columnName: text_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: recurring_task_series_subtask_templates
+            columnName: text_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: recurring_task_series_subtask_templates
+            columns:
+              - column:
+                  name: text
+                  type: VARCHAR(200)
+  - changeSet:
+      id: 068-drop-plaintext-kitchen-recipes
+      author: nido
+      comment: The second half of 067 for kitchen_recipes — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "kitchen_recipes still holds texts in clear: they are encrypted after this start, and the columns are dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM kitchen_recipes WHERE name IS NOT NULL OR description IS NOT NULL OR note IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: kitchen_recipes
+            columns:
+              - column:
+                  name: name
+              - column:
+                  name: description
+              - column:
+                  name: note
+        - addNotNullConstraint:
+            tableName: kitchen_recipes
+            columnName: name_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: kitchen_recipes
+            columnName: name_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: kitchen_recipes
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(120)
+              - column:
+                  name: description
+                  type: TEXT
+              - column:
+                  name: note
+                  type: TEXT
+  - changeSet:
+      id: 068-drop-plaintext-kitchen-recipe-ingredients
+      author: nido
+      comment: The second half of 067 for kitchen_recipe_ingredients — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "kitchen_recipe_ingredients still holds names in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM kitchen_recipe_ingredients WHERE name IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: kitchen_recipe_ingredients
+            columnName: name
+        - addNotNullConstraint:
+            tableName: kitchen_recipe_ingredients
+            columnName: name_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: kitchen_recipe_ingredients
+            columnName: name_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: kitchen_recipe_ingredients
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(120)
+  - changeSet:
+      id: 068-drop-plaintext-kitchen-recipe-steps
+      author: nido
+      comment: The second half of 067 for kitchen_recipe_steps — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "kitchen_recipe_steps still holds texts in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM kitchen_recipe_steps WHERE text IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: kitchen_recipe_steps
+            columnName: text
+        - addNotNullConstraint:
+            tableName: kitchen_recipe_steps
+            columnName: text_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: kitchen_recipe_steps
+            columnName: text_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: kitchen_recipe_steps
+            columns:
+              - column:
+                  name: text
+                  type: VARCHAR(2000)
+  - changeSet:
+      id: 068-drop-plaintext-finance-categories
+      author: nido
+      comment: >
+        The second half of 067 for finance_categories — see 068-drop-plaintext-shopping-items. Every label is encrypted from now on, the defaults' included.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "finance_categories still holds labels in clear: they are encrypted after this start, and the column is dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM finance_categories WHERE label IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: finance_categories
+            columnName: label
+        - addNotNullConstraint:
+            tableName: finance_categories
+            columnName: label_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: finance_categories
+            columnName: label_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: finance_categories
+            columns:
+              - column:
+                  name: label
+                  type: VARCHAR(60)
+  - changeSet:
+      id: 068-drop-plaintext-spaces
+      author: nido
+      comment: The second half of 067 for spaces — see 068-drop-plaintext-shopping-items.
+      preConditions:
+        - onFail: CONTINUE
+        - onFailMessage: "spaces still holds names or descriptions in clear: they are encrypted after this start, and the columns are dropped at the next one."
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT count(*) FROM spaces WHERE name IS NOT NULL OR description IS NOT NULL
+      changes:
+        - dropColumn:
+            tableName: spaces
+            columns:
+              - column:
+                  name: name
+              - column:
+                  name: description
+        - addNotNullConstraint:
+            tableName: spaces
+            columnName: name_encrypted
+            columnDataType: TEXT
+      rollback:
+        - dropNotNullConstraint:
+            tableName: spaces
+            columnName: name_encrypted
+            columnDataType: TEXT
+        - addColumn:
+            tableName: spaces
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(80)
+              - column:
+                  name: description
+                  type: VARCHAR(280)

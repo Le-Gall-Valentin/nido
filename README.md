@@ -25,8 +25,9 @@ The logs show a setup code:
 Open `http://<this machine>:8080`, enter the code, and follow the steps: your administrator account,
 Nido's address, email if you wish, and your encryption key.
 
-**Save the encryption key the last step shows.** It encrypts two-factor authentication, finances and the
-calendar. It is shown once; keep it in a password manager.
+**Save the encryption key the last step shows.** It encrypts what your household keeps in Nido — finances,
+calendar, shopping lists, tasks, recipes, the names of your spaces — and two-factor authentication. It is shown
+once; keep it in a password manager.
 
 Nothing else to fill in: the database and Redis passwords are generated at the first start, and so are
 Nido's own secrets. The code changes at every restart.
@@ -79,6 +80,9 @@ docker compose up -d
 
 Pin the version with `NIDO_VERSION=0.12.0` in `.env`, so that `pull` never moves you to a new version by surprise.
 
+Before updating to 0.14.0, back up the database (see below): its first start rewrites every encrypted value, and
+the previous version cannot read them afterwards.
+
 ## Backups
 
 Back up two things, **and keep them apart**:
@@ -90,8 +94,33 @@ Back up two things, **and keep them apart**:
 Nido encrypts sensitive data with that key, and keeps the key out of the database on purpose: a stolen
 database dump alone reveals nothing. Stored together, the two would undo that.
 
-Losing the key makes two-factor authentication, finances and the calendar unreadable. Nido refuses to
-start with a key that is not the one its data was encrypted with, rather than writing data nobody can read.
+Losing the key makes all of that unreadable. Nido refuses to start with a key that is not the one its data was
+encrypted with, rather than writing data nobody can read.
+
+## When Nido refuses a stored value
+
+Every encrypted value is sealed to the row it belongs to. One that was moved, copied or altered in the database — by
+hand, by a partial restore, or by someone with write access to it — is refused rather than shown: the page shows an
+error, and the log has an ERROR line naming the table, the column and the row, never the value:
+
+```
+The value of finance_transactions.amount_encrypted in row 3f… belongs to another place
+```
+
+To get the page back, put that value right, in this order of preference:
+
+1. Restore the row from a backup taken before the change.
+2. If the column may be empty — the description of a space, a recipe or an event, the note of a recipe, the place of
+   an event, recurring events included — empty it: `UPDATE <table> SET <column> = NULL WHERE id = '<row>';`
+3. Otherwise, if you can do without the row, delete it — knowing that Postgres deletes what depends on it too:
+   - **never delete a row of `spaces`**: it is the whole space, with everything in it. Restore it instead;
+   - a finance category takes its transactions, budget and recurring transactions with it, a shopping aisle its
+     items, a recurring event its events;
+   - a task, a recipe, a transaction or a savings goal only takes what belongs to it: subtasks, ingredients, steps
+     and menu entries, shares, contributions.
+
+The same goes for the start that updates to 0.14.0: if it stops on `Could not seal row … of <table>.<column>`, put that
+row right the same way, then start again — the work already done is kept.
 
 ## Settings
 

@@ -1,8 +1,12 @@
 package com.nido.api.tasks.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -15,15 +19,19 @@ import com.nido.api.tasks.domain.model.Task;
 import com.nido.api.tasks.domain.model.TaskPriority;
 import com.nido.api.tasks.domain.model.TaskStatus;
 import com.nido.api.tasks.domain.model.UpdateTaskCommand;
+import com.nido.api.tasks.infrastructure.persistence.entity.TaskEntity;
+import com.nido.api.tasks.infrastructure.persistence.entity.TaskSubtaskEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 @IntegrationTestConfig
@@ -32,6 +40,8 @@ class TaskRepositoryAdapterIT {
     @Autowired TaskRepositoryAdapter adapter;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired UserIdentityJpaRepository userJpaRepository;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired SpaceSealers sealers;
 
     private UUID spaceId;
     private UUID aliceId;
@@ -43,7 +53,7 @@ class TaskRepositoryAdapterIT {
 
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName("Chez Valentin");
+        TestSpaces.name(space, "Chez Valentin");
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         spaceId = spaceJpaRepository.saveAndFlush(space).getId();
@@ -157,7 +167,7 @@ class TaskRepositoryAdapterIT {
 
         SpaceEntity other = new SpaceEntity();
         other.setType(SpaceType.SHARED);
-        other.setName("Ailleurs");
+        TestSpaces.name(other, "Ailleurs");
         other.setAccent("#c17a5c");
         other.setGlyph("🏡");
         UUID otherSpaceId = spaceJpaRepository.saveAndFlush(other).getId();
@@ -193,5 +203,84 @@ class TaskRepositoryAdapterIT {
         adapter.createAll(List.of());
 
         assertThat(adapter.findBySpaceId(spaceId)).isEmpty();
+    }
+
+    @Test
+    void the_title_and_the_subtasks_are_stored_sealed_with_the_key_of_the_space() {
+        Task created = adapter.create(new CreateTaskCommand(spaceId, "Rendez-vous oncologue", TaskPriority.HIGH, null,
+            List.of(), List.of(new SubtaskInput("Apporter l’ordonnance", false)), null, aliceId));
+
+        String title = jdbc.queryForObject("SELECT title_encrypted FROM tasks WHERE id = ?", String.class, created.id());
+        assertThat(title).startsWith("v2:").doesNotContain("oncologue");
+        assertThat(sealers.forSpace(spaceId).open(TaskEntity.TITLE, created.id(), title)).isEqualTo("Rendez-vous oncologue");
+        assertThat(storedSubtaskTexts(created.id())).containsExactly("Apporter l’ordonnance");
+    }
+
+    @Test
+    void editing_the_subtasks_seals_the_new_texts() {
+        Task created = adapter.create(new CreateTaskCommand(spaceId, "Ménage", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskInput("Cuisine", false)), null, aliceId));
+        UUID kitchen = created.subtasks().getFirst().id();
+
+        Task updated = adapter.update(new UpdateTaskCommand(created.id(), spaceId, "Ménage", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskEdit(kitchen, "Cuisine et four"), new SubtaskEdit(null, "Salle de bain 🛁"))));
+
+        assertThat(updated.subtasks()).extracting(Subtask::text).containsExactly("Cuisine et four", "Salle de bain 🛁");
+        assertThat(storedSubtaskTexts(created.id())).containsExactly("Cuisine et four", "Salle de bain 🛁");
+    }
+
+    @Test
+    void an_unchanged_subtask_keeps_its_stored_value() {
+        Task created = adapter.create(new CreateTaskCommand(spaceId, "Ménage", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskInput("Cuisine", false)), null, aliceId));
+        UUID kitchen = created.subtasks().getFirst().id();
+        String before = jdbc.queryForObject("SELECT text_encrypted FROM task_subtasks WHERE id = ?", String.class, kitchen);
+
+        adapter.update(new UpdateTaskCommand(created.id(), spaceId, "Grand ménage", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskEdit(kitchen, "Cuisine"))));
+
+        assertThat(jdbc.queryForObject("SELECT text_encrypted FROM task_subtasks WHERE id = ?", String.class, kitchen)).isEqualTo(before);
+    }
+
+    @Test
+    void a_title_or_a_subtask_copied_from_another_row_is_refused() {
+        Task first = adapter.create(new CreateTaskCommand(spaceId, "Payer la cantine", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskInput("Trouver le RIB", false), new SubtaskInput("Virement", false)), null, aliceId));
+        Task second = adapter.create(new CreateTaskCommand(spaceId, "Arroser", TaskPriority.LOW, null, List.of(), List.of(), null, aliceId));
+        jdbc.update("UPDATE tasks SET title_encrypted = (SELECT title_encrypted FROM tasks WHERE id = ?) WHERE id = ?",
+            first.id(), second.id());
+        jdbc.update("UPDATE task_subtasks SET text_encrypted = (SELECT text_encrypted FROM task_subtasks WHERE id = ?) WHERE id = ?",
+            first.subtasks().get(0).id(), first.subtasks().get(1).id());
+
+        assertThatThrownBy(() -> adapter.findById(second.id())).isInstanceOf(SealedValueRejected.class);
+        assertThatThrownBy(() -> adapter.findById(first.id())).isInstanceOf(SealedValueRejected.class);
+    }
+
+    private List<String> storedSubtaskTexts(UUID taskId) {
+        SpaceSealer sealer = sealers.forSpace(spaceId);
+        return jdbc.query("SELECT id, text_encrypted FROM task_subtasks WHERE task_id = ? ORDER BY position",
+            (rs, rowNum) -> sealer.open(TaskSubtaskEntity.TEXT, rs.getObject("id", UUID.class), rs.getString("text_encrypted")), taskId);
+    }
+
+    @Test
+    void an_update_seals_under_the_space_of_the_task_whatever_the_command_says() {
+        Task created = adapter.create(new CreateTaskCommand(spaceId, "Ménage", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskInput("Cuisine", false)), null, aliceId));
+
+        adapter.update(new UpdateTaskCommand(created.id(), anotherSpace(), "Grand ménage", TaskPriority.LOW, null, List.of(),
+            List.of(new SubtaskEdit(created.subtasks().getFirst().id(), "Cuisine et four"), new SubtaskEdit(null, "Salle de bain"))));
+
+        Task reread = adapter.findById(created.id()).orElseThrow();
+        assertThat(reread.title()).isEqualTo("Grand ménage");
+        assertThat(reread.subtasks()).extracting(Subtask::text).containsExactly("Cuisine et four", "Salle de bain");
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
     }
 }

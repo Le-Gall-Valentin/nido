@@ -1,9 +1,13 @@
 package com.nido.api.shopping.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
+import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shopping.domain.model.AddShoppingItemCommand;
 import com.nido.api.shopping.domain.model.ShoppingItem;
 import com.nido.api.shopping.domain.model.UpdateShoppingItemCommand;
+import com.nido.api.shopping.infrastructure.persistence.entity.ShoppingItemEntity;
 import com.nido.api.shared.model.MeasurementUnit;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -11,12 +15,14 @@ import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaReposito
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTestConfig
 class ShoppingItemRepositoryAdapterIT {
@@ -24,6 +30,8 @@ class ShoppingItemRepositoryAdapterIT {
     @Autowired ShoppingItemRepositoryAdapter adapter;
     @Autowired ShoppingCategoryRepositoryAdapter categoryAdapter;
     @Autowired SpaceJpaRepository spaceJpaRepository;
+    @Autowired JdbcTemplate jdbc;
+    @Autowired SpaceSealers sealers;
 
     private UUID spaceId;
     private UUID categoryId;
@@ -33,7 +41,7 @@ class ShoppingItemRepositoryAdapterIT {
     void setUp() {
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName("Chez Valentin");
+        TestSpaces.name(space, "Chez Valentin");
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         spaceId = spaceJpaRepository.saveAndFlush(space).getId();
@@ -161,5 +169,45 @@ class ShoppingItemRepositoryAdapterIT {
         spaceJpaRepository.flush();
 
         assertThat(adapter.findById(created.id())).isEmpty();
+    }
+
+    @Test
+    void the_name_is_stored_encrypted_with_the_key_of_its_space_and_an_edit_re_encrypts_it() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Crème fraîche", null, null));
+
+        adapter.update(new UpdateShoppingItemCommand(created.id(), spaceId, categoryId, "Crème fraîche 🥛", null, null));
+
+        String stored = jdbc.queryForObject("SELECT name_encrypted FROM shopping_items WHERE id = ?", String.class, created.id());
+        assertThat(stored).startsWith("v2:").doesNotContain("Crème");
+        assertThat(sealers.forSpace(spaceId).open(ShoppingItemEntity.NAME, created.id(), stored)).isEqualTo("Crème fraîche 🥛");
+        assertThat(adapter.findById(created.id()).orElseThrow().name()).isEqualTo("Crème fraîche 🥛");
+    }
+
+    @Test
+    void a_name_copied_from_another_item_is_refused() {
+        ShoppingItem pasta = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+        ShoppingItem rice = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null, null));
+        jdbc.update("UPDATE shopping_items SET name_encrypted = (SELECT name_encrypted FROM shopping_items WHERE id = ?) WHERE id = ?",
+            pasta.id(), rice.id());
+
+        assertThatThrownBy(() -> adapter.findById(rice.id())).isInstanceOf(SealedValueRejected.class);
+    }
+
+    @Test
+    void an_update_seals_under_the_space_of_the_item_whatever_the_command_says() {
+        ShoppingItem created = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", new BigDecimal("500"), MeasurementUnit.GRAM));
+
+        adapter.update(new UpdateShoppingItemCommand(created.id(), anotherSpace(), categoryId, "Pâtes complètes", null, null));
+
+        assertThat(adapter.findById(created.id()).orElseThrow().name()).isEqualTo("Pâtes complètes");
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
     }
 }

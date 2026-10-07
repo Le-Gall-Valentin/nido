@@ -1,0 +1,45 @@
+databaseChangeLog:
+  - changeSet:
+      id: 069-create-sealing-state
+      author: nido
+      comment: >
+        Whether the start that sealed values still owes the VACUUM that removes their earlier versions from the
+        tables' files. Set before the first row is rewritten and cleared once the VACUUM ran: a start stopped in
+        between, after its last batch, finds nothing left to seal, and only this tells the next one to vacuum.
+        One row.
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: sealing_state
+      changes:
+        - createTable:
+            tableName: sealing_state
+            columns:
+              - column:
+                  name: id
+                  type: SMALLINT
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_sealing_state
+                    nullable: false
+              - column:
+                  name: vacuum_owed
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: ALTER TABLE sealing_state ADD CONSTRAINT chk_sealing_state_single_row CHECK (id = 1)
+        - insert:
+            tableName: sealing_state
+            columns:
+              - column:
+                  name: id
+                  valueNumeric: 1
+              - column:
+                  name: vacuum_owed
+                  valueBoolean: false
+      rollback:
+        - dropTable:
+            tableName: sealing_state

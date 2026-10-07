@@ -1,6 +1,7 @@
 package com.nido.api.infrastructure.web;
 
 import com.nido.api.shared.infrastructure.web.ProblemDetailFactory;
+import com.nido.api.shared.security.StoredValueRejected;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -88,6 +89,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public void handleForbidden(AccessDeniedException e, HttpServletRequest request,
                                 HttpServletResponse response) throws Exception {
         accessDeniedHandler.handle(request, response, e);
+    }
+
+    /**
+     * A stored value that is not where it was sealed — moved, copied or altered in the database. Refused rather than
+     * shown, and logged with its place, never its value, for whoever looks after the database.
+     */
+    @ExceptionHandler(StoredValueRejected.class)
+    public ResponseEntity<ProblemDetail> handleRejectedValue(StoredValueRejected e, HttpServletRequest request) {
+        log.error("Refused a stored value on {} {}: {}", request.getMethod(), request.getRequestURI(), e.getMessage());
+        ProblemDetail problem = ProblemDetailFactory.of(HttpStatus.INTERNAL_SERVER_ERROR, "DataIntegrity",
+            "A stored value failed its integrity check and was not shown. The incident has been logged.",
+            URI.create(request.getRequestURI()));
+        problem.setProperty("error_code", "data_integrity");
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem);
     }
 
     @ExceptionHandler(Exception.class)

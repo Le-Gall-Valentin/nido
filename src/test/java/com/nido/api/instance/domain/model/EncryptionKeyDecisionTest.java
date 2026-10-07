@@ -18,7 +18,7 @@ class EncryptionKeyDecisionTest {
     }
 
     private static InstanceState state(KeyFingerprint fingerprint, boolean setupCompleted) {
-        return new InstanceState(Optional.ofNullable(fingerprint), false, setupCompleted);
+        return new InstanceState(Optional.ofNullable(fingerprint), true, false, setupCompleted);
     }
 
     @Test

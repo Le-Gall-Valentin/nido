@@ -2,8 +2,10 @@ package com.nido.api.kitchen.infrastructure.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.shared.model.MeasurementUnit;
 import com.nido.api.kitchen.domain.model.RecipeCategory;
@@ -55,6 +57,7 @@ class MenuControllerIT {
     @Autowired RecipeJpaRepository recipes;
     @Autowired RecipeIngredientJpaRepository recipeIngredients;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
+    @Autowired SpaceSealers sealers;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -166,7 +169,7 @@ class MenuControllerIT {
     private UUID saveSharedSpace(String name) {
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName(name);
+        TestSpaces.name(space, name);
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         return spaces.saveAndFlush(space).getId();
@@ -183,7 +186,7 @@ class MenuControllerIT {
     private UUID saveRecipe(UUID spaceId, String name, int referencePortions, String ingredientName, String qty, MeasurementUnit unit) {
         RecipeEntity recipe = new RecipeEntity();
         recipe.setSpaceId(spaceId);
-        recipe.setName(name);
+        recipe.setNameEncrypted(sealers.forSpace(spaceId).seal(RecipeEntity.NAME, recipe.getId(), name));
         recipe.setCategory(RecipeCategory.PLAT);
         recipe.setMinutes(35);
         recipe.setReferencePortions(referencePortions);
@@ -192,7 +195,7 @@ class MenuControllerIT {
         RecipeIngredientEntity ingredient = new RecipeIngredientEntity();
         ingredient.setRecipeId(id);
         ingredient.setPosition(0);
-        ingredient.setName(ingredientName);
+        ingredient.setNameEncrypted(sealers.forSpace(spaceId).seal(RecipeIngredientEntity.NAME, ingredient.getId(), ingredientName));
         ingredient.setQuantity(new BigDecimal(qty));
         ingredient.setUnit(unit);
         recipeIngredients.saveAndFlush(ingredient);

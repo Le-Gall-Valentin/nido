@@ -39,4 +39,18 @@ class ListMySpacesHandlerTest {
 
         assertThat(result).containsExactly(personal);
     }
+
+    private static SpaceSummaryView space(SpaceType type, String name) {
+        return new SpaceSummaryView(UUID.randomUUID(), type, name, "#8a7d6b", "👤", ZoneId.of("Europe/Paris"), SpaceRole.OWNER, 1);
+    }
+
+    @Test
+    void the_personal_space_comes_first_then_the_shared_ones_in_french_alphabetical_order() {
+        // The names are sealed: the repository cannot sort them, so they come in no particular order.
+        UUID userId = UUID.randomUUID();
+        when(spaceRepository.findMySpaces(userId)).thenReturn(List.of(space(SpaceType.SHARED, "Zeste"),
+            space(SpaceType.SHARED, "éclair"), space(SpaceType.PERSONAL, "Perso"), space(SpaceType.SHARED, "abricot")));
+
+        assertThat(handler.listMine(userId)).extracting(SpaceSummaryView::name).containsExactly("Perso", "abricot", "éclair", "Zeste");
+    }
 }

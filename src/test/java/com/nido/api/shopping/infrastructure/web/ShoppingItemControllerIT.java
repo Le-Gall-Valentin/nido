@@ -2,6 +2,7 @@ package com.nido.api.shopping.infrastructure.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
@@ -158,7 +159,7 @@ class ShoppingItemControllerIT {
     private UUID saveSharedSpace(String name) {
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
-        space.setName(name);
+        TestSpaces.name(space, name);
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         return spaces.saveAndFlush(space).getId();
@@ -184,5 +185,18 @@ class ShoppingItemControllerIT {
             .signWith(Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
             .compact();
         return new Cookie("access_token", token);
+    }
+
+    @Test
+    void a_name_holding_half_an_emoji_is_a_bad_request() throws Exception {
+        // A lone surrogate — half of an emoji — is no text at all: it can be neither encrypted nor stored as typed.
+        String whole = "Œufs \\ud83e\\udd5a";
+        String half = "Œufs \\ud83e";
+        for (String name : new String[] {whole, half}) {
+            String body = "{\"categoryId\":\"" + categoryId + "\",\"name\":\"" + name + "\",\"quantity\":1,\"unit\":\"PIECE\"}";
+            mockMvc.perform(post("/api/spaces/" + spaceId + "/shopping/items")
+                    .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(name.equals(whole) ? status().isCreated() : status().isBadRequest());
+        }
     }
 }

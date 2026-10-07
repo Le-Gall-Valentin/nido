@@ -7,16 +7,15 @@ import com.nido.api.finance.domain.model.SavingsContribution;
 import com.nido.api.finance.domain.model.SavingsGoal;
 import com.nido.api.finance.domain.model.UpdateSavingsGoalCommand;
 import com.nido.api.finance.domain.port.out.SavingsGoalRepository;
-import com.nido.api.finance.infrastructure.config.FinanceEncryptorFactory;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceSavingsContributionEntity;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceSavingsGoalEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceSavingsContributionJpaRepository;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceSavingsGoalJpaRepository;
-import org.springframework.security.crypto.encrypt.TextEncryptor;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,53 +27,54 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
 
     private final FinanceSavingsGoalJpaRepository goals;
     private final FinanceSavingsContributionJpaRepository goalContributions;
-    private final FinanceEncryptorFactory encryptorFactory;
+    private final SpaceSealers sealers;
 
     public SavingsGoalRepositoryAdapter(
             FinanceSavingsGoalJpaRepository goals, FinanceSavingsContributionJpaRepository goalContributions,
-            FinanceEncryptorFactory encryptorFactory) {
+            SpaceSealers sealers) {
         this.goals = goals;
         this.goalContributions = goalContributions;
-        this.encryptorFactory = encryptorFactory;
+        this.sealers = sealers;
     }
 
     @Override
     public Optional<SavingsGoal> findById(UUID goalId) {
-        return goals.findById(goalId).map(e -> toDomain(e, e.getSpaceId()));
+        return goals.findById(goalId).map(this::toDomain);
     }
 
     @Override
     public List<SavingsGoal> findBySpaceId(UUID spaceId) {
-        return goals.findBySpaceId(spaceId).stream().map(e -> toDomain(e, spaceId)).toList();
+        return goals.findBySpaceId(spaceId).stream().map(this::toDomain).toList();
     }
 
     @Override
     @Transactional
     public SavingsGoal create(CreateSavingsGoalCommand command) {
-        TextEncryptor encryptor = encryptorFactory.forSpace(command.spaceId());
+        SpaceSealer sealer = sealers.forSpace(command.spaceId());
         FinanceSavingsGoalEntity e = new FinanceSavingsGoalEntity();
         e.setSpaceId(command.spaceId());
-        e.setNameEncrypted(encryptor.encrypt(command.name()));
-        e.setTargetAmountEncrypted(encryptor.encrypt(command.targetAmount().toPlainString()));
+        e.setNameEncrypted(sealer.seal(FinanceSavingsGoalEntity.NAME, e.getId(), command.name()));
+        e.setTargetAmountEncrypted(SealedAmounts.seal(sealer, FinanceSavingsGoalEntity.TARGET_AMOUNT, e.getId(), command.targetAmount()));
         e.setTargetDate(command.targetDate());
         e.setColor(command.color());
         e.setGlyph(command.glyph());
         FinanceSavingsGoalEntity saved = goals.saveAndFlush(e);
-        return toDomain(saved, command.spaceId());
+        return toDomain(saved);
     }
 
     @Override
     @Transactional
     public SavingsGoal update(UpdateSavingsGoalCommand command) {
-        TextEncryptor encryptor = encryptorFactory.forSpace(command.spaceId());
         FinanceSavingsGoalEntity e = goals.findById(command.goalId()).orElseThrow(FinanceException.SavingsGoalNotFound::new);
-        e.setNameEncrypted(encryptor.encrypt(command.name()));
-        e.setTargetAmountEncrypted(encryptor.encrypt(command.targetAmount().toPlainString()));
+        // The key of the space the row is stored in, whatever the command says.
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
+        e.setNameEncrypted(sealer.seal(FinanceSavingsGoalEntity.NAME, e.getId(), command.name()));
+        e.setTargetAmountEncrypted(SealedAmounts.seal(sealer, FinanceSavingsGoalEntity.TARGET_AMOUNT, e.getId(), command.targetAmount()));
         e.setTargetDate(command.targetDate());
         e.setColor(command.color());
         e.setGlyph(command.glyph());
         FinanceSavingsGoalEntity saved = goals.saveAndFlush(e);
-        return toDomain(saved, command.spaceId());
+        return toDomain(saved);
     }
 
     @Override
@@ -86,10 +86,10 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
     @Override
     public List<SavingsContribution> findContributionsByGoalId(UUID goalId) {
         FinanceSavingsGoalEntity goal = goals.findById(goalId).orElseThrow(FinanceException.SavingsGoalNotFound::new);
-        TextEncryptor encryptor = encryptorFactory.forSpace(goal.getSpaceId());
+        SpaceSealer sealer = sealers.forSpace(goal.getSpaceId());
         return goalContributions.findByGoalIdOrderByContributedDateDesc(goalId).stream()
             .map(ce -> new SavingsContribution(ce.getId(), ce.getGoalId(), ce.getUserId(),
-                new BigDecimal(encryptor.decrypt(ce.getAmountEncrypted())), ce.getContributedDate()))
+                SealedAmounts.open(sealer, FinanceSavingsContributionEntity.AMOUNT, ce.getId(), ce.getAmountEncrypted()), ce.getContributedDate()))
             .toList();
     }
 
@@ -98,10 +98,10 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
         if (goalIds.isEmpty()) {
             return Map.of();
         }
-        TextEncryptor encryptor = encryptorFactory.forSpace(spaceId);
-        return goalContributions.findByGoalIdInOrderByContributedDateDesc(goalIds).stream()
+        SpaceSealer sealer = sealers.forSpace(spaceId);
+        return goalContributions.findOfSpaceByGoalIds(spaceId, goalIds).stream()
             .map(ce -> new SavingsContribution(ce.getId(), ce.getGoalId(), ce.getUserId(),
-                new BigDecimal(encryptor.decrypt(ce.getAmountEncrypted())), ce.getContributedDate()))
+                SealedAmounts.open(sealer, FinanceSavingsContributionEntity.AMOUNT, ce.getId(), ce.getAmountEncrypted()), ce.getContributedDate()))
             .collect(Collectors.groupingBy(SavingsContribution::goalId));
     }
 
@@ -114,19 +114,22 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
     @Override
     @Transactional
     public SavingsContribution addContribution(AddSavingsContributionCommand command) {
-        TextEncryptor encryptor = encryptorFactory.forSpace(command.spaceId());
+        // The key of the goal's space, whatever the command says: the contribution is read under it.
+        UUID spaceId = goals.findById(command.goalId()).map(FinanceSavingsGoalEntity::getSpaceId)
+            .orElseThrow(FinanceException.SavingsGoalNotFound::new);
+        SpaceSealer sealer = sealers.forSpace(spaceId);
         FinanceSavingsContributionEntity ce = new FinanceSavingsContributionEntity();
         ce.setGoalId(command.goalId());
         ce.setUserId(command.memberId());
-        ce.setAmountEncrypted(encryptor.encrypt(command.amount().toPlainString()));
+        ce.setAmountEncrypted(SealedAmounts.seal(sealer, FinanceSavingsContributionEntity.AMOUNT, ce.getId(), command.amount()));
         ce.setContributedDate(command.date());
         FinanceSavingsContributionEntity saved = goalContributions.saveAndFlush(ce);
         return new SavingsContribution(saved.getId(), saved.getGoalId(), saved.getUserId(), command.amount(), saved.getContributedDate());
     }
 
-    private SavingsGoal toDomain(FinanceSavingsGoalEntity e, UUID spaceId) {
-        TextEncryptor encryptor = encryptorFactory.forSpace(spaceId);
-        return new SavingsGoal(e.getId(), e.getSpaceId(), encryptor.decrypt(e.getNameEncrypted()),
-            new BigDecimal(encryptor.decrypt(e.getTargetAmountEncrypted())), e.getTargetDate(), e.getColor(), e.getGlyph());
+    private SavingsGoal toDomain(FinanceSavingsGoalEntity e) {
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
+        return new SavingsGoal(e.getId(), e.getSpaceId(), sealer.open(FinanceSavingsGoalEntity.NAME, e.getId(), e.getNameEncrypted()),
+            SealedAmounts.open(sealer, FinanceSavingsGoalEntity.TARGET_AMOUNT, e.getId(), e.getTargetAmountEncrypted()), e.getTargetDate(), e.getColor(), e.getGlyph());
     }
 }

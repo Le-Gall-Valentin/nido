@@ -5,12 +5,12 @@ import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.CreateEventCommand;
 import com.nido.api.calendar.domain.model.UpdateEventCommand;
 import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
-import com.nido.api.calendar.infrastructure.config.CalendarEncryptorFactory;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarEventEntity;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarEventParticipantEntity;
 import com.nido.api.calendar.infrastructure.persistence.repository.CalendarEventJpaRepository;
 import com.nido.api.calendar.infrastructure.persistence.repository.CalendarEventParticipantJpaRepository;
-import org.springframework.security.crypto.encrypt.TextEncryptor;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,14 +29,14 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
 
     private final CalendarEventJpaRepository events;
     private final CalendarEventParticipantJpaRepository participants;
-    private final CalendarEncryptorFactory encryptorFactory;
+    private final SpaceSealers sealers;
 
     public CalendarEventRepositoryAdapter(CalendarEventJpaRepository events,
                                           CalendarEventParticipantJpaRepository participants,
-                                          CalendarEncryptorFactory encryptorFactory) {
+                                          SpaceSealers sealers) {
         this.events = events;
         this.participants = participants;
-        this.encryptorFactory = encryptorFactory;
+        this.sealers = sealers;
     }
 
     @Override
@@ -96,12 +96,12 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
     @Override
     @Transactional
     public CalendarEvent create(CreateEventCommand command) {
-        TextEncryptor encryptor = encryptorFactory.forSpace(command.spaceId());
+        SpaceSealer sealer = sealers.forSpace(command.spaceId());
         CalendarEventEntity entity = new CalendarEventEntity();
         entity.setSpaceId(command.spaceId());
-        entity.setTitleEncrypted(encryptor.encrypt(command.title()));
-        entity.setDescriptionEncrypted(encryptOrNull(encryptor, command.description()));
-        entity.setLocationEncrypted(encryptOrNull(encryptor, command.location()));
+        entity.setTitleEncrypted(sealer.seal(CalendarEventEntity.TITLE, entity.getId(), command.title()));
+        entity.setDescriptionEncrypted(sealer.sealNullable(CalendarEventEntity.DESCRIPTION, entity.getId(), command.description()));
+        entity.setLocationEncrypted(sealer.sealNullable(CalendarEventEntity.LOCATION, entity.getId(), command.location()));
         entity.setAllDay(command.allDay());
         entity.setStartDate(command.startDate());
         entity.setStartTime(command.startTime());
@@ -121,10 +121,10 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
     public CalendarEvent update(UpdateEventCommand command) {
         CalendarEventEntity entity = events.findById(command.eventId())
             .orElseThrow(CalendarException.EventNotFound::new);
-        TextEncryptor encryptor = encryptorFactory.forSpace(entity.getSpaceId());
-        entity.setTitleEncrypted(encryptor.encrypt(command.title()));
-        entity.setDescriptionEncrypted(encryptOrNull(encryptor, command.description()));
-        entity.setLocationEncrypted(encryptOrNull(encryptor, command.location()));
+        SpaceSealer sealer = sealers.forSpace(entity.getSpaceId());
+        entity.setTitleEncrypted(sealer.seal(CalendarEventEntity.TITLE, entity.getId(), command.title()));
+        entity.setDescriptionEncrypted(sealer.sealNullable(CalendarEventEntity.DESCRIPTION, entity.getId(), command.description()));
+        entity.setLocationEncrypted(sealer.sealNullable(CalendarEventEntity.LOCATION, entity.getId(), command.location()));
         entity.setAllDay(command.allDay());
         entity.setStartDate(command.startDate());
         entity.setStartTime(command.startTime());
@@ -170,21 +170,13 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
             .map(CalendarEventParticipantEntity::getUserId).toList();
     }
 
-    private static String encryptOrNull(TextEncryptor encryptor, String value) {
-        return value == null ? null : encryptor.encrypt(value);
-    }
-
-    private static String decryptOrNull(TextEncryptor encryptor, String value) {
-        return value == null ? null : encryptor.decrypt(value);
-    }
-
     private CalendarEvent toDomain(CalendarEventEntity e, List<UUID> participantIds) {
-        TextEncryptor encryptor = encryptorFactory.forSpace(e.getSpaceId());
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
         return new CalendarEvent(
             e.getId(), e.getSpaceId(),
-            encryptor.decrypt(e.getTitleEncrypted()),
-            decryptOrNull(encryptor, e.getDescriptionEncrypted()),
-            decryptOrNull(encryptor, e.getLocationEncrypted()),
+            sealer.open(CalendarEventEntity.TITLE, e.getId(), e.getTitleEncrypted()),
+            sealer.openNullable(CalendarEventEntity.DESCRIPTION, e.getId(), e.getDescriptionEncrypted()),
+            sealer.openNullable(CalendarEventEntity.LOCATION, e.getId(), e.getLocationEncrypted()),
             e.isAllDay(), e.getStartDate(), e.getStartTime(), e.getEndDate(), e.getEndTime(),
             e.getColor(), participantIds,
             e.getRecurringSeriesId(), e.getRecurringOriginalDate(),
