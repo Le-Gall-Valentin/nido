@@ -448,6 +448,20 @@ class FinanceControllerIT {
             .andExpect(jsonPath("$.error_code").value("data_integrity"));
     }
 
+    @Test
+    void one_amount_tampered_in_the_middle_of_the_month_fails_the_whole_list_rather_than_shortening_it() throws Exception {
+        String category = firstCategoryId();
+        String rent = createTransaction(category, "Loyer", "850.00");
+        String coffee = createTransaction(category, "Café", "3.50");
+        createTransaction(category, "Pain", "1.20");
+        jdbc.update("UPDATE finance_transactions SET amount_encrypted = (SELECT amount_encrypted FROM finance_transactions WHERE id = ?::uuid) "
+            + "WHERE id = ?::uuid", rent, coffee);
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/transactions?month=2026-01").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isInternalServerError())
+            .andExpect(jsonPath("$.error_code").value("data_integrity"));
+    }
+
     private String createTransaction(String categoryId, String label, String amount) throws Exception {
         String body = "{\"label\":\"" + label + "\",\"amount\":" + amount + ",\"type\":\"EXPENSE\",\"categoryId\":\"" + categoryId
             + "\",\"date\":\"2026-01-15\"}";
