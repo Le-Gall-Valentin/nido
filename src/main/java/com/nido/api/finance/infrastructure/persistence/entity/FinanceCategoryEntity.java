@@ -1,6 +1,7 @@
 package com.nido.api.finance.infrastructure.persistence.entity;
 
 import com.nido.api.finance.domain.model.TransactionType;
+import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -9,9 +10,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.UuidGenerator;
 
-import jakarta.persistence.Id;
 import java.util.UUID;
 
 @Entity
@@ -19,11 +18,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-public class FinanceCategoryEntity {
-
-    @Id
-    @UuidGenerator
-    private UUID id;
+public class FinanceCategoryEntity extends AssignedUuidEntity {
 
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;

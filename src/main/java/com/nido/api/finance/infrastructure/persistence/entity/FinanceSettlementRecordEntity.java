@@ -1,13 +1,12 @@
 package com.nido.api.finance.infrastructure.persistence.entity;
 
+import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -17,11 +16,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-public class FinanceSettlementRecordEntity {
-
-    @Id
-    @UuidGenerator
-    private UUID id;
+public class FinanceSettlementRecordEntity extends AssignedUuidEntity {
 
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
