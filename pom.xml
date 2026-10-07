@@ -12,19 +12,24 @@
     <artifactId>nido</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>nido</name>
-    <description>nido</description>
-    <url/>
+    <description>Everything a household shares, in one place: finances, shopping, tasks, menus, calendar. Self-hosted.</description>
+    <url>https://github.com/Le-Gall-Valentin/nido</url>
     <licenses>
-        <license/>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
     </licenses>
     <developers>
-        <developer/>
+        <developer>
+            <name>Valentin Le Gall</name>
+            <url>https://github.com/Le-Gall-Valentin</url>
+        </developer>
     </developers>
     <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
+        <connection>scm:git:https://github.com/Le-Gall-Valentin/nido.git</connection>
+        <developerConnection>scm:git:git@github.com:Le-Gall-Valentin/nido.git</developerConnection>
+        <url>https://github.com/Le-Gall-Valentin/nido</url>
     </scm>
     <properties>
         <java.version>21</java.version>
