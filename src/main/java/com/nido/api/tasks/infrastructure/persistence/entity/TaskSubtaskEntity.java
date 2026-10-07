@@ -1,6 +1,7 @@
 package com.nido.api.tasks.infrastructure.persistence.entity;
 
 import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -22,6 +23,8 @@ public class TaskSubtaskEntity extends AssignedUuidEntity {
 
     @Column(nullable = false)
     private int position;
+
+    public static final SealedColumn TEXT = SealedColumn.throughParent("task_subtasks", "text_encrypted", "task_id", "tasks").withClearColumn("text");
 
     @Column(name = "text_encrypted", nullable = false)
     private String textEncrypted;

@@ -4,7 +4,9 @@ import com.nido.api.IntegrationTestConfig;
 import com.nido.api.TestSpaces;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
-import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
+import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -14,17 +16,19 @@ import com.nido.api.tasks.domain.model.RecurrenceInterval;
 import com.nido.api.tasks.domain.model.RecurringTaskSeries;
 import com.nido.api.tasks.domain.model.TaskPriority;
 import com.nido.api.tasks.domain.model.UpdateRecurringTaskSeriesCommand;
+import com.nido.api.tasks.infrastructure.persistence.entity.RecurringTaskSeriesEntity;
+import com.nido.api.tasks.infrastructure.persistence.entity.RecurringTaskSeriesSubtaskTemplateEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.encrypt.TextEncryptor;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTestConfig
 class RecurringTaskSeriesRepositoryAdapterIT {
@@ -33,7 +37,7 @@ class RecurringTaskSeriesRepositoryAdapterIT {
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired UserIdentityJpaRepository userJpaRepository;
     @Autowired JdbcTemplate jdbc;
-    @Autowired SpaceEncryptorFactory encryptors;
+    @Autowired SpaceSealers sealers;
 
     private UUID spaceId;
     private UUID aliceId;
@@ -149,16 +153,31 @@ class RecurringTaskSeriesRepositoryAdapterIT {
     }
 
     @Test
-    void the_title_and_the_subtask_templates_are_stored_encrypted() {
+    void the_title_and_the_subtask_templates_are_stored_sealed() {
         RecurringTaskSeries created = adapter.create(new CreateRecurringTaskSeriesCommand(spaceId, "Sortir les poubelles",
             TaskPriority.MED, List.of("Trier le verre"), RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0,
             LocalDate.of(2026, 10, 5), null, List.of(aliceId), aliceId));
-        TextEncryptor key = encryptors.forSpace(spaceId);
+        SpaceSealer sealer = sealers.forSpace(spaceId);
 
-        assertThat(key.decrypt(jdbc.queryForObject("SELECT title_encrypted FROM recurring_task_series WHERE id = ?",
-            String.class, created.id()))).isEqualTo("Sortir les poubelles");
-        assertThat(jdbc.queryForList("SELECT text_encrypted FROM recurring_task_series_subtask_templates WHERE series_id = ?",
-                String.class, created.id()))
-            .extracting(key::decrypt).containsExactly("Trier le verre");
+        String title = jdbc.queryForObject("SELECT title_encrypted FROM recurring_task_series WHERE id = ?", String.class, created.id());
+        assertThat(title).startsWith("v2:");
+        assertThat(sealer.open(RecurringTaskSeriesEntity.TITLE, created.id(), title)).isEqualTo("Sortir les poubelles");
+        assertThat(jdbc.query("SELECT id, text_encrypted FROM recurring_task_series_subtask_templates WHERE series_id = ?",
+                (rs, rowNum) -> sealer.open(RecurringTaskSeriesSubtaskTemplateEntity.TEXT, rs.getObject("id", UUID.class),
+                    rs.getString("text_encrypted")), created.id()))
+            .containsExactly("Trier le verre");
+    }
+
+    @Test
+    void a_subtask_template_copied_from_another_one_is_refused() {
+        RecurringTaskSeries created = adapter.create(new CreateRecurringTaskSeriesCommand(spaceId, "Sortir les poubelles",
+            TaskPriority.MED, List.of("Trier le verre", "Rentrer les bacs"), RecurrenceInterval.WEEKLY, 1, RecurrenceInterval.DAILY, 0,
+            LocalDate.of(2026, 10, 5), null, List.of(aliceId), aliceId));
+        jdbc.update("""
+            UPDATE recurring_task_series_subtask_templates SET text_encrypted =
+              (SELECT text_encrypted FROM recurring_task_series_subtask_templates WHERE series_id = ? AND position = 0)
+            WHERE series_id = ? AND position = 1""", created.id(), created.id());
+
+        assertThatThrownBy(() -> adapter.findById(created.id())).isInstanceOf(SealedValueRejected.class);
     }
 }

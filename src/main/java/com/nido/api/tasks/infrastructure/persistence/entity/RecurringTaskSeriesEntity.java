@@ -1,6 +1,7 @@
 package com.nido.api.tasks.infrastructure.persistence.entity;
 
 import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.tasks.domain.model.RecurrenceInterval;
 import com.nido.api.tasks.domain.model.TaskPriority;
 import jakarta.persistence.Column;
@@ -24,6 +25,8 @@ public class RecurringTaskSeriesEntity extends AssignedUuidEntity {
 
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
+
+    public static final SealedColumn TITLE = SealedColumn.ofSpace("recurring_task_series", "title_encrypted").withClearColumn("title");
 
     @Column(name = "title_encrypted", nullable = false)
     private String titleEncrypted;

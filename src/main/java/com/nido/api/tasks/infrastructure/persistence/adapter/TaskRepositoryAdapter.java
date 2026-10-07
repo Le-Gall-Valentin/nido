@@ -1,6 +1,7 @@
 package com.nido.api.tasks.infrastructure.persistence.adapter;
 
-import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.tasks.domain.model.CreateTaskCommand;
 import com.nido.api.tasks.domain.model.SubtaskEdit;
 import com.nido.api.tasks.domain.model.SubtaskInput;
@@ -16,7 +17,6 @@ import com.nido.api.tasks.infrastructure.persistence.entity.TaskSubtaskEntity;
 import com.nido.api.tasks.infrastructure.persistence.repository.TaskAssigneeJpaRepository;
 import com.nido.api.tasks.infrastructure.persistence.repository.TaskJpaRepository;
 import com.nido.api.tasks.infrastructure.persistence.repository.TaskSubtaskJpaRepository;
-import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,14 +36,14 @@ public class TaskRepositoryAdapter implements TaskRepository {
     private final TaskJpaRepository tasks;
     private final TaskAssigneeJpaRepository assignees;
     private final TaskSubtaskJpaRepository subtasks;
-    private final SpaceEncryptorFactory encryptors;
+    private final SpaceSealers sealers;
 
     public TaskRepositoryAdapter(TaskJpaRepository tasks, TaskAssigneeJpaRepository assignees, TaskSubtaskJpaRepository subtasks,
-                                 SpaceEncryptorFactory encryptors) {
+                                 SpaceSealers sealers) {
         this.tasks = tasks;
         this.assignees = assignees;
         this.subtasks = subtasks;
-        this.encryptors = encryptors;
+        this.sealers = sealers;
     }
 
     @Override
@@ -69,17 +69,17 @@ public class TaskRepositoryAdapter implements TaskRepository {
     @Override
     @Transactional
     public Task create(CreateTaskCommand command) {
-        TextEncryptor encryptor = encryptors.forSpace(command.spaceId());
+        SpaceSealer sealer = sealers.forSpace(command.spaceId());
         TaskEntity e = new TaskEntity();
         e.setSpaceId(command.spaceId());
-        e.setTitleEncrypted(encryptor.encrypt(command.title()));
+        e.setTitleEncrypted(sealer.seal(TaskEntity.TITLE, e.getId(), command.title()));
         e.setStatus(TaskStatus.TODO);
         e.setPriority(command.priority());
         e.setDueDate(command.dueDate());
         e.setRecurringSeriesId(command.recurringSeriesId());
         e.setCreatedBy(command.creatorUserId());
         TaskEntity saved = tasks.saveAndFlush(e);
-        saveAssigneesAndSubtasks(saved.getId(), encryptor, command.assigneeIds(), command.subtasks());
+        saveAssigneesAndSubtasks(saved.getId(), sealer, command.assigneeIds(), command.subtasks());
         return findById(saved.getId()).orElseThrow(TaskException.TaskNotFound::new);
     }
 
@@ -92,7 +92,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
         List<TaskEntity> entities = commands.stream().map(command -> {
             TaskEntity e = new TaskEntity();
             e.setSpaceId(command.spaceId());
-            e.setTitleEncrypted(encryptors.forSpace(command.spaceId()).encrypt(command.title()));
+            e.setTitleEncrypted(sealers.forSpace(command.spaceId()).seal(TaskEntity.TITLE, e.getId(), command.title()));
             e.setStatus(TaskStatus.TODO);
             e.setPriority(command.priority());
             e.setDueDate(command.dueDate());
@@ -109,7 +109,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
         for (int i = 0; i < saved.size(); i++) {
             UUID taskId = saved.get(i).getId();
             CreateTaskCommand command = commands.get(i);
-            TextEncryptor encryptor = encryptors.forSpace(command.spaceId());
+            SpaceSealer sealer = sealers.forSpace(command.spaceId());
             for (UUID userId : command.assigneeIds()) {
                 TaskAssigneeEntity ae = new TaskAssigneeEntity();
                 ae.setTaskId(taskId);
@@ -122,7 +122,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
                 TaskSubtaskEntity se = new TaskSubtaskEntity();
                 se.setTaskId(taskId);
                 se.setPosition(position);
-                se.setTextEncrypted(encryptor.encrypt(input.text()));
+                se.setTextEncrypted(sealer.seal(TaskSubtaskEntity.TEXT, se.getId(), input.text()));
                 se.setDone(input.done());
                 subtaskEntities.add(se);
             }
@@ -139,8 +139,8 @@ public class TaskRepositoryAdapter implements TaskRepository {
     @Transactional
     public Task update(UpdateTaskCommand command) {
         TaskEntity e = tasks.findById(command.taskId()).orElseThrow(TaskException.TaskNotFound::new);
-        TextEncryptor encryptor = encryptors.forSpace(e.getSpaceId());
-        e.setTitleEncrypted(encryptor.encrypt(command.title()));
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
+        e.setTitleEncrypted(sealer.seal(TaskEntity.TITLE, e.getId(), command.title()));
         e.setPriority(command.priority());
         e.setDueDate(command.dueDate());
         tasks.saveAndFlush(e);
@@ -153,7 +153,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
         }
         assignees.flush();
         if (command.subtasks() != null) {
-            rewriteSubtasks(e.getId(), encryptor, command.subtasks());
+            rewriteSubtasks(e.getId(), sealer, command.subtasks());
         }
         return findById(e.getId()).orElseThrow(TaskException.TaskNotFound::new);
     }
@@ -182,7 +182,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
         tasks.flush();
     }
 
-    private void saveAssigneesAndSubtasks(UUID taskId, TextEncryptor encryptor, List<UUID> assigneeIds,
+    private void saveAssigneesAndSubtasks(UUID taskId, SpaceSealer sealer, List<UUID> assigneeIds,
                                           List<SubtaskInput> subtaskInputs) {
         for (UUID userId : assigneeIds) {
             TaskAssigneeEntity ae = new TaskAssigneeEntity();
@@ -195,7 +195,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
             TaskSubtaskEntity se = new TaskSubtaskEntity();
             se.setTaskId(taskId);
             se.setPosition(i);
-            se.setTextEncrypted(encryptor.encrypt(input.text()));
+            se.setTextEncrypted(sealer.seal(TaskSubtaskEntity.TEXT, se.getId(), input.text()));
             se.setDone(input.done());
             subtasks.save(se);
         }
@@ -208,7 +208,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
      * and moved in place, so its id and its check survive; a new one is inserted unchecked; a row
      * the list no longer names is deleted.
      */
-    private void rewriteSubtasks(UUID taskId, TextEncryptor encryptor, List<SubtaskEdit> edits) {
+    private void rewriteSubtasks(UUID taskId, SpaceSealer sealer, List<SubtaskEdit> edits) {
         Map<UUID, TaskSubtaskEntity> rows = subtasks.findByTaskIdOrderByPositionAsc(taskId).stream()
             .collect(Collectors.toMap(TaskSubtaskEntity::getId, Function.identity()));
         List<TaskSubtaskEntity> kept = new ArrayList<>();
@@ -219,6 +219,7 @@ public class TaskRepositoryAdapter implements TaskRepository {
                 row = new TaskSubtaskEntity();
                 row.setTaskId(taskId);
                 row.setDone(false);
+                row.setTextEncrypted(sealer.seal(TaskSubtaskEntity.TEXT, row.getId(), edit.text()));
             } else {
                 // UpdateTaskHandler has already refused an id that is not one of this task's own;
                 // this is the last line, should a caller ever skip it.
@@ -226,8 +227,11 @@ public class TaskRepositoryAdapter implements TaskRepository {
                 if (row == null) {
                     throw new TaskException.TaskNotFound();
                 }
+                // Sealing is randomised: sealing an unchanged text again would rewrite the row for nothing.
+                if (!edit.text().equals(sealer.open(TaskSubtaskEntity.TEXT, row.getId(), row.getTextEncrypted()))) {
+                    row.setTextEncrypted(sealer.seal(TaskSubtaskEntity.TEXT, row.getId(), edit.text()));
+                }
             }
-            row.setTextEncrypted(encryptor.encrypt(edit.text()));
             row.setPosition(position);
             kept.add(row);
         }
@@ -259,10 +263,10 @@ public class TaskRepositoryAdapter implements TaskRepository {
     }
 
     private Task toDomain(TaskEntity e, Collection<TaskAssigneeEntity> assigneeEntities, List<TaskSubtaskEntity> subtaskEntities) {
-        TextEncryptor encryptor = encryptors.forSpace(e.getSpaceId());
-        return new Task(e.getId(), e.getSpaceId(), encryptor.decrypt(e.getTitleEncrypted()), e.getStatus(), e.getPriority(), e.getDueDate(),
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
+        return new Task(e.getId(), e.getSpaceId(), sealer.open(TaskEntity.TITLE, e.getId(), e.getTitleEncrypted()), e.getStatus(), e.getPriority(), e.getDueDate(),
             assigneeEntities.stream().map(TaskAssigneeEntity::getUserId).toList(),
-            subtaskEntities.stream().map(s -> new Subtask(s.getId(), encryptor.decrypt(s.getTextEncrypted()), s.isDone())).toList(),
+            subtaskEntities.stream().map(s -> new Subtask(s.getId(), sealer.open(TaskSubtaskEntity.TEXT, s.getId(), s.getTextEncrypted()), s.isDone())).toList(),
             e.getRecurringSeriesId(), e.getCreatedBy(), e.getCreatedAt());
     }
 }
