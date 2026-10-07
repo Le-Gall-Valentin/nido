@@ -24,6 +24,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -143,6 +144,17 @@ class SavingsGoalRepositoryAdapterIT {
         assertThat(adapter.findById(goal.id()).orElseThrow())
             .extracting(SavingsGoal::name, g -> g.targetAmount().toPlainString()).containsExactly("Vacances d'été", "2500.00");
         assertThat(adapter.findContributionsByGoalId(goal.id())).extracting(c -> c.amount().toPlainString()).containsExactly("50.00");
+    }
+
+    @Test
+    void the_contributions_of_a_goal_of_another_space_are_not_among_this_space_s() {
+        UUID elsewhere = anotherSpace();
+        SavingsGoal theirs = adapter.create(new CreateSavingsGoalCommand(elsewhere, "Leur voyage", new BigDecimal("900.00"), null, "#5c7a58", "🎯"));
+        adapter.addContribution(new AddSavingsContributionCommand(theirs.id(), elsewhere, aliceId, new BigDecimal("30.00"), LocalDate.of(2026, 1, 5)));
+
+        assertThat(adapter.findContributionsByGoalIds(spaceId, List.of(theirs.id()))).isEmpty();
+        assertThat(adapter.findContributionsByGoalIds(elsewhere, List.of(theirs.id())).get(theirs.id()))
+            .extracting(c -> c.amount().toPlainString()).containsExactly("30.00");
     }
 
     private UUID anotherSpace() {

@@ -27,24 +27,27 @@ public class BudgetRepositoryAdapter implements BudgetRepository {
 
     @Override
     public List<Budget> findBySpaceId(UUID spaceId) {
-        return budgets.findBySpaceId(spaceId).stream().map(e -> toDomain(e, spaceId)).toList();
+        return budgets.findBySpaceId(spaceId).stream().map(this::toDomain).toList();
     }
 
     @Override
     public Optional<Budget> findByCategoryId(UUID categoryId) {
-        return budgets.findByCategoryId(categoryId).map(e -> toDomain(e, e.getSpaceId()));
+        return budgets.findByCategoryId(categoryId).map(this::toDomain);
     }
 
     @Override
     @Transactional
     public Budget upsert(SetBudgetCommand command) {
-        FinanceBudgetEntity e = budgets.findByCategoryId(command.categoryId()).orElseGet(FinanceBudgetEntity::new);
-        e.setSpaceId(command.spaceId());
-        e.setCategoryId(command.categoryId());
-        e.setMonthlyLimitEncrypted(sealers.forSpace(command.spaceId()).seal(FinanceBudgetEntity.MONTHLY_LIMIT, e.getId(),
+        FinanceBudgetEntity e = budgets.findByCategoryId(command.categoryId()).orElseGet(() -> {
+            FinanceBudgetEntity created = new FinanceBudgetEntity();
+            created.setSpaceId(command.spaceId());
+            created.setCategoryId(command.categoryId());
+            return created;
+        });
+        // The key of the space the row is stored in, whatever the command says.
+        e.setMonthlyLimitEncrypted(sealers.forSpace(e.getSpaceId()).seal(FinanceBudgetEntity.MONTHLY_LIMIT, e.getId(),
             command.monthlyLimit().toPlainString()));
-        FinanceBudgetEntity saved = budgets.saveAndFlush(e);
-        return toDomain(saved, command.spaceId());
+        return toDomain(budgets.saveAndFlush(e));
     }
 
     @Override
@@ -54,8 +57,8 @@ public class BudgetRepositoryAdapter implements BudgetRepository {
         budgets.flush();
     }
 
-    private Budget toDomain(FinanceBudgetEntity e, UUID spaceId) {
-        String decrypted = sealers.forSpace(spaceId).open(FinanceBudgetEntity.MONTHLY_LIMIT, e.getId(), e.getMonthlyLimitEncrypted());
+    private Budget toDomain(FinanceBudgetEntity e) {
+        String decrypted = sealers.forSpace(e.getSpaceId()).open(FinanceBudgetEntity.MONTHLY_LIMIT, e.getId(), e.getMonthlyLimitEncrypted());
         return new Budget(e.getId(), e.getSpaceId(), e.getCategoryId(), new BigDecimal(decrypted));
     }
 }

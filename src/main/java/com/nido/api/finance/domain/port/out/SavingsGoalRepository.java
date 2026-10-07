@@ -19,9 +19,8 @@ public interface SavingsGoalRepository {
     void delete(UUID goalId);
     List<SavingsContribution> findContributionsByGoalId(UUID goalId);
     /**
-     * Batches the per-goal contribution lookup into one query — {@code goalIds} must all
-     * belong to {@code spaceId} (the caller's responsibility), since a single encryptor for
-     * that space is used to decrypt every contribution returned.
+     * Batches the per-goal contribution lookup into one query. Only the goals of {@code spaceId} count: one of another
+     * space has no contributions here.
      */
     Map<UUID, List<SavingsContribution>> findContributionsByGoalIds(UUID spaceId, List<UUID> goalIds);
     SavingsContribution addContribution(AddSavingsContributionCommand command);

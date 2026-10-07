@@ -26,13 +26,13 @@ public class SettlementRecordRepositoryAdapter implements SettlementRecordReposi
 
     @Override
     public List<SettlementRecord> findBySpaceId(UUID spaceId) {
-        return settlements.findBySpaceId(spaceId).stream().map(e -> toDomain(e, spaceId)).toList();
+        return settlements.findBySpaceId(spaceId).stream().map(this::toDomain).toList();
     }
 
     @Override
     public List<SettlementRecord> findBetweenMembers(UUID spaceId, UUID memberAId, UUID memberBId) {
         return settlements.findBetweenMembers(spaceId, memberAId, memberBId).stream()
-            .map(e -> toDomain(e, spaceId))
+            .map(this::toDomain)
             .toList();
     }
 
@@ -56,11 +56,11 @@ public class SettlementRecordRepositoryAdapter implements SettlementRecordReposi
             command.amount().toPlainString()));
         e.setSettledDate(command.date());
         FinanceSettlementRecordEntity saved = settlements.saveAndFlush(e);
-        return toDomain(saved, command.spaceId());
+        return toDomain(saved);
     }
 
-    private SettlementRecord toDomain(FinanceSettlementRecordEntity e, UUID spaceId) {
-        BigDecimal amount = new BigDecimal(sealers.forSpace(spaceId).open(FinanceSettlementRecordEntity.AMOUNT, e.getId(), e.getAmountEncrypted()));
+    private SettlementRecord toDomain(FinanceSettlementRecordEntity e) {
+        BigDecimal amount = new BigDecimal(sealers.forSpace(e.getSpaceId()).open(FinanceSettlementRecordEntity.AMOUNT, e.getId(), e.getAmountEncrypted()));
         return new SettlementRecord(e.getId(), e.getSpaceId(), e.getFromUserId(), e.getToUserId(), amount, e.getSettledDate());
     }
 }

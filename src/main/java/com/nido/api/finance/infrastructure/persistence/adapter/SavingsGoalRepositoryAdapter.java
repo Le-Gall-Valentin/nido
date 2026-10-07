@@ -40,12 +40,12 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
 
     @Override
     public Optional<SavingsGoal> findById(UUID goalId) {
-        return goals.findById(goalId).map(e -> toDomain(e, e.getSpaceId()));
+        return goals.findById(goalId).map(this::toDomain);
     }
 
     @Override
     public List<SavingsGoal> findBySpaceId(UUID spaceId) {
-        return goals.findBySpaceId(spaceId).stream().map(e -> toDomain(e, spaceId)).toList();
+        return goals.findBySpaceId(spaceId).stream().map(this::toDomain).toList();
     }
 
     @Override
@@ -60,7 +60,7 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
         e.setColor(command.color());
         e.setGlyph(command.glyph());
         FinanceSavingsGoalEntity saved = goals.saveAndFlush(e);
-        return toDomain(saved, saved.getSpaceId());
+        return toDomain(saved);
     }
 
     @Override
@@ -75,7 +75,7 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
         e.setColor(command.color());
         e.setGlyph(command.glyph());
         FinanceSavingsGoalEntity saved = goals.saveAndFlush(e);
-        return toDomain(saved, saved.getSpaceId());
+        return toDomain(saved);
     }
 
     @Override
@@ -100,7 +100,7 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
             return Map.of();
         }
         SpaceSealer sealer = sealers.forSpace(spaceId);
-        return goalContributions.findByGoalIdInOrderByContributedDateDesc(goalIds).stream()
+        return goalContributions.findOfSpaceByGoalIds(spaceId, goalIds).stream()
             .map(ce -> new SavingsContribution(ce.getId(), ce.getGoalId(), ce.getUserId(),
                 new BigDecimal(sealer.open(FinanceSavingsContributionEntity.AMOUNT, ce.getId(), ce.getAmountEncrypted())), ce.getContributedDate()))
             .collect(Collectors.groupingBy(SavingsContribution::goalId));
@@ -128,8 +128,8 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
         return new SavingsContribution(saved.getId(), saved.getGoalId(), saved.getUserId(), command.amount(), saved.getContributedDate());
     }
 
-    private SavingsGoal toDomain(FinanceSavingsGoalEntity e, UUID spaceId) {
-        SpaceSealer sealer = sealers.forSpace(spaceId);
+    private SavingsGoal toDomain(FinanceSavingsGoalEntity e) {
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
         return new SavingsGoal(e.getId(), e.getSpaceId(), sealer.open(FinanceSavingsGoalEntity.NAME, e.getId(), e.getNameEncrypted()),
             new BigDecimal(sealer.open(FinanceSavingsGoalEntity.TARGET_AMOUNT, e.getId(), e.getTargetAmountEncrypted())), e.getTargetDate(), e.getColor(), e.getGlyph());
     }

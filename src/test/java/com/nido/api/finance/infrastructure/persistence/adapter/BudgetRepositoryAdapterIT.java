@@ -84,4 +84,23 @@ class BudgetRepositoryAdapterIT {
 
         assertThat(adapter.findByCategoryId(categoryId)).isEmpty();
     }
+
+    @Test
+    void an_update_keeps_the_budget_in_its_space_and_seals_under_it_whatever_the_command_says() {
+        adapter.upsert(new SetBudgetCommand(spaceId, categoryId, new BigDecimal("450.00")));
+
+        adapter.upsert(new SetBudgetCommand(anotherSpace(), categoryId, new BigDecimal("500.00")));
+
+        assertThat(adapter.findBySpaceId(spaceId)).singleElement()
+            .satisfies(budget -> assertThat(budget.monthlyLimit()).isEqualByComparingTo("500.00"));
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
+    }
 }
