@@ -10,8 +10,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Seals what earlier versions stored: values in clear (before 0.13.1) and values encrypted without an envelope
- * (before 0.14.0), column by column, in batches. Each value is checked to open back to itself before it is written,
+ * Seals what versions before 0.14.0 stored: values in clear (shopping, tasks, recipes, spaces) and values encrypted
+ * without an envelope (finance, calendar), column by column, in batches. Each value is checked to open back to itself before it is written,
  * so a sealing that would not read back stops the start before its batch is written. Through JDBC: the entities no
  * longer know the columns in clear.
  */

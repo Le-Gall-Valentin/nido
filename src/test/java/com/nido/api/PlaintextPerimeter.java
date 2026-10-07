@@ -4,7 +4,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 
-/** The columns 0.13.1 moves from clear to encrypted — the table of the spec — and what the schema says of them. */
+/** The columns 0.14.0 moves from clear to sealed — the table of the spec — and what the schema says of them. */
 final class PlaintextPerimeter {
 
     record Column(String table, String name, boolean required) {

@@ -20,7 +20,8 @@ import java.util.function.Function;
  *
  * <p><b>Why bound it.</b> The previous {@code ConcurrentHashMap} never released anything: one entry
  * per user and per space touched since boot, held for the life of the JVM. Nothing an attacker can
- * inflate — a missing space throws before the entry is created — so the memory alone was minor.
+ * inflate beyond the bound below — a key is derived for a space that exists or is being created, and
+ * one whose creation failed leaves an entry that expires like any other — so the memory alone was minor.
  * The real cost of never expiring is that <b>nothing can ever be invalidated</b>: the day a salt is
  * rotated or a space re-keyed, running instances would keep encrypting with the old key, silently,
  * until the next restart. Expiring by <i>write</i> rather than by access is what closes that: a key

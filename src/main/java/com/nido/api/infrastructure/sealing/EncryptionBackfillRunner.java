@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Seals, at start, what earlier versions stored: values in clear (before 0.13.1) and values encrypted without an
- * envelope (before 0.14.0) — see {@link SealedValueMigration}.
+ * Seals, at start, what versions before 0.14.0 stored: values in clear and values encrypted without an envelope —
+ * see {@link SealedValueMigration}.
  *
  * <p>Runs once every singleton exists — after Liquibase and after the encryption key was decided — and
  * before the context's refresh ends, which is when the HTTP connector opens and the scheduled tasks

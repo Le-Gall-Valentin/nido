@@ -45,7 +45,7 @@ public final class SealedColumn {
         return new SealedColumn(SqlIdentifier.require(table), SqlIdentifier.require(column), "t.id", "", null);
     }
 
-    /** The column that held the value in clear before 0.13.1: emptied by the migration, dropped by 068. */
+    /** The column that held the value in clear before 0.14.0: emptied by the migration, dropped by 068. */
     public SealedColumn withClearColumn(String clearColumn) {
         return new SealedColumn(table, column, spaceOf, join, SqlIdentifier.require(clearColumn));
     }

@@ -109,7 +109,7 @@ class EncryptionBackfillIT {
         return db.queryForObject(sql, UUID.class, args);
     }
 
-    /** One row in clear in every table 0.13.1 encrypts, written the way 0.13.0 wrote them, over two spaces. */
+    /** One row in clear in every table 0.14.0 seals, written the way 0.13.0 wrote them, over two spaces. */
     private void writtenInClearByAnEarlierVersion() throws Exception {
         InstallationTestSupport.migrateUpTo(database, "064-");
         admin = id("INSERT INTO users (username, email, role) VALUES ('admin', 'admin@example.fr', 'SUPER_ADMIN') RETURNING id");

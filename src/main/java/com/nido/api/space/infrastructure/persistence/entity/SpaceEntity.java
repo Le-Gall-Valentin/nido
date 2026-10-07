@@ -3,7 +3,6 @@ package com.nido.api.space.infrastructure.persistence.entity;
 import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
 import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.space.domain.model.SpaceType;
-import com.nido.api.space.infrastructure.persistence.SpaceSalt;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -59,11 +58,9 @@ public class SpaceEntity extends AssignedUuidEntity {
     private Instant createdAt;
 
     /**
-     * JPA allows exactly one of these per entity, so both defaults live here.
-     *
-     * <p>Every space needs a stable per-space encryption salt before any of its data can be sealed.
-     * The adapter draws it itself, before sealing the name; this stays as the net for a row
-     * inserted without one, so no caller can forget it.
+     * No default for the encryption salt: a space's name is sealed with it before the row is
+     * inserted, so the adapter draws it first (SpaceSalt) — a salt drawn here would come after a
+     * name sealed without one, and the column refuses a row that has none.
      *
      * <p>The timezone column has a database default, which an INSERT naming the column defeats:
      * Hibernate writes the field as it stands, and a null field becomes an explicit NULL against a
@@ -75,9 +72,6 @@ public class SpaceEntity extends AssignedUuidEntity {
     void applyDefaults() {
         if (timezone == null) {
             timezone = "Europe/Paris";
-        }
-        if (encryptionSalt == null) {
-            encryptionSalt = SpaceSalt.random();
         }
     }
 }
