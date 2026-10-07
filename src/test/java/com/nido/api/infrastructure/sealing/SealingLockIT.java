@@ -4,12 +4,14 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.SharedContainers;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.concurrent.CompletableFuture;
@@ -75,7 +77,10 @@ class SealingLockIT {
             throw new IllegalStateException("could not seal");
         })).hasMessage("could not seal");
 
-        try (Connection otherInstance = dataSource.getConnection(); Statement statement = otherInstance.createStatement();
+        // A session of its own, as another instance has: the pool may hand back the very session that kept the lock.
+        try (Connection otherInstance = DriverManager.getConnection(SharedContainers.POSTGRES.getJdbcUrl(),
+                SharedContainers.POSTGRES.getUsername(), SharedContainers.POSTGRES.getPassword());
+             Statement statement = otherInstance.createStatement();
              ResultSet taken = statement.executeQuery("SELECT pg_try_advisory_lock(hashtext('nido-sealed-values'))")) {
             taken.next();
             assertThat(taken.getBoolean(1)).as("free for the next instance").isTrue();
