@@ -112,8 +112,9 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     @Override
     @Transactional
     public Transaction update(UpdateTransactionCommand command, List<Contribution> resolvedContributors) {
-        SpaceSealer sealer = sealers.forSpace(command.spaceId());
         FinanceTransactionEntity e = transactions.findById(command.transactionId()).orElseThrow(FinanceException.TransactionNotFound::new);
+        // The key of the space the row is stored in, whatever the command says.
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
         e.setLabelEncrypted(sealer.seal(FinanceTransactionEntity.LABEL, e.getId(), command.label()));
         e.setAmountEncrypted(sealer.seal(FinanceTransactionEntity.AMOUNT, e.getId(), command.amount().toPlainString()));
         e.setType(command.type());

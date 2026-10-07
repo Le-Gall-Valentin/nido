@@ -107,4 +107,26 @@ class SavingsGoalRepositoryAdapterIT {
 
         assertThat(adapter.findById(created.id())).isEmpty();
     }
+
+    @Test
+    void an_update_and_a_contribution_seal_under_the_space_of_the_goal_whatever_the_command_says() {
+        SavingsGoal goal = adapter.create(new CreateSavingsGoalCommand(spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯"));
+        UUID elsewhere = anotherSpace();
+
+        adapter.update(new UpdateSavingsGoalCommand(goal.id(), elsewhere, "Vacances d'été", new BigDecimal("2500.00"), null, "#5c7a58", "🎯"));
+        adapter.addContribution(new AddSavingsContributionCommand(goal.id(), elsewhere, aliceId, new BigDecimal("50.00"), LocalDate.of(2026, 1, 15)));
+
+        assertThat(adapter.findById(goal.id()).orElseThrow())
+            .extracting(SavingsGoal::name, g -> g.targetAmount().toPlainString()).containsExactly("Vacances d'été", "2500.00");
+        assertThat(adapter.findContributionsByGoalId(goal.id())).extracting(c -> c.amount().toPlainString()).containsExactly("50.00");
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
+    }
 }

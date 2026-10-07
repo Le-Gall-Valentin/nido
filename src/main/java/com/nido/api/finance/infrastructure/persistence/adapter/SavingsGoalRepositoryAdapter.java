@@ -60,21 +60,22 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
         e.setColor(command.color());
         e.setGlyph(command.glyph());
         FinanceSavingsGoalEntity saved = goals.saveAndFlush(e);
-        return toDomain(saved, command.spaceId());
+        return toDomain(saved, saved.getSpaceId());
     }
 
     @Override
     @Transactional
     public SavingsGoal update(UpdateSavingsGoalCommand command) {
-        SpaceSealer sealer = sealers.forSpace(command.spaceId());
         FinanceSavingsGoalEntity e = goals.findById(command.goalId()).orElseThrow(FinanceException.SavingsGoalNotFound::new);
+        // The key of the space the row is stored in, whatever the command says.
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
         e.setNameEncrypted(sealer.seal(FinanceSavingsGoalEntity.NAME, e.getId(), command.name()));
         e.setTargetAmountEncrypted(sealer.seal(FinanceSavingsGoalEntity.TARGET_AMOUNT, e.getId(), command.targetAmount().toPlainString()));
         e.setTargetDate(command.targetDate());
         e.setColor(command.color());
         e.setGlyph(command.glyph());
         FinanceSavingsGoalEntity saved = goals.saveAndFlush(e);
-        return toDomain(saved, command.spaceId());
+        return toDomain(saved, saved.getSpaceId());
     }
 
     @Override
@@ -114,7 +115,10 @@ public class SavingsGoalRepositoryAdapter implements SavingsGoalRepository {
     @Override
     @Transactional
     public SavingsContribution addContribution(AddSavingsContributionCommand command) {
-        SpaceSealer sealer = sealers.forSpace(command.spaceId());
+        // The key of the goal's space, whatever the command says: the contribution is read under it.
+        UUID spaceId = goals.findById(command.goalId()).map(FinanceSavingsGoalEntity::getSpaceId)
+            .orElseThrow(FinanceException.SavingsGoalNotFound::new);
+        SpaceSealer sealer = sealers.forSpace(spaceId);
         FinanceSavingsContributionEntity ce = new FinanceSavingsContributionEntity();
         ce.setGoalId(command.goalId());
         ce.setUserId(command.memberId());

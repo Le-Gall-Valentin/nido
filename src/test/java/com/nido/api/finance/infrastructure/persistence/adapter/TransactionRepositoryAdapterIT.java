@@ -317,4 +317,25 @@ class TransactionRepositoryAdapterIT {
         assertThatThrownBy(() -> adapter.findById(rent.id())).isInstanceOf(SealedValueRejected.class);
         assertThatThrownBy(() -> adapter.findSplitsBySpaceId(spaceId)).isInstanceOf(SealedValueRejected.class);
     }
+
+    @Test
+    void an_update_seals_under_the_space_of_the_row_whatever_the_command_says() {
+        Transaction rent = save("Loyer", new BigDecimal("850.00"), aliceId, List.of(new Contribution(aliceId, new BigDecimal("850.00"))));
+
+        adapter.update(new UpdateTransactionCommand(rent.id(), anotherSpace(), "Loyer octobre", new BigDecimal("860.00"),
+                TransactionType.EXPENSE, categoryId, LocalDate.of(2026, 1, 15), aliceId, List.of(new ContributionInput(aliceId, null))),
+            List.of(new Contribution(aliceId, new BigDecimal("860.00"))));
+
+        assertThat(adapter.findById(rent.id()).orElseThrow())
+            .extracting(Transaction::label, t -> t.amount().toPlainString()).containsExactly("Loyer octobre", "860.00");
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
+    }
 }

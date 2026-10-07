@@ -170,4 +170,29 @@ class RecurringTransactionSeriesRepositoryAdapterIT {
         assertThat(reread.amount()).isEqualByComparingTo("825.00");
         assertThat(reread.contributors()).extracting(Contribution::shareAmount).containsExactly(new BigDecimal("825.00"));
     }
+
+    @Test
+    void an_update_seals_under_the_space_of_the_series_whatever_the_command_says() {
+        RecurringTransactionSeries created = adapter.create(new CreateRecurringSeriesCommand(
+            spaceId, "Loyer", new BigDecimal("800.00"), TransactionType.EXPENSE, categoryId, aliceId,
+            List.of(new ContributionInput(aliceId, null)), RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null),
+            List.of(new Contribution(aliceId, new BigDecimal("800.00"))));
+
+        adapter.update(new UpdateRecurringSeriesCommand(created.id(), anotherSpace(), "Loyer 2027", new BigDecimal("825.00"),
+            TransactionType.EXPENSE, categoryId, aliceId, List.of(new ContributionInput(aliceId, null)),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null),
+            List.of(new Contribution(aliceId, new BigDecimal("825.00"))));
+
+        assertThat(adapter.findById(created.id()).orElseThrow())
+            .extracting(RecurringTransactionSeries::label, s -> s.amount().toPlainString()).containsExactly("Loyer 2027", "825.00");
+    }
+
+    private UUID anotherSpace() {
+        SpaceEntity other = new SpaceEntity();
+        other.setType(SpaceType.SHARED);
+        TestSpaces.name(other, "Autre groupe");
+        other.setAccent("#c17a5c");
+        other.setGlyph("🏡");
+        return spaceJpaRepository.saveAndFlush(other).getId();
+    }
 }

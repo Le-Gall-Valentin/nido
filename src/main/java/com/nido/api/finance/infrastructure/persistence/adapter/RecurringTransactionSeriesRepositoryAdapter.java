@@ -90,8 +90,9 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
     @Override
     @Transactional
     public RecurringTransactionSeries update(UpdateRecurringSeriesCommand command, List<Contribution> resolvedContributors) {
-        SpaceSealer sealer = sealers.forSpace(command.spaceId());
         FinanceRecurringSeriesEntity e = series.findById(command.seriesId()).orElseThrow(FinanceException.RecurringSeriesNotFound::new);
+        // The key of the space the row is stored in, whatever the command says.
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
         e.setLabelEncrypted(sealer.seal(FinanceRecurringSeriesEntity.LABEL, e.getId(), command.label()));
         e.setAmountEncrypted(sealer.seal(FinanceRecurringSeriesEntity.AMOUNT, e.getId(), command.amount().toPlainString()));
         e.setType(command.type());
