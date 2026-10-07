@@ -1,6 +1,7 @@
 package com.nido.api.infrastructure.sealing;
 
-import com.nido.api.instance.application.port.in.ConfirmEncryptionKeyUseCase;
+import com.nido.api.instance.application.port.in.ForgetEncryptionKeyFingerprintUseCase;
+import com.nido.api.instance.domain.model.ResolvedEncryptionKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -42,11 +43,13 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
     private final SpaceSealers sealers;
     private final SealingLock lock;
     private final TableVacuum vacuum;
-    private final ConfirmEncryptionKeyUseCase key;
+    private final ResolvedEncryptionKey key;
+    private final ForgetEncryptionKeyFingerprintUseCase forget;
 
     public EncryptionBackfillRunner(List<SealedColumns> sealedColumns, List<ExistingCiphertextCheck> checks,
                                     SealedValueMigration migration, SpaceSealers sealers, SealingLock lock,
-                                    TableVacuum vacuum, ConfirmEncryptionKeyUseCase key) {
+                                    TableVacuum vacuum, ResolvedEncryptionKey key,
+                                    ForgetEncryptionKeyFingerprintUseCase forget) {
         this.sealedColumns = sealedColumns;
         this.checks = checks;
         this.migration = migration;
@@ -54,6 +57,7 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
         this.lock = lock;
         this.vacuum = vacuum;
         this.key = key;
+        this.forget = forget;
     }
 
     @Override
@@ -61,14 +65,14 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
         List<SealedColumn> columns = sealedColumns.stream().flatMap(declared -> declared.columns().stream()).toList();
         // A key whose fingerprint this start recorded is only taken on the data's word: an installation older
         // than 0.12 never recorded one, and keeping the fingerprint of a wrong key would lock the right one out.
-        boolean newKey = key.recordedAtThisStart();
+        boolean newKey = key.recordedAtThisStart().isPresent();
         if (!anythingPending(columns) && !newKey) {
             return;
         }
         lock.whileHeld(() -> {
             // Another instance may have done the work while this one waited for the lock.
             boolean pending = anythingPending(columns);
-            verifyExistingCiphertext(newKey);
+            verifyExistingCiphertext();
             if (!pending) {
                 return;
             }
@@ -90,13 +94,11 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
         return columns.stream().anyMatch(migration::pending);
     }
 
-    private void verifyExistingCiphertext(boolean newKey) {
+    private void verifyExistingCiphertext() {
         try {
             checks.forEach(ExistingCiphertextCheck::verify);
         } catch (RuntimeException refused) {
-            if (newKey) {
-                key.forgetFingerprintRecordedAtThisStart();
-            }
+            key.recordedAtThisStart().ifPresent(forget::forget);
             throw refused;
         }
     }

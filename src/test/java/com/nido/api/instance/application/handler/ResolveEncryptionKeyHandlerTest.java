@@ -2,6 +2,7 @@ package com.nido.api.instance.application.handler;
 
 import com.nido.api.instance.domain.model.InstanceState;
 import com.nido.api.instance.domain.model.KeyFingerprint;
+import com.nido.api.instance.domain.model.ResolvedEncryptionKey;
 import com.nido.api.instance.domain.port.out.InstanceStatePort;
 import com.nido.api.instance.domain.port.out.KeyFilePort;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,7 @@ class ResolveEncryptionKeyHandlerTest {
 
     @Test
     void a_fresh_installation_without_key_generates_one_and_remembers_it_was_generated() {
-        String key = handler.resolve(null);
+        String key = handler.resolve(null).value();
 
         assertThat(key).isEqualTo(file.content);
         assertThat(state.generated).isTrue();
@@ -51,7 +52,7 @@ class ResolveEncryptionKeyHandlerTest {
     void the_configured_key_wins_over_the_file() {
         file.content = "a-different-key-of-at-least-32-characters";
 
-        assertThat(handler.resolve(KEY)).isEqualTo(KEY);
+        assertThat(handler.resolve(KEY).value()).isEqualTo(KEY);
         assertThat(state.fingerprint.matches(KEY)).isTrue();
         assertThat(state.generated).isFalse();
     }
@@ -60,22 +61,22 @@ class ResolveEncryptionKeyHandlerTest {
     void a_blank_configured_key_counts_as_none() {
         file.content = KEY;
 
-        assertThat(handler.resolve("  ")).isEqualTo(KEY);
+        assertThat(handler.resolve("  ").value()).isEqualTo(KEY);
     }
 
     @Test
     void the_file_is_used_on_the_next_start() {
-        String first = handler.resolve(null);
+        String first = handler.resolve(null).value();
 
-        assertThat(handler.resolve(null)).isEqualTo(first);
+        assertThat(handler.resolve(null).value()).isEqualTo(first);
     }
 
     @Test
     void a_generated_key_lost_before_the_setup_is_done_is_replaced_by_a_new_one() {
-        handler.resolve(null);
+        handler.resolve(null).value();
         file.content = null;
 
-        String again = handler.resolve(null);
+        String again = handler.resolve(null).value();
 
         assertThat(again).isEqualTo(file.content);
         assertThat(state.generated).isTrue();
@@ -87,7 +88,7 @@ class ResolveEncryptionKeyHandlerTest {
         // The start that wrote it stopped before recording its fingerprint: the setup must still show it.
         file.content = "generated-key-of-forty-four-characters-xxxx=";
 
-        handler.resolve(null);
+        handler.resolve(null).value();
 
         assertThat(state.generated).isTrue();
         assertThat(state.fingerprint.matches(file.content)).isTrue();
@@ -103,28 +104,31 @@ class ResolveEncryptionKeyHandlerTest {
     }
 
     @Test
-    void a_key_given_to_an_installation_that_never_recorded_one_is_new_and_can_be_taken_back() {
+    void a_key_given_to_an_installation_that_never_recorded_one_comes_back_with_the_fingerprint_it_recorded() {
         // An installation older than 0.12: set up, data in it, no fingerprint.
         state.setupCompleted = true;
 
-        handler.resolve(KEY);
+        ResolvedEncryptionKey resolved = handler.resolve(KEY);
 
-        assertThat(handler.recordedAtThisStart()).isTrue();
-        handler.forgetFingerprintRecordedAtThisStart();
+        assertThat(resolved.recordedAtThisStart()).hasValueSatisfying(recorded -> assertThat(recorded).isSameAs(state.fingerprint));
+        handler.forget(resolved.recordedAtThisStart().orElseThrow());
         assertThat(state.fingerprint).isNull();
-        assertThat(handler.recordedAtThisStart()).isFalse();
     }
 
     @Test
-    void the_key_the_fingerprint_already_knows_is_not_new_and_nothing_is_taken_back() {
+    void the_key_the_fingerprint_already_knows_comes_back_without_one_and_nothing_else_is_forgotten() {
         state.setupCompleted = true;
         state.fingerprint = KeyFingerprint.of(KEY);
         KeyFingerprint known = state.fingerprint;
 
-        handler.resolve(KEY);
-        handler.forgetFingerprintRecordedAtThisStart();
+        assertThat(handler.resolve(KEY).recordedAtThisStart()).isEmpty();
+        handler.forget(KeyFingerprint.of(KEY));
 
-        assertThat(handler.recordedAtThisStart()).isFalse();
         assertThat(state.fingerprint).isSameAs(known);
+    }
+
+    @Test
+    void the_resolved_key_never_prints_itself() {
+        assertThat(handler.resolve(KEY).toString()).doesNotContain(KEY);
     }
 }
