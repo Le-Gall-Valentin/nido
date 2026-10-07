@@ -2,7 +2,6 @@ package com.nido.api.space.infrastructure.persistence.adapter;
 
 import com.nido.api.infrastructure.config.SpaceKeyCache;
 import com.nido.api.infrastructure.sealing.SpaceSealer;
-import com.nido.api.shared.model.NameOrdering;
 import com.nido.api.shared.model.PageResult;
 import com.nido.api.space.domain.model.CreateSharedSpaceCommand;
 import com.nido.api.space.domain.model.Space;
@@ -78,9 +77,6 @@ public class SpaceRepositoryAdapter implements SpaceRepository, SpaceCommandPort
             .map(e -> new SpaceSummaryView(e.getId(), e.getType(), nameOf(e), e.getAccent(), e.getGlyph(),
                 ZoneId.of(e.getTimezone()),
                 roleBySpace.get(e.getId()), counts.getOrDefault(e.getId(), 0L)))
-            // l'espace perso d'abord, puis les groupes par nom
-            .sorted(Comparator.comparing((SpaceSummaryView v) -> v.type() != SpaceType.PERSONAL)
-                .thenComparing(SpaceSummaryView::name, NameOrdering.comparator()))
             .toList();
     }
 

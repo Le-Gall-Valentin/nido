@@ -11,6 +11,7 @@ import java.util.UUID;
 public interface SpaceRepository {
     Optional<Space> findById(UUID spaceId);
     Optional<Space> findPersonalOwnedBy(UUID userId);
+    /** In no particular order: the names are sealed, so the order is the caller's to set. */
     List<SpaceSummaryView> findMySpaces(UUID userId);
     long countMembers(UUID spaceId);
     /** Lecture par lot, pour enrichir une liste sans lecture par élément. */

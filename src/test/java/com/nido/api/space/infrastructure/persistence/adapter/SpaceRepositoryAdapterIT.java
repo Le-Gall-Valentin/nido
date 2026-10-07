@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTestConfig
@@ -105,7 +106,7 @@ class SpaceRepositoryAdapterIT {
     }
 
     @Test
-    void findMySpaces_returns_the_personal_space_first_with_role_and_member_count() {
+    void findMySpaces_returns_every_space_of_the_member_with_role_and_member_count() {
         Space personal = adapter.createPersonal(alice);
         adapter.add(personal.id(), alice, SpaceRole.OWNER);
         Space shared = adapter.createShared(
@@ -115,12 +116,10 @@ class SpaceRepositoryAdapterIT {
 
         List<SpaceSummaryView> mine = adapter.findMySpaces(alice);
 
-        assertThat(mine).hasSize(2);
-        assertThat(mine.get(0).type()).isEqualTo(SpaceType.PERSONAL);
-        assertThat(mine.get(0).memberCount()).isEqualTo(1);
-        assertThat(mine.get(1).name()).isEqualTo("Chez Valentin");
-        assertThat(mine.get(1).myRole()).isEqualTo(SpaceRole.OWNER);
-        assertThat(mine.get(1).memberCount()).isEqualTo(2);
+        // In no particular order: ListMySpacesHandler sorts them.
+        assertThat(mine).extracting(SpaceSummaryView::type, SpaceSummaryView::name, SpaceSummaryView::myRole, SpaceSummaryView::memberCount)
+            .containsExactlyInAnyOrder(tuple(SpaceType.PERSONAL, personal.name(), SpaceRole.OWNER, 1L),
+                tuple(SpaceType.SHARED, "Chez Valentin", SpaceRole.OWNER, 2L));
         assertThat(adapter.findMySpaces(bob)).hasSize(1);
     }
 
@@ -232,17 +231,6 @@ class SpaceRepositoryAdapterIT {
         assertThat(stored).startsWith("v2:").doesNotContain("Lilas");
         assertThat(sealers.forSpace(space.id()).open(SpaceEntity.DESCRIPTION, space.id(), stored)).isEqualTo("Rue des Lilas");
         assertThat(adapter.findById(space.id()).orElseThrow().description()).isEqualTo("Rue des Lilas");
-    }
-
-    @Test
-    void my_shared_spaces_come_in_french_alphabetical_order_after_the_personal_one() {
-        adapter.add(adapter.createPersonal(alice).id(), alice, SpaceRole.OWNER); // createPersonal adds no membership
-        for (String name : List.of("Zeste", "éclair", "abricot")) {
-            Space space = adapter.createShared(new CreateSharedSpaceCommand(name, null, "#c17a5c", "🏡", alice, ZoneId.of("Europe/Paris")));
-            adapter.add(space.id(), alice, SpaceRole.OWNER);
-        }
-
-        assertThat(adapter.findMySpaces(alice)).extracting(SpaceSummaryView::name).containsExactly("Perso", "abricot", "éclair", "Zeste");
     }
 
     @Test
