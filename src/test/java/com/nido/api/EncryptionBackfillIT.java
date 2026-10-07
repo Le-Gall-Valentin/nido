@@ -43,6 +43,9 @@ import org.springframework.security.crypto.encrypt.TextEncryptor;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -202,17 +205,72 @@ class EncryptionBackfillIT {
         try (ConfigurableApplicationContext ignored = start(KEY)) {
             // seals, vacuums, and owes nothing
         }
-        assertThat(db.queryForObject("SELECT vacuum_owed FROM sealing_state", Boolean.class)).isFalse();
+        assertThat(db.queryForObject("SELECT count(*) FROM sealing_vacuum_owed", Long.class)).isZero();
         // What a start stopped after its last batch and before its VACUUM leaves: nothing left to seal.
-        db.update("UPDATE sealing_state SET vacuum_owed = true");
         long transactionFiles = filenode("finance_transactions");
+        db.update("INSERT INTO sealing_vacuum_owed (table_name, filenode) VALUES ('finance_transactions', ?)", transactionFiles);
 
         try (ConfigurableApplicationContext ignored = start(KEY)) {
             // the next start
         }
 
         assertThat(filenode("finance_transactions")).as("vacuumed by the next start").isNotEqualTo(transactionFiles);
-        assertThat(db.queryForObject("SELECT vacuum_owed FROM sealing_state", Boolean.class)).isFalse();
+        assertThat(db.queryForObject("SELECT count(*) FROM sealing_vacuum_owed", Long.class)).isZero();
+    }
+
+    /** Starts while another session holds the table the way a running pg_dump does: its VACUUM gives up on it. */
+    private void startWhileABackupReads(String table) throws Exception {
+        try (Connection backup = DriverManager.getConnection(SharedContainers.jdbcUrl(database),
+                SharedContainers.POSTGRES.getUsername(), SharedContainers.POSTGRES.getPassword());
+             Statement reading = backup.createStatement()) {
+            backup.setAutoCommit(false);
+            reading.execute("LOCK TABLE " + table + " IN ACCESS SHARE MODE");
+            start(KEY).close();
+            backup.rollback();
+        }
+    }
+
+    @Test
+    void a_table_the_vacuum_could_not_take_is_the_only_one_vacuumed_again() throws Exception {
+        writtenInClearByAnEarlierVersion();
+        // Liquibase first, or 067 would wait for the backup's lock rather than the VACUUM.
+        InstallationTestSupport.migrateUpTo(database, "070-");
+        startWhileABackupReads("shopping_items");
+        long itemFiles = filenode("shopping_items");
+        long taskFiles = filenode("tasks");
+
+        start(KEY).close();
+
+        assertThat(filenode("shopping_items")).as("still owed: vacuumed now").isNotEqualTo(itemFiles);
+        assertThat(filenode("tasks")).as("vacuumed by the first start: left alone").isEqualTo(taskFiles);
+    }
+
+    @Test
+    void a_vacuum_run_by_hand_as_the_warning_says_settles_what_was_owed() throws Exception {
+        writtenInClearByAnEarlierVersion();
+        InstallationTestSupport.migrateUpTo(database, "070-");
+        startWhileABackupReads("shopping_items");
+        db.execute("VACUUM (FULL, ANALYZE) shopping_items");
+        long itemFiles = filenode("shopping_items");
+        long taskFiles = filenode("tasks");
+
+        start(KEY).close();
+
+        assertThat(filenode("shopping_items")).as("rewritten by hand: nothing left to do").isEqualTo(itemFiles);
+        assertThat(filenode("tasks")).isEqualTo(taskFiles);
+    }
+
+    @Test
+    void a_vacuum_the_single_flag_of_069_still_owed_is_carried_over_and_run() throws Exception {
+        // A start of an earlier build of 0.14.0 stopped between its last batch and its VACUUM.
+        InstallationTestSupport.migrateUpTo(database, "071-");
+        db.update("UPDATE sealing_state SET vacuum_owed = true");
+        long spaceFiles = filenode("spaces");
+
+        start(KEY).close();
+
+        assertThat(filenode("spaces")).isNotEqualTo(spaceFiles);
+        assertThat(db.queryForObject("SELECT count(*) FROM sealing_vacuum_owed", Long.class)).isZero();
     }
 
     @Test

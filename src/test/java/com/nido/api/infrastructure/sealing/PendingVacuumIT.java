@@ -2,9 +2,12 @@ package com.nido.api.infrastructure.sealing;
 
 import com.nido.api.IntegrationTestConfig;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,28 +17,58 @@ class PendingVacuumIT {
     @Autowired PendingVacuum pendingVacuum;
     @Autowired JdbcClient jdbc;
 
+    @BeforeEach
+    void scratchTables() {
+        clear();
+        jdbc.sql("CREATE TABLE pending_vacuum_probes (id INT PRIMARY KEY)").update();
+        jdbc.sql("CREATE TABLE pending_vacuum_others (id INT PRIMARY KEY)").update();
+    }
+
     @AfterEach
-    void putTheRowBack() {
-        jdbc.sql("INSERT INTO sealing_state (id, vacuum_owed) VALUES (1, false) ON CONFLICT (id) DO UPDATE SET vacuum_owed = false")
-            .update();
+    void clear() {
+        jdbc.sql("DELETE FROM sealing_vacuum_owed").update();
+        jdbc.sql("DROP TABLE IF EXISTS pending_vacuum_probes").update();
+        jdbc.sql("DROP TABLE IF EXISTS pending_vacuum_others").update();
     }
 
     @Test
-    void owed_then_settled() {
-        pendingVacuum.owe();
-        assertThat(pendingVacuum.isOwed()).isTrue();
+    void owed_table_by_table_then_settled_table_by_table() {
+        assertThat(pendingVacuum.anyOwed()).isFalse();
 
-        pendingVacuum.settle();
-        assertThat(pendingVacuum.isOwed()).isFalse();
+        pendingVacuum.owe(List.of("pending_vacuum_probes", "pending_vacuum_others"));
+        assertThat(pendingVacuum.anyOwed()).isTrue();
+        assertThat(pendingVacuum.stillOwed()).containsExactly("pending_vacuum_others", "pending_vacuum_probes");
+
+        pendingVacuum.settle("pending_vacuum_probes");
+        assertThat(pendingVacuum.stillOwed()).containsExactly("pending_vacuum_others");
     }
 
     @Test
-    void a_missing_row_counts_as_owed_and_comes_back_with_the_next_record() {
-        // Unknown is not "nothing owed": vacuuming once too often costs a few seconds, never vacuuming leaves values.
-        jdbc.sql("DELETE FROM sealing_state").update();
+    void a_table_rewritten_since_its_debt_owes_nothing_any_more() {
+        pendingVacuum.owe(List.of("pending_vacuum_probes", "pending_vacuum_others"));
 
-        assertThat(pendingVacuum.isOwed()).isTrue();
-        pendingVacuum.settle();
-        assertThat(pendingVacuum.isOwed()).isFalse();
+        // The command the warning gives, run by hand.
+        jdbc.sql("VACUUM FULL pending_vacuum_probes").update();
+
+        assertThat(pendingVacuum.stillOwed()).containsExactly("pending_vacuum_others");
+    }
+
+    @Test
+    void a_table_owed_already_keeps_the_file_it_was_owed_for() {
+        pendingVacuum.owe(List.of("pending_vacuum_probes"));
+        jdbc.sql("VACUUM FULL pending_vacuum_probes").update();
+
+        // A later start owes it again before the earlier debt was looked at: the rewrite in between still counts.
+        pendingVacuum.owe(List.of("pending_vacuum_probes"));
+
+        assertThat(pendingVacuum.stillOwed()).isEmpty();
+    }
+
+    @Test
+    void a_table_gone_owes_nothing() {
+        pendingVacuum.owe(List.of("pending_vacuum_probes"));
+        jdbc.sql("DROP TABLE pending_vacuum_probes").update();
+
+        assertThat(pendingVacuum.stillOwed()).isEmpty();
     }
 }

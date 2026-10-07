@@ -79,11 +79,10 @@ class EncryptionBackfillRunnerTest {
 
         runner.afterSingletonsInstantiated();
 
-        InOrder order = inOrder(lock, finance, migration, vacuum);
+        InOrder order = inOrder(lock, finance, migration);
         order.verify(lock).whileHeld(any());
         order.verify(finance).verify();
         order.verify(migration).migrate(titles, sealers);
-        order.verify(vacuum).vacuumFull(Set.of("tasks", "shopping_items"));
     }
 
     @Test
@@ -98,16 +97,15 @@ class EncryptionBackfillRunnerTest {
     }
 
     @Test
-    void every_declared_table_is_vacuumed_and_only_the_rewritten_columns_are_logged() {
+    void every_declared_table_is_owed_a_vacuum_and_only_the_rewritten_columns_are_logged() {
         // A start cut short leaves tables sealed then, whose columns in clear 068 has since dropped
         // without rewriting them: their earlier versions are still in their files.
         when(migration.pending(items)).thenReturn(true);
         when(migration.migrate(items, sealers)).thenReturn(2);
-        when(vacuum.vacuumFull(any())).thenReturn(true);
 
         runner.afterSingletonsInstantiated();
 
-        verify(vacuum).vacuumFull(Set.of("tasks", "shopping_items"));
+        verify(pendingVacuum).owe(Set.of("tasks", "shopping_items"));
         assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
             .containsExactly("Sealed 2 values of shopping_items.name_encrypted that earlier versions stored");
     }
@@ -165,41 +163,59 @@ class EncryptionBackfillRunnerTest {
     }
 
     @Test
-    void the_vacuum_is_owed_before_the_first_row_is_rewritten_and_settled_once_it_ran() {
+    void the_vacuum_is_owed_before_the_first_row_is_rewritten_and_settled_table_by_table_once_it_ran() {
         when(migration.pending(titles)).thenReturn(true);
+        when(pendingVacuum.stillOwed()).thenReturn(List.of("shopping_items", "tasks"));
         when(vacuum.vacuumFull(any())).thenReturn(true);
 
         runner.afterSingletonsInstantiated();
 
         InOrder order = inOrder(pendingVacuum, migration, vacuum);
-        order.verify(pendingVacuum).owe();
+        order.verify(pendingVacuum).owe(Set.of("tasks", "shopping_items"));
         order.verify(migration).migrate(titles, sealers);
-        order.verify(vacuum).vacuumFull(Set.of("tasks", "shopping_items"));
-        order.verify(pendingVacuum).settle();
+        order.verify(vacuum).vacuumFull("shopping_items");
+        order.verify(pendingVacuum).settle("shopping_items");
+        order.verify(vacuum).vacuumFull("tasks");
+        order.verify(pendingVacuum).settle("tasks");
     }
 
     @Test
     void a_vacuum_a_stopped_start_still_owes_is_run_with_nothing_left_to_seal() {
         // A start stopped after its last batch and before its VACUUM: nothing is pending any more.
-        when(pendingVacuum.isOwed()).thenReturn(true);
-        when(vacuum.vacuumFull(any())).thenReturn(true);
+        when(pendingVacuum.anyOwed()).thenReturn(true);
+        when(pendingVacuum.stillOwed()).thenReturn(List.of("tasks"));
+        when(vacuum.vacuumFull("tasks")).thenReturn(true);
 
         runner.afterSingletonsInstantiated();
 
         InOrder order = inOrder(vacuum, pendingVacuum);
-        order.verify(vacuum).vacuumFull(Set.of("tasks", "shopping_items"));
-        order.verify(pendingVacuum).settle();
+        order.verify(vacuum).vacuumFull("tasks");
+        order.verify(pendingVacuum).settle("tasks");
         verify(migration, never()).migrate(any(), any());
+        verify(pendingVacuum, never()).owe(any());
     }
 
     @Test
-    void a_vacuum_that_could_not_run_on_every_table_stays_owed() {
-        when(migration.pending(titles)).thenReturn(true);
-        when(vacuum.vacuumFull(any())).thenReturn(false);
+    void a_start_that_only_owes_a_vacuum_checks_no_key() {
+        // Nothing is rewritten and the key is confirmed already: the key check would only cost a scan of every table.
+        when(pendingVacuum.anyOwed()).thenReturn(true);
+        when(pendingVacuum.stillOwed()).thenReturn(List.of("tasks"));
 
         runner.afterSingletonsInstantiated();
 
-        verify(pendingVacuum).owe();
-        verify(pendingVacuum, never()).settle();
+        verify(finance, never()).verify();
+    }
+
+    @Test
+    void a_table_the_vacuum_could_not_take_stays_owed_and_the_others_are_settled() {
+        when(migration.pending(titles)).thenReturn(true);
+        when(pendingVacuum.stillOwed()).thenReturn(List.of("shopping_items", "tasks"));
+        when(vacuum.vacuumFull("shopping_items")).thenReturn(false);
+        when(vacuum.vacuumFull("tasks")).thenReturn(true);
+
+        runner.afterSingletonsInstantiated();
+
+        verify(pendingVacuum).settle("tasks");
+        verify(pendingVacuum, never()).settle("shopping_items");
     }
 }

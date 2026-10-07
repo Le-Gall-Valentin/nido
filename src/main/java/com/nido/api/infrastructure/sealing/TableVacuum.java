@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 
 import java.sql.SQLWarning;
 import java.sql.Statement;
-import java.util.Collection;
 
 /**
  * Rewrites a table once its values in clear, or in the format before 0.14.0, are sealed. An UPDATE leaves the version it replaces in
@@ -35,48 +34,45 @@ public class TableVacuum {
         this.jdbc = jdbc;
     }
 
-    /** @return whether every table was vacuumed — those that were not got their warning */
-    public boolean vacuumFull(Collection<String> tables) {
-        boolean all = true;
-        for (String table : tables) {
-            SqlIdentifier.require(table);
-            try {
-                String skipped = jdbc.execute((ConnectionCallback<String>) connection -> {
-                    // One connection for the three statements, outside any transaction, which VACUUM refuses:
-                    // autocommit is forced rather than assumed of the pool, and given back as it was found.
-                    boolean autoCommit = connection.getAutoCommit();
-                    if (!autoCommit) {
-                        connection.setAutoCommit(true);
-                    }
-                    try (Statement statement = connection.createStatement()) {
-                        statement.execute("SET lock_timeout = '" + LOCK_TIMEOUT + "'");
-                        try {
-                            statement.execute("VACUUM (FULL, ANALYZE) " + table);
-                            SQLWarning warning = statement.getWarnings();
-                            return warning == null ? null : warning.getMessage();
-                        } finally {
-                            statement.execute("RESET lock_timeout");
-                        }
-                    } finally {
-                        if (!autoCommit) {
-                            connection.setAutoCommit(false);
-                        }
-                    }
-                });
-                if (skipped != null) {
-                    warnNotVacuumed(table, skipped);
-                    all = false;
+    /** @return whether the table was vacuumed — one that was not got its warning */
+    public boolean vacuumFull(String table) {
+        SqlIdentifier.require(table);
+        try {
+            String skipped = jdbc.execute((ConnectionCallback<String>) connection -> {
+                // One connection for the three statements, outside any transaction, which VACUUM refuses:
+                // autocommit is forced rather than assumed of the pool, and given back as it was found.
+                boolean autoCommit = connection.getAutoCommit();
+                if (!autoCommit) {
+                    connection.setAutoCommit(true);
                 }
-            } catch (DataAccessException e) {
-                warnNotVacuumed(table, e.getMostSpecificCause().getMessage());
-                all = false;
+                try (Statement statement = connection.createStatement()) {
+                    statement.execute("SET lock_timeout = '" + LOCK_TIMEOUT + "'");
+                    try {
+                        statement.execute("VACUUM (FULL, ANALYZE) " + table);
+                        SQLWarning warning = statement.getWarnings();
+                        return warning == null ? null : warning.getMessage();
+                    } finally {
+                        statement.execute("RESET lock_timeout");
+                    }
+                } finally {
+                    if (!autoCommit) {
+                        connection.setAutoCommit(false);
+                    }
+                }
+            });
+            if (skipped != null) {
+                warnNotVacuumed(table, skipped);
+                return false;
             }
+            return true;
+        } catch (DataAccessException e) {
+            warnNotVacuumed(table, e.getMostSpecificCause().getMessage());
+            return false;
         }
-        return all;
     }
 
     private static void warnNotVacuumed(String table, String why) {
-        log.warn("The values of {} are sealed, but their earlier versions stay in its files ({}). "
-            + "Run, as a role allowed to: VACUUM (FULL, ANALYZE) {};", table, why, table);
+        log.warn("The values of {} are sealed, but their earlier versions stay in its files ({}). The next start tries "
+            + "again; or run, as a role allowed to: VACUUM (FULL, ANALYZE) {};", table, why, table);
     }
 }

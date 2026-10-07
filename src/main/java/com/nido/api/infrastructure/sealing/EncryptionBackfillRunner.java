@@ -63,33 +63,33 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
         // A key whose fingerprint the data has yet to confirm is only taken on the data's word: an installation older
         // than 0.12 never recorded one, and keeping the fingerprint of a wrong key would lock the right one out.
         boolean unconfirmedKey = key.awaitsConfirmation();
-        if (!anythingPending(columns) && !pendingVacuum.isOwed() && !unconfirmedKey) {
+        if (!anythingPending(columns) && !pendingVacuum.anyOwed() && !unconfirmedKey) {
             return;
         }
         lock.whileHeld(() -> {
             // Another instance may have done the work while this one waited for the lock.
             boolean pending = anythingPending(columns);
-            verifyExistingCiphertext(unconfirmedKey);
+            // Before anything is rewritten with the key: a start that only owes a VACUUM rewrites nothing.
+            if (pending || unconfirmedKey) {
+                verifyExistingCiphertext(unconfirmedKey);
+            }
             if (pending) {
-                // Owed before the first row is rewritten: a start stopped from here on leaves it to the next one.
-                pendingVacuum.owe();
+                // Every table declared, owed before the first row is rewritten: a start stopped from here on leaves
+                // them to the next one, including tables it sealed whose columns in clear 068 then drops.
+                Set<String> tables = new LinkedHashSet<>();
+                columns.forEach(column -> tables.add(column.table()));
+                pendingVacuum.owe(tables);
                 for (SealedColumn column : columns) {
                     int rows = migration.migrate(column, sealers);
                     if (rows > 0) {
                         log.info("Sealed {} values of {} that earlier versions stored", rows, column);
                     }
                 }
-            } else if (!pendingVacuum.isOwed()) {
-                return;
             }
-            // Every table declared, not only those rewritten now: a start cut short leaves tables it sealed,
-            // whose columns in clear 068 has since dropped without rewriting them.
-            Set<String> tables = new LinkedHashSet<>();
-            columns.forEach(column -> tables.add(column.table()));
-            if (vacuum.vacuumFull(tables)) {
-                pendingVacuum.settle();
-            } else {
-                log.warn("The VACUUM stays owed: the next start tries it again");
+            for (String table : pendingVacuum.stillOwed()) {
+                if (vacuum.vacuumFull(table)) {
+                    pendingVacuum.settle(table);
+                }
             }
         });
     }

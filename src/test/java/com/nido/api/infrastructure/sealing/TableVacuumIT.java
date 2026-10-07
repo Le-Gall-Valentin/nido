@@ -65,7 +65,7 @@ class TableVacuumIT {
         probe("Pâtes");
         long before = filenode();
 
-        vacuum.vacuumFull(List.of("vacuum_probes"));
+        vacuum.vacuumFull("vacuum_probes");
 
         assertThat(filenode()).isNotEqualTo(before);
     }
@@ -79,7 +79,7 @@ class TableVacuumIT {
         assertThat(statisticsOfLabel()).as("what autoanalyze keeps of the column").contains("Secret de famille");
 
         migration.migrate(LABEL, SEALERS);
-        vacuum.vacuumFull(List.of("vacuum_probes"));
+        vacuum.vacuumFull("vacuum_probes");
 
         assertThat(statisticsOfLabel()).doesNotContain("Secret de famille");
     }
@@ -91,7 +91,7 @@ class TableVacuumIT {
         long before = filenode();
 
         // The test user is a superuser: Postgres lets it vacuum a table it does not own.
-        vacuum.vacuumFull(List.of("vacuum_probes"));
+        vacuum.vacuumFull("vacuum_probes");
 
         assertThat(filenode()).isNotEqualTo(before);
     }
@@ -99,9 +99,9 @@ class TableVacuumIT {
     @Test
     void a_vacuum_that_cannot_run_warns_with_the_command_instead_of_stopping_the_start() {
         AtomicBoolean done = new AtomicBoolean(true);
-        assertThat(warningsOf(() -> assertThatCode(() -> done.set(vacuum.vacuumFull(List.of("vacuum_absent")))).doesNotThrowAnyException()))
+        assertThat(warningsOf(() -> assertThatCode(() -> done.set(vacuum.vacuumFull("vacuum_absent"))).doesNotThrowAnyException()))
             .anySatisfy(line -> assertThat(line).contains("VACUUM (FULL, ANALYZE) vacuum_absent"));
-        assertThat(done).as("not every table vacuumed").isFalse();
+        assertThat(done).as("not vacuumed").isFalse();
     }
 
     @Test
@@ -113,7 +113,7 @@ class TableVacuumIT {
         long before = filenode();
 
         AtomicBoolean done = new AtomicBoolean(true);
-        assertThat(warningsOf(() -> done.set(asOutsider.vacuumFull(List.of("vacuum_probes")))))
+        assertThat(warningsOf(() -> done.set(asOutsider.vacuumFull("vacuum_probes"))))
             .anySatisfy(line -> assertThat(line).contains("VACUUM (FULL, ANALYZE) vacuum_probes").contains("skipping"));
         assertThat(done).as("a table Postgres skipped is not vacuumed").isFalse();
         assertThat(filenode()).isEqualTo(before);
@@ -121,7 +121,7 @@ class TableVacuumIT {
 
     @Test
     void only_a_plain_identifier_is_vacuumed() {
-        assertThatThrownBy(() -> vacuum.vacuumFull(List.of("vacuum_probes; DROP TABLE users")))
+        assertThatThrownBy(() -> vacuum.vacuumFull("vacuum_probes; DROP TABLE users"))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
