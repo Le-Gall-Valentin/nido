@@ -97,6 +97,21 @@ database dump alone reveals nothing. Stored together, the two would undo that.
 Losing the key makes all of that unreadable. Nido refuses to start with a key that is not the one its data was
 encrypted with, rather than writing data nobody can read.
 
+## When Nido refuses a stored value
+
+Every encrypted value is sealed to the row it belongs to. One that was moved, copied or altered in the database — by
+hand, by a partial restore, or by someone with write access to it — is refused rather than shown: the page shows an
+error, and the log has an ERROR line naming the table, the column and the row, never the value:
+
+```
+The value of finance_transactions.amount_encrypted in row 3f… belongs to another place
+```
+
+To get the page back, put that row right: restore it from a backup taken before the change or, if you can do without
+it, delete the row. The same goes for the start that updates to 0.14.0: if it stops on
+`Could not seal row … of <table>.<column>`, that row is the one to restore or delete, then start again — the work
+already done is kept.
+
 ## Settings
 
 Mail, Nido's address, session lengths and the API documentation are set from **Administration → Instance
