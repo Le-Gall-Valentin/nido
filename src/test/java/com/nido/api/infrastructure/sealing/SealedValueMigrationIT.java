@@ -121,6 +121,31 @@ class SealedValueMigrationIT {
     }
 
     @Test
+    void a_row_that_cannot_be_sealed_stops_the_run_and_never_shows_its_value() {
+        UUID secret = row("Secret de famille", null, null);
+
+        assertThatThrownBy(() -> migration.migrate(LABEL, space -> {
+                throw new IllegalArgumentException("Detected a Non-hex character");
+            }))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Could not seal row " + secret + " of sealing_probes.label_encrypted")
+            .hasNoCause()
+            .satisfies(failure -> assertThat(failure.getMessage()).doesNotContain("Secret de famille"));
+        assertThat(read(secret).get("label")).isEqualTo("Secret de famille");
+    }
+
+    @Test
+    void a_second_run_finds_nothing_left_and_changes_nothing() {
+        UUID id = row("Pâtes", null, null);
+        migration.migrate(LABEL, SEALERS);
+        Object sealed = read(id).get("label_encrypted");
+
+        assertThat(migration.pending(LABEL)).isFalse();
+        assertThat(migration.migrate(LABEL, SEALERS)).isZero();
+        assertThat(read(id).get("label_encrypted")).isEqualTo(sealed);
+    }
+
+    @Test
     void rows_that_refuse_to_change_stop_the_run_instead_of_looping() {
         row("Pâtes", null, null);
         jdbc.sql("CREATE FUNCTION sealing_probes_frozen() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NULL; END $$").update();

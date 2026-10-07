@@ -13,6 +13,7 @@ import org.springframework.security.crypto.encrypt.TextEncryptor;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -82,5 +83,18 @@ class SpaceKeyGuardIT {
         row(SpaceSealer.of(KEY).seal(LABEL, UUID.randomUUID(), "moved here"), null);
 
         assertThatCode(guard(KEY)::verify).doesNotThrowAnyException();
+    }
+
+    @Test
+    void a_key_that_cannot_be_derived_is_not_reported_as_a_wrong_key() {
+        row(KEY.encrypt("Loyer"), null);
+        SpaceKeyGuard guard = new SpaceKeyGuard(jdbc, space -> {
+            throw new IllegalArgumentException("Detected a Non-hex character");
+        }, List.of(SealedColumns.of(LABEL, NOTE)));
+
+        assertThatThrownBy(guard::verify)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("Could not derive the key of space " + A)
+            .satisfies(failure -> assertThat(failure.getMessage()).doesNotContain("does not decrypt"));
     }
 }

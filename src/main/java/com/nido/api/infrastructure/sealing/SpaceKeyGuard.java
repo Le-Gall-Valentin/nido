@@ -1,6 +1,5 @@
 package com.nido.api.infrastructure.sealing;
 
-import com.nido.api.infrastructure.config.ExistingCiphertextCheck;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 

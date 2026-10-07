@@ -1,4 +1,4 @@
-package com.nido.api.infrastructure.config;
+package com.nido.api.infrastructure.sealing;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,10 +10,9 @@ import org.springframework.stereotype.Component;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.util.Collection;
-import java.util.regex.Pattern;
 
 /**
- * Rewrites a table once its values in clear are encrypted. An UPDATE leaves the version it replaces in
+ * Rewrites a table once its values in clear, or in the format before 0.14.0, are sealed. An UPDATE leaves the version it replaces in
  * the table's files, in clear, until something reuses the space — a plain VACUUM only marks it reusable.
  * VACUUM FULL writes the live rows to new files and removes the old ones; ANALYZE replaces the statistics
  * autoanalyze kept of the column, most common values included.
@@ -21,7 +20,7 @@ import java.util.regex.Pattern;
  * <p>It locks the table exclusively, which is why it runs before the application serves anyone, and waits
  * at most {@link #LOCK_TIMEOUT} for that lock: a backup running at that moment holds the table for
  * minutes. Whatever stops it — that wait, a role Postgres does not allow, a full disk — is a warning with
- * the command to run, not a failed start: the data itself is encrypted already.
+ * the command to run, not a failed start: the data itself is sealed already.
  */
 @Component
 public class TableVacuum {
@@ -29,7 +28,6 @@ public class TableVacuum {
     static final String LOCK_TIMEOUT = "10s";
 
     private static final Logger log = LoggerFactory.getLogger(TableVacuum.class);
-    private static final Pattern IDENTIFIER = Pattern.compile("[a-z][a-z_]*");
 
     private final JdbcTemplate jdbc;
 
@@ -39,9 +37,7 @@ public class TableVacuum {
 
     public void vacuumFull(Collection<String> tables) {
         for (String table : tables) {
-            if (!IDENTIFIER.matcher(table).matches()) {
-                throw new IllegalArgumentException("Not a plain SQL identifier: " + table);
-            }
+            SqlIdentifier.require(table);
             try {
                 String skipped = jdbc.execute((ConnectionCallback<String>) connection -> {
                     // One connection for the three statements, outside any transaction, which VACUUM refuses:
@@ -75,7 +71,7 @@ public class TableVacuum {
     }
 
     private static void warnNotVacuumed(String table, String why) {
-        log.warn("The values of {} are encrypted, but their earlier versions in clear stay in its files ({}). "
+        log.warn("The values of {} are sealed, but their earlier versions stay in its files ({}). "
             + "Run, as a role allowed to: VACUUM (FULL, ANALYZE) {};", table, why, table);
     }
 }

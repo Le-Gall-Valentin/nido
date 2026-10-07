@@ -1,10 +1,5 @@
-package com.nido.api.infrastructure.config;
+package com.nido.api.infrastructure.sealing;
 
-import com.nido.api.infrastructure.sealing.SealedColumn;
-import com.nido.api.infrastructure.sealing.SealedColumns;
-import com.nido.api.infrastructure.sealing.SealedValueMigration;
-import com.nido.api.infrastructure.sealing.SealingLock;
-import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.instance.application.port.in.ConfirmEncryptionKeyUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +36,6 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
 
     private static final Logger log = LoggerFactory.getLogger(EncryptionBackfillRunner.class);
 
-    private final List<EncryptionBackfill> backfills;
     private final List<SealedColumns> sealedColumns;
     private final List<ExistingCiphertextCheck> checks;
     private final SealedValueMigration migration;
@@ -50,11 +44,9 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
     private final TableVacuum vacuum;
     private final ConfirmEncryptionKeyUseCase key;
 
-    public EncryptionBackfillRunner(List<EncryptionBackfill> backfills, List<SealedColumns> sealedColumns,
-                                    List<ExistingCiphertextCheck> checks, SealedValueMigration migration,
-                                    SpaceSealers sealers, SealingLock lock, TableVacuum vacuum,
-                                    ConfirmEncryptionKeyUseCase key) {
-        this.backfills = backfills;
+    public EncryptionBackfillRunner(List<SealedColumns> sealedColumns, List<ExistingCiphertextCheck> checks,
+                                    SealedValueMigration migration, SpaceSealers sealers, SealingLock lock,
+                                    TableVacuum vacuum, ConfirmEncryptionKeyUseCase key) {
         this.sealedColumns = sealedColumns;
         this.checks = checks;
         this.migration = migration;
@@ -83,14 +75,6 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
             // Every table declared, not only those rewritten now: a start cut short leaves tables it sealed,
             // whose columns in clear 068 has since dropped without rewriting them.
             Set<String> tables = new LinkedHashSet<>();
-            for (EncryptionBackfill backfill : backfills) {
-                backfill.run().forEach((table, rows) -> {
-                    if (rows > 0) {
-                        log.info("Encrypted {} rows of {} that earlier versions stored in clear", rows, table);
-                    }
-                    tables.add(table);
-                });
-            }
             for (SealedColumn column : columns) {
                 int rows = migration.migrate(column, sealers);
                 if (rows > 0) {
@@ -103,7 +87,7 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
     }
 
     private boolean anythingPending(List<SealedColumn> columns) {
-        return backfills.stream().anyMatch(EncryptionBackfill::pending) || columns.stream().anyMatch(migration::pending);
+        return columns.stream().anyMatch(migration::pending);
     }
 
     private void verifyExistingCiphertext(boolean newKey) {
