@@ -1,6 +1,6 @@
 package com.nido.api.shopping.infrastructure.persistence.adapter;
 
-import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shopping.domain.model.AddShoppingItemCommand;
 import com.nido.api.shopping.domain.model.ShoppingException;
 import com.nido.api.shopping.domain.model.ShoppingItem;
@@ -19,11 +19,11 @@ import java.util.UUID;
 public class ShoppingItemRepositoryAdapter implements ShoppingItemRepository {
 
     private final ShoppingItemJpaRepository items;
-    private final SpaceEncryptorFactory encryptors;
+    private final SpaceSealers sealers;
 
-    public ShoppingItemRepositoryAdapter(ShoppingItemJpaRepository items, SpaceEncryptorFactory encryptors) {
+    public ShoppingItemRepositoryAdapter(ShoppingItemJpaRepository items, SpaceSealers sealers) {
         this.items = items;
-        this.encryptors = encryptors;
+        this.sealers = sealers;
     }
 
     @Override
@@ -48,7 +48,7 @@ public class ShoppingItemRepositoryAdapter implements ShoppingItemRepository {
         ShoppingItemEntity e = new ShoppingItemEntity();
         e.setSpaceId(command.spaceId());
         e.setCategoryId(command.categoryId());
-        e.setNameEncrypted(encryptors.forSpace(command.spaceId()).encrypt(command.name()));
+        e.setNameEncrypted(sealers.forSpace(command.spaceId()).seal(ShoppingItemEntity.NAME, e.getId(), command.name()));
         e.setQuantity(command.quantity());
         e.setUnit(command.unit());
         e.setDone(false);
@@ -61,7 +61,7 @@ public class ShoppingItemRepositoryAdapter implements ShoppingItemRepository {
         ShoppingItemEntity e = items.findById(command.itemId()).orElseThrow(ShoppingException.ItemNotFound::new);
         e.setCategoryId(command.categoryId());
         // The key of the space the row is stored in, whatever the command says.
-        e.setNameEncrypted(encryptors.forSpace(e.getSpaceId()).encrypt(command.name()));
+        e.setNameEncrypted(sealers.forSpace(e.getSpaceId()).seal(ShoppingItemEntity.NAME, e.getId(), command.name()));
         e.setQuantity(command.quantity());
         e.setUnit(command.unit());
         return toDomain(items.saveAndFlush(e));
@@ -100,7 +100,7 @@ public class ShoppingItemRepositoryAdapter implements ShoppingItemRepository {
 
     private ShoppingItem toDomain(ShoppingItemEntity e) {
         return new ShoppingItem(e.getId(), e.getSpaceId(), e.getCategoryId(),
-            encryptors.forSpace(e.getSpaceId()).decrypt(e.getNameEncrypted()),
+            sealers.forSpace(e.getSpaceId()).open(ShoppingItemEntity.NAME, e.getId(), e.getNameEncrypted()),
             e.getQuantity(), e.getUnit(), e.isDone(), e.getPosition());
     }
 }

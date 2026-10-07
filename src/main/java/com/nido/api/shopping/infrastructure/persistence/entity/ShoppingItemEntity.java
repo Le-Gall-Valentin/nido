@@ -1,6 +1,7 @@
 package com.nido.api.shopping.infrastructure.persistence.entity;
 
 import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.shared.model.MeasurementUnit;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -26,6 +27,8 @@ public class ShoppingItemEntity extends AssignedUuidEntity {
 
     @Column(name = "category_id", nullable = false)
     private UUID categoryId;
+
+    public static final SealedColumn NAME = SealedColumn.ofSpace("shopping_items", "name_encrypted").withClearColumn("name");
 
     @Column(name = "name_encrypted", nullable = false)
     private String nameEncrypted;

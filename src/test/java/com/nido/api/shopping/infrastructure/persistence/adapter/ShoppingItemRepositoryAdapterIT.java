@@ -2,10 +2,12 @@ package com.nido.api.shopping.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.TestSpaces;
-import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
+import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shopping.domain.model.AddShoppingItemCommand;
 import com.nido.api.shopping.domain.model.ShoppingItem;
 import com.nido.api.shopping.domain.model.UpdateShoppingItemCommand;
+import com.nido.api.shopping.infrastructure.persistence.entity.ShoppingItemEntity;
 import com.nido.api.shared.model.MeasurementUnit;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTestConfig
 class ShoppingItemRepositoryAdapterIT {
@@ -28,7 +31,7 @@ class ShoppingItemRepositoryAdapterIT {
     @Autowired ShoppingCategoryRepositoryAdapter categoryAdapter;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired JdbcTemplate jdbc;
-    @Autowired SpaceEncryptorFactory encryptors;
+    @Autowired SpaceSealers sealers;
 
     private UUID spaceId;
     private UUID categoryId;
@@ -175,8 +178,18 @@ class ShoppingItemRepositoryAdapterIT {
         adapter.update(new UpdateShoppingItemCommand(created.id(), spaceId, categoryId, "Crème fraîche 🥛", null, null));
 
         String stored = jdbc.queryForObject("SELECT name_encrypted FROM shopping_items WHERE id = ?", String.class, created.id());
-        assertThat(stored).doesNotContain("Crème");
-        assertThat(encryptors.forSpace(spaceId).decrypt(stored)).isEqualTo("Crème fraîche 🥛");
+        assertThat(stored).startsWith("v2:").doesNotContain("Crème");
+        assertThat(sealers.forSpace(spaceId).open(ShoppingItemEntity.NAME, created.id(), stored)).isEqualTo("Crème fraîche 🥛");
         assertThat(adapter.findById(created.id()).orElseThrow().name()).isEqualTo("Crème fraîche 🥛");
+    }
+
+    @Test
+    void a_name_copied_from_another_item_is_refused() {
+        ShoppingItem pasta = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Pâtes", null, null));
+        ShoppingItem rice = adapter.add(new AddShoppingItemCommand(spaceId, categoryId, "Riz", null, null));
+        jdbc.update("UPDATE shopping_items SET name_encrypted = (SELECT name_encrypted FROM shopping_items WHERE id = ?) WHERE id = ?",
+            pasta.id(), rice.id());
+
+        assertThatThrownBy(() -> adapter.findById(rice.id())).isInstanceOf(SealedValueRejected.class);
     }
 }
