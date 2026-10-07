@@ -49,6 +49,16 @@ class AssignedUuidEntityIT {
     }
 
     @Test
+    void an_entity_saved_before_anyone_asked_its_id_is_given_one_as_it_is_inserted() {
+        TaskEntity task = newTask();
+
+        UUID id = tasks.saveAndFlush(task).getId();
+
+        assertThat(id).isNotNull();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM tasks WHERE id = ?", Long.class, id)).isEqualTo(1);
+    }
+
+    @Test
     void a_loaded_entity_is_updated_rather_than_inserted_again() {
         UUID id = tasks.saveAndFlush(newTask()).getId();
 
