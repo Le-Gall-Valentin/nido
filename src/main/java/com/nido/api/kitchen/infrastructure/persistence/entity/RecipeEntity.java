@@ -1,6 +1,7 @@
 package com.nido.api.kitchen.infrastructure.persistence.entity;
 
 import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.kitchen.domain.model.RecipeCategory;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -29,8 +30,12 @@ public class RecipeEntity extends AssignedUuidEntity {
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
 
+    public static final SealedColumn NAME = SealedColumn.ofSpace("kitchen_recipes", "name_encrypted").withClearColumn("name");
+
     @Column(name = "name_encrypted", nullable = false)
     private String nameEncrypted;
+
+    public static final SealedColumn DESCRIPTION = SealedColumn.ofSpace("kitchen_recipes", "description_encrypted").withClearColumn("description");
 
     @Column(name = "description_encrypted")
     private String descriptionEncrypted;
@@ -47,6 +52,8 @@ public class RecipeEntity extends AssignedUuidEntity {
 
     @Column(nullable = false)
     private boolean favorite;
+
+    public static final SealedColumn NOTE = SealedColumn.ofSpace("kitchen_recipes", "note_encrypted").withClearColumn("note");
 
     @Column(name = "note_encrypted")
     private String noteEncrypted;

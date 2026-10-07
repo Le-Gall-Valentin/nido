@@ -2,7 +2,9 @@ package com.nido.api.kitchen.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.TestSpaces;
-import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
+import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.kitchen.domain.model.CreateRecipeCommand;
 import com.nido.api.kitchen.domain.model.KitchenException;
 import com.nido.api.shared.model.MeasurementUnit;
@@ -10,6 +12,9 @@ import com.nido.api.kitchen.domain.model.Recipe;
 import com.nido.api.kitchen.domain.model.RecipeCategory;
 import com.nido.api.kitchen.domain.model.RecipeIngredient;
 import com.nido.api.kitchen.domain.model.UpdateRecipeCommand;
+import com.nido.api.kitchen.infrastructure.persistence.entity.RecipeEntity;
+import com.nido.api.kitchen.infrastructure.persistence.entity.RecipeIngredientEntity;
+import com.nido.api.kitchen.infrastructure.persistence.entity.RecipeStepEntity;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
@@ -17,7 +22,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.encrypt.TextEncryptor;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -33,7 +37,7 @@ class KitchenRecipeRepositoryAdapterIT {
     @Autowired KitchenRecipeRepositoryAdapter adapter;
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired JdbcTemplate jdbc;
-    @Autowired SpaceEncryptorFactory encryptors;
+    @Autowired SpaceSealers sealers;
 
     private UUID spaceId;
 
@@ -133,21 +137,40 @@ class KitchenRecipeRepositoryAdapterIT {
     }
 
     @Test
-    void every_text_of_a_recipe_is_stored_encrypted_with_the_key_of_its_space() {
+    void every_text_of_a_recipe_is_stored_sealed_with_the_key_of_its_space() {
         Recipe created = adapter.create(bolognaise());
-        TextEncryptor key = encryptors.forSpace(spaceId);
+        SpaceSealer sealer = sealers.forSpace(spaceId);
 
         Map<String, Object> recipe = jdbc.queryForMap(
             "SELECT name_encrypted, description_encrypted, note_encrypted FROM kitchen_recipes WHERE id = ?", created.id());
-        assertThat(key.decrypt((String) recipe.get("name_encrypted"))).isEqualTo("Pâtes bolognaise");
-        assertThat(key.decrypt((String) recipe.get("description_encrypted"))).isEqualTo("Un classique familial.");
-        assertThat(key.decrypt((String) recipe.get("note_encrypted"))).isEqualTo("Encore meilleur réchauffé.");
-        assertThat(jdbc.queryForList("SELECT name_encrypted FROM kitchen_recipe_ingredients WHERE recipe_id = ? ORDER BY position",
-                String.class, created.id()))
-            .extracting(key::decrypt).containsExactly("Pâtes", "Oignon");
-        assertThat(jdbc.queryForList("SELECT text_encrypted FROM kitchen_recipe_steps WHERE recipe_id = ? ORDER BY position",
-                String.class, created.id()))
-            .extracting(key::decrypt).containsExactly("Faire revenir l'oignon.", "Ajouter la sauce.");
+        assertThat((String) recipe.get("name_encrypted")).startsWith("v2:");
+        assertThat(sealer.open(RecipeEntity.NAME, created.id(), (String) recipe.get("name_encrypted"))).isEqualTo("Pâtes bolognaise");
+        assertThat(sealer.open(RecipeEntity.DESCRIPTION, created.id(), (String) recipe.get("description_encrypted")))
+            .isEqualTo("Un classique familial.");
+        assertThat(sealer.open(RecipeEntity.NOTE, created.id(), (String) recipe.get("note_encrypted"))).isEqualTo("Encore meilleur réchauffé.");
+        assertThat(jdbc.query("SELECT id, name_encrypted FROM kitchen_recipe_ingredients WHERE recipe_id = ? ORDER BY position",
+                (rs, rowNum) -> sealer.open(RecipeIngredientEntity.NAME, rs.getObject("id", UUID.class), rs.getString("name_encrypted")),
+                created.id()))
+            .containsExactly("Pâtes", "Oignon");
+        assertThat(jdbc.query("SELECT id, text_encrypted FROM kitchen_recipe_steps WHERE recipe_id = ? ORDER BY position",
+                (rs, rowNum) -> sealer.open(RecipeStepEntity.TEXT, rs.getObject("id", UUID.class), rs.getString("text_encrypted")),
+                created.id()))
+            .containsExactly("Faire revenir l'oignon.", "Ajouter la sauce.");
+    }
+
+    @Test
+    void a_name_or_an_ingredient_copied_from_another_row_is_refused() {
+        Recipe bolognaise = adapter.create(bolognaise());
+        Recipe rice = adapter.create(simple(spaceId, "Riz", null, List.of("Cuire."), null));
+        jdbc.update("UPDATE kitchen_recipes SET name_encrypted = (SELECT name_encrypted FROM kitchen_recipes WHERE id = ?) WHERE id = ?",
+            bolognaise.id(), rice.id());
+        jdbc.update("""
+            UPDATE kitchen_recipe_ingredients SET name_encrypted =
+              (SELECT name_encrypted FROM kitchen_recipe_ingredients WHERE recipe_id = ? AND position = 0)
+            WHERE recipe_id = ? AND position = 1""", bolognaise.id(), bolognaise.id());
+
+        assertThatThrownBy(() -> adapter.findById(rice.id())).isInstanceOf(SealedValueRejected.class);
+        assertThatThrownBy(() -> adapter.findById(bolognaise.id())).isInstanceOf(SealedValueRejected.class);
     }
 
     @Test
@@ -170,16 +193,7 @@ class KitchenRecipeRepositoryAdapterIT {
     }
 
     @Test
-    void the_list_is_in_french_alphabetical_order_once_decrypted() {
-        for (String name : List.of("Zeste", "éclair", "abricot", "Banane")) {
-            adapter.create(simple(spaceId, name, null, List.of("Mélanger."), null));
-        }
-
-        assertThat(adapter.findBySpaceId(spaceId)).extracting(Recipe::name).containsExactly("abricot", "Banane", "éclair", "Zeste");
-    }
-
-    @Test
-    void a_recipe_created_in_another_space_is_encrypted_with_that_space_key() {
+    void a_recipe_created_in_another_space_is_sealed_with_that_space_key() {
         // How a recipe is moved or copied: MoveRecipeHandler and CopyRecipeHandler create it in the destination.
         SpaceEntity otherSpace = new SpaceEntity();
         otherSpace.setType(SpaceType.SHARED);
@@ -191,7 +205,8 @@ class KitchenRecipeRepositoryAdapterIT {
         Recipe moved = adapter.create(simple(otherSpaceId, "Tarte Tatin", null, List.of("Caraméliser."), null));
 
         String stored = jdbc.queryForObject("SELECT name_encrypted FROM kitchen_recipes WHERE id = ?", String.class, moved.id());
-        assertThat(encryptors.forSpace(otherSpaceId).decrypt(stored)).isEqualTo("Tarte Tatin");
-        assertThatThrownBy(() -> encryptors.forSpace(spaceId).decrypt(stored));
+        assertThat(sealers.forSpace(otherSpaceId).open(RecipeEntity.NAME, moved.id(), stored)).isEqualTo("Tarte Tatin");
+        assertThatThrownBy(() -> sealers.forSpace(spaceId).open(RecipeEntity.NAME, moved.id(), stored))
+            .isInstanceOf(SealedValueRejected.class);
     }
 }

@@ -48,6 +48,20 @@ class ListRecipesHandlerTest {
         List<RecipeSummaryView> result = handler.list(caller);
 
         assertThat(result).extracting(RecipeSummaryView::lastPlannedOn)
-            .containsExactly(LocalDate.of(2026, 9, 7), null);
+            .containsExactly(null, LocalDate.of(2026, 9, 7)); // "Curry" before "Pâtes bolognaise"
+    }
+
+    @Test
+    void recipes_come_in_french_alphabetical_order() {
+        when(recipeRepository.findBySpaceId(spaceId)).thenReturn(List.of(recipe("Zeste"), recipe("éclair"), recipe("abricot"), recipe("Banane")));
+        when(menuRepository.lastPlannedOnBySpace(spaceId)).thenReturn(Map.of());
+        SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.VIEWER, Instant.now());
+
+        assertThat(handler.list(caller)).extracting(view -> view.recipe().name()).containsExactly("abricot", "Banane", "éclair", "Zeste");
+    }
+
+    private Recipe recipe(String name) {
+        return new Recipe(UUID.randomUUID(), spaceId, name, null, RecipeCategory.DESSERT, 10, 1, false, List.of(), List.of(), null,
+            Instant.now(), Instant.now());
     }
 }

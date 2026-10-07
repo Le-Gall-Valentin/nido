@@ -1,6 +1,7 @@
 package com.nido.api.kitchen.infrastructure.persistence.entity;
 
 import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.shared.model.MeasurementUnit;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -26,6 +27,9 @@ public class RecipeIngredientEntity extends AssignedUuidEntity {
 
     @Column(nullable = false)
     private int position;
+
+    public static final SealedColumn NAME = SealedColumn.throughParent("kitchen_recipe_ingredients", "name_encrypted", "recipe_id", "kitchen_recipes")
+        .withClearColumn("name");
 
     @Column(name = "name_encrypted", nullable = false)
     private String nameEncrypted;
