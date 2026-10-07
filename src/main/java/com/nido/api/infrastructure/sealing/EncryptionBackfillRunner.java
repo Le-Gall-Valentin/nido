@@ -91,8 +91,11 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
             // whose columns in clear 068 has since dropped without rewriting them.
             Set<String> tables = new LinkedHashSet<>();
             columns.forEach(column -> tables.add(column.table()));
-            vacuum.vacuumFull(tables);
-            pendingVacuum.settle();
+            if (vacuum.vacuumFull(tables)) {
+                pendingVacuum.settle();
+            } else {
+                log.warn("The VACUUM stays owed: the next start tries it again");
+            }
         });
     }
 

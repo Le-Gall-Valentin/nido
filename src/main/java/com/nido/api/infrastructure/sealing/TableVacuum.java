@@ -35,7 +35,9 @@ public class TableVacuum {
         this.jdbc = jdbc;
     }
 
-    public void vacuumFull(Collection<String> tables) {
+    /** @return whether every table was vacuumed — those that were not got their warning */
+    public boolean vacuumFull(Collection<String> tables) {
+        boolean all = true;
         for (String table : tables) {
             SqlIdentifier.require(table);
             try {
@@ -63,11 +65,14 @@ public class TableVacuum {
                 });
                 if (skipped != null) {
                     warnNotVacuumed(table, skipped);
+                    all = false;
                 }
             } catch (DataAccessException e) {
                 warnNotVacuumed(table, e.getMostSpecificCause().getMessage());
+                all = false;
             }
         }
+        return all;
     }
 
     private static void warnNotVacuumed(String table, String why) {

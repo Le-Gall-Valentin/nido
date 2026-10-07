@@ -18,6 +18,7 @@ import org.springframework.security.crypto.encrypt.Encryptors;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -97,8 +98,10 @@ class TableVacuumIT {
 
     @Test
     void a_vacuum_that_cannot_run_warns_with_the_command_instead_of_stopping_the_start() {
-        assertThat(warningsOf(() -> assertThatCode(() -> vacuum.vacuumFull(List.of("vacuum_absent"))).doesNotThrowAnyException()))
+        AtomicBoolean done = new AtomicBoolean(true);
+        assertThat(warningsOf(() -> assertThatCode(() -> done.set(vacuum.vacuumFull(List.of("vacuum_absent")))).doesNotThrowAnyException()))
             .anySatisfy(line -> assertThat(line).contains("VACUUM (FULL, ANALYZE) vacuum_absent"));
+        assertThat(done).as("not every table vacuumed").isFalse();
     }
 
     @Test
@@ -109,8 +112,10 @@ class TableVacuumIT {
             new DriverManagerDataSource(SharedContainers.POSTGRES.getJdbcUrl(), "vacuum_outsider", "outsider")));
         long before = filenode();
 
-        assertThat(warningsOf(() -> asOutsider.vacuumFull(List.of("vacuum_probes"))))
+        AtomicBoolean done = new AtomicBoolean(true);
+        assertThat(warningsOf(() -> done.set(asOutsider.vacuumFull(List.of("vacuum_probes")))))
             .anySatisfy(line -> assertThat(line).contains("VACUUM (FULL, ANALYZE) vacuum_probes").contains("skipping"));
+        assertThat(done).as("a table Postgres skipped is not vacuumed").isFalse();
         assertThat(filenode()).isEqualTo(before);
     }
 

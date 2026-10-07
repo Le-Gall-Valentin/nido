@@ -106,6 +106,7 @@ class EncryptionBackfillRunnerTest {
         // without rewriting them: their earlier versions are still in their files.
         when(migration.pending(items)).thenReturn(true);
         when(migration.migrate(items, sealers)).thenReturn(2);
+        when(vacuum.vacuumFull(any())).thenReturn(true);
 
         runner.afterSingletonsInstantiated();
 
@@ -155,6 +156,7 @@ class EncryptionBackfillRunnerTest {
     @Test
     void the_vacuum_is_owed_before_the_first_row_is_rewritten_and_settled_once_it_ran() {
         when(migration.pending(titles)).thenReturn(true);
+        when(vacuum.vacuumFull(any())).thenReturn(true);
 
         runner.afterSingletonsInstantiated();
 
@@ -169,6 +171,7 @@ class EncryptionBackfillRunnerTest {
     void a_vacuum_a_stopped_start_still_owes_is_run_with_nothing_left_to_seal() {
         // A start stopped after its last batch and before its VACUUM: nothing is pending any more.
         when(pendingVacuum.isOwed()).thenReturn(true);
+        when(vacuum.vacuumFull(any())).thenReturn(true);
 
         runner.afterSingletonsInstantiated();
 
@@ -176,5 +179,16 @@ class EncryptionBackfillRunnerTest {
         order.verify(vacuum).vacuumFull(Set.of("tasks", "shopping_items"));
         order.verify(pendingVacuum).settle();
         verify(migration, never()).migrate(any(), any());
+    }
+
+    @Test
+    void a_vacuum_that_could_not_run_on_every_table_stays_owed() {
+        when(migration.pending(titles)).thenReturn(true);
+        when(vacuum.vacuumFull(any())).thenReturn(false);
+
+        runner.afterSingletonsInstantiated();
+
+        verify(pendingVacuum).owe();
+        verify(pendingVacuum, never()).settle();
     }
 }

@@ -17,15 +17,24 @@ public class PendingVacuum {
         this.jdbc = jdbc;
     }
 
+    /** A missing row counts as owed: vacuuming once too often costs seconds, never vacuuming leaves old values. */
     public boolean isOwed() {
-        return jdbc.sql("SELECT vacuum_owed FROM sealing_state WHERE id = 1").query(Boolean.class).optional().orElse(false);
+        return jdbc.sql("SELECT vacuum_owed FROM sealing_state WHERE id = 1").query(Boolean.class).optional().orElse(true);
     }
 
     public void owe() {
-        jdbc.sql("UPDATE sealing_state SET vacuum_owed = true WHERE id = 1").update();
+        record(true);
     }
 
     public void settle() {
-        jdbc.sql("UPDATE sealing_state SET vacuum_owed = false WHERE id = 1").update();
+        record(false);
+    }
+
+    private void record(boolean owed) {
+        jdbc.sql("""
+                INSERT INTO sealing_state (id, vacuum_owed) VALUES (1, :owed)
+                ON CONFLICT (id) DO UPDATE SET vacuum_owed = EXCLUDED.vacuum_owed""")
+            .param("owed", owed)
+            .update();
     }
 }
