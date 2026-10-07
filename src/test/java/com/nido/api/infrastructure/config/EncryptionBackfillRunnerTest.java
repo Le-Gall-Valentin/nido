@@ -3,6 +3,11 @@ package com.nido.api.infrastructure.config;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.nido.api.infrastructure.sealing.SealedColumn;
+import com.nido.api.infrastructure.sealing.SealedColumns;
+import com.nido.api.infrastructure.sealing.SealedValueMigration;
+import com.nido.api.infrastructure.sealing.SealingLock;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.instance.application.port.in.ConfirmEncryptionKeyUseCase;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +21,8 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -31,8 +38,12 @@ class EncryptionBackfillRunnerTest {
     private final ExistingCiphertextCheck finance = mock(ExistingCiphertextCheck.class);
     private final TableVacuum vacuum = mock(TableVacuum.class);
     private final ConfirmEncryptionKeyUseCase key = mock(ConfirmEncryptionKeyUseCase.class);
-    private final EncryptionBackfillRunner runner =
-        new EncryptionBackfillRunner(List.of(shopping, tasks), List.of(finance), vacuum, key);
+    private final SealedValueMigration migration = mock(SealedValueMigration.class);
+    private final SealingLock lock = mock(SealingLock.class);
+    private final SealedColumn sealedColumn = SealedColumn.ofSpace("tasks", "title_encrypted");
+    private final SpaceSealers sealers = space -> { throw new AssertionError("not used"); };
+    private final EncryptionBackfillRunner runner = new EncryptionBackfillRunner(List.of(shopping, tasks),
+        List.of(SealedColumns.of(sealedColumn)), List.of(finance), migration, sealers, lock, vacuum, key);
 
     private final Logger logger = (Logger) LoggerFactory.getLogger(EncryptionBackfillRunner.class);
     private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
@@ -41,6 +52,10 @@ class EncryptionBackfillRunnerTest {
     void listen() {
         logged.start();
         logger.addAppender(logged);
+        doAnswer(call -> {
+            ((Runnable) call.getArgument(0)).run();
+            return null;
+        }).when(lock).whileHeld(any());
     }
 
     @AfterEach
@@ -55,7 +70,7 @@ class EncryptionBackfillRunnerTest {
         verify(finance, never()).verify();
         verify(shopping, never()).run();
         verify(tasks, never()).run();
-        verifyNoInteractions(vacuum);
+        verifyNoInteractions(vacuum, lock);
         assertThat(logged.list).isEmpty();
     }
 
@@ -82,6 +97,7 @@ class EncryptionBackfillRunnerTest {
 
         verify(shopping, never()).run();
         verify(tasks, never()).run();
+        verify(migration, never()).migrate(any(), any());
         verifyNoInteractions(vacuum);
     }
 
@@ -94,7 +110,7 @@ class EncryptionBackfillRunnerTest {
 
         runner.afterSingletonsInstantiated();
 
-        verify(vacuum).vacuumFull(Set.of("shopping_items", "shopping_categories"));
+        verify(vacuum).vacuumFull(Set.of("shopping_items", "shopping_categories", "tasks"));
         assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
             .containsExactly("Encrypted 2 rows of shopping_items that earlier versions stored in clear");
     }
@@ -129,5 +145,32 @@ class EncryptionBackfillRunnerTest {
         assertThatThrownBy(runner::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
 
         verify(key, never()).forgetFingerprintRecordedAtThisStart();
+    }
+
+    @Test
+    void a_sealed_column_with_work_left_is_migrated_under_the_lock_and_its_table_vacuumed() {
+        when(migration.pending(sealedColumn)).thenReturn(true, true);
+        when(migration.migrate(sealedColumn, sealers)).thenReturn(4);
+
+        runner.afterSingletonsInstantiated();
+
+        InOrder order = inOrder(lock, finance, migration, vacuum);
+        order.verify(lock).whileHeld(any());
+        order.verify(finance).verify();
+        order.verify(migration).migrate(sealedColumn, sealers);
+        order.verify(vacuum).vacuumFull(Set.of("tasks"));
+        assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
+            .containsExactly("Sealed 4 values of tasks.title_encrypted that earlier versions stored");
+    }
+
+    @Test
+    void work_another_instance_finished_while_this_one_waited_is_not_done_again() {
+        when(migration.pending(sealedColumn)).thenReturn(true, false);
+
+        runner.afterSingletonsInstantiated();
+
+        verify(migration, never()).migrate(any(), any());
+        verify(shopping, never()).run();
+        verifyNoInteractions(vacuum);
     }
 }

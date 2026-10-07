@@ -45,7 +45,11 @@ public class TableVacuum {
             try {
                 String skipped = jdbc.execute((ConnectionCallback<String>) connection -> {
                     // One connection for the three statements, outside any transaction, which VACUUM refuses:
-                    // a connection of the pool outside a transaction is in autocommit.
+                    // autocommit is forced rather than assumed of the pool, and given back as it was found.
+                    boolean autoCommit = connection.getAutoCommit();
+                    if (!autoCommit) {
+                        connection.setAutoCommit(true);
+                    }
                     try (Statement statement = connection.createStatement()) {
                         statement.execute("SET lock_timeout = '" + LOCK_TIMEOUT + "'");
                         try {
@@ -54,6 +58,10 @@ public class TableVacuum {
                             return warning == null ? null : warning.getMessage();
                         } finally {
                             statement.execute("RESET lock_timeout");
+                        }
+                    } finally {
+                        if (!autoCommit) {
+                            connection.setAutoCommit(false);
                         }
                     }
                 });
