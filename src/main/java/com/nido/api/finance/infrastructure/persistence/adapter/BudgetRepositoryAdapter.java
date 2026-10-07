@@ -9,7 +9,6 @@ import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,8 +44,8 @@ public class BudgetRepositoryAdapter implements BudgetRepository {
             return created;
         });
         // The key of the space the row is stored in, whatever the command says.
-        e.setMonthlyLimitEncrypted(sealers.forSpace(e.getSpaceId()).seal(FinanceBudgetEntity.MONTHLY_LIMIT, e.getId(),
-            command.monthlyLimit().toPlainString()));
+        e.setMonthlyLimitEncrypted(SealedAmounts.seal(sealers.forSpace(e.getSpaceId()), FinanceBudgetEntity.MONTHLY_LIMIT, e.getId(),
+            command.monthlyLimit()));
         return toDomain(budgets.saveAndFlush(e));
     }
 
@@ -58,7 +57,7 @@ public class BudgetRepositoryAdapter implements BudgetRepository {
     }
 
     private Budget toDomain(FinanceBudgetEntity e) {
-        String decrypted = sealers.forSpace(e.getSpaceId()).open(FinanceBudgetEntity.MONTHLY_LIMIT, e.getId(), e.getMonthlyLimitEncrypted());
-        return new Budget(e.getId(), e.getSpaceId(), e.getCategoryId(), new BigDecimal(decrypted));
+        return new Budget(e.getId(), e.getSpaceId(), e.getCategoryId(),
+            SealedAmounts.open(sealers.forSpace(e.getSpaceId()), FinanceBudgetEntity.MONTHLY_LIMIT, e.getId(), e.getMonthlyLimitEncrypted()));
     }
 }

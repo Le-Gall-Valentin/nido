@@ -16,7 +16,6 @@ import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +73,7 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
         FinanceRecurringSeriesEntity e = new FinanceRecurringSeriesEntity();
         e.setSpaceId(command.spaceId());
         e.setLabelEncrypted(sealer.seal(FinanceRecurringSeriesEntity.LABEL, e.getId(), command.label()));
-        e.setAmountEncrypted(sealer.seal(FinanceRecurringSeriesEntity.AMOUNT, e.getId(), command.amount().toPlainString()));
+        e.setAmountEncrypted(SealedAmounts.seal(sealer, FinanceRecurringSeriesEntity.AMOUNT, e.getId(), command.amount()));
         e.setType(command.type());
         e.setCategoryId(command.categoryId());
         e.setPayerId(command.payerId());
@@ -94,7 +93,7 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
         // The key of the space the row is stored in, whatever the command says.
         SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
         e.setLabelEncrypted(sealer.seal(FinanceRecurringSeriesEntity.LABEL, e.getId(), command.label()));
-        e.setAmountEncrypted(sealer.seal(FinanceRecurringSeriesEntity.AMOUNT, e.getId(), command.amount().toPlainString()));
+        e.setAmountEncrypted(SealedAmounts.seal(sealer, FinanceRecurringSeriesEntity.AMOUNT, e.getId(), command.amount()));
         e.setType(command.type());
         e.setCategoryId(command.categoryId());
         e.setPayerId(command.payerId());
@@ -135,8 +134,8 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
             FinanceRecurringSeriesContributorEntity ce = new FinanceRecurringSeriesContributorEntity();
             ce.setSeriesId(seriesId);
             ce.setUserId(c.memberId());
-            ce.setShareAmountEncrypted(sealer.seal(FinanceRecurringSeriesContributorEntity.SHARE_AMOUNT, ce.getId(),
-                c.shareAmount().toPlainString()));
+            ce.setShareAmountEncrypted(SealedAmounts.seal(sealer, FinanceRecurringSeriesContributorEntity.SHARE_AMOUNT, ce.getId(),
+                c.shareAmount()));
             return ce;
         }).toList();
         return contributors.saveAllAndFlush(entities);
@@ -146,10 +145,10 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
         SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
         List<Contribution> resolvedContributors = contributorEntities.stream()
             .map(ce -> new Contribution(ce.getUserId(),
-                new BigDecimal(sealer.open(FinanceRecurringSeriesContributorEntity.SHARE_AMOUNT, ce.getId(), ce.getShareAmountEncrypted()))))
+                SealedAmounts.open(sealer, FinanceRecurringSeriesContributorEntity.SHARE_AMOUNT, ce.getId(), ce.getShareAmountEncrypted())))
             .toList();
         return new RecurringTransactionSeries(e.getId(), e.getSpaceId(), sealer.open(FinanceRecurringSeriesEntity.LABEL, e.getId(), e.getLabelEncrypted()),
-            new BigDecimal(sealer.open(FinanceRecurringSeriesEntity.AMOUNT, e.getId(), e.getAmountEncrypted())), e.getType(), e.getCategoryId(), e.getPayerId(),
+            SealedAmounts.open(sealer, FinanceRecurringSeriesEntity.AMOUNT, e.getId(), e.getAmountEncrypted()), e.getType(), e.getCategoryId(), e.getPayerId(),
             resolvedContributors, e.getIntervalType(), e.getIntervalCount(), e.getAnchorDate(), e.getEndDate(),
             e.getLastMaterializedDate());
     }

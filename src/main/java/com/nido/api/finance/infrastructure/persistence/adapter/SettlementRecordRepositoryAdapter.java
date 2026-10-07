@@ -52,15 +52,15 @@ public class SettlementRecordRepositoryAdapter implements SettlementRecordReposi
         e.setSpaceId(command.spaceId());
         e.setFromUserId(command.fromMemberId());
         e.setToUserId(command.toMemberId());
-        e.setAmountEncrypted(sealers.forSpace(command.spaceId()).seal(FinanceSettlementRecordEntity.AMOUNT, e.getId(),
-            command.amount().toPlainString()));
+        e.setAmountEncrypted(SealedAmounts.seal(sealers.forSpace(command.spaceId()), FinanceSettlementRecordEntity.AMOUNT, e.getId(),
+            command.amount()));
         e.setSettledDate(command.date());
         FinanceSettlementRecordEntity saved = settlements.saveAndFlush(e);
         return toDomain(saved);
     }
 
     private SettlementRecord toDomain(FinanceSettlementRecordEntity e) {
-        BigDecimal amount = new BigDecimal(sealers.forSpace(e.getSpaceId()).open(FinanceSettlementRecordEntity.AMOUNT, e.getId(), e.getAmountEncrypted()));
+        BigDecimal amount = SealedAmounts.open(sealers.forSpace(e.getSpaceId()), FinanceSettlementRecordEntity.AMOUNT, e.getId(), e.getAmountEncrypted());
         return new SettlementRecord(e.getId(), e.getSpaceId(), e.getFromUserId(), e.getToUserId(), amount, e.getSettledDate());
     }
 }
