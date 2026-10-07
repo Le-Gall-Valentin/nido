@@ -17,7 +17,7 @@ public interface FinanceTransactionContributorJpaRepository extends JpaRepositor
     /** The shares of the given transactions, projected — no entity, no label, ciphertext untouched. */
     @Query("""
         select new com.nido.api.finance.infrastructure.persistence.repository.ContributorShareRow(
-            c.transactionId, c.userId, c.shareAmountEncrypted)
+            c.id, c.transactionId, c.userId, c.shareAmountEncrypted)
         from FinanceTransactionContributorEntity c
         where c.transactionId in :transactionIds
         """)

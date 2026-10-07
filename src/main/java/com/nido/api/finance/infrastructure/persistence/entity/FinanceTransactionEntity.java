@@ -2,6 +2,7 @@ package com.nido.api.finance.infrastructure.persistence.entity;
 
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -29,8 +30,12 @@ public class FinanceTransactionEntity extends AssignedUuidEntity {
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
 
+    public static final SealedColumn LABEL = SealedColumn.ofSpace("finance_transactions", "label_encrypted");
+
     @Column(name = "label_encrypted", nullable = false)
     private String labelEncrypted;
+
+    public static final SealedColumn AMOUNT = SealedColumn.ofSpace("finance_transactions", "amount_encrypted");
 
     @Column(name = "amount_encrypted", nullable = false)
     private String amountEncrypted;

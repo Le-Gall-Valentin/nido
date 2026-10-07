@@ -1,40 +1,27 @@
 package com.nido.api.finance.infrastructure.config;
 
-import com.nido.api.infrastructure.config.EncryptionBackfill;
-import com.nido.api.infrastructure.config.ExistingCiphertextCheck;
-import com.nido.api.infrastructure.config.PlaintextTable;
-import com.nido.api.infrastructure.config.PlaintextTableEncryptor;
-import com.nido.api.infrastructure.config.PlaintextTablesBackfill;
-import com.nido.api.infrastructure.config.SpaceCiphertextCheck;
-import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceBudgetEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceCategoryEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceRecurringSeriesContributorEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceRecurringSeriesEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceSavingsContributionEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceSavingsGoalEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceSettlementRecordEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionContributorEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionEntity;
+import com.nido.api.infrastructure.sealing.SealedColumns;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.simple.JdbcClient;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 public class FinanceEncryptionConfig {
 
-    // One key per space, shared with every module that encrypts a space's data — see SpaceKeyCache.
+    /** The columns of finance that hold sealed values — see SealedValueMigration and SpaceKeyGuard. */
     @Bean
-    FinanceEncryptorFactory financeEncryptorFactory(SpaceEncryptorFactory spaces) {
-        return spaces::forSpace;
-    }
-
-    /** The labels of default categories, stored in clear before 0.13.1 — see EncryptionBackfillRunner. */
-    @Bean
-    EncryptionBackfill financeEncryptionBackfill(PlaintextTableEncryptor encryptor, SpaceEncryptorFactory spaces) {
-        return new PlaintextTablesBackfill(encryptor, spaces::forSpace, PlaintextTable.ofSpace("finance_categories", "label"));
-    }
-
-    /** Finance has been encrypted since it exists: one of its values per space proves the key. */
-    @Bean
-    ExistingCiphertextCheck financeCiphertextCheck(JdbcClient jdbc, SpaceEncryptorFactory spaces) {
-        return new SpaceCiphertextCheck(jdbc, spaces::forSpace, "finance data", """
-            SELECT DISTINCT ON (space_id) space_id, value FROM (
-                SELECT space_id, amount_encrypted AS value FROM finance_transactions
-                UNION ALL
-                SELECT space_id, label_encrypted FROM finance_categories WHERE label_encrypted IS NOT NULL
-            ) sample
-            ORDER BY space_id""");
+    SealedColumns financeSealedColumns() {
+        return SealedColumns.of(FinanceCategoryEntity.LABEL, FinanceTransactionEntity.LABEL, FinanceTransactionEntity.AMOUNT,
+            FinanceTransactionContributorEntity.SHARE_AMOUNT, FinanceRecurringSeriesEntity.LABEL, FinanceRecurringSeriesEntity.AMOUNT,
+            FinanceRecurringSeriesContributorEntity.SHARE_AMOUNT, FinanceBudgetEntity.MONTHLY_LIMIT, FinanceSavingsGoalEntity.NAME,
+            FinanceSavingsGoalEntity.TARGET_AMOUNT, FinanceSavingsContributionEntity.AMOUNT, FinanceSettlementRecordEntity.AMOUNT);
     }
 }

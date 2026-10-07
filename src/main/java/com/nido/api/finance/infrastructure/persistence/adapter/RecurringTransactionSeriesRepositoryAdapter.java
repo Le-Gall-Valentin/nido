@@ -7,12 +7,12 @@ import com.nido.api.finance.domain.model.RecurringSeriesSchedule;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.model.UpdateRecurringSeriesCommand;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
-import com.nido.api.finance.infrastructure.config.FinanceEncryptorFactory;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceRecurringSeriesContributorEntity;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceRecurringSeriesEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceRecurringSeriesContributorJpaRepository;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceRecurringSeriesJpaRepository;
-import org.springframework.security.crypto.encrypt.TextEncryptor;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,14 +29,14 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
 
     private final FinanceRecurringSeriesJpaRepository series;
     private final FinanceRecurringSeriesContributorJpaRepository contributors;
-    private final FinanceEncryptorFactory encryptorFactory;
+    private final SpaceSealers sealers;
 
     public RecurringTransactionSeriesRepositoryAdapter(
             FinanceRecurringSeriesJpaRepository series, FinanceRecurringSeriesContributorJpaRepository contributors,
-            FinanceEncryptorFactory encryptorFactory) {
+            SpaceSealers sealers) {
         this.series = series;
         this.contributors = contributors;
-        this.encryptorFactory = encryptorFactory;
+        this.sealers = sealers;
     }
 
     @Override
@@ -70,11 +70,11 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
     @Override
     @Transactional
     public RecurringTransactionSeries create(CreateRecurringSeriesCommand command, List<Contribution> resolvedContributors) {
-        TextEncryptor encryptor = encryptorFactory.forSpace(command.spaceId());
+        SpaceSealer sealer = sealers.forSpace(command.spaceId());
         FinanceRecurringSeriesEntity e = new FinanceRecurringSeriesEntity();
         e.setSpaceId(command.spaceId());
-        e.setLabelEncrypted(encryptor.encrypt(command.label()));
-        e.setAmountEncrypted(encryptor.encrypt(command.amount().toPlainString()));
+        e.setLabelEncrypted(sealer.seal(FinanceRecurringSeriesEntity.LABEL, e.getId(), command.label()));
+        e.setAmountEncrypted(sealer.seal(FinanceRecurringSeriesEntity.AMOUNT, e.getId(), command.amount().toPlainString()));
         e.setType(command.type());
         e.setCategoryId(command.categoryId());
         e.setPayerId(command.payerId());
@@ -83,17 +83,17 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
         e.setAnchorDate(command.anchorDate());
         e.setEndDate(command.endDate());
         FinanceRecurringSeriesEntity saved = series.saveAndFlush(e);
-        List<FinanceRecurringSeriesContributorEntity> savedContributors = saveContributors(saved.getId(), encryptor, resolvedContributors);
+        List<FinanceRecurringSeriesContributorEntity> savedContributors = saveContributors(saved.getId(), sealer, resolvedContributors);
         return toDomain(saved, savedContributors);
     }
 
     @Override
     @Transactional
     public RecurringTransactionSeries update(UpdateRecurringSeriesCommand command, List<Contribution> resolvedContributors) {
-        TextEncryptor encryptor = encryptorFactory.forSpace(command.spaceId());
+        SpaceSealer sealer = sealers.forSpace(command.spaceId());
         FinanceRecurringSeriesEntity e = series.findById(command.seriesId()).orElseThrow(FinanceException.RecurringSeriesNotFound::new);
-        e.setLabelEncrypted(encryptor.encrypt(command.label()));
-        e.setAmountEncrypted(encryptor.encrypt(command.amount().toPlainString()));
+        e.setLabelEncrypted(sealer.seal(FinanceRecurringSeriesEntity.LABEL, e.getId(), command.label()));
+        e.setAmountEncrypted(sealer.seal(FinanceRecurringSeriesEntity.AMOUNT, e.getId(), command.amount().toPlainString()));
         e.setType(command.type());
         e.setCategoryId(command.categoryId());
         e.setPayerId(command.payerId());
@@ -104,7 +104,7 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
         FinanceRecurringSeriesEntity saved = series.saveAndFlush(e);
         contributors.deleteBySeriesId(e.getId());
         contributors.flush();
-        List<FinanceRecurringSeriesContributorEntity> savedContributors = saveContributors(e.getId(), encryptor, resolvedContributors);
+        List<FinanceRecurringSeriesContributorEntity> savedContributors = saveContributors(e.getId(), sealer, resolvedContributors);
         return toDomain(saved, savedContributors);
     }
 
@@ -129,24 +129,26 @@ public class RecurringTransactionSeriesRepositoryAdapter implements RecurringTra
         series.lockMaterialization("finance-materialize|" + spaceId);
     }
 
-    private List<FinanceRecurringSeriesContributorEntity> saveContributors(UUID seriesId, TextEncryptor encryptor, List<Contribution> resolved) {
+    private List<FinanceRecurringSeriesContributorEntity> saveContributors(UUID seriesId, SpaceSealer sealer, List<Contribution> resolved) {
         List<FinanceRecurringSeriesContributorEntity> entities = resolved.stream().map(c -> {
             FinanceRecurringSeriesContributorEntity ce = new FinanceRecurringSeriesContributorEntity();
             ce.setSeriesId(seriesId);
             ce.setUserId(c.memberId());
-            ce.setShareAmountEncrypted(encryptor.encrypt(c.shareAmount().toPlainString()));
+            ce.setShareAmountEncrypted(sealer.seal(FinanceRecurringSeriesContributorEntity.SHARE_AMOUNT, ce.getId(),
+                c.shareAmount().toPlainString()));
             return ce;
         }).toList();
         return contributors.saveAllAndFlush(entities);
     }
 
     private RecurringTransactionSeries toDomain(FinanceRecurringSeriesEntity e, List<FinanceRecurringSeriesContributorEntity> contributorEntities) {
-        TextEncryptor encryptor = encryptorFactory.forSpace(e.getSpaceId());
+        SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
         List<Contribution> resolvedContributors = contributorEntities.stream()
-            .map(ce -> new Contribution(ce.getUserId(), new BigDecimal(encryptor.decrypt(ce.getShareAmountEncrypted()))))
+            .map(ce -> new Contribution(ce.getUserId(),
+                new BigDecimal(sealer.open(FinanceRecurringSeriesContributorEntity.SHARE_AMOUNT, ce.getId(), ce.getShareAmountEncrypted()))))
             .toList();
-        return new RecurringTransactionSeries(e.getId(), e.getSpaceId(), encryptor.decrypt(e.getLabelEncrypted()),
-            new BigDecimal(encryptor.decrypt(e.getAmountEncrypted())), e.getType(), e.getCategoryId(), e.getPayerId(),
+        return new RecurringTransactionSeries(e.getId(), e.getSpaceId(), sealer.open(FinanceRecurringSeriesEntity.LABEL, e.getId(), e.getLabelEncrypted()),
+            new BigDecimal(sealer.open(FinanceRecurringSeriesEntity.AMOUNT, e.getId(), e.getAmountEncrypted())), e.getType(), e.getCategoryId(), e.getPayerId(),
             resolvedContributors, e.getIntervalType(), e.getIntervalCount(), e.getAnchorDate(), e.getEndDate(),
             e.getLastMaterializedDate());
     }

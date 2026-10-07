@@ -2,6 +2,7 @@ package com.nido.api.finance.infrastructure.persistence.entity;
 
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -27,6 +28,8 @@ public class FinanceCategoryEntity extends AssignedUuidEntity {
      * Every label, the defaults' included: a default category can be renamed, and what its owner types
      * then is theirs.
      */
+    public static final SealedColumn LABEL = SealedColumn.ofSpace("finance_categories", "label_encrypted").withClearColumn("label");
+
     @Column(name = "label_encrypted", nullable = false)
     private String labelEncrypted;
 

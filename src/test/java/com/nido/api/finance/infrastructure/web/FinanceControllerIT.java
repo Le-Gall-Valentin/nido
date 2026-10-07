@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -45,6 +46,7 @@ class FinanceControllerIT {
     @Autowired SpaceJpaRepository spaces;
     @Autowired SpaceMemberJpaRepository members;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
+    @Autowired JdbcTemplate jdbc;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -430,6 +432,28 @@ class FinanceControllerIT {
             }
         }
         throw new AssertionError("no INCOME category was seeded");
+    }
+
+    @Test
+    void two_amounts_swapped_in_the_database_are_refused_rather_than_shown() throws Exception {
+        String category = firstCategoryId();
+        String rent = createTransaction(category, "Loyer", "850.00");
+        String coffee = createTransaction(category, "Café", "3.50");
+        jdbc.update("""
+            UPDATE finance_transactions t SET amount_encrypted = o.amount_encrypted
+            FROM finance_transactions o WHERE (t.id, o.id) IN ((?::uuid, ?::uuid), (?::uuid, ?::uuid))""", rent, coffee, coffee, rent);
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/transactions?month=2026-01").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isInternalServerError())
+            .andExpect(jsonPath("$.error_code").value("data_integrity"));
+    }
+
+    private String createTransaction(String categoryId, String label, String amount) throws Exception {
+        String body = "{\"label\":\"" + label + "\",\"amount\":" + amount + ",\"type\":\"EXPENSE\",\"categoryId\":\"" + categoryId
+            + "\",\"date\":\"2026-01-15\"}";
+        return objectMapper.readTree(mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asText();
     }
 
     private String firstCategoryId() throws Exception {

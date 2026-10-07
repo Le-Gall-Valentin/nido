@@ -6,10 +6,11 @@ import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.CreateCategoryCommand;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.model.UpdateCategoryCommand;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceCategoryEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceCategoryJpaRepository;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
-import com.nido.api.infrastructure.config.SpaceEncryptorFactory;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -30,7 +31,7 @@ class CategoryRepositoryAdapterIT {
     @Autowired SpaceJpaRepository spaceJpaRepository;
     @Autowired UserIdentityJpaRepository userJpaRepository;
     @Autowired TransactionRepositoryAdapter transactionAdapter;
-    @Autowired SpaceEncryptorFactory encryptors;
+    @Autowired SpaceSealers sealers;
 
     private UUID spaceId;
 
@@ -70,8 +71,8 @@ class CategoryRepositoryAdapterIT {
         assertThat(created.label()).isEqualTo("Alimentation");
         assertThat(created.isDefault()).isTrue();
         String stored = jpaRepository.findById(created.id()).orElseThrow().getLabelEncrypted();
-        assertThat(stored).isNotNull().doesNotContain("Alimentation");
-        assertThat(encryptors.forSpace(spaceId).decrypt(stored)).isEqualTo("Alimentation");
+        assertThat(stored).startsWith("v2:").doesNotContain("Alimentation");
+        assertThat(sealers.forSpace(spaceId).open(FinanceCategoryEntity.LABEL, created.id(), stored)).isEqualTo("Alimentation");
     }
 
     @Test

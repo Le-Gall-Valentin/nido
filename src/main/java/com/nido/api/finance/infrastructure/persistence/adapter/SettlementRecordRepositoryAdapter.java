@@ -3,9 +3,9 @@ package com.nido.api.finance.infrastructure.persistence.adapter;
 import com.nido.api.finance.domain.model.CreateSettlementCommand;
 import com.nido.api.finance.domain.model.SettlementRecord;
 import com.nido.api.finance.domain.port.out.SettlementRecordRepository;
-import com.nido.api.finance.infrastructure.config.FinanceEncryptorFactory;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceSettlementRecordEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceSettlementRecordJpaRepository;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,11 +17,11 @@ import java.util.UUID;
 public class SettlementRecordRepositoryAdapter implements SettlementRecordRepository {
 
     private final FinanceSettlementRecordJpaRepository settlements;
-    private final FinanceEncryptorFactory encryptorFactory;
+    private final SpaceSealers sealers;
 
-    public SettlementRecordRepositoryAdapter(FinanceSettlementRecordJpaRepository settlements, FinanceEncryptorFactory encryptorFactory) {
+    public SettlementRecordRepositoryAdapter(FinanceSettlementRecordJpaRepository settlements, SpaceSealers sealers) {
         this.settlements = settlements;
-        this.encryptorFactory = encryptorFactory;
+        this.sealers = sealers;
     }
 
     @Override
@@ -52,14 +52,15 @@ public class SettlementRecordRepositoryAdapter implements SettlementRecordReposi
         e.setSpaceId(command.spaceId());
         e.setFromUserId(command.fromMemberId());
         e.setToUserId(command.toMemberId());
-        e.setAmountEncrypted(encryptorFactory.forSpace(command.spaceId()).encrypt(command.amount().toPlainString()));
+        e.setAmountEncrypted(sealers.forSpace(command.spaceId()).seal(FinanceSettlementRecordEntity.AMOUNT, e.getId(),
+            command.amount().toPlainString()));
         e.setSettledDate(command.date());
         FinanceSettlementRecordEntity saved = settlements.saveAndFlush(e);
         return toDomain(saved, command.spaceId());
     }
 
     private SettlementRecord toDomain(FinanceSettlementRecordEntity e, UUID spaceId) {
-        BigDecimal amount = new BigDecimal(encryptorFactory.forSpace(spaceId).decrypt(e.getAmountEncrypted()));
+        BigDecimal amount = new BigDecimal(sealers.forSpace(spaceId).open(FinanceSettlementRecordEntity.AMOUNT, e.getId(), e.getAmountEncrypted()));
         return new SettlementRecord(e.getId(), e.getSpaceId(), e.getFromUserId(), e.getToUserId(), amount, e.getSettledDate());
     }
 }

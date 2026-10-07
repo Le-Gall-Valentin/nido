@@ -1,6 +1,7 @@
 package com.nido.api.finance.infrastructure.persistence.entity;
 
 import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -28,6 +29,9 @@ public class FinanceSavingsContributionEntity extends AssignedUuidEntity {
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
+
+    public static final SealedColumn AMOUNT = SealedColumn.throughParent("finance_savings_contributions", "amount_encrypted", "goal_id",
+        "finance_savings_goals");
 
     @Column(name = "amount_encrypted", nullable = false)
     private String amountEncrypted;
