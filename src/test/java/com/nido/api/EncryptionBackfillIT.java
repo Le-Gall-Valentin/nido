@@ -274,6 +274,18 @@ class EncryptionBackfillIT {
     }
 
     @Test
+    void a_vacuum_069_cannot_tell_about_counts_as_owed() throws Exception {
+        // Unknown is not "nothing owed": vacuuming once too often costs seconds, never vacuuming leaves old values.
+        InstallationTestSupport.migrateUpTo(database, "071-");
+        db.update("DELETE FROM sealing_state");
+        long spaceFiles = filenode("spaces");
+
+        start(KEY).close();
+
+        assertThat(filenode("spaces")).isNotEqualTo(spaceFiles);
+    }
+
+    @Test
     void two_instances_starting_together_both_start() throws Exception {
         // Liquibase's own lock makes the second wait for the first's migrations, and the sealing lock then makes it
         // find nothing left. Two migrations overlapping, and both succeeding, is SealedValueMigrationIT's to show.

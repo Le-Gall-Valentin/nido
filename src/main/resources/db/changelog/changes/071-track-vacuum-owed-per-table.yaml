@@ -6,7 +6,10 @@ databaseChangeLog:
         The VACUUM owed once values are sealed, table by table rather than as the single flag of 069, each with the file
         the table was in when the debt was recorded. A table whose VACUUM keeps failing — a role Postgres does not allow,
         a lock always held — no longer makes every start rewrite every table again; and a table rewritten since, by the
-        command the warning gives to run by hand, is settled: its file changed. What 069 owed is carried over.
+        command the warning gives to run by hand, is settled: its file changed. What 069 owed is carried over, and a
+        069 that cannot tell — its row gone — counts as owing it. The valid checksum is the one of the first draft of
+        this changeset, which development databases ran before that last rule, unreleased.
+      validCheckSum: 9:421ec06defc1e8f05e3431e716ef8086
       changes:
         - createTable:
             tableName: sealing_vacuum_owed
@@ -34,7 +37,7 @@ databaseChangeLog:
                                 'finance_recurring_series_contributors', 'finance_budgets', 'finance_savings_goals',
                                 'finance_savings_contributions', 'finance_settlement_records', 'calendar_events',
                                 'calendar_recurring_event_series']) t
-              WHERE to_regclass(t) IS NOT NULL AND EXISTS (SELECT 1 FROM sealing_state WHERE vacuum_owed)
+              WHERE to_regclass(t) IS NOT NULL AND NOT EXISTS (SELECT 1 FROM sealing_state WHERE NOT vacuum_owed)
         - dropTable:
             tableName: sealing_state
       rollback:
