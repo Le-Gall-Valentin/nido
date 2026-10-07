@@ -10,8 +10,12 @@ import com.nido.api.calendar.domain.model.UpdateEventCommand;
 import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
 import com.nido.api.calendar.domain.port.out.EventExclusionRepository;
 import com.nido.api.calendar.domain.port.out.RecurringEventSeriesRepository;
+import com.nido.api.calendar.infrastructure.persistence.entity.CalendarEventEntity;
+import com.nido.api.calendar.infrastructure.persistence.entity.CalendarRecurringEventSeriesEntity;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -38,6 +42,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTestConfig
 class CalendarEventRepositoryAdapterIT {
@@ -47,6 +52,7 @@ class CalendarEventRepositoryAdapterIT {
     @Autowired EventExclusionRepository exclusions;
     @Autowired SpaceJpaRepository spaces;
     @Autowired UserIdentityJpaRepository users;
+    @Autowired SpaceSealers sealers;
     @Autowired JdbcTemplate jdbc;
     @Autowired PlatformTransactionManager transactionManager;
 
@@ -80,8 +86,10 @@ class CalendarEventRepositoryAdapterIT {
             "SELECT title_encrypted FROM calendar_events WHERE id = ?", String.class, created.id());
         String storedLocation = jdbc.queryForObject(
             "SELECT location_encrypted FROM calendar_events WHERE id = ?", String.class, created.id());
-        assertThat(storedTitle).doesNotContain("oncologue");
+        assertThat(storedTitle).startsWith("v2:").doesNotContain("oncologue");
         assertThat(storedLocation).doesNotContain("Saint-Louis");
+        assertThat(sealers.forSpace(spaceId).open(CalendarEventEntity.TITLE, created.id(), storedTitle)).isEqualTo("RDV oncologue");
+        assertThat(sealers.forSpace(spaceId).open(CalendarEventEntity.LOCATION, created.id(), storedLocation)).isEqualTo("Hôpital Saint-Louis");
 
         assertThat(events.findById(created.id())).get()
             .extracting(CalendarEvent::title, CalendarEvent::description, CalendarEvent::location)
@@ -243,8 +251,19 @@ class CalendarEventRepositoryAdapterIT {
         UUID seriesId = weeklySeries();
         String stored = jdbc.queryForObject(
             "SELECT title_encrypted FROM calendar_recurring_event_series WHERE id = ?", String.class, seriesId);
-        assertThat(stored).doesNotContain("Piano");
+        assertThat(stored).startsWith("v2:").doesNotContain("Piano");
+        assertThat(sealers.forSpace(spaceId).open(CalendarRecurringEventSeriesEntity.TITLE, seriesId, stored)).isEqualTo("Piano");
         assertThat(series.findById(seriesId)).get().extracting(s -> s.title()).isEqualTo("Piano");
+    }
+
+    @Test
+    void a_title_copied_from_another_event_is_refused() {
+        CalendarEvent dentist = events.create(plainEvent("Dentiste", LocalDate.of(2026, 3, 2)));
+        CalendarEvent piano = events.create(plainEvent("Piano", LocalDate.of(2026, 3, 3)));
+        jdbc.update("UPDATE calendar_events SET title_encrypted = (SELECT title_encrypted FROM calendar_events WHERE id = ?) WHERE id = ?",
+            dentist.id(), piano.id());
+
+        assertThatThrownBy(() -> events.findById(piano.id())).isInstanceOf(SealedValueRejected.class);
     }
 
     private CreateEventCommand plainEvent(String title, LocalDate date) {

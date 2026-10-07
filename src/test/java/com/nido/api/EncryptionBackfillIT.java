@@ -154,6 +154,7 @@ class EncryptionBackfillIT {
         writtenInClearByAnEarlierVersion();
         long itemFiles = filenode("shopping_items");
         long eventFiles = filenode("calendar_events");
+        long memberFiles = filenode("space_members");
         AtomicLong inClearWhenServing = new AtomicLong(-1);
         ApplicationListener<WebServerInitializedEvent> whenServing = event -> inClearWhenServing.set(
             PlaintextPerimeter.valuesInClear(event.getApplicationContext().getBean(JdbcTemplate.class)));
@@ -165,7 +166,8 @@ class EncryptionBackfillIT {
         assertThat(PlaintextPerimeter.valuesInClear(db)).isZero();
         assertThat(PlaintextPerimeter.columnsInClear(db)).as("dropped at the next start, not this one").isNotEmpty();
         assertThat(filenode("shopping_items")).as("rewritten by VACUUM FULL").isNotEqualTo(itemFiles);
-        assertThat(filenode("calendar_events")).as("nothing of it was in clear").isEqualTo(eventFiles);
+        assertThat(filenode("calendar_events")).as("its values were sealed, then its old row versions vacuumed").isNotEqualTo(eventFiles);
+        assertThat(filenode("space_members")).as("nothing of it is sealed").isEqualTo(memberFiles);
 
         try (ConfigurableApplicationContext app = start(KEY)) {
             everythingReadsAsItWasWritten(app);

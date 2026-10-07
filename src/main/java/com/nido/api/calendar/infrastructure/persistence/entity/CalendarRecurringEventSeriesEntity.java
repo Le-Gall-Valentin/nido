@@ -2,6 +2,7 @@ package com.nido.api.calendar.infrastructure.persistence.entity;
 
 import com.nido.api.calendar.domain.model.RecurrenceInterval;
 import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
+import com.nido.api.infrastructure.sealing.SealedColumn;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -30,11 +31,17 @@ public class CalendarRecurringEventSeriesEntity extends AssignedUuidEntity {
     @Column(name = "space_id", nullable = false)
     private UUID spaceId;
 
+    public static final SealedColumn TITLE = SealedColumn.ofSpace("calendar_recurring_event_series", "title_encrypted");
+
     @Column(name = "title_encrypted", nullable = false)
     private String titleEncrypted;
 
+    public static final SealedColumn DESCRIPTION = SealedColumn.ofSpace("calendar_recurring_event_series", "description_encrypted");
+
     @Column(name = "description_encrypted")
     private String descriptionEncrypted;
+
+    public static final SealedColumn LOCATION = SealedColumn.ofSpace("calendar_recurring_event_series", "location_encrypted");
 
     @Column(name = "location_encrypted")
     private String locationEncrypted;
