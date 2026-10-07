@@ -25,7 +25,16 @@ class EnvelopeTest {
 
     @Test
     void every_amount_takes_the_same_room() {
-        assertThat(bytes(Envelope.wrap(HERE, "3.50"))).isEqualTo(bytes(Envelope.wrap(HERE, "12500.00")));
+        assertThat(bytes(Envelope.wrap(HERE, "3.50")))
+            .isEqualTo(bytes(Envelope.wrap(HERE, "12500.00")))
+            .isEqualTo(bytes(Envelope.wrap(HERE, "1500000.00")));
+    }
+
+    @Test
+    void a_short_and_a_long_text_of_one_bucket_take_the_same_room() {
+        // The length written in the envelope must not give away by its width what the padding hides.
+        assertThat(bytes(Envelope.wrap(HERE, "Pain"))).isEqualTo(bytes(Envelope.wrap(HERE, "Courses du samedi")));
+        assertThat(bytes(Envelope.wrap(HERE, "x".repeat(99)))).isEqualTo(bytes(Envelope.wrap(HERE, "x".repeat(100))));
     }
 
     @Test
@@ -49,8 +58,8 @@ class EnvelopeTest {
     void a_text_that_is_not_an_envelope_is_refused() {
         String envelope = Envelope.wrap(HERE, "Loyer");
 
-        for (String broken : new String[] {"Loyer", HERE + "|5", HERE + "|x|Loyer", envelope.substring(0, envelope.length() - 1),
-                envelope.substring(0, envelope.length() - 1) + "*"}) {
+        for (String broken : new String[] {"Loyer", HERE + "|5", HERE + "|x|Loyer", HERE + "|5|Loyer" + "#".repeat(27),
+                envelope.substring(0, envelope.length() - 1), envelope.substring(0, envelope.length() - 1) + "*"}) {
             assertThatThrownBy(() -> Envelope.unwrap(HERE, broken))
                 .isInstanceOf(EnvelopeRejected.class)
                 .satisfies(e -> assertThat(((EnvelopeRejected) e).claimedReference()).isEmpty());

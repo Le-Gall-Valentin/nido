@@ -10,8 +10,9 @@ import java.util.Objects;
  *
  * <p>The reference names the table, the column and the row, so a ciphertext moved elsewhere opens on a
  * reference that is not the one asked for. {@code n} is the value's length in UTF-16 units, so the value comes
- * back exactly whatever it holds. The padding, made of {@code #}, brings the value to the next power of two of at
- * least {@value #MIN_BUCKET} bytes of UTF-8: the stored length no longer tells the value's.
+ * back exactly whatever it holds; it is always written on {@value #LENGTH_DIGITS} digits, or its width would tell
+ * what the padding hides. The padding, made of {@code #}, brings the value to the next power of two of at least
+ * {@value #MIN_BUCKET} bytes of UTF-8: within a column, the stored length tells nothing but that power of two.
  *
  * <p>Plain text handling — no key, no cipher. The encryption is still {@code Encryptors.delux}, whose GCM
  * authenticates all of this: the reference cannot be rewritten without the key.
@@ -19,10 +20,11 @@ import java.util.Objects;
 public final class Envelope {
 
     static final int MIN_BUCKET = 32;
-    private static final int MAX_BUCKET = 1 << 30;
+    static final int LENGTH_DIGITS = 9;
+    /** Below 10^{@value #LENGTH_DIGITS}: a value's length in UTF-16 units never exceeds its length in UTF-8 bytes. */
+    private static final int MAX_BUCKET = 1 << 29;
     private static final char SEPARATOR = '|';
     private static final char PAD = '#';
-    private static final int MAX_LENGTH_DIGITS = 9;
 
     private Envelope() {}
 
@@ -33,8 +35,9 @@ public final class Envelope {
             throw new IllegalArgumentException("A reference cannot hold '" + SEPARATOR + "'");
         }
         int bytes = utf8Length(value);
-        return reference + SEPARATOR + value.length() + SEPARATOR + value
-            + String.valueOf(PAD).repeat(bucketFor(bytes) - bytes);
+        int bucket = bucketFor(bytes);
+        return reference + SEPARATOR + String.format("%0" + LENGTH_DIGITS + "d", value.length()) + SEPARATOR + value
+            + String.valueOf(PAD).repeat(bucket - bytes);
     }
 
     /**
@@ -49,7 +52,7 @@ public final class Envelope {
             throw EnvelopeRejected.malformed();
         }
         String digits = text.substring(first + 1, second);
-        if (digits.isEmpty() || digits.length() > MAX_LENGTH_DIGITS || digits.chars().anyMatch(c -> c < '0' || c > '9')) {
+        if (digits.length() != LENGTH_DIGITS || digits.chars().anyMatch(c -> c < '0' || c > '9')) {
             throw EnvelopeRejected.malformed();
         }
         int length = Integer.parseInt(digits);
