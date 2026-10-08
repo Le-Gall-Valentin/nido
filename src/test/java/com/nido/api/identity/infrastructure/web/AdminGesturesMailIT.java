@@ -154,12 +154,14 @@ class AdminGesturesMailIT {
     void an_admin_resetting_a_second_factor_tells_its_holder_and_the_super_administrators() throws Exception {
         totps.save(new TwoFactorMethodEntity(carolId, TwoFactorMethod.APP, encryptorFactory.forUser(carolId).encrypt("JBSWY3DPEHPK3PXP")));
 
-        mockMvc.perform(post("/api/users/" + carolId + "/2fa/reset").cookie(cookieFor(bobId, Role.ADMIN)))
+        mockMvc.perform(post("/api/users/" + carolId + "/2fa/reset").cookie(cookieFor(bobId, Role.ADMIN))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[\"APP\"]}"))
             .andExpect(status().isNoContent());
 
         MimeMessage toCarol = to(address("carol"));
-        assertThat(subjectOf(toCarol)).isEqualTo("La double authentification de votre compte Nido a été désactivée");
-        assertThat(textOf(toCarol)).contains(name("bob") + " a réinitialisé la double authentification de votre compte.");
+        assertThat(subjectOf(toCarol)).isEqualTo("La double authentification de votre compte Nido a été réinitialisée");
+        assertThat(textOf(toCarol)).contains(name("bob") + " a retiré l’application d’authentification de votre compte.",
+            "Nido ne vous demande plus de code à la connexion.");
         assertThat(subjectOf(to(address("alice"))))
             .isEqualTo(name("bob") + " a réinitialisé la 2FA de " + name("carol"));
     }

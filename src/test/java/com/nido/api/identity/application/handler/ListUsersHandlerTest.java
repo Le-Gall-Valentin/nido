@@ -4,11 +4,12 @@ import com.nido.api.identity.domain.model.InvitationState;
 import com.nido.api.identity.domain.port.out.AccountInvitationPort;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.model.UserAdminView;
-import com.nido.api.identity.domain.port.out.TotpStatusPort;
+import com.nido.api.identity.domain.port.out.TwoFactorMethodsPort;
 import com.nido.api.identity.domain.port.out.UserAdminPort;
 import com.nido.api.shared.model.PageResult;
 import com.nido.api.shared.model.Role;
 import com.nido.api.shared.model.SortRequest;
+import com.nido.api.shared.model.TwoFactorMethod;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,18 +30,18 @@ import static org.mockito.Mockito.*;
 class ListUsersHandlerTest {
 
     @Mock UserAdminPort userAdminPort;
-    @Mock TotpStatusPort totpStatusPort;
+    @Mock TwoFactorMethodsPort twoFactorMethods;
     @Mock AccountInvitationPort invitations;
 
     private ListUsersHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new ListUsersHandler(userAdminPort, totpStatusPort, invitations);
+        handler = new ListUsersHandler(userAdminPort, twoFactorMethods, invitations);
     }
 
     @Test
-    void listUsers_returnsPageWithTotpStatus() {
+    void listUsers_returnsPageWithEachAccountsMethods() {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
         User user1 = new User(id1, "alice", "alice@test.com", Role.USER, true, Instant.now(), null);
@@ -49,7 +50,7 @@ class ListUsersHandlerTest {
 
         when(userAdminPort.findAll(0, 20, sort, null))
             .thenReturn(new PageResult<>(List.of(user1, user2), 2L, 0, 20));
-        when(totpStatusPort.findTotpEnabledAmong(Set.of(id1, id2))).thenReturn(Set.of(id1));
+        when(twoFactorMethods.activeMethodsAmong(Set.of(id1, id2))).thenReturn(Map.of(id1, Set.of(TwoFactorMethod.APP), id2, Set.of()));
         InvitationState pending = new InvitationState(false, Instant.parse("2026-10-12T10:00:00Z"));
         when(invitations.invitationsAmong(Set.of(id1, id2))).thenReturn(Map.of(id2, pending));
 
@@ -59,9 +60,9 @@ class ListUsersHandlerTest {
         assertThat(result.totalElements()).isEqualTo(2L);
         UserAdminView view1 = result.content().stream().filter(v -> v.id().equals(id1)).findFirst().orElseThrow();
         UserAdminView view2 = result.content().stream().filter(v -> v.id().equals(id2)).findFirst().orElseThrow();
-        assertThat(view1.totpEnabled()).isTrue();
+        assertThat(view1.twoFactorMethods()).containsExactly(TwoFactorMethod.APP);
         assertThat(view1.isActive()).isTrue();
-        assertThat(view2.totpEnabled()).isFalse();
+        assertThat(view2.twoFactorMethods()).isEmpty();
         assertThat(view2.isActive()).isFalse();
         assertThat(view1.invitation()).isNull();
         assertThat(view2.invitation()).isEqualTo(pending);
@@ -77,7 +78,7 @@ class ListUsersHandlerTest {
 
         assertThat(result.content()).isEmpty();
         assertThat(result.totalElements()).isZero();
-        verify(totpStatusPort, never()).findTotpEnabledAmong(any());
+        verify(twoFactorMethods, never()).activeMethodsAmong(any());
         verify(invitations, never()).invitationsAmong(any());
     }
 

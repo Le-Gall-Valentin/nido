@@ -1,9 +1,6 @@
 package com.nido.api.mfa.infrastructure.persistence.adapter;
 
-import com.nido.api.mfa.domain.model.UserTotpProfile;
 import com.nido.api.mfa.domain.port.out.TwoFactorMethodStorePort;
-import com.nido.api.mfa.domain.port.out.UserTotpLifecyclePort;
-import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
 import com.nido.api.mfa.infrastructure.config.TotpEncryptorFactory;
 import com.nido.api.mfa.infrastructure.persistence.entity.TwoFactorMethodEntity;
 import com.nido.api.mfa.infrastructure.persistence.repository.TwoFactorMethodJpaRepository;
@@ -18,10 +15,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
-public class TwoFactorMethodRepositoryAdapter implements TwoFactorMethodStorePort, UserTotpQueryPort, UserTotpLifecyclePort {
+public class TwoFactorMethodRepositoryAdapter implements TwoFactorMethodStorePort {
 
     private final TwoFactorMethodJpaRepository jpa;
     private final TotpEncryptorFactory encryptors;
@@ -70,36 +66,5 @@ public class TwoFactorMethodRepositoryAdapter implements TwoFactorMethodStorePor
     @Override
     public void deleteAll(UUID userId) {
         jpa.deleteAllOf(userId);
-    }
-
-    // ── What the TOTP handlers still read, until they move behind TwoFactorMethodHandler (tasks 5 to 7) ──
-
-    @Override
-    public Optional<UserTotpProfile> findById(UUID userId) {
-        Optional<String> secret = appSecret(userId);
-        return Optional.of(new UserTotpProfile(userId, secret.isPresent(), secret));
-    }
-
-    @Override
-    public Set<UUID> findTotpEnabledAmong(Collection<UUID> userIds) {
-        return activeMethodsAmong(userIds).entrySet().stream()
-            .filter(entry -> entry.getValue().contains(TwoFactorMethod.APP))
-            .map(Map.Entry::getKey)
-            .collect(Collectors.toSet());
-    }
-
-    @Override
-    public void enableTotp(UUID userId, String secret) {
-        enable(userId, TwoFactorMethod.APP, secret);
-    }
-
-    @Override
-    public void disableTotp(UUID userId) {
-        disable(userId, TwoFactorMethod.APP);
-    }
-
-    @Override
-    public void deleteTotp(UUID userId) {
-        deleteAll(userId);
     }
 }

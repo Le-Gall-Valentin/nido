@@ -9,7 +9,7 @@ import com.nido.api.identity.domain.port.out.CredentialDeletionPort;
 import com.nido.api.identity.domain.port.out.NotificationDataDeletionPort;
 import com.nido.api.identity.domain.port.out.PendingMailCancellationPort;
 import com.nido.api.identity.domain.port.out.SpaceDataDeletionPort;
-import com.nido.api.identity.domain.port.out.TotpDeletionPort;
+import com.nido.api.identity.domain.port.out.TwoFactorMethodsPort;
 import com.nido.api.identity.domain.port.out.TokenInvalidationPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
@@ -36,7 +36,7 @@ class DeleteUserHandlerTest {
     @Mock UserCommandPort userCommandPort;
     @Mock TokenInvalidationPort tokenInvalidationPort;
     @Mock CredentialDeletionPort credentialDeletionPort;
-    @Mock TotpDeletionPort totpDeletionPort;
+    @Mock TwoFactorMethodsPort twoFactorMethods;
     @Mock SpaceDataDeletionPort spaceDataDeletionPort;
     @Mock NotificationDataDeletionPort notificationDataDeletionPort;
     @Mock PendingMailCancellationPort pendingMailCancellationPort;
@@ -50,7 +50,7 @@ class DeleteUserHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new DeleteUserHandler(userRepository, userCommandPort, credentialDeletionPort, totpDeletionPort,
+        handler = new DeleteUserHandler(userRepository, userCommandPort, credentialDeletionPort, twoFactorMethods,
             spaceDataDeletionPort, notificationDataDeletionPort, pendingMailCancellationPort, tokenInvalidationPort,
             invitations, notifier);
     }
@@ -62,10 +62,10 @@ class DeleteUserHandlerTest {
         assertThatCode(() -> handler.delete(new DeleteUserCommand(targetId, callerId, Role.SUPER_ADMIN)))
             .doesNotThrowAnyException();
 
-        InOrder order = inOrder(userCommandPort, credentialDeletionPort, totpDeletionPort);
+        InOrder order = inOrder(userCommandPort, credentialDeletionPort, twoFactorMethods);
         order.verify(userCommandPort).deleteGdpr(targetId);
         order.verify(credentialDeletionPort).deleteCredentials(targetId);
-        order.verify(totpDeletionPort).deleteTotpData(targetId);
+        order.verify(twoFactorMethods).deleteAll(targetId);
         verify(spaceDataDeletionPort).deleteSpaceData(targetId, "u-" + targetId);
         verify(notificationDataDeletionPort).deleteNotificationData(targetId);
         verify(pendingMailCancellationPort).cancelPendingMailsTo(targetId + "@test.com");

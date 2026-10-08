@@ -1,7 +1,7 @@
 package com.nido.api.identity.infrastructure.web;
 
 import com.nido.api.identity.application.port.in.ActivateUserUseCase;
-import com.nido.api.identity.application.port.in.AdminResetTotpUseCase;
+import com.nido.api.identity.application.port.in.AdminResetTwoFactorUseCase;
 import com.nido.api.identity.application.port.in.ChangeMyLanguageUseCase;
 import com.nido.api.identity.application.port.in.ChangeMyPasswordUseCase;
 import com.nido.api.identity.application.port.in.DeleteUserUseCase;
@@ -17,7 +17,7 @@ import com.nido.api.identity.application.port.in.GetCurrentUserUseCase;
 import com.nido.api.identity.application.port.in.RegisterUseCase;
 import com.nido.api.identity.application.port.in.UpdateMyProfileUseCase;
 import com.nido.api.identity.domain.model.ActivateUserCommand;
-import com.nido.api.identity.domain.model.AdminResetTotpCommand;
+import com.nido.api.identity.domain.model.AdminResetTwoFactorCommand;
 import com.nido.api.identity.domain.model.ChangeMyPasswordCommand;
 import com.nido.api.identity.domain.model.DeactivateUserCommand;
 import com.nido.api.identity.domain.model.DeleteUserCommand;
@@ -35,6 +35,7 @@ import com.nido.api.identity.infrastructure.web.dto.InvitationStateResponse;
 import com.nido.api.identity.infrastructure.web.dto.PageResponse;
 import com.nido.api.identity.infrastructure.web.dto.RegisterRequest;
 import com.nido.api.identity.infrastructure.web.dto.RegisteredUserResponse;
+import com.nido.api.identity.infrastructure.web.dto.ResetTwoFactorRequest;
 import com.nido.api.identity.infrastructure.web.dto.UpdateLanguageRequest;
 import com.nido.api.identity.infrastructure.web.dto.UpdateProfileRequest;
 import com.nido.api.identity.infrastructure.web.dto.UpdateUserRequest;
@@ -64,6 +65,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Users")
@@ -76,7 +78,7 @@ public class UserController {
     private final GetCurrentUserUseCase getCurrentUserUseCase;
     private final RegisterUseCase registerUseCase;
     private final DeactivateUserUseCase deactivateUserUseCase;
-    private final AdminResetTotpUseCase adminResetTotpUseCase;
+    private final AdminResetTwoFactorUseCase adminResetTwoFactorUseCase;
     private final UpdateMyProfileUseCase updateMyProfileUseCase;
     private final ChangeMyPasswordUseCase changeMyPasswordUseCase;
     private final ListUsersUseCase listUsersUseCase;
@@ -89,7 +91,7 @@ public class UserController {
     public UserController(GetCurrentUserUseCase getCurrentUserUseCase,
                           RegisterUseCase registerUseCase,
                           DeactivateUserUseCase deactivateUserUseCase,
-                          AdminResetTotpUseCase adminResetTotpUseCase,
+                          AdminResetTwoFactorUseCase adminResetTwoFactorUseCase,
                           UpdateMyProfileUseCase updateMyProfileUseCase,
                           ChangeMyPasswordUseCase changeMyPasswordUseCase,
                           ListUsersUseCase listUsersUseCase,
@@ -101,7 +103,7 @@ public class UserController {
         this.getCurrentUserUseCase = getCurrentUserUseCase;
         this.registerUseCase = registerUseCase;
         this.deactivateUserUseCase = deactivateUserUseCase;
-        this.adminResetTotpUseCase = adminResetTotpUseCase;
+        this.adminResetTwoFactorUseCase = adminResetTwoFactorUseCase;
         this.updateMyProfileUseCase = updateMyProfileUseCase;
         this.changeMyPasswordUseCase = changeMyPasswordUseCase;
         this.listUsersUseCase = listUsersUseCase;
@@ -216,7 +218,7 @@ public class UserController {
             result.content().stream()
                 .map(v -> new UserAdminItemResponse(
                     v.id(), v.username(), v.email(), v.role(),
-                    v.isActive(), v.createdAt(), v.totpEnabled(), InvitationStateResponse.of(v.invitation())))
+                    v.isActive(), v.createdAt(), TwoFactorMethod.ordered(v.twoFactorMethods()), InvitationStateResponse.of(v.invitation())))
                 .toList(),
             result.totalElements(), result.page(), result.size()
         );
@@ -280,7 +282,7 @@ public class UserController {
         User user = created.user();
         URI location = URI.create("/api/users/" + user.id());
         return ResponseEntity.created(location).body(new RegisteredUserResponse(
-            user.id(), user.username(), user.email(), user.role(), user.createdAt(), false, null,
+            user.id(), user.username(), user.email(), user.role(), user.createdAt(), List.of(), null,
             InvitationDeliveryResponse.of(created.invitation())));
     }
 
@@ -487,20 +489,22 @@ public class UserController {
     }
 
     @Operation(
-        summary = "Réinitialiser le TOTP d'un utilisateur (admin)",
+        summary = "Réinitialiser la double authentification d'un compte (admin)",
         description = """
-            Supprime le secret TOTP d'un utilisateur et désactive son authentification à deux facteurs.
-            L'utilisateur devra reconfigurer le TOTP depuis son compte s'il souhaite le réactiver.
-
-            À utiliser lorsqu'un utilisateur a perdu l'accès à son application d'authentification.
-
-            Accessible aux rôles `ADMIN` et `SUPER_ADMIN`. Les contraintes de rôle habituelles s'appliquent.
-
-            Rate limit : 10 req/fenêtre.
+            Retire les méthodes cochées (`APP`, `MAIL`) ; une méthode demandée mais inactive est ignorée, et une
+            activation en cours de cette méthode est effacée. À utiliser quand quelqu'un a perdu son téléphone ou
+            l'accès à sa boîte mail. Un mail prévient le compte, et une notification les super-admins quand c'est un
+            `ADMIN` qui agit — seulement si quelque chose a été retiré. Les contraintes de rôle habituelles
+            s'appliquent ; jamais sur soi-même. `400` si `methods` est vide. Rate limit : 10 req/fenêtre.
             """
     )
     @ApiResponses({
-        @ApiResponse(responseCode = "204", description = "TOTP réinitialisé", content = @Content),
+        @ApiResponse(responseCode = "204", description = "Méthodes cochées retirées", content = @Content),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Aucune méthode cochée",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
+        ),
         @ApiResponse(
             responseCode = "401",
             description = "Non authentifié",
@@ -525,10 +529,11 @@ public class UserController {
     @PostMapping("/{id}/2fa/reset")
     @RateLimiting(max = 10)
     @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
-    public ResponseEntity<Void> resetTotp(
-            @Parameter(description = "UUID de l'utilisateur dont le TOTP est à réinitialiser") @PathVariable UUID id,
+    public ResponseEntity<Void> resetTwoFactor(
+            @Parameter(description = "UUID du compte") @PathVariable UUID id,
+            @Valid @RequestBody ResetTwoFactorRequest request,
             @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
-        adminResetTotpUseCase.reset(new AdminResetTotpCommand(id, caller.userId(), caller.role()));
+        adminResetTwoFactorUseCase.reset(new AdminResetTwoFactorCommand(id, caller.userId(), caller.role(), request.methods()));
         return ResponseEntity.noContent().build();
     }
 

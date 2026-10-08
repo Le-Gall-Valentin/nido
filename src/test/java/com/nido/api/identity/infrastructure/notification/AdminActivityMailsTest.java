@@ -1,5 +1,6 @@
 package com.nido.api.identity.infrastructure.notification;
 
+import com.nido.api.identity.infrastructure.mail.ResetMethods;
 import com.nido.api.mail.domain.model.AppPath;
 import com.nido.api.mail.domain.model.MailContent;
 import com.nido.api.mail.domain.model.RenderedMail;
@@ -29,7 +30,7 @@ class AdminActivityMailsTest {
     @Test
     void every_kind_is_reserved_to_super_administrators() {
         List<Class<?>> kinds = List.of(AccountCreatedNotification.class, AccountDeactivatedNotification.class,
-            AccountReactivatedNotification.class, AccountDeletedNotification.class, AccountTotpResetNotification.class);
+            AccountReactivatedNotification.class, AccountDeletedNotification.class, AccountTwoFactorResetNotification.class);
 
         assertThat(kinds).extracting(kind -> kind.getAnnotation(NotificationKind.class).value()).containsExactly(
             "identity.account-created", "identity.account-deactivated", "identity.account-reactivated",
@@ -51,13 +52,15 @@ class AdminActivityMailsTest {
             .isEqualTo("bob a réactivé le compte de carol");
         assertThat(fr(new AccountDeletedNotification("alice", "bob", "carol", false, USERS)).subject())
             .isEqualTo("bob a supprimé le compte de carol");
-        assertThat(fr(new AccountTotpResetNotification("alice", "bob", "carol", USERS)).subject())
+        assertThat(fr(new AccountTwoFactorResetNotification("alice", "bob", "carol", ResetMethods.MAIL, USERS)).subject())
             .isEqualTo("bob a réinitialisé la 2FA de carol");
+        assertThat(fr(new AccountTwoFactorResetNotification("alice", "bob", "carol", ResetMethods.MAIL, USERS)).text())
+            .contains("bob a retiré le code par mail de carol.");
 
         assertThat(en(new AccountCreatedNotification("alice", "bob", "carol", USERS)).subject()).isEqualTo("bob invited carol");
         assertThat(en(new AccountDeactivatedNotification("alice", "bob", "carol", USERS)).subject())
             .isEqualTo("bob deactivated carol’s account");
-        assertThat(en(new AccountTotpResetNotification("alice", "bob", "carol", USERS)).subject())
+        assertThat(en(new AccountTwoFactorResetNotification("alice", "bob", "carol", ResetMethods.MAIL, USERS)).subject())
             .isEqualTo("bob reset carol’s two-factor authentication");
     }
 

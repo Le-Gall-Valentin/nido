@@ -1,10 +1,12 @@
 package com.nido.api.identity.infrastructure.notification;
 
 import com.nido.api.identity.domain.model.User;
+import com.nido.api.identity.infrastructure.mail.ResetMethods;
 import com.nido.api.mail.domain.model.AppPath;
 import com.nido.api.notifications.application.port.in.NotifyUseCase;
 import com.nido.api.notifications.domain.model.NotificationRequest;
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TwoFactorMethod;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -13,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,12 +56,12 @@ class AdminActivityNotificationAdapterTest {
         adapter.accountCreated(List.of(alice), "bob", "carol");
         adapter.accountReactivated(List.of(alice), "bob", "carol");
         adapter.accountDeleted(List.of(alice), "bob", "carol", true);
-        adapter.totpReset(List.of(alice), "bob", "carol");
+        adapter.twoFactorReset(List.of(alice), "bob", "carol", Set.of(TwoFactorMethod.APP));
 
         assertThat(sent(4)).extracting(NotificationRequest::notification).containsExactly(
             new AccountCreatedNotification("alice", "bob", "carol", USERS),
             new AccountReactivatedNotification("alice", "bob", "carol", USERS),
             new AccountDeletedNotification("alice", "bob", "carol", true, USERS),
-            new AccountTotpResetNotification("alice", "bob", "carol", USERS));
+            new AccountTwoFactorResetNotification("alice", "bob", "carol", ResetMethods.APP, USERS));
     }
 }

@@ -192,7 +192,7 @@ class LoginHandlerTest {
     }
 
     @Test
-    void login_inactiveUser_totpEnabled_throwsUserNotActive() {
+    void login_inactiveUser_withTwoFactorOn_throwsUserNotActive() {
         UserCredentials inactiveTotpUser = new UserCredentials(
             UUID.randomUUID(), "user2", "user2@test.com", "hashed_pw", false, Role.USER, Instant.now(), null);
         when(userCredentialsPort.findByIdentifier("user2")).thenReturn(Optional.of(inactiveTotpUser));

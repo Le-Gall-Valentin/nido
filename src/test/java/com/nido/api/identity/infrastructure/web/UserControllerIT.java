@@ -189,7 +189,7 @@ class UserControllerIT {
             .andExpect(jsonPath("$.username").value("newuser"))
             .andExpect(jsonPath("$.role").value("USER"))
             .andExpect(jsonPath("$.email").value("newuser@test.com"))
-            .andExpect(jsonPath("$.totpEnabled").value(false))
+            .andExpect(jsonPath("$.twoFactorMethods").isEmpty())
             .andExpect(jsonPath("$.createdAt").isNotEmpty())
             .andExpect(jsonPath("$.invitation.delivery").value("link"))
             .andExpect(jsonPath("$.invitation.link").value(org.hamcrest.Matchers.containsString("/welcome#token=")));
@@ -411,7 +411,8 @@ class UserControllerIT {
         Cookie access = loginAs("superadmin", "adminpass");
         UUID targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").get().getId();
 
-        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access))
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[\"APP\"]}"))
             .andExpect(status().isNoContent());
     }
 
@@ -420,13 +421,15 @@ class UserControllerIT {
         Cookie access = loginAs("testuser", "password");
         UUID targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").get().getId();
 
-        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access))
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[\"APP\"]}"))
             .andExpect(status().isForbidden());
     }
 
     @Test
     void resetTotp_unauthenticated_returns401() throws Exception {
-        mockMvc.perform(post("/api/users/" + UUID.randomUUID() + "/2fa/reset"))
+        mockMvc.perform(post("/api/users/" + UUID.randomUUID() + "/2fa/reset")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[\"APP\"]}"))
             .andExpect(status().isUnauthorized());
     }
 
@@ -434,7 +437,8 @@ class UserControllerIT {
     void resetTotp_nonExistentUser_returns404() throws Exception {
         Cookie access = loginAs("superadmin", "adminpass");
 
-        mockMvc.perform(post("/api/users/" + UUID.randomUUID() + "/2fa/reset").cookie(access))
+        mockMvc.perform(post("/api/users/" + UUID.randomUUID() + "/2fa/reset").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[\"APP\"]}"))
             .andExpect(status().isNotFound());
     }
 
@@ -651,17 +655,17 @@ class UserControllerIT {
             .andExpect(jsonPath("$.content[0].id").isNotEmpty())
             .andExpect(jsonPath("$.content[0].role").isNotEmpty())
             .andExpect(jsonPath("$.content[0].isActive").isBoolean())
-            .andExpect(jsonPath("$.content[0].totpEnabled").isBoolean())
+            .andExpect(jsonPath("$.content[0].twoFactorMethods").isArray())
             .andExpect(jsonPath("$.content[0].createdAt").isNotEmpty());
     }
 
     @Test
-    void listUsers_totpEnabledUser_appearsWithTotpEnabledTrue() throws Exception {
+    void listUsers_aUserWithTheAppOn_appearsWithIt() throws Exception {
         Cookie access = loginAs("superadmin", "adminpass");
 
         mockMvc.perform(get("/api/users").cookie(access))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content[?(@.username == 'totpuser')].totpEnabled").value(true));
+            .andExpect(jsonPath("$.content[?(@.username == 'totpuser')].twoFactorMethods[0]").value("APP"));
     }
 
     @Test
@@ -1275,5 +1279,29 @@ class UserControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new LoginRequest("testuser", "N3wS3cr3t!"))))
             .andExpect(status().isOk());
+    }
+
+    @Test
+    void resetTwoFactor_withoutAMethod_returns400() throws Exception {
+        Cookie access = loginAs("superadmin", "adminpass");
+        UUID targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").get().getId();
+
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[]}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void resetTwoFactor_removesOnlyTheMethodTicked() throws Exception {
+        Cookie access = loginAs("superadmin", "adminpass");
+        UUID targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").get().getId();
+        userTotpJpaRepository.save(new TwoFactorMethodEntity(targetId, TwoFactorMethod.MAIL, null));
+
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[\"MAIL\"]}"))
+            .andExpect(status().isNoContent());
+
+        assertThat(userTotpJpaRepository.findByUserId(targetId)).extracting(TwoFactorMethodEntity::getMethod)
+            .containsExactly(TwoFactorMethod.APP);
     }
 }

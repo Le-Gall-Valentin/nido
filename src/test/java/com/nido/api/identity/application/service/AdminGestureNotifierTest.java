@@ -6,6 +6,7 @@ import com.nido.api.identity.domain.port.out.AdminAccountMailPort;
 import com.nido.api.identity.domain.port.out.AdminActivityNotificationPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TwoFactorMethod;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +18,7 @@ import org.mockito.quality.Strictness;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -93,12 +95,12 @@ class AdminGestureNotifierTest {
     @Test
     void a_reactivation_and_a_reset_second_factor_are_told_to_both() {
         notifier.reactivated(carol, bob.id(), Role.ADMIN);
-        notifier.totpReset(carol, bob.id(), Role.ADMIN);
+        notifier.twoFactorReset(carol, Set.of(TwoFactorMethod.APP), Set.of(TwoFactorMethod.MAIL), bob.id(), Role.ADMIN);
 
         verify(mails).reactivated(carol, "bob");
-        verify(mails).totpReset(carol, "bob");
+        verify(mails).twoFactorReset(carol, "bob", Set.of(TwoFactorMethod.APP), Set.of(TwoFactorMethod.MAIL));
         verify(activity).accountReactivated(List.of(alice, root), "bob", "carol");
-        verify(activity).totpReset(List.of(alice, root), "bob", "carol");
+        verify(activity).twoFactorReset(List.of(alice, root), "bob", "carol", Set.of(TwoFactorMethod.APP));
     }
 
     @Test

@@ -172,8 +172,8 @@ class TwoFactorControllerIT {
 
     @Test
     void adminReset_nowClearsAPendingEnrolment_soAStuckUserHasAWayOut() throws Exception {
-        // This used to answer 204 and change nothing: AdminTotpDisableService only acted
-        // `if (profile.totpEnabled())`, and a pending enrolment is by definition not enabled, so
+        // This used to answer 204 and change nothing: the admin reset only acted when the app was
+        // on, and a pending enrolment is by definition not on, so
         // the one recourse a stuck user could be pointed at did nothing while telling the admin it
         // had worked. Somebody who loses their phone mid-enrolment can now be unblocked.
         Cookie access = loginAs("testuser", "password");
@@ -182,7 +182,8 @@ class TwoFactorControllerIT {
                 .andReturn().getResponse().getContentAsString()).get("secret").asText();
         String targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").orElseThrow().getId().toString();
 
-        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(loginAs("superadmin", "adminpass")))
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(loginAs("superadmin", "adminpass"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[\"APP\"]}"))
             .andExpect(status().isNoContent());
 
         String after = objectMapper.readTree(
@@ -227,7 +228,7 @@ class TwoFactorControllerIT {
 
     @Test
     void setup_alreadyEnabled_returns409() throws Exception {
-        // totpuser has totpEnabled=true; logging in as them starts the challenge flow (no access_token).
+        // totpuser has the app on; logging in as them starts the challenge flow (no access_token).
         // Inject authentication directly to reach the endpoint as an authenticated totpuser.
         String totpUserId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser")
             .orElseThrow().getId().toString();
@@ -376,7 +377,7 @@ class TwoFactorControllerIT {
     }
 
     @Test
-    void status_authenticated_totpEnabled_returns200WithTrue() throws Exception {
+    void status_authenticated_withTheAppOn_saysItIsOn() throws Exception {
         String totpUserId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser")
             .orElseThrow().getId().toString();
         CustomUserDetails totpPrincipal = new CustomUserDetails(

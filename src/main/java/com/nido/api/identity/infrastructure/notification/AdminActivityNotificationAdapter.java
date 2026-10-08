@@ -2,13 +2,16 @@ package com.nido.api.identity.infrastructure.notification;
 
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.AdminActivityNotificationPort;
+import com.nido.api.identity.infrastructure.mail.ResetMethods;
 import com.nido.api.mail.domain.model.AppPath;
 import com.nido.api.notifications.application.port.in.NotifyUseCase;
 import com.nido.api.notifications.domain.model.Notification;
 import com.nido.api.notifications.domain.model.NotificationRequest;
+import com.nido.api.shared.model.TwoFactorMethod;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * The super-administrators' notifications, sent through the notifications context: one request per reader,
@@ -48,8 +51,9 @@ public class AdminActivityNotificationAdapter implements AdminActivityNotificati
     }
 
     @Override
-    public void totpReset(List<User> readers, String actorName, String accountName) {
-        readers.forEach(reader -> tell(reader, new AccountTotpResetNotification(reader.username(), actorName, accountName, USERS)));
+    public void twoFactorReset(List<User> readers, String actorName, String accountName, Set<TwoFactorMethod> removed) {
+        readers.forEach(reader -> tell(reader,
+            new AccountTwoFactorResetNotification(reader.username(), actorName, accountName, ResetMethods.of(removed), USERS)));
     }
 
     private void tell(User reader, Notification notification) {

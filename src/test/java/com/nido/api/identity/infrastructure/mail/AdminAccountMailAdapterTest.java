@@ -7,6 +7,7 @@ import com.nido.api.mail.domain.model.MailRequest;
 import com.nido.api.mail.domain.model.Recipient;
 import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TwoFactorMethod;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -17,6 +18,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,8 +67,8 @@ class AdminAccountMailAdapterTest {
 
     @Test
     void each_gesture_has_its_mail() {
-        adapter().totpReset(carol, "bob");
-        assertThat(sent().content()).isEqualTo(new TotpResetMail("carol", "bob", new AppPath("/account/security")));
+        adapter().twoFactorReset(carol, "bob", Set.of(TwoFactorMethod.APP), Set.of(TwoFactorMethod.MAIL));
+        assertThat(sent().content()).isEqualTo(new TwoFactorResetMail("carol", "bob", ResetMethods.APP, KeptMethod.MAIL, new AppPath("/account/security")));
     }
 
     @Test

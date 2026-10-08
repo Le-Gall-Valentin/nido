@@ -1,8 +1,10 @@
 package com.nido.api.identity.infrastructure.web.dto;
 
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TwoFactorMethod;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Schema(description = "Vue administrative d'un utilisateur dans la liste paginée")
@@ -25,8 +27,8 @@ public record UserAdminItemResponse(
     @Schema(description = "Date de création du compte (UTC)", example = "2024-01-15T10:30:00Z")
     Instant createdAt,
 
-    @Schema(description = "Indique si l'authentification à deux facteurs est activée", example = "false")
-    boolean totpEnabled,
+    @Schema(description = "Les méthodes de double authentification activées, en pause comprises")
+    List<TwoFactorMethod> twoFactorMethods,
 
     @Schema(description = "L'invitation, tant que le compte n'a pas choisi son mot de passe ; null ensuite", nullable = true)
     InvitationStateResponse invitation
