@@ -106,7 +106,7 @@ class AppMethodTest {
     void a_wrong_first_code_counts_and_the_fifth_abandons_the_enrolment() {
         when(pending.find(jane)).thenReturn(Optional.of("SECRET"));
         when(validator.isValid("SECRET", "000000")).thenReturn(false);
-        when(attempts.recordFailure(jane, CodePurpose.ENROL)).thenReturn(4, 5);
+        when(attempts.record(jane, CodePurpose.ENROL)).thenReturn(4, 5);
 
         assertThatThrownBy(() -> app.confirmEnrolment(jane, "000000")).isInstanceOf(MfaException.CodeInvalid.class);
         assertThatThrownBy(() -> app.confirmEnrolment(jane, "000000"))
@@ -138,7 +138,7 @@ class AppMethodTest {
     void a_wrong_code_or_no_secret_is_invalid() {
         when(store.appSecret(jane)).thenReturn(Optional.of("SECRET"), Optional.empty());
         when(validator.isValid("SECRET", "000000")).thenReturn(false);
-        when(attempts.recordFailure(jane, CodePurpose.DISABLE)).thenReturn(1);
+        when(attempts.record(jane, CodePurpose.DISABLE)).thenReturn(1);
 
         assertThat(app.check(jane, CodePurpose.DISABLE, jane.toString(), "000000")).isEqualTo(CodeCheck.INVALID);
         assertThat(app.check(jane, CodePurpose.LOGIN, "challenge", "123456")).isEqualTo(CodeCheck.INVALID);
@@ -151,7 +151,7 @@ class AppMethodTest {
 
         app.check(jane, CodePurpose.LOGIN, "challenge", "000000");
 
-        verify(attempts, never()).recordFailure(any(), any());
+        verify(attempts, never()).record(any(), any());
     }
 
     @Test
@@ -159,25 +159,35 @@ class AppMethodTest {
         // Without a count, a borrowed session could guess its way to turning the app off, at the pace of the route alone.
         when(store.appSecret(jane)).thenReturn(Optional.of("SECRET"));
         when(validator.isValid("SECRET", "000000")).thenReturn(false);
-        when(attempts.recordFailure(jane, CodePurpose.DISABLE)).thenReturn(4, 5);
+        when(attempts.record(jane, CodePurpose.DISABLE)).thenReturn(4, 5);
 
         assertThat(app.check(jane, CodePurpose.DISABLE, jane.toString(), "000000")).isEqualTo(CodeCheck.INVALID);
         assertThat(app.check(jane, CodePurpose.DISABLE, jane.toString(), "000000")).isEqualTo(CodeCheck.SPENT);
     }
 
     @Test
-    void once_spent_even_the_right_code_is_refused_unread_and_uncounted() {
-        when(attempts.failures(jane, CodePurpose.DISABLE)).thenReturn(5);
+    void past_the_fifth_even_the_right_code_is_refused_unread() {
+        // Counted before it is read: requests sent at once each take their own turn, so none is read past the fifth.
+        when(attempts.record(jane, CodePurpose.DISABLE)).thenReturn(6);
 
         assertThat(app.check(jane, CodePurpose.DISABLE, jane.toString(), "123456")).isEqualTo(CodeCheck.SPENT);
         verify(validator, never()).isValid(any(), any());
-        verify(attempts, never()).recordFailure(any(), any());
+    }
+
+    @Test
+    void the_fifth_turn_may_still_be_the_right_code() {
+        when(store.appSecret(jane)).thenReturn(Optional.of("SECRET"));
+        when(attempts.record(jane, CodePurpose.DISABLE)).thenReturn(5);
+        when(validator.isValid("SECRET", "123456")).thenReturn(true);
+        when(replay.markCodeUsedIfAbsent(jane, "123456")).thenReturn(true);
+
+        assertThat(app.check(jane, CodePurpose.DISABLE, jane.toString(), "123456")).isEqualTo(CodeCheck.SUCCESS);
     }
 
     @Test
     void the_right_code_to_turn_it_off_clears_the_count() {
         when(store.appSecret(jane)).thenReturn(Optional.of("SECRET"));
-        when(attempts.failures(jane, CodePurpose.DISABLE)).thenReturn(2);
+        when(attempts.record(jane, CodePurpose.DISABLE)).thenReturn(2);
         when(validator.isValid("SECRET", "123456")).thenReturn(true);
         when(replay.markCodeUsedIfAbsent(jane, "123456")).thenReturn(true);
 

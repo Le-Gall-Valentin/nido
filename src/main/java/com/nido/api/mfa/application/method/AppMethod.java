@@ -22,7 +22,7 @@ import java.util.UUID;
 /**
  * The authenticator app: a TOTP secret shown once as a QR code, then codes the app computes itself. Its rules
  * are the ones Nido has had since the beginning — an enrolment lives in Redis until proven, five wrong first
- * codes abandon it, a code is never accepted twice — and five wrong codes to turn it off hold it on for a while.
+ * codes abandon it, a code is never accepted twice — and five tries to turn it off hold it on for a while.
  */
 @ApplicationService
 public class AppMethod implements TwoFactorMethodHandler {
@@ -76,7 +76,7 @@ public class AppMethod implements TwoFactorMethodHandler {
     public Optional<String> confirmEnrolment(UUID userId, String code) {
         String secret = pending.find(userId).orElseThrow(MfaException.EnrolmentNotStarted::new);
         if (!validator.isValid(secret, code)) {
-            if (attempts.recordFailure(userId, CodePurpose.ENROL) >= TwoFactorPolicy.MAX_ATTEMPTS) {
+            if (attempts.record(userId, CodePurpose.ENROL) >= TwoFactorPolicy.MAX_ATTEMPTS) {
                 pending.discard(userId);
                 attempts.clear(userId, CodePurpose.ENROL);
                 throw new MfaException.ConfirmMaxAttemptsExceeded();
@@ -93,25 +93,29 @@ public class AppMethod implements TwoFactorMethodHandler {
 
     @Override
     public CodeCheck check(UUID userId, CodePurpose purpose, String binding, String code) {
-        boolean counted = purpose != CodePurpose.LOGIN;
-        // Spent: refused before the code is read, and not counted — the quarter of an hour runs from the fifth.
-        if (counted && attempts.failures(userId, purpose) >= TwoFactorPolicy.MAX_ATTEMPTS) {
+        if (purpose == CodePurpose.LOGIN) {
+            return checkAgainstSecret(userId, code);
+        }
+        // Counted before the code is read, and cleared by the right one: requests sent at once each take their own
+        // turn, so none is read past the fifth. The quarter of an hour runs from the first.
+        int attempt = attempts.record(userId, purpose);
+        if (attempt > TwoFactorPolicy.MAX_ATTEMPTS) {
             return CodeCheck.SPENT;
         }
+        CodeCheck result = checkAgainstSecret(userId, code);
+        if (result == CodeCheck.SUCCESS) {
+            attempts.clear(userId, purpose);
+            return result;
+        }
+        return result == CodeCheck.INVALID && attempt == TwoFactorPolicy.MAX_ATTEMPTS ? CodeCheck.SPENT : result;
+    }
+
+    private CodeCheck checkAgainstSecret(UUID userId, String code) {
         Optional<String> secret = store.appSecret(userId);
         if (secret.isEmpty() || !validator.isValid(secret.get(), code)) {
-            if (counted && attempts.recordFailure(userId, purpose) >= TwoFactorPolicy.MAX_ATTEMPTS) {
-                return CodeCheck.SPENT;
-            }
             return CodeCheck.INVALID;
         }
-        if (!replay.markCodeUsedIfAbsent(userId, code)) {
-            return CodeCheck.REPLAYED;
-        }
-        if (counted) {
-            attempts.clear(userId, purpose);
-        }
-        return CodeCheck.SUCCESS;
+        return replay.markCodeUsedIfAbsent(userId, code) ? CodeCheck.SUCCESS : CodeCheck.REPLAYED;
     }
 
     @Override

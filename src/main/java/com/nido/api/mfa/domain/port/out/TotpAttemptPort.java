@@ -5,16 +5,18 @@ import com.nido.api.mfa.domain.model.CodePurpose;
 import java.util.UUID;
 
 /**
- * Wrong codes given to the authenticator app outside sign-in, counted apart for each purpose: proving a new
- * one ({@link CodePurpose#ENROL}) and turning it off ({@link CodePurpose#DISABLE}). Sign-in is counted by the
+ * Codes given to the authenticator app outside sign-in, counted apart for each purpose: proving a new one
+ * ({@link CodePurpose#ENROL}) and turning it off ({@link CodePurpose#DISABLE}). Sign-in is counted by the
  * account, in authentication.
  */
 public interface TotpAttemptPort {
 
-    /** @return the failures now recorded for this purpose */
-    int recordFailure(UUID userId, CodePurpose purpose);
-
-    int failures(UUID userId, CodePurpose purpose);
+    /**
+     * Counts one more, atomically, in a window the first one opens and the later ones leave where it is.
+     *
+     * @return the count now, this one included
+     */
+    int record(UUID userId, CodePurpose purpose);
 
     void clear(UUID userId, CodePurpose purpose);
 }

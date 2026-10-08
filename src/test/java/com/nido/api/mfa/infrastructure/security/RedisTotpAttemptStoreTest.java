@@ -11,6 +11,7 @@ import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -32,35 +33,42 @@ class RedisTotpAttemptStoreTest {
     }
 
     @Test
-    void a_wrong_first_code_is_counted_for_an_hour_under_the_key_it_always_had() {
-        when(valueOps.increment("totp:confirm:attempts:" + userId)).thenReturn(3L);
+    void the_first_wrong_first_code_opens_an_hour_under_the_key_it_always_had() {
+        when(valueOps.increment("totp:confirm:attempts:" + userId)).thenReturn(1L);
+        when(redisTemplate.getExpire("totp:confirm:attempts:" + userId, TimeUnit.SECONDS)).thenReturn(-1L);
 
-        assertThat(store.recordFailure(userId, CodePurpose.ENROL)).isEqualTo(3);
+        assertThat(store.record(userId, CodePurpose.ENROL)).isEqualTo(1);
         verify(redisTemplate).expire("totp:confirm:attempts:" + userId, Duration.ofHours(1));
     }
 
     @Test
-    void a_wrong_code_to_turn_the_app_off_is_counted_for_a_quarter_of_an_hour_apart() {
+    void the_first_try_to_turn_the_app_off_opens_a_quarter_of_an_hour_apart() {
         when(valueOps.increment("totp:disable:attempts:" + userId)).thenReturn(1L);
+        when(redisTemplate.getExpire("totp:disable:attempts:" + userId, TimeUnit.SECONDS)).thenReturn(-1L);
 
-        assertThat(store.recordFailure(userId, CodePurpose.DISABLE)).isEqualTo(1);
+        assertThat(store.record(userId, CodePurpose.DISABLE)).isEqualTo(1);
         verify(redisTemplate).expire("totp:disable:attempts:" + userId, Duration.ofMinutes(15));
     }
 
     @Test
-    void a_missing_answer_from_redis_counts_as_the_first() {
-        when(valueOps.increment("totp:confirm:attempts:" + userId)).thenReturn(null);
+    void later_tries_leave_the_window_where_the_first_opened_it() {
+        // Renewed by every try, refused ones included, the wait would never end for someone still trying.
+        when(valueOps.increment("totp:disable:attempts:" + userId)).thenReturn(7L);
+        when(redisTemplate.getExpire("totp:disable:attempts:" + userId, TimeUnit.SECONDS)).thenReturn(300L);
 
-        assertThat(store.recordFailure(userId, CodePurpose.ENROL)).isEqualTo(1);
+        assertThat(store.record(userId, CodePurpose.DISABLE)).isEqualTo(7);
+        verify(redisTemplate, never()).expire(anyString(), any(Duration.class));
     }
 
     @Test
-    void the_failures_are_read_without_counting_one() {
-        when(valueOps.get("totp:disable:attempts:" + userId)).thenReturn("5", (String) null);
+    void a_count_left_without_expiry_gets_one_back() {
+        // A crash between INCR and EXPIRE would otherwise hold the app on for good.
+        when(valueOps.increment("totp:disable:attempts:" + userId)).thenReturn(3L);
+        when(redisTemplate.getExpire("totp:disable:attempts:" + userId, TimeUnit.SECONDS)).thenReturn(-1L);
 
-        assertThat(store.failures(userId, CodePurpose.DISABLE)).isEqualTo(5);
-        assertThat(store.failures(userId, CodePurpose.DISABLE)).isZero();
-        verify(valueOps, never()).increment(anyString());
+        store.record(userId, CodePurpose.DISABLE);
+
+        verify(redisTemplate).expire("totp:disable:attempts:" + userId, Duration.ofMinutes(15));
     }
 
     @Test
@@ -73,6 +81,6 @@ class RedisTotpAttemptStoreTest {
 
     @Test
     void sign_in_is_counted_by_the_account_not_here() {
-        assertThatThrownBy(() -> store.recordFailure(userId, CodePurpose.LOGIN)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> store.record(userId, CodePurpose.LOGIN)).isInstanceOf(IllegalArgumentException.class);
     }
 }
