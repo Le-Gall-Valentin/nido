@@ -1,4 +1,4 @@
-export type { User, UserRole, AdminUser, InvitationState, InvitationDelivery } from './model/types'
+export type { User, UserRole, AdminUser, InvitationState, InvitationDelivery, TwoFactorMethod } from './model/types'
 export { isAdminRole } from './model/types'
 export { getInitials } from './lib/getInitials'
 export { RolePill } from './ui/RolePill'

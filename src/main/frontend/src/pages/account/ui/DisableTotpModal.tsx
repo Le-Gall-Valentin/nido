@@ -2,8 +2,8 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle } from 'lucide-react'
 import { Dialog, Button } from '@/shared/ui'
-import { TotpDigitInput, TotpCodeError, TotpDisableMaxAttemptsError } from '@/features/totp'
-import type { TotpDigitInputHandle } from '@/features/totp'
+import { CodeInput, CodeError, MaxAttemptsError } from '@/features/two-factor'
+import type { CodeInputHandle } from '@/features/two-factor'
 import { RateLimitError, NetworkError, ServerError } from '@/shared/lib'
 
 interface DisableTotpModalProps {
@@ -14,11 +14,11 @@ interface DisableTotpModalProps {
 }
 
 export function DisableTotpModal({ open, onClose, onSuccess, onDisable }: DisableTotpModalProps) {
-  const { t } = useTranslation('totp')
+  const { t } = useTranslation('twoFactor')
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [errorKey, setErrorKey] = useState<string | null>(null)
-  const digitInputRef = useRef<TotpDigitInputHandle>(null)
+  const digitInputRef = useRef<CodeInputHandle>(null)
   const isSubmittingRef = useRef(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -32,11 +32,11 @@ export function DisableTotpModal({ open, onClose, onSuccess, onDisable }: Disabl
       setCode('')
       onSuccess()
     } catch (error) {
-      if (error instanceof TotpCodeError) {
+      if (error instanceof CodeError) {
         setErrorKey('disable.error.invalid_code')
         setCode('')
         digitInputRef.current?.focus()
-      } else if (error instanceof TotpDisableMaxAttemptsError) {
+      } else if (error instanceof MaxAttemptsError) {
         setErrorKey('disable.error.max_attempts')
         setCode('')
       } else if (error instanceof RateLimitError) {
@@ -69,7 +69,7 @@ export function DisableTotpModal({ open, onClose, onSuccess, onDisable }: Disabl
         <p className="text-sm text-fg-2">{t('disable.subtitle')}</p>
       </div>
       <form onSubmit={(e) => void handleSubmit(e)}>
-        <TotpDigitInput
+        <CodeInput
           ref={digitInputRef}
           value={code}
           onChange={setCode}

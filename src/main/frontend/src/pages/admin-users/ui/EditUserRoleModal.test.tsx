@@ -26,18 +26,18 @@ vi.mock('@/shared/ui', () => ({
 
 const TARGET_USER: AdminUser = {
   id: 'u-t', username: 'bob', email: 'bob@test.com',
-  role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
+  role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [],
 }
 const TARGET_ADMIN: AdminUser = { ...TARGET_USER, id: 'a-t', username: 'carol', role: 'ADMIN' }
 const TARGET_SUPER_ADMIN: AdminUser = { ...TARGET_USER, id: 'sa-t', username: 'root', role: 'SUPER_ADMIN' }
 
 const SUPER_ADMIN_CALLER: User = {
   id: 'sa', username: 'sa', email: 'sa@test.com',
-  role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
+  role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [],
 }
 const ADMIN_CALLER: User = {
   id: 'a1', username: 'admin', email: 'admin@test.com',
-  role: 'ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
+  role: 'ADMIN', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [],
 }
 
 function setup(target: AdminUser, caller: User, overrides: { onUpdate?: () => Promise<void> } = {}) {

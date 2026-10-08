@@ -7,10 +7,10 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
-const SA: User = { id: 'sa', username: 'sa', email: 'sa@test.com', role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: true }
+const SA: User = { id: 'sa', username: 'sa', email: 'sa@test.com', role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: ['APP'] }
 
 function target(overrides: Partial<AdminUser> = {}): AdminUser {
-  return { id: 'u1', username: 'alice', email: 'alice@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', totpEnabled: false, ...overrides }
+  return { id: 'u1', username: 'alice', email: 'alice@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [], ...overrides }
 }
 
 function setup(currentUser: User, user: AdminUser) {

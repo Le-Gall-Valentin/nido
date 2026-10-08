@@ -69,14 +69,14 @@ export function canDelete(caller: User, target: AdminUser): PermissionResult {
 }
 
 /**
- * AdminResetTotpHandler: self → hierarchy.
- * The totpEnabled check is frontend-only UX (backend treats reset of a
- * disabled TOTP as a no-op).
+ * AdminResetTwoFactorHandler: self → hierarchy.
+ * The "a method is on" check is frontend-only UX (backend treats the reset of a
+ * method that is off as a no-op).
  */
 export function canResetTotp(caller: User, target: AdminUser): PermissionResult {
   if (caller.id === target.id) return deny('self')
   if (!canManage(caller.role, target.role)) return deny(hierarchyDenialReason(caller, target))
-  if (!target.totpEnabled) return deny('totp_not_enabled')
+  if (target.twoFactorMethods.length === 0) return deny('totp_not_enabled')
   return OK
 }
 

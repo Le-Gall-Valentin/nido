@@ -8,11 +8,11 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, string>) => (opts?.username ? `${k}:${opts.username}` : k) }),
 }))
 
-const SA: User = { id: 'sa', username: 'sa', email: 'sa@test.com', role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: true }
-const ADMIN: User = { id: 'a1', username: 'admin', email: 'admin@test.com', role: 'ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false }
+const SA: User = { id: 'sa', username: 'sa', email: 'sa@test.com', role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: ['APP'] }
+const ADMIN: User = { id: 'a1', username: 'admin', email: 'admin@test.com', role: 'ADMIN', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [] }
 
 function target(overrides: Partial<AdminUser> = {}): AdminUser {
-  return { id: 'u1', username: 'alice', email: 'alice@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', totpEnabled: true, ...overrides }
+  return { id: 'u1', username: 'alice', email: 'alice@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: ['APP'], ...overrides }
 }
 
 function setup(currentUser: User, user: AdminUser, mail: MailAvailability = 'available') {
@@ -38,7 +38,7 @@ describe('UserActions — gating', () => {
   })
 
   it('disables totp reset when the target has no totp enabled', () => {
-    const { getByLabelText } = setup(SA, target({ totpEnabled: false }))
+    const { getByLabelText } = setup(SA, target({ twoFactorMethods: [] }))
     expect((getByLabelText('table.btn_reset_totp:alice') as HTMLButtonElement).disabled).toBe(true)
   })
 

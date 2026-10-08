@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Shield } from 'lucide-react'
 import { Button, Dialog, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { TotpSetupFlow } from '@/features/totp'
-import type { ITotpEnrollApi } from '@/features/totp'
+import { AppSetupFlow } from '@/features/two-factor'
+import type { ITwoFactorMethodsApi } from '@/features/two-factor'
 import type { User } from '@/entities/user'
 import { DisableTotpModal } from './DisableTotpModal'
 
@@ -12,7 +12,7 @@ type Flash = { kind: 'success' | 'error'; key: string } | null
 interface TwoFactorSectionProps {
   user: User
   onPatch: (partial: Partial<User>) => void
-  enrollApi: ITotpEnrollApi
+  enrollApi: ITwoFactorMethodsApi
 }
 
 export function TwoFactorSection({ user, onPatch, enrollApi }: TwoFactorSectionProps) {
@@ -33,13 +33,13 @@ export function TwoFactorSection({ user, onPatch, enrollApi }: TwoFactorSectionP
   }
 
   function handleEnableSuccess() {
-    onPatch({ totpEnabled: true })
+    onPatch({ twoFactorMethods: user.twoFactorMethods.includes('MAIL') ? ['APP', 'MAIL'] : ['APP'] })
     setEnableOpen(false)
     showFlash('success', 'twofa.success_enabled')
   }
 
   function handleDisableSuccess() {
-    onPatch({ totpEnabled: false })
+    onPatch({ twoFactorMethods: user.twoFactorMethods.filter(m => m !== 'APP') })
     setDisableOpen(false)
     showFlash('success', 'twofa.success_disabled')
   }
@@ -52,12 +52,12 @@ export function TwoFactorSection({ user, onPatch, enrollApi }: TwoFactorSectionP
             <h3 className="text-lg font-semibold text-fg-0">{t('twofa.title')}</h3>
             <span
               className={`shrink-0 inline-flex items-center px-2 py-[3px] rounded-[6px] text-[11px] font-bold uppercase whitespace-nowrap ${
-                user.totpEnabled
+                user.twoFactorMethods.includes('APP')
                   ? 'bg-status-green-dim text-status-green'
                   : 'bg-status-red-dim text-status-red'
               }`}
             >
-              {user.totpEnabled ? t('twofa.status_enabled') : t('twofa.status_disabled')}
+              {user.twoFactorMethods.includes('APP') ? t('twofa.status_enabled') : t('twofa.status_disabled')}
             </span>
           </div>
           <p className="text-[13.5px] text-fg-2 mt-0.5">{t('twofa.subtitle')}</p>
@@ -67,16 +67,16 @@ export function TwoFactorSection({ user, onPatch, enrollApi }: TwoFactorSectionP
         <div className="flex items-start gap-3.5">
           <div
             className={`w-[46px] h-[46px] rounded-[13px] flex items-center justify-center shrink-0 ${
-              user.totpEnabled ? 'bg-accent-dim text-accent' : 'bg-bg-3 text-fg-2'
+              user.twoFactorMethods.includes('APP') ? 'bg-accent-dim text-accent' : 'bg-bg-3 text-fg-2'
             }`}
           >
             <Shield className="size-6" />
           </div>
           <div className="flex-1 flex flex-col gap-3 sm:flex-row sm:items-start">
             <p className="flex-1 text-[13.5px] text-fg-1 leading-[1.55] max-w-[440px]">
-              {user.totpEnabled ? t('twofa.desc_enabled') : t('twofa.desc_disabled')}
+              {user.twoFactorMethods.includes('APP') ? t('twofa.desc_enabled') : t('twofa.desc_disabled')}
             </p>
-            {user.totpEnabled ? (
+            {user.twoFactorMethods.includes('APP') ? (
               <Button
                 onClick={() => setDisableOpen(true)}
                 className="self-end sm:self-start shrink-0 border-status-red/30 bg-bg-1 text-status-red hover:bg-status-red-dim hover:text-status-red"
@@ -107,11 +107,11 @@ export function TwoFactorSection({ user, onPatch, enrollApi }: TwoFactorSectionP
         title={t('twofa.btn_enable')}
         maxWidth="max-w-lg"
       >
-        <TotpSetupFlow
+        <AppSetupFlow
           api={enrollApi}
           onSuccess={handleEnableSuccess}
           onDismiss={() => setEnableOpen(false)}
-          dismissLabel={t('setup.dismiss_profile', { ns: 'totp' })}
+          dismissLabel={t('setup.dismiss_profile', { ns: 'twoFactor' })}
         />
       </Dialog>
 
@@ -119,7 +119,7 @@ export function TwoFactorSection({ user, onPatch, enrollApi }: TwoFactorSectionP
         open={disableOpen}
         onClose={() => setDisableOpen(false)}
         onSuccess={handleDisableSuccess}
-        onDisable={(code) => enrollApi.disable(code)}
+        onDisable={(code) => enrollApi.disable('APP', code)}
       />
     </section>
   )

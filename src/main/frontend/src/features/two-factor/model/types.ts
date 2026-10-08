@@ -1,0 +1,30 @@
+import type { TwoFactorMethod } from '@/entities/user'
+
+/** Turning the authenticator app on: the secret to scan or type. */
+export interface AppSetupData {
+  otpauthUri: string
+  secret: string
+}
+
+/** Turning the code by mail on: the code left for the account's address. */
+export interface MailSetupData {
+  sentTo: string
+  resendAfterSeconds: number
+}
+
+/** A method as its holder sees it. Enabled and not usable: paused — the mail while mail is off. */
+export interface MethodState {
+  method: TwoFactorMethod
+  enabled: boolean
+  usable: boolean
+}
+
+/** A code left by mail; another can be asked for after this many seconds. */
+export interface ResendData {
+  resendAfterSeconds: number
+}
+
+/** What the sign-in said of the code by mail, when the mail was the only method. */
+export type MailCodeState =
+  | { sent: true; resendAfterSeconds: number }
+  | { sent: false; retryAfterSeconds: number }

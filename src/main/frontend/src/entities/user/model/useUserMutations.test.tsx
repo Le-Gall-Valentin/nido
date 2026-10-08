@@ -9,7 +9,7 @@ import { USERS_QUERY_KEY } from './useUsers'
 import { useCreateUser, useResendInvitation, useToggleUserActive } from './useUserMutations'
 
 const USER: AdminUser = {
-  id: 'u-1', username: 'alice', email: 'alice@test.com', role: 'USER', createdAt: '2026-01-01', totpEnabled: false, isActive: true, invitation: null,
+  id: 'u-1', username: 'alice', email: 'alice@test.com', role: 'USER', createdAt: '2026-01-01', twoFactorMethods: [], isActive: true, invitation: null,
 }
 
 const PAGE: UsersPage = { content: [USER], totalElements: 1, page: 0, size: 20 }

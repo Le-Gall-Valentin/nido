@@ -3,24 +3,24 @@ import { AlertTriangle, Eye, EyeOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { TotpDigitInput } from './TotpDigitInput'
-import type { TotpDigitInputHandle } from './TotpDigitInput'
-import { TotpCodeError, TotpConfirmMaxAttemptsError } from '../model/errors'
+import { CodeInput } from './CodeInput'
+import type { CodeInputHandle } from './CodeInput'
+import { CodeError, ConfirmMaxAttemptsError } from '../model/errors'
 import { RateLimitError, NetworkError, ServerError } from '@/shared/lib'
-import type { ITotpEnrollApi } from '../model/ITotpEnrollApi'
-import type { TotpSetupData } from '../model/types'
+import type { ITwoFactorMethodsApi } from '../model/ITwoFactorMethodsApi'
+import type { AppSetupData } from '../model/types'
 
-interface TotpSetupFlowProps {
-  api: ITotpEnrollApi
+interface AppSetupFlowProps {
+  api: Pick<ITwoFactorMethodsApi, 'setupApp' | 'confirm'>
   onSuccess: () => void
   onDismiss?: () => void
   dismissLabel?: string
 }
 
-export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpSetupFlowProps) {
-  const { t } = useTranslation('totp')
+export function AppSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: AppSetupFlowProps) {
+  const { t } = useTranslation('twoFactor')
   const headingId = useId()
-  const [setupData, setSetupData] = useState<TotpSetupData | null>(null)
+  const [setupData, setSetupData] = useState<AppSetupData | null>(null)
   const [setupError, setSetupError] = useState(false)
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -28,7 +28,7 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
   const [isSecretVisible, setIsSecretVisible] = useState(false)
   const [setupRestartKey, setSetupRestartKey] = useState(0)
   const isSubmittingRef = useRef(false)
-  const digitInputRef = useRef<TotpDigitInputHandle>(null)
+  const digitInputRef = useRef<CodeInputHandle>(null)
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const apiRef = useRef(api)
 
@@ -48,7 +48,7 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
 
   useEffect(() => {
     let cancelled = false
-    apiRef.current.setup()
+    apiRef.current.setupApp()
       .then(data => {
         if (cancelled) return
         if (!data.secret?.trim()) { setSetupError(true); return }
@@ -68,10 +68,10 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
     setIsLoading(true)
     setErrorKey(null)
     try {
-      await api.confirm(code)
+      await api.confirm('APP', code)
       onSuccess()
     } catch (error) {
-      if (error instanceof TotpConfirmMaxAttemptsError) {
+      if (error instanceof ConfirmMaxAttemptsError) {
         setErrorKey('setup.error.max_attempts')
         setCode('')
         restartTimerRef.current = setTimeout(() => {
@@ -80,7 +80,7 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
           setErrorKey(null)
           setSetupRestartKey(k => k + 1)
         }, 2000)
-      } else if (error instanceof TotpCodeError) {
+      } else if (error instanceof CodeError) {
         setErrorKey('setup.error.invalid_code')
         setCode('')
         digitInputRef.current?.focus()
@@ -153,7 +153,7 @@ export function TotpSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: TotpS
       </div>
 
       <form onSubmit={(e) => void handleSubmit(e)} aria-labelledby={headingId} className="mt-4">
-        <TotpDigitInput
+        <CodeInput
           ref={digitInputRef}
           value={code}
           onChange={setCode}

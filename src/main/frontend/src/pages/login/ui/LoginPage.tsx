@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { LoginForm } from '@/features/auth'
-import { TotpVerifyStep, TotpEnrollProposal, TotpSetupFlow, totpApi as defaultTotpApi } from '@/features/totp'
-import type { ITotpVerifyApi, ITotpEnrollApi } from '@/features/totp'
+import { CodeStep, EnrollProposal, AppSetupFlow, twoFactorApi as defaultTwoFactorApi } from '@/features/two-factor'
+import type { ITwoFactorChallengeApi, ITwoFactorMethodsApi } from '@/features/two-factor'
 import { capabilitiesApi as defaultCapabilitiesApi, usePasswordResetAvailability, type ICapabilitiesApi } from '@/entities/capabilities'
 import { ROUTES } from '@/shared/config'
 import { Alert } from '@/shared/ui'
@@ -12,16 +12,14 @@ import { isPasswordResetDone } from '../model/passwordResetDone'
 import { acceptedInvitationIdentifier } from '../model/invitationAccepted'
 import { useLoginFlow } from './useLoginFlow'
 
-type TotpApi = ITotpVerifyApi & ITotpEnrollApi
-
 const TITLE_ID = 'login-title'
 
 interface LoginPageProps {
-  totpApi?: TotpApi
+  twoFactorApi?: ITwoFactorChallengeApi & ITwoFactorMethodsApi
   capabilitiesApi?: ICapabilitiesApi
 }
 
-export function LoginPage({ totpApi = defaultTotpApi, capabilitiesApi = defaultCapabilitiesApi }: LoginPageProps = {}) {
+export function LoginPage({ twoFactorApi = defaultTwoFactorApi, capabilitiesApi = defaultCapabilitiesApi }: LoginPageProps = {}) {
   const { t } = useTranslation('login')
   const location = useLocation()
   const navigate = useNavigate()
@@ -75,16 +73,16 @@ export function LoginPage({ totpApi = defaultTotpApi, capabilitiesApi = defaultC
       )}
 
       {step === 'totp' && (
-        <TotpVerifyStep
+        <CodeStep
           username={pendingUsername}
-          api={totpApi}
+          api={twoFactorApi}
           onVerified={handleVerified}
           onBack={handleBack}
         />
       )}
 
       {step === 'enroll' && pendingUser && (
-        <TotpEnrollProposal
+        <EnrollProposal
           username={pendingUser.username}
           onActivate={handleActivate}
           onSkip={handleSkip}
@@ -92,8 +90,8 @@ export function LoginPage({ totpApi = defaultTotpApi, capabilitiesApi = defaultC
       )}
 
       {step === 'setup' && (
-        <TotpSetupFlow
-          api={totpApi}
+        <AppSetupFlow
+          api={twoFactorApi}
           onSuccess={handleSetupSuccess}
           onDismiss={handleSetupDismiss}
         />

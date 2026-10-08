@@ -134,7 +134,7 @@ function UserCard({
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-bg-3 pt-3">
         <UserStatusToggle user={user} currentUser={currentUser} onToggle={onToggleActive} isPending={isToggling} />
         {user.invitation && <InvitationBadge invitation={user.invitation} />}
-        <TotpBadge enabled={user.totpEnabled} />
+        <TotpBadge enabled={user.twoFactorMethods.length > 0} />
         <span className="text-[12.5px] text-fg-3">
           {createdLabel} · {createdDate}
         </span>

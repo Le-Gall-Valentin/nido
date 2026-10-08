@@ -16,14 +16,14 @@ vi.mock('@/entities/user', async (importActual) => {
   return { ...actual }
 })
 
-const SA: User = { id: 'sa', username: 'superadmin', email: 'sa@test.com', role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: true }
-const ADMIN: User = { id: 'a1', username: 'adminuser', email: 'admin@test.com', role: 'ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false }
+const SA: User = { id: 'sa', username: 'superadmin', email: 'sa@test.com', role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: ['APP'] }
+const ADMIN: User = { id: 'a1', username: 'adminuser', email: 'admin@test.com', role: 'ADMIN', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [] }
 
 const USERS: AdminUser[] = [
   { ...SA, isActive: true, invitation: null },
   { ...ADMIN, isActive: true, invitation: null },
-  { id: 'u1', username: 'testuser', email: 'test@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-02-01T00:00:00Z', totpEnabled: true },
-  { id: 'u2', username: 'inactive', email: 'inactive@test.com', role: 'USER', isActive: false, invitation: null, createdAt: '2024-03-01T00:00:00Z', totpEnabled: false },
+  { id: 'u1', username: 'testuser', email: 'test@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-02-01T00:00:00Z', twoFactorMethods: ['APP'] },
+  { id: 'u2', username: 'inactive', email: 'inactive@test.com', role: 'USER', isActive: false, invitation: null, createdAt: '2024-03-01T00:00:00Z', twoFactorMethods: [] },
 ]
 
 const DEFAULT_HANDLERS = {
@@ -95,7 +95,7 @@ describe('UsersTable — rows', () => {
   it('shows the totp_on pill on the row of a user with totp enabled', () => {
     const { getAllByRole } = setup()
     const rows = getAllByRole('row').slice(1) // skip header
-    const userRow = rows[2] // testuser, totpEnabled: true
+    const userRow = rows[2] // testuser, twoFactorMethods: ['APP']
     expect(within(userRow).getByText('table.totp_on')).toBeDefined()
     expect(within(userRow).queryByText('table.totp_off')).toBeNull()
   })
@@ -103,7 +103,7 @@ describe('UsersTable — rows', () => {
   it('shows the totp_off pill on the row of a user without totp', () => {
     const { getAllByRole } = setup()
     const rows = getAllByRole('row').slice(1)
-    const inactiveRow = rows[3] // inactive, totpEnabled: false
+    const inactiveRow = rows[3] // inactive, twoFactorMethods: []
     expect(within(inactiveRow).getByText('table.totp_off')).toBeDefined()
     expect(within(inactiveRow).queryByText('table.totp_on')).toBeNull()
   })
@@ -137,7 +137,7 @@ describe('UsersTable — button permissions', () => {
   it('totp reset button is disabled if totp not enabled', () => {
     const { getAllByRole } = setup(SA)
     const rows = getAllByRole('row').slice(1)
-    const adminRow = rows[1] // adminuser, totpEnabled: false
+    const adminRow = rows[1] // adminuser, twoFactorMethods: []
     const totpBtn = adminRow.querySelector('[aria-label^="table.btn_reset_totp"]') as HTMLButtonElement
     expect(totpBtn?.disabled).toBe(true)
   })

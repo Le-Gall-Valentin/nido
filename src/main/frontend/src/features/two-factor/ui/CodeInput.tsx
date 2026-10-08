@@ -1,11 +1,11 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import { twMerge } from 'tailwind-merge'
 
-export interface TotpDigitInputHandle {
+export interface CodeInputHandle {
   focus: () => void
 }
 
-interface TotpDigitInputProps {
+interface CodeInputProps {
   value: string
   onChange: (v: string) => void
   disabled?: boolean
@@ -26,8 +26,8 @@ function digitsOf(text: string) {
  * field itself: Bitwarden skips a field under 0.1 opacity or covered by another element, and iOS
  * only offers to paste into an opaque one.
  */
-export const TotpDigitInput = forwardRef<TotpDigitInputHandle, TotpDigitInputProps>(
-  function TotpDigitInput(
+export const CodeInput = forwardRef<CodeInputHandle, CodeInputProps>(
+  function CodeInput(
     { value, onChange, disabled = false, autoFocus = false, label = 'Verification code' },
     ref
   ) {

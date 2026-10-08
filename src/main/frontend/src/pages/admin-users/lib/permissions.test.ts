@@ -12,7 +12,7 @@ import {
 import type { User, AdminUser, UserRole } from '@/entities/user'
 
 function makeUser(id: string, role: UserRole): User {
-  return { id, username: id, email: `${id}@test.com`, role, createdAt: '2024-01-01T00:00:00Z', totpEnabled: true }
+  return { id, username: id, email: `${id}@test.com`, role, createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: ['APP'] }
 }
 
 function makeAdminUser(id: string, role: UserRole, overrides: Partial<AdminUser> = {}): AdminUser {
@@ -153,11 +153,11 @@ describe('canResetTotp', () => {
   })
 
   it('denies when target has no TOTP', () => {
-    expect(canResetTotp(SUPER_ADMIN, makeAdminUser('u2', 'USER', { totpEnabled: false }))).toEqual({ ok: false, reason: 'totp_not_enabled' })
+    expect(canResetTotp(SUPER_ADMIN, makeAdminUser('u2', 'USER', { twoFactorMethods: [] }))).toEqual({ ok: false, reason: 'totp_not_enabled' })
   })
 
   it('hierarchy denial wins over totp_not_enabled (mirrors backend order)', () => {
-    expect(canResetTotp(ADMIN, makeAdminUser('a2', 'ADMIN', { totpEnabled: false }))).toEqual({ ok: false, reason: 'admin_cannot_manage_admin' })
+    expect(canResetTotp(ADMIN, makeAdminUser('a2', 'ADMIN', { twoFactorMethods: [] }))).toEqual({ ok: false, reason: 'admin_cannot_manage_admin' })
   })
 
   it('denies ADMIN on ADMIN', () => {

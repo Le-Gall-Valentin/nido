@@ -2,22 +2,22 @@ import React, { useEffect, useId, useRef, useState } from 'react'
 import { AlertTriangle, ChevronLeft, Info, Lock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { TotpDigitInput } from './TotpDigitInput'
-import type { TotpDigitInputHandle } from './TotpDigitInput'
-import { TotpChallengeExpiredError, TotpMaxAttemptsError } from '../model/errors'
+import { CodeInput } from './CodeInput'
+import type { CodeInputHandle } from './CodeInput'
+import { ChallengeExpiredError, MaxAttemptsError } from '../model/errors'
 import { RateLimitError, NetworkError, ServerError } from '@/shared/lib'
-import type { ITotpVerifyApi } from '../model/ITotpVerifyApi'
+import type { ITwoFactorChallengeApi } from '../model/ITwoFactorChallengeApi'
 import type { User } from '@/entities/user'
 
-interface TotpVerifyStepProps {
+interface CodeStepProps {
   username: string
-  api: ITotpVerifyApi
+  api: Pick<ITwoFactorChallengeApi, 'verify'>
   onVerified: (user: User) => void
   onBack: () => void
 }
 
-export function TotpVerifyStep({ username, api, onVerified, onBack }: TotpVerifyStepProps) {
-  const { t } = useTranslation('totp')
+export function CodeStep({ username, api, onVerified, onBack }: CodeStepProps) {
+  const { t } = useTranslation('twoFactor')
   const headingId = useId()
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -25,7 +25,7 @@ export function TotpVerifyStep({ username, api, onVerified, onBack }: TotpVerify
   const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null)
   const [autoBack, setAutoBack] = useState(false)
   const isSubmittingRef = useRef(false)
-  const digitInputRef = useRef<TotpDigitInputHandle>(null)
+  const digitInputRef = useRef<CodeInputHandle>(null)
 
   // After max attempts lockout, redirect automatically after 2 seconds.
   useEffect(() => {
@@ -42,13 +42,13 @@ export function TotpVerifyStep({ username, api, onVerified, onBack }: TotpVerify
     setIsLoading(true)
     setErrorKey(null)
     try {
-      const user = await api.verify(code)
+      const user = await api.verify('APP', code)
       onVerified(user)
     } catch (error) {
-      if (error instanceof TotpMaxAttemptsError) {
+      if (error instanceof MaxAttemptsError) {
         setErrorKey('verify.error.max_attempts')
         setAutoBack(true)
-      } else if (error instanceof TotpChallengeExpiredError) {
+      } else if (error instanceof ChallengeExpiredError) {
         setErrorKey('verify.error.challenge_expired')
       } else if (error instanceof RateLimitError) {
         if (error.retryAfterSeconds !== null) {
@@ -98,7 +98,7 @@ export function TotpVerifyStep({ username, api, onVerified, onBack }: TotpVerify
       </div>
 
       <form onSubmit={(e) => void handleSubmit(e)} aria-labelledby={headingId}>
-        <TotpDigitInput
+        <CodeInput
           ref={digitInputRef}
           value={code}
           onChange={setCode}

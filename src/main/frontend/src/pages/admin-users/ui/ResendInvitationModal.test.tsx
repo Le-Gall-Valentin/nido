@@ -9,7 +9,7 @@ vi.mock('react-i18next', () => ({
 
 const CAROL: AdminUser = {
   id: 'u-3', username: 'carol', email: 'carol@test.com', role: 'USER', isActive: true,
-  createdAt: '2026-10-01T00:00:00Z', totpEnabled: false, invitation: { status: 'expired', expiresAt: '2026-10-04T00:00:00Z' },
+  createdAt: '2026-10-01T00:00:00Z', twoFactorMethods: [], invitation: { status: 'expired', expiresAt: '2026-10-04T00:00:00Z' },
 }
 
 describe('ResendInvitationModal', () => {

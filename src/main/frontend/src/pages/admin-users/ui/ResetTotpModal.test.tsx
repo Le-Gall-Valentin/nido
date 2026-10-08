@@ -24,7 +24,7 @@ vi.mock('@/shared/ui', () => ({
 
 const TARGET: AdminUser = {
   id: 'u-1', username: 'alice', email: 'alice@test.com',
-  role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', totpEnabled: true,
+  role: 'USER', isActive: true, invitation: null, createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: ['APP'],
 }
 
 function setup(overrides: { onReset?: () => Promise<void> } = {}) {

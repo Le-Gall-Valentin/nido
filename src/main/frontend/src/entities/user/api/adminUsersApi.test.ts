@@ -19,7 +19,7 @@ function axiosErr(status: number): AxiosError {
 
 const ADMIN_USER = {
   id: 'u-1', username: 'alice', email: 'alice@test.com',
-  role: 'ADMIN', isActive: true, createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
+  role: 'ADMIN', isActive: true, createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [],
 }
 
 beforeEach(() => { Object.values(mock).forEach(m => m.mockReset()) })
@@ -212,7 +212,7 @@ describe('resetTotp', () => {
   it('POST /users/{id}/2fa/reset (backend UserController path)', async () => {
     mock.post.mockResolvedValue({ status: 204 })
     await adminUsersApi.resetTotp('u-1')
-    expect(mock.post).toHaveBeenCalledWith('/users/u-1/2fa/reset')
+    expect(mock.post).toHaveBeenCalledWith('/users/u-1/2fa/reset', { methods: ['APP', 'MAIL'] })
   })
 
   it('throws ServerError on 500', async () => {

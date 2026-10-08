@@ -1,7 +1,7 @@
 import { render, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { DisableTotpModal } from './DisableTotpModal'
-import { TotpCodeError, TotpDisableMaxAttemptsError } from '@/features/totp'
+import { CodeError, MaxAttemptsError } from '@/features/two-factor'
 import { RateLimitError, NetworkError, ServerError } from '@/shared/lib'
 
 vi.mock('react-i18next', () => ({
@@ -16,11 +16,11 @@ vi.mock('@/shared/ui', () => ({
   ),
 }))
 
-vi.mock('@/features/totp', async (importActual) => {
-  const actual = await importActual<typeof import('@/features/totp')>()
+vi.mock('@/features/two-factor', async (importActual) => {
+  const actual = await importActual<typeof import('@/features/two-factor')>()
   return {
     ...actual,
-    TotpDigitInput: ({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean; autoFocus?: boolean; label?: string }) => (
+    CodeInput: ({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean; autoFocus?: boolean; label?: string }) => (
       <input aria-label="code" value={value} onChange={e => onChange(e.target.value)} disabled={disabled} />
     ),
   }
@@ -68,9 +68,9 @@ describe('DisableTotpModal', () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalled())
   })
 
-  it('shows invalid code error on TotpCodeError', async () => {
+  it('shows invalid code error on CodeError', async () => {
     const { getByLabelText, getByText, findByRole } = render(
-      <DisableTotpModal {...DEFAULT_PROPS} onDisable={vi.fn().mockRejectedValue(new TotpCodeError())} />
+      <DisableTotpModal {...DEFAULT_PROPS} onDisable={vi.fn().mockRejectedValue(new CodeError())} />
     )
     fireEvent.change(getByLabelText('code'), { target: { value: '123456' } })
     fireEvent.click(getByText('disable.submit'))
@@ -78,9 +78,9 @@ describe('DisableTotpModal', () => {
     expect(alert.textContent).toContain('disable.error.invalid_code')
   })
 
-  it('shows max attempts error on TotpDisableMaxAttemptsError', async () => {
+  it('shows max attempts error on MaxAttemptsError', async () => {
     const { getByLabelText, getByText, findByRole } = render(
-      <DisableTotpModal {...DEFAULT_PROPS} onDisable={vi.fn().mockRejectedValue(new TotpDisableMaxAttemptsError())} />
+      <DisableTotpModal {...DEFAULT_PROPS} onDisable={vi.fn().mockRejectedValue(new MaxAttemptsError())} />
     )
     fireEvent.change(getByLabelText('code'), { target: { value: '123456' } })
     fireEvent.click(getByText('disable.submit'))
@@ -121,7 +121,7 @@ describe('DisableTotpModal', () => {
   it('resets code and error when close is triggered', async () => {
     const onClose = vi.fn()
     const { getByLabelText, getByText, queryByRole } = render(
-      <DisableTotpModal {...DEFAULT_PROPS} onClose={onClose} onDisable={vi.fn().mockRejectedValue(new TotpCodeError())} />
+      <DisableTotpModal {...DEFAULT_PROPS} onClose={onClose} onDisable={vi.fn().mockRejectedValue(new CodeError())} />
     )
     fireEvent.change(getByLabelText('code'), { target: { value: '123456' } })
     fireEvent.click(getByText('disable.submit'))

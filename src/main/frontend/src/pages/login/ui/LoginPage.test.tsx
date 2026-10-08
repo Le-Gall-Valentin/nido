@@ -20,26 +20,26 @@ vi.mock('@/features/auth', () => ({
   useAuth: vi.fn(),
 }))
 
-vi.mock('@/features/totp', () => ({
-  TotpVerifyStep: ({ onVerified, onBack }: { onVerified: (u: unknown) => void; onBack: () => void }) => (
+vi.mock('@/features/two-factor', () => ({
+  CodeStep: ({ onVerified, onBack }: { onVerified: (u: unknown) => void; onBack: () => void }) => (
     <div>
       <button onClick={() => onVerified({ id: '1', username: 'alice', role: 'USER' })}>verify</button>
       <button onClick={onBack}>back</button>
     </div>
   ),
-  TotpEnrollProposal: ({ onActivate, onSkip }: { onActivate: () => void; onSkip: () => void }) => (
+  EnrollProposal: ({ onActivate, onSkip }: { onActivate: () => void; onSkip: () => void }) => (
     <div>
       <button onClick={onActivate}>activate</button>
       <button onClick={onSkip}>skip</button>
     </div>
   ),
-  TotpSetupFlow: ({ onSuccess, onDismiss }: { onSuccess: () => void; onDismiss?: () => void }) => (
+  AppSetupFlow: ({ onSuccess, onDismiss }: { onSuccess: () => void; onDismiss?: () => void }) => (
     <div>
       <button onClick={onSuccess}>setup-success</button>
       {onDismiss && <button onClick={onDismiss}>setup-dismiss</button>}
     </div>
   ),
-  totpApi: {},
+  twoFactorApi: {},
 }))
 
 const availability = vi.hoisted(() => ({ current: 'unavailable' as 'loading' | 'available' | 'unavailable' }))
@@ -50,7 +50,10 @@ vi.mock('@/entities/capabilities', () => ({
 }))
 
 const mockFinalizeLogin = vi.fn()
-const mockTotpApi = { verify: vi.fn(), setup: vi.fn(), confirm: vi.fn(), getStatus: vi.fn(), disable: vi.fn() }
+const mockTwoFactorApi = {
+  verify: vi.fn(), sendMailCode: vi.fn(), list: vi.fn(), setupApp: vi.fn(), setupMail: vi.fn(),
+  confirm: vi.fn(), sendDisableCode: vi.fn(), disable: vi.fn(),
+}
 
 describe('LoginPage', () => {
   beforeEach(() => {
@@ -65,7 +68,7 @@ describe('LoginPage', () => {
     beforeEach(() => {
       render(
         <MemoryRouter>
-          <LoginPage totpApi={mockTotpApi} />
+          <LoginPage twoFactorApi={mockTwoFactorApi} />
         </MemoryRouter>
       )
     })
@@ -108,16 +111,16 @@ describe('LoginPage', () => {
   })
 
   describe('step transitions', () => {
-    it('shows TotpVerifyStep when login outcome is totp_required', () => {
-      render(<MemoryRouter><LoginPage totpApi={mockTotpApi} /></MemoryRouter>)
+    it('shows the code step when login outcome is totp_required', () => {
+      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
       fireEvent.click(screen.getByText('trigger-totp'))
       expect(screen.getByText('verify')).not.toBeNull()
       expect(screen.getByText('back')).not.toBeNull()
       expect(screen.queryByRole('form')).toBeNull()
     })
 
-    it('shows TotpEnrollProposal when login outcome is enrollment_proposed', () => {
-      render(<MemoryRouter><LoginPage totpApi={mockTotpApi} /></MemoryRouter>)
+    it('shows the enrol proposal when login outcome is enrollment_proposed', () => {
+      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
       fireEvent.click(screen.getByText('trigger-enroll'))
       expect(screen.getByText('activate')).not.toBeNull()
       expect(screen.getByText('skip')).not.toBeNull()
@@ -125,15 +128,15 @@ describe('LoginPage', () => {
     })
 
     it('returns to credentials step when back is clicked from totp step', () => {
-      render(<MemoryRouter><LoginPage totpApi={mockTotpApi} /></MemoryRouter>)
+      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
       fireEvent.click(screen.getByText('trigger-totp'))
       fireEvent.click(screen.getByText('back'))
       expect(screen.getByRole('form')).not.toBeNull()
       expect(screen.queryByText('verify')).toBeNull()
     })
 
-    it('shows TotpSetupFlow when user activates from enrollment proposal', () => {
-      render(<MemoryRouter><LoginPage totpApi={mockTotpApi} /></MemoryRouter>)
+    it('shows the app setup when user activates from enrollment proposal', () => {
+      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
       fireEvent.click(screen.getByText('trigger-enroll'))
       fireEvent.click(screen.getByText('activate'))
       expect(screen.getByText('setup-success')).not.toBeNull()
@@ -142,21 +145,21 @@ describe('LoginPage', () => {
     })
 
     it('calls finalizeLogin after totp verify', () => {
-      render(<MemoryRouter><LoginPage totpApi={mockTotpApi} /></MemoryRouter>)
+      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
       fireEvent.click(screen.getByText('trigger-totp'))
       fireEvent.click(screen.getByText('verify'))
       expect(mockFinalizeLogin).toHaveBeenCalledWith({ id: '1', username: 'alice', role: 'USER' })
     })
 
     it('calls finalizeLogin when skip is chosen from enrollment proposal', () => {
-      render(<MemoryRouter><LoginPage totpApi={mockTotpApi} /></MemoryRouter>)
+      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
       fireEvent.click(screen.getByText('trigger-enroll'))
       fireEvent.click(screen.getByText('skip'))
       expect(mockFinalizeLogin).toHaveBeenCalledWith({ id: '1', username: 'alice', role: 'USER' })
     })
 
     it('calls finalizeLogin after setup success', () => {
-      render(<MemoryRouter><LoginPage totpApi={mockTotpApi} /></MemoryRouter>)
+      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
       fireEvent.click(screen.getByText('trigger-enroll'))
       fireEvent.click(screen.getByText('activate'))
       fireEvent.click(screen.getByText('setup-success'))
@@ -164,7 +167,7 @@ describe('LoginPage', () => {
     })
 
     it('calls finalizeLogin when setup is dismissed', () => {
-      render(<MemoryRouter><LoginPage totpApi={mockTotpApi} /></MemoryRouter>)
+      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
       fireEvent.click(screen.getByText('trigger-enroll'))
       fireEvent.click(screen.getByText('activate'))
       fireEvent.click(screen.getByText('setup-dismiss'))
@@ -180,14 +183,14 @@ describe('LoginPage', () => {
 
     it('offers the link under the form when the server can send it', () => {
       availability.current = 'available'
-      render(<MemoryRouter><LoginPage totpApi={mockTotpApi} /></MemoryRouter>)
+      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
 
       expect(screen.getByRole('link', { name: 'forgot.link' }).getAttribute('href')).toBe('/forgot-password')
     })
 
     it.each(['unavailable', 'loading'] as const)('shows the page as it always was when %s', (state) => {
       availability.current = state
-      render(<MemoryRouter><LoginPage totpApi={mockTotpApi} /></MemoryRouter>)
+      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
 
       expect(screen.queryByRole('link', { name: 'forgot.link' })).toBeNull()
       expect(screen.getByText('help.contact_admin')).not.toBeNull()
@@ -197,7 +200,7 @@ describe('LoginPage', () => {
       render(
         <MemoryRouter initialEntries={[{ pathname: '/login', state: { invitation: 'accepted', identifier: 'carol' } }]}>
           <Routes>
-            <Route path="/login" element={<><LoginPage totpApi={mockTotpApi} /><Where /></>} />
+            <Route path="/login" element={<><LoginPage twoFactorApi={mockTwoFactorApi} /><Where /></>} />
           </Routes>
         </MemoryRouter>,
       )
@@ -213,7 +216,7 @@ describe('LoginPage', () => {
       render(
         <MemoryRouter initialEntries={[{ pathname: '/login', state: { passwordReset: 'done' } }]}>
           <Routes>
-            <Route path="/login" element={<><LoginPage totpApi={mockTotpApi} /><Where /></>} />
+            <Route path="/login" element={<><LoginPage twoFactorApi={mockTwoFactorApi} /><Where /></>} />
           </Routes>
         </MemoryRouter>,
       )

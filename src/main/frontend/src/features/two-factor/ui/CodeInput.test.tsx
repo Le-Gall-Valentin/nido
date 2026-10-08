@@ -1,16 +1,16 @@
 import { render, fireEvent } from '@testing-library/react'
 import { createRef } from 'react'
 import { describe, it, expect, vi } from 'vitest'
-import { TotpDigitInput, type TotpDigitInputHandle } from './TotpDigitInput'
+import { CodeInput, type CodeInputHandle } from './CodeInput'
 
 function setup(value = '', onChange = vi.fn()) {
-  const utils = render(<TotpDigitInput value={value} onChange={onChange} label="Code de vérification" />)
+  const utils = render(<CodeInput value={value} onChange={onChange} label="Code de vérification" />)
   const field = utils.getByRole('textbox', { name: 'Code de vérification' }) as HTMLInputElement
   const boxes = Array.from(utils.container.querySelector('[aria-hidden="true"]')!.children)
   return { ...utils, field, boxes }
 }
 
-describe('TotpDigitInput', () => {
+describe('CodeInput', () => {
   it('is a single one-time-code field, the one password managers and phones fill', () => {
     const { getAllByRole, field } = setup()
     expect(getAllByRole('textbox')).toHaveLength(1)
@@ -71,13 +71,13 @@ describe('TotpDigitInput', () => {
   })
 
   it('is disabled when asked', () => {
-    const { getByRole } = render(<TotpDigitInput value="" onChange={vi.fn()} disabled />)
+    const { getByRole } = render(<CodeInput value="" onChange={vi.fn()} disabled />)
     expect((getByRole('textbox') as HTMLInputElement).disabled).toBe(true)
   })
 
   it('focus() through the ref focuses the field', () => {
-    const ref = createRef<TotpDigitInputHandle>()
-    const { getByRole } = render(<TotpDigitInput value="" onChange={vi.fn()} ref={ref} />)
+    const ref = createRef<CodeInputHandle>()
+    const { getByRole } = render(<CodeInput value="" onChange={vi.fn()} ref={ref} />)
     ref.current!.focus()
     expect(document.activeElement).toBe(getByRole('textbox'))
   })

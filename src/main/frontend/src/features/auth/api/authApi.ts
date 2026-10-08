@@ -6,16 +6,16 @@ import type { IAuthApi } from '../model/IAuthApi'
 import { CredentialsError, NetworkError, RateLimitError, ServerError } from '../model/errors'
 import { parseRetryAfter } from '@/shared/lib'
 
-interface TotpRequiredBody {
-  totpRequired: true
+interface TwoFactorRequiredBody {
+  twoFactorRequired: true
   username: string
 }
 
 export const authApi: IAuthApi = {
   async login(credentials: LoginCredentials): Promise<LoginApiResult> {
     try {
-      const { data } = await client.post<TotpRequiredBody | User>('/auth/login', credentials)
-      if ('totpRequired' in data && data.totpRequired === true) return { type: 'totp_required', username: data.username }
+      const { data } = await client.post<TwoFactorRequiredBody | User>('/auth/login', credentials)
+      if ('twoFactorRequired' in data && data.twoFactorRequired === true) return { type: 'totp_required', username: data.username }
       return { type: 'success', user: data as User }
     } catch (error) {
       if (isAxiosError(error)) {

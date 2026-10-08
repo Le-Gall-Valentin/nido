@@ -137,7 +137,7 @@ function UserRow({ user, currentUser, mail, youLabel, roleLabel, meta, isTogglin
       </td>
 
       <td className="px-3.5 py-3.5">
-        <TotpBadge enabled={user.totpEnabled} />
+        <TotpBadge enabled={user.twoFactorMethods.length > 0} />
       </td>
 
       <td className="py-3.5 pl-3.5 pr-[18px]">

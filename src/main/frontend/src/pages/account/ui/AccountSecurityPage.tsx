@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useShallow } from 'zustand/react/shallow'
 import { useAuth } from '@/features/auth'
-import { totpApi } from '@/features/totp'
+import { twoFactorApi } from '@/features/two-factor'
 import { accountApi } from '../api/accountApi'
 import type { IAccountApi } from '../model/IAccountApi'
 import { TwoFactorSection } from './TwoFactorSection'
@@ -33,7 +33,7 @@ export function AccountSecurityPage({ api = accountApi }: AccountSecurityPagePro
       <TwoFactorSection
         user={user}
         onPatch={patchUser}
-        enrollApi={totpApi}
+        enrollApi={twoFactorApi}
       />
 
       <ChangePasswordSection

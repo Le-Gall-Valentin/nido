@@ -2,14 +2,14 @@ import { ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
 
-interface TotpEnrollProposalProps {
+interface EnrollProposalProps {
   username: string
   onActivate: () => void
   onSkip: () => void
 }
 
-export function TotpEnrollProposal({ username, onActivate, onSkip }: TotpEnrollProposalProps) {
-  const { t } = useTranslation('totp')
+export function EnrollProposal({ username, onActivate, onSkip }: EnrollProposalProps) {
+  const { t } = useTranslation('twoFactor')
 
   return (
     <div>

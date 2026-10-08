@@ -1,8 +1,8 @@
 import { render, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { TotpSetupFlow } from './TotpSetupFlow'
-import type { ITotpEnrollApi } from '../model/ITotpEnrollApi'
-import { TotpCodeError, TotpConfirmMaxAttemptsError } from '../model/errors'
+import { AppSetupFlow } from './AppSetupFlow'
+import type { ITwoFactorMethodsApi } from '../model/ITwoFactorMethodsApi'
+import { CodeError, ConfirmMaxAttemptsError } from '../model/errors'
 import { RateLimitError, NetworkError, ServerError } from '@/shared/lib'
 
 vi.mock('qrcode.react', () => {
@@ -19,12 +19,12 @@ const SETUP_DATA = {
   secret: 'ABCDEFGHIJKLMNOP',
 }
 
-function makeApi(overrides: Partial<ITotpEnrollApi> = {}): ITotpEnrollApi {
+type SetupApi = Pick<ITwoFactorMethodsApi, 'setupApp' | 'confirm'>
+
+function makeApi(overrides: Partial<SetupApi> = {}): SetupApi {
   return {
-    setup: vi.fn().mockResolvedValue(SETUP_DATA),
+    setupApp: vi.fn().mockResolvedValue(SETUP_DATA),
     confirm: vi.fn().mockResolvedValue(undefined),
-    getStatus: vi.fn(),
-    disable: vi.fn(),
     ...overrides,
   }
 }
@@ -37,47 +37,47 @@ function fillCode(container: HTMLElement, code: string) {
   fireEvent.change(codeField(container), { target: { value: code } })
 }
 
-describe('TotpSetupFlow', () => {
+describe('AppSetupFlow', () => {
   afterEach(() => { vi.useRealTimers() })
 
   it('shows loading spinner while setup is pending', () => {
-    const api = makeApi({ setup: vi.fn().mockReturnValue(new Promise(() => {})) })
-    const { getByRole } = render(<TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+    const api = makeApi({ setupApp: vi.fn().mockReturnValue(new Promise(() => {})) })
+    const { getByRole } = render(<AppSetupFlow api={api} onSuccess={vi.fn()} />)
     expect(getByRole('status')).toBeTruthy()
   })
 
-  it('calls api.setup() exactly once on mount', async () => {
+  it('calls api.setupApp() exactly once on mount', async () => {
     const setup = vi.fn().mockResolvedValue(SETUP_DATA)
-    const api = makeApi({ setup })
-    const { findByTestId } = render(<TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+    const api = makeApi({ setupApp: setup })
+    const { findByTestId } = render(<AppSetupFlow api={api} onSuccess={vi.fn()} />)
     await findByTestId('qr-code')
     expect(setup).toHaveBeenCalledTimes(1)
   })
 
   it('shows error when setup returns whitespace-only secret', async () => {
-    const api = makeApi({ setup: vi.fn().mockResolvedValue({ otpauthUri: 'otpauth://...', secret: '   ' }) })
-    const { findByRole } = render(<TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+    const api = makeApi({ setupApp: vi.fn().mockResolvedValue({ otpauthUri: 'otpauth://...', secret: '   ' }) })
+    const { findByRole } = render(<AppSetupFlow api={api} onSuccess={vi.fn()} />)
     const alert = await findByRole('alert')
     expect(alert.textContent).toContain('setup.error.setup_failed')
   })
 
   it('shows error when setup returns empty secret', async () => {
-    const api = makeApi({ setup: vi.fn().mockResolvedValue({ otpauthUri: 'otpauth://...', secret: '' }) })
-    const { findByRole } = render(<TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+    const api = makeApi({ setupApp: vi.fn().mockResolvedValue({ otpauthUri: 'otpauth://...', secret: '' }) })
+    const { findByRole } = render(<AppSetupFlow api={api} onSuccess={vi.fn()} />)
     const alert = await findByRole('alert')
     expect(alert.textContent).toContain('setup.error.setup_failed')
   })
 
   it('shows error when setup fails', async () => {
-    const api = makeApi({ setup: vi.fn().mockRejectedValue(new Error('network error')) })
-    const { findByRole } = render(<TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+    const api = makeApi({ setupApp: vi.fn().mockRejectedValue(new Error('network error')) })
+    const { findByRole } = render(<AppSetupFlow api={api} onSuccess={vi.fn()} />)
     const alert = await findByRole('alert')
     expect(alert.textContent).toContain('setup.error.setup_failed')
   })
 
   it('renders QR code after setup succeeds', async () => {
     const api = makeApi()
-    const { findByTestId } = render(<TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+    const { findByTestId } = render(<AppSetupFlow api={api} onSuccess={vi.fn()} />)
 
     const qr = await findByTestId('qr-code')
     expect(qr).toBeTruthy()
@@ -86,7 +86,7 @@ describe('TotpSetupFlow', () => {
 
   it('hides secret by default after setup succeeds', async () => {
     const api = makeApi()
-    const { findByTestId, queryByText } = render(<TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+    const { findByTestId, queryByText } = render(<AppSetupFlow api={api} onSuccess={vi.fn()} />)
     await findByTestId('qr-code')
     // Secret should be masked, not visible
     expect(queryByText('ABCD EFGH IJKL MNOP')).toBeNull()
@@ -94,7 +94,7 @@ describe('TotpSetupFlow', () => {
 
   it('reveals secret after clicking show button', async () => {
     const api = makeApi()
-    const { findByTestId, getByRole, getByText } = render(<TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+    const { findByTestId, getByRole, getByText } = render(<AppSetupFlow api={api} onSuccess={vi.fn()} />)
     await findByTestId('qr-code')
 
     fireEvent.click(getByRole('button', { name: 'setup.show_secret' }))
@@ -103,7 +103,7 @@ describe('TotpSetupFlow', () => {
 
   it('hides secret again after clicking hide button', async () => {
     const api = makeApi()
-    const { findByTestId, getByRole, queryByText } = render(<TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+    const { findByTestId, getByRole, queryByText } = render(<AppSetupFlow api={api} onSuccess={vi.fn()} />)
     await findByTestId('qr-code')
 
     fireEvent.click(getByRole('button', { name: 'setup.show_secret' }))
@@ -114,7 +114,7 @@ describe('TotpSetupFlow', () => {
   it('calls api.confirm with the entered code on submit', async () => {
     const api = makeApi()
     const { findByTestId, container, getByRole } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
 
@@ -123,14 +123,14 @@ describe('TotpSetupFlow', () => {
       fireEvent.submit(getByRole('button', { name: /setup\.submit/i }).closest('form')!)
     })
 
-    expect(api.confirm).toHaveBeenCalledWith('123456')
+    expect(api.confirm).toHaveBeenCalledWith('APP', '123456')
   })
 
   it('calls onSuccess after confirm succeeds', async () => {
     const onSuccess = vi.fn()
     const api = makeApi()
     const { findByTestId, container, getByRole } = render(
-      <TotpSetupFlow api={api} onSuccess={onSuccess} />
+      <AppSetupFlow api={api} onSuccess={onSuccess} />
     )
     await findByTestId('qr-code')
 
@@ -142,10 +142,10 @@ describe('TotpSetupFlow', () => {
     expect(onSuccess).toHaveBeenCalledTimes(1)
   })
 
-  it('shows error and clears code on TotpCodeError from confirm', async () => {
-    const api = makeApi({ confirm: vi.fn().mockRejectedValue(new TotpCodeError()) })
+  it('shows error and clears code on CodeError from confirm', async () => {
+    const api = makeApi({ confirm: vi.fn().mockRejectedValue(new CodeError()) })
     const { findByTestId, container, getByRole, findByRole } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
 
@@ -165,9 +165,9 @@ describe('TotpSetupFlow', () => {
     // — shown after six digits had been entered and the server had rejected them. Read as "your input
     // did not register" rather than "that code is wrong", which sends the user to re-type instead of
     // to look at their authenticator. The login step has said "invalid or expired code" all along.
-    const api = makeApi({ confirm: vi.fn().mockRejectedValue(new TotpCodeError()) })
+    const api = makeApi({ confirm: vi.fn().mockRejectedValue(new CodeError()) })
     const { container, getByRole, findByRole, findByTestId } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+      <AppSetupFlow api={api} onSuccess={vi.fn()} />)
     await findByTestId('qr-code')
 
     fillCode(container, '999999')
@@ -183,7 +183,7 @@ describe('TotpSetupFlow', () => {
     // dead end the task checkbox had before F3, and the login step already says "enter all 6 digits".
     const api = makeApi()
     const { container, getByRole, findByRole, findByTestId } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} />)
+      <AppSetupFlow api={api} onSuccess={vi.fn()} />)
     await findByTestId('qr-code')
 
     fillCode(container, '1234')
@@ -198,7 +198,7 @@ describe('TotpSetupFlow', () => {
   it('renders dismiss button when onDismiss is provided', async () => {
     const api = makeApi()
     const { findByTestId, getByText } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} onDismiss={vi.fn()} />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} onDismiss={vi.fn()} />
     )
     await findByTestId('qr-code')
     expect(getByText('setup.dismiss_login')).toBeTruthy()
@@ -207,7 +207,7 @@ describe('TotpSetupFlow', () => {
   it('does not render dismiss button when onDismiss is not provided', async () => {
     const api = makeApi()
     const { findByTestId, queryByText } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
     expect(queryByText('setup.dismiss_login')).toBeNull()
@@ -217,7 +217,7 @@ describe('TotpSetupFlow', () => {
     const onDismiss = vi.fn()
     const api = makeApi()
     const { findByTestId, getByText } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} onDismiss={onDismiss} />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} onDismiss={onDismiss} />
     )
     await findByTestId('qr-code')
 
@@ -228,7 +228,7 @@ describe('TotpSetupFlow', () => {
   it('uses custom dismissLabel when provided', async () => {
     const api = makeApi()
     const { findByTestId, getByText } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} onDismiss={vi.fn()} dismissLabel="Custom label" />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} onDismiss={vi.fn()} dismissLabel="Custom label" />
     )
     await findByTestId('qr-code')
     expect(getByText('Custom label')).toBeTruthy()
@@ -237,7 +237,7 @@ describe('TotpSetupFlow', () => {
   it('shows rate_limit error on RateLimitError from confirm', async () => {
     const api = makeApi({ confirm: vi.fn().mockRejectedValue(new RateLimitError()) })
     const { findByTestId, container, getByRole, findByRole } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
     fillCode(container, '123456')
@@ -251,7 +251,7 @@ describe('TotpSetupFlow', () => {
   it('shows network error on NetworkError from confirm', async () => {
     const api = makeApi({ confirm: vi.fn().mockRejectedValue(new NetworkError()) })
     const { findByTestId, container, getByRole, findByRole } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
     fillCode(container, '654321')
@@ -262,10 +262,10 @@ describe('TotpSetupFlow', () => {
     expect(alert.textContent).toContain('setup.error.network')
   })
 
-  it('shows max_attempts error on TotpConfirmMaxAttemptsError', async () => {
-    const api = makeApi({ confirm: vi.fn().mockRejectedValue(new TotpConfirmMaxAttemptsError()) })
+  it('shows max_attempts error on ConfirmMaxAttemptsError', async () => {
+    const api = makeApi({ confirm: vi.fn().mockRejectedValue(new ConfirmMaxAttemptsError()) })
     const { findByTestId, container, getByRole, findByRole } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
     fillCode(container, '123456')
@@ -276,11 +276,11 @@ describe('TotpSetupFlow', () => {
     expect(alert.textContent).toContain('setup.error.max_attempts')
   })
 
-  it('does not restart setup if unmounted within 2s of TotpConfirmMaxAttemptsError', async () => {
+  it('does not restart setup if unmounted within 2s of ConfirmMaxAttemptsError', async () => {
     const setup = vi.fn().mockResolvedValue(SETUP_DATA)
-    const api = makeApi({ setup, confirm: vi.fn().mockRejectedValue(new TotpConfirmMaxAttemptsError()) })
+    const api = makeApi({ setupApp: setup, confirm: vi.fn().mockRejectedValue(new ConfirmMaxAttemptsError()) })
     const { findByTestId, container, getByRole, unmount } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
     vi.useFakeTimers()
@@ -297,11 +297,11 @@ describe('TotpSetupFlow', () => {
     expect(setup).toHaveBeenCalledTimes(1)
   })
 
-  it('restarts setup automatically 2s after TotpConfirmMaxAttemptsError', async () => {
+  it('restarts setup automatically 2s after ConfirmMaxAttemptsError', async () => {
     const setup = vi.fn().mockResolvedValue(SETUP_DATA)
-    const api = makeApi({ setup, confirm: vi.fn().mockRejectedValue(new TotpConfirmMaxAttemptsError()) })
+    const api = makeApi({ setupApp: setup, confirm: vi.fn().mockRejectedValue(new ConfirmMaxAttemptsError()) })
     const { findByTestId, container, getByRole } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
     expect(setup).toHaveBeenCalledTimes(1)
@@ -316,7 +316,7 @@ describe('TotpSetupFlow', () => {
 
     // Advance fake timer — triggers restart
     await act(async () => { vi.advanceTimersByTime(2000) })
-    // Flush api.setup() promise from restart
+    // Flush api.setupApp() promise from restart
     await act(async () => {})
 
     expect(setup).toHaveBeenCalledTimes(2)
@@ -325,7 +325,7 @@ describe('TotpSetupFlow', () => {
   it('auto-hides secret after 5 minutes when visible', async () => {
     const api = makeApi()
     const { findByTestId, getByRole, queryByText } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
 
@@ -344,7 +344,7 @@ describe('TotpSetupFlow', () => {
   it('shows server error on ServerError from confirm', async () => {
     const api = makeApi({ confirm: vi.fn().mockRejectedValue(new ServerError()) })
     const { findByTestId, container, getByRole, findByRole } = render(
-      <TotpSetupFlow api={api} onSuccess={vi.fn()} />
+      <AppSetupFlow api={api} onSuccess={vi.fn()} />
     )
     await findByTestId('qr-code')
     fillCode(container, '111111')

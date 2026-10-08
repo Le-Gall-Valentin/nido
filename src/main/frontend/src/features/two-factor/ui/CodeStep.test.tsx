@@ -1,8 +1,8 @@
 import { render, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { TotpVerifyStep } from './TotpVerifyStep'
-import type { ITotpVerifyApi } from '../model/ITotpVerifyApi'
-import { TotpCodeError, TotpChallengeExpiredError, TotpMaxAttemptsError } from '../model/errors'
+import { CodeStep } from './CodeStep'
+import type { ITwoFactorChallengeApi } from '../model/ITwoFactorChallengeApi'
+import { CodeError, ChallengeExpiredError, MaxAttemptsError } from '../model/errors'
 import { RateLimitError, NetworkError, ServerError } from '@/shared/lib'
 
 vi.mock('react-i18next', () => ({
@@ -12,7 +12,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-function makeApi(overrides: Partial<ITotpVerifyApi> = {}): ITotpVerifyApi {
+function makeApi(overrides: Partial<Pick<ITwoFactorChallengeApi, 'verify'>> = {}): Pick<ITwoFactorChallengeApi, 'verify'> {
   return {
     verify: vi.fn(),
     ...overrides,
@@ -27,11 +27,11 @@ function fillCode(container: HTMLElement, code: string) {
   fireEvent.change(codeField(container), { target: { value: code } })
 }
 
-describe('TotpVerifyStep', () => {
+describe('CodeStep', () => {
   it('renders heading, subtitle with username, submit button, back link, help text', () => {
     const api = makeApi()
     const { getByText, getByRole } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     expect(getByText('verify.title')).toBeTruthy()
@@ -44,7 +44,7 @@ describe('TotpVerifyStep', () => {
   it('calls api.verify with the entered code on submit', async () => {
     const api = makeApi({ verify: vi.fn().mockResolvedValue({ id: '1', username: 'alice', role: 'USER' }) })
     const { container, getByRole } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '123456')
@@ -52,7 +52,7 @@ describe('TotpVerifyStep', () => {
       fireEvent.submit(getByRole('button', { name: /verify\.submit/i }).closest('form')!)
     })
 
-    expect(api.verify).toHaveBeenCalledWith('123456')
+    expect(api.verify).toHaveBeenCalledWith('APP', '123456')
   })
 
   it('calls onVerified with user on success', async () => {
@@ -60,7 +60,7 @@ describe('TotpVerifyStep', () => {
     const api = makeApi({ verify: vi.fn().mockResolvedValue(user) })
     const onVerified = vi.fn()
     const { container, getByRole } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={onVerified} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={onVerified} onBack={vi.fn()} />
     )
 
     fillCode(container, '123456')
@@ -71,10 +71,10 @@ describe('TotpVerifyStep', () => {
     expect(onVerified).toHaveBeenCalledWith(user)
   })
 
-  it('shows invalid_code error and clears code on TotpCodeError', async () => {
-    const api = makeApi({ verify: vi.fn().mockRejectedValue(new TotpCodeError()) })
+  it('shows invalid_code error and clears code on CodeError', async () => {
+    const api = makeApi({ verify: vi.fn().mockRejectedValue(new CodeError()) })
     const { container, getByRole, getByText } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '999999')
@@ -90,10 +90,10 @@ describe('TotpVerifyStep', () => {
     expect(codeField(container).value).toBe('')
   })
 
-  it('shows challenge_expired error on TotpChallengeExpiredError (does not clear code)', async () => {
-    const api = makeApi({ verify: vi.fn().mockRejectedValue(new TotpChallengeExpiredError()) })
+  it('shows challenge_expired error on ChallengeExpiredError (does not clear code)', async () => {
+    const api = makeApi({ verify: vi.fn().mockRejectedValue(new ChallengeExpiredError()) })
     const { container, getByRole, getByText } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '123456')
@@ -112,7 +112,7 @@ describe('TotpVerifyStep', () => {
   it('shows incomplete error without calling api if code has fewer than 6 digits', async () => {
     const api = makeApi({ verify: vi.fn() })
     const { container, getByRole, getByText } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '123')
@@ -129,7 +129,7 @@ describe('TotpVerifyStep', () => {
     const verifyPromise = new Promise(res => { resolveVerify = res })
     const api = makeApi({ verify: vi.fn().mockReturnValue(verifyPromise) })
     const { container, getByRole } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '123456')
@@ -153,7 +153,7 @@ describe('TotpVerifyStep', () => {
     const verifyPromise = new Promise(res => { resolveVerify = res })
     const api = makeApi({ verify: vi.fn().mockReturnValue(verifyPromise) })
     const { container, getByRole } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '123456')
@@ -175,7 +175,7 @@ describe('TotpVerifyStep', () => {
     const verifyPromise = new Promise(res => { resolveVerify = res })
     const api = makeApi({ verify: vi.fn().mockReturnValue(verifyPromise) })
     const { container, getByRole, getByText } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '123456')
@@ -194,7 +194,7 @@ describe('TotpVerifyStep', () => {
     const api = makeApi()
     const onBack = vi.fn()
     const { getByText } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={onBack} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={onBack} />
     )
 
     fireEvent.click(getByText('verify.back'))
@@ -204,7 +204,7 @@ describe('TotpVerifyStep', () => {
   it('shows rate_limit_timed error with seconds when RateLimitError has retryAfterSeconds', async () => {
     const api = makeApi({ verify: vi.fn().mockRejectedValue(new RateLimitError(42)) })
     const { container, getByRole, getByText } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
     fillCode(container, '123456')
     await act(async () => {
@@ -216,7 +216,7 @@ describe('TotpVerifyStep', () => {
   it('shows rate_limit error on RateLimitError', async () => {
     const api = makeApi({ verify: vi.fn().mockRejectedValue(new RateLimitError()) })
     const { container, getByRole, getByText } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
     fillCode(container, '123456')
     await act(async () => {
@@ -228,7 +228,7 @@ describe('TotpVerifyStep', () => {
   it('shows network error on NetworkError', async () => {
     const api = makeApi({ verify: vi.fn().mockRejectedValue(new NetworkError()) })
     const { container, getByRole, getByText } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
     fillCode(container, '123456')
     await act(async () => {
@@ -240,7 +240,7 @@ describe('TotpVerifyStep', () => {
   it('shows server error on ServerError', async () => {
     const api = makeApi({ verify: vi.fn().mockRejectedValue(new ServerError()) })
     const { container, getByRole, getByText } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
     fillCode(container, '123456')
     await act(async () => {
@@ -249,10 +249,10 @@ describe('TotpVerifyStep', () => {
     await waitFor(() => expect(getByText('verify.error.server')).toBeTruthy())
   })
 
-  it('shows max_attempts error on TotpMaxAttemptsError', async () => {
-    const api = makeApi({ verify: vi.fn().mockRejectedValue(new TotpMaxAttemptsError()) })
+  it('shows max_attempts error on MaxAttemptsError', async () => {
+    const api = makeApi({ verify: vi.fn().mockRejectedValue(new MaxAttemptsError()) })
     const { container, getByRole, getByText } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
     fillCode(container, '123456')
     await act(async () => {
@@ -265,10 +265,10 @@ describe('TotpVerifyStep', () => {
 
   it('calls onBack automatically after max_attempts lockout', async () => {
     vi.useFakeTimers()
-    const api = makeApi({ verify: vi.fn().mockRejectedValue(new TotpMaxAttemptsError()) })
+    const api = makeApi({ verify: vi.fn().mockRejectedValue(new MaxAttemptsError()) })
     const onBack = vi.fn()
     const { container, getByRole } = render(
-      <TotpVerifyStep username="alice" api={api} onVerified={vi.fn()} onBack={onBack} />
+      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={onBack} />
     )
     fillCode(container, '123456')
 

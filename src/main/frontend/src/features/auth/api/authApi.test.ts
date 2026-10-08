@@ -36,7 +36,7 @@ describe('authApi', () => {
 
   it('login posts credentials and returns full user from response', async () => {
     const credentials: LoginCredentials = { identifier: 'user', password: 'secret' }
-    const fullUser = { id: '1', username: 'user', role: 'USER', email: 'user@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false }
+    const fullUser = { id: '1', username: 'user', role: 'USER', email: 'user@test.com', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [] }
     mockedClient.post.mockResolvedValue({ data: fullUser })
 
     await expect(authApi.login(credentials)).resolves.toEqual({ type: 'success', user: fullUser })
@@ -44,8 +44,8 @@ describe('authApi', () => {
     expect(mockedClient.get).not.toHaveBeenCalled()
   })
 
-  it('login returns the account name from a totpRequired answer', async () => {
-    mockedClient.post.mockResolvedValue({ data: { totpRequired: true, username: 'alice' } })
+  it('login returns the account name from a twoFactorRequired answer', async () => {
+    mockedClient.post.mockResolvedValue({ data: { twoFactorRequired: true, username: 'alice', methods: ['APP'], maskedEmail: null, mailCode: null } })
     const result = await authApi.login({ identifier: 'alice@test.com', password: 'p' })
     expect(result).toEqual({ type: 'totp_required', username: 'alice' })
   })

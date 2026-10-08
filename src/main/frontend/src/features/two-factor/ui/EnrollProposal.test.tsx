@@ -1,6 +1,6 @@
 import { render, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
-import { TotpEnrollProposal } from './TotpEnrollProposal'
+import { EnrollProposal } from './EnrollProposal'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -9,10 +9,10 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-describe('TotpEnrollProposal', () => {
+describe('EnrollProposal', () => {
   it('renders heading, subtitle with username, why card, activate button, skip link', () => {
     const { getByText, getByRole } = render(
-      <TotpEnrollProposal username="alice" onActivate={vi.fn()} onSkip={vi.fn()} />
+      <EnrollProposal username="alice" onActivate={vi.fn()} onSkip={vi.fn()} />
     )
 
     expect(getByText('enroll.title')).toBeTruthy()
@@ -26,7 +26,7 @@ describe('TotpEnrollProposal', () => {
   it('calls onActivate when activate button is clicked', () => {
     const onActivate = vi.fn()
     const { getByRole } = render(
-      <TotpEnrollProposal username="alice" onActivate={onActivate} onSkip={vi.fn()} />
+      <EnrollProposal username="alice" onActivate={onActivate} onSkip={vi.fn()} />
     )
 
     fireEvent.click(getByRole('button', { name: /enroll\.activate/i }))
@@ -36,7 +36,7 @@ describe('TotpEnrollProposal', () => {
   it('calls onSkip when skip link is clicked', () => {
     const onSkip = vi.fn()
     const { getByText } = render(
-      <TotpEnrollProposal username="alice" onActivate={vi.fn()} onSkip={onSkip} />
+      <EnrollProposal username="alice" onActivate={vi.fn()} onSkip={onSkip} />
     )
 
     fireEvent.click(getByText('enroll.skip'))
@@ -47,7 +47,7 @@ describe('TotpEnrollProposal', () => {
     const onActivate = vi.fn()
     const onSkip = vi.fn()
     const { getByText, getByRole } = render(
-      <TotpEnrollProposal username="alice" onActivate={onActivate} onSkip={onSkip} />
+      <EnrollProposal username="alice" onActivate={onActivate} onSkip={onSkip} />
     )
 
     fireEvent.click(getByText('enroll.skip'))

@@ -2,13 +2,17 @@ import type { Language } from '@/shared/lib'
 
 export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'USER'
 
+/** A way to prove a sign-in after the password, as the server names it: the authenticator app, or a code sent by mail. */
+export type TwoFactorMethod = 'APP' | 'MAIL'
+
 export interface User {
   id: string
   username: string
   email: string
   role: UserRole
   createdAt: string
-  totpEnabled: boolean
+  /** The methods on, in order — paused ones included (the mail while mail is off). */
+  twoFactorMethods: TwoFactorMethod[]
   /** The language recorded on the account; null until a signed-in session records one. */
   language?: Language | null
 }

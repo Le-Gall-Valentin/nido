@@ -33,7 +33,7 @@ const authStore = (auth as unknown as { __store: StoreApi<FakeAuth> }).__store
 const saveLanguage = vi.fn<(language: Language) => Promise<void>>()
 
 function user(id: string, language: Language | null): User {
-  return { id, username: id, email: `${id}@test.com`, role: 'USER', createdAt: '2026-01-01T00:00:00Z', totpEnabled: false, language }
+  return { id, username: id, email: `${id}@test.com`, role: 'USER', createdAt: '2026-01-01T00:00:00Z', twoFactorMethods: [], language }
 }
 
 /** Owns the language on screen, like LanguageProvider; the button is Preferences' switch. */

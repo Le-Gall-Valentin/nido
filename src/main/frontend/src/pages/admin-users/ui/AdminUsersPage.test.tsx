@@ -145,11 +145,11 @@ vi.mock('./ResetTotpModal', () => ({
 
 const MOCK_CURRENT_USER: User = {
   id: 'sa', username: 'superadmin', email: 'sa@test.com',
-  role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: true,
+  role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: ['APP'],
 }
 const MOCK_USER: AdminUser = {
   id: 'u1', username: 'alice', email: 'alice@test.com',
-  role: 'USER', isActive: true, invitation: null, createdAt: '2024-02-01T00:00:00Z', totpEnabled: false,
+  role: 'USER', isActive: true, invitation: null, createdAt: '2024-02-01T00:00:00Z', twoFactorMethods: [],
 }
 const MOCK_PAGE: UsersPage = {
   content: [MOCK_USER],
