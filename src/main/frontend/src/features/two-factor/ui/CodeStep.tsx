@@ -3,13 +3,13 @@ import { AlertTriangle, CheckCircle2, ChevronLeft, Info, Lock, Mail } from 'luci
 import { useTranslation } from 'react-i18next'
 import type { TwoFactorMethod, User } from '@/entities/user'
 import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
 import { CodeInput, type CodeInputHandle } from './CodeInput'
 import { ResendCode } from './ResendCode'
-import { useResendCountdown } from '../model/useResendCountdown'
+import { useResend } from '../model/useResend'
+import { commonErrorMessage, minutesOf, type Message } from '../model/messages'
 import type { ITwoFactorChallengeApi } from '../model/ITwoFactorChallengeApi'
 import {
-  ChallengeExpiredError, MaxAttemptsError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError,
+  ChallengeExpiredError, CodeError, MaxAttemptsError, MethodNotEnabledError, MethodUnavailableError,
 } from '../model/errors'
 
 interface CodeStepProps {
@@ -29,20 +29,18 @@ interface CodeStepProps {
   onChooseAnother?: () => void
 }
 
-type Notice = { tone: 'error' | 'ok'; key: string; values?: Record<string, unknown> }
+type Notice = Message & { tone: 'error' | 'ok' }
 
 /** These leave nothing to try on this screen: the sign-in starts again after a moment. */
 const RESTARTING = new Set(['verify.error.max_attempts', 'verify.error.method_not_enabled', 'verify.error.method_unavailable'])
 
-function errorKeyOf(error: unknown): string {
-  if (error instanceof MaxAttemptsError) return 'verify.error.max_attempts'
-  if (error instanceof ChallengeExpiredError) return 'verify.error.challenge_expired'
-  if (error instanceof MethodNotEnabledError) return 'verify.error.method_not_enabled'
-  if (error instanceof MethodUnavailableError) return 'verify.error.method_unavailable'
-  if (error instanceof RateLimitError) return error.retryAfterSeconds !== null ? 'verify.error.rate_limit_timed' : 'verify.error.rate_limit'
-  if (error instanceof NetworkError) return 'verify.error.network'
-  if (error instanceof ServerError) return 'verify.error.server'
-  return 'verify.error.invalid_code'
+function messageOf(error: unknown): Message {
+  if (error instanceof CodeError) return { key: 'verify.error.invalid_code' }
+  if (error instanceof MaxAttemptsError) return { key: 'verify.error.max_attempts' }
+  if (error instanceof ChallengeExpiredError) return { key: 'verify.error.challenge_expired' }
+  if (error instanceof MethodNotEnabledError) return { key: 'verify.error.method_not_enabled' }
+  if (error instanceof MethodUnavailableError) return { key: 'verify.error.method_unavailable' }
+  return commonErrorMessage(error)
 }
 
 export function CodeStep({
@@ -56,10 +54,13 @@ export function CodeStep({
   const [isLoading, setIsLoading] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(() =>
     mailLimitSeconds !== null
-      ? { tone: 'error', key: 'mail.error.send_limit', values: { minutes: Math.ceil(mailLimitSeconds / 60) } }
+      ? { tone: 'error', key: 'twoFactor:error.send_limit', values: { minutes: minutesOf(mailLimitSeconds) } }
       : null)
   const [autoBack, setAutoBack] = useState(false)
-  const countdown = useResendCountdown(mailLimitSeconds ?? resendAfterSeconds)
+  // Held back by the account's limit at sign-in, the code has not left until a resend sends it.
+  const [codeLeft, setCodeLeft] = useState(mailLimitSeconds === null)
+  const { seconds, sending, resend } = useResend(mailLimitSeconds ?? resendAfterSeconds,
+    async () => (await api.sendMailCode()).resendAfterSeconds)
   const isSubmittingRef = useRef(false)
   const inputRef = useRef<CodeInputHandle>(null)
 
@@ -79,11 +80,8 @@ export function CodeStep({
     try {
       onVerified(await api.verify(method, code))
     } catch (error) {
-      const key = errorKeyOf(error)
-      const values = error instanceof RateLimitError && error.retryAfterSeconds !== null ? { seconds: error.retryAfterSeconds } : undefined
-      setNotice({ tone: 'error', key, values })
-      if (RESTARTING.has(key)) setAutoBack(true)
-      if (key === 'verify.error.invalid_code') {
+      showError(error)
+      if (error instanceof CodeError) {
         setCode('')
         inputRef.current?.focus()
       }
@@ -93,27 +91,25 @@ export function CodeStep({
     }
   }
 
+  function showError(error: unknown) {
+    const message = messageOf(error)
+    setNotice({ tone: 'error', ...message })
+    if (RESTARTING.has(message.key)) setAutoBack(true)
+  }
+
   async function handleResend(): Promise<void> {
     setNotice(null)
-    try {
-      const { resendAfterSeconds: next } = await api.sendMailCode()
-      countdown.restart(next)
+    const outcome = await resend()
+    if (outcome?.kind === 'sent') {
       setCode('')
+      setCodeLeft(true)
       setNotice({ tone: 'ok', key: 'mail.resent' })
-    } catch (error) {
-      if (error instanceof ResendTooSoonError) {
-        // Another tab of this browser signed in moments ago: its code is the live one, already in the mailbox.
-        countdown.restart(error.seconds)
-        setNotice({ tone: 'ok', key: 'mail.recent' })
-      } else if (error instanceof SendLimitError) {
-        countdown.restart(error.seconds)
-        setNotice({ tone: 'error', key: 'mail.error.send_limit', values: { minutes: Math.ceil(error.seconds / 60) } })
-      } else {
-        const key = errorKeyOf(error)
-        const values = error instanceof RateLimitError && error.retryAfterSeconds !== null ? { seconds: error.retryAfterSeconds } : undefined
-        setNotice({ tone: 'error', key, values })
-        if (RESTARTING.has(key)) setAutoBack(true)
-      }
+    } else if (outcome?.kind === 'recent') {
+      // Another tab of this browser signed in moments ago: its code is the live one, already in the mailbox.
+      setCodeLeft(true)
+      setNotice({ tone: 'ok', key: 'mail.recent' })
+    } else if (outcome?.kind === 'failed') {
+      showError(outcome.error)
     }
   }
 
@@ -138,7 +134,10 @@ export function CodeStep({
           {t(mail ? 'mail.title' : 'verify.title')}
         </h2>
         <p className="text-[15px] text-fg-2">
-          {mail ? t('mail.subtitle', { username, address: maskedEmail }) : t('verify.subtitle', { username })}
+          {mail
+            // A code held back has not left: say so rather than send them to their mailbox.
+            ? t(codeLeft ? 'mail.subtitle' : 'mail.subtitle_not_sent', { username, address: maskedEmail })
+            : t('verify.subtitle', { username })}
         </p>
       </div>
 
@@ -174,7 +173,7 @@ export function CodeStep({
         </Button>
       </form>
 
-      {mail && <ResendCode seconds={countdown.seconds} onResend={() => void handleResend()} disabled={isLoading} />}
+      {mail && <ResendCode seconds={seconds} onResend={() => void handleResend()} disabled={isLoading || sending} />}
 
       <div className="mt-7 flex gap-2 items-start text-[13px] text-fg-2">
         <Info className="size-3.5 shrink-0 mt-0.5" />

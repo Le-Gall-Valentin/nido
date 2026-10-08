@@ -154,7 +154,7 @@
   },
   "reset_two_factor": {
     "title": "Reset 2FA for {{username}}?",
-    "body": "Choose the methods to remove. {{username}} can turn them back on at the next login.",
+    "body": "Choose the methods to remove. {{username}} can turn them back on from their profile.",
     "app": "Authenticator app",
     "app_hint": "For instance after losing their phone.",
     "mail": "Code by email",

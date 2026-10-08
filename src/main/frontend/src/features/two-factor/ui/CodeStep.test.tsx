@@ -2,7 +2,7 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { CodeStep } from './CodeStep'
 import type { ITwoFactorChallengeApi } from '../model/ITwoFactorChallengeApi'
-import { CodeError, ChallengeExpiredError, MaxAttemptsError, MethodNotEnabledError, ResendTooSoonError } from '../model/errors'
+import { CodeError, ChallengeExpiredError, MaxAttemptsError, MethodNotEnabledError, ResendTooSoonError, SendLimitError } from '../model/errors'
 import { RateLimitError, NetworkError, ServerError } from '@/shared/lib'
 
 vi.mock('react-i18next', () => ({
@@ -213,7 +213,7 @@ describe('CodeStep', () => {
     await act(async () => {
       fireEvent.submit(getByRole('button', { name: /verify\.submit/i }).closest('form')!)
     })
-    await waitFor(() => expect(getByText('verify.error.rate_limit_timed:{"seconds":42}')).toBeTruthy())
+    await waitFor(() => expect(getByText('twoFactor:error.rate_limit_timed:{"seconds":42}')).toBeTruthy())
   })
 
   it('shows rate_limit error on RateLimitError', async () => {
@@ -225,7 +225,7 @@ describe('CodeStep', () => {
     await act(async () => {
       fireEvent.submit(getByRole('button', { name: /verify\.submit/i }).closest('form')!)
     })
-    await waitFor(() => expect(getByText('verify.error.rate_limit')).toBeTruthy())
+    await waitFor(() => expect(getByText('twoFactor:error.rate_limit')).toBeTruthy())
   })
 
   it('shows network error on NetworkError', async () => {
@@ -237,7 +237,7 @@ describe('CodeStep', () => {
     await act(async () => {
       fireEvent.submit(getByRole('button', { name: /verify\.submit/i }).closest('form')!)
     })
-    await waitFor(() => expect(getByText('verify.error.network')).toBeTruthy())
+    await waitFor(() => expect(getByText('twoFactor:error.network')).toBeTruthy())
   })
 
   it('shows server error on ServerError', async () => {
@@ -249,7 +249,7 @@ describe('CodeStep', () => {
     await act(async () => {
       fireEvent.submit(getByRole('button', { name: /verify\.submit/i }).closest('form')!)
     })
-    await waitFor(() => expect(getByText('verify.error.server')).toBeTruthy())
+    await waitFor(() => expect(getByText('twoFactor:error.server')).toBeTruthy())
   })
 
   it('shows max_attempts error on MaxAttemptsError', async () => {
@@ -286,6 +286,16 @@ describe('CodeStep', () => {
     expect(onBack).toHaveBeenCalledTimes(1)
   })
 })
+
+/**
+ * React starts the wait from an effect it flushes on its own scheduler: on a busy machine, only once the event loop
+ * has turned — a synchronous act() never lets it, and the wait would never start. Let it turn, then let the wait pass.
+ */
+async function expectBackAfterTheWait(onBack: ReturnType<typeof vi.fn>) {
+  await act(async () => { await new Promise(resolve => setImmediate(resolve)) })
+  act(() => { vi.advanceTimersByTime(2000) })
+  expect(onBack).toHaveBeenCalled()
+}
 
 describe('CodeStep by mail', () => {
   const mailApi = (overrides: Partial<Pick<ITwoFactorChallengeApi, 'verify' | 'sendMailCode'>> = {}) => ({
@@ -337,8 +347,24 @@ describe('CodeStep by mail', () => {
       <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr" mailLimitSeconds={420}
         api={mailApi()} onVerified={vi.fn()} onBack={vi.fn()} />)
 
-    expect(getByText('mail.error.send_limit:{"minutes":7}')).toBeTruthy()
+    expect(getByText('twoFactor:error.send_limit:{"minutes":7}')).toBeTruthy()
     expect(getByText('resend.wait:{"time":"7:00"}')).toBeTruthy()
+    // Nothing left: the subtitle must not say a code was sent.
+    expect(getByText('mail.subtitle_not_sent:{"username":"camille","address":"c••••••n@exemple.fr"}')).toBeTruthy()
+  })
+
+  it('once a code finally leaves, the subtitle says it went', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const sendMailCode = vi.fn().mockResolvedValue({ resendAfterSeconds: 60 })
+    const { getByText, findByText } = render(
+      <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr" mailLimitSeconds={1}
+        api={mailApi({ sendMailCode })} onVerified={vi.fn()} onBack={vi.fn()} />)
+    act(() => { vi.advanceTimersByTime(1000) })
+
+    fireEvent.click(getByText('resend.action'))
+
+    expect(await findByText('mail.subtitle:{"username":"camille","address":"c••••••n@exemple.fr"}')).toBeTruthy()
+    vi.useRealTimers()
   })
 
   it('a method removed meanwhile is said, then the sign-in starts again', async () => {
@@ -352,8 +378,7 @@ describe('CodeStep by mail', () => {
     fireEvent.click(getByRole('button', { name: /verify\.submit/ }))
 
     expect(await findByText('verify.error.method_not_enabled')).toBeTruthy()
-    act(() => { vi.advanceTimersByTime(2000) })
-    expect(onBack).toHaveBeenCalled()
+    await expectBackAfterTheWait(onBack)
     vi.useRealTimers()
   })
 
@@ -389,6 +414,47 @@ describe('CodeStep by mail', () => {
 
     fireEvent.click(getByText('resend.action'))
 
-    expect(await findByText('verify.error.rate_limit_timed:{"seconds":30}')).toBeTruthy()
+    expect(await findByText('twoFactor:error.rate_limit_timed:{"seconds":30}')).toBeTruthy()
+  })
+
+  it('a resend stopped by the account limit says when, and waits that long', async () => {
+    const sendMailCode = vi.fn().mockRejectedValue(new SendLimitError(600))
+    const { getByText, findByText } = render(
+      <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr" resendAfterSeconds={0}
+        api={mailApi({ sendMailCode })} onVerified={vi.fn()} onBack={vi.fn()} />)
+
+    fireEvent.click(getByText('resend.action'))
+
+    expect(await findByText('twoFactor:error.send_limit:{"minutes":10}')).toBeTruthy()
+    expect(getByText('resend.wait:{"time":"10:00"}')).toBeTruthy()
+  })
+
+  it('a resend met by the lockout is said, then the sign-in starts again', async () => {
+    // Another tab used up the codes: no code leaves into a sign-in that would refuse it.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const onBack = vi.fn()
+    const { getByText, findByText } = render(
+      <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr" resendAfterSeconds={0}
+        api={mailApi({ sendMailCode: vi.fn().mockRejectedValue(new MaxAttemptsError()) })} onVerified={vi.fn()} onBack={onBack} />)
+
+    fireEvent.click(getByText('resend.action'))
+
+    expect(await findByText('verify.error.max_attempts')).toBeTruthy()
+    await expectBackAfterTheWait(onBack)
+    vi.useRealTimers()
+  })
+
+  it('a second click on resend while the first is on its way sends nothing', () => {
+    const sendMailCode = vi.fn(() => new Promise<{ resendAfterSeconds: number }>(() => {}))
+    const { getByText } = render(
+      <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr" resendAfterSeconds={0}
+        api={mailApi({ sendMailCode })} onVerified={vi.fn()} onBack={vi.fn()} />)
+
+    const resend = getByText('resend.action')
+    fireEvent.click(resend)
+    fireEvent.click(resend)
+
+    expect(sendMailCode).toHaveBeenCalledTimes(1)
+    expect((resend as HTMLButtonElement).disabled).toBe(true)
   })
 })

@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { AlertTriangle, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { NetworkError } from '@/shared/lib'
 import { MethodCard } from './MethodCard'
 import type { ITwoFactorMethodsApi } from '../model/ITwoFactorMethodsApi'
 import type { MailSetupData } from '../model/types'
-import { MethodUnavailableError, ResendTooSoonError, SendLimitError } from '../model/errors'
+import { commonErrorMessage, type Message } from '../model/messages'
+import { MethodUnavailableError, ResendTooSoonError } from '../model/errors'
 
 interface EnrollProposalProps {
   username: string
@@ -23,7 +23,7 @@ interface EnrollProposalProps {
 export function EnrollProposal({ username, email, mailAvailable, api, onAppChosen, onMailStarted, onSkip }: EnrollProposalProps) {
   const { t } = useTranslation('twoFactor')
   const [sending, setSending] = useState(false)
-  const [error, setError] = useState<{ key: string; values?: Record<string, unknown> } | null>(null)
+  const [error, setError] = useState<Message | null>(null)
 
   async function chooseMail() {
     if (sending) return
@@ -34,9 +34,7 @@ export function EnrollProposal({ username, email, mailAvailable, api, onAppChose
     } catch (e) {
       if (e instanceof ResendTooSoonError) onMailStarted({ sentTo: email, resendAfterSeconds: e.seconds })
       else if (e instanceof MethodUnavailableError) setError({ key: 'enroll.error.mail_unavailable' })
-      else if (e instanceof SendLimitError) setError({ key: 'enroll.error.send_limit', values: { minutes: Math.ceil(e.seconds / 60) } })
-      else if (e instanceof NetworkError) setError({ key: 'enroll.error.network' })
-      else setError({ key: 'enroll.error.server' })
+      else setError(commonErrorMessage(e))
     } finally {
       setSending(false)
     }

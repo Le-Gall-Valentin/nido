@@ -11,10 +11,6 @@
       "challenge_expired": "Session expirée. Veuillez vous reconnecter.",
       "max_attempts": "Trop de codes incorrects. Réessayez de vous connecter dans quelques minutes.",
       "incomplete": "Saisissez les 6 chiffres.",
-      "rate_limit": "Trop de tentatives. Veuillez patienter avant de réessayer.",
-      "rate_limit_timed": "Trop de tentatives. Veuillez patienter {{seconds}} secondes avant de réessayer.",
-      "network": "Réseau indisponible. Vérifiez votre connexion.",
-      "server": "Une erreur serveur est survenue. Veuillez réessayer.",
       "method_not_enabled": "Cette méthode n'est plus active sur votre compte. Veuillez vous reconnecter.",
       "method_unavailable": "L'envoi de mails vient d'être coupé. Veuillez vous reconnecter."
     },
@@ -30,10 +26,7 @@
     "subtitle_choice": "Bonjour {{username}}. Pour protéger votre accès, activez la double authentification : un code vous sera demandé à chaque connexion, en plus du mot de passe.",
     "question": "Où recevoir ce code ?",
     "error": {
-      "mail_unavailable": "L'envoi de mails est coupé. Choisissez l'application.",
-      "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min.",
-      "network": "Réseau indisponible. Vérifiez votre connexion.",
-      "server": "Une erreur serveur est survenue. Veuillez réessayer."
+      "mail_unavailable": "L'envoi de mails est coupé. Choisissez l'application."
     }
   },
   "setup": {
@@ -51,25 +44,19 @@
       "invalid_code": "Code invalide ou expiré.",
       "incomplete": "Saisissez les 6 chiffres.",
       "setup_failed": "Impossible de générer le QR code. Réessayez.",
-      "max_attempts": "Trop de tentatives. La configuration a été annulée, veuillez recommencer.",
-      "rate_limit": "Trop de tentatives. Veuillez patienter avant de réessayer.",
-      "network": "Réseau indisponible. Vérifiez votre connexion.",
-      "server": "Une erreur serveur est survenue. Veuillez réessayer."
+      "max_attempts": "Trop de tentatives. La configuration a été annulée, veuillez recommencer."
     }
   },
   "disable": {
-    "title": "Désactiver la double authentification",
     "subtitle": "Saisissez le code affiché par votre application pour confirmer.",
     "submit": "Désactiver",
     "code_label": "Code de vérification",
     "error": {
       "invalid_code": "Code invalide ou expiré.",
       "max_attempts": "Trop de tentatives incorrectes.",
-      "rate_limit": "Trop de tentatives. Veuillez patienter.",
-      "network": "Réseau indisponible.",
-      "server": "Une erreur serveur est survenue.",
-      "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min.",
-      "code_spent": "Trop de codes faux : ce code ne marche plus. Demandez-en un nouveau."
+      "code_spent": "Trop de codes faux : ce code ne marche plus. Demandez-en un nouveau.",
+      "code_expired": "Ce code n'est plus valable : demandez-en un nouveau.",
+      "code_spent_app": "Trop de codes faux : réessayez dans un quart d'heure."
     },
     "title_app": "Désactiver l'application d'authentification",
     "title_mail": "Désactiver le code par mail",
@@ -93,20 +80,16 @@
       "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min, ou utilisez votre application.",
       "mail_unavailable": "L'envoi de mails est coupé. Utilisez votre application.",
       "challenge_expired": "Session expirée. Veuillez vous reconnecter.",
-      "network": "Réseau indisponible. Vérifiez votre connexion.",
-      "server": "Une erreur serveur est survenue. Veuillez réessayer.",
       "mail_not_enabled": "Le code par mail n'est plus actif sur votre compte. Utilisez votre application."
     }
   },
   "mail": {
     "title": "Vérifiez vos mails",
     "subtitle": "Bonjour {{username}}. Nous avons envoyé un code à 6 chiffres à {{address}}. Il reste valable 10 minutes.",
+    "subtitle_not_sent": "Bonjour {{username}}. Le code partira à {{address}} : demandez-le dès que le délai est écoulé.",
     "code_label": "Code reçu par mail",
     "help": "Regardez aussi dans vos courriers indésirables. Plus accès à cette boîte ? Demandez à un administrateur de réinitialiser votre double authentification.",
     "resent": "Nouveau code envoyé. L'ancien ne marche plus.",
-    "error": {
-      "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min."
-    },
     "recent": "Un code est parti il y a moins d'une minute : regardez vos mails."
   },
   "resend": {
@@ -121,15 +104,18 @@
     "submit": "Vérifier et activer",
     "back": "Choisir une autre méthode",
     "error": {
-      "invalid_code": "Code invalide ou expiré.",
+      "invalid_code": "Code invalide.",
       "incomplete": "Saisissez les 6 chiffres.",
       "max_attempts": "Trop de codes faux. Demandez un nouveau code.",
       "expired": "Ce code a expiré. Demandez-en un nouveau.",
-      "mail_unavailable": "L'envoi de mails est coupé : le code par mail ne peut pas être activé.",
-      "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min.",
-      "rate_limit": "Trop de tentatives. Veuillez patienter avant de réessayer.",
-      "network": "Réseau indisponible. Vérifiez votre connexion.",
-      "server": "Une erreur serveur est survenue. Veuillez réessayer."
+      "mail_unavailable": "L'envoi de mails est coupé : le code par mail ne peut pas être activé."
     }
+  },
+  "error": {
+    "network": "Réseau indisponible. Vérifiez votre connexion.",
+    "server": "Une erreur serveur est survenue. Veuillez réessayer.",
+    "rate_limit": "Trop de tentatives. Veuillez patienter avant de réessayer.",
+    "rate_limit_timed": "Trop de tentatives. Veuillez patienter {{seconds}} secondes avant de réessayer.",
+    "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min."
   }
 }

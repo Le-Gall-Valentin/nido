@@ -29,6 +29,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "success": "Profile updated.",
+    "success_mail_removed": "Address saved. Email is switched off: nothing could prove the new address, so codes by email were turned off. Turn them back on under Security once email is back.",
     "current_password": "Current password",
     "current_password_hint": "Your address is how your account is recovered: confirm with your password.",
     "error": {
@@ -49,12 +50,10 @@
       "submit": "Confirm the address",
       "cancel": "Cancel and keep {{address}}",
       "error": {
-        "invalid_code": "Invalid or expired code.",
+        "invalid_code": "Invalid code.",
         "incomplete": "Please enter all 6 digits.",
-        "send_limit": "Too many codes sent. Try again in {{minutes}} min.",
-        "network": "Network unavailable.",
-        "server": "An error occurred. Please try again.",
-        "spent": "Too many wrong codes: this one no longer works. Ask for a new one."
+        "spent": "Too many wrong codes: this one no longer works. Ask for a new one.",
+        "expired": "This code is no longer valid: ask for a new one."
       }
     }
   },
@@ -70,6 +69,7 @@
     "mail_title": "Code by email",
     "mail_desc": "A code sent to {{address}}. Handy when your phone is not at hand.",
     "mail_paused": "Email is switched off: no code is asked at login until it comes back. Turn the app on to stay protected.",
+    "mail_paused_app_on": "Email is switched off: this code is not asked at login until it comes back. The app still protects your account.",
     "mail_unavailable": "Email is not set up on this Nido. Ask an administrator.",
     "help": "No longer have any of your methods? An administrator can reset your two-factor authentication.",
     "btn_enable": "Turn on",
@@ -81,10 +81,7 @@
     "success_disabled": "Method turned off.",
     "error": {
       "mail_unavailable": "Email is switched off: codes by email cannot be used.",
-      "send_limit": "Too many codes sent. Try again in {{minutes}} min.",
       "load": "Your methods could not be loaded. Reload the page.",
-      "network": "Network unavailable.",
-      "server": "An error occurred. Please try again.",
       "changed": "Your methods changed meanwhile: the list is up to date."
     }
   },

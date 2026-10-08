@@ -1,7 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { DisableMethodDialog } from './DisableMethodDialog'
-import { CodeError, CodeSpentError, MaxAttemptsError, SendLimitError, type ITwoFactorMethodsApi } from '@/features/two-factor'
+import {
+  CodeError, CodeExpiredError, CodeSpentError, MaxAttemptsError, MethodNotEnabledError, ResendTooSoonError, SendLimitError,
+  type ITwoFactorMethodsApi,
+} from '@/features/two-factor'
+import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
 
 type DisableApi = Pick<ITwoFactorMethodsApi, 'disable' | 'sendDisableCode'>
 
@@ -65,7 +69,7 @@ describe('DisableMethodDialog', () => {
 
     fireEvent.click(screen.getByText('resend.action'))
 
-    expect(await screen.findByText('disable.error.send_limit:{"minutes":5}')).toBeTruthy()
+    expect(await screen.findByText('twoFactor:error.send_limit:{"minutes":5}')).toBeTruthy()
   })
 
   it('a paused mail that came back while the dialog was open hands back to the page', async () => {
@@ -85,5 +89,74 @@ describe('DisableMethodDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /disable\.submit/ }))
 
     expect(await screen.findByText('disable.error.code_spent')).toBeTruthy()
+  })
+
+  it('a code that is no longer waiting says to ask for a new one, not that someone guessed', async () => {
+    open('MAIL', false, { disable: vi.fn().mockRejectedValue(new CodeExpiredError()) })
+
+    fill('004213')
+    fireEvent.click(screen.getByRole('button', { name: /disable\.submit/ }))
+
+    expect(await screen.findByText('disable.error.code_expired')).toBeTruthy()
+  })
+
+  it('the app spent by wrong codes says to wait, there being no code to ask for', async () => {
+    open('APP', false, { disable: vi.fn().mockRejectedValue(new CodeSpentError()) })
+
+    fill('000000')
+    fireEvent.click(screen.getByRole('button', { name: /disable\.submit/ }))
+
+    expect(await screen.findByText('disable.error.code_spent_app')).toBeTruthy()
+  })
+
+  it('the route limit, a lost network and a server error are said', async () => {
+    open('APP', false, { disable: vi.fn()
+      .mockRejectedValueOnce(new RateLimitError(40))
+      .mockRejectedValueOnce(new NetworkError())
+      .mockRejectedValueOnce(new ServerError()) })
+
+    fill('000000'); fireEvent.click(screen.getByRole('button', { name: /disable\.submit/ }))
+    expect(await screen.findByText('twoFactor:error.rate_limit_timed:{"seconds":40}')).toBeTruthy()
+    fill('000000'); fireEvent.click(screen.getByRole('button', { name: /disable\.submit/ }))
+    expect(await screen.findByText('twoFactor:error.network')).toBeTruthy()
+    fill('000000'); fireEvent.click(screen.getByRole('button', { name: /disable\.submit/ }))
+    expect(await screen.findByText('twoFactor:error.server')).toBeTruthy()
+  })
+
+  it('already off — another tab, an administrator — is what was asked', async () => {
+    const { onSuccess } = open('APP', false, { disable: vi.fn().mockRejectedValue(new MethodNotEnabledError()) })
+
+    fill('123456')
+    fireEvent.click(screen.getByRole('button', { name: /disable\.submit/ }))
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled())
+  })
+
+  it('a resend asked again too soon keeps the code already sent, and says nothing went wrong', async () => {
+    open('MAIL', false, { sendDisableCode: vi.fn().mockRejectedValue(new ResendTooSoonError(30)) })
+
+    fireEvent.click(screen.getByText('resend.action'))
+
+    expect(await screen.findByText('resend.wait:{"time":"0:30"}')).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('a resend lost to the network is said', async () => {
+    open('MAIL', false, { sendDisableCode: vi.fn().mockRejectedValue(new NetworkError()) })
+
+    fireEvent.click(screen.getByText('resend.action'))
+
+    expect(await screen.findByText('twoFactor:error.network')).toBeTruthy()
+  })
+
+  it('a second click on resend while the first is on its way sends nothing', () => {
+    const sendDisableCode = vi.fn(() => new Promise<never>(() => {}))
+    open('MAIL', false, { sendDisableCode })
+
+    const resend = screen.getByText('resend.action')
+    fireEvent.click(resend)
+    fireEvent.click(resend)
+
+    expect(sendDisableCode).toHaveBeenCalledTimes(1)
   })
 })

@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MethodChoiceStep } from './MethodChoiceStep'
-import { ChallengeExpiredError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError } from '../model/errors'
+import {
+  ChallengeExpiredError, MaxAttemptsError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError,
+} from '../model/errors'
+import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, o?: Record<string, unknown>) => (o ? `${k}:${JSON.stringify(o)}` : k) }),
@@ -77,6 +80,24 @@ describe('MethodChoiceStep', () => {
     fireEvent.click(card(/method\.mail_title/))
     expect(await screen.findByText('choose.error.challenge_expired')).toBeTruthy()
     expect(onChoose).not.toHaveBeenCalled()
+  })
+
+  it('the route limit, a lost network and a lockout are said too', async () => {
+    const sendMailCode = vi.fn()
+      .mockRejectedValueOnce(new RateLimitError(30))
+      .mockRejectedValueOnce(new NetworkError())
+      .mockRejectedValueOnce(new MaxAttemptsError())
+      .mockRejectedValueOnce(new ServerError())
+    setup(sendMailCode)
+
+    fireEvent.click(card(/method\.mail_title/))
+    expect(await screen.findByText('twoFactor:error.rate_limit_timed:{"seconds":30}')).toBeTruthy()
+    fireEvent.click(card(/method\.mail_title/))
+    expect(await screen.findByText('twoFactor:error.network')).toBeTruthy()
+    fireEvent.click(card(/method\.mail_title/))
+    expect(await screen.findByText('verify.error.max_attempts')).toBeTruthy()
+    fireEvent.click(card(/method\.mail_title/))
+    expect(await screen.findByText('twoFactor:error.server')).toBeTruthy()
   })
 
   it('goes back to the identifiers', () => {

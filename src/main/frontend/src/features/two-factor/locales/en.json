@@ -11,10 +11,6 @@
       "challenge_expired": "Session expired. Please log in again.",
       "max_attempts": "Too many incorrect codes. Try signing in again in a few minutes.",
       "incomplete": "Please enter all 6 digits.",
-      "rate_limit": "Too many attempts. Please wait before trying again.",
-      "rate_limit_timed": "Too many attempts. Please wait {{seconds}} seconds before trying again.",
-      "network": "Network unavailable. Please check your connection.",
-      "server": "A server error occurred. Please try again.",
       "method_not_enabled": "This method is no longer on for your account. Please log in again.",
       "method_unavailable": "Email was just switched off. Please log in again."
     },
@@ -30,10 +26,7 @@
     "subtitle_choice": "Hello {{username}}. To protect your access, turn on two-factor authentication: a code will be asked at each login, on top of your password.",
     "question": "Where should the code come from?",
     "error": {
-      "mail_unavailable": "Email is switched off. Choose the app.",
-      "send_limit": "Too many codes sent. Try again in {{minutes}} min.",
-      "network": "Network unavailable. Please check your connection.",
-      "server": "A server error occurred. Please try again."
+      "mail_unavailable": "Email is switched off. Choose the app."
     }
   },
   "setup": {
@@ -51,25 +44,19 @@
       "invalid_code": "Invalid or expired code.",
       "incomplete": "Please enter all 6 digits.",
       "setup_failed": "Unable to generate QR code. Please try again.",
-      "max_attempts": "Too many failed attempts. Setup has been cancelled, please try again.",
-      "rate_limit": "Too many attempts. Please wait before trying again.",
-      "network": "Network unavailable. Please check your connection.",
-      "server": "A server error occurred. Please try again."
+      "max_attempts": "Too many failed attempts. Setup has been cancelled, please try again."
     }
   },
   "disable": {
-    "title": "Disable two-factor authentication",
     "subtitle": "Enter the code from your authenticator app to confirm.",
     "submit": "Disable",
     "code_label": "Verification code",
     "error": {
       "invalid_code": "Invalid or expired code.",
       "max_attempts": "Too many incorrect attempts.",
-      "rate_limit": "Too many attempts. Please wait.",
-      "network": "Network unavailable.",
-      "server": "A server error occurred.",
-      "send_limit": "Too many codes sent. Try again in {{minutes}} min.",
-      "code_spent": "Too many wrong codes: this one no longer works. Ask for a new one."
+      "code_spent": "Too many wrong codes: this one no longer works. Ask for a new one.",
+      "code_expired": "This code is no longer valid: ask for a new one.",
+      "code_spent_app": "Too many wrong codes: try again in a quarter of an hour."
     },
     "title_app": "Turn off the authenticator app",
     "title_mail": "Turn off codes by email",
@@ -93,20 +80,16 @@
       "send_limit": "Too many codes sent. Try again in {{minutes}} min, or use your app.",
       "mail_unavailable": "Email is switched off. Use your app.",
       "challenge_expired": "Session expired. Please log in again.",
-      "network": "Network unavailable. Please check your connection.",
-      "server": "A server error occurred. Please try again.",
       "mail_not_enabled": "Codes by email are no longer on for your account. Use your app."
     }
   },
   "mail": {
     "title": "Check your email",
     "subtitle": "Hello {{username}}. We sent a 6-digit code to {{address}}. It is valid for 10 minutes.",
+    "subtitle_not_sent": "Hello {{username}}. The code will go to {{address}}: ask for it once the wait is over.",
     "code_label": "Code received by email",
     "help": "Check your spam folder too. No longer have this mailbox? Ask an administrator to reset your two-factor authentication.",
     "resent": "New code sent. The previous one no longer works.",
-    "error": {
-      "send_limit": "Too many codes sent. Try again in {{minutes}} min."
-    },
     "recent": "A code left less than a minute ago: check your inbox."
   },
   "resend": {
@@ -121,15 +104,18 @@
     "submit": "Verify and turn on",
     "back": "Choose another method",
     "error": {
-      "invalid_code": "Invalid or expired code.",
+      "invalid_code": "Invalid code.",
       "incomplete": "Please enter all 6 digits.",
       "max_attempts": "Too many wrong codes. Ask for a new one.",
       "expired": "This code expired. Ask for a new one.",
-      "mail_unavailable": "Email is switched off: codes by email cannot be turned on.",
-      "send_limit": "Too many codes sent. Try again in {{minutes}} min.",
-      "rate_limit": "Too many attempts. Please wait before trying again.",
-      "network": "Network unavailable. Please check your connection.",
-      "server": "A server error occurred. Please try again."
+      "mail_unavailable": "Email is switched off: codes by email cannot be turned on."
     }
+  },
+  "error": {
+    "network": "Network unavailable. Please check your connection.",
+    "server": "A server error occurred. Please try again.",
+    "rate_limit": "Too many attempts. Please wait before trying again.",
+    "rate_limit_timed": "Too many attempts. Please wait {{seconds}} seconds before trying again.",
+    "send_limit": "Too many codes sent. Try again in {{minutes}} min."
   }
 }

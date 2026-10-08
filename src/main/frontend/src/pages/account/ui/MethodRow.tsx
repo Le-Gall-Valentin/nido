@@ -24,13 +24,15 @@ export function StatusBadge({ status }: { status: Status }) {
 interface MethodRowProps {
   state: MethodState
   email: string
+  /** Whether the app is on: a paused mail then leaves the account protected, and says so. */
+  appOn: boolean
   busy: boolean
   onEnable: () => void
   onDisable: () => void
 }
 
 /** One method: on, off, paused (on while mail is off) or unavailable (off while mail is off). */
-export function MethodRow({ state, email, busy, onEnable, onDisable }: MethodRowProps) {
+export function MethodRow({ state, email, appOn, busy, onEnable, onDisable }: MethodRowProps) {
   const { t } = useTranslation('account')
   const app = state.method === 'APP'
   const paused = state.enabled && !state.usable
@@ -39,7 +41,7 @@ export function MethodRow({ state, email, busy, onEnable, onDisable }: MethodRow
   const Icon = paused ? Pause : app ? Smartphone : Mail
   const description = app
     ? t('twofa.app_desc')
-    : paused ? t('twofa.mail_paused') : unavailable ? t('twofa.mail_unavailable') : t('twofa.mail_desc', { address: email })
+    : paused ? t(appOn ? 'twofa.mail_paused_app_on' : 'twofa.mail_paused') : unavailable ? t('twofa.mail_unavailable') : t('twofa.mail_desc', { address: email })
 
   return (
     <div className="grid grid-cols-[40px_minmax(0,1fr)] gap-x-3.5 gap-y-2 border-t border-border px-7 py-4 sm:grid-cols-[40px_minmax(0,1fr)_auto] sm:items-center">

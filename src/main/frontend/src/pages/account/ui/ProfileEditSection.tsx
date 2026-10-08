@@ -1,14 +1,14 @@
-import { useId, useState, useRef, useEffect } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
+import { Alert, Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import type { User } from '@/entities/user'
-import { ResendTooSoonError, SendLimitError } from '@/features/two-factor'
+import { ResendTooSoonError, SendLimitError, commonErrorMessage } from '@/features/two-factor'
 import { ConflictError, InvalidCurrentPasswordError } from '../api/accountApi'
 import type { ProfileUpdateResult } from '../model/IAccountApi'
+import { useFlash } from '../model/useFlash'
 import { EmailCodeDialog } from './EmailCodeDialog'
 import { NetworkError, RateLimitError, isValidUsername, usernameProblem, type UsernameProblem } from '@/shared/lib'
 
-type Flash = { kind: 'success' | 'error'; key: string; values?: Record<string, number> } | null
 
 interface ProfileEditSectionProps {
   user: User
@@ -30,8 +30,9 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
   const [currentPassword, setCurrentPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [emailCode, setEmailCode] = useState<{ sentTo: string; resendAfterSeconds: number } | null>(null)
-  const [flash, setFlash] = useState<Flash>(null)
-  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { flash, showFlash, clearFlash } = useFlash(3000)
+  // Stays until the next save: what the person needs to act on must not fade out after three seconds.
+  const [mailMethodRemoved, setMailMethodRemoved] = useState(false)
 
   const trimmedUsername = username.trim()
   const trimmedEmail = email.trim()
@@ -47,20 +48,11 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
   const canSave = isDirty && isValidUsername(trimmedUsername) && !emailEmpty
     && (!addressChanges || currentPassword.length > 0)
 
-  useEffect(() => {
-    return () => { if (flashTimer.current) clearTimeout(flashTimer.current) }
-  }, [])
-
-  function showFlash(kind: 'success' | 'error', key: string, values?: Record<string, number>) {
-    if (flashTimer.current) clearTimeout(flashTimer.current)
-    setFlash({ kind, key, values })
-    flashTimer.current = setTimeout(() => setFlash(null), 3000)
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!canSave || isSubmitting) return
     setIsSubmitting(true)
+    setMailMethodRemoved(false)
     try {
       const result = await onUpdateProfile(trimmedUsername, trimmedEmail, addressChanges ? currentPassword : undefined, undefined)
       if (result.kind === 'email_code_sent') {
@@ -68,13 +60,14 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
         setEmailCode({ sentTo: result.sentTo, resendAfterSeconds: result.resendAfterSeconds })
         return
       }
-      saved()
+      saved(result.mailMethodRemoved)
     } catch (error) {
       if (error instanceof ResendTooSoonError) {
         // Saved again within the minute (after cancelling the code, say): the code already sent still works.
         setEmailCode({ sentTo: trimmedEmail, resendAfterSeconds: error.seconds })
       } else if (error instanceof SendLimitError) {
-        showFlash('error', 'profile.email_code.error.send_limit', { minutes: Math.ceil(error.seconds / 60) })
+        const message = commonErrorMessage(error)
+        showFlash('error', message.key, message.values)
       } else if (error instanceof InvalidCurrentPasswordError) {
         setCurrentPassword('')
         showFlash('error', 'profile.error.wrong_password')
@@ -92,28 +85,41 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
     }
   }
 
-  function saved() {
-    onPatch({ username: trimmedUsername, email: trimmedEmail })
+  /** @param mailMethodRemoved saved while mail was off: nothing proved the new address, so the code by mail went */
+  function saved(mailMethodRemoved: boolean) {
+    onPatch(mailMethodRemoved
+      ? { username: trimmedUsername, email: trimmedEmail, twoFactorMethods: user.twoFactorMethods.filter(m => m !== 'MAIL') }
+      : { username: trimmedUsername, email: trimmedEmail })
     setCurrentPassword('')
     setEmailCode(null)
-    showFlash('success', 'profile.success')
+    if (mailMethodRemoved) {
+      clearFlash()
+      setMailMethodRemoved(true)
+    } else {
+      showFlash('success', 'profile.success')
+    }
   }
 
   async function confirmEmailCode(code: string) {
     const result = await onUpdateProfile(trimmedUsername, trimmedEmail, currentPassword, code)
-    if (result.kind === 'saved') saved()
+    if (result.kind === 'saved') saved(result.mailMethodRemoved)
   }
 
+  // Mail may have gone off since the first code: the same change then saves at once, and the dialog has no code to wait for.
   async function resendEmailCode(): Promise<number> {
     const result = await onUpdateProfile(trimmedUsername, trimmedEmail, currentPassword, undefined)
-    return result.kind === 'email_code_sent' ? result.resendAfterSeconds : 0
+    if (result.kind === 'saved') {
+      saved(result.mailMethodRemoved)
+      return 0
+    }
+    return result.resendAfterSeconds
   }
 
   function handleCancel() {
     setUsername(user.username)
     setEmail(user.email)
     setCurrentPassword('')
-    setFlash(null)
+    clearFlash()
   }
 
   return (
@@ -167,6 +173,7 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
               <p id={passwordHintId} className="text-xs text-fg-2">{t('profile.current_password_hint')}</p>
             </div>
           )}
+          {mailMethodRemoved && <Alert variant="warning" className="mb-3">{t('profile.success_mail_removed')}</Alert>}
           {flash && (
             <div
               role={flash.kind === 'success' ? 'status' : 'alert'}

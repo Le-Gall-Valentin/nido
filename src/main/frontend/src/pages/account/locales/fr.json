@@ -29,6 +29,7 @@
     "save": "Enregistrer",
     "cancel": "Annuler",
     "success": "Profil mis à jour.",
+    "success_mail_removed": "Adresse enregistrée. L'envoi de mails est coupé : rien n'a pu prouver la nouvelle adresse, le code par mail est donc retiré. Réactivez-le dans Sécurité quand les mails reviendront.",
     "current_password": "Mot de passe actuel",
     "current_password_hint": "Votre adresse sert à récupérer votre compte : confirmez avec votre mot de passe.",
     "error": {
@@ -49,12 +50,10 @@
       "submit": "Confirmer l'adresse",
       "cancel": "Annuler et garder {{address}}",
       "error": {
-        "invalid_code": "Code invalide ou expiré.",
+        "invalid_code": "Code invalide.",
         "incomplete": "Saisissez les 6 chiffres.",
-        "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min.",
-        "network": "Réseau indisponible.",
-        "server": "Une erreur est survenue. Veuillez réessayer.",
-        "spent": "Trop de codes faux : ce code ne marche plus. Demandez-en un nouveau."
+        "spent": "Trop de codes faux : ce code ne marche plus. Demandez-en un nouveau.",
+        "expired": "Ce code n'est plus valable : demandez-en un nouveau."
       }
     }
   },
@@ -70,6 +69,7 @@
     "mail_title": "Code par mail",
     "mail_desc": "Un code envoyé à {{address}}. Pratique quand le téléphone n'est pas sous la main.",
     "mail_paused": "L'envoi de mails est coupé : aucun code n'est demandé à la connexion tant qu'il ne revient pas. Activez l'application pour rester protégé.",
+    "mail_paused_app_on": "L'envoi de mails est coupé : ce code n'est pas demandé à la connexion tant qu'il ne revient pas. L'application protège toujours votre compte.",
     "mail_unavailable": "L'envoi de mails n'est pas configuré sur ce Nido. Demandez à un administrateur.",
     "help": "Plus accès à aucune de vos méthodes ? Un administrateur peut réinitialiser votre double authentification.",
     "btn_enable": "Activer",
@@ -81,10 +81,7 @@
     "success_disabled": "Méthode désactivée.",
     "error": {
       "mail_unavailable": "L'envoi de mails est coupé : le code par mail ne peut pas être utilisé.",
-      "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min.",
       "load": "Impossible de charger vos méthodes. Rechargez la page.",
-      "network": "Réseau indisponible.",
-      "server": "Une erreur est survenue. Veuillez réessayer.",
       "changed": "Vos méthodes ont changé entre-temps : la liste est à jour."
     }
   },

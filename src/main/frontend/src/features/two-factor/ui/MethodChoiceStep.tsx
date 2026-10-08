@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { AlertTriangle, ChevronLeft, Info, Lock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { NetworkError } from '@/shared/lib'
 import { MethodCard } from './MethodCard'
 import type { ITwoFactorChallengeApi } from '../model/ITwoFactorChallengeApi'
 import type { CodeChoice } from '../model/types'
-import { ChallengeExpiredError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError } from '../model/errors'
+import { commonErrorMessage, minutesOf, type Message } from '../model/messages'
+import {
+  ChallengeExpiredError, MaxAttemptsError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError,
+} from '../model/errors'
 
 interface MethodChoiceStepProps {
   username: string
@@ -15,11 +17,20 @@ interface MethodChoiceStepProps {
   onBack: () => void
 }
 
+function messageOf(error: unknown): Message {
+  if (error instanceof SendLimitError) return { key: 'choose.error.send_limit', values: { minutes: minutesOf(error.seconds) } }
+  if (error instanceof MethodUnavailableError) return { key: 'choose.error.mail_unavailable' }
+  if (error instanceof MethodNotEnabledError) return { key: 'choose.error.mail_not_enabled' }
+  if (error instanceof ChallengeExpiredError) return { key: 'choose.error.challenge_expired' }
+  if (error instanceof MaxAttemptsError) return { key: 'verify.error.max_attempts' }
+  return commonErrorMessage(error)
+}
+
 /** Both methods on: the person picks. The mail's code leaves on the click — never from an effect. */
 export function MethodChoiceStep({ username, maskedEmail, api, onChoose, onBack }: MethodChoiceStepProps) {
   const { t } = useTranslation('twoFactor')
   const [sending, setSending] = useState(false)
-  const [error, setError] = useState<{ key: string; values?: Record<string, unknown> } | null>(null)
+  const [error, setError] = useState<Message | null>(null)
 
   async function chooseMail() {
     if (sending) return
@@ -31,12 +42,7 @@ export function MethodChoiceStep({ username, maskedEmail, api, onChoose, onBack 
     } catch (e) {
       // A code sent less than a minute ago still works: go to it, with the time left.
       if (e instanceof ResendTooSoonError) onChoose({ method: 'MAIL', resendAfterSeconds: e.seconds })
-      else if (e instanceof SendLimitError) setError({ key: 'choose.error.send_limit', values: { minutes: Math.ceil(e.seconds / 60) } })
-      else if (e instanceof MethodUnavailableError) setError({ key: 'choose.error.mail_unavailable' })
-      else if (e instanceof MethodNotEnabledError) setError({ key: 'choose.error.mail_not_enabled' })
-      else if (e instanceof ChallengeExpiredError) setError({ key: 'choose.error.challenge_expired' })
-      else if (e instanceof NetworkError) setError({ key: 'choose.error.network' })
-      else setError({ key: 'choose.error.server' })
+      else setError(messageOf(e))
     } finally {
       setSending(false)
     }

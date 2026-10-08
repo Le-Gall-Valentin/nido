@@ -2,14 +2,13 @@ import React, { useId, useRef, useState } from 'react'
 import { AlertTriangle, ChevronLeft, Mail } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { NetworkError, RateLimitError } from '@/shared/lib'
 import { CodeInput, type CodeInputHandle } from './CodeInput'
 import { ResendCode } from './ResendCode'
-import { useResendCountdown } from '../model/useResendCountdown'
+import { useResend } from '../model/useResend'
+import { commonErrorMessage, type Message } from '../model/messages'
 import type { ITwoFactorMethodsApi } from '../model/ITwoFactorMethodsApi'
 import {
   CodeError, ConfirmMaxAttemptsError, EnrolmentExpiredError, MethodAlreadyEnabledError, MethodUnavailableError,
-  ResendTooSoonError, SendLimitError,
 } from '../model/errors'
 
 interface MailSetupStepProps {
@@ -25,14 +24,22 @@ interface MailSetupStepProps {
   variant: 'page' | 'dialog'
 }
 
+function messageOf(error: unknown): Message {
+  if (error instanceof CodeError) return { key: 'mailSetup.error.invalid_code' }
+  if (error instanceof ConfirmMaxAttemptsError) return { key: 'mailSetup.error.max_attempts' }
+  if (error instanceof EnrolmentExpiredError) return { key: 'mailSetup.error.expired' }
+  if (error instanceof MethodUnavailableError) return { key: 'mailSetup.error.mail_unavailable' }
+  return commonErrorMessage(error)
+}
+
 /** Proving the address receives mail before the mail becomes a way in. */
 export function MailSetupStep({ sentTo, resendAfterSeconds, api, onSuccess, onBack, onDismiss, dismissLabel, variant }: MailSetupStepProps) {
   const { t } = useTranslation('twoFactor')
   const headingId = useId()
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<{ key: string; values?: Record<string, unknown> } | null>(null)
-  const countdown = useResendCountdown(resendAfterSeconds)
+  const [error, setError] = useState<Message | null>(null)
+  const { seconds, sending, resend, restart } = useResend(resendAfterSeconds, async () => (await api.setupMail()).resendAfterSeconds)
   const isSubmittingRef = useRef(false)
   const inputRef = useRef<CodeInputHandle>(null)
 
@@ -49,13 +56,10 @@ export function MailSetupStep({ sentTo, resendAfterSeconds, api, onSuccess, onBa
     } catch (e) {
       if (e instanceof MethodAlreadyEnabledError) { onSuccess(); return }
       setCode('')
-      if (e instanceof CodeError) { setError({ key: 'mailSetup.error.invalid_code' }); inputRef.current?.focus() }
-      else if (e instanceof ConfirmMaxAttemptsError) { setError({ key: 'mailSetup.error.max_attempts' }); countdown.restart(0) }
-      else if (e instanceof EnrolmentExpiredError) { setError({ key: 'mailSetup.error.expired' }); countdown.restart(0) }
-      else if (e instanceof MethodUnavailableError) setError({ key: 'mailSetup.error.mail_unavailable' })
-      else if (e instanceof RateLimitError) setError({ key: 'mailSetup.error.rate_limit' })
-      else if (e instanceof NetworkError) setError({ key: 'mailSetup.error.network' })
-      else setError({ key: 'mailSetup.error.server' })
+      setError(messageOf(e))
+      if (e instanceof CodeError) inputRef.current?.focus()
+      // The code is gone, by wrong guesses or by time: a new one can be asked for at once.
+      if (e instanceof ConfirmMaxAttemptsError || e instanceof EnrolmentExpiredError) restart(0)
     } finally {
       isSubmittingRef.current = false
       setIsLoading(false)
@@ -64,19 +68,9 @@ export function MailSetupStep({ sentTo, resendAfterSeconds, api, onSuccess, onBa
 
   async function handleResend(): Promise<void> {
     setError(null)
-    try {
-      const { resendAfterSeconds: next } = await api.setupMail()
-      countdown.restart(next)
-      setCode('')
-    } catch (e) {
-      if (e instanceof ResendTooSoonError) countdown.restart(e.seconds)
-      else if (e instanceof SendLimitError) {
-        countdown.restart(e.seconds)
-        setError({ key: 'mailSetup.error.send_limit', values: { minutes: Math.ceil(e.seconds / 60) } })
-      } else if (e instanceof MethodUnavailableError) setError({ key: 'mailSetup.error.mail_unavailable' })
-      else if (e instanceof NetworkError) setError({ key: 'mailSetup.error.network' })
-      else setError({ key: 'mailSetup.error.server' })
-    }
+    const outcome = await resend()
+    if (outcome?.kind === 'sent') setCode('')
+    else if (outcome?.kind === 'failed') setError(messageOf(outcome.error))
   }
 
   return (
@@ -122,7 +116,7 @@ export function MailSetupStep({ sentTo, resendAfterSeconds, api, onSuccess, onBa
         </Button>
       </form>
 
-      <ResendCode seconds={countdown.seconds} onResend={() => void handleResend()} disabled={isLoading} />
+      <ResendCode seconds={seconds} onResend={() => void handleResend()} disabled={isLoading || sending} />
 
       {onDismiss && (
         <button

@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { EmailCodeDialog } from './EmailCodeDialog'
-import { EmailCodeInvalidError, EmailCodeSpentError } from '../api/accountApi'
-import { SendLimitError } from '@/features/two-factor'
+import { EmailCodeExpiredError, EmailCodeInvalidError, EmailCodeSpentError } from '../api/accountApi'
+import { ResendTooSoonError, SendLimitError } from '@/features/two-factor'
+import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, o?: Record<string, unknown>) => (o ? `${k}:${JSON.stringify(o)}` : k) }),
@@ -61,7 +62,7 @@ describe('EmailCodeDialog', () => {
 
     fireEvent.click(screen.getByText('resend.action'))
 
-    expect(await screen.findByText('profile.email_code.error.send_limit:{"minutes":5}')).toBeTruthy()
+    expect(await screen.findByText('twoFactor:error.send_limit:{"minutes":5}')).toBeTruthy()
   })
 
   it('cancelling changes nothing', () => {
@@ -79,5 +80,65 @@ describe('EmailCodeDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: /profile\.email_code\.submit/ }))
 
     expect(await screen.findByText('profile.email_code.error.spent')).toBeTruthy()
+  })
+
+  it('a code no longer waiting says to ask for a new one, not that someone guessed', async () => {
+    open({ onConfirm: vi.fn().mockRejectedValue(new EmailCodeExpiredError()) })
+
+    fill('004213')
+    fireEvent.click(screen.getByRole('button', { name: /profile\.email_code\.submit/ }))
+
+    expect(await screen.findByText('profile.email_code.error.expired')).toBeTruthy()
+  })
+
+  it('the route limit, a lost network and a server error are said', async () => {
+    // PATCH /me allows five a minute: a save and four wrong codes reach it.
+    open({ onConfirm: vi.fn()
+      .mockRejectedValueOnce(new RateLimitError(50))
+      .mockRejectedValueOnce(new NetworkError())
+      .mockRejectedValueOnce(new ServerError()) })
+    const submit = () => { fill('000000'); fireEvent.click(screen.getByRole('button', { name: /profile\.email_code\.submit/ })) }
+
+    submit(); expect(await screen.findByText('twoFactor:error.rate_limit_timed:{"seconds":50}')).toBeTruthy()
+    submit(); expect(await screen.findByText('twoFactor:error.network')).toBeTruthy()
+    submit(); expect(await screen.findByText('twoFactor:error.server')).toBeTruthy()
+  })
+
+  it('half a code is not sent', () => {
+    const { onConfirm } = open()
+
+    fill('004')
+    fireEvent.click(screen.getByRole('button', { name: /profile\.email_code\.submit/ }))
+
+    expect(screen.getByText('profile.email_code.error.incomplete')).toBeTruthy()
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
+
+  it('a resend asked again too soon keeps the code already sent, and says nothing went wrong', async () => {
+    open({ onResend: vi.fn().mockRejectedValue(new ResendTooSoonError(25)) })
+
+    fireEvent.click(screen.getByText('resend.action'))
+
+    expect(await screen.findByText('resend.wait:{"time":"0:25"}')).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('a resend lost to the network is said', async () => {
+    open({ onResend: vi.fn().mockRejectedValue(new NetworkError()) })
+
+    fireEvent.click(screen.getByText('resend.action'))
+
+    expect(await screen.findByText('twoFactor:error.network')).toBeTruthy()
+  })
+
+  it('a second click on resend while the first is on its way sends nothing', () => {
+    const onResend = vi.fn(() => new Promise<number>(() => {}))
+    open({ onResend })
+
+    const resend = screen.getByText('resend.action')
+    fireEvent.click(resend)
+    fireEvent.click(resend)
+
+    expect(onResend).toHaveBeenCalledTimes(1)
   })
 })

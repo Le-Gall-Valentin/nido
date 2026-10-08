@@ -7,6 +7,7 @@ import { CodeInput } from './CodeInput'
 import type { CodeInputHandle } from './CodeInput'
 import { CodeError, ConfirmMaxAttemptsError } from '../model/errors'
 import { RateLimitError, NetworkError, ServerError } from '@/shared/lib'
+import { commonErrorMessage, type Message } from '../model/messages'
 import type { ITwoFactorMethodsApi } from '../model/ITwoFactorMethodsApi'
 import type { AppSetupData } from '../model/types'
 
@@ -24,7 +25,7 @@ export function AppSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: AppSet
   const [setupError, setSetupError] = useState(false)
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<string | null>(null)
+  const [error, setError] = useState<Message | null>(null)
   const [isSecretVisible, setIsSecretVisible] = useState(false)
   const [setupRestartKey, setSetupRestartKey] = useState(0)
   const isSubmittingRef = useRef(false)
@@ -62,36 +63,32 @@ export function AppSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: AppSet
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
-    if (code.length < 6) { setErrorKey('setup.error.incomplete'); return }
+    if (code.length < 6) { setError({ key: 'setup.error.incomplete' }); return }
     if (isSubmittingRef.current) return
     isSubmittingRef.current = true
     setIsLoading(true)
-    setErrorKey(null)
+    setError(null)
     try {
       await api.confirm('APP', code)
       onSuccess()
     } catch (error) {
       if (error instanceof ConfirmMaxAttemptsError) {
-        setErrorKey('setup.error.max_attempts')
+        setError({ key: 'setup.error.max_attempts' })
         setCode('')
         restartTimerRef.current = setTimeout(() => {
           restartTimerRef.current = null
           setSetupData(null)
-          setErrorKey(null)
+          setError(null)
           setSetupRestartKey(k => k + 1)
         }, 2000)
       } else if (error instanceof CodeError) {
-        setErrorKey('setup.error.invalid_code')
+        setError({ key: 'setup.error.invalid_code' })
         setCode('')
         digitInputRef.current?.focus()
-      } else if (error instanceof RateLimitError) {
-        setErrorKey('setup.error.rate_limit')
-      } else if (error instanceof NetworkError) {
-        setErrorKey('setup.error.network')
-      } else if (error instanceof ServerError) {
-        setErrorKey('setup.error.server')
+      } else if (error instanceof RateLimitError || error instanceof NetworkError || error instanceof ServerError) {
+        setError(commonErrorMessage(error))
       } else {
-        setErrorKey('setup.error.invalid_code')
+        setError({ key: 'setup.error.invalid_code' })
         setCode('')
         digitInputRef.current?.focus()
       }
@@ -162,13 +159,13 @@ export function AppSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: AppSet
           label={t('setup.code_label')}
         />
 
-        {errorKey && (
+        {error && (
           <div
             role="alert"
             className="flex items-center gap-2 rounded-[10px] bg-status-red-dim px-3.5 py-[11px] text-[13.5px] text-status-red mb-3"
           >
             <AlertTriangle className="size-3.5 shrink-0" />
-            {t(errorKey)}
+            {t(error.key, error.values)}
           </div>
         )}
 

@@ -1,6 +1,9 @@
-/** What came of a profile change: saved, or waiting for the code sent to the new address. */
+/**
+ * What came of a profile change: saved — and, while mail was off, the code by mail removed since nothing could prove
+ * the new address — or waiting for the code sent to the new address.
+ */
 export type ProfileUpdateResult =
-  | { kind: 'saved' }
+  | { kind: 'saved'; mailMethodRemoved: boolean }
   | { kind: 'email_code_sent'; sentTo: string; resendAfterSeconds: number }
 
 /**

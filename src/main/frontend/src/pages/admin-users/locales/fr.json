@@ -154,7 +154,7 @@
   },
   "reset_two_factor": {
     "title": "Réinitialiser la 2FA de {{username}} ?",
-    "body": "Choisissez les méthodes à retirer. {{username}} pourra les activer à nouveau à sa prochaine connexion.",
+    "body": "Choisissez les méthodes à retirer. {{username}} pourra les activer à nouveau depuis son profil.",
     "app": "Application d'authentification",
     "app_hint": "Par exemple après la perte du téléphone.",
     "mail": "Code par mail",

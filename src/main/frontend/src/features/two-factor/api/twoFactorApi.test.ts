@@ -5,7 +5,7 @@ import { twoFactorApi } from './twoFactorApi'
 import { client } from '@/shared/api'
 import {
   ChallengeExpiredError, CodeError, ConfirmMaxAttemptsError, EnrolmentExpiredError, MaxAttemptsError,
-  CodeSpentError, MethodAlreadyEnabledError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError,
+  CodeExpiredError, CodeSpentError, MethodAlreadyEnabledError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError,
 } from '../model/errors'
 import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
 
@@ -145,5 +145,40 @@ describe('twoFactorApi', () => {
     mocked.delete.mockRejectedValueOnce(problem(410, { error_code: 'code_spent' }))
 
     await expect(twoFactorApi.disable('MAIL', '004213')).rejects.toBeInstanceOf(CodeSpentError)
+  })
+
+  it('turning a method off reads a wrong code, and a 429 without a wait as the lockout', async () => {
+    mocked.delete.mockRejectedValueOnce(problem(401))
+    await expect(twoFactorApi.disable('APP', '000000')).rejects.toBeInstanceOf(CodeError)
+
+    mocked.delete.mockRejectedValueOnce(problem(429))
+    await expect(twoFactorApi.disable('APP', '000000')).rejects.toBeInstanceOf(MaxAttemptsError)
+  })
+
+  it('outside sign-in and setup, a 429 without a wait has no lockout to name: a server error', async () => {
+    mocked.get.mockRejectedValueOnce(problem(429))
+    await expect(twoFactorApi.list()).rejects.toBeInstanceOf(ServerError)
+
+    mocked.post.mockRejectedValueOnce(problem(429))
+    await expect(twoFactorApi.setupApp()).rejects.toBeInstanceOf(ServerError)
+
+    mocked.post.mockRejectedValueOnce(problem(429))
+    await expect(twoFactorApi.setupMail()).rejects.toBeInstanceOf(ServerError)
+
+    mocked.post.mockRejectedValueOnce(problem(429))
+    await expect(twoFactorApi.sendDisableCode()).rejects.toBeInstanceOf(ServerError)
+  })
+
+  it('names a code no longer waiting apart from one wrong guesses spent', async () => {
+    mocked.delete.mockRejectedValueOnce(problem(410, { error_code: 'code_expired' }))
+
+    await expect(twoFactorApi.disable('MAIL', '004213')).rejects.toBeInstanceOf(CodeExpiredError)
+  })
+
+  it('a sign-in locked by wrong codes is a lockout, though it says when', async () => {
+    // Read as a rate limit, the code screen would invite another try that the lockout refuses.
+    mocked.post.mockRejectedValueOnce(problem(429, { error_code: 'two_factor_locked' }, { 'retry-after': '600' }))
+
+    await expect(twoFactorApi.sendMailCode()).rejects.toBeInstanceOf(MaxAttemptsError)
   })
 })

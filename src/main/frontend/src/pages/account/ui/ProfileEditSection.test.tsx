@@ -29,11 +29,11 @@ const BASE_USER: User = {
   role: 'USER', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [],
 }
 
-function setup(overrides: { onUpdateProfile?: (username: string, email: string, currentPassword?: string, emailCode?: string) => Promise<ProfileUpdateResult>; onPatch?: (partial: Partial<User>) => void } = {}) {
+function setup(overrides: { onUpdateProfile?: (username: string, email: string, currentPassword?: string, emailCode?: string) => Promise<ProfileUpdateResult>; onPatch?: (partial: Partial<User>) => void; user?: User } = {}) {
   const onUpdateProfile = (overrides.onUpdateProfile ?? vi.fn().mockResolvedValue({ kind: 'saved' })) as (username: string, email: string, currentPassword?: string, emailCode?: string) => Promise<ProfileUpdateResult>
   const onPatch = (overrides.onPatch ?? vi.fn()) as (partial: Partial<User>) => void
   const result = render(
-    <ProfileEditSection user={BASE_USER} onPatch={onPatch} onUpdateProfile={onUpdateProfile} />
+    <ProfileEditSection user={overrides.user ?? BASE_USER} onPatch={onPatch} onUpdateProfile={onUpdateProfile} />
   )
   return { ...result, onUpdateProfile, onPatch }
 }
@@ -288,6 +288,39 @@ describe('ProfileEditSection', () => {
     fireEvent.change(getByLabelText('profile.current_password'), { target: { value: 'Secret-1' } })
     fireEvent.click(getByRole('button', { name: /profile\.save/ }))
 
-    expect(await findByText('profile.email_code.error.send_limit:{"minutes":10}')).toBeTruthy()
+    expect(await findByText('twoFactor:error.send_limit:{"minutes":10}')).toBeTruthy()
+  })
+
+  it('saved while mail is off, the code by mail is gone and the page says so until the next save', async () => {
+    // Nothing could prove the new address: the code by mail went with the old one. Saying only "saved"
+    // would leave the person believing it still protects them.
+    const onUpdateProfile = vi.fn().mockResolvedValue({ kind: 'saved', mailMethodRemoved: true })
+    const user: User = { ...BASE_USER, twoFactorMethods: ['APP', 'MAIL'] }
+    const { getByLabelText, getByRole, findByText, onPatch } = setup({ onUpdateProfile, user })
+
+    fireEvent.change(getByLabelText('profile.email'), { target: { value: 'new@test.com' } })
+    fireEvent.change(getByLabelText('profile.current_password'), { target: { value: 'Secret-1' } })
+    fireEvent.click(getByRole('button', { name: /profile\.save/ }))
+
+    expect(await findByText('profile.success_mail_removed')).toBeTruthy()
+    expect(onPatch).toHaveBeenCalledWith({ username: 'alice', email: 'new@test.com', twoFactorMethods: ['APP'] })
+  })
+
+  it('a resend that ends up saving — mail went off meanwhile — closes the code and says what happened', async () => {
+    const onUpdateProfile = vi.fn()
+      .mockResolvedValueOnce({ kind: 'email_code_sent', sentTo: 'new@test.com', resendAfterSeconds: 60 })
+      .mockResolvedValueOnce({ kind: 'saved', mailMethodRemoved: true })
+    const user: User = { ...BASE_USER, twoFactorMethods: ['MAIL'] }
+    const { getByLabelText, getByRole, findByText, getByText, queryByText, onPatch } = setup({ onUpdateProfile, user })
+
+    fireEvent.change(getByLabelText('profile.email'), { target: { value: 'new@test.com' } })
+    fireEvent.change(getByLabelText('profile.current_password'), { target: { value: 'Secret-1' } })
+    fireEvent.click(getByRole('button', { name: /profile\.save/ }))
+    await findByText('email-code-new@test.com')
+    fireEvent.click(getByText('resend-code'))
+
+    expect(await findByText('profile.success_mail_removed')).toBeTruthy()
+    expect(queryByText('email-code-new@test.com')).toBeNull()
+    expect(onPatch).toHaveBeenCalledWith({ username: 'alice', email: 'new@test.com', twoFactorMethods: [] })
   })
 })

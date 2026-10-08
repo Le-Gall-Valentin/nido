@@ -2,11 +2,10 @@ import React, { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle } from 'lucide-react'
 import { Button, CTA_BUTTON_STYLE, Dialog } from '@/shared/ui'
-import { NetworkError } from '@/shared/lib'
 import {
-  CodeInput, ResendCode, ResendTooSoonError, SendLimitError, useResendCountdown, type CodeInputHandle,
+  CodeInput, ResendCode, commonErrorMessage, useResend, type CodeInputHandle, type Message,
 } from '@/features/two-factor'
-import { EmailCodeInvalidError, EmailCodeSpentError } from '../api/accountApi'
+import { EmailCodeExpiredError, EmailCodeInvalidError, EmailCodeSpentError } from '../api/accountApi'
 
 interface EmailCodeDialogProps {
   sentTo: string
@@ -18,13 +17,20 @@ interface EmailCodeDialogProps {
   onCancel: () => void
 }
 
+function messageOf(error: unknown): Message {
+  if (error instanceof EmailCodeInvalidError) return { key: 'profile.email_code.error.invalid_code' }
+  if (error instanceof EmailCodeExpiredError) return { key: 'profile.email_code.error.expired' }
+  if (error instanceof EmailCodeSpentError) return { key: 'profile.email_code.error.spent' }
+  return commonErrorMessage(error)
+}
+
 /** The code sent to the address the account is moving to: nothing is saved before it. */
 export function EmailCodeDialog({ sentTo, previousAddress, resendAfterSeconds, onConfirm, onResend, onCancel }: EmailCodeDialogProps) {
   const { t } = useTranslation('account')
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<{ key: string; values?: Record<string, unknown> } | null>(null)
-  const countdown = useResendCountdown(resendAfterSeconds)
+  const [error, setError] = useState<Message | null>(null)
+  const { seconds, sending, resend } = useResend(resendAfterSeconds, onResend)
   const inputRef = useRef<CodeInputHandle>(null)
 
   async function handleSubmit(event: React.FormEvent) {
@@ -37,10 +43,8 @@ export function EmailCodeDialog({ sentTo, previousAddress, resendAfterSeconds, o
       await onConfirm(code)
     } catch (e) {
       setCode('')
-      if (e instanceof EmailCodeInvalidError) { setError({ key: 'profile.email_code.error.invalid_code' }); inputRef.current?.focus() }
-      else if (e instanceof EmailCodeSpentError) setError({ key: 'profile.email_code.error.spent' })
-      else if (e instanceof NetworkError) setError({ key: 'profile.email_code.error.network' })
-      else setError({ key: 'profile.email_code.error.server' })
+      setError(messageOf(e))
+      if (e instanceof EmailCodeInvalidError) inputRef.current?.focus()
     } finally {
       setIsLoading(false)
     }
@@ -48,17 +52,9 @@ export function EmailCodeDialog({ sentTo, previousAddress, resendAfterSeconds, o
 
   async function handleResend() {
     setError(null)
-    try {
-      countdown.restart(await onResend())
-      setCode('')
-    } catch (e) {
-      if (e instanceof ResendTooSoonError) countdown.restart(e.seconds)
-      else if (e instanceof SendLimitError) {
-        countdown.restart(e.seconds)
-        setError({ key: 'profile.email_code.error.send_limit', values: { minutes: Math.ceil(e.seconds / 60) } })
-      } else if (e instanceof NetworkError) setError({ key: 'profile.email_code.error.network' })
-      else setError({ key: 'profile.email_code.error.server' })
-    }
+    const outcome = await resend()
+    if (outcome?.kind === 'sent') setCode('')
+    else if (outcome?.kind === 'failed') setError(messageOf(outcome.error))
   }
 
   return (
@@ -79,7 +75,7 @@ export function EmailCodeDialog({ sentTo, previousAddress, resendAfterSeconds, o
           {t('profile.email_code.submit')}
         </Button>
       </form>
-      <ResendCode seconds={countdown.seconds} onResend={() => void handleResend()} disabled={isLoading} />
+      <ResendCode seconds={seconds} onResend={() => void handleResend()} disabled={isLoading || sending} />
       <button
         type="button"
         onClick={onCancel}

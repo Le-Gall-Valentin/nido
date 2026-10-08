@@ -245,7 +245,7 @@ describe('AppSetupFlow', () => {
       fireEvent.submit(getByRole('button', { name: /setup\.submit/i }).closest('form')!)
     })
     const alert = await findByRole('alert')
-    expect(alert.textContent).toContain('setup.error.rate_limit')
+    expect(alert.textContent).toContain('twoFactor:error.rate_limit')
   })
 
   it('shows network error on NetworkError from confirm', async () => {
@@ -259,7 +259,7 @@ describe('AppSetupFlow', () => {
       fireEvent.submit(getByRole('button', { name: /setup\.submit/i }).closest('form')!)
     })
     const alert = await findByRole('alert')
-    expect(alert.textContent).toContain('setup.error.network')
+    expect(alert.textContent).toContain('twoFactor:error.network')
   })
 
   it('shows max_attempts error on ConfirmMaxAttemptsError', async () => {
@@ -352,6 +352,6 @@ describe('AppSetupFlow', () => {
       fireEvent.submit(getByRole('button', { name: /setup\.submit/i }).closest('form')!)
     })
     const alert = await findByRole('alert')
-    expect(alert.textContent).toContain('setup.error.server')
+    expect(alert.textContent).toContain('twoFactor:error.server')
   })
 })

@@ -6,9 +6,10 @@ import type { ITwoFactorChallengeApi } from '../model/ITwoFactorChallengeApi'
 import type { ITwoFactorMethodsApi } from '../model/ITwoFactorMethodsApi'
 import type { AppSetupData, MailSetupData, MethodState, ResendData } from '../model/types'
 import {
-  ChallengeExpiredError, CodeError, CodeSpentError, ConfirmMaxAttemptsError, EnrolmentExpiredError, MaxAttemptsError,
-  MethodAlreadyEnabledError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError,
+  ChallengeExpiredError, CodeError, CodeExpiredError, CodeSpentError, ConfirmMaxAttemptsError, EnrolmentExpiredError,
+  MaxAttemptsError, MethodAlreadyEnabledError, MethodNotEnabledError, MethodUnavailableError,
 } from '../model/errors'
+import { codeRefusalOf } from './codeRefusal'
 
 /**
  * Every 2FA route answers in the same words: `error_code` names the case when there is one (stable, not tied to
@@ -18,16 +19,19 @@ import {
 function fail(error: unknown, lockout: () => Error): never {
   if (!isAxiosError(error) || error.response === undefined) throw new NetworkError()
   const { status, headers } = error.response
-  const data = (error.response.data ?? {}) as { error_code?: string; retryAfterSeconds?: number }
+  const data = (error.response.data ?? {}) as { error_code?: string }
   const retryAfter = parseRetryAfter(headers)
+  const refusal = codeRefusalOf(error.response)
+  if (refusal) throw refusal
   switch (data.error_code) {
     case 'two_factor_challenge_expired': throw new ChallengeExpiredError()
+    // A lockout though it says when: read as a rate limit, the screen would invite a try the lockout refuses.
+    case 'two_factor_locked': throw new MaxAttemptsError()
     case 'method_unavailable': throw new MethodUnavailableError()
     case 'method_not_enabled': throw new MethodNotEnabledError()
     case 'method_already_enabled': throw new MethodAlreadyEnabledError()
     case 'code_spent': throw new CodeSpentError()
-    case 'resend_too_soon': throw new ResendTooSoonError(data.retryAfterSeconds ?? retryAfter ?? 60)
-    case 'send_limit_reached': throw new SendLimitError(data.retryAfterSeconds ?? retryAfter ?? 900)
+    case 'code_expired': throw new CodeExpiredError()
   }
   if (status === 401) throw new CodeError()
   if (status === 422) throw new EnrolmentExpiredError()

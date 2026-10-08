@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import axios, { type AxiosError } from 'axios'
-import { accountApi, ConflictError, EmailCodeInvalidError, EmailCodeSpentError, InvalidCurrentPasswordError } from './accountApi'
+import {
+  accountApi, ConflictError, EmailCodeExpiredError, EmailCodeInvalidError, EmailCodeSpentError, InvalidCurrentPasswordError,
+} from './accountApi'
 import { ResendTooSoonError, SendLimitError } from '@/features/two-factor'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
@@ -49,7 +51,14 @@ describe('accountApi', () => {
 
     it('resolves saved on 204', async () => {
       mockedClient.patch.mockResolvedValue({ status: 204 })
-      await expect(accountApi.updateProfile('a', 'a@test.com')).resolves.toEqual({ kind: 'saved' })
+      await expect(accountApi.updateProfile('a', 'a@test.com')).resolves.toEqual({ kind: 'saved', mailMethodRemoved: false })
+    })
+
+    it('a 200 says the address was saved and the code by mail removed with the old one', async () => {
+      mockedClient.patch.mockResolvedValue({ status: 200, data: { mailMethodRemoved: true } })
+
+      await expect(accountApi.updateProfile('a', 'new@test.com', 'secret'))
+        .resolves.toEqual({ kind: 'saved', mailMethodRemoved: true })
     })
 
     it('a 202 says a code went to the new address', async () => {
@@ -80,6 +89,12 @@ describe('accountApi', () => {
       await expect(accountApi.updateProfile('a', 'new@test.com', 'secret', '000000')).rejects.toBeInstanceOf(EmailCodeSpentError)
     })
 
+    it('a code no longer waiting is its own error', async () => {
+      mockedClient.patch.mockRejectedValue(makeAxiosError(400, {}, { error_code: 'email_code_expired' }))
+
+      await expect(accountApi.updateProfile('a', 'new@test.com', 'secret', '004213')).rejects.toBeInstanceOf(EmailCodeExpiredError)
+    })
+
     it('a code asked again too soon or too often says when', async () => {
       mockedClient.patch.mockRejectedValueOnce(makeAxiosError(429, { 'retry-after': '30' }, { error_code: 'resend_too_soon', retryAfterSeconds: 30 }))
       await expect(accountApi.updateProfile('a', 'new@test.com', 'secret')).rejects.toEqual(new ResendTooSoonError(30))
@@ -101,6 +116,11 @@ describe('accountApi', () => {
     it('throws RateLimitError on 429', async () => {
       mockedClient.patch.mockRejectedValue(makeAxiosError(429))
       await expect(accountApi.updateProfile('a', 'a@test.com')).rejects.toBeInstanceOf(RateLimitError)
+    })
+
+    it('a 429 of the route limit carries its wait', async () => {
+      mockedClient.patch.mockRejectedValue(makeAxiosError(429, { 'retry-after': '45' }))
+      await expect(accountApi.updateProfile('a', 'a@test.com')).rejects.toEqual(new RateLimitError(45))
     })
 
     it('throws NetworkError when no response', async () => {

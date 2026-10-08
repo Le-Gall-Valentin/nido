@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { EnrollProposal } from './EnrollProposal'
 import { MethodUnavailableError, ResendTooSoonError, SendLimitError } from '../model/errors'
+import { NetworkError, RateLimitError } from '@/shared/lib'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, o?: Record<string, unknown>) => (o ? `${k}:${JSON.stringify(o)}` : k) }),
@@ -55,8 +56,18 @@ describe('EnrollProposal', () => {
     fireEvent.click(screen.getByRole('button', { name: /method\.mail_title/ }))
     expect(await screen.findByText('enroll.error.mail_unavailable')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: /method\.mail_title/ }))
-    expect(await screen.findByText('enroll.error.send_limit:{"minutes":5}')).toBeTruthy()
+    expect(await screen.findByText('twoFactor:error.send_limit:{"minutes":5}')).toBeTruthy()
     expect(onMailStarted).not.toHaveBeenCalled()
+  })
+
+  it('the route limit and a lost network are said too', async () => {
+    const setupMail = vi.fn().mockRejectedValueOnce(new RateLimitError(20)).mockRejectedValueOnce(new NetworkError())
+    setup(true, setupMail)
+
+    fireEvent.click(screen.getByText('method.mail_title').closest('button')!)
+    expect(await screen.findByText('twoFactor:error.rate_limit_timed:{"seconds":20}')).toBeTruthy()
+    fireEvent.click(screen.getByText('method.mail_title').closest('button')!)
+    expect(await screen.findByText('twoFactor:error.network')).toBeTruthy()
   })
 
   it('can be skipped', () => {

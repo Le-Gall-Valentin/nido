@@ -1,4 +1,4 @@
-/** The code is wrong, expired or already used. */
+/** The code is wrong — or, the app's, expired or already used. */
 export class CodeError extends Error {
   constructor() { super('Invalid code'); this.name = 'CodeError' }
 }
@@ -13,9 +13,17 @@ export class MaxAttemptsError extends Error {
   constructor() { super('Too many incorrect codes'); this.name = 'MaxAttemptsError' }
 }
 
-/** Wrong guesses took the code with it — even the right one is refused now: ask for a new one. */
+/**
+ * Too many wrong codes: a code sent is gone with them — ask for a new one —, the app's are refused for a quarter
+ * of an hour.
+ */
 export class CodeSpentError extends Error {
-  constructor() { super('This code no longer works'); this.name = 'CodeSpentError' }
+  constructor() { super('Too many wrong codes'); this.name = 'CodeSpentError' }
+}
+
+/** No code sent is waiting any more — never asked for, or past its ten minutes: ask for a new one. */
+export class CodeExpiredError extends Error {
+  constructor() { super('No code is waiting any more'); this.name = 'CodeExpiredError' }
 }
 
 /** Too many wrong first codes: the enrolment is cancelled and starts again. */

@@ -6,9 +6,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, o?: Record<string, unknown>) => (o ? `${k}:${JSON.stringify(o)}` : k) }),
 }))
 
-function row(method: 'APP' | 'MAIL', enabled: boolean, usable: boolean) {
+function row(method: 'APP' | 'MAIL', enabled: boolean, usable: boolean, appOn = false) {
   const handlers = { onEnable: vi.fn(), onDisable: vi.fn() }
-  render(<MethodRow state={{ method, enabled, usable }} email="camille@exemple.fr" busy={false} {...handlers} />)
+  render(<MethodRow state={{ method, enabled, usable }} email="camille@exemple.fr" appOn={appOn} busy={false} {...handlers} />)
   return handlers
 }
 
@@ -37,6 +37,13 @@ describe('MethodRow', () => {
     expect(screen.getByText('twofa.mail_paused')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'twofa.btn_disable' }))
     expect(onDisable).toHaveBeenCalled()
+  })
+
+  it('paused next to the app, it does not ask to turn on the app already on', () => {
+    row('MAIL', true, false, true)
+
+    expect(screen.getByText('twofa.mail_paused_app_on')).toBeTruthy()
+    expect(screen.queryByText('twofa.mail_paused')).toBeNull()
   })
 
   it('the mail off while mail is off is unavailable, with nothing to press', () => {

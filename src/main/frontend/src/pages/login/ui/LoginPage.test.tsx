@@ -25,6 +25,7 @@ vi.mock('@/features/auth', () => ({
       <button onClick={() => onLoginOutcome?.({ kind: 'two_factor_required', challenge: { username: 'alice', methods: ['MAIL'], maskedEmail: 'a••••••e@x.fr', mailCode: { sent: false, retryAfterSeconds: 420 } } })}>trigger-mail-limit</button>
       <button onClick={() => onLoginOutcome?.({ kind: 'two_factor_required', challenge: { username: 'alice', methods: ['APP', 'MAIL'], maskedEmail: 'a••••••e@x.fr', mailCode: null } })}>trigger-both</button>
       <button onClick={() => onLoginOutcome?.({ kind: 'enrollment_proposed', user: ALICE })}>trigger-enroll</button>
+      <button onClick={() => onLoginOutcome?.({ kind: 'two_factor_required', challenge: { username: 'alice', methods: [], maskedEmail: null, mailCode: null } })}>trigger-none</button>
     </div>
   ),
   useAuth: vi.fn(),
@@ -194,6 +195,13 @@ describe('LoginPage', () => {
 
       expect(screen.getByRole('form')).toBeTruthy()
       expect(screen.queryByText('code-MAIL-60-none')).toBeNull()
+    })
+
+    it('a second factor asked for without a method leaves the identifiers in place', () => {
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-none'))
+
+      expect(screen.getByRole('form')).toBeTruthy()
     })
 
     it('back from a code returns to the identifiers', () => {

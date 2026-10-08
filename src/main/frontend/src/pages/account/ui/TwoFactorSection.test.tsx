@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { createTestQueryClient } from '@/shared/test'
 import type { User } from '@/entities/user'
 import type { ITwoFactorMethodsApi, MethodState } from '@/features/two-factor'
-import { MethodAlreadyEnabledError, MethodNotEnabledError, MethodUnavailableError } from '@/features/two-factor'
+import {
+  MethodAlreadyEnabledError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError,
+} from '@/features/two-factor'
+import { NetworkError, RateLimitError } from '@/shared/lib'
 import { TwoFactorSection } from './TwoFactorSection'
 
 vi.mock('react-i18next', () => ({
@@ -155,5 +158,66 @@ describe('TwoFactorSection', () => {
     expect(await screen.findByText('twofa.error.changed')).toBeTruthy()
     expect(screen.queryByText('disable-stale')).toBeNull()
     await waitFor(() => expect(api.list).toHaveBeenCalledTimes(2))
+  })
+
+  it('a paused mail next to the app on says the app still protects the account', async () => {
+    setup([state('APP', true, true), state('MAIL', true, false)], {}, { ...USER, twoFactorMethods: ['APP', 'MAIL'] })
+
+    expect(await screen.findByText('twofa.mail_paused_app_on')).toBeTruthy()
+  })
+
+  it('turning the mail on again within the minute opens the code already sent, with the time left', async () => {
+    setup([state('APP', true, true), state('MAIL', false, true)], { setupMail: vi.fn().mockRejectedValue(new ResendTooSoonError(25)) })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_enable' }))
+
+    expect(await screen.findByText('mail-setup-camille@exemple.fr')).toBeTruthy()
+  })
+
+  it('turning the mail off again within the minute opens the dialog on the code already sent', async () => {
+    setup([state('APP', false, true), state('MAIL', true, true)],
+      { sendDisableCode: vi.fn().mockRejectedValue(new ResendTooSoonError(25)) }, { ...USER, twoFactorMethods: ['MAIL'] })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_disable' }))
+
+    expect(await screen.findByText('disable-MAIL-false-25')).toBeTruthy()
+  })
+
+  it('the account limit, the route limit and a lost network are said', async () => {
+    const setupMail = vi.fn()
+      .mockRejectedValueOnce(new SendLimitError(540))
+      .mockRejectedValueOnce(new RateLimitError(20))
+      .mockRejectedValueOnce(new NetworkError())
+    setup([state('APP', true, true), state('MAIL', false, true)], { setupMail })
+    const enable = async () => fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_enable' }))
+
+    await enable(); expect(await screen.findByText('twoFactor:error.send_limit:{"minutes":9}')).toBeTruthy()
+    await enable(); expect(await screen.findByText('twoFactor:error.rate_limit_timed:{"seconds":20}')).toBeTruthy()
+    await enable(); expect(await screen.findByText('twoFactor:error.network')).toBeTruthy()
+  })
+
+  it('the buttons wait while a code is on its way', async () => {
+    setup([state('APP', true, true), state('MAIL', false, true)], { setupMail: vi.fn(() => new Promise<never>(() => {})) })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_enable' }))
+
+    await waitFor(() => expect((screen.getByRole('button', { name: 'twofa.btn_enable' }) as HTMLButtonElement).disabled).toBe(true))
+    expect((screen.getByRole('button', { name: 'twofa.btn_disable' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('methods that cannot be loaded say so', async () => {
+    setup([], { list: vi.fn().mockRejectedValue(new NetworkError()) })
+
+    expect(await screen.findByText('twofa.error.load')).toBeTruthy()
+  })
+
+  it('a method turned off from its dialog is recorded and said', async () => {
+    const { onPatch } = setup([state('APP', true, true), state('MAIL', true, true)], {}, { ...USER, twoFactorMethods: ['APP', 'MAIL'] })
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'twofa.btn_disable' }))[0])
+    fireEvent.click(await screen.findByText('disable-success'))
+
+    expect(onPatch).toHaveBeenCalledWith({ twoFactorMethods: ['MAIL'] })
+    expect(await screen.findByText('twofa.success_disabled')).toBeTruthy()
   })
 })

@@ -2,11 +2,10 @@ import React, { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle } from 'lucide-react'
 import { Dialog, Button } from '@/shared/ui'
-import { NetworkError, RateLimitError } from '@/shared/lib'
 import type { TwoFactorMethod } from '@/entities/user'
 import {
-  CodeError, CodeInput, CodeSpentError, MaxAttemptsError, MethodNotEnabledError, ResendCode, ResendTooSoonError, SendLimitError,
-  useResendCountdown, type CodeInputHandle, type ITwoFactorMethodsApi,
+  CodeError, CodeExpiredError, CodeInput, CodeSpentError, MaxAttemptsError, MethodNotEnabledError, ResendCode,
+  commonErrorMessage, useResend, type CodeInputHandle, type ITwoFactorMethodsApi, type Message,
 } from '@/features/two-factor'
 
 interface DisableMethodDialogProps {
@@ -23,12 +22,21 @@ interface DisableMethodDialogProps {
   onStale: () => void
 }
 
+function messageOf(error: unknown, method: TwoFactorMethod): Message {
+  if (error instanceof CodeError) return { key: 'disable.error.invalid_code' }
+  if (error instanceof CodeExpiredError) return { key: 'disable.error.code_expired' }
+  // Spent: the mail's code is gone, so a new one is asked for; the app's codes are refused for a quarter of an hour.
+  if (error instanceof CodeSpentError) return { key: method === 'APP' ? 'disable.error.code_spent_app' : 'disable.error.code_spent' }
+  if (error instanceof MaxAttemptsError) return { key: 'disable.error.max_attempts' }
+  return commonErrorMessage(error)
+}
+
 export function DisableMethodDialog({ method, paused, address, resendAfterSeconds, api, onClose, onSuccess, onStale }: DisableMethodDialogProps) {
   const { t } = useTranslation('twoFactor')
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<{ key: string; values?: Record<string, unknown> } | null>(null)
-  const countdown = useResendCountdown(resendAfterSeconds)
+  const [error, setError] = useState<Message | null>(null)
+  const { seconds, sending, resend } = useResend(resendAfterSeconds, async () => (await api.sendDisableCode()).resendAfterSeconds)
   const inputRef = useRef<CodeInputHandle>(null)
   const isSubmittingRef = useRef(false)
   const needsCode = !paused
@@ -49,12 +57,8 @@ export function DisableMethodDialog({ method, paused, address, resendAfterSecond
       if (e instanceof MethodNotEnabledError) { onSuccess(); return }
       if (e instanceof CodeError && paused) { onStale(); return }
       setCode('')
-      if (e instanceof CodeError) { setError({ key: 'disable.error.invalid_code' }); inputRef.current?.focus() }
-      else if (e instanceof CodeSpentError) setError({ key: 'disable.error.code_spent' })
-      else if (e instanceof MaxAttemptsError) setError({ key: 'disable.error.max_attempts' })
-      else if (e instanceof RateLimitError) setError({ key: 'disable.error.rate_limit' })
-      else if (e instanceof NetworkError) setError({ key: 'disable.error.network' })
-      else setError({ key: 'disable.error.server' })
+      setError(messageOf(e, method))
+      if (e instanceof CodeError) inputRef.current?.focus()
     } finally {
       isSubmittingRef.current = false
       setIsLoading(false)
@@ -63,16 +67,8 @@ export function DisableMethodDialog({ method, paused, address, resendAfterSecond
 
   async function handleResend() {
     setError(null)
-    try {
-      countdown.restart((await api.sendDisableCode()).resendAfterSeconds)
-    } catch (e) {
-      if (e instanceof ResendTooSoonError) countdown.restart(e.seconds)
-      else if (e instanceof SendLimitError) {
-        countdown.restart(e.seconds)
-        setError({ key: 'disable.error.send_limit', values: { minutes: Math.ceil(e.seconds / 60) } })
-      } else if (e instanceof NetworkError) setError({ key: 'disable.error.network' })
-      else setError({ key: 'disable.error.server' })
-    }
+    const outcome = await resend()
+    if (outcome?.kind === 'failed') setError(messageOf(outcome.error, method))
   }
 
   return (
@@ -92,7 +88,7 @@ export function DisableMethodDialog({ method, paused, address, resendAfterSecond
           </div>
         )}
         {needsCode && method === 'MAIL' && (
-          <ResendCode seconds={countdown.seconds} onResend={() => void handleResend()} disabled={isLoading} />
+          <ResendCode seconds={seconds} onResend={() => void handleResend()} disabled={isLoading || sending} />
         )}
         <div className="flex gap-2 justify-end mt-4">
           <Button type="button" onClick={onClose} disabled={isLoading}>{t('setup.dismiss_profile')}</Button>
