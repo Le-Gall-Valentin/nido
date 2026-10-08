@@ -41,6 +41,20 @@
       "network": "Réseau indisponible.",
       "rate_limit": "Trop de tentatives. Veuillez réessayer plus tard.",
       "email_required": "L'adresse e-mail est obligatoire."
+    },
+    "email_code": {
+      "title": "Confirmez votre nouvelle adresse",
+      "subtitle": "Le code par mail protège votre compte : il partira désormais à cette adresse. Nous y avons envoyé un code à 6 chiffres, {{address}}.",
+      "code_label": "Code reçu à la nouvelle adresse",
+      "submit": "Confirmer l'adresse",
+      "cancel": "Annuler et garder {{address}}",
+      "error": {
+        "invalid_code": "Code invalide ou expiré.",
+        "incomplete": "Saisissez les 6 chiffres.",
+        "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min.",
+        "network": "Réseau indisponible.",
+        "server": "Une erreur est survenue. Veuillez réessayer."
+      }
     }
   },
   "twofa": {

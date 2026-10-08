@@ -2,15 +2,18 @@ import { useId, useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import type { User } from '@/entities/user'
+import { ResendTooSoonError, SendLimitError } from '@/features/two-factor'
 import { ConflictError, InvalidCurrentPasswordError } from '../api/accountApi'
+import type { ProfileUpdateResult } from '../model/IAccountApi'
+import { EmailCodeDialog } from './EmailCodeDialog'
 import { NetworkError, RateLimitError, isValidUsername, usernameProblem, type UsernameProblem } from '@/shared/lib'
 
-type Flash = { kind: 'success' | 'error'; key: string } | null
+type Flash = { kind: 'success' | 'error'; key: string; values?: Record<string, number> } | null
 
 interface ProfileEditSectionProps {
   user: User
   onPatch: (partial: Partial<User>) => void
-  onUpdateProfile: (username: string, email: string, currentPassword?: string) => Promise<void>
+  onUpdateProfile: (username: string, email: string, currentPassword?: string, emailCode?: string) => Promise<ProfileUpdateResult>
 }
 
 
@@ -26,6 +29,7 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
   const [email, setEmail] = useState(user.email)
   const [currentPassword, setCurrentPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [emailCode, setEmailCode] = useState<{ sentTo: string; resendAfterSeconds: number } | null>(null)
   const [flash, setFlash] = useState<Flash>(null)
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -47,9 +51,9 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
     return () => { if (flashTimer.current) clearTimeout(flashTimer.current) }
   }, [])
 
-  function showFlash(kind: 'success' | 'error', key: string) {
+  function showFlash(kind: 'success' | 'error', key: string, values?: Record<string, number>) {
     if (flashTimer.current) clearTimeout(flashTimer.current)
-    setFlash({ kind, key })
+    setFlash({ kind, key, values })
     flashTimer.current = setTimeout(() => setFlash(null), 3000)
   }
 
@@ -58,12 +62,20 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
     if (!canSave || isSubmitting) return
     setIsSubmitting(true)
     try {
-      await onUpdateProfile(trimmedUsername, trimmedEmail, addressChanges ? currentPassword : undefined)
-      onPatch({ username: trimmedUsername, email: trimmedEmail })
-      setCurrentPassword('')
-      showFlash('success', 'profile.success')
+      const result = await onUpdateProfile(trimmedUsername, trimmedEmail, addressChanges ? currentPassword : undefined, undefined)
+      if (result.kind === 'email_code_sent') {
+        // Nothing is saved yet: the same change comes back with the code. The password stays in the form for it.
+        setEmailCode({ sentTo: result.sentTo, resendAfterSeconds: result.resendAfterSeconds })
+        return
+      }
+      saved()
     } catch (error) {
-      if (error instanceof InvalidCurrentPasswordError) {
+      if (error instanceof ResendTooSoonError) {
+        // Saved again within the minute (after cancelling the code, say): the code already sent still works.
+        setEmailCode({ sentTo: trimmedEmail, resendAfterSeconds: error.seconds })
+      } else if (error instanceof SendLimitError) {
+        showFlash('error', 'profile.email_code.error.send_limit', { minutes: Math.ceil(error.seconds / 60) })
+      } else if (error instanceof InvalidCurrentPasswordError) {
         setCurrentPassword('')
         showFlash('error', 'profile.error.wrong_password')
       } else if (error instanceof ConflictError) {
@@ -78,6 +90,23 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  function saved() {
+    onPatch({ username: trimmedUsername, email: trimmedEmail })
+    setCurrentPassword('')
+    setEmailCode(null)
+    showFlash('success', 'profile.success')
+  }
+
+  async function confirmEmailCode(code: string) {
+    const result = await onUpdateProfile(trimmedUsername, trimmedEmail, currentPassword, code)
+    if (result.kind === 'saved') saved()
+  }
+
+  async function resendEmailCode(): Promise<number> {
+    const result = await onUpdateProfile(trimmedUsername, trimmedEmail, currentPassword, undefined)
+    return result.kind === 'email_code_sent' ? result.resendAfterSeconds : 0
   }
 
   function handleCancel() {
@@ -143,7 +172,7 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
               role={flash.kind === 'success' ? 'status' : 'alert'}
               className={`mb-3 text-xs px-3 py-2 rounded-lg ${flash.kind === 'success' ? 'bg-status-green-dim text-status-green' : 'bg-status-red-dim text-status-red'}`}
             >
-              {t(flash.key)}
+              {t(flash.key, flash.values)}
             </div>
           )}
           <div className="flex justify-end gap-2 mt-1">
@@ -156,6 +185,16 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
           </div>
         </form>
       </div>
+      {emailCode && (
+        <EmailCodeDialog
+          sentTo={emailCode.sentTo}
+          previousAddress={user.email}
+          resendAfterSeconds={emailCode.resendAfterSeconds}
+          onConfirm={confirmEmailCode}
+          onResend={resendEmailCode}
+          onCancel={() => setEmailCode(null)}
+        />
+      )}
     </section>
   )
 }

@@ -41,6 +41,20 @@
       "network": "Network unavailable.",
       "rate_limit": "Too many requests. Please try again later.",
       "email_required": "Email address is required."
+    },
+    "email_code": {
+      "title": "Confirm your new address",
+      "subtitle": "Codes by email protect your account: they will go to this address from now on. We sent a 6-digit code there, {{address}}.",
+      "code_label": "Code received at the new address",
+      "submit": "Confirm the address",
+      "cancel": "Cancel and keep {{address}}",
+      "error": {
+        "invalid_code": "Invalid or expired code.",
+        "incomplete": "Please enter all 6 digits.",
+        "send_limit": "Too many codes sent. Try again in {{minutes}} min.",
+        "network": "Network unavailable.",
+        "server": "An error occurred. Please try again."
+      }
     }
   },
   "twofa": {
