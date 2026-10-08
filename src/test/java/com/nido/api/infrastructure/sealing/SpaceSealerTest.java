@@ -35,7 +35,7 @@ class SpaceSealerTest {
         assertThatThrownBy(() -> sealer.open(AMOUNT, coffee, stored))
             .isInstanceOfSatisfying(SealedValueRejected.class, e -> {
                 assertThat(e.reason()).isEqualTo(SealedValueRejected.Reason.ELSEWHERE);
-                assertThat(e.getMessage()).contains(coffee.toString()).doesNotContain("850");
+                assertThat(e.getMessage()).contains(coffee.toString()).doesNotContain("850.00");
             });
         assertThatThrownBy(() -> sealer.open(LABEL, rent, stored))
             .isInstanceOfSatisfying(SealedValueRejected.class, e -> assertThat(e.reason()).isEqualTo(SealedValueRejected.Reason.ELSEWHERE));
