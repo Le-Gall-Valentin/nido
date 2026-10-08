@@ -4,7 +4,6 @@ import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.CredentialSetupPort;
 import com.nido.api.identity.domain.port.out.PersonalSpaceInitPort;
-import com.nido.api.identity.domain.port.out.TotpRecordInitPort;
 import com.nido.api.identity.domain.port.out.UserAdminPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.shared.model.Language;
@@ -30,14 +29,13 @@ class SeedHandlerTest {
     @Mock UserAdminPort userAdminPort;
     @Mock UserCommandPort userCommandPort;
     @Mock CredentialSetupPort credentialSetupPort;
-    @Mock TotpRecordInitPort totpRecordInitPort;
     @Mock PersonalSpaceInitPort personalSpaceInitPort;
 
     private SeedHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new SeedHandler(userAdminPort, userCommandPort, credentialSetupPort, totpRecordInitPort, personalSpaceInitPort);
+        handler = new SeedHandler(userAdminPort, userCommandPort, credentialSetupPort, personalSpaceInitPort);
     }
 
     @Test
@@ -54,7 +52,6 @@ class SeedHandlerTest {
         assertThat(handler.seedInitialSuperAdmin("admin", "admin@test.com", "secret", null)).contains(userId);
 
         verify(credentialSetupPort).setup(userId, "secret");
-        verify(totpRecordInitPort).initForUser(userId);
         verify(personalSpaceInitPort).initForUser(created.id());
         verify(userCommandPort, never()).updateLanguage(any(), any());
     }
@@ -79,7 +76,6 @@ class SeedHandlerTest {
 
         verifyNoInteractions(userCommandPort);
         verifyNoInteractions(credentialSetupPort);
-        verifyNoInteractions(totpRecordInitPort);
     }
 
     @Test

@@ -2,7 +2,7 @@ package com.nido.api.mfa.infrastructure.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.shared.model.Role;
-import com.nido.api.shared.model.TotpPolicy;
+import com.nido.api.shared.model.TwoFactorPolicy;
 import com.nido.api.authentication.infrastructure.persistence.entity.UserCredentialEntity;
 import com.nido.api.authentication.infrastructure.persistence.repository.RefreshTokenJpaRepository;
 import com.nido.api.authentication.infrastructure.persistence.repository.UserCredentialJpaRepository;
@@ -11,8 +11,9 @@ import com.nido.api.authentication.infrastructure.web.dto.LoginRequest;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
-import com.nido.api.mfa.infrastructure.persistence.entity.UserTotpEntity;
-import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
+import com.nido.api.mfa.infrastructure.persistence.entity.TwoFactorMethodEntity;
+import com.nido.api.mfa.infrastructure.persistence.repository.TwoFactorMethodJpaRepository;
+import com.nido.api.shared.model.TwoFactorMethod;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.IntegrationTestConfig;
 import jakarta.servlet.http.Cookie;
@@ -49,7 +50,7 @@ class TotpControllerIT {
     @Autowired UserIdentityJpaRepository userIdentityJpaRepository;
     @Autowired RefreshTokenJpaRepository refreshTokenJpaRepository;
     @Autowired UserCredentialJpaRepository userCredentialJpaRepository;
-    @Autowired UserTotpJpaRepository userTotpJpaRepository;
+    @Autowired TwoFactorMethodJpaRepository userTotpJpaRepository;
     @Autowired PendingTotpEnrolmentPort pendingEnrolment;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired TotpEncryptorFactory encryptorFactory;
@@ -85,9 +86,6 @@ class TotpControllerIT {
         userCred.setPasswordHash(encoder.encode("password"));
         userCredentialJpaRepository.save(userCred);
 
-        UserTotpEntity userTotpRecord = new UserTotpEntity();
-        userTotpRecord.setUserId(user.getId());
-        userTotpJpaRepository.save(userTotpRecord);
 
         // Super-admin (for admin-only endpoints)
         UserIdentityEntity admin = new UserIdentityEntity();
@@ -101,9 +99,6 @@ class TotpControllerIT {
         adminCred.setPasswordHash(encoder.encode("adminpass"));
         userCredentialJpaRepository.save(adminCred);
 
-        UserTotpEntity adminTotpRecord = new UserTotpEntity();
-        adminTotpRecord.setUserId(admin.getId());
-        userTotpJpaRepository.save(adminTotpRecord);
 
         // User with TOTP already enabled
         UserIdentityEntity totpUser = new UserIdentityEntity();
@@ -117,11 +112,7 @@ class TotpControllerIT {
         totpCred.setPasswordHash(encoder.encode("totppass"));
         userCredentialJpaRepository.save(totpCred);
 
-        UserTotpEntity totpRecord = new UserTotpEntity();
-        totpRecord.setUserId(totpUser.getId());
-        totpRecord.setTotpSecret(encryptorFactory.forUser(totpUser.getId()).encrypt(KNOWN_TOTP_SECRET));
-        totpRecord.setTotpEnabled(true);
-        userTotpJpaRepository.save(totpRecord);
+        userTotpJpaRepository.save(new TwoFactorMethodEntity(totpUser.getId(), TwoFactorMethod.APP, encryptorFactory.forUser(totpUser.getId()).encrypt(KNOWN_TOTP_SECRET)));
     }
 
     // ─── /api/auth/2fa/setup ──────────────────────────────────────────────────
@@ -221,9 +212,9 @@ class TotpControllerIT {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.totpEnabled").value(true));
 
-        UserTotpEntity stored = userTotpJpaRepository.findById(
-            userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").orElseThrow().getId()).orElseThrow();
-        assertThat(stored.getTotpSecret())
+        TwoFactorMethodEntity stored = userTotpJpaRepository.findById(new TwoFactorMethodEntity.Key(
+            userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").orElseThrow().getId(), TwoFactorMethod.APP)).orElseThrow();
+        assertThat(stored.getSecret())
             .as("the proven secret is persisted, encrypted, by the confirmation")
             .isNotNull().isNotEqualTo(secret);
     }
@@ -471,7 +462,7 @@ class TotpControllerIT {
             .andExpect(status().isOk());
         assertThat(pendingEnrolment.find(userId)).isPresent();
 
-        for (int attempt = 1; attempt < TotpPolicy.MAX_ATTEMPTS; attempt++) {
+        for (int attempt = 1; attempt < TwoFactorPolicy.MAX_ATTEMPTS; attempt++) {
             mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"code\":\"000000\"}"))

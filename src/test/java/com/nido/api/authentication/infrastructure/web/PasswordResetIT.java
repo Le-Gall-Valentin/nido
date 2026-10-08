@@ -14,8 +14,9 @@ import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntit
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.mfa.infrastructure.config.TotpEncryptorFactory;
-import com.nido.api.mfa.infrastructure.persistence.entity.UserTotpEntity;
-import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
+import com.nido.api.mfa.infrastructure.persistence.entity.TwoFactorMethodEntity;
+import com.nido.api.mfa.infrastructure.persistence.repository.TwoFactorMethodJpaRepository;
+import com.nido.api.shared.model.TwoFactorMethod;
 import com.nido.api.shared.model.Role;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -62,7 +63,7 @@ class PasswordResetIT {
     @Autowired UserIdentityJpaRepository users;
     @Autowired UserCredentialJpaRepository credentials;
     @Autowired RefreshTokenJpaRepository refreshTokens;
-    @Autowired UserTotpJpaRepository totps;
+    @Autowired TwoFactorMethodJpaRepository totps;
     @Autowired PasswordResetTokenJpaRepository resetTokens;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired TotpEncryptorFactory encryptorFactory;
@@ -248,11 +249,7 @@ class PasswordResetIT {
 
     @Test
     void a_reset_never_gets_past_the_second_factor() throws Exception {
-        UserTotpEntity totp = new UserTotpEntity();
-        totp.setUserId(jane.getId());
-        totp.setTotpSecret(encryptorFactory.forUser(jane.getId()).encrypt("JBSWY3DPEHPK3PXP"));
-        totp.setTotpEnabled(true);
-        totps.save(totp);
+        totps.save(new TwoFactorMethodEntity(jane.getId(), TwoFactorMethod.APP, encryptorFactory.forUser(jane.getId()).encrypt("JBSWY3DPEHPK3PXP")));
         requestReset("jane", "fr");
 
         confirm(tokenIn(onlyMail()), "NewPassw0rd!", 204);

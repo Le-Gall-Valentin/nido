@@ -13,8 +13,9 @@ import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntit
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.IntegrationTestConfig;
-import com.nido.api.mfa.infrastructure.persistence.entity.UserTotpEntity;
-import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
+import com.nido.api.mfa.infrastructure.persistence.entity.TwoFactorMethodEntity;
+import com.nido.api.mfa.infrastructure.persistence.repository.TwoFactorMethodJpaRepository;
+import com.nido.api.shared.model.TwoFactorMethod;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.InvitationStatus;
 import com.nido.api.space.domain.model.SpaceRole;
@@ -62,7 +63,7 @@ class UserControllerIT {
     @Autowired UserCredentialJpaRepository userCredentialJpaRepository;
     @Autowired UserIdentityJpaRepository userIdentityJpaRepository;
     @Autowired RefreshTokenJpaRepository refreshTokenJpaRepository;
-    @Autowired UserTotpJpaRepository userTotpJpaRepository;
+    @Autowired TwoFactorMethodJpaRepository userTotpJpaRepository;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired TotpEncryptorFactory encryptorFactory;
     @Autowired SpaceJpaRepository spaceJpaRepository;
@@ -294,7 +295,7 @@ class UserControllerIT {
         assertThat(entity.getUsername()).isNull();
         assertThat(entity.getEmail()).isNull();
         assertThat(userCredentialJpaRepository.findById(targetId)).isEmpty();
-        assertThat(userTotpJpaRepository.findById(targetId)).isEmpty();
+        assertThat(userTotpJpaRepository.findByUserId(targetId)).isEmpty();
         boolean hasTokens = refreshTokenJpaRepository.findAll().stream()
             .anyMatch(t -> targetId.equals(t.getUserId()));
         assertThat(hasTokens).isFalse();
@@ -1007,12 +1008,12 @@ class UserControllerIT {
         userCredentialJpaRepository.save(cred);
     }
 
+    /** A second factor off is no row at all: only an enabled one is written. */
     private void saveTotpRecord(UUID userId, String secret, boolean enabled) {
-        UserTotpEntity totp = new UserTotpEntity();
-        totp.setUserId(userId);
-        totp.setTotpSecret(encryptorFactory.forUser(userId).encrypt(secret));
-        totp.setTotpEnabled(enabled);
-        userTotpJpaRepository.save(totp);
+        if (enabled) {
+            userTotpJpaRepository.save(new TwoFactorMethodEntity(userId, TwoFactorMethod.APP,
+                encryptorFactory.forUser(userId).encrypt(secret)));
+        }
     }
 
     private record Created(String id, String token) {}

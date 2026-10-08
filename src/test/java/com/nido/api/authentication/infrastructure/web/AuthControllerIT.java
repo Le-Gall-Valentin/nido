@@ -9,8 +9,9 @@ import com.nido.api.authentication.infrastructure.persistence.repository.UserCre
 import com.nido.api.authentication.infrastructure.web.dto.LoginRequest;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
-import com.nido.api.mfa.infrastructure.persistence.entity.UserTotpEntity;
-import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
+import com.nido.api.mfa.infrastructure.persistence.entity.TwoFactorMethodEntity;
+import com.nido.api.mfa.infrastructure.persistence.repository.TwoFactorMethodJpaRepository;
+import com.nido.api.shared.model.TwoFactorMethod;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.TestHashUtils;
@@ -41,7 +42,7 @@ class AuthControllerIT {
     @Autowired UserIdentityJpaRepository userIdentityJpaRepository;
     @Autowired RefreshTokenJpaRepository refreshTokenJpaRepository;
     @Autowired UserCredentialJpaRepository userCredentialJpaRepository;
-    @Autowired UserTotpJpaRepository userTotpJpaRepository;
+    @Autowired TwoFactorMethodJpaRepository userTotpJpaRepository;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired TotpEncryptorFactory encryptorFactory;
 
@@ -93,11 +94,7 @@ class AuthControllerIT {
         totpCred.setPasswordHash(encoder.encode("totppass"));
         userCredentialJpaRepository.save(totpCred);
 
-        UserTotpEntity totpEntity = new UserTotpEntity();
-        totpEntity.setUserId(totpUser.getId());
-        totpEntity.setTotpSecret(encryptorFactory.forUser(totpUser.getId()).encrypt("JBSWY3DPEHPK3PXP"));
-        totpEntity.setTotpEnabled(true);
-        userTotpJpaRepository.save(totpEntity);
+        userTotpJpaRepository.save(new TwoFactorMethodEntity(totpUser.getId(), TwoFactorMethod.APP, encryptorFactory.forUser(totpUser.getId()).encrypt("JBSWY3DPEHPK3PXP")));
     }
 
     @Test

@@ -12,7 +12,7 @@ import com.nido.api.mfa.domain.port.out.UserTotpLifecyclePort;
 import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
 import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import com.nido.api.shared.annotation.ApplicationService;
-import com.nido.api.shared.model.TotpPolicy;
+import com.nido.api.shared.model.TwoFactorPolicy;
 import org.springframework.transaction.annotation.Transactional;
 
 @ApplicationService
@@ -57,7 +57,7 @@ public class ConfirmTotpHandler implements ConfirmTotpUseCase {
 
         if (!codeValidator.isValid(secret, command.code())) {
             int attempts = confirmAttemptPort.incrementAndGetAttempts(command.userId());
-            if (attempts >= TotpPolicy.MAX_ATTEMPTS) {
+            if (attempts >= TwoFactorPolicy.MAX_ATTEMPTS) {
                 pendingEnrolment.discard(command.userId());
                 confirmAttemptPort.clearAttempts(command.userId());
                 throw new MfaException.TotpConfirmMaxAttemptsExceeded();

@@ -13,7 +13,7 @@ import com.nido.api.authentication.domain.port.out.RefreshTokenIssuerPort;
 import com.nido.api.authentication.domain.port.out.TotpChallengeStorePort;
 import com.nido.api.authentication.domain.port.out.UserCredentialsPort;
 import com.nido.api.shared.annotation.ApplicationService;
-import com.nido.api.shared.model.TotpPolicy;
+import com.nido.api.shared.model.TwoFactorPolicy;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
@@ -61,7 +61,7 @@ public class VerifyTotpChallengeHandler implements VerifyTotpChallengeUseCase {
         // touch it: renewing the window on a refused attempt would let a caller hold the
         // account locked indefinitely at no cost, turning a brute-force guard into a way to
         // deny its owner service.
-        if (challengeStore.failedAttempts(userId) >= TotpPolicy.MAX_ATTEMPTS) {
+        if (challengeStore.failedAttempts(userId) >= TwoFactorPolicy.MAX_ATTEMPTS) {
             throw new AuthenticationException.TotpMaxAttemptsExceeded();
         }
 
@@ -69,7 +69,7 @@ public class VerifyTotpChallengeHandler implements VerifyTotpChallengeUseCase {
             case REPLAYED -> throw new AuthenticationException.TotpCodeInvalid();
             case INVALID -> {
                 int attempts = challengeStore.recordFailedAttempt(userId);
-                if (attempts >= TotpPolicy.MAX_ATTEMPTS) {
+                if (attempts >= TwoFactorPolicy.MAX_ATTEMPTS) {
                     challengeStore.invalidateChallenge(command.challengeId());
                     throw new AuthenticationException.TotpMaxAttemptsExceeded();
                 }

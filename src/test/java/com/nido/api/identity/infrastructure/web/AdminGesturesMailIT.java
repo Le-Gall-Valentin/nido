@@ -7,8 +7,9 @@ import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntit
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.mfa.infrastructure.config.TotpEncryptorFactory;
-import com.nido.api.mfa.infrastructure.persistence.entity.UserTotpEntity;
-import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
+import com.nido.api.mfa.infrastructure.persistence.entity.TwoFactorMethodEntity;
+import com.nido.api.mfa.infrastructure.persistence.repository.TwoFactorMethodJpaRepository;
+import com.nido.api.shared.model.TwoFactorMethod;
 import com.nido.api.shared.model.Role;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.AfterEach;
@@ -49,7 +50,7 @@ class AdminGesturesMailIT {
     @Autowired UserIdentityJpaRepository users;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired JdbcClient jdbc;
-    @Autowired UserTotpJpaRepository totps;
+    @Autowired TwoFactorMethodJpaRepository totps;
     @Autowired TotpEncryptorFactory encryptorFactory;
 
     private MockMvc mockMvc;
@@ -151,11 +152,7 @@ class AdminGesturesMailIT {
 
     @Test
     void an_admin_resetting_a_second_factor_tells_its_holder_and_the_super_administrators() throws Exception {
-        UserTotpEntity totp = new UserTotpEntity();
-        totp.setUserId(carolId);
-        totp.setTotpSecret(encryptorFactory.forUser(carolId).encrypt("JBSWY3DPEHPK3PXP"));
-        totp.setTotpEnabled(true);
-        totps.save(totp);
+        totps.save(new TwoFactorMethodEntity(carolId, TwoFactorMethod.APP, encryptorFactory.forUser(carolId).encrypt("JBSWY3DPEHPK3PXP")));
 
         mockMvc.perform(post("/api/users/" + carolId + "/2fa/reset").cookie(cookieFor(bobId, Role.ADMIN)))
             .andExpect(status().isNoContent());

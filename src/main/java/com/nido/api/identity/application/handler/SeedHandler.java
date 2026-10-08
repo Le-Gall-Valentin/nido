@@ -4,7 +4,6 @@ import com.nido.api.identity.application.port.in.SeedUseCase;
 import com.nido.api.identity.domain.model.CreateUserProfileCommand;
 import com.nido.api.identity.domain.port.out.CredentialSetupPort;
 import com.nido.api.identity.domain.port.out.PersonalSpaceInitPort;
-import com.nido.api.identity.domain.port.out.TotpRecordInitPort;
 import com.nido.api.identity.domain.port.out.UserAdminPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.shared.annotation.ApplicationService;
@@ -25,18 +24,15 @@ public class SeedHandler implements SeedUseCase {
     private final UserAdminPort userAdminPort;
     private final UserCommandPort userCommandPort;
     private final CredentialSetupPort credentialSetupPort;
-    private final TotpRecordInitPort totpRecordInitPort;
     private final PersonalSpaceInitPort personalSpaceInitPort;
 
     public SeedHandler(UserAdminPort userAdminPort,
                        UserCommandPort userCommandPort,
                        CredentialSetupPort credentialSetupPort,
-                       TotpRecordInitPort totpRecordInitPort,
                        PersonalSpaceInitPort personalSpaceInitPort) {
         this.userAdminPort = userAdminPort;
         this.userCommandPort = userCommandPort;
         this.credentialSetupPort = credentialSetupPort;
-        this.totpRecordInitPort = totpRecordInitPort;
         this.personalSpaceInitPort = personalSpaceInitPort;
     }
 
@@ -49,7 +45,6 @@ public class SeedHandler implements SeedUseCase {
         }
         var user = userCommandPort.createProfile(new CreateUserProfileCommand(username, email, Role.SUPER_ADMIN));
         credentialSetupPort.setup(user.id(), password);
-        totpRecordInitPort.initForUser(user.id());
         personalSpaceInitPort.initForUser(user.id());
         if (language != null) {
             userCommandPort.updateLanguage(user.id(), language);
