@@ -1,19 +1,35 @@
 import { useCallback, useEffect, useState } from 'react'
 
-/** Seconds before another code can be asked for, counting down from what the server said. */
+function secondsUntil(deadline: number) {
+  return Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+}
+
+/**
+ * Seconds before another code can be asked for, counting down from what the server said. The wait is read
+ * from a deadline, not counted tick by tick: a locked phone or a throttled tab runs timers late or in
+ * bursts, and a count of ticks would fall behind the server's own clock.
+ */
 export function useResendCountdown(initialSeconds: number) {
-  const [seconds, setSeconds] = useState(Math.max(0, initialSeconds))
+  const [deadline, setDeadline] = useState(() => Date.now() + Math.max(0, initialSeconds) * 1000)
+  const [seconds, setSeconds] = useState(() => secondsUntil(deadline))
   const running = seconds > 0
 
-  // One interval for the whole wait, not a timeout re-armed at each second: a tab that was asleep, or a
-  // render that came late, still counts every second that went by.
   useEffect(() => {
     if (!running) return
-    const timer = setInterval(() => setSeconds(left => Math.max(0, left - 1)), 1000)
-    return () => clearInterval(timer)
-  }, [running])
+    const refresh = () => setSeconds(secondsUntil(deadline))
+    const timer = setInterval(refresh, 1000)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [running, deadline])
 
-  const restart = useCallback((next: number) => setSeconds(Math.max(0, next)), [])
+  const restart = useCallback((next: number) => {
+    const at = Date.now() + Math.max(0, next) * 1000
+    setDeadline(at)
+    setSeconds(secondsUntil(at))
+  }, [])
 
   return { seconds, restart }
 }

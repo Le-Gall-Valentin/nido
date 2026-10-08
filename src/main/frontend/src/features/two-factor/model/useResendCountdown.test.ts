@@ -25,4 +25,14 @@ describe('useResendCountdown', () => {
 
     expect(result.current.seconds).toBe(60)
   })
+
+  it('shows the time really left when the browser held its timers back', () => {
+    // A locked phone or a throttled tab runs the timer late, or not at all: the wait comes from the clock.
+    const { result } = renderHook(() => useResendCountdown(60))
+
+    act(() => { vi.setSystemTime(Date.now() + 30_000) })
+    act(() => { vi.advanceTimersByTime(1000) })
+
+    expect(result.current.seconds).toBe(29)
+  })
 })
