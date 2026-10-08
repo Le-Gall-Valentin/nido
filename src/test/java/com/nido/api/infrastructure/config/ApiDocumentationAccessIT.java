@@ -147,4 +147,14 @@ class ApiDocumentationAccessIT {
                 .as(path).contains("204", "400", "401", "404", "429");
         }
     }
+
+    @Test
+    void turning_a_second_factor_on_or_off_is_documented_as_answering_no_content() throws Exception {
+        JsonNode paths = new ObjectMapper().readTree(get("/api/docs", sessionCookie()).body()).path("paths");
+
+        assertThat(paths.path("/api/auth/2fa/{method}/confirm").path("post").path("responses").fieldNames()).toIterable()
+            .contains("204").doesNotContain("200");
+        assertThat(paths.path("/api/auth/2fa/{method}").path("delete").path("responses").fieldNames()).toIterable()
+            .contains("204").doesNotContain("200");
+    }
 }

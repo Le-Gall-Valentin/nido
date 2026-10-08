@@ -14,6 +14,8 @@ import com.nido.api.shared.security.AuthenticatedUser;
 import com.nido.api.shared.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -80,6 +82,7 @@ public class TwoFactorController {
         Le code de l'application, ou celui reçu par mail. `401` si le code est faux ; `422` si aucune activation
         n'est en cours (jamais commencée ou expirée) ; `429` sans `Retry-After` après 5 codes faux : l'activation
         est annulée, il faut la recommencer. `409` comme pour `/setup`. Rate limit : 10 req/fenêtre.""")
+    @ApiResponse(responseCode = "204", description = "Méthode activée", content = @Content)
     @PostMapping("/{method}/confirm")
     @RateLimiting(max = 10)
     @PreAuthorize("isAuthenticated()")
@@ -105,6 +108,7 @@ public class TwoFactorController {
         Demande le code de la méthode (de l'application, ou reçu par mail après `/disable-code`). Une méthode en
         pause (`MAIL` pendant que l'envoi de mails est coupé) se désactive sans code. `401` si le code est faux ou
         manque ; `409` `method_not_enabled`. Un mail prévient le compte. Rate limit : 5 req/fenêtre.""")
+    @ApiResponse(responseCode = "204", description = "Méthode désactivée", content = @Content)
     @DeleteMapping("/{method}")
     @RateLimiting(max = 5)
     @PreAuthorize("isAuthenticated()")
