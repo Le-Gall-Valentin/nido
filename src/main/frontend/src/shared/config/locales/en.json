@@ -1,6 +1,11 @@
 {
   "loading": "Loading...",
   "close": "Close",
+  "member": {
+    "generic": "A member",
+    "former": "Former member",
+    "deleted": "Deleted account"
+  },
   "password": {
     "show": "Show password",
     "hide": "Hide password"

@@ -1,6 +1,11 @@
 {
   "loading": "Chargement...",
   "close": "Fermer",
+  "member": {
+    "generic": "Un membre",
+    "former": "Ancien membre",
+    "deleted": "Compte supprimé"
+  },
   "password": {
     "show": "Afficher le mot de passe",
     "hide": "Masquer le mot de passe"

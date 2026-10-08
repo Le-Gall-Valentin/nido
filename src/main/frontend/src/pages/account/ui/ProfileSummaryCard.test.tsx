@@ -39,11 +39,12 @@ describe('ProfileSummaryCard', () => {
     expect(getByText('JD')).toBeDefined()
   })
 
-  it('renders SUPER_ADMIN with a different gradient than USER', () => {
+  it('colours the avatar by the person, the same whatever their role', () => {
     const { container: adminContainer } = render(<ProfileSummaryCard user={{ ...BASE_USER, role: 'SUPER_ADMIN' }} />)
     const { container: userContainer } = render(<ProfileSummaryCard user={BASE_USER} />)
-    const adminAvatar = adminContainer.querySelector('[style*="gradient"]') as HTMLElement
-    const userAvatar = userContainer.querySelector('[style*="gradient"]') as HTMLElement
-    expect(adminAvatar.style.background).not.toBe(userAvatar.style.background)
+    const { container: otherContainer } = render(<ProfileSummaryCard user={{ ...BASE_USER, id: `${BASE_USER.id}-other` }} />)
+    const background = (container: HTMLElement) => (container.querySelector('[style*="gradient"]') as HTMLElement).style.background
+    expect(background(adminContainer)).toBe(background(userContainer))
+    expect(background(otherContainer)).not.toBe(background(userContainer))
   })
 })

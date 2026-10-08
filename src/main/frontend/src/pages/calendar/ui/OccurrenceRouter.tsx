@@ -11,7 +11,8 @@ import type { CalendarOccurrence } from '@/entities/calendar'
 interface OccurrenceRouterProps {
   spaceId: string
   occurrence: CalendarOccurrence
-  members: SpaceMember[]
+  /** Undefined while not known: a task's detail then calls nobody a former member. */
+  members: SpaceMember[] | undefined
   /** Navigates to the module that owns this item, for the sources the calendar cannot edit. */
   onOpenInModule: (occurrence: CalendarOccurrence) => void
   onClose: () => void
@@ -34,7 +35,7 @@ export function OccurrenceRouter({
     case 'FINANCE':
       // Both a materialized transaction and a projected one belong to a series, and the series is
       // what a reader wants to change — a single past debit is an accounting fact, not a plan.
-      return <FinanceOccurrence spaceId={spaceId} members={members} onClose={onClose} />
+      return <FinanceOccurrence spaceId={spaceId} members={members ?? []} onClose={onClose} />
     case 'SAVINGS':
       return <SavingsOccurrence spaceId={spaceId} occurrence={occurrence} onClose={onClose} />
     case 'MEAL':

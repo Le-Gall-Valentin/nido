@@ -1,13 +1,14 @@
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button } from '@/shared/ui'
 import { UserAvatar } from '@/entities/user'
-import type { SpaceMember } from '@/entities/space'
+import { useMemberName, type SpaceMember } from '@/entities/space'
 import type { RecurringTaskSeries } from '@/entities/tasks'
 import { TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
 
 interface RecurringTaskSeriesDetailModalProps {
   series: RecurringTaskSeries
-  members: SpaceMember[]
+  /** Undefined while not known: nobody is then called a former member. */
+  members: SpaceMember[] | undefined
   onClose: () => void
 }
 
@@ -15,10 +16,7 @@ export function RecurringTaskSeriesDetailModal({ series, members, onClose }: Rec
   const { t } = useTranslation('tasks')
   const priorityMeta = TASK_PRIORITY_META[series.priority]
 
-  function memberLabel(memberId: string): string {
-    const member = members.find((m) => m.userId === memberId)
-    return member?.username ?? member?.email ?? memberId
-  }
+  const memberLabel = useMemberName(members)
 
   return (
     <Dialog open onClose={onClose} title={t('recurring_series.detail_title')} maxWidth="max-w-lg">
@@ -58,7 +56,7 @@ export function RecurringTaskSeriesDetailModal({ series, members, onClose }: Rec
           <dd className="flex items-center gap-1.5 font-medium text-fg-0">
             {series.createdBy ? (
               <>
-                <UserAvatar username={memberLabel(series.createdBy)} role="USER" className="size-5 rounded-full text-[9px]" />
+                <UserAvatar userId={series.createdBy} username={memberLabel(series.createdBy)} className="size-5 rounded-full text-[9px]" />
                 {memberLabel(series.createdBy)}
               </>
             ) : t('detail.unknown_creator')}
@@ -83,7 +81,7 @@ export function RecurringTaskSeriesDetailModal({ series, members, onClose }: Rec
           <ul className="space-y-1.5">
             {series.rotationMemberIds.map((memberId) => (
               <li key={memberId} className="flex items-center gap-2 text-sm">
-                <UserAvatar username={memberLabel(memberId)} role="USER" className="size-6 shrink-0 rounded-full text-[10px]" />
+                <UserAvatar userId={memberId} username={memberLabel(memberId)} className="size-6 shrink-0 rounded-full text-[10px]" />
                 <span className="flex-1 truncate text-fg-1">{memberLabel(memberId)}</span>
               </li>
             ))}

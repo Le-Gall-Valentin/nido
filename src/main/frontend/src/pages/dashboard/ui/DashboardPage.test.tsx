@@ -128,21 +128,21 @@ describe('DashboardPage', () => {
 
     await waitFor(() => expect(api.getDashboard).toHaveBeenCalled())
     await new Promise((resolve) => setTimeout(resolve, 50))
-    expect(screen.queryByText(/member_unknown/)).toBeNull()
+    expect(screen.queryByText(/member.former/)).toBeNull()
     expect(screen.getByRole('status', { name: 'loading' })).toBeDefined()
   })
 
   it('does not call anyone a former member when the members cannot be read', async () => {
     renderPage({ ...BUSY, attention: [{ kind: 'DEBT', severity: 'MEDIUM', toMemberId: 'u-cam', amount: 5 }] }, { members: new Error('down') })
 
-    expect(await screen.findByText(/attention\.debt:.*"name":"member_generic"/)).toBeDefined()
-    expect(screen.queryByText(/member_unknown/)).toBeNull()
+    expect(await screen.findByText(/attention\.debt:.*"name":"member.generic"/)).toBeDefined()
+    expect(screen.queryByText(/member.former/)).toBeNull()
   })
 
   it('names a member who left as a former member', async () => {
     renderPage({ ...BUSY, attention: [{ kind: 'DEBT', severity: 'MEDIUM', toMemberId: 'u-gone', amount: 5 }] })
 
-    expect(await screen.findByText(/attention\.debt:.*"name":"member_unknown"/)).toBeDefined()
+    expect(await screen.findByText(/attention\.debt:.*"name":"member.former"/)).toBeDefined()
   })
 
   it('accepts an invitation and reads the dashboard again', async () => {

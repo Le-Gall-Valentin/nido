@@ -1,7 +1,5 @@
 {
   "loading": "Loading the dashboard…",
-  "member_unknown": "Former member",
-  "member_generic": "A member",
   "error": {
     "load_failed": "The dashboard could not be loaded.",
     "retry": "Try again",

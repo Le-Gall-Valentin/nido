@@ -32,7 +32,7 @@ export function SavingsGoalContributionsModal({ goalName, color, glyph, contribu
         <ul className="max-h-96 space-y-2 overflow-y-auto">
           {contributions.map((contribution) => (
             <li key={contribution.id} className="flex items-center gap-2.5 text-sm">
-              <UserAvatar username={memberLabel(contribution.memberId)} role="USER" className="size-7 shrink-0 rounded-full text-[10.5px]" />
+              <UserAvatar userId={contribution.memberId} username={memberLabel(contribution.memberId)} className="size-7 shrink-0 rounded-full text-[10.5px]" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-fg-0">{memberLabel(contribution.memberId)}</p>
                 <p className="text-xs text-fg-3">{contribution.date}</p>

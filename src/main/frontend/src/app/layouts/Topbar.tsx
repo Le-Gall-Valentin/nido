@@ -95,7 +95,7 @@ export function Topbar({ onSearchOpen, onMenuOpen }: TopbarProps) {
             aria-label={t('topbar.profile_label')}
             className="flex items-center rounded-full border border-border bg-bg-1 p-1"
           >
-            <UserAvatar username={user.username} role={user.role} className="size-8 rounded-full text-[13px]" />
+            <UserAvatar userId={user.id} username={user.username} className="size-8 rounded-full text-[13px]" />
           </button>
 
           {menuOpen && (
@@ -108,7 +108,7 @@ export function Topbar({ onSearchOpen, onMenuOpen }: TopbarProps) {
               />
               <div className="absolute right-0 top-[52px] z-50 w-[250px] rounded-[15px] border border-border bg-bg-1 p-2 shadow-[0_12px_40px_rgba(44,42,38,0.14)]">
                 <div className="flex items-center gap-[11px] px-2.5 pb-3 pt-2">
-                  <UserAvatar username={user.username} role={user.role} className="size-10 rounded-full text-[15px]" />
+                  <UserAvatar userId={user.id} username={user.username} className="size-10 rounded-full text-[15px]" />
                   <div className="min-w-0">
                     <div className="truncate text-sm font-semibold text-fg-0">{user.username}</div>
                     <div className="truncate text-xs text-fg-3">{user.email}</div>

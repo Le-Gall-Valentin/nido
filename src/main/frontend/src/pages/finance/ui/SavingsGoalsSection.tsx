@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { CheckCircle2, Pencil, Plus, Trash2 } from 'lucide-react'
-import { UserAvatar } from '@/entities/user'
+import { UserAvatarStack } from '@/entities/user'
 import type { SavingsGoal } from '@/entities/finance'
 import { safeSavingsGoalColor, safeSavingsGoalGlyph } from '@/widgets/savings-goal'
 import { formatAmount } from '@/shared/lib'
@@ -47,7 +47,7 @@ export function SavingsGoalsSection({
           {savingsGoals.map((goal) => {
             const percent = goal.targetAmount > 0 ? Math.min(100, (goal.totalContributed / goal.targetAmount) * 100) : 0
             const done = percent >= 100
-            const contributors = [...new Map(goal.contributions.map((c) => [c.memberId, c])).values()].slice(0, 4)
+            const contributorIds = [...new Set(goal.contributions.map((c) => c.memberId))]
             return (
               <div key={goal.id} className="relative rounded-[14px] border border-border transition-colors hover:bg-bg-2">
                 <button
@@ -98,14 +98,16 @@ export function SavingsGoalsSection({
 
                   <div className="mt-2.5 flex items-center justify-between gap-2">
                     <div className="flex items-center">
-                      {contributors.map((contribution) => (
-                        <UserAvatar
-                          key={contribution.memberId}
-                          username={memberLabel(contribution.memberId)}
-                          role="USER"
-                          className="-mr-1.5 size-[22px] rounded-full text-[8.5px] ring-2 ring-bg-1"
+                      {/* Above the card's own button, as the edit and delete buttons are: a tap names who saved. */}
+                      {contributorIds.length > 0 && (
+                        <UserAvatarStack
+                          people={contributorIds.map((id) => ({ userId: id, name: memberLabel(id) }))}
+                          max={4}
+                          standalone
+                          avatarClassName="size-[22px] rounded-full text-[8.5px] ring-2 ring-bg-1"
+                          className="pointer-events-auto rounded-full"
                         />
-                      ))}
+                      )}
                       {done ? (
                         <span className="ml-2 flex items-center gap-1 text-xs font-semibold text-status-green">
                           <CheckCircle2 size={14} />

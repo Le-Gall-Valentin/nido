@@ -326,8 +326,8 @@ describe('FinancePage', () => {
       }]),
     }))
 
-    await waitFor(() => expect(screen.getAllByText('alice').length).toBeGreaterThan(0))
-    fireEvent.click(screen.getAllByText('alice')[0])
+    // The balances row, which starts with her name — a transaction row also names her, as its payer.
+    fireEvent.click(await screen.findByRole('button', { name: /^alice/ }))
 
     const memberModal = await waitFor(() => screen.getByRole('dialog', { name: 'alice' }))
     fireEvent.click(within(memberModal).getByText('Salaire'))

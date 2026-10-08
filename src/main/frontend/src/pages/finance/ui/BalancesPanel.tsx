@@ -66,6 +66,7 @@ export function BalancesPanel({
 
       {viewingMemberId && (
         <MemberTransactionsModal
+          memberId={viewingMemberId}
           memberLabel={memberLabel(viewingMemberId)}
           transactions={transactions.filter((transaction) => transaction.payerId === viewingMemberId)}
           onSelectTransaction={onSelectTransaction}

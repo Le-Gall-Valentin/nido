@@ -112,7 +112,7 @@ function UserRow({ user, currentUser, mail, youLabel, roleLabel, meta, isTogglin
     <tr>
       <td className="py-3.5 pl-[18px] pr-3.5">
         <div className="flex items-center gap-3.5">
-          <UserAvatar username={user.username} role={user.role} />
+          <UserAvatar userId={user.id} username={user.username} />
           <div className="min-w-0">
             <div className="text-[14.5px] font-semibold text-fg-0 truncate">
               {user.username}

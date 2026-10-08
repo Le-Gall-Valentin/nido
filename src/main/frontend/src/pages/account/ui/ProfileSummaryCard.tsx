@@ -19,8 +19,8 @@ export function ProfileSummaryCard({ user }: ProfileSummaryCardProps) {
     <div className="rounded-2xl border border-border bg-bg-1 px-7 py-6 mb-4">
       <div className="flex items-center gap-[18px]">
         <UserAvatar
+          userId={user.id}
           username={user.username}
-          role={user.role}
           className="w-[68px] h-[68px] rounded-full text-[24px]"
         />
         <div className="flex-1 min-w-0">

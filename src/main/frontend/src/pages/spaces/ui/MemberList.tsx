@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Crown, UserMinus, UserX } from 'lucide-react'
 import { SpaceRolePill, canManageSpace, isOwner, type SpaceMember, type SpaceRole , AssignableSpaceRole } from '@/entities/space'
-import { getInitials } from '@/entities/user'
+import { UserAvatar } from '@/entities/user'
 import { formatRelativeTime } from '@/shared/lib'
 
 const ASSIGNABLE_ROLES: AssignableSpaceRole[] = ['ADMIN', 'MEMBER', 'VIEWER']
@@ -54,13 +54,13 @@ export function MemberList({
 
         return (
           <li key={member.userId} className="flex flex-wrap items-center gap-3.5 px-[18px] py-3.5">
-            <div
-              className={`flex size-10 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${deleted ? 'bg-bg-3 text-fg-3' : 'text-white'}`}
-              style={deleted ? undefined : { background: 'linear-gradient(135deg, var(--avatar-from), var(--avatar-to))' }}
-              aria-hidden="true"
-            >
-              {deleted ? <UserX className="size-4" /> : getInitials(member.username ?? '')}
-            </div>
+            {deleted ? (
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-bg-3 text-fg-3" aria-hidden="true">
+                <UserX className="size-4" />
+              </div>
+            ) : (
+              <UserAvatar userId={member.userId} username={member.username ?? ''} />
+            )}
 
             {/* A floor under the name, as in the invitation list: on a phone the role and actions wrap below. */}
             <div className="min-w-32 flex-1">

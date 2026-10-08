@@ -3,14 +3,15 @@ import i18next from 'i18next'
 import { MapPin, Repeat } from 'lucide-react'
 import { Dialog, Button } from '@/shared/ui'
 import { resolveLocale } from '@/shared/lib'
-import type { SpaceMember } from '@/entities/space'
+import { useMemberName, type SpaceMember } from '@/entities/space'
 import { UserAvatar } from '@/entities/user'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { formatPeriodLabel, formatSpan } from '../lib/periodLabel'
 
 interface EventDetailModalProps {
   occurrence: CalendarOccurrence
-  members: SpaceMember[]
+  /** Undefined while not known: nobody is then called a former member. */
+  members: SpaceMember[] | undefined
   /** The signed-in user, so "join" and "leave" can be offered as the right one of the two. */
   currentUserId: string
   canWrite: boolean
@@ -47,6 +48,7 @@ export function EventDetailModal({
   onEdit, onDelete, onCopy, onMove, onJoin, onLeave, onClose,
 }: EventDetailModalProps) {
   const { t } = useTranslation('calendar')
+  const memberName = useMemberName(members)
   const isParticipant = occurrence.participantIds.includes(currentUserId)
   const belongsToSeries = occurrence.seriesId !== null
 
@@ -83,15 +85,14 @@ export function EventDetailModal({
             {occurrence.participantIds.length === 0 ? (
               <p className="text-sm text-fg-3">{t('detail.no_participants')}</p>
             ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {occurrence.participantIds.map((userId) => {
-                  const member = members.find((m) => m.userId === userId)
-                  return (
-                    <UserAvatar key={userId} username={member?.username ?? '?'} role="USER"
-                      className="size-7 rounded-full text-[11px]" />
-                  )
-                })}
-              </div>
+              <ul className="space-y-1.5">
+                {occurrence.participantIds.map((userId) => (
+                  <li key={userId} className="flex items-center gap-2 text-sm">
+                    <UserAvatar userId={userId} username={memberName(userId)} className="size-6 shrink-0 rounded-full text-[10px]" />
+                    <span className="flex-1 truncate text-fg-1">{memberName(userId)}</span>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         )}

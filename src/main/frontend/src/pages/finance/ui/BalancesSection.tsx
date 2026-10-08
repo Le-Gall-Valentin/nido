@@ -35,7 +35,7 @@ export function BalancesSection({
               <li key={row.memberId}>
                 <button type="button" onClick={() => onSelectMember(row.memberId)}
                   className="flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors hover:bg-bg-2">
-                  <UserAvatar username={memberLabel(row.memberId)} role="USER" className="size-8 shrink-0 rounded-full text-xs" />
+                  <UserAvatar userId={row.memberId} username={memberLabel(row.memberId)} className="size-8 shrink-0 rounded-full text-xs" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[13.5px] font-medium text-fg-0">
                       {memberLabel(row.memberId)} <span className="font-normal text-fg-3">· {t('balances.paid_prefix', { amount: formatAmount(paid) })}</span>
@@ -60,9 +60,9 @@ export function BalancesSection({
             balances?.suggestedTransfers.map((transfer) => (
               <div key={`${transfer.fromMemberId}-${transfer.toMemberId}`} className="flex flex-col gap-2 rounded-[11px] bg-bg-2 p-2.5 sm:flex-row sm:items-center sm:gap-2.5">
                 <div className="flex items-center gap-2.5 sm:contents">
-                  <UserAvatar username={memberLabel(transfer.fromMemberId)} role="USER" className="size-7 shrink-0 rounded-full text-[10.5px]" />
+                  <UserAvatar userId={transfer.fromMemberId} username={memberLabel(transfer.fromMemberId)} className="size-7 shrink-0 rounded-full text-[10.5px]" />
                   <ArrowRight size={16} className="shrink-0 text-fg-3" />
-                  <UserAvatar username={memberLabel(transfer.toMemberId)} role="USER" className="size-7 shrink-0 rounded-full text-[10.5px]" />
+                  <UserAvatar userId={transfer.toMemberId} username={memberLabel(transfer.toMemberId)} className="size-7 shrink-0 rounded-full text-[10.5px]" />
                   <button type="button"
                     onClick={() => onSelectHistory({ memberAId: transfer.fromMemberId, memberBId: transfer.toMemberId })}
                     className="min-w-0 flex-1 truncate rounded text-left text-sm text-fg-1 hover:underline">

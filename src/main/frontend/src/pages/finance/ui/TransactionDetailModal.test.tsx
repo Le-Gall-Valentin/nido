@@ -69,4 +69,10 @@ describe('TransactionDetailModal', () => {
 
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('calls nobody a former member while the members are not known', () => {
+    render(<TransactionDetailModal transaction={transaction} category={alimentation} members={undefined} onClose={vi.fn()} />)
+    expect(screen.getAllByText('member.generic').length).toBeGreaterThan(0)
+    expect(screen.queryByText('member.former')).toBeNull()
+  })
 })

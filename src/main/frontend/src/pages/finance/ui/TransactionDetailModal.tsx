@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Repeat } from 'lucide-react'
 import { Dialog, Button } from '@/shared/ui'
 import { UserAvatar } from '@/entities/user'
-import type { SpaceMember } from '@/entities/space'
+import { useMemberName, type SpaceMember } from '@/entities/space'
 import type { Category, Transaction } from '@/entities/finance'
 import { CategoryIconBadge } from './CategoryIconBadge'
 import { roundSharePercentages } from '../lib/roundSharePercentages'
@@ -12,19 +12,17 @@ import { formatAmount } from '@/shared/lib'
 interface TransactionDetailModalProps {
   transaction: Transaction
   category?: Category
-  members: SpaceMember[]
+  /** Undefined while not known: nobody is then called a former member. */
+  members: SpaceMember[] | undefined
   onClose: () => void
 }
 
 export function TransactionDetailModal({ transaction, category, members, onClose }: TransactionDetailModalProps) {
   const { t } = useTranslation('finance')
-  const payer = members.find((m) => m.userId === transaction.payerId)
+  const payer = members?.find((m) => m.userId === transaction.payerId)
   const labels = contributionLabelKeys(transaction.type)
 
-  function memberLabel(memberId: string): string {
-    const member = members.find((m) => m.userId === memberId)
-    return member?.username ?? member?.email ?? memberId
-  }
+  const memberLabel = useMemberName(members)
 
   return (
     <Dialog open onClose={onClose} title={t('transactions.detail_title')} maxWidth="max-w-lg">
@@ -55,8 +53,8 @@ export function TransactionDetailModal({ transaction, category, members, onClose
           <div className="flex items-center justify-between">
             <dt className="text-fg-3">{t(labels.holder)}</dt>
             <dd className="flex items-center gap-1.5 font-medium text-fg-0">
-              <UserAvatar username={payer.username ?? '?'} role="USER" className="size-5 rounded-full text-[9px]" />
-              {payer.username ?? payer.email}
+              <UserAvatar userId={payer.userId} username={memberLabel(payer.userId)} className="size-5 rounded-full text-[9px]" />
+              {memberLabel(payer.userId)}
             </dd>
           </div>
         )}
@@ -70,7 +68,7 @@ export function TransactionDetailModal({ transaction, category, members, onClose
             <ul className="space-y-2">
               {transaction.contributors.map((contribution, i) => (
                 <li key={contribution.memberId} className="flex items-center gap-2 text-sm">
-                  <UserAvatar username={memberLabel(contribution.memberId)} role="USER" className="size-6 shrink-0 rounded-full text-[10px]" />
+                  <UserAvatar userId={contribution.memberId} username={memberLabel(contribution.memberId)} className="size-6 shrink-0 rounded-full text-[10px]" />
                   <span className="flex-1 truncate text-fg-1">{memberLabel(contribution.memberId)}</span>
                   <span className="text-fg-3">{percents[i]}%</span>
                   <span className="w-20 text-right font-medium text-fg-0">{formatAmount(contribution.shareAmount)}</span>

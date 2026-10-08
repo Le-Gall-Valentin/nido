@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import { Dialog } from '@/shared/ui'
+import { Dialog, Tooltip } from '@/shared/ui'
 import { UserAvatar } from '@/entities/user'
-import type { SpaceMember } from '@/entities/space'
+import { useMemberName, type SpaceMember } from '@/entities/space'
 import type { Category, Transaction } from '@/entities/finance'
 import { CategoryIconBadge } from './CategoryIconBadge'
 import { formatAmount } from '@/shared/lib'
@@ -16,6 +16,7 @@ interface CategoryTransactionsModalProps {
 
 export function CategoryTransactionsModal({ category, transactions, members, onSelectTransaction, onClose }: CategoryTransactionsModalProps) {
   const { t } = useTranslation('finance')
+  const memberName = useMemberName(members)
 
   return (
     <Dialog open onClose={onClose} title={category?.label ?? t('transactions.title')} maxWidth="max-w-lg" showCloseButton>
@@ -38,7 +39,11 @@ export function CategoryTransactionsModal({ category, transactions, members, onS
                     <p className="truncate text-sm font-medium text-fg-0">{transaction.label}</p>
                     <p className="truncate text-xs text-fg-3">{transaction.date}</p>
                   </div>
-                  {payer && <UserAvatar username={payer.username ?? '?'} role="USER" className="size-6 shrink-0 rounded-full text-[10px]" />}
+                  {payer && (
+                    <Tooltip label={memberName(payer.userId)} className="shrink-0">
+                      <UserAvatar userId={payer.userId} username={memberName(payer.userId)} className="size-6 rounded-full text-[10px]" />
+                    </Tooltip>
+                  )}
                   <span className={`shrink-0 text-sm font-semibold ${transaction.type === 'EXPENSE' ? 'text-fg-0' : 'text-status-green'}`}>
                     {transaction.type === 'EXPENSE' ? '-' : '+'}{formatAmount(transaction.amount)}
                   </span>
