@@ -95,4 +95,15 @@ class MailCodeRepositoryAdapterIT {
         assertThat(codes.find(jane, CodePurpose.LOGIN)).isEmpty();
         assertThat(codes.find(jane, CodePurpose.ENROL)).isEmpty();
     }
+
+    @Test
+    void a_code_is_taken_once_and_only_while_it_is_still_the_code_that_was_checked() {
+        codes.replace(code(CodePurpose.LOGIN, "b1", NOW));
+
+        assertThat(codes.take(jane, CodePurpose.LOGIN, "hash-b2")).isFalse();
+        assertThat(codes.find(jane, CodePurpose.LOGIN)).isPresent();
+        assertThat(codes.take(jane, CodePurpose.LOGIN, "hash-b1")).isTrue();
+        assertThat(codes.take(jane, CodePurpose.LOGIN, "hash-b1")).isFalse();
+        assertThat(codes.find(jane, CodePurpose.LOGIN)).isEmpty();
+    }
 }

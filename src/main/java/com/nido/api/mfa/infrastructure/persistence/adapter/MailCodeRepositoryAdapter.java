@@ -75,6 +75,19 @@ public class MailCodeRepositoryAdapter implements MailCodeStorePort {
     }
 
     @Override
+    public boolean take(UUID userId, CodePurpose purpose, String codeHash) {
+        // The row lock makes a second delete wait for the first to commit, then find nothing.
+        return jdbc.sql("""
+                DELETE FROM two_factor_mail_codes
+                WHERE user_id = :userId AND purpose = :purpose AND code_hash = :codeHash
+                """)
+            .param("userId", userId)
+            .param("purpose", purpose.name())
+            .param("codeHash", codeHash)
+            .update() == 1;
+    }
+
+    @Override
     public void delete(UUID userId, CodePurpose purpose) {
         jdbc.sql("DELETE FROM two_factor_mail_codes WHERE user_id = :userId AND purpose = :purpose")
             .param("userId", userId).param("purpose", purpose.name()).update();

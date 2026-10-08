@@ -19,6 +19,14 @@ public interface MailCodeStorePort {
     /** @return the failures now recorded, 0 when there is no code */
     int recordFailure(UUID userId, CodePurpose purpose);
 
+    /**
+     * Deletes the code if it is still the one with this hash: of two requests carrying the right code at once,
+     * one takes it and the other finds nothing.
+     *
+     * @return whether this caller took it
+     */
+    boolean take(UUID userId, CodePurpose purpose, String codeHash);
+
     void delete(UUID userId, CodePurpose purpose);
 
     void deleteAll(UUID userId);

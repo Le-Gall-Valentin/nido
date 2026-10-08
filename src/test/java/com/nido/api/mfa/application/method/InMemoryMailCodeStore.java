@@ -16,10 +16,17 @@ class InMemoryMailCodeStore implements MailCodeStorePort {
     private record Key(UUID userId, CodePurpose purpose) {}
 
     final Map<Key, SentMailCode> codes = new HashMap<>();
+    /** Another request takes the code right after the next read: two requests carrying the same code at once. */
+    boolean takenRightAfterNextFind;
 
     @Override
     public Optional<SentMailCode> find(UUID userId, CodePurpose purpose) {
-        return Optional.ofNullable(codes.get(new Key(userId, purpose)));
+        Optional<SentMailCode> found = Optional.ofNullable(codes.get(new Key(userId, purpose)));
+        if (takenRightAfterNextFind) {
+            takenRightAfterNextFind = false;
+            codes.remove(new Key(userId, purpose));
+        }
+        return found;
     }
 
     @Override
@@ -36,6 +43,12 @@ class InMemoryMailCodeStore implements MailCodeStorePort {
             code.failedAttempts() + 1, code.sentAt(), code.expiresAt());
         codes.put(new Key(userId, purpose), failed);
         return failed.failedAttempts();
+    }
+
+    @Override
+    public boolean take(UUID userId, CodePurpose purpose, String codeHash) {
+        SentMailCode live = codes.get(new Key(userId, purpose));
+        return live != null && live.codeHash().equals(codeHash) && codes.remove(new Key(userId, purpose), live);
     }
 
     @Override

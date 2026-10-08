@@ -7,9 +7,12 @@ import com.nido.api.mfa.domain.model.EnrolmentStarted;
 import com.nido.api.mfa.domain.model.MfaException;
 import com.nido.api.mfa.domain.port.out.AccountAddressPort;
 import com.nido.api.mfa.domain.port.out.MailAvailabilityPort;
+import com.nido.api.mfa.domain.port.out.MailCodeHasherPort;
 import com.nido.api.mfa.domain.port.out.MailCodeSendLimitPort;
 import com.nido.api.mfa.domain.port.out.TwoFactorMailPort;
+import com.nido.api.mfa.infrastructure.security.HmacMailCodeHasherAdapter;
 import com.nido.api.shared.model.TwoFactorMethod;
+import com.nido.api.shared.security.EncryptionKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -45,6 +48,7 @@ class MailMethodTest {
     private final TwoFactorMailPort mails = mock(TwoFactorMailPort.class);
     private final MailAvailabilityPort availability = mock(MailAvailabilityPort.class);
     private final AccountAddressPort addresses = mock(AccountAddressPort.class);
+    private final MailCodeHasherPort hasher = new HmacMailCodeHasherAdapter(new EncryptionKey("test-installation-key"));
     private final Deque<String> nextCodes = new ArrayDeque<>(List.of("004213", "771205", "555555"));
 
     private Instant now = START;
@@ -60,7 +64,7 @@ class MailMethodTest {
         when(availability.isAvailable()).thenReturn(true);
         when(limit.tryCount(jane)).thenReturn(OptionalLong.empty());
         when(addresses.addressOf(jane)).thenReturn(Optional.of("jane@example.fr"));
-        MailCodeIssuer issuer = new MailCodeIssuer(codes, limit, nextCodes::pop, mails, availability, clock);
+        MailCodeIssuer issuer = new MailCodeIssuer(codes, limit, nextCodes::pop, hasher, mails, availability, clock);
         mail = new MailMethod(issuer, availability, addresses);
     }
 
@@ -148,6 +152,14 @@ class MailMethodTest {
         mail.sendCode(jane, CodePurpose.LOGIN, "c2");
         now = START.plusSeconds(120 + 600);
         assertThat(mail.check(jane, CodePurpose.LOGIN, "c2", "771205")).isEqualTo(CodeCheck.INVALID);
+    }
+
+    @Test
+    void of_two_requests_carrying_the_right_code_at_once_only_one_gets_in() {
+        mail.sendCode(jane, CodePurpose.LOGIN, "c1");
+        codes.takenRightAfterNextFind = true;
+
+        assertThat(mail.check(jane, CodePurpose.LOGIN, "c1", "004213")).isEqualTo(CodeCheck.INVALID);
     }
 
     @Test

@@ -3,10 +3,10 @@ package com.nido.api.mfa.application.method;
 import com.nido.api.mfa.domain.model.CodeCheck;
 import com.nido.api.mfa.domain.model.CodeDelivery;
 import com.nido.api.mfa.domain.model.CodePurpose;
-import com.nido.api.mfa.domain.model.MailCodeDigest;
 import com.nido.api.mfa.domain.model.SentMailCode;
 import com.nido.api.mfa.domain.port.out.MailAvailabilityPort;
 import com.nido.api.mfa.domain.port.out.MailCodeGeneratorPort;
+import com.nido.api.mfa.domain.port.out.MailCodeHasherPort;
 import com.nido.api.mfa.domain.port.out.MailCodeSendLimitPort;
 import com.nido.api.mfa.domain.port.out.MailCodeStorePort;
 import com.nido.api.mfa.domain.port.out.TwoFactorMailPort;
@@ -31,15 +31,17 @@ public class MailCodeIssuer {
     private final MailCodeStorePort codes;
     private final MailCodeSendLimitPort limit;
     private final MailCodeGeneratorPort generator;
+    private final MailCodeHasherPort hasher;
     private final TwoFactorMailPort mails;
     private final MailAvailabilityPort availability;
     private final Clock clock;
 
     public MailCodeIssuer(MailCodeStorePort codes, MailCodeSendLimitPort limit, MailCodeGeneratorPort generator,
-                          TwoFactorMailPort mails, MailAvailabilityPort availability, Clock clock) {
+                          MailCodeHasherPort hasher, TwoFactorMailPort mails, MailAvailabilityPort availability, Clock clock) {
         this.codes = codes;
         this.limit = limit;
         this.generator = generator;
+        this.hasher = hasher;
         this.mails = mails;
         this.availability = availability;
         this.clock = clock;
@@ -55,7 +57,7 @@ public class MailCodeIssuer {
             return new CodeDelivery.Unavailable();
         }
         Instant now = clock.instant();
-        String bindingHash = MailCodeDigest.bindingHash(binding);
+        String bindingHash = hasher.bindingHash(binding);
         Optional<SentMailCode> previous = codes.find(userId, purpose);
         if (previous.isPresent() && previous.get().bindingHash().equals(bindingHash)) {
             long wait = TwoFactorPolicy.RESEND_DELAY.toSeconds() - Duration.between(previous.get().sentAt(), now).toSeconds();
@@ -69,7 +71,7 @@ public class MailCodeIssuer {
         }
         String code = generator.newCode();
         Instant expiresAt = now.plus(TwoFactorPolicy.CODE_VALIDITY);
-        codes.replace(new SentMailCode(userId, purpose, bindingHash, MailCodeDigest.of(binding, code), 0, now, expiresAt));
+        codes.replace(new SentMailCode(userId, purpose, bindingHash, hasher.codeHash(binding, code), 0, now, expiresAt));
         mails.sendCode(userId, address, purpose, code, expiresAt);
         return new CodeDelivery.Sent(TwoFactorPolicy.RESEND_DELAY.toSeconds());
     }
@@ -78,13 +80,13 @@ public class MailCodeIssuer {
     public CodeCheck check(UUID userId, CodePurpose purpose, String binding, String code) {
         Optional<SentMailCode> sent = codes.find(userId, purpose)
             .filter(live -> live.expiresAt().isAfter(clock.instant()))
-            .filter(live -> live.bindingHash().equals(MailCodeDigest.bindingHash(binding)));
+            .filter(live -> live.bindingHash().equals(hasher.bindingHash(binding)));
         if (sent.isEmpty()) {
             return CodeCheck.INVALID;
         }
-        if (MailCodeDigest.matches(sent.get().codeHash(), binding, code)) {
-            codes.delete(userId, purpose);
-            return CodeCheck.SUCCESS;
+        if (hasher.matches(sent.get().codeHash(), binding, code)) {
+            // Taken, not merely deleted: of two requests carrying the right code at once, only one gets in.
+            return codes.take(userId, purpose, sent.get().codeHash()) ? CodeCheck.SUCCESS : CodeCheck.INVALID;
         }
         if (purpose != CodePurpose.LOGIN && codes.recordFailure(userId, purpose) >= TwoFactorPolicy.MAX_ATTEMPTS) {
             codes.delete(userId, purpose);
