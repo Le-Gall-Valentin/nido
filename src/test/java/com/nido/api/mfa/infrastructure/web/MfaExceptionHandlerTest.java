@@ -69,7 +69,6 @@ class MfaExceptionHandlerTest {
         assertThat(handler.handle(new MfaException.EnrolmentNotStarted(), request).getStatusCode())
             .isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
         assertThat(handler.handle(new MfaException.CodeInvalid(), request).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(handler.handle(new MfaException.InsufficientPermissions(), request).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         var lockout = handler.handle(new MfaException.ConfirmMaxAttemptsExceeded(), request);
         assertThat(lockout.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
         assertThat(lockout.getHeaders().containsHeader(HttpHeaders.RETRY_AFTER))
@@ -83,5 +82,13 @@ class MfaExceptionHandlerTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(410);
         assertThat(response.getBody().getProperties()).containsEntry("error_code", "code_spent");
+    }
+
+    @Test
+    void an_expired_code_is_gone_too_but_named_apart() {
+        var response = handler.handle(new MfaException.CodeExpired(), request);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(410);
+        assertThat(response.getBody().getProperties()).containsEntry("error_code", "code_expired");
     }
 }

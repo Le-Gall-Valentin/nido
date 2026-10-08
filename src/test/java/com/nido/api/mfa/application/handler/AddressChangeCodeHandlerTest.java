@@ -56,9 +56,9 @@ class AddressChangeCodeHandlerTest {
     @Test
     void a_code_counts_only_for_the_address_it_was_sent_to() {
         when(issuer.check(jane, CodePurpose.EMAIL_CHANGE, "jane@new.fr", "004213")).thenReturn(CodeCheck.SUCCESS);
-        when(issuer.check(jane, CodePurpose.EMAIL_CHANGE, "jane@other.fr", "004213")).thenReturn(CodeCheck.INVALID);
+        when(issuer.check(jane, CodePurpose.EMAIL_CHANGE, "jane@other.fr", "004213")).thenReturn(CodeCheck.EXPIRED);
 
-        assertThat(handler.check(jane, "jane@new.fr", "004213")).isTrue();
-        assertThat(handler.check(jane, "jane@other.fr", "004213")).isFalse();
+        assertThat(handler.check(jane, "jane@new.fr", "004213")).isEqualTo(CodeCheck.SUCCESS);
+        assertThat(handler.check(jane, "jane@other.fr", "004213")).isEqualTo(CodeCheck.EXPIRED);
     }
 }

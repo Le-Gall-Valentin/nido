@@ -18,7 +18,7 @@ import java.util.UUID;
  * method can be neither turned on nor asked for — it is paused, and the account signs in with its password.
  */
 @ApplicationService
-public class MailMethod implements TwoFactorMethodHandler {
+public class MailMethod implements CodeSendingMethod {
 
     private final MailCodeIssuer issuer;
     private final MailAvailabilityPort availability;
@@ -41,11 +41,6 @@ public class MailMethod implements TwoFactorMethodHandler {
     }
 
     @Override
-    public boolean deliversCodes() {
-        return true;
-    }
-
-    @Override
     public EnrolmentStarted startEnrolment(UUID userId) {
         String address = addresses.addressOf(userId).orElseThrow(MfaException.UserNotFound::new);
         long resendAfter = issuer.issue(userId, CodePurpose.ENROL, userId.toString(), address).resendAfterOrThrow();
@@ -54,17 +49,13 @@ public class MailMethod implements TwoFactorMethodHandler {
 
     @Override
     public Optional<String> confirmEnrolment(UUID userId, String code) {
-        if (!issuer.isPending(userId, CodePurpose.ENROL)) {
-            throw new MfaException.EnrolmentNotStarted();
-        }
-        if (issuer.check(userId, CodePurpose.ENROL, userId.toString(), code) == CodeCheck.SUCCESS) {
-            return Optional.empty();
-        }
-        // The fifth wrong code took the code with it: the enrolment has to start again.
-        if (!issuer.isPending(userId, CodePurpose.ENROL)) {
-            throw new MfaException.ConfirmMaxAttemptsExceeded();
-        }
-        throw new MfaException.CodeInvalid();
+        return switch (issuer.check(userId, CodePurpose.ENROL, userId.toString(), code)) {
+            case SUCCESS -> Optional.empty();
+            case EXPIRED -> throw new MfaException.EnrolmentNotStarted();
+            // The fifth wrong code took the code with it: the enrolment has to start again.
+            case SPENT -> throw new MfaException.ConfirmMaxAttemptsExceeded();
+            case INVALID, REPLAYED -> throw new MfaException.CodeInvalid();
+        };
     }
 
     @Override
@@ -79,11 +70,10 @@ public class MailMethod implements TwoFactorMethodHandler {
         return issuer.check(userId, purpose, binding, code);
     }
 
-    @Override
-    public boolean codePending(UUID userId, CodePurpose purpose) {
-        return issuer.isPending(userId, purpose);
-    }
-
+    /**
+     * Every code of the account goes, whatever it was for: each one is asked for only while the mail method is on,
+     * or to turn it on, so none of them has a use once the method changes state.
+     */
     @Override
     public void forgetPending(UUID userId) {
         issuer.forget(userId);

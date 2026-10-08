@@ -3,8 +3,8 @@ package com.nido.api.mfa.domain.model;
 public abstract sealed class MfaException extends RuntimeException
     permits MfaException.UserNotFound, MfaException.MethodAlreadyEnabled, MfaException.MethodNotEnabled,
             MfaException.MethodUnavailable, MfaException.MethodSendsNoCode, MfaException.EnrolmentNotStarted,
-            MfaException.CodeInvalid, MfaException.CodeSpent, MfaException.ConfirmMaxAttemptsExceeded, MfaException.ResendTooSoon,
-            MfaException.SendLimitReached, MfaException.InsufficientPermissions {
+            MfaException.CodeInvalid, MfaException.CodeExpired, MfaException.CodeSpent,
+            MfaException.ConfirmMaxAttemptsExceeded, MfaException.ResendTooSoon, MfaException.SendLimitReached {
 
     private MfaException(String message) { super(message); }
 
@@ -30,11 +30,15 @@ public abstract sealed class MfaException extends RuntimeException
         public EnrolmentNotStarted() { super("No two-factor setup is under way"); }
     }
     public static final class CodeInvalid extends MfaException {
-        public CodeInvalid() { super("Invalid or expired code"); }
+        public CodeInvalid() { super("Invalid code"); }
     }
-    /** Too many wrong guesses took the code with it — or none is waiting: a new one has to be asked for. */
+    /** No code sent is waiting — never asked for, or expired: a new one has to be asked for. */
+    public static final class CodeExpired extends MfaException {
+        public CodeExpired() { super("No code is waiting any more. Please ask for a new one."); }
+    }
+    /** Too many wrong guesses: a code sent is gone with them, the app's codes are refused for a while. */
     public static final class CodeSpent extends MfaException {
-        public CodeSpent() { super("This code no longer works. Please ask for a new one."); }
+        public CodeSpent() { super("Too many wrong codes."); }
     }
 
     public static final class ConfirmMaxAttemptsExceeded extends MfaException {
@@ -51,8 +55,5 @@ public abstract sealed class MfaException extends RuntimeException
         private final long seconds;
         public SendLimitReached(long seconds) { super("Too many codes sent by mail"); this.seconds = seconds; }
         public long seconds() { return seconds; }
-    }
-    public static final class InsufficientPermissions extends MfaException {
-        public InsufficientPermissions() { super("Insufficient permissions"); }
     }
 }

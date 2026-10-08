@@ -47,7 +47,8 @@ public class MfaTwoFactorChallengeAdapter implements TwoFactorChallengePort {
     public SecondFactorCheck verify(UUID userId, TwoFactorMethod method, String challengeId, String code) {
         return switch (challenge.verify(userId, method, challengeId, code)) {
             case SUCCESS -> SecondFactorCheck.SUCCESS;
-            case INVALID -> SecondFactorCheck.INVALID;
+            // Sign-in counts every wrong answer against the account, whatever the reason the code no longer works.
+            case INVALID, EXPIRED, SPENT -> SecondFactorCheck.INVALID;
             case REPLAYED -> SecondFactorCheck.REPLAYED;
         };
     }

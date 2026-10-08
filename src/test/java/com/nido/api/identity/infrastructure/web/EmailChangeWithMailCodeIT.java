@@ -166,15 +166,31 @@ class EmailChangeWithMailCodeIT {
         String right = codeIn(mailTo(newAddress));
         String wrong = right.equals("000000") ? "111111" : "000000";
 
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 4; i++) {
             rateLimits.clearAll();
-            change(newAddress, wrong).andExpect(status().isBadRequest());
+            change(newAddress, wrong).andExpect(jsonPath("$.error_code").value("email_code_invalid"));
         }
+        rateLimits.clearAll();
+        change(newAddress, wrong)
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("email_code_spent"));
         rateLimits.clearAll();
 
         change(newAddress, right)
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.error_code").value("email_code_spent"));
+            .andExpect(jsonPath("$.error_code").value("email_code_expired"));
+    }
+
+    @Test
+    void a_code_that_expired_says_so_not_that_someone_guessed() throws Exception {
+        change(newAddress, null).andExpect(status().isAccepted());
+        String right = codeIn(mailTo(newAddress));
+        jdbc.sql("UPDATE two_factor_mail_codes SET expires_at = now() - interval '1 second'").update();
+
+        change(newAddress, right)
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("email_code_expired"));
+        assertThat(users.findById(janeId).orElseThrow().getEmail()).isEqualTo("jane@old.fr");
     }
 
     @Test

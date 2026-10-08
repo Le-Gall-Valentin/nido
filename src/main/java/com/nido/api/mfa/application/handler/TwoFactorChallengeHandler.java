@@ -36,7 +36,9 @@ public class TwoFactorChallengeHandler implements TwoFactorChallengeUseCase {
     @Override
     @Transactional
     public CodeDelivery sendMailCode(UUID userId, String challengeId) {
-        return methods.of(TwoFactorMethod.MAIL).sendCode(userId, CodePurpose.LOGIN, challengeId);
+        return methods.sender(TwoFactorMethod.MAIL)
+            .map(mail -> mail.sendCode(userId, CodePurpose.LOGIN, challengeId))
+            .orElseGet(CodeDelivery.Unavailable::new);
     }
 
     @Override

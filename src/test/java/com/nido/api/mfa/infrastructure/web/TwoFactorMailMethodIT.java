@@ -195,9 +195,27 @@ class TwoFactorMailMethodIT {
         rateLimits.clearAll();
         mockMvc.perform(delete("/api/auth/2fa/mail").cookie(access).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"" + right + "\"}"))
-            .andExpect(status().isGone());
+            .andExpect(status().isGone())
+            .andExpect(jsonPath("$.error_code").value("code_expired"));
         mockMvc.perform(get("/api/auth/2fa").cookie(access))
             .andExpect(jsonPath("$[1].enabled").value(true));
+    }
+
+    @Test
+    void a_disable_code_that_expired_says_so_and_counts_nothing() throws Exception {
+        // Ten minutes gone is not five wrong guesses: the person is told to ask again, not that someone guessed.
+        methods.save(new TwoFactorMethodEntity(users.findNotDeletedByUsernameIgnoreCase("jane").orElseThrow().getId(),
+            TwoFactorMethod.MAIL, null));
+        Cookie access = loginWithMailCode();
+        mockMvc.perform(post("/api/auth/2fa/mail/disable-code").cookie(access)).andExpect(status().isOk());
+        String right = codeOfMail(1);
+        jdbc.sql("UPDATE two_factor_mail_codes SET expires_at = now() - interval '1 second'").update();
+
+        mockMvc.perform(delete("/api/auth/2fa/mail").cookie(access).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"" + right + "\"}"))
+            .andExpect(status().isGone())
+            .andExpect(jsonPath("$.error_code").value("code_expired"));
+        assertThat(jdbc.sql("SELECT failed_attempts FROM two_factor_mail_codes").query(Integer.class).single()).isZero();
     }
 
     private Cookie loginWithMailCode() throws Exception {

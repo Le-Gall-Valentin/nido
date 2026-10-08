@@ -110,4 +110,12 @@ class IdentityExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().getProperties()).containsEntry("error_code", "email_code_spent");
     }
+
+    @Test
+    void an_expired_address_code_is_a_bad_request_named_apart() {
+        var response = handler.handle(new IdentityException.EmailCodeExpired(), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().getProperties()).containsEntry("error_code", "email_code_expired");
+    }
 }

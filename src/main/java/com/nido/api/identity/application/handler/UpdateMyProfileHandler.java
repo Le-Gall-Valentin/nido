@@ -78,12 +78,12 @@ public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
                 if (command.emailCode() == null) {
                     return new ProfileUpdate.EmailCodeSent(command.email(), addressChangeCode.send(user.id(), command.email()));
                 }
-                if (!addressChangeCode.check(user.id(), command.email(), command.emailCode())) {
+                switch (addressChangeCode.check(user.id(), command.email(), command.emailCode())) {
+                    case VALID -> { }
+                    case INVALID -> throw new IdentityException.EmailCodeInvalid();
+                    case EXPIRED -> throw new IdentityException.EmailCodeExpired();
                     // The fifth wrong code took the code with it: even the right one is refused from now on.
-                    if (!addressChangeCode.pending(user.id())) {
-                        throw new IdentityException.EmailCodeSpent();
-                    }
-                    throw new IdentityException.EmailCodeInvalid();
+                    case SPENT -> throw new IdentityException.EmailCodeSpent();
                 }
             }
         }

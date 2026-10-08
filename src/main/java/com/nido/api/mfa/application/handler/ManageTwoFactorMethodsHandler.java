@@ -1,9 +1,9 @@
 package com.nido.api.mfa.application.handler;
 
+import com.nido.api.mfa.application.method.CodeSendingMethod;
 import com.nido.api.mfa.application.method.TwoFactorMethodHandler;
 import com.nido.api.mfa.application.method.TwoFactorMethods;
 import com.nido.api.mfa.application.port.in.ManageTwoFactorMethodsUseCase;
-import com.nido.api.mfa.domain.model.CodeCheck;
 import com.nido.api.mfa.domain.model.CodePurpose;
 import com.nido.api.mfa.domain.model.EnrolmentStarted;
 import com.nido.api.mfa.domain.model.MethodState;
@@ -72,14 +72,11 @@ public class ManageTwoFactorMethodsHandler implements ManageTwoFactorMethodsUseC
     @Override
     @Transactional
     public long sendDisableCode(UUID userId, TwoFactorMethod method) {
-        TwoFactorMethodHandler handler = methods.of(method);
-        if (!handler.deliversCodes()) {
-            throw new MfaException.MethodSendsNoCode();
-        }
+        CodeSendingMethod sender = methods.sender(method).orElseThrow(MfaException.MethodSendsNoCode::new);
         if (!store.activeMethods(userId).contains(method)) {
             throw new MfaException.MethodNotEnabled();
         }
-        return handler.sendCode(userId, CodePurpose.DISABLE, userId.toString()).resendAfterOrThrow();
+        return sender.sendCode(userId, CodePurpose.DISABLE, userId.toString()).resendAfterOrThrow();
     }
 
     /** Same reason as {@link #confirmEnrolment}: a wrong code is counted, so the error does not undo the count. */
@@ -93,12 +90,16 @@ public class ManageTwoFactorMethodsHandler implements ManageTwoFactorMethodsUseC
         TwoFactorMethodHandler handler = methods.of(method);
         // A paused method protects nothing and has no way to prove itself: it goes on the session alone.
         if (handler.usableNow()) {
-            if (code == null || handler.check(userId, CodePurpose.DISABLE, userId.toString(), code) != CodeCheck.SUCCESS) {
-                // The fifth wrong code took the code with it: "invalid" would have the person try the right one in vain.
-                if (code != null && handler.deliversCodes() && !handler.codePending(userId, CodePurpose.DISABLE)) {
-                    throw new MfaException.CodeSpent();
-                }
+            if (code == null) {
                 throw new MfaException.CodeInvalid();
+            }
+            switch (handler.check(userId, CodePurpose.DISABLE, userId.toString(), code)) {
+                case SUCCESS -> { }
+                case INVALID, REPLAYED -> throw new MfaException.CodeInvalid();
+                // Told apart from a wrong guess: "too many wrong codes" to someone who only waited would alarm them.
+                case EXPIRED -> throw new MfaException.CodeExpired();
+                // "Invalid" would have the person try the right one in vain.
+                case SPENT -> throw new MfaException.CodeSpent();
             }
         }
         store.disable(userId, method);

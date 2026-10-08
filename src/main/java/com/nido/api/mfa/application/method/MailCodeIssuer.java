@@ -76,27 +76,26 @@ public class MailCodeIssuer {
         return new CodeDelivery.Sent(TwoFactorPolicy.RESEND_DELAY.toSeconds());
     }
 
-    /** A right code is used up. A wrong one counts against the code — at sign-in, the account's counter does. */
+    /**
+     * A right code is used up. A wrong one counts against the code, and the fifth takes it — at sign-in, the
+     * account's counter does the counting. Nothing waiting for this binding is told apart from a wrong guess.
+     */
     public CodeCheck check(UUID userId, CodePurpose purpose, String binding, String code) {
         Optional<SentMailCode> sent = codes.find(userId, purpose)
             .filter(live -> live.expiresAt().isAfter(clock.instant()))
             .filter(live -> live.bindingHash().equals(hasher.bindingHash(binding)));
         if (sent.isEmpty()) {
-            return CodeCheck.INVALID;
+            return CodeCheck.EXPIRED;
         }
         if (hasher.matches(sent.get().codeHash(), binding, code)) {
             // Taken, not merely deleted: of two requests carrying the right code at once, only one gets in.
-            return codes.take(userId, purpose, sent.get().codeHash()) ? CodeCheck.SUCCESS : CodeCheck.INVALID;
+            return codes.take(userId, purpose, sent.get().codeHash()) ? CodeCheck.SUCCESS : CodeCheck.EXPIRED;
         }
         if (purpose != CodePurpose.LOGIN && codes.recordFailure(userId, purpose) >= TwoFactorPolicy.MAX_ATTEMPTS) {
             codes.delete(userId, purpose);
+            return CodeCheck.SPENT;
         }
         return CodeCheck.INVALID;
-    }
-
-    /** Whether a live code for this purpose is waiting, whatever it is bound to. */
-    public boolean isPending(UUID userId, CodePurpose purpose) {
-        return codes.find(userId, purpose).filter(live -> live.expiresAt().isAfter(clock.instant())).isPresent();
     }
 
     public void forget(UUID userId) {

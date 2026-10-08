@@ -1,5 +1,6 @@
 package com.nido.api.mfa.application.handler;
 
+import com.nido.api.mfa.application.method.CodeSendingMethod;
 import com.nido.api.mfa.application.method.TwoFactorMethodHandler;
 import com.nido.api.mfa.application.method.TwoFactorMethods;
 import com.nido.api.mfa.domain.model.CodeCheck;
@@ -22,7 +23,7 @@ class TwoFactorChallengeHandlerTest {
 
     private final TwoFactorMethodStorePort store = mock(TwoFactorMethodStorePort.class);
     private final TwoFactorMethodHandler app = mock(TwoFactorMethodHandler.class);
-    private final TwoFactorMethodHandler mail = mock(TwoFactorMethodHandler.class);
+    private final CodeSendingMethod mail = mock(CodeSendingMethod.class);
     private final UUID jane = UUID.randomUUID();
     private TwoFactorChallengeHandler handler;
 

@@ -1,6 +1,7 @@
 package com.nido.api.identity.application.handler;
 
 import com.nido.api.identity.domain.model.EmailAddress;
+import com.nido.api.identity.domain.model.EmailCodeCheck;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.ProfileUpdate;
 import com.nido.api.identity.domain.model.UpdateProfileCommand;
@@ -184,7 +185,7 @@ class UpdateMyProfileHandlerTest {
         when(passwordCheck.matches(userId, "password")).thenReturn(true);
         when(addressChangeCode.required(userId)).thenReturn(true);
         when(userRepository.findByEmail(new EmailAddress("new@test.com"))).thenReturn(Optional.empty());
-        when(addressChangeCode.check(userId, "new@test.com", "004213")).thenReturn(true);
+        when(addressChangeCode.check(userId, "new@test.com", "004213")).thenReturn(EmailCodeCheck.VALID);
         UpdateProfileCommand command = new UpdateProfileCommand(userId, "jane", "new@test.com", "password", "004213");
 
         assertThat(handler.updateProfile(command)).isEqualTo(new ProfileUpdate.Saved());
@@ -198,8 +199,7 @@ class UpdateMyProfileHandlerTest {
         when(passwordCheck.matches(userId, "password")).thenReturn(true);
         when(addressChangeCode.required(userId)).thenReturn(true);
         when(userRepository.findByEmail(new EmailAddress("new@test.com"))).thenReturn(Optional.empty());
-        when(addressChangeCode.check(userId, "new@test.com", "000000")).thenReturn(false);
-        when(addressChangeCode.pending(userId)).thenReturn(true);
+        when(addressChangeCode.check(userId, "new@test.com", "000000")).thenReturn(EmailCodeCheck.INVALID);
 
         assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com", "password", "000000")))
             .isInstanceOf(IdentityException.EmailCodeInvalid.class);
@@ -256,11 +256,23 @@ class UpdateMyProfileHandlerTest {
         when(passwordCheck.matches(userId, "password")).thenReturn(true);
         when(addressChangeCode.required(userId)).thenReturn(true);
         when(userRepository.findByEmail(new EmailAddress("new@test.com"))).thenReturn(Optional.empty());
-        when(addressChangeCode.check(userId, "new@test.com", "000000")).thenReturn(false);
-        when(addressChangeCode.pending(userId)).thenReturn(false);
+        when(addressChangeCode.check(userId, "new@test.com", "000000")).thenReturn(EmailCodeCheck.SPENT);
 
         assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com", "password", "000000")))
             .isInstanceOf(IdentityException.EmailCodeSpent.class);
+        verify(userCommandPort, never()).updateProfile(any());
+    }
+
+    @Test
+    void a_code_that_expired_says_so_rather_than_blame_wrong_guesses() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
+        when(passwordCheck.matches(userId, "password")).thenReturn(true);
+        when(addressChangeCode.required(userId)).thenReturn(true);
+        when(userRepository.findByEmail(new EmailAddress("new@test.com"))).thenReturn(Optional.empty());
+        when(addressChangeCode.check(userId, "new@test.com", "004213")).thenReturn(EmailCodeCheck.EXPIRED);
+
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com", "password", "004213")))
+            .isInstanceOf(IdentityException.EmailCodeExpired.class);
         verify(userCommandPort, never()).updateProfile(any());
     }
 }

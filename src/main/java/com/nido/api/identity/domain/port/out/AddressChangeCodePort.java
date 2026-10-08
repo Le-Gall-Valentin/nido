@@ -1,5 +1,7 @@
 package com.nido.api.identity.domain.port.out;
 
+import com.nido.api.identity.domain.model.EmailCodeCheck;
+
 import java.util.UUID;
 
 /**
@@ -13,8 +15,6 @@ public interface AddressChangeCodePort {
     /** @return the seconds before another code can be asked for */
     long send(UUID userId, String newAddress);
 
-    boolean check(UUID userId, String newAddress, String code);
-
-    /** Whether a code is still waiting: five wrong guesses take it with them. */
-    boolean pending(UUID userId);
+    /** A right code is used up; five wrong ones take it with them. */
+    EmailCodeCheck check(UUID userId, String newAddress, String code);
 }

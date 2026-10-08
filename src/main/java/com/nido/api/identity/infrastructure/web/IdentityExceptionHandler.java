@@ -52,7 +52,11 @@ public class IdentityExceptionHandler {
 
             case IdentityException.EmailCodeInvalid ex ->
                     new IdentityErrorResponse(400, ex.getClass().getSimpleName(),
-                        "The code sent to the new address is invalid or expired.", "email_code_invalid");
+                        "The code sent to the new address is invalid.", "email_code_invalid");
+
+            case IdentityException.EmailCodeExpired ex ->
+                    new IdentityErrorResponse(400, ex.getClass().getSimpleName(),
+                        "No code is waiting for the new address any more: ask for a new one.", "email_code_expired");
 
             case IdentityException.EmailCodeSpent ex ->
                     new IdentityErrorResponse(400, ex.getClass().getSimpleName(),

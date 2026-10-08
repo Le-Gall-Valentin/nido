@@ -1,7 +1,6 @@
 package com.nido.api.mfa.application.method;
 
 import com.nido.api.mfa.domain.model.CodeCheck;
-import com.nido.api.mfa.domain.model.CodeDelivery;
 import com.nido.api.mfa.domain.model.CodePurpose;
 import com.nido.api.mfa.domain.model.EnrolmentStarted;
 import com.nido.api.mfa.domain.model.MfaException;
@@ -9,7 +8,7 @@ import com.nido.api.mfa.domain.port.out.AccountAddressPort;
 import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import com.nido.api.mfa.domain.port.out.TotpCodeReplayPort;
 import com.nido.api.mfa.domain.port.out.TotpCodeValidatorPort;
-import com.nido.api.mfa.domain.port.out.TotpConfirmAttemptPort;
+import com.nido.api.mfa.domain.port.out.TotpAttemptPort;
 import com.nido.api.mfa.domain.port.out.TotpSecretGeneratorPort;
 import com.nido.api.mfa.domain.port.out.TotpUriBuilderPort;
 import com.nido.api.mfa.domain.port.out.TwoFactorMethodStorePort;
@@ -25,6 +24,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,7 +38,7 @@ class AppMethodTest {
     @Mock PendingTotpEnrolmentPort pending;
     @Mock TotpCodeValidatorPort validator;
     @Mock TotpCodeReplayPort replay;
-    @Mock TotpConfirmAttemptPort confirmAttempts;
+    @Mock TotpAttemptPort attempts;
     @Mock AccountAddressPort addresses;
 
     private AppMethod app;
@@ -46,15 +46,14 @@ class AppMethodTest {
 
     @BeforeEach
     void setUp() {
-        app = new AppMethod(store, secrets, uris, pending, validator, replay, confirmAttempts, addresses);
+        app = new AppMethod(store, secrets, uris, pending, validator, replay, attempts, addresses);
     }
 
     @Test
     void the_app_is_always_usable_and_sends_nothing() {
         assertThat(app.method()).isEqualTo(TwoFactorMethod.APP);
         assertThat(app.usableNow()).isTrue();
-        assertThat(app.deliversCodes()).isFalse();
-        assertThat(app.sendCode(jane, CodePurpose.LOGIN, "challenge")).isEqualTo(new CodeDelivery.Unavailable());
+        assertThat(app).isNotInstanceOf(CodeSendingMethod.class);
     }
 
     @Test
@@ -92,7 +91,7 @@ class AppMethodTest {
         when(replay.markCodeUsedIfAbsent(jane, "123456")).thenReturn(true);
 
         assertThat(app.confirmEnrolment(jane, "123456")).contains("SECRET");
-        verify(confirmAttempts).clearAttempts(jane);
+        verify(attempts).clear(jane, CodePurpose.ENROL);
         verify(pending, never()).discard(jane);
     }
 
@@ -107,13 +106,13 @@ class AppMethodTest {
     void a_wrong_first_code_counts_and_the_fifth_abandons_the_enrolment() {
         when(pending.find(jane)).thenReturn(Optional.of("SECRET"));
         when(validator.isValid("SECRET", "000000")).thenReturn(false);
-        when(confirmAttempts.incrementAndGetAttempts(jane)).thenReturn(4, 5);
+        when(attempts.recordFailure(jane, CodePurpose.ENROL)).thenReturn(4, 5);
 
         assertThatThrownBy(() -> app.confirmEnrolment(jane, "000000")).isInstanceOf(MfaException.CodeInvalid.class);
         assertThatThrownBy(() -> app.confirmEnrolment(jane, "000000"))
             .isInstanceOf(MfaException.ConfirmMaxAttemptsExceeded.class);
         verify(pending).discard(jane);
-        verify(confirmAttempts).clearAttempts(jane);
+        verify(attempts).clear(jane, CodePurpose.ENROL);
     }
 
     @Test
@@ -139,16 +138,59 @@ class AppMethodTest {
     void a_wrong_code_or_no_secret_is_invalid() {
         when(store.appSecret(jane)).thenReturn(Optional.of("SECRET"), Optional.empty());
         when(validator.isValid("SECRET", "000000")).thenReturn(false);
+        when(attempts.recordFailure(jane, CodePurpose.DISABLE)).thenReturn(1);
 
         assertThat(app.check(jane, CodePurpose.DISABLE, jane.toString(), "000000")).isEqualTo(CodeCheck.INVALID);
         assertThat(app.check(jane, CodePurpose.LOGIN, "challenge", "123456")).isEqualTo(CodeCheck.INVALID);
     }
 
     @Test
-    void forgetting_drops_the_enrolment_and_its_attempts() {
+    void wrong_codes_at_sign_in_are_left_to_the_account_counter() {
+        when(store.appSecret(jane)).thenReturn(Optional.of("SECRET"));
+        when(validator.isValid("SECRET", "000000")).thenReturn(false);
+
+        app.check(jane, CodePurpose.LOGIN, "challenge", "000000");
+
+        verify(attempts, never()).recordFailure(any(), any());
+    }
+
+    @Test
+    void wrong_codes_to_turn_the_app_off_are_counted_and_the_fifth_spends_the_way_for_a_while() {
+        // Without a count, a borrowed session could guess its way to turning the app off, at the pace of the route alone.
+        when(store.appSecret(jane)).thenReturn(Optional.of("SECRET"));
+        when(validator.isValid("SECRET", "000000")).thenReturn(false);
+        when(attempts.recordFailure(jane, CodePurpose.DISABLE)).thenReturn(4, 5);
+
+        assertThat(app.check(jane, CodePurpose.DISABLE, jane.toString(), "000000")).isEqualTo(CodeCheck.INVALID);
+        assertThat(app.check(jane, CodePurpose.DISABLE, jane.toString(), "000000")).isEqualTo(CodeCheck.SPENT);
+    }
+
+    @Test
+    void once_spent_even_the_right_code_is_refused_unread_and_uncounted() {
+        when(attempts.failures(jane, CodePurpose.DISABLE)).thenReturn(5);
+
+        assertThat(app.check(jane, CodePurpose.DISABLE, jane.toString(), "123456")).isEqualTo(CodeCheck.SPENT);
+        verify(validator, never()).isValid(any(), any());
+        verify(attempts, never()).recordFailure(any(), any());
+    }
+
+    @Test
+    void the_right_code_to_turn_it_off_clears_the_count() {
+        when(store.appSecret(jane)).thenReturn(Optional.of("SECRET"));
+        when(attempts.failures(jane, CodePurpose.DISABLE)).thenReturn(2);
+        when(validator.isValid("SECRET", "123456")).thenReturn(true);
+        when(replay.markCodeUsedIfAbsent(jane, "123456")).thenReturn(true);
+
+        assertThat(app.check(jane, CodePurpose.DISABLE, jane.toString(), "123456")).isEqualTo(CodeCheck.SUCCESS);
+        verify(attempts).clear(jane, CodePurpose.DISABLE);
+    }
+
+    @Test
+    void forgetting_drops_the_enrolment_and_every_count() {
         app.forgetPending(jane);
 
         verify(pending).discard(jane);
-        verify(confirmAttempts).clearAttempts(jane);
+        verify(attempts).clear(jane, CodePurpose.ENROL);
+        verify(attempts).clear(jane, CodePurpose.DISABLE);
     }
 }

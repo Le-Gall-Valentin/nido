@@ -1,7 +1,6 @@
 package com.nido.api.mfa.application.method;
 
 import com.nido.api.mfa.domain.model.CodeCheck;
-import com.nido.api.mfa.domain.model.CodeDelivery;
 import com.nido.api.mfa.domain.model.CodePurpose;
 import com.nido.api.mfa.domain.model.EnrolmentStarted;
 import com.nido.api.shared.model.TwoFactorMethod;
@@ -10,9 +9,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * What a second-factor method knows how to do. The use cases are written once against this contract and
+ * What every second-factor method knows how to do. The use cases are written once against this contract and
  * never ask which method they hold; what genuinely differs — how a method starts — is said by the type of
- * {@link EnrolmentStarted} rather than forced into one shape.
+ * {@link EnrolmentStarted} rather than forced into one shape, and a method whose codes are sent says so by
+ * being a {@link CodeSendingMethod}.
  */
 public interface TwoFactorMethodHandler {
 
@@ -20,9 +20,6 @@ public interface TwoFactorMethodHandler {
 
     /** Whether it can be turned on or asked for now — the mail method is not while mail is off. */
     boolean usableNow();
-
-    /** Whether this method sends its codes, and so can be asked for one. */
-    boolean deliversCodes();
 
     EnrolmentStarted startEnrolment(UUID userId);
 
@@ -35,22 +32,11 @@ public interface TwoFactorMethodHandler {
     Optional<String> confirmEnrolment(UUID userId, String code);
 
     /**
-     * Sends a code for this purpose, bound to {@code binding}: the challenge id for {@link CodePurpose#LOGIN},
-     * the account id for {@link CodePurpose#DISABLE}. {@link CodeDelivery.Unavailable} for a method that does
-     * not deliver codes. Never throws for a refusal: see {@link CodeDelivery}.
+     * Wrong codes outside sign-in are counted here, five at most; at sign-in, the account's counter does it.
+     * See {@link CodeCheck} for what each answer means.
      */
-    CodeDelivery sendCode(UUID userId, CodePurpose purpose, String binding);
-
     CodeCheck check(UUID userId, CodePurpose purpose, String binding, String code);
 
-    /**
-     * Whether a code for this purpose is still waiting. A method whose codes are not sent has nothing to spend.
-     * Five wrong guesses take a sent code with it: then even the right one is refused.
-     */
-    default boolean codePending(UUID userId, CodePurpose purpose) {
-        return true;
-    }
-
-    /** Drops what is under way for this account: an enrolment, the codes sent. */
+    /** Drops what is under way for this account: an enrolment, the codes sent, the wrong codes counted. */
     void forgetPending(UUID userId);
 }

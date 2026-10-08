@@ -1,5 +1,7 @@
 package com.nido.api.mfa.application.port.in;
 
+import com.nido.api.mfa.domain.model.CodeCheck;
+
 import java.util.UUID;
 
 /**
@@ -14,9 +16,6 @@ public interface AddressChangeCodeUseCase {
     /** @return the seconds before another code can be asked for */
     long send(UUID userId, String newAddress);
 
-    /** A right code is used up: true once. */
-    boolean check(UUID userId, String newAddress, String code);
-
-    /** Whether a code for the new address is still waiting: five wrong guesses take it with them. */
-    boolean pending(UUID userId);
+    /** A right code is used up; five wrong ones take it with them. */
+    CodeCheck check(UUID userId, String newAddress, String code);
 }

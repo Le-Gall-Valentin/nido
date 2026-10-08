@@ -39,13 +39,7 @@ public class AddressChangeCodeHandler implements AddressChangeCodeUseCase {
 
     @Override
     @Transactional
-    public boolean check(UUID userId, String newAddress, String code) {
-        return issuer.check(userId, CodePurpose.EMAIL_CHANGE, newAddress, code) == CodeCheck.SUCCESS;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean pending(UUID userId) {
-        return issuer.isPending(userId, CodePurpose.EMAIL_CHANGE);
+    public CodeCheck check(UUID userId, String newAddress, String code) {
+        return issuer.check(userId, CodePurpose.EMAIL_CHANGE, newAddress, code);
     }
 }

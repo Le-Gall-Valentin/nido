@@ -1,5 +1,6 @@
 package com.nido.api.mfa.application.handler;
 
+import com.nido.api.mfa.application.method.CodeSendingMethod;
 import com.nido.api.mfa.application.method.TwoFactorMethodHandler;
 import com.nido.api.mfa.application.method.TwoFactorMethods;
 import com.nido.api.mfa.domain.model.CodeCheck;
@@ -33,7 +34,7 @@ class ManageTwoFactorMethodsHandlerTest {
     private final TwoFactorMethodStorePort store = mock(TwoFactorMethodStorePort.class);
     private final TwoFactorMailPort mails = mock(TwoFactorMailPort.class);
     private final TwoFactorMethodHandler app = mock(TwoFactorMethodHandler.class);
-    private final TwoFactorMethodHandler mail = mock(TwoFactorMethodHandler.class);
+    private final CodeSendingMethod mail = mock(CodeSendingMethod.class);
     private final UUID jane = UUID.randomUUID();
     private ManageTwoFactorMethodsHandler handler;
 
@@ -43,7 +44,6 @@ class ManageTwoFactorMethodsHandlerTest {
         when(app.usableNow()).thenReturn(true);
         when(mail.method()).thenReturn(TwoFactorMethod.MAIL);
         when(mail.usableNow()).thenReturn(true);
-        when(mail.deliversCodes()).thenReturn(true);
         when(store.activeMethods(jane)).thenReturn(EnumSet.noneOf(TwoFactorMethod.class));
         handler = new ManageTwoFactorMethodsHandler(new TwoFactorMethods(List.of(app, mail)), store, mails);
     }
@@ -169,11 +169,38 @@ class ManageTwoFactorMethodsHandlerTest {
         // The fifth wrong code takes the code with it: from then on even the right one is refused, and "invalid"
         // would send the person round in circles.
         when(store.activeMethods(jane)).thenReturn(EnumSet.of(TwoFactorMethod.MAIL));
-        when(mail.check(jane, CodePurpose.DISABLE, jane.toString(), "000000")).thenReturn(CodeCheck.INVALID);
-        when(mail.codePending(jane, CodePurpose.DISABLE)).thenReturn(false);
+        when(mail.check(jane, CodePurpose.DISABLE, jane.toString(), "000000")).thenReturn(CodeCheck.SPENT);
 
         assertThatThrownBy(() -> handler.disable(jane, TwoFactorMethod.MAIL, "000000"))
             .isInstanceOf(MfaException.CodeSpent.class);
         verify(store, never()).disable(any(), any());
+    }
+
+    @Test
+    void a_disable_code_that_expired_says_so_rather_than_blame_wrong_guesses() {
+        when(store.activeMethods(jane)).thenReturn(EnumSet.of(TwoFactorMethod.MAIL));
+        when(mail.check(jane, CodePurpose.DISABLE, jane.toString(), "004213")).thenReturn(CodeCheck.EXPIRED);
+
+        assertThatThrownBy(() -> handler.disable(jane, TwoFactorMethod.MAIL, "004213"))
+            .isInstanceOf(MfaException.CodeExpired.class);
+        verify(store, never()).disable(any(), any());
+    }
+
+    @Test
+    void the_app_spent_by_wrong_codes_says_so_too() {
+        when(store.activeMethods(jane)).thenReturn(EnumSet.of(TwoFactorMethod.APP));
+        when(app.check(jane, CodePurpose.DISABLE, jane.toString(), "000000")).thenReturn(CodeCheck.SPENT);
+
+        assertThatThrownBy(() -> handler.disable(jane, TwoFactorMethod.APP, "000000"))
+            .isInstanceOf(MfaException.CodeSpent.class);
+    }
+
+    @Test
+    void a_code_already_used_is_a_wrong_one_here() {
+        when(store.activeMethods(jane)).thenReturn(EnumSet.of(TwoFactorMethod.APP));
+        when(app.check(jane, CodePurpose.DISABLE, jane.toString(), "123456")).thenReturn(CodeCheck.REPLAYED);
+
+        assertThatThrownBy(() -> handler.disable(jane, TwoFactorMethod.APP, "123456"))
+            .isInstanceOf(MfaException.CodeInvalid.class);
     }
 }

@@ -11,6 +11,7 @@ import com.nido.api.authentication.infrastructure.web.dto.LoginRequest;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
+import com.nido.api.mfa.domain.port.out.TwoFactorMethodStorePort;
 import com.nido.api.mfa.infrastructure.persistence.entity.TwoFactorMethodEntity;
 import com.nido.api.mfa.infrastructure.persistence.repository.TwoFactorMethodJpaRepository;
 import com.nido.api.shared.model.TwoFactorMethod;
@@ -55,6 +56,7 @@ class TwoFactorControllerIT {
     @Autowired PendingTotpEnrolmentPort pendingEnrolment;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired TotpEncryptorFactory encryptorFactory;
+    @Autowired TwoFactorMethodStorePort methodStore;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -420,6 +422,31 @@ class TwoFactorControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"" + validCode + "\"}"))
             .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void wrong_codes_to_turn_the_app_off_are_counted_and_the_fifth_holds_it_on_for_a_while() throws Exception {
+        java.util.UUID totpUserId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").orElseThrow().getId();
+        CustomUserDetails totpPrincipal = new CustomUserDetails(totpUserId, Role.USER, "totpuser@test.com");
+        String right = currentCodeFor(KNOWN_TOTP_SECRET);
+        String wrong = right.equals("000000") ? "111111" : "000000";
+
+        for (int i = 0; i < 4; i++) {
+            rateLimitBucketStore.clearAll();
+            mockMvc.perform(delete("/api/auth/2fa/app").with(user(totpPrincipal))
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"code\":\"" + wrong + "\"}"))
+                .andExpect(status().isUnauthorized());
+        }
+        rateLimitBucketStore.clearAll();
+        mockMvc.perform(delete("/api/auth/2fa/app").with(user(totpPrincipal))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"code\":\"" + wrong + "\"}"))
+            .andExpect(status().isGone())
+            .andExpect(jsonPath("$.error_code").value("code_spent"));
+        rateLimitBucketStore.clearAll();
+        mockMvc.perform(delete("/api/auth/2fa/app").with(user(totpPrincipal))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"code\":\"" + right + "\"}"))
+            .andExpect(status().isGone());
+        assertThat(methodStore.activeMethods(totpUserId)).containsExactly(TwoFactorMethod.APP);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

@@ -77,7 +77,7 @@ class MailMethodTest {
     @Test
     void the_mail_method_sends_codes_and_is_usable_while_mail_is_on() {
         assertThat(mail.method()).isEqualTo(TwoFactorMethod.MAIL);
-        assertThat(mail.deliversCodes()).isTrue();
+        assertThat(mail).isInstanceOf(CodeSendingMethod.class);
         assertThat(mail.usableNow()).isTrue();
         when(availability.isAvailable()).thenReturn(false);
         assertThat(mail.usableNow()).isFalse();
@@ -130,7 +130,8 @@ class MailMethodTest {
 
         assertThat(mail.sendCode(jane, CodePurpose.LOGIN, "second-tab")).isEqualTo(new CodeDelivery.Sent(60));
 
-        assertThat(mail.check(jane, CodePurpose.LOGIN, "first-tab", "004213")).isEqualTo(CodeCheck.INVALID);
+        assertThat(mail.check(jane, CodePurpose.LOGIN, "first-tab", "004213"))
+            .as("nothing waits for the first tab any more").isEqualTo(CodeCheck.EXPIRED);
         assertThat(mail.check(jane, CodePurpose.LOGIN, "second-tab", "771205")).isEqualTo(CodeCheck.SUCCESS);
     }
 
@@ -146,12 +147,35 @@ class MailMethodTest {
     void a_code_works_once_and_not_after_ten_minutes() {
         mail.sendCode(jane, CodePurpose.LOGIN, "c1");
         assertThat(mail.check(jane, CodePurpose.LOGIN, "c1", "004213")).isEqualTo(CodeCheck.SUCCESS);
-        assertThat(mail.check(jane, CodePurpose.LOGIN, "c1", "004213")).isEqualTo(CodeCheck.INVALID);
+        assertThat(mail.check(jane, CodePurpose.LOGIN, "c1", "004213")).isEqualTo(CodeCheck.EXPIRED);
 
         now = START.plusSeconds(120);
         mail.sendCode(jane, CodePurpose.LOGIN, "c2");
         now = START.plusSeconds(120 + 600);
-        assertThat(mail.check(jane, CodePurpose.LOGIN, "c2", "771205")).isEqualTo(CodeCheck.INVALID);
+        assertThat(mail.check(jane, CodePurpose.LOGIN, "c2", "771205")).isEqualTo(CodeCheck.EXPIRED);
+    }
+
+    @Test
+    void a_code_that_expired_or_was_never_asked_for_is_not_counted_as_a_wrong_guess() {
+        // Saying "too many wrong codes" to someone who only waited too long would have them fear an attack.
+        assertThat(mail.check(jane, CodePurpose.DISABLE, jane.toString(), "004213")).isEqualTo(CodeCheck.EXPIRED);
+
+        mail.sendCode(jane, CodePurpose.DISABLE, jane.toString());
+        now = START.plusSeconds(601);
+
+        assertThat(mail.check(jane, CodePurpose.DISABLE, jane.toString(), "004213")).isEqualTo(CodeCheck.EXPIRED);
+        assertThat(codes.codes.values()).singleElement().extracting("failedAttempts").isEqualTo(0);
+    }
+
+    @Test
+    void the_fifth_wrong_code_spends_it_and_the_right_one_then_finds_nothing() {
+        mail.sendCode(jane, CodePurpose.DISABLE, jane.toString());
+        for (int i = 0; i < 4; i++) {
+            assertThat(mail.check(jane, CodePurpose.DISABLE, jane.toString(), "999999")).isEqualTo(CodeCheck.INVALID);
+        }
+
+        assertThat(mail.check(jane, CodePurpose.DISABLE, jane.toString(), "999999")).isEqualTo(CodeCheck.SPENT);
+        assertThat(mail.check(jane, CodePurpose.DISABLE, jane.toString(), "004213")).isEqualTo(CodeCheck.EXPIRED);
     }
 
     @Test
@@ -159,7 +183,7 @@ class MailMethodTest {
         mail.sendCode(jane, CodePurpose.LOGIN, "c1");
         codes.takenRightAfterNextFind = true;
 
-        assertThat(mail.check(jane, CodePurpose.LOGIN, "c1", "004213")).isEqualTo(CodeCheck.INVALID);
+        assertThat(mail.check(jane, CodePurpose.LOGIN, "c1", "004213")).isEqualTo(CodeCheck.EXPIRED);
     }
 
     @Test

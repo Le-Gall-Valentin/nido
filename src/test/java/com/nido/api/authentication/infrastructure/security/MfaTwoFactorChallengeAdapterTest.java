@@ -45,6 +45,15 @@ class MfaTwoFactorChallengeAdapterTest {
     }
 
     @Test
+    void a_code_expired_or_spent_is_a_wrong_one_at_sign_in() {
+        // Sign-in counts every wrong answer against the account, whatever the reason the code no longer works.
+        when(challenge.verify(jane, TwoFactorMethod.MAIL, "c", "123456")).thenReturn(CodeCheck.EXPIRED, CodeCheck.SPENT);
+
+        assertThat(adapter.verify(jane, TwoFactorMethod.MAIL, "c", "123456")).isEqualTo(SecondFactorCheck.INVALID);
+        assertThat(adapter.verify(jane, TwoFactorMethod.MAIL, "c", "123456")).isEqualTo(SecondFactorCheck.INVALID);
+    }
+
+    @Test
     void the_methods_come_from_mfa() {
         when(methods.activeMethods(jane)).thenReturn(EnumSet.of(TwoFactorMethod.MAIL));
         when(challenge.usableMethods(jane)).thenReturn(EnumSet.noneOf(TwoFactorMethod.class));

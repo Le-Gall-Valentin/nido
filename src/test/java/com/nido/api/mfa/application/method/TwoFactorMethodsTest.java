@@ -30,6 +30,18 @@ class TwoFactorMethodsTest {
     }
 
     @Test
+    void only_a_method_whose_codes_are_sent_can_be_asked_for_one() {
+        TwoFactorMethodHandler app = handler(TwoFactorMethod.APP);
+        CodeSendingMethod mail = mock(CodeSendingMethod.class);
+        when(mail.method()).thenReturn(TwoFactorMethod.MAIL);
+
+        TwoFactorMethods methods = new TwoFactorMethods(List.of(app, mail));
+
+        assertThat(methods.sender(TwoFactorMethod.MAIL)).containsSame(mail);
+        assertThat(methods.sender(TwoFactorMethod.APP)).isEmpty();
+    }
+
+    @Test
     void a_method_nobody_implements_stops_the_start() {
         assertThatThrownBy(() -> new TwoFactorMethods(List.of(handler(TwoFactorMethod.APP))))
             .isInstanceOf(IllegalStateException.class).hasMessageContaining("MAIL");

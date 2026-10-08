@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /** Every method's implementation, by name. A method without exactly one implementation stops the start. */
 @ApplicationService
@@ -31,5 +32,10 @@ public class TwoFactorMethods {
 
     public TwoFactorMethodHandler of(TwoFactorMethod method) {
         return handlers.get(method);
+    }
+
+    /** The method, when its codes are sent — empty for one that shows its own. */
+    public Optional<CodeSendingMethod> sender(TwoFactorMethod method) {
+        return handlers.get(method) instanceof CodeSendingMethod sending ? Optional.of(sending) : Optional.empty();
     }
 }
