@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Key, Pencil, Send, Trash2 } from 'lucide-react'
 import type { User, AdminUser } from '@/entities/user'
 import type { MailAvailability } from '@/entities/capabilities'
-import { canDelete, canResetTotp, canEditRole, canResendInvitation } from '../lib/permissions'
+import { canDelete, canResetTwoFactor, canEditRole, canResendInvitation } from '../lib/permissions'
 import { permissionDenialTitle } from './permissionDenialTitle'
 
 interface UserActionsProps {
@@ -11,7 +11,7 @@ interface UserActionsProps {
   /** Without mail, a new invitation link is shown to be passed on rather than sent: the action says so. */
   mail: MailAvailability
   onEditRole: (user: AdminUser) => void
-  onResetTotp: (user: AdminUser) => void
+  onResetTwoFactor: (user: AdminUser) => void
   onDelete: (user: AdminUser) => void
   onResendInvitation: (user: AdminUser) => void
   /** 'sm' for the dense desktop table, 'md' for touch-friendly card targets. */
@@ -27,19 +27,19 @@ export function UserActions({
   currentUser,
   mail,
   onEditRole,
-  onResetTotp,
+  onResetTwoFactor,
   onDelete,
   onResendInvitation,
   size = 'sm',
   className = '',
 }: UserActionsProps) {
   const { t } = useTranslation('adminUsers')
-  const totpCheck = canResetTotp(currentUser, user)
+  const twoFactorCheck = canResetTwoFactor(currentUser, user)
   const editCheck = canEditRole(currentUser, user)
   const deleteCheck = canDelete(currentUser, user)
   const resendCheck = canResendInvitation(currentUser, user)
 
-  const resetLabel = t('table.btn_reset_totp', { username: user.username })
+  const resetLabel = t('table.btn_reset_two_factor', { username: user.username })
   const editLabel = t('table.btn_edit', { username: user.username })
   const deleteLabel = t('table.btn_delete')
   const resendLabel = t(mail === 'available' ? 'table.btn_resend' : 'table.btn_new_link', { username: user.username })
@@ -59,10 +59,10 @@ export function UserActions({
       )}
       <ActionButton
         label={resetLabel}
-        title={permissionDenialTitle(totpCheck, t, resetLabel)}
-        disabled={!totpCheck.ok}
+        title={permissionDenialTitle(twoFactorCheck, t, resetLabel)}
+        disabled={!twoFactorCheck.ok}
         size={size}
-        onClick={() => onResetTotp(user)}
+        onClick={() => onResetTwoFactor(user)}
       >
         <Key className="size-3.5" />
       </ActionButton>

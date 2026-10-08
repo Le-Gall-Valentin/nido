@@ -1,7 +1,7 @@
 import { isAxiosError } from 'axios'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
-import type { AdminUser, InvitationDelivery } from '../model/types'
+import type { AdminUser, InvitationDelivery, TwoFactorMethod } from '../model/types'
 import type { IAdminUsersApi, UsersPage } from '../model/IAdminUsersApi'
 
 export type { AdminUser }
@@ -89,9 +89,9 @@ export const adminUsersApi: IAdminUsersApi = {
     }
   },
 
-  async resetTotp(id: string): Promise<void> {
+  async resetTwoFactor(id: string, methods: TwoFactorMethod[]): Promise<void> {
     try {
-      await client.post(`/users/${id}/2fa/reset`, { methods: ['APP', 'MAIL'] })
+      await client.post(`/users/${id}/2fa/reset`, { methods })
     } catch (error) {
       handleError(error)
     }

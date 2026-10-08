@@ -20,7 +20,7 @@ const mockApi = vi.hoisted(() => ({
   updateUserRole: vi.fn(),
   activateUser: vi.fn(),
   deactivateUser: vi.fn(),
-  resetTotp: vi.fn(),
+  resetTwoFactor: vi.fn(),
   deleteUser: vi.fn(),
   resendInvitation: vi.fn(),
 }))
@@ -41,7 +41,7 @@ vi.mock('./UsersTable', () => ({
     isLoading: boolean
     onEditRole: (u: AdminUser) => void
     onDelete: (u: AdminUser) => void
-    onResetTotp: (u: AdminUser) => void
+    onResetTwoFactor: (u: AdminUser) => void
     onToggleActive: (u: AdminUser) => void
     onResendInvitation: (u: AdminUser) => void
   }) => {
@@ -50,7 +50,7 @@ vi.mock('./UsersTable', () => ({
       <div data-testid="users-table">
         <button data-testid="trigger-edit" onClick={() => props.onEditRole(MOCK_USER)}>edit</button>
         <button data-testid="trigger-delete" onClick={() => props.onDelete(MOCK_USER)}>delete</button>
-        <button data-testid="trigger-totp" onClick={() => props.onResetTotp(MOCK_USER)}>totp</button>
+        <button data-testid="trigger-two-factor" onClick={() => props.onResetTwoFactor(MOCK_USER)}>two-factor</button>
         <button data-testid="trigger-toggle" onClick={() => props.onToggleActive(props.users[0])}>toggle</button>
         <button data-testid="trigger-resend" onClick={() => props.onResendInvitation(MOCK_USER)}>resend</button>
       </div>
@@ -129,16 +129,16 @@ vi.mock('./ResendInvitationModal', () => ({
   ),
 }))
 
-vi.mock('./ResetTotpModal', () => ({
-  ResetTotpModal: ({ user, onClose, onReset, onSuccess }: {
+vi.mock('./ResetTwoFactorDialog', () => ({
+  ResetTwoFactorDialog: ({ user, onClose, onReset, onSuccess }: {
     user: AdminUser
     onClose: () => void
-    onReset: (id: string) => Promise<unknown>
+    onReset: (input: { id: string; methods: ('APP' | 'MAIL')[] }) => Promise<unknown>
     onSuccess: () => void
   }) => (
-    <div data-testid="totp-modal">
-      <button onClick={onClose}>close-totp</button>
-      <button onClick={() => { void onReset(user.id).then(onSuccess) }}>reset-it</button>
+    <div data-testid="two-factor-dialog">
+      <button onClick={onClose}>close-two-factor</button>
+      <button onClick={() => { void onReset({ id: user.id, methods: ['APP'] }).then(onSuccess) }}>reset-it</button>
     </div>
   ),
 }))
@@ -172,7 +172,7 @@ beforeEach(() => {
   mockApi.deactivateUser.mockResolvedValue(undefined)
   mockApi.activateUser.mockResolvedValue(undefined)
   mockApi.deleteUser.mockResolvedValue(undefined)
-  mockApi.resetTotp.mockResolvedValue(undefined)
+  mockApi.resetTwoFactor.mockResolvedValue(undefined)
   mockApi.updateUserRole.mockResolvedValue(undefined)
   mockApi.createUser.mockResolvedValue({ delivery: 'mail' })
   mockApi.resendInvitation.mockResolvedValue({ delivery: 'mail' })
@@ -245,12 +245,12 @@ describe('AdminUsersPage — delete modal', () => {
   })
 })
 
-describe('AdminUsersPage — reset totp modal', () => {
-  it('opens ResetTotpModal when totp triggered', async () => {
+describe('AdminUsersPage — reset two-factor dialog', () => {
+  it('opens the reset dialog when the row asks for it', async () => {
     const { findByTestId } = setup()
     await findByTestId('users-table')
-    fireEvent.click(document.querySelector('[data-testid="trigger-totp"]')!)
-    expect(await findByTestId('totp-modal')).toBeDefined()
+    fireEvent.click(document.querySelector('[data-testid="trigger-two-factor"]')!)
+    expect(await findByTestId('two-factor-dialog')).toBeDefined()
   })
 })
 
@@ -356,11 +356,11 @@ describe('AdminUsersPage — each dialog reaches the API', () => {
   it('resets the second factor of the account the row named, then closes the dialog', async () => {
     const { findByTestId, getByText, getByTestId, queryByTestId } = setup()
     await findByTestId('users-table')
-    fireEvent.click(getByTestId('trigger-totp'))
+    fireEvent.click(getByTestId('trigger-two-factor'))
     fireEvent.click(getByText('reset-it'))
 
-    await waitFor(() => expect(mockApi.resetTotp).toHaveBeenCalledWith('u1'))
-    await waitFor(() => expect(queryByTestId('totp-modal')).toBeNull())
+    await waitFor(() => expect(mockApi.resetTwoFactor).toHaveBeenCalledWith('u1', ['APP']))
+    await waitFor(() => expect(queryByTestId('two-factor-dialog')).toBeNull())
   })
 
   it('sends again the invitation of the account the row named', async () => {

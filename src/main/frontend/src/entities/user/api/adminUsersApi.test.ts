@@ -208,21 +208,21 @@ describe('deactivateUser', () => {
   })
 })
 
-describe('resetTotp', () => {
+describe('resetTwoFactor', () => {
   it('POST /users/{id}/2fa/reset (backend UserController path)', async () => {
     mock.post.mockResolvedValue({ status: 204 })
-    await adminUsersApi.resetTotp('u-1')
-    expect(mock.post).toHaveBeenCalledWith('/users/u-1/2fa/reset', { methods: ['APP', 'MAIL'] })
+    await adminUsersApi.resetTwoFactor('u-1', ['MAIL'])
+    expect(mock.post).toHaveBeenCalledWith('/users/u-1/2fa/reset', { methods: ['MAIL'] })
   })
 
   it('throws ServerError on 500', async () => {
     mock.post.mockRejectedValue(axiosErr(500))
-    await expect(adminUsersApi.resetTotp('u-1')).rejects.toBeInstanceOf(ServerError)
+    await expect(adminUsersApi.resetTwoFactor('u-1', ['APP'])).rejects.toBeInstanceOf(ServerError)
   })
 
   it('throws NetworkError on no response', async () => {
     mock.post.mockRejectedValue(new Error('network'))
-    await expect(adminUsersApi.resetTotp('u-1')).rejects.toBeInstanceOf(NetworkError)
+    await expect(adminUsersApi.resetTwoFactor('u-1', ['APP'])).rejects.toBeInstanceOf(NetworkError)
   })
 })
 

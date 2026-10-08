@@ -29,7 +29,7 @@ const USERS: AdminUser[] = [
 const DEFAULT_HANDLERS = {
   onToggleActive: vi.fn(),
   onEditRole: vi.fn(),
-  onResetTotp: vi.fn(),
+  onResetTwoFactor: vi.fn(),
   onDelete: vi.fn(),
   onResendInvitation: vi.fn(),
 }
@@ -92,20 +92,20 @@ describe('UsersTable — rows', () => {
     expect(within(rows[2]).getByText('user.role.USER')).toBeDefined()
   })
 
-  it('shows the totp_on pill on the row of a user with totp enabled', () => {
+  it('shows the app chip on the row of a user with the app on', () => {
     const { getAllByRole } = setup()
     const rows = getAllByRole('row').slice(1) // skip header
     const userRow = rows[2] // testuser, twoFactorMethods: ['APP']
-    expect(within(userRow).getByText('table.totp_on')).toBeDefined()
-    expect(within(userRow).queryByText('table.totp_off')).toBeNull()
+    expect(within(userRow).getByText('table.two_factor_app')).toBeDefined()
+    expect(within(userRow).queryByText('table.two_factor_none')).toBeNull()
   })
 
-  it('shows the totp_off pill on the row of a user without totp', () => {
+  it('shows no method on the row of a user without one', () => {
     const { getAllByRole } = setup()
     const rows = getAllByRole('row').slice(1)
     const inactiveRow = rows[3] // inactive, twoFactorMethods: []
-    expect(within(inactiveRow).getByText('table.totp_off')).toBeDefined()
-    expect(within(inactiveRow).queryByText('table.totp_on')).toBeNull()
+    expect(within(inactiveRow).getByText('table.two_factor_none')).toBeDefined()
+    expect(within(inactiveRow).queryByText('table.two_factor_app')).toBeNull()
   })
 })
 
@@ -134,12 +134,12 @@ describe('UsersTable — button permissions', () => {
     expect(editBtn?.disabled).toBe(true)
   })
 
-  it('totp reset button is disabled if totp not enabled', () => {
+  it('the 2FA reset button is disabled when no method is on', () => {
     const { getAllByRole } = setup(SA)
     const rows = getAllByRole('row').slice(1)
     const adminRow = rows[1] // adminuser, twoFactorMethods: []
-    const totpBtn = adminRow.querySelector('[aria-label^="table.btn_reset_totp"]') as HTMLButtonElement
-    expect(totpBtn?.disabled).toBe(true)
+    const resetButton = adminRow.querySelector('[aria-label^="table.btn_reset_two_factor"]') as HTMLButtonElement
+    expect(resetButton?.disabled).toBe(true)
   })
 
   it('ADMIN caller cannot edit ADMIN target', () => {

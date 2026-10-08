@@ -21,7 +21,7 @@ describe('mapApiErrorToKey', () => {
   })
 
   it('maps NotFoundError', () => {
-    expect(mapApiErrorToKey(new NotFoundError(), 'reset_totp')).toBe('reset_totp.error.not_found')
+    expect(mapApiErrorToKey(new NotFoundError(), 'reset_two_factor')).toBe('reset_two_factor.error.not_found')
   })
 
   it('maps RateLimitError', () => {
@@ -29,7 +29,7 @@ describe('mapApiErrorToKey', () => {
   })
 
   it('maps NetworkError', () => {
-    expect(mapApiErrorToKey(new NetworkError(), 'reset_totp')).toBe('reset_totp.error.network')
+    expect(mapApiErrorToKey(new NetworkError(), 'reset_two_factor')).toBe('reset_two_factor.error.network')
   })
 
   it('maps ServerError and unknown errors to server', () => {

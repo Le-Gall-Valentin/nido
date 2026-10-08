@@ -7,7 +7,7 @@ export type { IAdminUsersApi, UsersPage } from './model/IAdminUsersApi'
 export { AdminUsersApiProvider, useAdminUsersApi } from './model/adminUsersApiContext'
 export { USERS_QUERY_KEY, USERS_PAGE_SIZE, useUsers } from './model/useUsers'
 export {
-  useCreateUser, useUpdateUserRole, useDeleteUser, useResetTotp, useToggleUserActive, useResendInvitation,
+  useCreateUser, useUpdateUserRole, useDeleteUser, useResetTwoFactor, useToggleUserActive, useResendInvitation,
 } from './model/useUserMutations'
 export { adminUsersApi, AlreadyInactiveError, AlreadyJoinedError, ConflictError, RoleAlreadyAssignedError } from './api/adminUsersApi'
 export type { IAccountLanguageApi } from './model/IAccountLanguageApi'

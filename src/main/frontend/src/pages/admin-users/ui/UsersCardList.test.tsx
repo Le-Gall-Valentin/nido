@@ -21,7 +21,7 @@ const USERS: AdminUser[] = [
 const HANDLERS = {
   onToggleActive: vi.fn(),
   onEditRole: vi.fn(),
-  onResetTotp: vi.fn(),
+  onResetTwoFactor: vi.fn(),
   onDelete: vi.fn(),
   onResendInvitation: vi.fn(),
 }
@@ -69,7 +69,7 @@ describe('UsersCardList', () => {
     expect(getAllByRole('switch')).toHaveLength(USERS.length)
     // actions for the standard user are present
     expect(getByLabelText('table.btn_edit:testuser')).toBeDefined()
-    expect(getByLabelText('table.btn_reset_totp:testuser')).toBeDefined()
+    expect(getByLabelText('table.btn_reset_two_factor:testuser')).toBeDefined()
   })
 
   it('disables delete on the SUPER_ADMIN card but enables it on the standard user', () => {

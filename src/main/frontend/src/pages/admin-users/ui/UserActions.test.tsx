@@ -16,7 +16,7 @@ function target(overrides: Partial<AdminUser> = {}): AdminUser {
 }
 
 function setup(currentUser: User, user: AdminUser, mail: MailAvailability = 'available') {
-  const handlers = { onEditRole: vi.fn(), onResetTotp: vi.fn(), onDelete: vi.fn(), onResendInvitation: vi.fn() }
+  const handlers = { onEditRole: vi.fn(), onResetTwoFactor: vi.fn(), onDelete: vi.fn(), onResendInvitation: vi.fn() }
   const result = render(<UserActions user={user} currentUser={currentUser} mail={mail} {...handlers} />)
   return { ...result, ...handlers }
 }
@@ -24,11 +24,11 @@ function setup(currentUser: User, user: AdminUser, mail: MailAvailability = 'ava
 beforeEach(() => { vi.clearAllMocks() })
 
 describe('UserActions — gating', () => {
-  it('enables all three actions for a SUPER_ADMIN acting on a standard USER with totp', () => {
+  it('enables all three actions for a SUPER_ADMIN acting on a standard USER with a method on', () => {
     const { getByLabelText } = setup(SA, target())
     expect((getByLabelText('table.btn_delete') as HTMLButtonElement).disabled).toBe(false)
     expect((getByLabelText('table.btn_edit:alice') as HTMLButtonElement).disabled).toBe(false)
-    expect((getByLabelText('table.btn_reset_totp:alice') as HTMLButtonElement).disabled).toBe(false)
+    expect((getByLabelText('table.btn_reset_two_factor:alice') as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('disables delete and edit on a SUPER_ADMIN target', () => {
@@ -37,9 +37,9 @@ describe('UserActions — gating', () => {
     expect((getByLabelText('table.btn_edit:root') as HTMLButtonElement).disabled).toBe(true)
   })
 
-  it('disables totp reset when the target has no totp enabled', () => {
+  it('disables the 2FA reset when the target has no method on', () => {
     const { getByLabelText } = setup(SA, target({ twoFactorMethods: [] }))
-    expect((getByLabelText('table.btn_reset_totp:alice') as HTMLButtonElement).disabled).toBe(true)
+    expect((getByLabelText('table.btn_reset_two_factor:alice') as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('prevents an ADMIN from acting on another ADMIN', () => {
@@ -52,12 +52,12 @@ describe('UserActions — gating', () => {
 describe('UserActions — handlers', () => {
   it('fires the matching handler with the user when enabled', () => {
     const user = target()
-    const { getByLabelText, onEditRole, onResetTotp, onDelete } = setup(SA, user)
+    const { getByLabelText, onEditRole, onResetTwoFactor, onDelete } = setup(SA, user)
     fireEvent.click(getByLabelText('table.btn_edit:alice'))
-    fireEvent.click(getByLabelText('table.btn_reset_totp:alice'))
+    fireEvent.click(getByLabelText('table.btn_reset_two_factor:alice'))
     fireEvent.click(getByLabelText('table.btn_delete'))
     expect(onEditRole).toHaveBeenCalledWith(user)
-    expect(onResetTotp).toHaveBeenCalledWith(user)
+    expect(onResetTwoFactor).toHaveBeenCalledWith(user)
     expect(onDelete).toHaveBeenCalledWith(user)
   })
 })
@@ -65,7 +65,7 @@ describe('UserActions — handlers', () => {
 describe('UserActions — sizing', () => {
   it('uses larger touch targets for the md size', () => {
     const { getByLabelText } = render(
-      <UserActions user={target()} currentUser={SA} mail="available" size="md" onEditRole={vi.fn()} onResetTotp={vi.fn()} onDelete={vi.fn()} onResendInvitation={vi.fn()} />
+      <UserActions user={target()} currentUser={SA} mail="available" size="md" onEditRole={vi.fn()} onResetTwoFactor={vi.fn()} onDelete={vi.fn()} onResendInvitation={vi.fn()} />
     )
     expect(getByLabelText('table.btn_delete').className).toContain('size-9')
   })
