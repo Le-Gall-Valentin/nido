@@ -8,6 +8,8 @@ import com.nido.api.mail.domain.model.Recipient;
 import com.nido.api.mfa.domain.model.CodePurpose;
 import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
+import com.nido.api.mail.domain.model.AppPath;
+import com.nido.api.shared.model.TwoFactorMethod;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -69,5 +71,29 @@ class TwoFactorMailAdapterTest {
         adapter().sendCode(janeId, "jane@new.fr", CodePurpose.LOGIN, "004213", EXPIRY);
 
         verify(sendMail, never()).send(any());
+    }
+
+    @Test
+    void turning_a_method_on_is_told_to_the_account_for_a_day() {
+        when(findUser.findById(janeId)).thenReturn(Optional.of(
+            new User(janeId, "jane", "jane@test.com", Role.USER, true, Instant.now(), Language.FR)));
+
+        adapter().methodEnabled(janeId, TwoFactorMethod.MAIL);
+
+        MailRequest request = sent();
+        assertThat(request.to()).isEqualTo(new Recipient("jane@test.com", "jane"));
+        assertThat(request.expiresAt()).isEqualTo(Instant.parse("2026-10-08T10:00:00Z"));
+        assertThat(request.content()).isEqualTo(new TwoFactorEnabledMail("jane", TwoFactorMethod.MAIL));
+    }
+
+    @Test
+    void turning_a_method_off_links_to_the_security_page() {
+        when(findUser.findById(janeId)).thenReturn(Optional.of(
+            new User(janeId, "jane", "jane@test.com", Role.USER, true, Instant.now(), null)));
+
+        adapter().methodDisabled(janeId, TwoFactorMethod.APP, true);
+
+        assertThat(sent().content())
+            .isEqualTo(new TwoFactorDisabledMail("jane", TwoFactorMethod.APP, true, new AppPath("/account/security")));
     }
 }

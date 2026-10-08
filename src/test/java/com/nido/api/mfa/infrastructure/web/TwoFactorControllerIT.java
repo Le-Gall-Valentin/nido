@@ -44,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @IntegrationTestConfig
-class TotpControllerIT {
+class TwoFactorControllerIT {
 
     @Autowired WebApplicationContext webApplicationContext;
     @Autowired UserIdentityJpaRepository userIdentityJpaRepository;
@@ -115,13 +115,13 @@ class TotpControllerIT {
         userTotpJpaRepository.save(new TwoFactorMethodEntity(totpUser.getId(), TwoFactorMethod.APP, encryptorFactory.forUser(totpUser.getId()).encrypt(KNOWN_TOTP_SECRET)));
     }
 
-    // ─── /api/auth/2fa/setup ──────────────────────────────────────────────────
+    // ─── /api/auth/2fa/app/setup ──────────────────────────────────────────────────
 
     @Test
     void setup_authenticated_returns200WithOtpauthUriAndSecret() throws Exception {
         Cookie access = loginAs("testuser", "password");
 
-        mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+        mockMvc.perform(post("/api/auth/2fa/app/setup").cookie(access))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.otpauthUri").value(startsWith("otpauth://totp/")))
             .andExpect(jsonPath("$.secret").isNotEmpty());
@@ -140,11 +140,11 @@ class TotpControllerIT {
         Cookie access = loginAs("testuser", "password");
 
         String first = objectMapper.readTree(
-            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+            mockMvc.perform(post("/api/auth/2fa/app/setup").cookie(access))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString()).get("secret").asText();
         String second = objectMapper.readTree(
-            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+            mockMvc.perform(post("/api/auth/2fa/app/setup").cookie(access))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString()).get("secret").asText();
 
@@ -154,17 +154,17 @@ class TotpControllerIT {
     @Test
     void setup_pendingEnrolment_cannotBeCancelledByItsOwner() throws Exception {
         // The consequence of the stickiness above, pinned because it is a dead end rather than a
-        // design: DELETE /api/auth/2fa requires a valid code, and a pending enrolment has no
+        // design: DELETE /api/auth/2fa/app requires a valid code, and a pending enrolment has no
         // enabled TOTP to produce one from. Somebody who loses their phone between /setup and
         // /confirm therefore cannot start over on their own — only an admin reset
         // (POST /api/users/{id}/2fa/reset) or five deliberately wrong confirmations clear it.
-        // The answer is 409 TotpNotEnabled: from the API's point of view there is nothing to
+        // The answer is 409 MethodNotEnabled: from the API's point of view there is nothing to
         // disable, even though a secret is sitting in the database blocking any fresh enrolment.
         // Documented in the endpoint description; see the audit note before "fixing" this test.
         Cookie access = loginAs("testuser", "password");
-        mockMvc.perform(post("/api/auth/2fa/setup").cookie(access)).andExpect(status().isOk());
+        mockMvc.perform(post("/api/auth/2fa/app/setup").cookie(access)).andExpect(status().isOk());
 
-        mockMvc.perform(delete("/api/auth/2fa").cookie(access)
+        mockMvc.perform(delete("/api/auth/2fa/app").cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"123456\"}"))
             .andExpect(status().isConflict());
@@ -178,7 +178,7 @@ class TotpControllerIT {
         // had worked. Somebody who loses their phone mid-enrolment can now be unblocked.
         Cookie access = loginAs("testuser", "password");
         String before = objectMapper.readTree(
-            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+            mockMvc.perform(post("/api/auth/2fa/app/setup").cookie(access))
                 .andReturn().getResponse().getContentAsString()).get("secret").asText();
         String targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").orElseThrow().getId().toString();
 
@@ -186,7 +186,7 @@ class TotpControllerIT {
             .andExpect(status().isNoContent());
 
         String after = objectMapper.readTree(
-            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+            mockMvc.perform(post("/api/auth/2fa/app/setup").cookie(access))
                 .andReturn().getResponse().getContentAsString()).get("secret").asText();
         assertThat(after)
             .as("the pending enrolment is cleared, so setup starts over")
@@ -200,17 +200,17 @@ class TotpControllerIT {
         // missed, the account would report 2FA enabled with no secret to check codes against.
         Cookie access = loginAs("testuser", "password");
         String secret = objectMapper.readTree(
-            mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+            mockMvc.perform(post("/api/auth/2fa/app/setup").cookie(access))
                 .andReturn().getResponse().getContentAsString()).get("secret").asText();
 
-        mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
+        mockMvc.perform(post("/api/auth/2fa/app/confirm").cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"" + currentCodeFor(secret) + "\"}"))
             .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/api/auth/2fa/status").cookie(access))
+        mockMvc.perform(get("/api/auth/2fa").cookie(access))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.totpEnabled").value(true));
+            .andExpect(jsonPath("$[0].enabled").value(true));
 
         TwoFactorMethodEntity stored = userTotpJpaRepository.findById(new TwoFactorMethodEntity.Key(
             userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").orElseThrow().getId(), TwoFactorMethod.APP)).orElseThrow();
@@ -221,7 +221,7 @@ class TotpControllerIT {
 
     @Test
     void setup_unauthenticated_returns401() throws Exception {
-        mockMvc.perform(post("/api/auth/2fa/setup"))
+        mockMvc.perform(post("/api/auth/2fa/app/setup"))
             .andExpect(status().isUnauthorized());
     }
 
@@ -234,16 +234,16 @@ class TotpControllerIT {
         CustomUserDetails totpPrincipal = new CustomUserDetails(
             java.util.UUID.fromString(totpUserId), Role.USER, "totpuser@test.com");
 
-        mockMvc.perform(post("/api/auth/2fa/setup")
+        mockMvc.perform(post("/api/auth/2fa/app/setup")
                 .with(user(totpPrincipal)))
             .andExpect(status().isConflict());
     }
 
-    // ─── /api/auth/2fa/confirm ────────────────────────────────────────────────
+    // ─── /api/auth/2fa/app/confirm ────────────────────────────────────────────────
 
     @Test
     void confirm_unauthenticated_returns401() throws Exception {
-        mockMvc.perform(post("/api/auth/2fa/confirm")
+        mockMvc.perform(post("/api/auth/2fa/app/confirm")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"123456\"}"))
             .andExpect(status().isUnauthorized());
@@ -254,10 +254,10 @@ class TotpControllerIT {
         Cookie access = loginAs("testuser", "password");
 
         // First call setup so a pending secret exists
-        mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+        mockMvc.perform(post("/api/auth/2fa/app/setup").cookie(access))
             .andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/auth/2fa/confirm")
+        mockMvc.perform(post("/api/auth/2fa/app/confirm")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"000000\"}"))
@@ -314,7 +314,7 @@ class TotpControllerIT {
     void disable_totpNotEnabled_returns409() throws Exception {
         Cookie access = loginAs("testuser", "password");
 
-        mockMvc.perform(delete("/api/auth/2fa")
+        mockMvc.perform(delete("/api/auth/2fa/app")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"000000\"}"))
@@ -323,7 +323,7 @@ class TotpControllerIT {
 
     @Test
     void disable_unauthenticated_returns401() throws Exception {
-        mockMvc.perform(delete("/api/auth/2fa")
+        mockMvc.perform(delete("/api/auth/2fa/app")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"000000\"}"))
             .andExpect(status().isUnauthorized());
@@ -370,9 +370,9 @@ class TotpControllerIT {
     @Test
     void status_authenticated_totpNotEnabled_returns200WithFalse() throws Exception {
         Cookie access = loginAs("testuser", "password");
-        mockMvc.perform(get("/api/auth/2fa/status").cookie(access))
+        mockMvc.perform(get("/api/auth/2fa").cookie(access))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.totpEnabled").value(false));
+            .andExpect(jsonPath("$[0].enabled").value(false));
     }
 
     @Test
@@ -382,22 +382,22 @@ class TotpControllerIT {
         CustomUserDetails totpPrincipal = new CustomUserDetails(
             java.util.UUID.fromString(totpUserId), Role.USER, "totpuser@test.com");
 
-        mockMvc.perform(get("/api/auth/2fa/status").with(user(totpPrincipal)))
+        mockMvc.perform(get("/api/auth/2fa").with(user(totpPrincipal)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.totpEnabled").value(true));
+            .andExpect(jsonPath("$[0].enabled").value(true));
     }
 
     @Test
     void confirm_validCode_returns204() throws Exception {
         Cookie access = loginAs("testuser", "password");
-        MvcResult setupResult = mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+        MvcResult setupResult = mockMvc.perform(post("/api/auth/2fa/app/setup").cookie(access))
             .andExpect(status().isOk())
             .andReturn();
         String secret = objectMapper.readTree(setupResult.getResponse().getContentAsString()).get("secret").asText();
         DefaultCodeGenerator generator = new DefaultCodeGenerator(HashingAlgorithm.SHA256, 6);
         long counter = Math.floorDiv(System.currentTimeMillis() / 1000L, 30);
         String validCode = generator.generate(secret, counter);
-        mockMvc.perform(post("/api/auth/2fa/confirm")
+        mockMvc.perform(post("/api/auth/2fa/app/confirm")
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"" + validCode + "\"}"))
@@ -413,7 +413,7 @@ class TotpControllerIT {
         DefaultCodeGenerator generator = new DefaultCodeGenerator(HashingAlgorithm.SHA256, 6);
         long counter = Math.floorDiv(System.currentTimeMillis() / 1000L, 30);
         String validCode = generator.generate(KNOWN_TOTP_SECRET, counter);
-        mockMvc.perform(delete("/api/auth/2fa")
+        mockMvc.perform(delete("/api/auth/2fa/app")
                 .with(user(totpPrincipal))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"" + validCode + "\"}"))
@@ -458,17 +458,17 @@ class TotpControllerIT {
         Cookie access = loginAs("testuser", "password");
         java.util.UUID userId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").orElseThrow().getId();
 
-        mockMvc.perform(post("/api/auth/2fa/setup").cookie(access))
+        mockMvc.perform(post("/api/auth/2fa/app/setup").cookie(access))
             .andExpect(status().isOk());
         assertThat(pendingEnrolment.find(userId)).isPresent();
 
         for (int attempt = 1; attempt < TwoFactorPolicy.MAX_ATTEMPTS; attempt++) {
-            mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
+            mockMvc.perform(post("/api/auth/2fa/app/confirm").cookie(access)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"code\":\"000000\"}"))
                 .andExpect(status().isUnauthorized());
         }
-        mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
+        mockMvc.perform(post("/api/auth/2fa/app/confirm").cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"000000\"}"))
             .andExpect(status().isTooManyRequests());
@@ -476,7 +476,7 @@ class TotpControllerIT {
         assertThat(pendingEnrolment.find(userId)).isEmpty();
         // With no pending secret left, confirming is no longer a guessing game at all:
         // restarting the setup is the only way forward.
-        mockMvc.perform(post("/api/auth/2fa/confirm").cookie(access)
+        mockMvc.perform(post("/api/auth/2fa/app/confirm").cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"000000\"}"))
             .andExpect(status().isUnprocessableEntity());
@@ -546,5 +546,54 @@ class TotpControllerIT {
                     .content("{\"code\":\"10000" + i + "\"}"))
                 .andExpect(status().isUnauthorized());
         }
+    }
+
+    // ─── méthodes ───────────────────────────────────────────────────────────────
+
+    @Test
+    void the_methods_are_listed_in_order_with_the_mail_unusable_while_mail_is_off() throws Exception {
+        mockMvc.perform(get("/api/auth/2fa").cookie(loginAs("testuser", "password")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].method").value("APP"))
+            .andExpect(jsonPath("$[0].enabled").value(false))
+            .andExpect(jsonPath("$[0].usable").value(true))
+            .andExpect(jsonPath("$[1].method").value("MAIL"))
+            .andExpect(jsonPath("$[1].usable").value(false));
+    }
+
+    @Test
+    void the_mail_cannot_be_turned_on_while_mail_is_off() throws Exception {
+        mockMvc.perform(post("/api/auth/2fa/mail/setup").cookie(loginAs("testuser", "password")))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.error_code").value("method_unavailable"));
+    }
+
+    @Test
+    void the_app_sends_no_code_to_turn_it_off() throws Exception {
+        // totpuser has the app on: signing in would stop at the challenge, so the principal is injected.
+        CustomUserDetails totpPrincipal = new CustomUserDetails(
+            userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").orElseThrow().getId(),
+            Role.USER, "totpuser@test.com");
+        mockMvc.perform(post("/api/auth/2fa/app/disable-code").with(user(totpPrincipal)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("method_sends_no_code"));
+    }
+
+    @Test
+    void a_method_the_url_does_not_know_is_not_found() throws Exception {
+        mockMvc.perform(post("/api/auth/2fa/sms/setup").cookie(loginAs("testuser", "password")))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void a_paused_mail_method_is_turned_off_without_a_code() throws Exception {
+        java.util.UUID id = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").orElseThrow().getId();
+        userTotpJpaRepository.save(new TwoFactorMethodEntity(id, TwoFactorMethod.MAIL, null));
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(delete("/api/auth/2fa/mail").cookie(access))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/auth/2fa").cookie(access))
+            .andExpect(jsonPath("$[1].enabled").value(false));
     }
 }

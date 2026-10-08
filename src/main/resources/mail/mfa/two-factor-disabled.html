@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: mail(#{${'subject.' + mail.method}}, #{${'preheader.' + mail.method}}, ~{::content})}">
+<body>
+<th:block th:fragment="content">
+  <h1 th:replace="~{components :: heading(#{${'heading.' + mail.method}})}"></h1>
+  <p th:replace="~{components :: paragraph(#{greeting(${mail.username})})}"></p>
+  <p th:replace="~{components :: paragraph(#{${'body.' + mail.method}})}"></p>
+  <th:block th:unless="${mail.anotherRemains}">
+    <p th:replace="~{components :: paragraph(#{alone})}"></p>
+  </th:block>
+  <th:block th:if="${mail.anotherRemains}">
+    <p th:replace="~{components :: paragraph(#{remains})}"></p>
+  </th:block>
+  <table th:replace="~{components :: note(#{warning}, 'warning')}"></table>
+  <table th:replace="~{components :: button(${appUrl + mail.securityPath.value}, #{action})}"></table>
+  <p th:replace="~{components :: fallbackLink(${appUrl + mail.securityPath.value})}"></p>
+</th:block>
+</body>
+</html>
