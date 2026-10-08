@@ -4,7 +4,7 @@ import com.nido.api.shared.model.Role;
 import com.nido.api.authentication.infrastructure.persistence.entity.RefreshTokenEntity;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
-import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
+import com.nido.api.mfa.infrastructure.persistence.repository.TwoFactorMethodJpaRepository;
 import com.nido.api.IntegrationTestConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,7 +20,7 @@ class RefreshTokenRepositoryIT {
     @Autowired RefreshTokenJpaRepository refreshTokenJpaRepository;
     @Autowired UserIdentityJpaRepository userIdentityJpaRepository;
     @Autowired UserCredentialJpaRepository userCredentialJpaRepository;
-    @Autowired UserTotpJpaRepository userTotpJpaRepository;
+    @Autowired TwoFactorMethodJpaRepository userTotpJpaRepository;
 
     private UserIdentityEntity savedUser;
 

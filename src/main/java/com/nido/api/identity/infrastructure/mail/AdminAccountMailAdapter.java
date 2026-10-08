@@ -8,11 +8,13 @@ import com.nido.api.mail.domain.model.AppPath;
 import com.nido.api.mail.domain.model.MailContent;
 import com.nido.api.mail.domain.model.MailRequest;
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TwoFactorMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
+import java.util.Set;
 
 /**
  * The mails an account's holder receives when an administrator acts on their account, in the account's
@@ -41,8 +43,8 @@ public class AdminAccountMailAdapter implements AdminAccountMailPort {
     }
 
     @Override
-    public void totpReset(User account, String actorName) {
-        send(account, new TotpResetMail(account.username(), actorName, SECURITY));
+    public void twoFactorReset(User account, String actorName, Set<TwoFactorMethod> removed, Set<TwoFactorMethod> kept) {
+        send(account, new TwoFactorResetMail(account.username(), actorName, ResetMethods.of(removed), KeptMethod.of(kept), SECURITY));
     }
 
     @Override

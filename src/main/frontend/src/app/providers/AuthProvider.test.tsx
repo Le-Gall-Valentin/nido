@@ -9,7 +9,7 @@ vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (k: string) => k }
 
 const alice = {
   id: 'alice', username: 'alice', email: 'alice@test.com', role: 'USER' as const,
-  createdAt: '2026-01-01T00:00:00Z', totpEnabled: false, language: null,
+  createdAt: '2026-01-01T00:00:00Z', twoFactorMethods: [], language: null,
 }
 
 function fakeApi(): IAuthApi {

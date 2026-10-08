@@ -38,7 +38,7 @@ describe('authStore', () => {
 
   it('login returns enrollment_proposed without calling notifyLoginSuccess', async () => {
     const api = createApiMock()
-    const user = { id: '1', username: 'user', role: 'USER' as const, email: 'u@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false }
+    const user = { id: '1', username: 'user', role: 'USER' as const, email: 'u@test.com', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [] }
     vi.mocked(api.login).mockResolvedValue({ type: 'success', user })
     const store = createAuthStore(api)
 
@@ -53,7 +53,7 @@ describe('authStore', () => {
 
   it('remembers who is signing in until the sign-in is finished or dropped', async () => {
     const api = createApiMock()
-    const user = { id: '1', username: 'user', role: 'USER' as const, email: 'u@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false, language: 'en' as const }
+    const user = { id: '1', username: 'user', role: 'USER' as const, email: 'u@test.com', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [], language: 'en' as const }
     vi.mocked(api.login).mockResolvedValue({ type: 'success', user })
     const store = createAuthStore(api)
 
@@ -71,24 +71,41 @@ describe('authStore', () => {
     expect(store.getState().signingIn).toBeNull()
   })
 
-  it('login returns totp_required with the name the server gave, not what was typed', async () => {
+  it('login hands the challenge over, with the name the server gave', async () => {
     const api = createApiMock()
-    vi.mocked(api.login).mockResolvedValue({ type: 'totp_required', username: 'alice' })
+    const challenge = {
+      username: 'alice', methods: ['MAIL' as const], maskedEmail: 'a••••••e@x.fr',
+      mailCode: { sent: true as const, resendAfterSeconds: 60 },
+    }
+    vi.mocked(api.login).mockResolvedValue({ type: 'two_factor_required', challenge })
     const store = createAuthStore(api)
 
-    const outcome = await store.getState().login({ identifier: 'Alice@Test.com', password: 'secret' })
-
-    expect(outcome).toEqual({ kind: 'totp_required', username: 'alice' })
+    await expect(store.getState().login({ identifier: 'alice@x.fr', password: 'pw' }))
+      .resolves.toEqual({ kind: 'two_factor_required', challenge })
     expect(mockedSetSessionHint).not.toHaveBeenCalled()
     expect(mockedNotifyLoginSuccess).not.toHaveBeenCalled()
     expect(store.getState().user).toBeNull()
+  })
+
+  it('an account whose methods are all paused signs in at once, without a proposal', async () => {
+    const api = createApiMock()
+    const user = {
+      id: '1', username: 'alice', role: 'USER' as const, email: 'a@x.fr', createdAt: '2024-01-01T00:00:00Z',
+      twoFactorMethods: ['MAIL' as const],
+    }
+    vi.mocked(api.login).mockResolvedValue({ type: 'success', user })
+    const store = createAuthStore(api)
+
+    await expect(store.getState().login({ identifier: 'alice', password: 'pw' })).resolves.toEqual({ kind: 'authenticated' })
+    expect(store.getState().user).toEqual(user)
+    expect(store.getState().signingIn).toBeNull()
   })
 
 
   it('finalizeLogin sets user and session hint', () => {
     const api = createApiMock()
     const store = createAuthStore(api)
-    const user = { id: '1', username: 'user', role: 'USER' as const, email: 'u@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false }
+    const user = { id: '1', username: 'user', role: 'USER' as const, email: 'u@test.com', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [] }
 
     store.getState().finalizeLogin(user)
 
@@ -150,7 +167,7 @@ describe('authStore', () => {
     it('calls getMe and hydrates user when session hint is set', async () => {
       const api = createApiMock()
       mockedHasSessionHint.mockReturnValue(true)
-      vi.mocked(api.getMe).mockResolvedValue({ id: '1', username: 'admin', role: 'ADMIN', email: 'admin@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false })
+      vi.mocked(api.getMe).mockResolvedValue({ id: '1', username: 'admin', role: 'ADMIN', email: 'admin@test.com', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [] })
       const store = createAuthStore(api)
 
       await store.getState().initialize()
@@ -195,19 +212,19 @@ describe('authStore', () => {
       const controller1 = new AbortController()
       mockedHasSessionHint.mockReturnValue(true)
 
-      let resolveGetMe!: (value: { id: string; username: string; role: 'USER'; email: string; createdAt: string; totpEnabled: boolean }) => void
+      let resolveGetMe!: (value: { id: string; username: string; role: 'USER'; email: string; createdAt: string; twoFactorMethods: ('APP' | 'MAIL')[] }) => void
       vi.mocked(api.getMe)
         .mockImplementationOnce(
           () => new Promise((resolve) => { resolveGetMe = resolve })
         )
-        .mockResolvedValueOnce({ id: '2', username: 'alice', role: 'USER', email: 'alice@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false })
+        .mockResolvedValueOnce({ id: '2', username: 'alice', role: 'USER', email: 'alice@test.com', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [] })
 
       const store = createAuthStore(api)
 
       // First call — will be aborted before getMe resolves
       const initPromise1 = store.getState().initialize(controller1.signal)
       controller1.abort()
-      resolveGetMe({ id: '1', username: 'alice', role: 'USER', email: 'alice@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false })
+      resolveGetMe({ id: '1', username: 'alice', role: 'USER', email: 'alice@test.com', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [] })
       await initPromise1 // wait for the aborted call to fully settle
 
       // Second call — must proceed and complete normally
@@ -221,7 +238,7 @@ describe('authStore', () => {
       const api = createApiMock()
       const abortController = new AbortController()
 
-      let resolveGetMe!: (value: { id: string; username: string; role: 'USER'; email: string; createdAt: string; totpEnabled: boolean }) => void
+      let resolveGetMe!: (value: { id: string; username: string; role: 'USER'; email: string; createdAt: string; twoFactorMethods: ('APP' | 'MAIL')[] }) => void
       vi.mocked(api.getMe).mockImplementation(
         () => new Promise((resolve) => { resolveGetMe = resolve })
       )
@@ -232,7 +249,7 @@ describe('authStore', () => {
 
       // Abort before getMe resolves
       abortController.abort()
-      resolveGetMe({ id: '1', username: 'alice', role: 'USER', email: 'alice@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false })
+      resolveGetMe({ id: '1', username: 'alice', role: 'USER', email: 'alice@test.com', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [] })
       await initPromise
 
       // isInitializing stays true because we never set it to false (aborted)
@@ -246,14 +263,14 @@ describe('authStore', () => {
     const store = createAuthStore(api)
     const user = {
       id: '1', username: 'user', role: 'USER' as const,
-      email: 'u@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
+      email: 'u@test.com', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [],
     }
     store.setState({ user })
 
-    store.getState().patchUser({ username: 'updated', totpEnabled: true })
+    store.getState().patchUser({ username: 'updated', twoFactorMethods: ['APP'] })
 
     expect(store.getState().user?.username).toBe('updated')
-    expect(store.getState().user?.totpEnabled).toBe(true)
+    expect(store.getState().user?.twoFactorMethods).toEqual(['APP'])
     expect(store.getState().user?.email).toBe('u@test.com')
   })
 

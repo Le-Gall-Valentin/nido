@@ -118,6 +118,39 @@ class ApiDocumentationAccessIT {
     }
 
     @Test
+    void the_second_factor_routes_document_every_answer_a_client_reads() throws Exception {
+        JsonNode document = new ObjectMapper().readTree(get("/api/docs", sessionCookie()).body());
+        JsonNode paths = document.path("paths");
+        JsonNode schemas = document.path("components").path("schemas");
+
+        JsonNode setup = paths.path("/api/auth/2fa/{method}/setup").path("post").path("responses").path("200")
+            .path("content").path("application/json").path("schema");
+        assertThat(setup.path("oneOf").findValuesAsText("$ref"))
+            .as("the setup answers one of two shapes, not a bare object")
+            .map(ref -> ref.substring(ref.lastIndexOf('/') + 1))
+            .containsExactlyInAnyOrder("AppSetupResponse", "MailSetupResponse");
+        assertThat(schemas.path("MailSetupResponse").path("properties").fieldNames()).toIterable()
+            .contains("sentTo", "resendAfterSeconds");
+
+        JsonNode disable = paths.path("/api/auth/2fa/{method}").path("delete").path("responses");
+        assertThat(disable.path("410").path("description").asText()).contains("code_spent", "code_expired");
+
+        JsonNode mailCode = paths.path("/api/auth/2fa/challenge/mail").path("post").path("responses");
+        assertThat(mailCode.fieldNames()).toIterable().contains("200", "401", "409", "429");
+        assertThat(mailCode.path("429").path("description").asText())
+            .contains("resend_too_soon", "send_limit_reached", "two_factor_locked");
+
+        assertThat(paths.path("/api/auth/login").path("post").path("responses").path("429").path("description").asText())
+            .contains("two_factor_locked");
+
+        JsonNode profile = paths.path("/api/users/me").path("patch").path("responses");
+        assertThat(profile.path("400").path("description").asText())
+            .contains("email_code_invalid", "email_code_expired", "email_code_spent");
+        assertThat(profile.path("429").path("description").asText()).contains("resend_too_soon", "send_limit_reached");
+        assertThat(profile.fieldNames()).toIterable().contains("200", "202", "204");
+    }
+
+    @Test
     void the_dashboard_documents_what_each_of_its_cards_carries() throws Exception {
         // A card's data used to be a bare object here: the client mirrors six shapes by hand, and the
         // document it could check them against described none of them.
@@ -146,5 +179,15 @@ class ApiDocumentationAccessIT {
             assertThat(paths.path(path).path("put").path("responses").fieldNames()).toIterable()
                 .as(path).contains("204", "400", "401", "404", "429");
         }
+    }
+
+    @Test
+    void turning_a_second_factor_on_or_off_is_documented_as_answering_no_content() throws Exception {
+        JsonNode paths = new ObjectMapper().readTree(get("/api/docs", sessionCookie()).body()).path("paths");
+
+        assertThat(paths.path("/api/auth/2fa/{method}/confirm").path("post").path("responses").fieldNames()).toIterable()
+            .contains("204").doesNotContain("200");
+        assertThat(paths.path("/api/auth/2fa/{method}").path("delete").path("responses").fieldNames()).toIterable()
+            .contains("204").doesNotContain("200");
     }
 }

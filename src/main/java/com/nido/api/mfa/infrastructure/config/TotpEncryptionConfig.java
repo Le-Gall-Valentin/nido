@@ -18,9 +18,10 @@ public class TotpEncryptionConfig {
     // re-enrollment (see key rotation procedure below).
     //
     // KEY ROTATION PROCEDURE: if the encryption key must be changed:
-    //   1. Disable TOTP for all users (UPDATE users SET totp_secret=NULL, totp_enabled=FALSE)
-    //   2. Deploy with the new key
-    //   3. Users re-enroll at next login
+    //   1. Remove every authenticator app (DELETE FROM two_factor_methods WHERE method = 'APP')
+    //   2. Deploy with the new key — codes sent by mail and not used yet stop working too: their hashes are
+    //      keyed by it (HmacMailCodeHasherAdapter); a new one is simply asked for
+    //   3. Users turn the app on again at their next login
     // There is no in-place re-encryption path because the old ciphertext requires the old key.
     @Bean
     TotpEncryptorFactory totpEncryptorFactory(EncryptionKey encryptionKey) {

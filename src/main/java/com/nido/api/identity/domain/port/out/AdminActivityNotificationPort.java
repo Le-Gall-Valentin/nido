@@ -1,8 +1,10 @@
 package com.nido.api.identity.domain.port.out;
 
 import com.nido.api.identity.domain.model.User;
+import com.nido.api.shared.model.TwoFactorMethod;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * What super-administrators hear of the gestures of administrators — notifications, each reader can switch
@@ -22,5 +24,6 @@ public interface AdminActivityNotificationPort {
      */
     void accountDeleted(List<User> readers, String actorName, String accountName, boolean wasInvited);
 
-    void totpReset(List<User> readers, String actorName, String accountName);
+    /** @param removed what the administrator took away — never empty */
+    void twoFactorReset(List<User> readers, String actorName, String accountName, Set<TwoFactorMethod> removed);
 }

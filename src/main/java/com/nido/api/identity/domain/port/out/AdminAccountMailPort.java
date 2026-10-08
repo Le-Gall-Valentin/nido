@@ -2,6 +2,9 @@ package com.nido.api.identity.domain.port.out;
 
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TwoFactorMethod;
+
+import java.util.Set;
 
 /**
  * What an account's holder is told when an administrator acts on their account. Mails, not notifications:
@@ -11,7 +14,11 @@ public interface AdminAccountMailPort {
 
     void roleChanged(User account, String actorName, Role newRole);
 
-    void totpReset(User account, String actorName);
+    /**
+     * @param removed what the administrator took away — never empty
+     * @param kept    what still protects the account
+     */
+    void twoFactorReset(User account, String actorName, Set<TwoFactorMethod> removed, Set<TwoFactorMethod> kept);
 
     void deactivated(User account, String actorName);
 

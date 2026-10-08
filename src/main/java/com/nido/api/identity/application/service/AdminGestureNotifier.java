@@ -7,11 +7,13 @@ import com.nido.api.identity.domain.port.out.AdminActivityNotificationPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TwoFactorMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -62,11 +64,12 @@ public class AdminGestureNotifier {
         });
     }
 
-    /** Called only when a second factor was actually on — an invited account never has one. */
-    public void totpReset(User account, UUID actorId, Role actorRole) {
+    /** Called only when a method was actually removed — an invited account never has one. */
+    public void twoFactorReset(User account, Set<TwoFactorMethod> removed, Set<TwoFactorMethod> kept,
+                               UUID actorId, Role actorRole) {
         nameOf(actorId).ifPresent(actor -> {
-            mails.totpReset(account, actor);
-            tellSuperAdministrators(actorRole, readers -> activity.totpReset(readers, actor, account.username()));
+            mails.twoFactorReset(account, actor, removed, kept);
+            tellSuperAdministrators(actorRole, readers -> activity.twoFactorReset(readers, actor, account.username(), removed));
         });
     }
 

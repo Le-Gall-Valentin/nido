@@ -30,9 +30,9 @@ public class TotpCiphertextCheck implements ExistingCiphertextCheck {
 
     @Override
     public void verify() {
-        List<Map.Entry<UUID, String>> samples = jdbc.sql("SELECT user_id, totp_secret FROM user_totp "
-                + "WHERE totp_secret IS NOT NULL ORDER BY user_id LIMIT " + SAMPLES)
-            .query((rs, rowNum) -> Map.entry(rs.getObject("user_id", UUID.class), rs.getString("totp_secret")))
+        List<Map.Entry<UUID, String>> samples = jdbc.sql("SELECT user_id, secret FROM two_factor_methods "
+                + "WHERE method = 'APP' ORDER BY user_id LIMIT " + SAMPLES)
+            .query((rs, rowNum) -> Map.entry(rs.getObject("user_id", UUID.class), rs.getString("secret")))
             .list();
         if (!samples.isEmpty() && samples.stream().noneMatch(this::opens)) {
             throw new IllegalStateException("The encryption key does not decrypt the two-factor secrets already "

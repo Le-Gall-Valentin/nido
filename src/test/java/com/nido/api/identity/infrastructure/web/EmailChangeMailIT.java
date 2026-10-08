@@ -11,7 +11,7 @@ import com.nido.api.authentication.infrastructure.web.dto.LoginRequest;
 import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
-import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
+import com.nido.api.mfa.infrastructure.persistence.repository.TwoFactorMethodJpaRepository;
 import com.nido.api.shared.model.Role;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
@@ -40,7 +40,7 @@ class EmailChangeMailIT {
     @Autowired UserCredentialJpaRepository credentials;
     @Autowired RefreshTokenJpaRepository refreshTokens;
     @Autowired PasswordResetTokenJpaRepository resetTokens;
-    @Autowired UserTotpJpaRepository totps;
+    @Autowired TwoFactorMethodJpaRepository totps;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired JdbcClient jdbc;
 

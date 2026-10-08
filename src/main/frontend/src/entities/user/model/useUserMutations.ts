@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { UsersPage, AdminUser } from '../api/adminUsersApi'
+import type { TwoFactorMethod } from './types'
 import { useAdminUsersApi } from './adminUsersApiContext'
 import { USERS_QUERY_KEY } from './useUsers'
 
@@ -47,11 +48,11 @@ export function useDeleteUser() {
   })
 }
 
-export function useResetTotp() {
+export function useResetTwoFactor() {
   const api = useAdminUsersApi()
   const invalidate = useInvalidateUsers()
   return useMutation({
-    mutationFn: (id: string) => api.resetTotp(id),
+    mutationFn: ({ id, methods }: { id: string; methods: TwoFactorMethod[] }) => api.resetTwoFactor(id, methods),
     onSuccess: invalidate,
   })
 }

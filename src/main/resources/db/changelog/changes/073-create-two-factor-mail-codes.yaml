@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: 073-create-two-factor-mail-codes
+      author: nido
+      comment: >
+        The codes sent by mail: one at a time per account and purpose, a new one replacing the last. Neither
+        the code nor what it is bound to is kept: code_hash is an HMAC of the code and of what it is bound to
+        (the sign-in challenge, the account, or the address being confirmed), binding_hash an HMAC of the
+        binding alone that tells a resend from a new request — both under a key derived from the master key,
+        which the database does not hold. Expiry is checked on use; a scheduled purge clears the rest.
+      changes:
+        - sql:
+            sql: >
+              CREATE TABLE two_factor_mail_codes (
+                user_id UUID NOT NULL,
+                purpose VARCHAR(16) NOT NULL,
+                binding_hash VARCHAR(64) NOT NULL,
+                code_hash VARCHAR(64) NOT NULL,
+                failed_attempts INT NOT NULL DEFAULT 0,
+                sent_at TIMESTAMPTZ NOT NULL,
+                expires_at TIMESTAMPTZ NOT NULL,
+                CONSTRAINT pk_two_factor_mail_codes PRIMARY KEY (user_id, purpose),
+                CONSTRAINT fk_two_factor_mail_codes_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                CONSTRAINT ck_two_factor_mail_codes_purpose CHECK (purpose IN ('LOGIN', 'ENROL', 'DISABLE', 'EMAIL_CHANGE'))
+              )
+        - sql:
+            sql: CREATE INDEX idx_two_factor_mail_codes_expires_at ON two_factor_mail_codes (expires_at)
+      rollback:
+        - dropTable:
+            tableName: two_factor_mail_codes

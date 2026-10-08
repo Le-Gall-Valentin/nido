@@ -3,9 +3,10 @@ package com.nido.api.identity.application.handler;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.model.UserSelfView;
-import com.nido.api.identity.domain.port.out.TotpStatusPort;
+import com.nido.api.identity.domain.port.out.TwoFactorMethodsPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TwoFactorMethod;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -24,13 +26,13 @@ import static org.mockito.Mockito.when;
 class GetCurrentUserHandlerTest {
 
     @Mock UserRepository userRepository;
-    @Mock TotpStatusPort totpStatusPort;
+    @Mock TwoFactorMethodsPort twoFactorMethods;
 
     private GetCurrentUserHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new GetCurrentUserHandler(userRepository, totpStatusPort);
+        handler = new GetCurrentUserHandler(userRepository, twoFactorMethods);
     }
 
     @Test
@@ -39,7 +41,7 @@ class GetCurrentUserHandlerTest {
         Instant now = Instant.now();
         User user = new User(id, "user1", "u@test.com", Role.USER, true, now, null);
         when(userRepository.findById(id)).thenReturn(Optional.of(user));
-        when(totpStatusPort.isTotpEnabled(id)).thenReturn(false);
+        when(twoFactorMethods.activeMethods(id)).thenReturn(EnumSet.noneOf(TwoFactorMethod.class));
 
         UserSelfView view = handler.getCurrentUser(id);
 
@@ -48,19 +50,19 @@ class GetCurrentUserHandlerTest {
         assertThat(view.email()).isEqualTo("u@test.com");
         assertThat(view.role()).isEqualTo(Role.USER);
         assertThat(view.createdAt()).isEqualTo(now);
-        assertThat(view.totpEnabled()).isFalse();
+        assertThat(view.twoFactorMethods()).isEmpty();
     }
 
     @Test
-    void getCurrentUser_found_totpEnabled_returnsViewWithTotpTrue() {
+    void getCurrentUser_found_withTheAppOn_returnsViewWithTheApp() {
         UUID id = UUID.randomUUID();
         User user = new User(id, "user1", "u@test.com", Role.USER, true, Instant.now(), null);
         when(userRepository.findById(id)).thenReturn(Optional.of(user));
-        when(totpStatusPort.isTotpEnabled(id)).thenReturn(true);
+        when(twoFactorMethods.activeMethods(id)).thenReturn(EnumSet.of(TwoFactorMethod.APP));
 
         UserSelfView view = handler.getCurrentUser(id);
 
-        assertThat(view.totpEnabled()).isTrue();
+        assertThat(view.twoFactorMethods()).containsExactly(TwoFactorMethod.APP);
     }
 
     @Test

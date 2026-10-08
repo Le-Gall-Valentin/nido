@@ -12,7 +12,7 @@ export type PermissionDenialReason =
   | 'self'
   | 'admin_cannot_manage_admin'
   | 'insufficient'
-  | 'totp_not_enabled'
+  | 'two_factor_not_enabled'
   | 'target_inactive'
   | 'no_assignable_role'
   | 'target_inactive_invitation'
@@ -69,14 +69,14 @@ export function canDelete(caller: User, target: AdminUser): PermissionResult {
 }
 
 /**
- * AdminResetTotpHandler: self → hierarchy.
- * The totpEnabled check is frontend-only UX (backend treats reset of a
- * disabled TOTP as a no-op).
+ * AdminResetTwoFactorHandler: self → hierarchy.
+ * Offered only when a method is on — frontend-only UX: the backend answers 204 and tells nobody when nothing
+ * was removed.
  */
-export function canResetTotp(caller: User, target: AdminUser): PermissionResult {
+export function canResetTwoFactor(caller: User, target: AdminUser): PermissionResult {
   if (caller.id === target.id) return deny('self')
   if (!canManage(caller.role, target.role)) return deny(hierarchyDenialReason(caller, target))
-  if (!target.totpEnabled) return deny('totp_not_enabled')
+  if (target.twoFactorMethods.length === 0) return deny('two_factor_not_enabled')
   return OK
 }
 

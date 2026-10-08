@@ -14,25 +14,25 @@ interface QueueEntry {
 const SESSION_ROUTES = ['/auth/login', '/auth/refresh', '/auth/logout'] as const
 
 /**
- * Routes that authenticate the request by what it carries — a TOTP code, or the challenge cookie
- * from a login in progress — rather than by the access token. Their 401 says "that code is wrong"
- * while the session is perfectly valid, so refreshing rotates both tokens for nothing and replaying
- * the request spends a second of the attempts the server allows on it. The method is part of the
- * rule: the disable route is the DELETE on /auth/2fa, while /auth/2fa/setup and /auth/2fa/status sit
- * under the same prefix and carry no code, so a 401 from those two is what refreshing is for.
+ * Routes that authenticate the request by what it carries — a code, or the challenge cookie of a sign-in in
+ * progress — rather than by the access token. Their 401 says "that code is wrong" (or "start the sign-in
+ * again") while the session is fine, so refreshing rotates both tokens for nothing and replaying the request
+ * spends one of the attempts the server allows. The method is part of the rule: /auth/2fa/{method}/setup,
+ * /auth/2fa/mail/disable-code and GET /auth/2fa carry no code, so a 401 from those is what refreshing is for.
  */
-const CODE_BEARING_ROUTES = [
-  { method: 'post', path: '/auth/2fa/verify' },
-  { method: 'post', path: '/auth/2fa/confirm' },
-  { method: 'delete', path: '/auth/2fa' },
-] as const
+const CODE_BEARING_ROUTES: ReadonlyArray<{ method: string; path: RegExp }> = [
+  { method: 'post', path: /\/auth\/2fa\/verify$/ },
+  { method: 'post', path: /\/auth\/2fa\/challenge\/mail$/ },
+  { method: 'post', path: /\/auth\/2fa\/(app|mail)\/confirm$/ },
+  { method: 'delete', path: /\/auth\/2fa\/(app|mail)$/ },
+]
 
 function answersSomethingOtherThanTheSession(request: InternalAxiosRequestConfig): boolean {
   const path = request.url?.split('?')[0]
   if (!path) return false
   const method = request.method?.toLowerCase()
   return SESSION_ROUTES.some((route) => path.endsWith(route))
-    || CODE_BEARING_ROUTES.some((route) => path.endsWith(route.path) && route.method === method)
+    || CODE_BEARING_ROUTES.some((route) => route.method === method && route.path.test(path))
 }
 
 export function createRefreshInterceptorHandlers(

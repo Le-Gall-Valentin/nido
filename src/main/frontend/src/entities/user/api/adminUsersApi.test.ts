@@ -19,7 +19,7 @@ function axiosErr(status: number): AxiosError {
 
 const ADMIN_USER = {
   id: 'u-1', username: 'alice', email: 'alice@test.com',
-  role: 'ADMIN', isActive: true, createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
+  role: 'ADMIN', isActive: true, createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [],
 }
 
 beforeEach(() => { Object.values(mock).forEach(m => m.mockReset()) })
@@ -208,21 +208,21 @@ describe('deactivateUser', () => {
   })
 })
 
-describe('resetTotp', () => {
+describe('resetTwoFactor', () => {
   it('POST /users/{id}/2fa/reset (backend UserController path)', async () => {
     mock.post.mockResolvedValue({ status: 204 })
-    await adminUsersApi.resetTotp('u-1')
-    expect(mock.post).toHaveBeenCalledWith('/users/u-1/2fa/reset')
+    await adminUsersApi.resetTwoFactor('u-1', ['MAIL'])
+    expect(mock.post).toHaveBeenCalledWith('/users/u-1/2fa/reset', { methods: ['MAIL'] })
   })
 
   it('throws ServerError on 500', async () => {
     mock.post.mockRejectedValue(axiosErr(500))
-    await expect(adminUsersApi.resetTotp('u-1')).rejects.toBeInstanceOf(ServerError)
+    await expect(adminUsersApi.resetTwoFactor('u-1', ['APP'])).rejects.toBeInstanceOf(ServerError)
   })
 
   it('throws NetworkError on no response', async () => {
     mock.post.mockRejectedValue(new Error('network'))
-    await expect(adminUsersApi.resetTotp('u-1')).rejects.toBeInstanceOf(NetworkError)
+    await expect(adminUsersApi.resetTwoFactor('u-1', ['APP'])).rejects.toBeInstanceOf(NetworkError)
   })
 })
 

@@ -1,4 +1,4 @@
-import type { AdminUser, InvitationDelivery } from './types'
+import type { AdminUser, InvitationDelivery, TwoFactorMethod } from './types'
 
 /** Paginated users payload returned by the backend (mirrors `PageResponse`). */
 export interface UsersPage {
@@ -27,6 +27,7 @@ export interface IAdminUsersApi {
   updateUserRole(id: string, role: 'USER' | 'ADMIN'): Promise<void>
   activateUser(id: string): Promise<void>
   deactivateUser(id: string): Promise<void>
-  resetTotp(id: string): Promise<void>
+  /** Removes the methods ticked; one that is off is ignored. */
+  resetTwoFactor(id: string, methods: TwoFactorMethod[]): Promise<void>
   deleteUser(id: string): Promise<void>
 }

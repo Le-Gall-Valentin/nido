@@ -6,10 +6,10 @@ import type { AdminUser } from '@/entities/user'
 import type { IAdminUsersApi, UsersPage } from './IAdminUsersApi'
 import { AdminUsersApiProvider } from './adminUsersApiContext'
 import { USERS_QUERY_KEY } from './useUsers'
-import { useCreateUser, useResendInvitation, useToggleUserActive } from './useUserMutations'
+import { useCreateUser, useResendInvitation, useResetTwoFactor, useToggleUserActive } from './useUserMutations'
 
 const USER: AdminUser = {
-  id: 'u-1', username: 'alice', email: 'alice@test.com', role: 'USER', createdAt: '2026-01-01', totpEnabled: false, isActive: true, invitation: null,
+  id: 'u-1', username: 'alice', email: 'alice@test.com', role: 'USER', createdAt: '2026-01-01', twoFactorMethods: [], isActive: true, invitation: null,
 }
 
 const PAGE: UsersPage = { content: [USER], totalElements: 1, page: 0, size: 20 }
@@ -21,7 +21,7 @@ function fakeApi(overrides: Partial<IAdminUsersApi> = {}): IAdminUsersApi {
     updateUserRole: vi.fn(),
     activateUser: vi.fn(),
     deactivateUser: vi.fn(),
-    resetTotp: vi.fn(),
+    resetTwoFactor: vi.fn(),
     deleteUser: vi.fn(),
     resendInvitation: vi.fn(),
     ...overrides,
@@ -83,5 +83,16 @@ describe('useResendInvitation', () => {
 
     await expect(result.current.mutateAsync('u-1')).resolves.toEqual({ delivery: 'link', link: '/welcome#token=y' })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
+  })
+})
+
+describe('useResetTwoFactor', () => {
+  it('sends the methods the administrator ticked', async () => {
+    const api = fakeApi({ resetTwoFactor: vi.fn().mockResolvedValue(undefined) })
+    const { result } = renderHook(() => useResetTwoFactor(), { wrapper: wrapperWith(api) })
+
+    await result.current.mutateAsync({ id: 'u-1', methods: ['APP'] })
+
+    expect(api.resetTwoFactor).toHaveBeenCalledWith('u-1', ['APP'])
   })
 })

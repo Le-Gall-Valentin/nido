@@ -42,10 +42,18 @@ export function createAuthStore(api: IAuthApi) {
 
     async login(credentials: LoginCredentials): Promise<LoginOutcome> {
       const result = await api.login(credentials)
-      if (result.type === 'totp_required') {
-        return { kind: 'totp_required', username: result.username }
+      if (result.type === 'two_factor_required') {
+        return { kind: 'two_factor_required', challenge: result.challenge }
       }
       const { user } = result
+      // Methods on but all paused (the mail while mail is off): the account chose its protection — it is not
+      // asked to choose again. It comes back with mail.
+      if (user.twoFactorMethods.length > 0) {
+        notifyLoginSuccess()
+        setSessionHint()
+        set({ user, signedOut: false, signingIn: null })
+        return { kind: 'authenticated' }
+      }
       set({ signingIn: user })
       return { kind: 'enrollment_proposed', user }
     },

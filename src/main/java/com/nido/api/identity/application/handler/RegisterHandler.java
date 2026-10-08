@@ -10,7 +10,6 @@ import com.nido.api.identity.domain.model.RegisteredAccount;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.AccountInvitationPort;
 import com.nido.api.identity.domain.port.out.PersonalSpaceInitPort;
-import com.nido.api.identity.domain.port.out.TotpRecordInitPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.annotation.ApplicationService;
@@ -30,20 +29,17 @@ public class RegisterHandler implements RegisterUseCase {
     private final UserCommandPort userCommandPort;
     private final UserRepository userRepository;
     private final AccountInvitationPort invitations;
-    private final TotpRecordInitPort totpRecordInitPort;
     private final PersonalSpaceInitPort personalSpaceInitPort;
     private final AdminGestureNotifier notifier;
 
     public RegisterHandler(UserCommandPort userCommandPort,
                            UserRepository userRepository,
                            AccountInvitationPort invitations,
-                           TotpRecordInitPort totpRecordInitPort,
                            PersonalSpaceInitPort personalSpaceInitPort,
                            AdminGestureNotifier notifier) {
         this.userCommandPort = userCommandPort;
         this.userRepository = userRepository;
         this.invitations = invitations;
-        this.totpRecordInitPort = totpRecordInitPort;
         this.personalSpaceInitPort = personalSpaceInitPort;
         this.notifier = notifier;
     }
@@ -63,7 +59,6 @@ public class RegisterHandler implements RegisterUseCase {
             .orElseThrow(IdentityException.InsufficientPermissions::new);
         User user = userCommandPort.createProfile(
             new CreateUserProfileCommand(command.username(), command.email(), command.role()));
-        totpRecordInitPort.initForUser(user.id());
         personalSpaceInitPort.initForUser(user.id());
         InvitationDelivery invitation = invitations.invite(user.id(), inviterName);
         notifier.accountCreated(user, inviterName, callerRole);

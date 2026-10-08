@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: mail(#{${'subject.' + mail.purpose}}, #{${'preheader.' + mail.purpose}}, ~{::content})}">
+<body>
+<th:block th:fragment="content">
+  <h1 th:replace="~{components :: heading(#{${'heading.' + mail.purpose}})}"></h1>
+  <p th:replace="~{components :: paragraph(#{greeting(${mail.username})})}"></p>
+  <p th:replace="~{components :: paragraph(#{${'intro.' + mail.purpose}})}"></p>
+  <!-- One run of digits, spaced by letter-spacing only: a real space could stop a phone from offering the code. -->
+  <p data-text-line th:text="${mail.code}"
+     style="margin:4px 0 16px;padding:16px 8px;border-radius:12px;background-color:#f1ede5;text-align:center;font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;font-size:30px;line-height:1.2;font-weight:600;letter-spacing:0.18em;color:#2c2a26;">000000</p>
+  <p th:replace="~{components :: paragraph(#{validity})}"></p>
+  <table th:replace="~{components :: note(#{${'warning.' + mail.purpose}}, 'warning')}"></table>
+</th:block>
+</body>
+</html>

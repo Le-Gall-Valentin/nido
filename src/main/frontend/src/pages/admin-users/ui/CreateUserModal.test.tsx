@@ -38,7 +38,7 @@ vi.mock('./InvitationResult', () => ({
 
 const SUPER_ADMIN_CALLER: User = {
   id: 'sa', username: 'sa', email: 'sa@test.com',
-  role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
+  role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [],
 }
 const ADMIN_CALLER: User = { ...SUPER_ADMIN_CALLER, id: 'a1', username: 'admin', role: 'ADMIN' }
 

@@ -1,0 +1,63 @@
+databaseChangeLog:
+  - changeSet:
+      id: 072-replace-user-totp-with-two-factor-methods
+      author: nido
+      comment: >
+        A second factor is now one of several methods: the authenticator app, or a code sent by mail. One row
+        per method an account has turned on replaces the one row per account that user_totp kept, whatever
+        its state. The authenticator secrets are copied as they are: each is encrypted with a key drawn from
+        the master key and its account's id, not from the table it sits in. The copy is counted before the
+        old table goes: an account that had two-factor authentication on and is not carried over would be
+        left with a password only while its holder believes otherwise, so the migration stops instead and
+        names the fix. Everything runs in this changeset's single transaction.
+      changes:
+        - sql:
+            sql: >
+              CREATE TABLE two_factor_methods (
+                user_id UUID NOT NULL,
+                method VARCHAR(16) NOT NULL,
+                secret TEXT,
+                CONSTRAINT pk_two_factor_methods PRIMARY KEY (user_id, method),
+                CONSTRAINT fk_two_factor_methods_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                CONSTRAINT ck_two_factor_methods_method CHECK (method IN ('APP', 'MAIL')),
+                CONSTRAINT ck_two_factor_methods_secret CHECK ((method = 'APP') = (secret IS NOT NULL))
+              )
+        - sql:
+            sql: >
+              INSERT INTO two_factor_methods (user_id, method, secret)
+              SELECT user_id, 'APP', totp_secret FROM user_totp WHERE totp_enabled AND totp_secret IS NOT NULL
+        - sql:
+            splitStatements: false
+            sql: |
+              DO $$
+              BEGIN
+                IF (SELECT count(*) FROM user_totp WHERE totp_enabled)
+                   <> (SELECT count(*) FROM two_factor_methods WHERE method = 'APP') THEN
+                  RAISE EXCEPTION '072: an account has two-factor authentication on without a secret, so it cannot be carried over. Turn it off for that account (UPDATE user_totp SET totp_enabled = false WHERE totp_enabled AND totp_secret IS NULL), then restart.';
+                END IF;
+              END
+              $$;
+        - dropTable:
+            tableName: user_totp
+      rollback:
+        - sql:
+            sql: >
+              CREATE TABLE user_totp (
+                user_id UUID NOT NULL,
+                totp_secret VARCHAR(256),
+                totp_enabled BOOLEAN NOT NULL DEFAULT false,
+                CONSTRAINT pk_user_totp PRIMARY KEY (user_id),
+                CONSTRAINT fk_user_totp_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                CONSTRAINT chk_user_totp_secret_required CHECK (totp_secret IS NOT NULL OR totp_enabled = false)
+              )
+        - sql:
+            sql: >
+              INSERT INTO user_totp (user_id, totp_secret, totp_enabled)
+              SELECT user_id, secret, true FROM two_factor_methods WHERE method = 'APP'
+        - sql:
+            comment: The version before reads one row per account, and only updates it when TOTP is turned on.
+            sql: >
+              INSERT INTO user_totp (user_id, totp_secret, totp_enabled)
+              SELECT id, NULL, false FROM users u WHERE NOT EXISTS (SELECT 1 FROM user_totp t WHERE t.user_id = u.id)
+        - dropTable:
+            tableName: two_factor_methods

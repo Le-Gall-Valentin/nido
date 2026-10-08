@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { InvalidCurrentPasswordError } from '../api/accountApi'
 import { NetworkError, RateLimitError, isValidPassword, passwordProblem } from '@/shared/lib'
+import { useFlash } from '../model/useFlash'
 
-type Flash = { kind: 'success' | 'error'; key: string } | null
 
 /**
  * How long the confirmation stays on screen before onChanged hands over. Long enough to
@@ -28,8 +28,7 @@ export function ChangePasswordSection({ onChangePassword, onChanged }: ChangePas
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [flash, setFlash] = useState<Flash>(null)
-  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { flash, showFlash } = useFlash(3000)
   const handoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const mismatch = next.length > 0 && confirm.length > 0 && next !== confirm
@@ -38,16 +37,9 @@ export function ChangePasswordSection({ onChangePassword, onChanged }: ChangePas
 
   useEffect(() => {
     return () => {
-      if (flashTimer.current) clearTimeout(flashTimer.current)
       if (handoverTimer.current) clearTimeout(handoverTimer.current)
     }
   }, [])
-
-  function showFlash(kind: 'success' | 'error', key: string) {
-    if (flashTimer.current) clearTimeout(flashTimer.current)
-    setFlash({ kind, key })
-    flashTimer.current = setTimeout(() => setFlash(null), 3000)
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

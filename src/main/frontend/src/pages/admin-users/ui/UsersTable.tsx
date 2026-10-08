@@ -5,7 +5,7 @@ import { RolePill, UserAvatar } from '@/entities/user'
 import { formatUserDate } from '../lib/formatUserDate'
 import { UserStatusToggle } from './UserStatusToggle'
 import { UserActions } from './UserActions'
-import { TotpBadge } from './TotpBadge'
+import { TwoFactorChips } from './TwoFactorChips'
 import { InvitationBadge } from './InvitationBadge'
 import type { UserRowCallbacks } from './userRowCallbacks'
 
@@ -27,7 +27,7 @@ export function UsersTable({
   pendingToggleId,
   onToggleActive,
   onEditRole,
-  onResetTotp,
+  onResetTwoFactor,
   onDelete,
   onResendInvitation,
 }: UsersTableProps) {
@@ -59,7 +59,7 @@ export function UsersTable({
               <th>{t('table.col_user')}</th>
               <th>{t('table.col_role')}</th>
               <th>{t('table.col_status')}</th>
-              <th>{t('table.col_totp')}</th>
+              <th>{t('table.col_two_factor')}</th>
               <th aria-hidden="true" />
             </tr>
           </thead>
@@ -83,7 +83,7 @@ export function UsersTable({
                 isToggling={user.id === pendingToggleId}
                 onToggleActive={onToggleActive}
                 onEditRole={onEditRole}
-                onResetTotp={onResetTotp}
+                onResetTwoFactor={onResetTwoFactor}
                 onDelete={onDelete}
                 onResendInvitation={onResendInvitation}
               />
@@ -105,7 +105,7 @@ interface RowProps extends UserRowCallbacks {
   isToggling: boolean
 }
 
-function UserRow({ user, currentUser, mail, youLabel, roleLabel, meta, isToggling, onToggleActive, onEditRole, onResetTotp, onDelete, onResendInvitation }: RowProps) {
+function UserRow({ user, currentUser, mail, youLabel, roleLabel, meta, isToggling, onToggleActive, onEditRole, onResetTwoFactor, onDelete, onResendInvitation }: RowProps) {
   const isMe = user.id === currentUser.id
 
   return (
@@ -137,7 +137,7 @@ function UserRow({ user, currentUser, mail, youLabel, roleLabel, meta, isTogglin
       </td>
 
       <td className="px-3.5 py-3.5">
-        <TotpBadge enabled={user.totpEnabled} />
+        <TwoFactorChips methods={user.twoFactorMethods} mail={mail} />
       </td>
 
       <td className="py-3.5 pl-3.5 pr-[18px]">
@@ -146,7 +146,7 @@ function UserRow({ user, currentUser, mail, youLabel, roleLabel, meta, isTogglin
           currentUser={currentUser}
           mail={mail}
           onEditRole={onEditRole}
-          onResetTotp={onResetTotp}
+          onResetTwoFactor={onResetTwoFactor}
           onDelete={onDelete}
           onResendInvitation={onResendInvitation}
           className="justify-end"

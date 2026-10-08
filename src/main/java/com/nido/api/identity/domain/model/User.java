@@ -31,7 +31,7 @@ public record User(
 
     public void ensureCanBeUpdatedBy(Role callerRole) { ensureCanBeManagedBy(callerRole); }
 
-    public void ensureTotpCanBeResetBy(Role callerRole) { ensureCanBeManagedBy(callerRole); }
+    public void ensureTwoFactorCanBeResetBy(Role callerRole) { ensureCanBeManagedBy(callerRole); }
 
     public void ensureInvitationCanBeResentBy(Role callerRole) { ensureCanBeManagedBy(callerRole); }
 

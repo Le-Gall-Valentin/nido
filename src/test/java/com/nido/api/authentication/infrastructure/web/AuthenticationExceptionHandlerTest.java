@@ -3,6 +3,7 @@ package com.nido.api.authentication.infrastructure.web;
 import com.nido.api.authentication.domain.model.AuthenticationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 
@@ -93,7 +94,7 @@ class AuthenticationExceptionHandlerTest {
 
     @Test
     void handle_totpCodeInvalid_returns401WithGenericMessage() {
-        var response = handler.handle(new AuthenticationException.TotpCodeInvalid(), request);
+        var response = handler.handle(new AuthenticationException.TwoFactorCodeInvalid(), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(response.getBody()).isNotNull();
@@ -103,18 +104,18 @@ class AuthenticationExceptionHandlerTest {
 
     @Test
     void handle_totpChallengeExpired_returns401WithStableErrorCode() {
-        var response = handler.handle(new AuthenticationException.TotpChallengeExpired(), request);
+        var response = handler.handle(new AuthenticationException.TwoFactorChallengeExpired(), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getDetail()).isEqualTo("Authentication required");
         assertThat(response.getBody().getTitle()).isEqualTo("AuthenticationError");
-        assertThat(response.getBody().getProperties()).containsEntry("error_code", "totp_challenge_expired");
+        assertThat(response.getBody().getProperties()).containsEntry("error_code", "two_factor_challenge_expired");
     }
 
     @Test
     void handle_totpMaxAttemptsExceeded_returns429() {
-        var response = handler.handle(new AuthenticationException.TotpMaxAttemptsExceeded(), request);
+        var response = handler.handle(new AuthenticationException.TwoFactorMaxAttemptsExceeded(), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
         assertThat(response.getBody()).isNotNull();
@@ -148,5 +149,33 @@ class AuthenticationExceptionHandlerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getDetail()).isEqualTo("This account already chose its password.");
         assertThat(response.getBody().getProperties()).containsEntry("error_code", "account_already_joined");
+    }
+
+    @Test
+    void a_refused_mail_code_says_which_and_when_to_ask_again() {
+        var tooSoon = handler.handle(new AuthenticationException.MailCodeRefused(true, 30), request);
+        var limit = handler.handle(new AuthenticationException.MailCodeRefused(false, 420), request);
+
+        assertThat(tooSoon.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(tooSoon.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("30");
+        assertThat(tooSoon.getBody().getProperties()).containsEntry("error_code", "resend_too_soon");
+        assertThat(limit.getBody().getProperties()).containsEntry("error_code", "send_limit_reached");
+    }
+
+    @Test
+    void a_method_off_or_paused_is_a_conflict_named_for_the_client() {
+        assertThat(handler.handle(new AuthenticationException.MethodNotEnabled(), request).getBody().getProperties())
+            .containsEntry("error_code", "method_not_enabled");
+        assertThat(handler.handle(new AuthenticationException.MethodUnavailable(), request).getBody().getProperties())
+            .containsEntry("error_code", "method_unavailable");
+    }
+
+    @Test
+    void a_lockout_at_sign_in_says_when_to_come_back() {
+        var response = handler.handle(new AuthenticationException.TwoFactorLockedOut(600), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(response.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("600");
+        assertThat(response.getBody().getProperties()).containsEntry("error_code", "two_factor_locked");
     }
 }

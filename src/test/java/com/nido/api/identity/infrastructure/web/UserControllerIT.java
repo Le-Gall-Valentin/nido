@@ -13,8 +13,9 @@ import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntit
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.IntegrationTestConfig;
-import com.nido.api.mfa.infrastructure.persistence.entity.UserTotpEntity;
-import com.nido.api.mfa.infrastructure.persistence.repository.UserTotpJpaRepository;
+import com.nido.api.mfa.infrastructure.persistence.entity.TwoFactorMethodEntity;
+import com.nido.api.mfa.infrastructure.persistence.repository.TwoFactorMethodJpaRepository;
+import com.nido.api.shared.model.TwoFactorMethod;
 import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.InvitationStatus;
 import com.nido.api.space.domain.model.SpaceRole;
@@ -62,7 +63,7 @@ class UserControllerIT {
     @Autowired UserCredentialJpaRepository userCredentialJpaRepository;
     @Autowired UserIdentityJpaRepository userIdentityJpaRepository;
     @Autowired RefreshTokenJpaRepository refreshTokenJpaRepository;
-    @Autowired UserTotpJpaRepository userTotpJpaRepository;
+    @Autowired TwoFactorMethodJpaRepository userTotpJpaRepository;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired TotpEncryptorFactory encryptorFactory;
     @Autowired SpaceJpaRepository spaceJpaRepository;
@@ -134,11 +135,11 @@ class UserControllerIT {
             .andExpect(jsonPath("$.email").value("testuser@test.com"))
             .andExpect(jsonPath("$.role").value("USER"))
             .andExpect(jsonPath("$.createdAt").isNotEmpty())
-            .andExpect(jsonPath("$.totpEnabled").value(false));
+            .andExpect(jsonPath("$.twoFactorMethods").isEmpty());
     }
 
     @Test
-    void me_withTotpEnabled_returnsTotpEnabledTrue() throws Exception {
+    void me_withTheAppOn_namesIt() throws Exception {
         UserIdentityEntity totpUser = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").get();
         // Build a valid access token directly — loginAs would be blocked by TOTP challenge
         Instant now = Instant.now();
@@ -157,7 +158,7 @@ class UserControllerIT {
 
         mockMvc.perform(get("/api/users/me").cookie(access))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.totpEnabled").value(true))
+            .andExpect(jsonPath("$.twoFactorMethods[0]").value("APP"))
             .andExpect(jsonPath("$.username").value("totpuser"))
             .andExpect(jsonPath("$.email").value("totpuser@test.com"));
     }
@@ -188,7 +189,7 @@ class UserControllerIT {
             .andExpect(jsonPath("$.username").value("newuser"))
             .andExpect(jsonPath("$.role").value("USER"))
             .andExpect(jsonPath("$.email").value("newuser@test.com"))
-            .andExpect(jsonPath("$.totpEnabled").value(false))
+            .andExpect(jsonPath("$.twoFactorMethods").isEmpty())
             .andExpect(jsonPath("$.createdAt").isNotEmpty())
             .andExpect(jsonPath("$.invitation.delivery").value("link"))
             .andExpect(jsonPath("$.invitation.link").value(org.hamcrest.Matchers.containsString("/welcome#token=")));
@@ -294,7 +295,7 @@ class UserControllerIT {
         assertThat(entity.getUsername()).isNull();
         assertThat(entity.getEmail()).isNull();
         assertThat(userCredentialJpaRepository.findById(targetId)).isEmpty();
-        assertThat(userTotpJpaRepository.findById(targetId)).isEmpty();
+        assertThat(userTotpJpaRepository.findByUserId(targetId)).isEmpty();
         boolean hasTokens = refreshTokenJpaRepository.findAll().stream()
             .anyMatch(t -> targetId.equals(t.getUserId()));
         assertThat(hasTokens).isFalse();
@@ -410,7 +411,8 @@ class UserControllerIT {
         Cookie access = loginAs("superadmin", "adminpass");
         UUID targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").get().getId();
 
-        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access))
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[\"APP\"]}"))
             .andExpect(status().isNoContent());
     }
 
@@ -419,13 +421,15 @@ class UserControllerIT {
         Cookie access = loginAs("testuser", "password");
         UUID targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").get().getId();
 
-        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access))
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[\"APP\"]}"))
             .andExpect(status().isForbidden());
     }
 
     @Test
     void resetTotp_unauthenticated_returns401() throws Exception {
-        mockMvc.perform(post("/api/users/" + UUID.randomUUID() + "/2fa/reset"))
+        mockMvc.perform(post("/api/users/" + UUID.randomUUID() + "/2fa/reset")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[\"APP\"]}"))
             .andExpect(status().isUnauthorized());
     }
 
@@ -433,7 +437,8 @@ class UserControllerIT {
     void resetTotp_nonExistentUser_returns404() throws Exception {
         Cookie access = loginAs("superadmin", "adminpass");
 
-        mockMvc.perform(post("/api/users/" + UUID.randomUUID() + "/2fa/reset").cookie(access))
+        mockMvc.perform(post("/api/users/" + UUID.randomUUID() + "/2fa/reset").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[\"APP\"]}"))
             .andExpect(status().isNotFound());
     }
 
@@ -449,6 +454,25 @@ class UserControllerIT {
 
         assertThat(userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("updated")).isPresent();
         assertThat(userIdentityJpaRepository.findByEmailAndDeletedFalse("updated@test.com")).isPresent();
+    }
+
+    @Test
+    void updateProfile_withTheMailMethodOnWhileMailIsOff_savesTheAddressAndRemovesTheMethod() throws Exception {
+        // Mail is off in this context: nothing can prove the new address, so the method that would send every
+        // future code there goes, and the answer says so.
+        UUID testUserId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").get().getId();
+        userTotpJpaRepository.save(new TwoFactorMethodEntity(testUserId, TwoFactorMethod.MAIL, null));
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"testuser\",\"email\":\"moved@test.com\",\"currentPassword\":\"password\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.mailMethodRemoved").value(true));
+
+        assertThat(userIdentityJpaRepository.findByEmailAndDeletedFalse("moved@test.com")).isPresent();
+        mockMvc.perform(get("/api/users/me").cookie(access))
+            .andExpect(jsonPath("$.twoFactorMethods").isEmpty());
     }
 
     @Test
@@ -650,17 +674,17 @@ class UserControllerIT {
             .andExpect(jsonPath("$.content[0].id").isNotEmpty())
             .andExpect(jsonPath("$.content[0].role").isNotEmpty())
             .andExpect(jsonPath("$.content[0].isActive").isBoolean())
-            .andExpect(jsonPath("$.content[0].totpEnabled").isBoolean())
+            .andExpect(jsonPath("$.content[0].twoFactorMethods").isArray())
             .andExpect(jsonPath("$.content[0].createdAt").isNotEmpty());
     }
 
     @Test
-    void listUsers_totpEnabledUser_appearsWithTotpEnabledTrue() throws Exception {
+    void listUsers_aUserWithTheAppOn_appearsWithIt() throws Exception {
         Cookie access = loginAs("superadmin", "adminpass");
 
         mockMvc.perform(get("/api/users").cookie(access))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content[?(@.username == 'totpuser')].totpEnabled").value(true));
+            .andExpect(jsonPath("$.content[?(@.username == 'totpuser')].twoFactorMethods[0]").value("APP"));
     }
 
     @Test
@@ -1007,12 +1031,12 @@ class UserControllerIT {
         userCredentialJpaRepository.save(cred);
     }
 
+    /** A second factor off is no row at all: only an enabled one is written. */
     private void saveTotpRecord(UUID userId, String secret, boolean enabled) {
-        UserTotpEntity totp = new UserTotpEntity();
-        totp.setUserId(userId);
-        totp.setTotpSecret(encryptorFactory.forUser(userId).encrypt(secret));
-        totp.setTotpEnabled(enabled);
-        userTotpJpaRepository.save(totp);
+        if (enabled) {
+            userTotpJpaRepository.save(new TwoFactorMethodEntity(userId, TwoFactorMethod.APP,
+                encryptorFactory.forUser(userId).encrypt(secret)));
+        }
     }
 
     private record Created(String id, String token) {}
@@ -1274,5 +1298,39 @@ class UserControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new LoginRequest("testuser", "N3wS3cr3t!"))))
             .andExpect(status().isOk());
+    }
+
+    @Test
+    void resetTwoFactor_withoutAMethod_returns400() throws Exception {
+        Cookie access = loginAs("superadmin", "adminpass");
+        UUID targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").get().getId();
+
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[]}"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void resetTwoFactor_removesOnlyTheMethodTicked() throws Exception {
+        Cookie access = loginAs("superadmin", "adminpass");
+        UUID targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").get().getId();
+        userTotpJpaRepository.save(new TwoFactorMethodEntity(targetId, TwoFactorMethod.MAIL, null));
+
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[\"MAIL\"]}"))
+            .andExpect(status().isNoContent());
+
+        assertThat(userTotpJpaRepository.findByUserId(targetId)).extracting(TwoFactorMethodEntity::getMethod)
+            .containsExactly(TwoFactorMethod.APP);
+    }
+
+    @Test
+    void resetTwoFactor_withAnEmptyMethod_returns400() throws Exception {
+        Cookie access = loginAs("superadmin", "adminpass");
+        UUID targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").get().getId();
+
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[null]}"))
+            .andExpect(status().isBadRequest());
     }
 }

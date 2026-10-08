@@ -69,7 +69,7 @@ function AdminUsersPageContent() {
   const rowCallbacks: UserRowCallbacks = {
     onToggleActive: handleToggle,
     onEditRole: (user) => setDialog({ kind: 'edit_role', user }),
-    onResetTotp: (user) => setDialog({ kind: 'reset_totp', user }),
+    onResetTwoFactor: (user) => setDialog({ kind: 'reset_two_factor', user }),
     onDelete: (user) => setDialog({ kind: 'delete', user }),
     onResendInvitation: (user) => setDialog({ kind: 'resend', user }),
   }

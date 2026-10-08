@@ -54,12 +54,16 @@ class AdminAccountMailsTest {
     }
 
     @Test
-    void a_reset_second_factor_asks_to_turn_it_back_on() {
-        TotpResetMail mail = new TotpResetMail("carol", "bob", new AppPath("/account/security"));
-        assertThat(fr(mail).subject()).isEqualTo("La double authentification de votre compte Nido a été désactivée");
-        assertThat(fr(mail).text()).contains("bob a réinitialisé la double authentification de votre compte.",
-            "réactivez-la dès que possible", "https://nido.example/account/security");
-        assertThat(en(mail).subject()).isEqualTo("Two-factor authentication was turned off on your Nido account");
+    void a_reset_names_what_was_removed_and_what_still_protects_the_account() {
+        TwoFactorResetMail all = new TwoFactorResetMail("carol", "bob", ResetMethods.BOTH, KeptMethod.NONE, new AppPath("/account/security"));
+        TwoFactorResetMail app = new TwoFactorResetMail("carol", "bob", ResetMethods.APP, KeptMethod.MAIL, new AppPath("/account/security"));
+
+        assertThat(fr(all).subject()).isEqualTo("La double authentification de votre compte Nido a été réinitialisée");
+        assertThat(fr(all).text()).contains("bob a retiré l’application d’authentification et le code par mail de votre compte.",
+            "Nido ne vous demande plus de code à la connexion.", "https://nido.example/account/security");
+        assertThat(fr(app).text()).contains("bob a retiré l’application d’authentification de votre compte.",
+            "Nido vous demandera toujours un code envoyé par mail.");
+        assertThat(en(app).subject()).isEqualTo("Two-factor authentication on your Nido account was reset");
     }
 
     @Test
@@ -101,7 +105,7 @@ class AdminAccountMailsTest {
     @Test
     void each_mail_declares_its_template() {
         assertThat(new RoleChangedMail("u", "a", true, LOGIN).template()).isEqualTo("identity/role-changed");
-        assertThat(new TotpResetMail("u", "a", LOGIN).template()).isEqualTo("identity/totp-reset");
+        assertThat(new TwoFactorResetMail("u", "a", ResetMethods.APP, KeptMethod.NONE, LOGIN).template()).isEqualTo("identity/two-factor-reset");
         assertThat(new AccountDeactivatedMail("u", "a").template()).isEqualTo("identity/account-deactivated");
         assertThat(new AccountReactivatedMail("u", "a", LOGIN).template()).isEqualTo("identity/account-reactivated");
         assertThat(new AccountDeletedMail("u", "a").template()).isEqualTo("identity/account-deleted");

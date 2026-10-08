@@ -49,8 +49,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
-                // TOTP challenge verification — authenticated via challenge cookie, not JWT
-                .requestMatchers(HttpMethod.POST, "/api/auth/2fa/verify").permitAll()
+                // The second step of a sign-in — authenticated by the challenge cookie, not by a JWT
+                .requestMatchers(HttpMethod.POST, "/api/auth/2fa/verify", "/api/auth/2fa/challenge/mail").permitAll()
                 // What the sign-in pages may offer, and "forgot password" — used by definition by
                 // people who cannot sign in. The reset routes answer 404 while mail is off.
                 .requestMatchers(HttpMethod.GET, "/api/auth/capabilities").permitAll()

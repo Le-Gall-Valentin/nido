@@ -11,7 +11,7 @@ function fakeApi(): IAdminUsersApi {
     updateUserRole: vi.fn(),
     activateUser: vi.fn(),
     deactivateUser: vi.fn(),
-    resetTotp: vi.fn(),
+    resetTwoFactor: vi.fn(),
     deleteUser: vi.fn(),
     resendInvitation: vi.fn(),
   }

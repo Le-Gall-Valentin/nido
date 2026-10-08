@@ -6,10 +6,9 @@ import com.nido.api.authentication.application.port.in.LogoutUseCase;
 import com.nido.api.authentication.application.port.in.RefreshTokenUseCase;
 import com.nido.api.authentication.domain.model.AuthenticationException;
 import com.nido.api.authentication.domain.model.LoginResult;
-import com.nido.api.authentication.domain.model.UserCredentials;
 import com.nido.api.authentication.infrastructure.security.CookieService;
 import com.nido.api.authentication.infrastructure.web.dto.LoginRequest;
-import com.nido.api.authentication.infrastructure.web.dto.TotpRequiredResponse;
+import com.nido.api.authentication.infrastructure.web.dto.TwoFactorRequiredResponse;
 import com.nido.api.authentication.infrastructure.web.dto.UserInfoResponse;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import io.swagger.v3.oas.annotations.Operation;
@@ -55,9 +54,11 @@ public class AuthController {
             **Cas 1 — Succès sans 2FA** : retourne `200` avec les informations de l'utilisateur.
             Deux cookies HttpOnly sont posés : `access_token` et `refresh_token`.
 
-            **Cas 2 — 2FA requis** : retourne `200` avec `{ "totpRequired": true, "username": "…" }`.
-            Un cookie `totp_challenge` est posé. Le client doit ensuite appeler
-            `POST /api/auth/2fa/verify` avec le code TOTP pour finaliser la connexion.
+            **Cas 2 — 2FA requis** : retourne `200` avec
+            `{ "twoFactorRequired": true, "username", "methods", "maskedEmail", "mailCode" }` ; un cookie
+            `two_factor_challenge` est posé. Avec le mail pour seule méthode, le code est déjà parti. Le client
+            appelle ensuite `POST /api/auth/2fa/verify` avec `{ method, code }` (et
+            `POST /api/auth/2fa/challenge/mail` pour recevoir le code quand on a choisi le mail).
 
             Rate limit : 5 requêtes par fenêtre.
             """
@@ -65,10 +66,10 @@ public class AuthController {
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
-            description = "Authentification réussie (sans 2FA) ou challenge TOTP initié",
+            description = "Authentification réussie (sans 2FA) ou second facteur demandé",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(oneOf = {UserInfoResponse.class, TotpRequiredResponse.class})
+                schema = @Schema(oneOf = {UserInfoResponse.class, TwoFactorRequiredResponse.class})
             )
         ),
         @ApiResponse(
@@ -83,7 +84,7 @@ public class AuthController {
         ),
         @ApiResponse(
             responseCode = "429",
-            description = "Trop de tentatives de connexion. Respecter le header `Retry-After`.",
+            description = "Trop de tentatives de connexion, ou compte verrouillé par des codes de double authentification faux (`two_factor_locked`). Respecter le header `Retry-After`.",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
         )
     })
@@ -96,12 +97,11 @@ public class AuthController {
             case LoginResult.Success s -> {
                 response.addHeader(HttpHeaders.SET_COOKIE, cookieService.buildAccessCookie(s.tokens().accessToken()).toString());
                 response.addHeader(HttpHeaders.SET_COOKIE, cookieService.buildRefreshCookie(s.tokens().refreshToken()).toString());
-                UserCredentials user = s.credentials();
-                yield ResponseEntity.ok(new UserInfoResponse(user.id(), user.username(), user.email(), user.role(), user.createdAt(), false, UserInfoResponse.codeOf(user.language())));
+                yield ResponseEntity.ok(UserInfoResponse.of(s.credentials(), s.twoFactorMethods()));
             }
-            case LoginResult.TotpRequired t -> {
+            case LoginResult.TwoFactorRequired t -> {
                 response.addHeader(HttpHeaders.SET_COOKIE, cookieService.buildChallengeCookie(t.challengeId()).toString());
-                yield ResponseEntity.ok(new TotpRequiredResponse(t.username()));
+                yield ResponseEntity.ok(TwoFactorRequiredResponse.of(t));
             }
         };
     }
@@ -149,7 +149,7 @@ public class AuthController {
         summary = "Déconnexion",
         description = """
             Révoque le `refresh_token` côté serveur et efface les cookies `access_token`
-            et `refresh_token`. Le cookie `totp_challenge`, s'il est présent, n'est pas
+            et `refresh_token`. Le cookie `two_factor_challenge`, s'il est présent, n'est pas
             effacé par cet appel — il expire naturellement après sa TTL.
 
             Si le cookie `refresh_token` est absent, la déconnexion reste effective

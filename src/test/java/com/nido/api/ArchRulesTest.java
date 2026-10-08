@@ -576,7 +576,7 @@ class ArchRulesTest {
     // package will break the build.
     //
     // Uses getName() (not getSimpleName()) to also catch JVM-generated synthetic
-    // inner classes (e.g. MfaTotpVerifierAdapter$1 from switch expressions).
+    // inner classes (e.g. MfaTwoFactorChallengeAdapter$1 from switch expressions).
     // -------------------------------------------------------------------------
 
     /**
@@ -597,7 +597,7 @@ class ArchRulesTest {
         // authentication.infra → mfa.application (port.in + dto)
         new CrossBcAppDep("authentication",
             new String[]{BASE + "mfa.application.port.in..", BASE + "mfa.application.dto.."},
-            Set.of("TotpStatusAdapter", "MfaTotpVerifierAdapter")),
+            Set.of("MfaTwoFactorChallengeAdapter")),
 
         // authentication.infra → mail.application.port.in
         new CrossBcAppDep("authentication",
@@ -619,17 +619,17 @@ class ArchRulesTest {
         // identity.infra → mfa.application.port.in
         new CrossBcAppDep("identity",
             new String[]{BASE + "mfa.application.port.in.."},
-            Set.of("TotpRecordInitAdapter", "MfaAdminResetTotpAdapter", "IdentityTotpStatusAdapter", "TotpDeletionAdapter")),
+            Set.of("MfaTwoFactorMethodsAdapter", "MfaAddressChangeCodeAdapter")),
 
         // mfa.infra → identity.application.port.in
         new CrossBcAppDep("mfa",
             new String[]{BASE + "identity.application.port.in.."},
-            Set.of("TotpMailAdapter")),
+            Set.of("AccountAddressAdapter", "TwoFactorMailAdapter")),
 
         // mfa.infra → mail.application.port.in
         new CrossBcAppDep("mfa",
             new String[]{BASE + "mail.application.port.in.."},
-            Set.of("TotpMailAdapter")),
+            Set.of("TwoFactorMailAdapter", "MailAvailabilityAdapter")),
 
         // identity.infra → space.application.port.in
         new CrossBcAppDep("identity",

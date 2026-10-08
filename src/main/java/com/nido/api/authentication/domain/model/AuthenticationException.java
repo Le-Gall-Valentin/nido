@@ -7,9 +7,13 @@ public abstract sealed class AuthenticationException extends RuntimeException
             AuthenticationException.TokenNotFound,
             AuthenticationException.TokenRevoked,
             AuthenticationException.UserNotFound,
-            AuthenticationException.TotpCodeInvalid,
-            AuthenticationException.TotpChallengeExpired,
-            AuthenticationException.TotpMaxAttemptsExceeded,
+            AuthenticationException.TwoFactorCodeInvalid,
+            AuthenticationException.TwoFactorChallengeExpired,
+            AuthenticationException.TwoFactorMaxAttemptsExceeded,
+            AuthenticationException.MethodNotEnabled,
+            AuthenticationException.MethodUnavailable,
+            AuthenticationException.MailCodeRefused,
+            AuthenticationException.TwoFactorLockedOut,
             AuthenticationException.InvalidCurrentPassword,
             AuthenticationException.InvalidResetToken,
             AuthenticationException.InvalidInvitationToken,
@@ -44,16 +48,49 @@ public abstract sealed class AuthenticationException extends RuntimeException
         public UserNotFound() { super("User not found"); }
     }
 
-    public static final class TotpCodeInvalid extends AuthenticationException {
-        public TotpCodeInvalid() { super("Invalid or expired TOTP code"); }
+    public static final class TwoFactorCodeInvalid extends AuthenticationException {
+        public TwoFactorCodeInvalid() { super("Invalid or expired code"); }
     }
 
-    public static final class TotpChallengeExpired extends AuthenticationException {
-        public TotpChallengeExpired() { super("Two-factor authentication challenge has expired"); }
+    public static final class TwoFactorChallengeExpired extends AuthenticationException {
+        public TwoFactorChallengeExpired() { super("Two-factor authentication challenge has expired"); }
     }
 
-    public static final class TotpMaxAttemptsExceeded extends AuthenticationException {
-        public TotpMaxAttemptsExceeded() { super("Too many incorrect TOTP attempts"); }
+    public static final class TwoFactorMaxAttemptsExceeded extends AuthenticationException {
+        public TwoFactorMaxAttemptsExceeded() { super("Too many incorrect codes"); }
+    }
+
+    /** The method asked for is not on for this account — removed by an administrator during the sign-in, say. */
+    public static final class MethodNotEnabled extends AuthenticationException {
+        public MethodNotEnabled() { super("This two-factor method is not on for this account"); }
+    }
+
+    /** On, but paused: the mail method while mail is off. */
+    public static final class MethodUnavailable extends AuthenticationException {
+        public MethodUnavailable() { super("This two-factor method cannot be used right now"); }
+    }
+
+    /** The right password, but too many wrong codes lately: no new challenge until the lockout runs out. */
+    public static final class TwoFactorLockedOut extends AuthenticationException {
+        private final long retryAfterSeconds;
+        public TwoFactorLockedOut(long retryAfterSeconds) {
+            super("Too many incorrect codes");
+            this.retryAfterSeconds = retryAfterSeconds;
+        }
+        public long retryAfterSeconds() { return retryAfterSeconds; }
+    }
+
+    /** The sign-in code could not leave now: too soon after the last one, or too many in the window. */
+    public static final class MailCodeRefused extends AuthenticationException {
+        private final boolean tooSoon;
+        private final long retryAfterSeconds;
+        public MailCodeRefused(boolean tooSoon, long retryAfterSeconds) {
+            super(tooSoon ? "A code was sent moments ago" : "Too many codes sent by mail");
+            this.tooSoon = tooSoon;
+            this.retryAfterSeconds = retryAfterSeconds;
+        }
+        public boolean tooSoon() { return tooSoon; }
+        public long retryAfterSeconds() { return retryAfterSeconds; }
     }
 
     public static final class InvalidCurrentPassword extends AuthenticationException {

@@ -11,17 +11,17 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const SA: User = { id: 'sa', username: 'superadmin', email: 'sa@test.com', role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', totpEnabled: true }
+const SA: User = { id: 'sa', username: 'superadmin', email: 'sa@test.com', role: 'SUPER_ADMIN', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: ['APP'] }
 
 const USERS: AdminUser[] = [
   { ...SA, isActive: true, invitation: null },
-  { id: 'u1', username: 'testuser', email: 'test@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-02-01T00:00:00Z', totpEnabled: true },
+  { id: 'u1', username: 'testuser', email: 'test@test.com', role: 'USER', isActive: true, invitation: null, createdAt: '2024-02-01T00:00:00Z', twoFactorMethods: ['APP'] },
 ]
 
 const HANDLERS = {
   onToggleActive: vi.fn(),
   onEditRole: vi.fn(),
-  onResetTotp: vi.fn(),
+  onResetTwoFactor: vi.fn(),
   onDelete: vi.fn(),
   onResendInvitation: vi.fn(),
 }
@@ -69,7 +69,7 @@ describe('UsersCardList', () => {
     expect(getAllByRole('switch')).toHaveLength(USERS.length)
     // actions for the standard user are present
     expect(getByLabelText('table.btn_edit:testuser')).toBeDefined()
-    expect(getByLabelText('table.btn_reset_totp:testuser')).toBeDefined()
+    expect(getByLabelText('table.btn_reset_two_factor:testuser')).toBeDefined()
   })
 
   it('disables delete on the SUPER_ADMIN card but enables it on the standard user', () => {

@@ -8,7 +8,7 @@ import type { AdminUser } from '@/entities/user'
 export interface UserRowCallbacks {
   onToggleActive: (user: AdminUser) => void
   onEditRole: (user: AdminUser) => void
-  onResetTotp: (user: AdminUser) => void
+  onResetTwoFactor: (user: AdminUser) => void
   onDelete: (user: AdminUser) => void
   onResendInvitation: (user: AdminUser) => void
 }

@@ -21,7 +21,9 @@ describe('signInAfterSetup', () => {
   })
 
   it('leaves it to the login page when the sign-in asks for more or fails', async () => {
-    vi.mocked(authApi.login).mockResolvedValueOnce({ type: 'totp_required', username: 'jane' })
+    vi.mocked(authApi.login).mockResolvedValueOnce({
+      type: 'two_factor_required', challenge: { username: 'jane', methods: ['APP'], maskedEmail: null, mailCode: null },
+    })
     expect(await signInAfterSetup('jane', 'p')).toBe(false)
 
     vi.mocked(authApi.login).mockRejectedValueOnce(new Error('offline'))

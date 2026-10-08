@@ -18,7 +18,7 @@ vi.mock('@/features/auth', () => ({
 
 const BASE_USER: User = {
   id: 'u-1', username: 'alice', email: 'alice@test.com',
-  role: 'USER', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false,
+  role: 'USER', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [],
 }
 
 const PERSONAL: SpaceSummary = {

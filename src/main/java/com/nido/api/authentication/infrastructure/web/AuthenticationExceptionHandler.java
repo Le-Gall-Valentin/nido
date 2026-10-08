@@ -5,6 +5,7 @@ import com.nido.api.shared.infrastructure.web.ProblemDetailFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -48,14 +49,29 @@ public class AuthenticationExceptionHandler {
             case AuthenticationException.TokenRevoked ignored ->
                     response(401, "Authentication required");
 
-            case AuthenticationException.TotpCodeInvalid ignored ->
+            case AuthenticationException.TwoFactorCodeInvalid ignored ->
                     response(401, "Authentication required");
 
-            case AuthenticationException.TotpChallengeExpired ignored ->
-                    response(401, "Authentication required", "totp_challenge_expired");
+            case AuthenticationException.TwoFactorChallengeExpired ignored ->
+                    response(401, "Authentication required", "two_factor_challenge_expired");
 
-            case AuthenticationException.TotpMaxAttemptsExceeded ignored ->
+            case AuthenticationException.TwoFactorMaxAttemptsExceeded ignored ->
                     response(429, "Authentication required", null);
+
+            case AuthenticationException.MethodNotEnabled ignored ->
+                    response(409, "This two-factor method is not on for this account.", "method_not_enabled");
+
+            case AuthenticationException.MethodUnavailable ignored ->
+                    response(409, "This two-factor method cannot be used right now.", "method_unavailable");
+
+            case AuthenticationException.TwoFactorLockedOut locked ->
+                    new AuthErrorResponse(429, "AuthenticationError", "Too many incorrect codes.", "two_factor_locked",
+                        locked.retryAfterSeconds());
+
+            case AuthenticationException.MailCodeRefused refused ->
+                    new AuthErrorResponse(429, "AuthenticationError",
+                        refused.tooSoon() ? "A code was sent moments ago." : "Too many codes sent by mail.",
+                        refused.tooSoon() ? "resend_too_soon" : "send_limit_reached", refused.retryAfterSeconds());
 
             case AuthenticationException.InvalidCurrentPassword ignored ->
                     response(422, "Current password is incorrect.");
@@ -82,17 +98,21 @@ public class AuthenticationExceptionHandler {
         if (response.errorCode() != null) {
             problem.setProperty("error_code", response.errorCode());
         }
-
-        return ResponseEntity.status(response.status()).body(problem);
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(response.status());
+        if (response.retryAfterSeconds() != null) {
+            problem.setProperty("retryAfterSeconds", response.retryAfterSeconds());
+            builder.header(HttpHeaders.RETRY_AFTER, String.valueOf(response.retryAfterSeconds()));
+        }
+        return builder.body(problem);
     }
 
     private static AuthErrorResponse response(int status, String detail) {
-        return new AuthErrorResponse(status, "AuthenticationError", detail, null);
+        return new AuthErrorResponse(status, "AuthenticationError", detail, null, null);
     }
 
     private static AuthErrorResponse response(int status, String detail, String errorCode) {
-        return new AuthErrorResponse(status, "AuthenticationError", detail, errorCode);
+        return new AuthErrorResponse(status, "AuthenticationError", detail, errorCode, null);
     }
 
-    private record AuthErrorResponse(int status, String title, String detail, String errorCode) {}
+    private record AuthErrorResponse(int status, String title, String detail, String errorCode, Long retryAfterSeconds) {}
 }

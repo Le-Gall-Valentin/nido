@@ -44,10 +44,11 @@ class SealedValueRejectedHandlingTest {
 
             assertThat(answer.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
             assertThat(answer.getBody().getProperties()).containsEntry("error_code", "data_integrity");
-            assertThat(answer.getBody().getDetail()).doesNotContain("finance").doesNotContain("850");
+            // In full: a random row id holds "850" now and then, never "850.00".
+            assertThat(answer.getBody().getDetail()).doesNotContain("finance").doesNotContain("850.00");
             assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
                 .singleElement().asString()
-                .contains("finance_transactions.amount_encrypted", row.toString()).doesNotContain("850");
+                .contains("finance_transactions.amount_encrypted", row.toString()).doesNotContain("850.00");
         } finally {
             logger.detachAppender(logged);
         }

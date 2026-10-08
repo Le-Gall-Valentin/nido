@@ -71,7 +71,7 @@ describe('refreshInterceptor', () => {
     expect(mockOnSessionExpired).not.toHaveBeenCalled()
   })
 
-  it('lets 401 on /auth/2fa/confirm pass through without refreshing (wrong enrollment code)', async () => {
+  it('lets 401 on /auth/2fa/app/confirm pass through without refreshing (wrong enrollment code)', async () => {
     const instance = axios.create()
     let refreshCalled = false
     instance.defaults.adapter = async (config) => {
@@ -80,7 +80,7 @@ describe('refreshInterceptor', () => {
     }
     const { onRejected } = createRefreshInterceptorHandlers(instance, mockOnSessionExpired)
 
-    const error = make401('/auth/2fa/confirm', false, 'post')
+    const error = make401('/auth/2fa/app/confirm', false, 'post')
     await expect(onRejected(error)).rejects.toBeDefined()
     expect(refreshCalled).toBe(false)
     expect(mockOnSessionExpired).not.toHaveBeenCalled()
@@ -101,7 +101,7 @@ describe('refreshInterceptor', () => {
     expect(mockOnSessionExpired).not.toHaveBeenCalled()
   })
 
-  it('lets 401 on DELETE /auth/2fa pass through without refreshing (wrong code while disabling)', async () => {
+  it('lets 401 on DELETE /auth/2fa/mail pass through without refreshing (wrong code while disabling)', async () => {
     // The route that was missing from the list. Its 401 means the TOTP code in the body was wrong,
     // and the session is fine — so refreshing rotates both tokens for nothing, and replaying the
     // request spends a second of the five attempts the server allows on it. Five wrong codes and
@@ -117,16 +117,36 @@ describe('refreshInterceptor', () => {
     }
     const { onRejected } = createRefreshInterceptorHandlers(instance, mockOnSessionExpired)
 
-    const error = make401('/auth/2fa', false, 'delete')
+    const error = make401('/auth/2fa/mail', false, 'delete')
     await expect(onRejected(error)).rejects.toBeDefined()
     expect(refreshCalled).toBe(false)
-    expect(sent).not.toContain('/auth/2fa')
+    expect(sent).not.toContain('/auth/2fa/mail')
     expect(mockOnSessionExpired).not.toHaveBeenCalled()
   })
 
   it.each([
-    ['post', '/auth/2fa/setup'],
-    ['get', '/auth/2fa/status'],
+    ['post', '/auth/2fa/challenge/mail'],
+    ['post', '/auth/2fa/mail/confirm'],
+    ['delete', '/auth/2fa/app'],
+  ])('lets 401 on %s %s pass through without refreshing', async (method, url) => {
+    const instance = axios.create()
+    let refreshCalled = false
+    instance.defaults.adapter = async (config) => {
+      if (config.url === '/auth/refresh') refreshCalled = true
+      return { data: {}, status: 200, statusText: 'OK', headers: {}, config }
+    }
+    const { onRejected } = createRefreshInterceptorHandlers(instance, mockOnSessionExpired)
+
+    await expect(onRejected(make401(url, false, method))).rejects.toBeDefined()
+    expect(refreshCalled).toBe(false)
+    expect(mockOnSessionExpired).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['post', '/auth/2fa/app/setup'],
+    ['post', '/auth/2fa/mail/setup'],
+    ['post', '/auth/2fa/mail/disable-code'],
+    ['get', '/auth/2fa'],
   ])('still refreshes on 401 from %s %s, which carries no code', async (method, url) => {
     // The sibling routes under the same prefix authenticate with the access token alone, so their
     // 401 is exactly what refreshing is for. Excluding the whole /auth/2fa family would strand a

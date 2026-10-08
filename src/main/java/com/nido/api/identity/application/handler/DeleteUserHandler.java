@@ -10,7 +10,7 @@ import com.nido.api.identity.domain.port.out.CredentialDeletionPort;
 import com.nido.api.identity.domain.port.out.NotificationDataDeletionPort;
 import com.nido.api.identity.domain.port.out.PendingMailCancellationPort;
 import com.nido.api.identity.domain.port.out.SpaceDataDeletionPort;
-import com.nido.api.identity.domain.port.out.TotpDeletionPort;
+import com.nido.api.identity.domain.port.out.TwoFactorMethodsPort;
 import com.nido.api.identity.domain.port.out.TokenInvalidationPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
@@ -27,7 +27,7 @@ public class DeleteUserHandler implements DeleteUserUseCase {
     private final UserRepository userRepository;
     private final UserCommandPort userCommandPort;
     private final CredentialDeletionPort credentialDeletionPort;
-    private final TotpDeletionPort totpDeletionPort;
+    private final TwoFactorMethodsPort twoFactorMethods;
     private final SpaceDataDeletionPort spaceDataDeletionPort;
     private final NotificationDataDeletionPort notificationDataDeletionPort;
     private final PendingMailCancellationPort pendingMailCancellationPort;
@@ -38,7 +38,7 @@ public class DeleteUserHandler implements DeleteUserUseCase {
     public DeleteUserHandler(UserRepository userRepository,
                              UserCommandPort userCommandPort,
                              CredentialDeletionPort credentialDeletionPort,
-                             TotpDeletionPort totpDeletionPort,
+                             TwoFactorMethodsPort twoFactorMethods,
                              SpaceDataDeletionPort spaceDataDeletionPort,
                              NotificationDataDeletionPort notificationDataDeletionPort,
                              PendingMailCancellationPort pendingMailCancellationPort,
@@ -48,7 +48,7 @@ public class DeleteUserHandler implements DeleteUserUseCase {
         this.userRepository = userRepository;
         this.userCommandPort = userCommandPort;
         this.credentialDeletionPort = credentialDeletionPort;
-        this.totpDeletionPort = totpDeletionPort;
+        this.twoFactorMethods = twoFactorMethods;
         this.spaceDataDeletionPort = spaceDataDeletionPort;
         this.notificationDataDeletionPort = notificationDataDeletionPort;
         this.pendingMailCancellationPort = pendingMailCancellationPort;
@@ -70,7 +70,7 @@ public class DeleteUserHandler implements DeleteUserUseCase {
         boolean wasInvited = invitations.isInvited(target.id());
         userCommandPort.deleteGdpr(command.targetUserId());
         credentialDeletionPort.deleteCredentials(command.targetUserId());
-        totpDeletionPort.deleteTotpData(command.targetUserId());
+        twoFactorMethods.deleteAll(command.targetUserId());
         spaceDataDeletionPort.deleteSpaceData(command.targetUserId(), target.username());
         notificationDataDeletionPort.deleteNotificationData(command.targetUserId());
         // Read before the anonymisation above wiped it from the row; still in hand in the loaded account.

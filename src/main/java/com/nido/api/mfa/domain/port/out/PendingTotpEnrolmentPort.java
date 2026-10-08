@@ -6,7 +6,7 @@ import java.util.UUID;
 /**
  * An enrolment that has been started but not yet proven.
  *
- * <p>Kept apart from {@link UserTotpQueryPort} and the record it reads because the two are not the
+ * <p>Kept apart from {@link TwoFactorMethodStorePort} and the methods it keeps because the two are not the
  * same kind of thing. A confirmed TOTP secret is durable state: it protects an account and must
  * survive anything. A secret that has only been displayed as a QR code protects nothing yet — it is
  * a step in a conversation, and it should stop existing when that conversation stops.

@@ -4,7 +4,7 @@ import com.nido.api.identity.application.port.in.GetCurrentUserUseCase;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.model.UserSelfView;
-import com.nido.api.identity.domain.port.out.TotpStatusPort;
+import com.nido.api.identity.domain.port.out.TwoFactorMethodsPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,11 +15,11 @@ import java.util.UUID;
 public class GetCurrentUserHandler implements GetCurrentUserUseCase {
 
     private final UserRepository userRepository;
-    private final TotpStatusPort totpStatusPort;
+    private final TwoFactorMethodsPort twoFactorMethods;
 
-    public GetCurrentUserHandler(UserRepository userRepository, TotpStatusPort totpStatusPort) {
+    public GetCurrentUserHandler(UserRepository userRepository, TwoFactorMethodsPort twoFactorMethods) {
         this.userRepository = userRepository;
-        this.totpStatusPort = totpStatusPort;
+        this.twoFactorMethods = twoFactorMethods;
     }
 
     @Override
@@ -30,8 +30,7 @@ public class GetCurrentUserHandler implements GetCurrentUserUseCase {
         if (!user.isActive()) {
             throw new IdentityException.UserNotActive();
         }
-        boolean totpEnabled = totpStatusPort.isTotpEnabled(userId);
-        return new UserSelfView(user.id(), user.username(), user.email(), user.role(), user.createdAt(), totpEnabled,
-            user.language());
+        return new UserSelfView(user.id(), user.username(), user.email(), user.role(), user.createdAt(),
+            twoFactorMethods.activeMethods(userId), user.language());
     }
 }

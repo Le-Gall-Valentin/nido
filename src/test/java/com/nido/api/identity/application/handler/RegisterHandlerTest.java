@@ -9,7 +9,6 @@ import com.nido.api.identity.domain.model.RegisterCommand;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.AccountInvitationPort;
 import com.nido.api.identity.domain.port.out.PersonalSpaceInitPort;
-import com.nido.api.identity.domain.port.out.TotpRecordInitPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.model.Role;
@@ -35,7 +34,6 @@ class RegisterHandlerTest {
     @Mock UserRepository userRepository;
     @Mock AccountInvitationPort invitations;
     @Mock AdminGestureNotifier notifier;
-    @Mock TotpRecordInitPort totpRecordInitPort;
     @Mock PersonalSpaceInitPort personalSpaceInitPort;
 
     private RegisterHandler handler;
@@ -44,7 +42,7 @@ class RegisterHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new RegisterHandler(userCommandPort, userRepository, invitations, totpRecordInitPort, personalSpaceInitPort, notifier);
+        handler = new RegisterHandler(userCommandPort, userRepository, invitations, personalSpaceInitPort, notifier);
         lenient().when(userRepository.findById(callerId))
             .thenReturn(Optional.of(new User(callerId, "root", "root@test.com", Role.SUPER_ADMIN, true, Instant.now(), null)));
         lenient().when(invitations.invite(any(), any())).thenReturn(new InvitationDelivery.Mailed());
@@ -59,7 +57,6 @@ class RegisterHandlerTest {
 
         assertThat(result.role()).isEqualTo(Role.ADMIN);
         verify(invitations).invite(created.id(), "root");
-        verify(totpRecordInitPort).initForUser(created.id());
     }
 
     @Test
@@ -114,18 +111,6 @@ class RegisterHandlerTest {
 
         assertThatThrownBy(() -> handler.register(cmd("new", Role.USER), callerId, Role.SUPER_ADMIN))
             .isInstanceOf(IdentityException.EmailAlreadyExists.class);
-    }
-
-    @Test
-    void register_totpInitFails_propagatesException() {
-        User created = user(UUID.randomUUID(), "newuser", Role.USER);
-        when(userCommandPort.createProfile(any())).thenReturn(created);
-        doThrow(new RuntimeException("totp store unavailable"))
-            .when(totpRecordInitPort).initForUser(created.id());
-
-        assertThatThrownBy(() -> handler.register(cmd("newuser", Role.USER), callerId, Role.SUPER_ADMIN))
-            .isInstanceOf(RuntimeException.class)
-            .hasMessage("totp store unavailable");
     }
 
     @Test

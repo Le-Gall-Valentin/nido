@@ -1,17 +1,17 @@
 import type { AdminUser, User } from '@/entities/user'
-import { useCreateUser, useDeleteUser, useResendInvitation, useResetTotp, useUpdateUserRole } from '@/entities/user'
+import { useCreateUser, useDeleteUser, useResendInvitation, useResetTwoFactor, useUpdateUserRole } from '@/entities/user'
 import type { MailAvailability } from '@/entities/capabilities'
 import { CreateUserModal } from './CreateUserModal'
 import { EditUserRoleModal } from './EditUserRoleModal'
 import { DeleteUserModal } from './DeleteUserModal'
-import { ResetTotpModal } from './ResetTotpModal'
+import { ResetTwoFactorDialog } from './ResetTwoFactorDialog'
 import { ResendInvitationModal } from './ResendInvitationModal'
 import { DeactivateUserModal } from './DeactivateUserModal'
 
 /** The one dialog the administration has open, if any, with the account it is about. */
 export type UserDialog =
   | { kind: 'create' }
-  | { kind: 'edit_role' | 'delete' | 'reset_totp' | 'resend' | 'deactivate'; user: AdminUser }
+  | { kind: 'edit_role' | 'delete' | 'reset_two_factor' | 'resend' | 'deactivate'; user: AdminUser }
   | null
 
 interface UserDialogsProps {
@@ -32,7 +32,7 @@ export function UserDialogs({ dialog, caller, mail, onClose, onCreated, onDelete
   const createUser = useCreateUser()
   const updateUserRole = useUpdateUserRole()
   const deleteUser = useDeleteUser()
-  const resetTotp = useResetTotp()
+  const resetTwoFactor = useResetTwoFactor()
   const resendInvitation = useResendInvitation()
 
   if (!dialog) return null
@@ -59,8 +59,8 @@ export function UserDialogs({ dialog, caller, mail, onClose, onCreated, onDelete
       )
     case 'delete':
       return <DeleteUserModal user={dialog.user} mail={mail} onClose={onClose} onDelete={deleteUser.mutateAsync} onSuccess={onDeleted} />
-    case 'reset_totp':
-      return <ResetTotpModal user={dialog.user} mail={mail} onClose={onClose} onReset={resetTotp.mutateAsync} onSuccess={onClose} />
+    case 'reset_two_factor':
+      return <ResetTwoFactorDialog user={dialog.user} mail={mail} onClose={onClose} onReset={resetTwoFactor.mutateAsync} onSuccess={onClose} />
     case 'resend':
       return <ResendInvitationModal user={dialog.user} mail={mail} onClose={onClose} onResend={resendInvitation.mutateAsync} />
     case 'deactivate':

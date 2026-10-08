@@ -5,7 +5,7 @@ import { RolePill, UserAvatar } from '@/entities/user'
 import { formatUserDate } from '../lib/formatUserDate'
 import { UserStatusToggle } from './UserStatusToggle'
 import { UserActions } from './UserActions'
-import { TotpBadge } from './TotpBadge'
+import { TwoFactorChips } from './TwoFactorChips'
 import { InvitationBadge } from './InvitationBadge'
 import type { UserRowCallbacks } from './userRowCallbacks'
 
@@ -28,7 +28,7 @@ export function UsersCardList({
   pendingToggleId,
   onToggleActive,
   onEditRole,
-  onResetTotp,
+  onResetTwoFactor,
   onDelete,
   onResendInvitation,
 }: UsersCardListProps) {
@@ -75,7 +75,7 @@ export function UsersCardList({
             isToggling={user.id === pendingToggleId}
             onToggleActive={onToggleActive}
             onEditRole={onEditRole}
-            onResetTotp={onResetTotp}
+            onResetTwoFactor={onResetTwoFactor}
             onDelete={onDelete}
             onResendInvitation={onResendInvitation}
           />
@@ -107,7 +107,7 @@ function UserCard({
   isToggling,
   onToggleActive,
   onEditRole,
-  onResetTotp,
+  onResetTwoFactor,
   onDelete,
   onResendInvitation,
 }: UserCardProps) {
@@ -134,7 +134,7 @@ function UserCard({
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-bg-3 pt-3">
         <UserStatusToggle user={user} currentUser={currentUser} onToggle={onToggleActive} isPending={isToggling} />
         {user.invitation && <InvitationBadge invitation={user.invitation} />}
-        <TotpBadge enabled={user.totpEnabled} />
+        <TwoFactorChips methods={user.twoFactorMethods} mail={mail} />
         <span className="text-[12.5px] text-fg-3">
           {createdLabel} · {createdDate}
         </span>
@@ -147,7 +147,7 @@ function UserCard({
           currentUser={currentUser}
           mail={mail}
           onEditRole={onEditRole}
-          onResetTotp={onResetTotp}
+          onResetTwoFactor={onResetTwoFactor}
           onDelete={onDelete}
           onResendInvitation={onResendInvitation}
           size="md"

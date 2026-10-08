@@ -14,7 +14,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Each test works on user_totp inside a transaction it rolls back: the other tests never see its rows. */
+/** Each test works on two_factor_methods inside a transaction it rolls back: the other tests never see its rows. */
 @IntegrationTestConfig
 class TotpCiphertextCheckIT {
 
@@ -29,7 +29,7 @@ class TotpCiphertextCheckIT {
     private void withSecrets(Runnable test, String firstSecret, String secondSecret) {
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
             status.setRollbackOnly();
-            jdbc.sql("DELETE FROM user_totp").update();
+            jdbc.sql("DELETE FROM two_factor_methods").update();
             secret(FIRST, "totp-check-first", firstSecret);
             secret(SECOND, "totp-check-second", secondSecret);
             test.run();
@@ -39,7 +39,7 @@ class TotpCiphertextCheckIT {
     private void secret(UUID user, String username, String secret) {
         jdbc.sql("INSERT INTO users (id, username, email, role) VALUES (:id, :username, :email, 'USER')")
             .param("id", user).param("username", username).param("email", username + "@example.fr").update();
-        jdbc.sql("INSERT INTO user_totp (user_id, totp_secret, totp_enabled) VALUES (:id, :secret, true)")
+        jdbc.sql("INSERT INTO two_factor_methods (user_id, method, secret) VALUES (:id, 'APP', :secret)")
             .param("id", user).param("secret", secret).update();
     }
 

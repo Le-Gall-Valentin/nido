@@ -36,7 +36,7 @@ describe('authApi', () => {
 
   it('login posts credentials and returns full user from response', async () => {
     const credentials: LoginCredentials = { identifier: 'user', password: 'secret' }
-    const fullUser = { id: '1', username: 'user', role: 'USER', email: 'user@test.com', createdAt: '2024-01-01T00:00:00Z', totpEnabled: false }
+    const fullUser = { id: '1', username: 'user', role: 'USER', email: 'user@test.com', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [] }
     mockedClient.post.mockResolvedValue({ data: fullUser })
 
     await expect(authApi.login(credentials)).resolves.toEqual({ type: 'success', user: fullUser })
@@ -44,10 +44,26 @@ describe('authApi', () => {
     expect(mockedClient.get).not.toHaveBeenCalled()
   })
 
-  it('login returns the account name from a totpRequired answer', async () => {
-    mockedClient.post.mockResolvedValue({ data: { totpRequired: true, username: 'alice' } })
-    const result = await authApi.login({ identifier: 'alice@test.com', password: 'p' })
-    expect(result).toEqual({ type: 'totp_required', username: 'alice' })
+  it('reads the challenge of a sign-in that needs a second factor', async () => {
+    mockedClient.post.mockResolvedValue({ data: {
+      twoFactorRequired: true, username: 'alice', methods: ['APP', 'MAIL'], maskedEmail: 'a••••••e@x.fr', mailCode: null,
+    } })
+
+    await expect(authApi.login({ identifier: 'alice@x.fr', password: 'pw' })).resolves.toEqual({
+      type: 'two_factor_required',
+      challenge: { username: 'alice', methods: ['APP', 'MAIL'], maskedEmail: 'a••••••e@x.fr', mailCode: null },
+    })
+  })
+
+  it('carries what the server said of the code it sent', async () => {
+    mockedClient.post.mockResolvedValue({ data: {
+      twoFactorRequired: true, username: 'alice', methods: ['MAIL'], maskedEmail: 'a••••••e@x.fr',
+      mailCode: { sent: false, retryAfterSeconds: 420 },
+    } })
+
+    const result = await authApi.login({ identifier: 'alice', password: 'pw' })
+
+    expect(result).toMatchObject({ challenge: { mailCode: { sent: false, retryAfterSeconds: 420 } } })
   })
 
   it('logout calls logout endpoint', async () => {

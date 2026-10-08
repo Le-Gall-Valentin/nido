@@ -5,14 +5,14 @@ import {
   canDeactivate,
   canActivate,
   canDelete,
-  canResetTotp,
+  canResetTwoFactor,
   canEditRole,
   canResendInvitation,
 } from './permissions'
 import type { User, AdminUser, UserRole } from '@/entities/user'
 
 function makeUser(id: string, role: UserRole): User {
-  return { id, username: id, email: `${id}@test.com`, role, createdAt: '2024-01-01T00:00:00Z', totpEnabled: true }
+  return { id, username: id, email: `${id}@test.com`, role, createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: ['APP'] }
 }
 
 function makeAdminUser(id: string, role: UserRole, overrides: Partial<AdminUser> = {}): AdminUser {
@@ -139,37 +139,37 @@ describe('canDelete', () => {
   })
 })
 
-describe('canResetTotp', () => {
+describe('canResetTwoFactor', () => {
   it('denies self', () => {
-    expect(canResetTotp(SUPER_ADMIN, makeAdminUser('sa', 'SUPER_ADMIN'))).toEqual({ ok: false, reason: 'self' })
+    expect(canResetTwoFactor(SUPER_ADMIN, makeAdminUser('sa', 'SUPER_ADMIN'))).toEqual({ ok: false, reason: 'self' })
   })
 
   it('denies SUPER_ADMIN target with super_admin_protected', () => {
-    expect(canResetTotp(ADMIN, makeAdminUser('sa2', 'SUPER_ADMIN'))).toEqual({ ok: false, reason: 'super_admin_protected' })
+    expect(canResetTwoFactor(ADMIN, makeAdminUser('sa2', 'SUPER_ADMIN'))).toEqual({ ok: false, reason: 'super_admin_protected' })
   })
 
   it('denies USER caller', () => {
-    expect(canResetTotp(USER, makeAdminUser('u2', 'USER'))).toEqual({ ok: false, reason: 'insufficient' })
+    expect(canResetTwoFactor(USER, makeAdminUser('u2', 'USER'))).toEqual({ ok: false, reason: 'insufficient' })
   })
 
   it('denies when target has no TOTP', () => {
-    expect(canResetTotp(SUPER_ADMIN, makeAdminUser('u2', 'USER', { totpEnabled: false }))).toEqual({ ok: false, reason: 'totp_not_enabled' })
+    expect(canResetTwoFactor(SUPER_ADMIN, makeAdminUser('u2', 'USER', { twoFactorMethods: [] }))).toEqual({ ok: false, reason: 'two_factor_not_enabled' })
   })
 
-  it('hierarchy denial wins over totp_not_enabled (mirrors backend order)', () => {
-    expect(canResetTotp(ADMIN, makeAdminUser('a2', 'ADMIN', { totpEnabled: false }))).toEqual({ ok: false, reason: 'admin_cannot_manage_admin' })
+  it('hierarchy denial wins over two_factor_not_enabled (mirrors backend order)', () => {
+    expect(canResetTwoFactor(ADMIN, makeAdminUser('a2', 'ADMIN', { twoFactorMethods: [] }))).toEqual({ ok: false, reason: 'admin_cannot_manage_admin' })
   })
 
   it('denies ADMIN on ADMIN', () => {
-    expect(canResetTotp(ADMIN, makeAdminUser('a2', 'ADMIN'))).toEqual({ ok: false, reason: 'admin_cannot_manage_admin' })
+    expect(canResetTwoFactor(ADMIN, makeAdminUser('a2', 'ADMIN'))).toEqual({ ok: false, reason: 'admin_cannot_manage_admin' })
   })
 
   it('allows SUPER_ADMIN on ADMIN with TOTP', () => {
-    expect(canResetTotp(SUPER_ADMIN, makeAdminUser('a2', 'ADMIN'))).toEqual({ ok: true })
+    expect(canResetTwoFactor(SUPER_ADMIN, makeAdminUser('a2', 'ADMIN'))).toEqual({ ok: true })
   })
 
   it('allows ADMIN on USER with TOTP', () => {
-    expect(canResetTotp(ADMIN, makeAdminUser('u2', 'USER'))).toEqual({ ok: true })
+    expect(canResetTwoFactor(ADMIN, makeAdminUser('u2', 'USER'))).toEqual({ ok: true })
   })
 })
 

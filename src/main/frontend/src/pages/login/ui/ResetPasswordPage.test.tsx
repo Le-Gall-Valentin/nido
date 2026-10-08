@@ -37,7 +37,7 @@ vi.mock('@/features/auth', async () => {
 
 const authStore = (auth as unknown as { __store: StoreApi<FakeAuth> }).__store
 const jane: User = {
-  id: 'u-1', username: 'jane', email: 'jane@test.com', role: 'USER', createdAt: '2026-01-01T00:00:00Z', totpEnabled: false,
+  id: 'u-1', username: 'jane', email: 'jane@test.com', role: 'USER', createdAt: '2026-01-01T00:00:00Z', twoFactorMethods: [],
 }
 
 beforeEach(() => {
