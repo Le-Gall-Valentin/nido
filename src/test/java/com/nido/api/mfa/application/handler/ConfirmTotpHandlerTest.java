@@ -68,7 +68,7 @@ class ConfirmTotpHandlerTest {
         when(pendingEnrolment.find(userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "123456")))
-            .isInstanceOf(MfaException.TotpSetupNotStarted.class);
+            .isInstanceOf(MfaException.EnrolmentNotStarted.class);
     }
 
     @Test
@@ -79,7 +79,7 @@ class ConfirmTotpHandlerTest {
         when(codeValidator.isValid(secret, "000000")).thenReturn(false);
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "000000")))
-            .isInstanceOf(MfaException.TotpCodeInvalid.class);
+            .isInstanceOf(MfaException.CodeInvalid.class);
         verifyNoInteractions(mails);
     }
 
@@ -98,7 +98,7 @@ class ConfirmTotpHandlerTest {
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "123456")))
-            .isInstanceOf(MfaException.TotpAlreadyEnabled.class);
+            .isInstanceOf(MfaException.MethodAlreadyEnabled.class);
         // Not even looked up: an account that already has TOTP is refused before anything else.
         verifyNoInteractions(codeValidator, codeReplay, userTotpLifecyclePort, pendingEnrolment);
     }
@@ -112,7 +112,7 @@ class ConfirmTotpHandlerTest {
         when(confirmAttemptPort.incrementAndGetAttempts(userId)).thenReturn(1);
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "000000")))
-            .isInstanceOf(MfaException.TotpCodeInvalid.class);
+            .isInstanceOf(MfaException.CodeInvalid.class);
 
         verify(confirmAttemptPort).incrementAndGetAttempts(userId);
         // The enrolment is read to get the secret to check against, but a single wrong code must
@@ -129,7 +129,7 @@ class ConfirmTotpHandlerTest {
         when(confirmAttemptPort.incrementAndGetAttempts(userId)).thenReturn(5);
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "000000")))
-            .isInstanceOf(MfaException.TotpConfirmMaxAttemptsExceeded.class);
+            .isInstanceOf(MfaException.ConfirmMaxAttemptsExceeded.class);
 
         verify(pendingEnrolment).discard(userId);
         verify(confirmAttemptPort).clearAttempts(userId);
@@ -160,7 +160,7 @@ class ConfirmTotpHandlerTest {
         when(codeReplay.markCodeUsedIfAbsent(userId, "123456")).thenReturn(false);
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "123456")))
-            .isInstanceOf(MfaException.TotpCodeInvalid.class);
+            .isInstanceOf(MfaException.CodeInvalid.class);
 
         verifyNoInteractions(confirmAttemptPort, userTotpLifecyclePort);
     }
@@ -174,6 +174,6 @@ class ConfirmTotpHandlerTest {
         when(codeReplay.markCodeUsedIfAbsent(userId, "123456")).thenReturn(false);
 
         assertThatThrownBy(() -> handler.confirm(new ConfirmTotpCommand(userId, "123456")))
-            .isInstanceOf(MfaException.TotpCodeInvalid.class);
+            .isInstanceOf(MfaException.CodeInvalid.class);
     }
 }

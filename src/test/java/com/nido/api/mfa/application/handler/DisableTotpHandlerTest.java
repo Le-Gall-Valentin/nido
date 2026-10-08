@@ -72,7 +72,7 @@ class DisableTotpHandlerTest {
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
 
         assertThatThrownBy(() -> handler.disable(new DisableTotpCommand(userId, "123456")))
-            .isInstanceOf(MfaException.TotpSetupNotStarted.class);
+            .isInstanceOf(MfaException.EnrolmentNotStarted.class);
         verifyNoInteractions(codeValidator, codeReplay);
     }
 
@@ -82,7 +82,7 @@ class DisableTotpHandlerTest {
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
 
         assertThatThrownBy(() -> handler.disable(new DisableTotpCommand(userId, "123456")))
-            .isInstanceOf(MfaException.TotpNotEnabled.class);
+            .isInstanceOf(MfaException.MethodNotEnabled.class);
     }
 
     @Test
@@ -92,7 +92,7 @@ class DisableTotpHandlerTest {
         when(codeValidator.isValid(secret, "000000")).thenReturn(false);
 
         assertThatThrownBy(() -> handler.disable(new DisableTotpCommand(userId, "000000")))
-            .isInstanceOf(MfaException.TotpCodeInvalid.class);
+            .isInstanceOf(MfaException.CodeInvalid.class);
         verifyNoInteractions(mails);
     }
 
@@ -104,6 +104,6 @@ class DisableTotpHandlerTest {
         when(codeReplay.markCodeUsedIfAbsent(userId, "123456")).thenReturn(false);
 
         assertThatThrownBy(() -> handler.disable(new DisableTotpCommand(userId, "123456")))
-            .isInstanceOf(MfaException.TotpCodeInvalid.class);
+            .isInstanceOf(MfaException.CodeInvalid.class);
     }
 }

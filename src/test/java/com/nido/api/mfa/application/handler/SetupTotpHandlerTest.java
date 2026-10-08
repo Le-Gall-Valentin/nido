@@ -59,7 +59,7 @@ class SetupTotpHandlerTest {
         when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
 
         assertThatThrownBy(() -> handler.setup(new SetupTotpCommand(userId, email)))
-            .isInstanceOf(MfaException.TotpAlreadyEnabled.class);
+            .isInstanceOf(MfaException.MethodAlreadyEnabled.class);
     }
 
     @Test
@@ -82,7 +82,7 @@ class SetupTotpHandlerTest {
         when(pendingEnrolment.find(userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> handler.setup(new SetupTotpCommand(userId, email)))
-            .isInstanceOf(MfaException.TotpSetupNotStarted.class);
+            .isInstanceOf(MfaException.EnrolmentNotStarted.class);
     }
 
     @Test

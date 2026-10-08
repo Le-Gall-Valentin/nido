@@ -48,25 +48,25 @@ public class ConfirmTotpHandler implements ConfirmTotpUseCase {
         UserTotpProfile user = userTotpQuery.findById(command.userId())
             .orElseThrow(MfaException.UserNotFound::new);
 
-        if (user.totpEnabled()) throw new MfaException.TotpAlreadyEnabled();
+        if (user.totpEnabled()) throw new MfaException.MethodAlreadyEnabled();
         // Absent means the enrolment was never started, or has expired since the QR code was shown.
         // The two are one case on purpose: in both there is nothing to confirm, and saying which
         // would tell an attacker whether an enrolment is in flight.
         String secret = pendingEnrolment.find(command.userId())
-            .orElseThrow(MfaException.TotpSetupNotStarted::new);
+            .orElseThrow(MfaException.EnrolmentNotStarted::new);
 
         if (!codeValidator.isValid(secret, command.code())) {
             int attempts = confirmAttemptPort.incrementAndGetAttempts(command.userId());
             if (attempts >= TwoFactorPolicy.MAX_ATTEMPTS) {
                 pendingEnrolment.discard(command.userId());
                 confirmAttemptPort.clearAttempts(command.userId());
-                throw new MfaException.TotpConfirmMaxAttemptsExceeded();
+                throw new MfaException.ConfirmMaxAttemptsExceeded();
             }
-            throw new MfaException.TotpCodeInvalid();
+            throw new MfaException.CodeInvalid();
         }
 
         if (!codeReplay.markCodeUsedIfAbsent(command.userId(), command.code())) {
-            throw new MfaException.TotpCodeInvalid();
+            throw new MfaException.CodeInvalid();
         }
 
         confirmAttemptPort.clearAttempts(command.userId());

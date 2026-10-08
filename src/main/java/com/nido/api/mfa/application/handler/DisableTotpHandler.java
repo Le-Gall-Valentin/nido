@@ -43,10 +43,10 @@ public class DisableTotpHandler implements DisableTotpUseCase {
         UserTotpProfile user = userTotpQuery.findById(command.userId())
             .orElseThrow(MfaException.UserNotFound::new);
 
-        if (!user.totpEnabled()) throw new MfaException.TotpNotEnabled();
-        String secret = user.totpSecret().orElseThrow(MfaException.TotpSetupNotStarted::new);
-        if (!codeValidator.isValid(secret, command.code())) throw new MfaException.TotpCodeInvalid();
-        if (!codeReplay.markCodeUsedIfAbsent(command.userId(), command.code())) throw new MfaException.TotpCodeInvalid();
+        if (!user.totpEnabled()) throw new MfaException.MethodNotEnabled();
+        String secret = user.totpSecret().orElseThrow(MfaException.EnrolmentNotStarted::new);
+        if (!codeValidator.isValid(secret, command.code())) throw new MfaException.CodeInvalid();
+        if (!codeReplay.markCodeUsedIfAbsent(command.userId(), command.code())) throw new MfaException.CodeInvalid();
 
         // Turning 2FA off should not leave a half-started replacement behind.
         pendingEnrolment.discard(command.userId());

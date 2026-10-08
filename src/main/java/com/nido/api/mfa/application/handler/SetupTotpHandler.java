@@ -36,7 +36,7 @@ public class SetupTotpHandler implements SetupTotpUseCase {
         UserTotpProfile user = userTotpQuery.findById(command.userId())
             .orElseThrow(MfaException.UserNotFound::new);
 
-        if (user.totpEnabled()) throw new MfaException.TotpAlreadyEnabled();
+        if (user.totpEnabled()) throw new MfaException.MethodAlreadyEnabled();
 
         String candidate = secretGenerator.generateSecret();
         if (pendingEnrolment.startIfAbsent(command.userId(), candidate)) {
@@ -47,7 +47,7 @@ public class SetupTotpHandler implements SetupTotpUseCase {
         // QR code. It can still have expired between the two calls, in which case there is nothing
         // to hand back and the caller starts over.
         String existing = pendingEnrolment.find(command.userId())
-            .orElseThrow(MfaException.TotpSetupNotStarted::new);
+            .orElseThrow(MfaException.EnrolmentNotStarted::new);
         return new TotpSetupResult(existing, uriBuilder.buildOtpauthUri(existing, command.email()));
     }
 }
