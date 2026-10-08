@@ -457,6 +457,25 @@ class UserControllerIT {
     }
 
     @Test
+    void updateProfile_withTheMailMethodOnWhileMailIsOff_savesTheAddressAndRemovesTheMethod() throws Exception {
+        // Mail is off in this context: nothing can prove the new address, so the method that would send every
+        // future code there goes, and the answer says so.
+        UUID testUserId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("testuser").get().getId();
+        userTotpJpaRepository.save(new TwoFactorMethodEntity(testUserId, TwoFactorMethod.MAIL, null));
+        Cookie access = loginAs("testuser", "password");
+
+        mockMvc.perform(patch("/api/users/me").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"testuser\",\"email\":\"moved@test.com\",\"currentPassword\":\"password\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.mailMethodRemoved").value(true));
+
+        assertThat(userIdentityJpaRepository.findByEmailAndDeletedFalse("moved@test.com")).isPresent();
+        mockMvc.perform(get("/api/users/me").cookie(access))
+            .andExpect(jsonPath("$.twoFactorMethods").isEmpty());
+    }
+
+    @Test
     void updateProfile_newEmailWithoutPassword_returns400() throws Exception {
         Cookie access = loginAs("testuser", "password");
 

@@ -3,6 +3,7 @@ package com.nido.api.identity.infrastructure.web;
 import com.nido.api.identity.domain.model.IdentityException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 
@@ -109,6 +110,28 @@ class IdentityExceptionHandlerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().getProperties()).containsEntry("error_code", "email_code_spent");
+    }
+
+    @Test
+    void a_code_asked_again_too_soon_says_when_in_the_words_every_code_screen_reads() {
+        var response = handler.handle(new IdentityException.EmailCodeResendTooSoon(40), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(response.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("40");
+        assertThat(response.getBody().getProperties())
+            .containsEntry("error_code", "resend_too_soon")
+            .containsEntry("retryAfterSeconds", 40L);
+    }
+
+    @Test
+    void the_account_send_limit_says_when_too() {
+        var response = handler.handle(new IdentityException.EmailCodeSendLimitReached(420), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(response.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("420");
+        assertThat(response.getBody().getProperties())
+            .containsEntry("error_code", "send_limit_reached")
+            .containsEntry("retryAfterSeconds", 420L);
     }
 
     @Test

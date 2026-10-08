@@ -1,6 +1,7 @@
 package com.nido.api.identity.domain.port.out;
 
 import com.nido.api.identity.domain.model.EmailCodeCheck;
+import com.nido.api.identity.domain.model.EmailCodeDelivery;
 
 import java.util.UUID;
 
@@ -10,11 +11,14 @@ import java.util.UUID;
  */
 public interface AddressChangeCodePort {
 
-    boolean required(UUID userId);
+    /** Whether the code by mail protects the account, paused or not: then a new address is proven, or it goes. */
+    boolean mailMethodOn(UUID userId);
 
-    /** @return the seconds before another code can be asked for */
-    long send(UUID userId, String newAddress);
+    EmailCodeDelivery send(UUID userId, String newAddress);
 
     /** A right code is used up; five wrong ones take it with them. */
     EmailCodeCheck check(UUID userId, String newAddress, String code);
+
+    /** The new address could not be proven: the code by mail is turned off, and its holder told. */
+    void forgoMailMethod(UUID userId);
 }

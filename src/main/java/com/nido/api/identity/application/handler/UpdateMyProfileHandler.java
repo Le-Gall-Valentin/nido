@@ -2,6 +2,7 @@ package com.nido.api.identity.application.handler;
 
 import com.nido.api.identity.application.port.in.UpdateMyProfileUseCase;
 import com.nido.api.identity.domain.model.EmailAddress;
+import com.nido.api.identity.domain.model.EmailCodeDelivery;
 import com.nido.api.identity.domain.model.IdentityException;
 import com.nido.api.identity.domain.model.ProfileUpdate;
 import com.nido.api.identity.domain.model.UpdateProfileCommand;
@@ -14,6 +15,8 @@ import com.nido.api.identity.domain.port.out.UserCommandPort;
 import com.nido.api.identity.domain.port.out.UserRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 
 @ApplicationService
@@ -50,7 +53,9 @@ public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
      * typo would otherwise lock its holder out at the next sign-in. The first request sends a code there and
      * saves nothing; the same request with the code saves. A taken address is refused before anything is sent —
      * the code would land in someone else's mailbox. A wrong code is counted next to it, in this transaction, so
-     * that error does not roll the count back.
+     * that error does not roll the count back. While mail is off nothing can prove the address: it is saved, and
+     * the code by mail goes with the old one — kept, it would send every future code to an address nobody
+     * proved, locking out a holder who mistyped it, or serving whoever changed it.
      */
     @Override
     @Transactional(noRollbackFor = {IdentityException.EmailCodeInvalid.class, IdentityException.EmailCodeSpent.class})
@@ -61,33 +66,26 @@ public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
             throw new IdentityException.UserNotActive();
         }
         boolean addressChanges = user.email() == null || !EmailAddress.normalize(user.email()).equals(command.email());
+        boolean forgoMailMethod = false;
         if (addressChanges) {
-            if (command.currentPassword() == null || command.currentPassword().isBlank()) {
-                throw new IdentityException.CurrentPasswordRequired();
-            }
-            if (!passwordCheck.matches(user.id(), command.currentPassword())) {
-                throw new IdentityException.InvalidCurrentPassword();
-            }
-            if (addressChangeCode.required(user.id())) {
-                boolean taken = userRepository.findByEmail(new EmailAddress(command.email()))
-                    .filter(other -> !other.id().equals(user.id()))
-                    .isPresent();
-                if (taken) {
-                    throw new IdentityException.EmailAlreadyExists();
-                }
+            checkCurrentPassword(user, command);
+            if (addressChangeCode.mailMethodOn(user.id())) {
+                refuseTakenAddress(user, command);
                 if (command.emailCode() == null) {
-                    return new ProfileUpdate.EmailCodeSent(command.email(), addressChangeCode.send(user.id(), command.email()));
-                }
-                switch (addressChangeCode.check(user.id(), command.email(), command.emailCode())) {
-                    case VALID -> { }
-                    case INVALID -> throw new IdentityException.EmailCodeInvalid();
-                    case EXPIRED -> throw new IdentityException.EmailCodeExpired();
-                    // The fifth wrong code took the code with it: even the right one is refused from now on.
-                    case SPENT -> throw new IdentityException.EmailCodeSpent();
+                    Optional<ProfileUpdate> codeSent = sendCode(user, command);
+                    if (codeSent.isPresent()) {
+                        return codeSent.get();
+                    }
+                    forgoMailMethod = true;
+                } else {
+                    checkCode(user, command);
                 }
             }
         }
         userCommandPort.updateProfile(command);
+        if (forgoMailMethod) {
+            addressChangeCode.forgoMailMethod(user.id());
+        }
         if (addressChanges) {
             // A reset link already sent went to the old address: whoever still reads it must not keep a
             // way in once the account has moved on.
@@ -96,6 +94,47 @@ public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
         if (addressChanges && user.email() != null) {
             profileMail.emailChanged(user.username(), user.email(), command.email(), user.language());
         }
-        return new ProfileUpdate.Saved();
+        return forgoMailMethod ? new ProfileUpdate.SavedMailMethodRemoved() : new ProfileUpdate.Saved();
+    }
+
+    private void checkCurrentPassword(User user, UpdateProfileCommand command) {
+        if (command.currentPassword() == null || command.currentPassword().isBlank()) {
+            throw new IdentityException.CurrentPasswordRequired();
+        }
+        if (!passwordCheck.matches(user.id(), command.currentPassword())) {
+            throw new IdentityException.InvalidCurrentPassword();
+        }
+    }
+
+    /** Before any code leaves: it would land in someone else's mailbox. */
+    private void refuseTakenAddress(User user, UpdateProfileCommand command) {
+        boolean taken = userRepository.findByEmail(new EmailAddress(command.email()))
+            .filter(other -> !other.id().equals(user.id()))
+            .isPresent();
+        if (taken) {
+            throw new IdentityException.EmailAlreadyExists();
+        }
+    }
+
+    /** @return the code sent, nothing saved yet — or empty while mail is off, when nothing can prove the address */
+    private Optional<ProfileUpdate> sendCode(User user, UpdateProfileCommand command) {
+        return switch (addressChangeCode.send(user.id(), command.email())) {
+            case EmailCodeDelivery.Sent sent ->
+                Optional.of(new ProfileUpdate.EmailCodeSent(command.email(), sent.resendAfterSeconds()));
+            case EmailCodeDelivery.TooSoon tooSoon -> throw new IdentityException.EmailCodeResendTooSoon(tooSoon.retryAfterSeconds());
+            case EmailCodeDelivery.LimitReached limit -> throw new IdentityException.EmailCodeSendLimitReached(limit.retryAfterSeconds());
+            case EmailCodeDelivery.Unavailable unavailable -> Optional.empty();
+        };
+    }
+
+    /** Checked even if mail went off since it was sent: the code still proves the address. */
+    private void checkCode(User user, UpdateProfileCommand command) {
+        switch (addressChangeCode.check(user.id(), command.email(), command.emailCode())) {
+            case VALID -> { }
+            case INVALID -> throw new IdentityException.EmailCodeInvalid();
+            case EXPIRED -> throw new IdentityException.EmailCodeExpired();
+            // The fifth wrong code took the code with it: even the right one is refused from now on.
+            case SPENT -> throw new IdentityException.EmailCodeSpent();
+        }
     }
 }

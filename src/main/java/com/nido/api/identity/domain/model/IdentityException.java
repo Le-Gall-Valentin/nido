@@ -11,6 +11,8 @@ public abstract sealed class IdentityException extends RuntimeException
             IdentityException.EmailCodeInvalid,
             IdentityException.EmailCodeSpent,
             IdentityException.EmailCodeExpired,
+            IdentityException.EmailCodeResendTooSoon,
+            IdentityException.EmailCodeSendLimitReached,
             IdentityException.InsufficientPermissions,
             IdentityException.CurrentPasswordRequired,
             IdentityException.InvalidCurrentPassword,
@@ -55,6 +57,20 @@ public abstract sealed class IdentityException extends RuntimeException
     /** No code is waiting for the new address — never sent, or expired: a new one has to be asked for. */
     public static final class EmailCodeExpired extends IdentityException {
         public EmailCodeExpired() { super("No code is waiting for the new address any more"); }
+    }
+
+    /** A code left for the same address moments ago: it still works; another can leave after {@link #seconds()}. */
+    public static final class EmailCodeResendTooSoon extends IdentityException {
+        private final long seconds;
+        public EmailCodeResendTooSoon(long seconds) { super("A code was sent to the new address moments ago"); this.seconds = seconds; }
+        public long seconds() { return seconds; }
+    }
+
+    /** The account was sent all the mails of code its window allows; the next can leave after {@link #seconds()}. */
+    public static final class EmailCodeSendLimitReached extends IdentityException {
+        private final long seconds;
+        public EmailCodeSendLimitReached(long seconds) { super("Too many codes sent by mail"); this.seconds = seconds; }
+        public long seconds() { return seconds; }
     }
     public static final class InsufficientPermissions extends IdentityException {
         public InsufficientPermissions() { super("Insufficient permissions"); }

@@ -1,12 +1,15 @@
 package com.nido.api.identity.infrastructure.security;
 
 import com.nido.api.identity.domain.model.EmailCodeCheck;
+import com.nido.api.identity.domain.model.EmailCodeDelivery;
 import com.nido.api.identity.domain.port.out.AddressChangeCodePort;
 import com.nido.api.mfa.application.port.in.AddressChangeCodeUseCase;
+import com.nido.api.mfa.domain.model.CodeDelivery;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
+/** mfa's answers, said in identity's words: identity never meets an MfaException. */
 @Component
 public class MfaAddressChangeCodeAdapter implements AddressChangeCodePort {
 
@@ -17,13 +20,18 @@ public class MfaAddressChangeCodeAdapter implements AddressChangeCodePort {
     }
 
     @Override
-    public boolean required(UUID userId) {
-        return codes.required(userId);
+    public boolean mailMethodOn(UUID userId) {
+        return codes.mailMethodOn(userId);
     }
 
     @Override
-    public long send(UUID userId, String newAddress) {
-        return codes.send(userId, newAddress);
+    public EmailCodeDelivery send(UUID userId, String newAddress) {
+        return switch (codes.send(userId, newAddress)) {
+            case CodeDelivery.Sent sent -> new EmailCodeDelivery.Sent(sent.resendAfterSeconds());
+            case CodeDelivery.TooSoon tooSoon -> new EmailCodeDelivery.TooSoon(tooSoon.retryAfterSeconds());
+            case CodeDelivery.LimitReached limit -> new EmailCodeDelivery.LimitReached(limit.retryAfterSeconds());
+            case CodeDelivery.Unavailable unavailable -> new EmailCodeDelivery.Unavailable();
+        };
     }
 
     @Override
@@ -34,5 +42,10 @@ public class MfaAddressChangeCodeAdapter implements AddressChangeCodePort {
             case EXPIRED -> EmailCodeCheck.EXPIRED;
             case SPENT -> EmailCodeCheck.SPENT;
         };
+    }
+
+    @Override
+    public void forgoMailMethod(UUID userId) {
+        codes.forgoMailMethod(userId);
     }
 }

@@ -583,22 +583,31 @@ public class UserController {
             Changer l'adresse (hors casse) exige `currentPassword` (`400` s'il manque, `422` s'il est faux) ;
             l'ancienne adresse en est prévenue par mail.
 
-            Si la double authentification par mail est active (et l'envoi de mails aussi), un changement d'adresse
-            répond d'abord **202** `{ emailCodeRequired, sentTo, resendAfterSeconds }` sans rien enregistrer : un
-            code est parti à la nouvelle adresse ; la même requête avec `emailCode` enregistre. `400`
-            `email_code_invalid` si le code est faux ou expiré ; `429` `resend_too_soon` ou `send_limit_reached`.
+            Si la double authentification par mail est active, un changement d'adresse répond d'abord **202**
+            `{ emailCodeRequired, sentTo, resendAfterSeconds }` sans rien enregistrer : un code est parti à la
+            nouvelle adresse ; la même requête avec `emailCode` enregistre. `400` `email_code_invalid` si le code est
+            faux, `email_code_expired` s'il n'y en a plus en attente (expiré, jamais demandé), `email_code_spent` après
+            le cinquième code faux ; `429` `resend_too_soon` ou `send_limit_reached` (avec `Retry-After`).
+
+            Si l'envoi de mails est coupé à ce moment, rien ne peut prouver la nouvelle adresse : elle est enregistrée
+            et le code par mail est retiré — **200** `{ mailMethodRemoved: true }`.
             """
     )
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Profil mis à jour", content = @Content),
         @ApiResponse(
+            responseCode = "200",
+            description = "Profil mis à jour pendant que l'envoi de mails est coupé : le code par mail est retiré",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ProfileUpdateResponse.MailMethodRemoved.class))
+        ),
+        @ApiResponse(
             responseCode = "202",
             description = "Rien n'est enregistré : un code est parti à la nouvelle adresse (double authentification par mail active)",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ProfileUpdateResponse.class))
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ProfileUpdateResponse.EmailCodeSent.class))
         ),
         @ApiResponse(
             responseCode = "400",
-            description = "Corps invalide (champs manquants ou non conformes aux contraintes), adresse changée sans le mot de passe actuel (`CurrentPasswordRequired`), ou code de la nouvelle adresse faux ou expiré (`email_code_invalid`)",
+            description = "Corps invalide (champs manquants ou non conformes aux contraintes), adresse changée sans le mot de passe actuel (`CurrentPasswordRequired`), ou code de la nouvelle adresse faux (`email_code_invalid`), plus en attente (`email_code_expired`) ou épuisé par cinq codes faux (`email_code_spent`)",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
         ),
         @ApiResponse(
@@ -628,7 +637,7 @@ public class UserController {
         ),
         @ApiResponse(
             responseCode = "429",
-            description = "Trop de requêtes (global ou par utilisateur)",
+            description = "Trop de requêtes (global ou par utilisateur), ou code de la nouvelle adresse refusé : demandé à nouveau trop tôt (`resend_too_soon`) ou plafond d'envois atteint (`send_limit_reached`), avec `Retry-After` et `retryAfterSeconds`",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
         )
     })
@@ -642,8 +651,10 @@ public class UserController {
             caller.userId(), request.username(), request.email(), request.currentPassword(), request.emailCode()));
         return switch (update) {
             case ProfileUpdate.Saved saved -> ResponseEntity.noContent().build();
+            case ProfileUpdate.SavedMailMethodRemoved removed ->
+                ResponseEntity.ok(new ProfileUpdateResponse.MailMethodRemoved(true));
             case ProfileUpdate.EmailCodeSent sent ->
-                ResponseEntity.accepted().body(new ProfileUpdateResponse(true, sent.sentTo(), sent.resendAfterSeconds()));
+                ResponseEntity.accepted().body(new ProfileUpdateResponse.EmailCodeSent(true, sent.sentTo(), sent.resendAfterSeconds()));
         };
     }
 

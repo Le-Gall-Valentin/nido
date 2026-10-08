@@ -5,6 +5,7 @@ import com.nido.api.shared.infrastructure.web.ProblemDetailFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -58,6 +59,15 @@ public class IdentityExceptionHandler {
                     new IdentityErrorResponse(400, ex.getClass().getSimpleName(),
                         "No code is waiting for the new address any more: ask for a new one.", "email_code_expired");
 
+            // The words of every code screen (mfa answers the same): one client parser for all of them.
+            case IdentityException.EmailCodeResendTooSoon ex ->
+                    new IdentityErrorResponse(429, ex.getClass().getSimpleName(),
+                        "A code was sent to the new address moments ago: it still works.", "resend_too_soon", ex.seconds());
+
+            case IdentityException.EmailCodeSendLimitReached ex ->
+                    new IdentityErrorResponse(429, ex.getClass().getSimpleName(),
+                        "Too many codes sent by mail: the next one can leave later.", "send_limit_reached", ex.seconds());
+
             case IdentityException.EmailCodeSpent ex ->
                     new IdentityErrorResponse(400, ex.getClass().getSimpleName(),
                         "The code sent to the new address no longer works: ask for a new one.", "email_code_spent");
@@ -86,13 +96,22 @@ public class IdentityExceptionHandler {
         if (response.errorCode() != null) {
             problem.setProperty("error_code", response.errorCode());
         }
+        ResponseEntity.BodyBuilder answer = ResponseEntity.status(response.status());
+        if (response.retryAfterSeconds() != null) {
+            problem.setProperty("retryAfterSeconds", response.retryAfterSeconds());
+            answer.header(HttpHeaders.RETRY_AFTER, String.valueOf(response.retryAfterSeconds()));
+        }
 
-        return ResponseEntity.status(response.status()).body(problem);
+        return answer.body(problem);
     }
 
     private static IdentityErrorResponse response(int status, IdentityException e, String detail) {
         return new IdentityErrorResponse(status, e.getClass().getSimpleName(), detail, null);
     }
 
-    private record IdentityErrorResponse(int status, String title, String detail, String errorCode) {}
+    private record IdentityErrorResponse(int status, String title, String detail, String errorCode, Long retryAfterSeconds) {
+        IdentityErrorResponse(int status, String title, String detail, String errorCode) {
+            this(status, title, detail, errorCode, null);
+        }
+    }
 }
