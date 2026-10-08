@@ -27,9 +27,9 @@ vi.mock('@/features/two-factor', () => ({
       <button onClick={onBack}>back</button>
     </div>
   ),
-  EnrollProposal: ({ onActivate, onSkip }: { onActivate: () => void; onSkip: () => void }) => (
+  EnrollProposal: ({ onAppChosen, onSkip }: { onAppChosen: () => void; onSkip: () => void }) => (
     <div>
-      <button onClick={onActivate}>activate</button>
+      <button onClick={onAppChosen}>activate</button>
       <button onClick={onSkip}>skip</button>
     </div>
   ),

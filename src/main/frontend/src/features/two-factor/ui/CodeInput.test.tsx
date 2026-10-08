@@ -81,4 +81,13 @@ describe('CodeInput', () => {
     ref.current!.focus()
     expect(document.activeElement).toBe(getByRole('textbox'))
   })
+
+  it('keeps leading zeros', () => {
+    const onChange = vi.fn()
+    const { container } = render(<CodeInput value="" onChange={onChange} />)
+
+    fireEvent.change(container.querySelector('input[autocomplete="one-time-code"]')!, { target: { value: '004213' } })
+
+    expect(onChange).toHaveBeenCalledWith('004213')
+  })
 })

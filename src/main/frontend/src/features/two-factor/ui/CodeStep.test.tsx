@@ -2,7 +2,7 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { CodeStep } from './CodeStep'
 import type { ITwoFactorChallengeApi } from '../model/ITwoFactorChallengeApi'
-import { CodeError, ChallengeExpiredError, MaxAttemptsError } from '../model/errors'
+import { CodeError, ChallengeExpiredError, MaxAttemptsError, MethodNotEnabledError } from '../model/errors'
 import { RateLimitError, NetworkError, ServerError } from '@/shared/lib'
 
 vi.mock('react-i18next', () => ({
@@ -12,9 +12,12 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-function makeApi(overrides: Partial<Pick<ITwoFactorChallengeApi, 'verify'>> = {}): Pick<ITwoFactorChallengeApi, 'verify'> {
+function makeApi(
+  overrides: Partial<Pick<ITwoFactorChallengeApi, 'verify' | 'sendMailCode'>> = {},
+): Pick<ITwoFactorChallengeApi, 'verify' | 'sendMailCode'> {
   return {
     verify: vi.fn(),
+    sendMailCode: vi.fn(),
     ...overrides,
   }
 }
@@ -31,7 +34,7 @@ describe('CodeStep', () => {
   it('renders heading, subtitle with username, submit button, back link, help text', () => {
     const api = makeApi()
     const { getByText, getByRole } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     expect(getByText('verify.title')).toBeTruthy()
@@ -44,7 +47,7 @@ describe('CodeStep', () => {
   it('calls api.verify with the entered code on submit', async () => {
     const api = makeApi({ verify: vi.fn().mockResolvedValue({ id: '1', username: 'alice', role: 'USER' }) })
     const { container, getByRole } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '123456')
@@ -60,7 +63,7 @@ describe('CodeStep', () => {
     const api = makeApi({ verify: vi.fn().mockResolvedValue(user) })
     const onVerified = vi.fn()
     const { container, getByRole } = render(
-      <CodeStep username="alice" api={api} onVerified={onVerified} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={onVerified} onBack={vi.fn()} />
     )
 
     fillCode(container, '123456')
@@ -74,7 +77,7 @@ describe('CodeStep', () => {
   it('shows invalid_code error and clears code on CodeError', async () => {
     const api = makeApi({ verify: vi.fn().mockRejectedValue(new CodeError()) })
     const { container, getByRole, getByText } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '999999')
@@ -93,7 +96,7 @@ describe('CodeStep', () => {
   it('shows challenge_expired error on ChallengeExpiredError (does not clear code)', async () => {
     const api = makeApi({ verify: vi.fn().mockRejectedValue(new ChallengeExpiredError()) })
     const { container, getByRole, getByText } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '123456')
@@ -112,7 +115,7 @@ describe('CodeStep', () => {
   it('shows incomplete error without calling api if code has fewer than 6 digits', async () => {
     const api = makeApi({ verify: vi.fn() })
     const { container, getByRole, getByText } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '123')
@@ -129,7 +132,7 @@ describe('CodeStep', () => {
     const verifyPromise = new Promise(res => { resolveVerify = res })
     const api = makeApi({ verify: vi.fn().mockReturnValue(verifyPromise) })
     const { container, getByRole } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '123456')
@@ -153,7 +156,7 @@ describe('CodeStep', () => {
     const verifyPromise = new Promise(res => { resolveVerify = res })
     const api = makeApi({ verify: vi.fn().mockReturnValue(verifyPromise) })
     const { container, getByRole } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '123456')
@@ -175,7 +178,7 @@ describe('CodeStep', () => {
     const verifyPromise = new Promise(res => { resolveVerify = res })
     const api = makeApi({ verify: vi.fn().mockReturnValue(verifyPromise) })
     const { container, getByRole, getByText } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
 
     fillCode(container, '123456')
@@ -194,7 +197,7 @@ describe('CodeStep', () => {
     const api = makeApi()
     const onBack = vi.fn()
     const { getByText } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={onBack} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={onBack} />
     )
 
     fireEvent.click(getByText('verify.back'))
@@ -204,7 +207,7 @@ describe('CodeStep', () => {
   it('shows rate_limit_timed error with seconds when RateLimitError has retryAfterSeconds', async () => {
     const api = makeApi({ verify: vi.fn().mockRejectedValue(new RateLimitError(42)) })
     const { container, getByRole, getByText } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
     fillCode(container, '123456')
     await act(async () => {
@@ -216,7 +219,7 @@ describe('CodeStep', () => {
   it('shows rate_limit error on RateLimitError', async () => {
     const api = makeApi({ verify: vi.fn().mockRejectedValue(new RateLimitError()) })
     const { container, getByRole, getByText } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
     fillCode(container, '123456')
     await act(async () => {
@@ -228,7 +231,7 @@ describe('CodeStep', () => {
   it('shows network error on NetworkError', async () => {
     const api = makeApi({ verify: vi.fn().mockRejectedValue(new NetworkError()) })
     const { container, getByRole, getByText } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
     fillCode(container, '123456')
     await act(async () => {
@@ -240,7 +243,7 @@ describe('CodeStep', () => {
   it('shows server error on ServerError', async () => {
     const api = makeApi({ verify: vi.fn().mockRejectedValue(new ServerError()) })
     const { container, getByRole, getByText } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
     fillCode(container, '123456')
     await act(async () => {
@@ -252,7 +255,7 @@ describe('CodeStep', () => {
   it('shows max_attempts error on MaxAttemptsError', async () => {
     const api = makeApi({ verify: vi.fn().mockRejectedValue(new MaxAttemptsError()) })
     const { container, getByRole, getByText } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={vi.fn()} />
     )
     fillCode(container, '123456')
     await act(async () => {
@@ -268,7 +271,7 @@ describe('CodeStep', () => {
     const api = makeApi({ verify: vi.fn().mockRejectedValue(new MaxAttemptsError()) })
     const onBack = vi.fn()
     const { container, getByRole } = render(
-      <CodeStep username="alice" api={api} onVerified={vi.fn()} onBack={onBack} />
+      <CodeStep username="alice" method="APP" api={api} onVerified={vi.fn()} onBack={onBack} />
     )
     fillCode(container, '123456')
 
@@ -281,5 +284,87 @@ describe('CodeStep', () => {
     expect(onBack).not.toHaveBeenCalled()
     act(() => { vi.runAllTimers() })
     expect(onBack).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('CodeStep by mail', () => {
+  const mailApi = (overrides: Partial<Pick<ITwoFactorChallengeApi, 'verify' | 'sendMailCode'>> = {}) => ({
+    verify: vi.fn(), sendMailCode: vi.fn(), ...overrides,
+  })
+
+  it('says where the code went and waits before offering another', () => {
+    vi.useFakeTimers()
+    const { getByText, queryByText } = render(
+      <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr" resendAfterSeconds={2}
+        api={mailApi()} onVerified={vi.fn()} onBack={vi.fn()} />)
+
+    expect(getByText('mail.title')).toBeTruthy()
+    expect(getByText('mail.subtitle:{"username":"camille","address":"c••••••n@exemple.fr"}')).toBeTruthy()
+    expect(getByText('resend.wait:{"time":"0:02"}')).toBeTruthy()
+    act(() => { vi.advanceTimersByTime(2000) })
+    expect(queryByText('resend.action')).toBeTruthy()
+    vi.useRealTimers()
+  })
+
+  it('verifies with the mail method', async () => {
+    const verify = vi.fn().mockResolvedValue({ id: '1', username: 'camille' })
+    const onVerified = vi.fn()
+    const { container, getByRole } = render(
+      <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr" api={mailApi({ verify })}
+        onVerified={onVerified} onBack={vi.fn()} />)
+
+    fillCode(container, '004213')
+    fireEvent.click(getByRole('button', { name: /verify\.submit/ }))
+
+    await waitFor(() => expect(onVerified).toHaveBeenCalled())
+    expect(verify).toHaveBeenCalledWith('MAIL', '004213')
+  })
+
+  it('a new code restarts the wait and says the old one is gone', async () => {
+    const sendMailCode = vi.fn().mockResolvedValue({ resendAfterSeconds: 60 })
+    const { getByText, findByText } = render(
+      <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr" resendAfterSeconds={0}
+        api={mailApi({ sendMailCode })} onVerified={vi.fn()} onBack={vi.fn()} />)
+
+    fireEvent.click(getByText('resend.action'))
+
+    expect(await findByText('mail.resent')).toBeTruthy()
+    expect(getByText('resend.wait:{"time":"1:00"}')).toBeTruthy()
+  })
+
+  it('a code the login could not send says when one can leave', () => {
+    const { getByText } = render(
+      <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr" mailLimitSeconds={420}
+        api={mailApi()} onVerified={vi.fn()} onBack={vi.fn()} />)
+
+    expect(getByText('mail.error.send_limit:{"minutes":7}')).toBeTruthy()
+    expect(getByText('resend.wait:{"time":"7:00"}')).toBeTruthy()
+  })
+
+  it('a method removed meanwhile is said, then the sign-in starts again', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const onBack = vi.fn()
+    const { container, getByRole, findByText } = render(
+      <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr"
+        api={mailApi({ verify: vi.fn().mockRejectedValue(new MethodNotEnabledError()) })} onVerified={vi.fn()} onBack={onBack} />)
+
+    fillCode(container, '004213')
+    fireEvent.click(getByRole('button', { name: /verify\.submit/ }))
+
+    expect(await findByText('verify.error.method_not_enabled')).toBeTruthy()
+    act(() => { vi.advanceTimersByTime(2000) })
+    expect(onBack).toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('with two methods, the way back is the choice', () => {
+    const onChooseAnother = vi.fn()
+    const { getByText } = render(
+      <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr" api={mailApi()}
+        onVerified={vi.fn()} onBack={vi.fn()} onChooseAnother={onChooseAnother} />)
+
+    fireEvent.click(getByText('verify.back_choose'))
+
+    expect(onChooseAnother).toHaveBeenCalled()
   })
 })

@@ -1,33 +1,68 @@
 import React, { useEffect, useId, useRef, useState } from 'react'
-import { AlertTriangle, ChevronLeft, Info, Lock } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronLeft, Info, Lock, Mail } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import type { TwoFactorMethod, User } from '@/entities/user'
 import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { CodeInput } from './CodeInput'
-import type { CodeInputHandle } from './CodeInput'
-import { ChallengeExpiredError, MaxAttemptsError } from '../model/errors'
-import { RateLimitError, NetworkError, ServerError } from '@/shared/lib'
+import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
+import { CodeInput, type CodeInputHandle } from './CodeInput'
+import { ResendCode } from './ResendCode'
+import { useResendCountdown } from '../model/useResendCountdown'
 import type { ITwoFactorChallengeApi } from '../model/ITwoFactorChallengeApi'
-import type { User } from '@/entities/user'
+import {
+  ChallengeExpiredError, MaxAttemptsError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError,
+} from '../model/errors'
 
 interface CodeStepProps {
   username: string
-  api: Pick<ITwoFactorChallengeApi, 'verify'>
+  method: TwoFactorMethod
+  /** MAIL: where the code went, masked. */
+  maskedEmail?: string | null
+  /** MAIL: seconds before another code can be asked for. */
+  resendAfterSeconds?: number
+  /** MAIL: the login could not send the code — the account's limit — and when one can leave. */
+  mailLimitSeconds?: number | null
+  api: Pick<ITwoFactorChallengeApi, 'verify' | 'sendMailCode'>
   onVerified: (user: User) => void
+  /** Back to the identifiers; also where a lockout or a method gone leads after a moment. */
   onBack: () => void
+  /** Back to the choice, under the same challenge — given only when both methods are on. */
+  onChooseAnother?: () => void
 }
 
-export function CodeStep({ username, api, onVerified, onBack }: CodeStepProps) {
+type Notice = { tone: 'error' | 'ok'; key: string; values?: Record<string, unknown> }
+
+/** These leave nothing to try on this screen: the sign-in starts again after a moment. */
+const RESTARTING = new Set(['verify.error.max_attempts', 'verify.error.method_not_enabled', 'verify.error.method_unavailable'])
+
+function errorKeyOf(error: unknown): string {
+  if (error instanceof MaxAttemptsError) return 'verify.error.max_attempts'
+  if (error instanceof ChallengeExpiredError) return 'verify.error.challenge_expired'
+  if (error instanceof MethodNotEnabledError) return 'verify.error.method_not_enabled'
+  if (error instanceof MethodUnavailableError) return 'verify.error.method_unavailable'
+  if (error instanceof RateLimitError) return error.retryAfterSeconds !== null ? 'verify.error.rate_limit_timed' : 'verify.error.rate_limit'
+  if (error instanceof NetworkError) return 'verify.error.network'
+  if (error instanceof ServerError) return 'verify.error.server'
+  return 'verify.error.invalid_code'
+}
+
+export function CodeStep({
+  username, method, maskedEmail = null, resendAfterSeconds = 0, mailLimitSeconds = null,
+  api, onVerified, onBack, onChooseAnother,
+}: CodeStepProps) {
   const { t } = useTranslation('twoFactor')
   const headingId = useId()
+  const mail = method === 'MAIL'
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [errorKey, setErrorKey] = useState<string | null>(null)
-  const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null)
+  const [notice, setNotice] = useState<Notice | null>(() =>
+    mailLimitSeconds !== null
+      ? { tone: 'error', key: 'mail.error.send_limit', values: { minutes: Math.ceil(mailLimitSeconds / 60) } }
+      : null)
   const [autoBack, setAutoBack] = useState(false)
+  const countdown = useResendCountdown(mailLimitSeconds ?? resendAfterSeconds)
   const isSubmittingRef = useRef(false)
-  const digitInputRef = useRef<CodeInputHandle>(null)
+  const inputRef = useRef<CodeInputHandle>(null)
 
-  // After max attempts lockout, redirect automatically after 2 seconds.
   useEffect(() => {
     if (!autoBack) return
     const timer = setTimeout(() => onBack(), 2000)
@@ -36,35 +71,21 @@ export function CodeStep({ username, api, onVerified, onBack }: CodeStepProps) {
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
-    if (code.length < 6) { setErrorKey('verify.error.incomplete'); return }
+    if (code.length < 6) { setNotice({ tone: 'error', key: 'verify.error.incomplete' }); return }
     if (isSubmittingRef.current) return
     isSubmittingRef.current = true
     setIsLoading(true)
-    setErrorKey(null)
+    setNotice(null)
     try {
-      const user = await api.verify('APP', code)
-      onVerified(user)
+      onVerified(await api.verify(method, code))
     } catch (error) {
-      if (error instanceof MaxAttemptsError) {
-        setErrorKey('verify.error.max_attempts')
-        setAutoBack(true)
-      } else if (error instanceof ChallengeExpiredError) {
-        setErrorKey('verify.error.challenge_expired')
-      } else if (error instanceof RateLimitError) {
-        if (error.retryAfterSeconds !== null) {
-          setErrorKey('verify.error.rate_limit_timed')
-          setRateLimitSeconds(error.retryAfterSeconds)
-        } else {
-          setErrorKey('verify.error.rate_limit')
-        }
-      } else if (error instanceof NetworkError) {
-        setErrorKey('verify.error.network')
-      } else if (error instanceof ServerError) {
-        setErrorKey('verify.error.server')
-      } else {
-        setErrorKey('verify.error.invalid_code')
+      const key = errorKeyOf(error)
+      const values = error instanceof RateLimitError && error.retryAfterSeconds !== null ? { seconds: error.retryAfterSeconds } : undefined
+      setNotice({ tone: 'error', key, values })
+      if (RESTARTING.has(key)) setAutoBack(true)
+      if (key === 'verify.error.invalid_code') {
         setCode('')
-        digitInputRef.current?.focus()
+        inputRef.current?.focus()
       }
     } finally {
       isSubmittingRef.current = false
@@ -72,48 +93,71 @@ export function CodeStep({ username, api, onVerified, onBack }: CodeStepProps) {
     }
   }
 
+  async function handleResend(): Promise<void> {
+    setNotice(null)
+    try {
+      const { resendAfterSeconds: next } = await api.sendMailCode()
+      countdown.restart(next)
+      setCode('')
+      setNotice({ tone: 'ok', key: 'mail.resent' })
+    } catch (error) {
+      if (error instanceof ResendTooSoonError) {
+        countdown.restart(error.seconds)
+      } else if (error instanceof SendLimitError) {
+        countdown.restart(error.seconds)
+        setNotice({ tone: 'error', key: 'mail.error.send_limit', values: { minutes: Math.ceil(error.seconds / 60) } })
+      } else {
+        const key = errorKeyOf(error)
+        setNotice({ tone: 'error', key })
+        if (RESTARTING.has(key)) setAutoBack(true)
+      }
+    }
+  }
+
   return (
     <div>
       <button
         type="button"
-        onClick={onBack}
+        onClick={onChooseAnother ?? onBack}
         disabled={isLoading}
         className="mb-5 flex items-center gap-1 bg-transparent border-0 p-0 text-[13.5px] text-fg-2 cursor-pointer hover:text-fg-0"
       >
         <ChevronLeft className="size-[15px]" />
-        {t('verify.back')}
+        {t(onChooseAnother ? 'verify.back_choose' : 'verify.back')}
       </button>
 
       <div className="mb-[18px] grid size-[46px] place-items-center rounded-[13px] bg-accent-dim text-accent">
-        <Lock className="size-6" />
+        {mail ? <Mail className="size-6" /> : <Lock className="size-6" />}
       </div>
 
       <div className="mb-6">
         <h2 id={headingId} className="mb-1.5 text-[24px] lg:text-[28px] font-semibold tracking-tight text-fg-0">
-          {t('verify.title')}
+          {t(mail ? 'mail.title' : 'verify.title')}
         </h2>
         <p className="text-[15px] text-fg-2">
-          {t('verify.subtitle', { username })}
+          {mail ? t('mail.subtitle', { username, address: maskedEmail }) : t('verify.subtitle', { username })}
         </p>
       </div>
 
       <form onSubmit={(e) => void handleSubmit(e)} aria-labelledby={headingId}>
         <CodeInput
-          ref={digitInputRef}
+          ref={inputRef}
           value={code}
           onChange={setCode}
           disabled={isLoading}
           autoFocus
-          label={t('verify.code_label')}
+          label={t(mail ? 'mail.code_label' : 'verify.code_label')}
         />
 
-        {errorKey && (
+        {notice && (
           <div
-            role="alert"
-            className="flex items-center gap-2 rounded-[10px] bg-status-red-dim px-3.5 py-[11px] text-[13.5px] text-status-red mb-3"
+            role={notice.tone === 'ok' ? 'status' : 'alert'}
+            className={`mb-3 flex items-center gap-2 rounded-[10px] px-3.5 py-[11px] text-[13.5px] ${
+              notice.tone === 'ok' ? 'bg-status-green-dim text-status-green' : 'bg-status-red-dim text-status-red'
+            }`}
           >
-            <AlertTriangle className="size-3.5 shrink-0" />
-            {t(errorKey, rateLimitSeconds !== null ? { seconds: rateLimitSeconds } : undefined)}
+            {notice.tone === 'ok' ? <CheckCircle2 className="size-3.5 shrink-0" /> : <AlertTriangle className="size-3.5 shrink-0" />}
+            {t(notice.key, notice.values)}
           </div>
         )}
 
@@ -127,9 +171,11 @@ export function CodeStep({ username, api, onVerified, onBack }: CodeStepProps) {
         </Button>
       </form>
 
+      {mail && <ResendCode seconds={countdown.seconds} onResend={() => void handleResend()} disabled={isLoading} />}
+
       <div className="mt-7 flex gap-2 items-start text-[13px] text-fg-2">
         <Info className="size-3.5 shrink-0 mt-0.5" />
-        <span>{t('verify.help')}</span>
+        <span>{t(mail ? 'mail.help' : 'verify.help')}</span>
       </div>
     </div>
   )

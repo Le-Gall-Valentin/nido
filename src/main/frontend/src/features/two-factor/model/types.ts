@@ -28,3 +28,6 @@ export interface ResendData {
 export type MailCodeState =
   | { sent: true; resendAfterSeconds: number }
   | { sent: false; retryAfterSeconds: number }
+
+/** What the choice screen moves on with: the app, or the mail with the wait before another code. */
+export type CodeChoice = { method: 'APP' } | { method: 'MAIL'; resendAfterSeconds: number }

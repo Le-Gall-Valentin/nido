@@ -75,6 +75,7 @@ export function LoginPage({ twoFactorApi = defaultTwoFactorApi, capabilitiesApi 
       {step === 'totp' && (
         <CodeStep
           username={pendingUsername}
+          method="APP"
           api={twoFactorApi}
           onVerified={handleVerified}
           onBack={handleBack}
@@ -84,7 +85,11 @@ export function LoginPage({ twoFactorApi = defaultTwoFactorApi, capabilitiesApi 
       {step === 'enroll' && pendingUser && (
         <EnrollProposal
           username={pendingUser.username}
-          onActivate={handleActivate}
+          email={pendingUser.email}
+          mailAvailable={false}
+          api={twoFactorApi}
+          onAppChosen={handleActivate}
+          onMailStarted={handleActivate}
           onSkip={handleSkip}
         />
       )}
