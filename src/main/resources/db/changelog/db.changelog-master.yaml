@@ -215,3 +215,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/072-replace-user-totp-with-two-factor-methods.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/073-create-two-factor-mail-codes.yaml
+      relativeToChangelogFile: false
