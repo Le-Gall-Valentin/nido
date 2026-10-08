@@ -273,7 +273,7 @@ class TwoFactorControllerIT {
         mockMvc.perform(post("/api/auth/2fa/verify")
                 .cookie(challenge)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"000000\"}"))
+                .content("{\"method\":\"APP\",\"code\":\"000000\"}"))
             .andExpect(status().isUnauthorized());
     }
 
@@ -281,7 +281,7 @@ class TwoFactorControllerIT {
     void verify_withoutChallengeCookie_returns401() throws Exception {
         mockMvc.perform(post("/api/auth/2fa/verify")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"000000\"}"))
+                .content("{\"method\":\"APP\",\"code\":\"000000\"}"))
             .andExpect(status().isUnauthorized());
     }
 
@@ -294,7 +294,7 @@ class TwoFactorControllerIT {
             mockMvc.perform(post("/api/auth/2fa/verify")
                     .cookie(challenge)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"code\":\"00000" + i + "\"}"))
+                    .content("{\"method\":\"APP\",\"code\":\"00000" + i + "\"}"))
                 .andExpect(status().isUnauthorized());
         }
 
@@ -303,7 +303,7 @@ class TwoFactorControllerIT {
         mockMvc.perform(post("/api/auth/2fa/verify")
                 .cookie(challenge)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"000005\"}"))
+                .content("{\"method\":\"APP\",\"code\":\"000005\"}"))
             .andExpect(status().isTooManyRequests())
             .andExpect(jsonPath("$.title").value("AuthenticationError"));
     }
@@ -332,13 +332,13 @@ class TwoFactorControllerIT {
     // ─── Login with TOTP required ─────────────────────────────────────────────
 
     @Test
-    void login_totpRequired_setsTotpChallengeCookie() throws Exception {
+    void login_twoFactorRequired_setsTheChallengeCookie() throws Exception {
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new LoginRequest("totpuser", "totppass"))))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.totpRequired").value(true))
-            .andExpect(header().string("Set-Cookie", containsString("totp_challenge")))
+            .andExpect(jsonPath("$.twoFactorRequired").value(true))
+            .andExpect(header().string("Set-Cookie", containsString("two_factor_challenge")))
             .andExpect(header().string("Set-Cookie", containsString("HttpOnly")))
             .andExpect(header().string("Set-Cookie", containsString("Path=/api/auth/2fa")));
     }
@@ -357,7 +357,7 @@ class TwoFactorControllerIT {
         MvcResult result = mockMvc.perform(post("/api/auth/2fa/verify")
                 .cookie(challenge)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"" + validCode + "\"}"))
+                .content("{\"method\":\"APP\",\"code\":\"" + validCode + "\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.username").value("totpuser"))
             .andReturn();
@@ -441,7 +441,7 @@ class TwoFactorControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new LoginRequest(username, password))))
             .andReturn();
-        return result.getResponse().getCookie("totp_challenge");
+        return result.getResponse().getCookie("two_factor_challenge");
     }
     // ─── B3 : le verrou anti-brute-force doit survivre au rollback ─────────
 
@@ -493,12 +493,12 @@ class TwoFactorControllerIT {
         for (int i = 0; i < 4; i++) {
             mockMvc.perform(post("/api/auth/2fa/verify").cookie(firstChallenge)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"code\":\"00000" + i + "\"}"))
+                    .content("{\"method\":\"APP\",\"code\":\"00000" + i + "\"}"))
                 .andExpect(status().isUnauthorized());
         }
         mockMvc.perform(post("/api/auth/2fa/verify").cookie(firstChallenge)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"000005\"}"))
+                .content("{\"method\":\"APP\",\"code\":\"000005\"}"))
             .andExpect(status().isTooManyRequests());
 
         // Cleared so the assertion below cannot pass on the rate limiter's own 429 — the point
@@ -510,7 +510,7 @@ class TwoFactorControllerIT {
 
         mockMvc.perform(post("/api/auth/2fa/verify").cookie(secondChallenge)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"000006\"}"))
+                .content("{\"method\":\"APP\",\"code\":\"000006\"}"))
             .andExpect(status().isTooManyRequests())
             .andExpect(jsonPath("$.title").value("AuthenticationError"));
     }
@@ -523,7 +523,7 @@ class TwoFactorControllerIT {
         for (int i = 0; i < 3; i++) {
             mockMvc.perform(post("/api/auth/2fa/verify").cookie(firstChallenge)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"code\":\"00000" + i + "\"}"))
+                    .content("{\"method\":\"APP\",\"code\":\"00000" + i + "\"}"))
                 .andExpect(status().isUnauthorized());
         }
 
@@ -533,7 +533,7 @@ class TwoFactorControllerIT {
         long counter = Math.floorDiv(System.currentTimeMillis() / 1000L, 30);
         mockMvc.perform(post("/api/auth/2fa/verify").cookie(secondChallenge)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"" + generator.generate(KNOWN_TOTP_SECRET, counter) + "\"}"))
+                .content("{\"method\":\"APP\",\"code\":\"" + generator.generate(KNOWN_TOTP_SECRET, counter) + "\"}"))
             .andExpect(status().isOk());
 
         rateLimitBucketStore.clearAll();
@@ -543,7 +543,7 @@ class TwoFactorControllerIT {
         for (int i = 0; i < 4; i++) {
             mockMvc.perform(post("/api/auth/2fa/verify").cookie(thirdChallenge)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"code\":\"10000" + i + "\"}"))
+                    .content("{\"method\":\"APP\",\"code\":\"10000" + i + "\"}"))
                 .andExpect(status().isUnauthorized());
         }
     }

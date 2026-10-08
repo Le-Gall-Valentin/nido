@@ -179,12 +179,12 @@ class AuthControllerIT {
     }
 
     @Test
-    void login_totpRequired_namesTheAccountEvenWhenSignedInByAddress() throws Exception {
+    void login_twoFactorRequired_namesTheAccountEvenWhenSignedInByAddress() throws Exception {
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new LoginRequest("totpuser@test.com", "totppass"))))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.totpRequired").value(true))
+            .andExpect(jsonPath("$.twoFactorRequired").value(true))
             .andExpect(jsonPath("$.username").value("totpuser"));
     }
 
@@ -309,8 +309,10 @@ class AuthControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new LoginRequest("totpuser", "totppass"))))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.totpRequired").value(true))
-            .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("totp_challenge")))
+            .andExpect(jsonPath("$.twoFactorRequired").value(true))
+            .andExpect(jsonPath("$.methods[0]").value("APP"))
+            .andExpect(jsonPath("$.maskedEmail").doesNotExist())
+            .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("two_factor_challenge")))
             .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("HttpOnly")))
             .andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.containsString("Path=/api/auth/2fa")));
     }
@@ -321,12 +323,12 @@ class AuthControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new LoginRequest("totpuser", "totppass"))))
             .andReturn();
-        Cookie challenge = loginResult.getResponse().getCookie("totp_challenge");
+        Cookie challenge = loginResult.getResponse().getCookie("two_factor_challenge");
 
         mockMvc.perform(post("/api/auth/2fa/verify")
                 .cookie(challenge)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"ABCDEF\"}"))
+                .content("{\"method\":\"APP\",\"code\":\"ABCDEF\"}"))
             .andExpect(status().isBadRequest());
     }
 
@@ -336,12 +338,12 @@ class AuthControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new LoginRequest("totpuser", "totppass"))))
             .andReturn();
-        Cookie challenge = loginResult.getResponse().getCookie("totp_challenge");
+        Cookie challenge = loginResult.getResponse().getCookie("two_factor_challenge");
 
         mockMvc.perform(post("/api/auth/2fa/verify")
                 .cookie(challenge)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"1234567\"}"))
+                .content("{\"method\":\"APP\",\"code\":\"1234567\"}"))
             .andExpect(status().isBadRequest());
     }
 
@@ -349,7 +351,7 @@ class AuthControllerIT {
     void verifyTotp_withoutChallengeCookie_returns401() throws Exception {
         mockMvc.perform(post("/api/auth/2fa/verify")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"123456\"}"))
+                .content("{\"method\":\"APP\",\"code\":\"123456\"}"))
             .andExpect(status().isUnauthorized());
     }
 
@@ -361,13 +363,13 @@ class AuthControllerIT {
             .andExpect(status().isOk())
             .andReturn();
 
-        Cookie challenge = loginResult.getResponse().getCookie("totp_challenge");
+        Cookie challenge = loginResult.getResponse().getCookie("two_factor_challenge");
         assertThat(challenge).isNotNull();
 
         mockMvc.perform(post("/api/auth/2fa/verify")
                 .cookie(challenge)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"000000\"}"))
+                .content("{\"method\":\"APP\",\"code\":\"000000\"}"))
             .andExpect(status().isUnauthorized());
     }
 

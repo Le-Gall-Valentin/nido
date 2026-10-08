@@ -18,11 +18,6 @@ public class IdentityTotpStatusAdapter implements TotpStatusPort {
     }
 
     @Override
-    public boolean isTotpEnabled(UUID userId) {
-        return getTotpStatusUseCase.isTotpEnabled(userId);
-    }
-
-    @Override
     public Set<UUID> findTotpEnabledAmong(Collection<UUID> userIds) {
         return getTotpStatusUseCase.findTotpEnabledAmong(userIds);
     }

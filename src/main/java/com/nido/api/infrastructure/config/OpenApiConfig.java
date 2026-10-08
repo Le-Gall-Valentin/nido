@@ -54,7 +54,7 @@ public class OpenApiConfig {
                                   "instance": "/api/users/abc"
                                 }
                                 ```
-                                Certaines erreurs incluent un champ `error_code` supplémentaire (ex : `totp_challenge_expired`).
+                                Certaines erreurs incluent un champ `error_code` supplémentaire (ex : `two_factor_challenge_expired`).
                                 """))
                 .tags(List.of(
                         new Tag().name("Authentication").description("Login, logout et renouvellement de token"),

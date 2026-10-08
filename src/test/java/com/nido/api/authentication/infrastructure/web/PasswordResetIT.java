@@ -258,7 +258,7 @@ class PasswordResetIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new LoginRequest("jane", "NewPassw0rd!"))))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.totpRequired").value(true));
+            .andExpect(jsonPath("$.twoFactorRequired").value(true));
     }
 
     @Test

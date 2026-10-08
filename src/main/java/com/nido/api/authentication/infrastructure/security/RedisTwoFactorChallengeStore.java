@@ -1,6 +1,6 @@
 package com.nido.api.authentication.infrastructure.security;
 
-import com.nido.api.authentication.domain.port.out.TotpChallengeStorePort;
+import com.nido.api.authentication.domain.port.out.TwoFactorChallengeStorePort;
 import com.nido.api.infrastructure.config.NidoProperties;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Component
-public class RedisTotpChallengeStore implements TotpChallengeStorePort {
+public class RedisTwoFactorChallengeStore implements TwoFactorChallengeStorePort {
 
     private static final String CHALLENGE_PREFIX = "totp:challenge:";
     private static final String ATTEMPTS_PREFIX = "totp:attempts:user:";
@@ -22,7 +22,7 @@ public class RedisTotpChallengeStore implements TotpChallengeStorePort {
     private final Duration challengeTtl;
     private final Duration lockoutWindow;
 
-    public RedisTotpChallengeStore(StringRedisTemplate redisTemplate, NidoProperties properties) {
+    public RedisTwoFactorChallengeStore(StringRedisTemplate redisTemplate, NidoProperties properties) {
         this.redisTemplate = redisTemplate;
         NidoProperties.SecurityProperties security = properties.security();
         this.challengeTtl = Duration.ofMinutes(

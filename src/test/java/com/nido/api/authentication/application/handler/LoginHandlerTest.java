@@ -10,6 +10,7 @@ import com.nido.api.authentication.domain.port.out.*;
 import com.nido.api.authentication.domain.model.*;
 import com.nido.api.authentication.domain.port.out.*;
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TwoFactorMethod;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import java.time.Instant;
 import java.util.UUID;
@@ -40,8 +43,8 @@ class LoginHandlerTest {
     RefreshTokenIssuerPort refreshTokenPort;
     @Mock RefreshTokenConfigPort tokenConfig;
     @Mock
-    TotpChallengeStorePort totpChallengeStore;
-    @Mock TotpStatusQueryPort totpStatusQuery;
+    TwoFactorChallengeStorePort challengeStore;
+    @Mock TwoFactorChallengePort secondFactor;
 
     private LoginHandler handler;
     private ListAppender<ILoggingEvent> logAppender;
@@ -73,7 +76,7 @@ class LoginHandlerTest {
         // Constructor calls passwordHasher.hash() to precompute the dummy hash — stub it first
         lenient().when(passwordHasher.hash(anyString())).thenReturn("$2a$12$stubbed-dummy-hash-for-tests");
         lenient().when(tokenConfig.refreshTokenExpiryDays()).thenReturn(30);
-        handler = new LoginHandler(userCredentialsPort, passwordHasher, passwordVerifier, accessTokenPort, refreshTokenPort, tokenConfig, totpChallengeStore, totpStatusQuery);
+        handler = new LoginHandler(userCredentialsPort, passwordHasher, passwordVerifier, accessTokenPort, refreshTokenPort, tokenConfig, challengeStore, secondFactor);
     }
 
     @Test
@@ -197,28 +200,28 @@ class LoginHandlerTest {
 
         assertThatThrownBy(() -> handler.login(new LoginCommand("user2", "password")))
             .isInstanceOf(AuthenticationException.UserNotActive.class);
-        verifyNoInteractions(totpChallengeStore, accessTokenPort, refreshTokenPort, totpStatusQuery);
+        verifyNoInteractions(challengeStore, accessTokenPort, refreshTokenPort, secondFactor);
     }
 
     @Test
-    void login_totpStatusQuery_notCalledOnUnknownUser() {
+    void login_secondFactor_notCalledOnUnknownUser() {
         when(userCredentialsPort.findByIdentifier("unknown")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> handler.login(new LoginCommand("unknown", "password")))
             .isInstanceOf(AuthenticationException.InvalidCredentials.class);
 
-        verifyNoInteractions(totpStatusQuery);
+        verifyNoInteractions(secondFactor);
     }
 
     @Test
-    void login_totpStatusQuery_notCalledOnWrongPassword() {
+    void login_secondFactor_notCalledOnWrongPassword() {
         when(userCredentialsPort.findByIdentifier("user1")).thenReturn(Optional.of(activeUser));
         when(passwordVerifier.matches("wrong", "hashed_pw")).thenReturn(false);
 
         assertThatThrownBy(() -> handler.login(new LoginCommand("user1", "wrong")))
             .isInstanceOf(AuthenticationException.InvalidCredentials.class);
 
-        verifyNoInteractions(totpStatusQuery);
+        verifyNoInteractions(secondFactor);
     }
 
     @Test
@@ -247,30 +250,61 @@ class LoginHandlerTest {
     }
 
     @Test
-    void login_totpEnabled_returnsTotpRequired_andStoresChallenge() {
+    void the_app_alone_gets_a_challenge_and_no_tokens() {
         when(userCredentialsPort.findByIdentifier("user2")).thenReturn(Optional.of(activeUser2));
         when(passwordVerifier.matches("password", "hashed_pw")).thenReturn(true);
-        when(totpStatusQuery.isTotpEnabled(activeUser2.id())).thenReturn(true);
-        when(totpChallengeStore.createChallenge(activeUser2.id())).thenReturn("challenge-uuid");
+        when(secondFactor.usableMethods(activeUser2.id())).thenReturn(EnumSet.of(TwoFactorMethod.APP));
+        when(challengeStore.createChallenge(activeUser2.id())).thenReturn("challenge-uuid");
 
         LoginResult result = handler.login(new LoginCommand("user2", "password"));
 
-        assertThat(result).isInstanceOf(LoginResult.TotpRequired.class);
-        assertThat(((LoginResult.TotpRequired) result).challengeId()).isEqualTo("challenge-uuid");
-        assertThat(((LoginResult.TotpRequired) result).username()).isEqualTo("user2");
+        assertThat(result).isEqualTo(new LoginResult.TwoFactorRequired("challenge-uuid", "user2",
+            List.of(TwoFactorMethod.APP), null, null));
         verifyNoInteractions(accessTokenPort, refreshTokenPort);
+        verify(secondFactor, never()).sendMailCode(any(), any());
     }
 
     @Test
-    void login_totpEnabled_doesNotIssueTokens() {
+    void the_mail_alone_sends_its_code_bound_to_the_challenge_and_shows_the_address_masked() {
         when(userCredentialsPort.findByIdentifier("user2")).thenReturn(Optional.of(activeUser2));
         when(passwordVerifier.matches("password", "hashed_pw")).thenReturn(true);
-        when(totpStatusQuery.isTotpEnabled(activeUser2.id())).thenReturn(true);
-        when(totpChallengeStore.createChallenge(activeUser2.id())).thenReturn("challenge-uuid");
+        when(secondFactor.usableMethods(activeUser2.id())).thenReturn(EnumSet.of(TwoFactorMethod.MAIL));
+        when(challengeStore.createChallenge(activeUser2.id())).thenReturn("challenge-uuid");
+        when(secondFactor.sendMailCode(activeUser2.id(), "challenge-uuid")).thenReturn(new MailCodeDelivery.Sent(60));
 
-        handler.login(new LoginCommand("user2", "password"));
+        LoginResult result = handler.login(new LoginCommand("user2", "password"));
 
-        verifyNoInteractions(accessTokenPort);
-        verifyNoInteractions(refreshTokenPort);
+        assertThat(result).isEqualTo(new LoginResult.TwoFactorRequired("challenge-uuid", "user2",
+            List.of(TwoFactorMethod.MAIL), "u••••••2@test.com", new MailCodeDelivery.Sent(60)));
+    }
+
+    @Test
+    void with_both_methods_nothing_is_sent_until_one_is_chosen() {
+        when(userCredentialsPort.findByIdentifier("user2")).thenReturn(Optional.of(activeUser2));
+        when(passwordVerifier.matches("password", "hashed_pw")).thenReturn(true);
+        when(secondFactor.usableMethods(activeUser2.id())).thenReturn(EnumSet.of(TwoFactorMethod.MAIL, TwoFactorMethod.APP));
+        when(challengeStore.createChallenge(activeUser2.id())).thenReturn("challenge-uuid");
+
+        LoginResult.TwoFactorRequired result = (LoginResult.TwoFactorRequired) handler.login(new LoginCommand("user2", "password"));
+
+        assertThat(result.methods()).containsExactly(TwoFactorMethod.APP, TwoFactorMethod.MAIL);
+        assertThat(result.maskedEmail()).isEqualTo("u••••••2@test.com");
+        assertThat(result.mailCode()).isNull();
+        verify(secondFactor, never()).sendMailCode(any(), any());
+    }
+
+    @Test
+    void a_paused_mail_method_lets_the_password_through_and_is_still_named() {
+        when(userCredentialsPort.findByIdentifier("user1")).thenReturn(Optional.of(activeUser));
+        when(passwordVerifier.matches("password", "hashed_pw")).thenReturn(true);
+        when(secondFactor.usableMethods(activeUser.id())).thenReturn(EnumSet.noneOf(TwoFactorMethod.class));
+        when(secondFactor.activeMethods(activeUser.id())).thenReturn(EnumSet.of(TwoFactorMethod.MAIL));
+        when(accessTokenPort.generate(activeUser)).thenReturn("jwt_access");
+        when(refreshTokenPort.generate(eq(activeUser), anyInt())).thenReturn("raw_refresh");
+
+        LoginResult.Success result = (LoginResult.Success) handler.login(new LoginCommand("user1", "password"));
+
+        assertThat(result.twoFactorMethods()).containsExactly(TwoFactorMethod.MAIL);
+        verifyNoInteractions(challengeStore);
     }
 }

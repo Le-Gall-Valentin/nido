@@ -1,18 +1,19 @@
 package com.nido.api.authentication.application.handler;
 
-import com.nido.api.authentication.application.dto.VerifyTotpChallengeCommand;
-import com.nido.api.authentication.application.port.in.VerifyTotpChallengeUseCase;
+import com.nido.api.authentication.application.dto.VerifyTwoFactorChallengeCommand;
+import com.nido.api.authentication.application.port.in.VerifyTwoFactorChallengeUseCase;
 import com.nido.api.authentication.domain.model.AuthTokens;
 import com.nido.api.authentication.domain.model.AuthenticationException;
 import com.nido.api.authentication.domain.model.LoginResult;
 import com.nido.api.authentication.domain.model.UserCredentials;
 import com.nido.api.authentication.domain.port.out.AccessTokenPort;
-import com.nido.api.authentication.domain.port.out.MfaTotpVerifierPort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenConfigPort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenIssuerPort;
-import com.nido.api.authentication.domain.port.out.TotpChallengeStorePort;
+import com.nido.api.authentication.domain.port.out.TwoFactorChallengePort;
+import com.nido.api.authentication.domain.port.out.TwoFactorChallengeStorePort;
 import com.nido.api.authentication.domain.port.out.UserCredentialsPort;
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.shared.model.TwoFactorMethod;
 import com.nido.api.shared.model.TwoFactorPolicy;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
@@ -22,23 +23,23 @@ import java.util.UUID;
 // Redis operations (challenge store) are not part of this transaction and not rolled back
 // on JPA failure — this is an accepted trade-off documented in the architecture decisions.
 @ApplicationService
-public class VerifyTotpChallengeHandler implements VerifyTotpChallengeUseCase {
+public class VerifyTwoFactorChallengeHandler implements VerifyTwoFactorChallengeUseCase {
 
-    private final TotpChallengeStorePort challengeStore;
-    private final MfaTotpVerifierPort mfaVerifier;
+    private final TwoFactorChallengeStorePort challengeStore;
+    private final TwoFactorChallengePort secondFactor;
     private final UserCredentialsPort userCredentialsPort;
     private final AccessTokenPort accessTokenPort;
     private final RefreshTokenIssuerPort refreshTokenPort;
     private final RefreshTokenConfigPort tokenConfig;
 
-    public VerifyTotpChallengeHandler(TotpChallengeStorePort challengeStore,
-                                      MfaTotpVerifierPort mfaVerifier,
+    public VerifyTwoFactorChallengeHandler(TwoFactorChallengeStorePort challengeStore,
+                                      TwoFactorChallengePort secondFactor,
                                       UserCredentialsPort userCredentialsPort,
                                       AccessTokenPort accessTokenPort,
                                       RefreshTokenIssuerPort refreshTokenPort,
                                       RefreshTokenConfigPort tokenConfig) {
         this.challengeStore = challengeStore;
-        this.mfaVerifier = mfaVerifier;
+        this.secondFactor = secondFactor;
         this.userCredentialsPort = userCredentialsPort;
         this.accessTokenPort = accessTokenPort;
         this.refreshTokenPort = refreshTokenPort;
@@ -47,14 +48,23 @@ public class VerifyTotpChallengeHandler implements VerifyTotpChallengeUseCase {
 
     @Override
     @Transactional
-    public LoginResult.Success verify(VerifyTotpChallengeCommand command) {
+    public LoginResult.Success verify(VerifyTwoFactorChallengeCommand command) {
         UUID userId = challengeStore.resolveChallenge(command.challengeId())
-            .orElseThrow(AuthenticationException.TotpChallengeExpired::new);
+            .orElseThrow(AuthenticationException.TwoFactorChallengeExpired::new);
 
         UserCredentials creds = userCredentialsPort.findById(userId)
             .orElseThrow(AuthenticationException.UserNotFound::new);
 
         if (!creds.isActive()) throw new AuthenticationException.UserNotActive();
+
+        // Recomputed at each step: an administrator may have removed the method, or mail been switched off,
+        // since the challenge was created.
+        if (!secondFactor.activeMethods(userId).contains(command.method())) {
+            throw new AuthenticationException.MethodNotEnabled();
+        }
+        if (!secondFactor.usableMethods(userId).contains(command.method())) {
+            throw new AuthenticationException.MethodUnavailable();
+        }
 
         // Refused before the code is even looked at, and without recording anything. The
         // counter belongs to the account, so an attempt made while already locked out must not
@@ -62,18 +72,18 @@ public class VerifyTotpChallengeHandler implements VerifyTotpChallengeUseCase {
         // account locked indefinitely at no cost, turning a brute-force guard into a way to
         // deny its owner service.
         if (challengeStore.failedAttempts(userId) >= TwoFactorPolicy.MAX_ATTEMPTS) {
-            throw new AuthenticationException.TotpMaxAttemptsExceeded();
+            throw new AuthenticationException.TwoFactorMaxAttemptsExceeded();
         }
 
-        switch (mfaVerifier.verifyAndConsume(userId, command.code())) {
-            case REPLAYED -> throw new AuthenticationException.TotpCodeInvalid();
+        switch (secondFactor.verify(userId, command.method(), command.challengeId(), command.code())) {
+            case REPLAYED -> throw new AuthenticationException.TwoFactorCodeInvalid();
             case INVALID -> {
                 int attempts = challengeStore.recordFailedAttempt(userId);
                 if (attempts >= TwoFactorPolicy.MAX_ATTEMPTS) {
                     challengeStore.invalidateChallenge(command.challengeId());
-                    throw new AuthenticationException.TotpMaxAttemptsExceeded();
+                    throw new AuthenticationException.TwoFactorMaxAttemptsExceeded();
                 }
-                throw new AuthenticationException.TotpCodeInvalid();
+                throw new AuthenticationException.TwoFactorCodeInvalid();
             }
             case SUCCESS -> {}
         }
@@ -87,6 +97,6 @@ public class VerifyTotpChallengeHandler implements VerifyTotpChallengeUseCase {
             accessTokenPort.generate(creds),
             refreshTokenPort.generate(creds, tokenConfig.refreshTokenExpiryDays())
         );
-        return new LoginResult.Success(tokens, creds);
+        return new LoginResult.Success(tokens, creds, TwoFactorMethod.ordered(secondFactor.activeMethods(userId)));
     }
 }

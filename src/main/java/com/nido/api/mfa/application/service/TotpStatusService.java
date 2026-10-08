@@ -1,7 +1,6 @@
 package com.nido.api.mfa.application.service;
 
 import com.nido.api.mfa.application.port.in.GetTotpStatusUseCase;
-import com.nido.api.mfa.domain.model.UserTotpProfile;
 import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
 import com.nido.api.shared.annotation.ApplicationService;
 import java.util.Collection;
@@ -15,12 +14,6 @@ public class TotpStatusService implements GetTotpStatusUseCase {
 
     public TotpStatusService(UserTotpQueryPort userTotpQuery) {
         this.userTotpQuery = userTotpQuery;
-    }
-
-    public boolean isTotpEnabled(UUID userId) {
-        return userTotpQuery.findById(userId)
-            .map(UserTotpProfile::totpEnabled)
-            .orElse(false);
     }
 
     @Override

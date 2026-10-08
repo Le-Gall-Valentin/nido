@@ -5,19 +5,24 @@ import com.nido.api.authentication.application.port.in.LoginUseCase;
 import com.nido.api.authentication.domain.model.AuthTokens;
 import com.nido.api.authentication.domain.model.AuthenticationException;
 import com.nido.api.authentication.domain.model.LoginResult;
+import com.nido.api.authentication.domain.model.MailCodeDelivery;
+import com.nido.api.authentication.domain.model.MaskedEmail;
 import com.nido.api.authentication.domain.model.UserCredentials;
 import com.nido.api.authentication.domain.port.out.AccessTokenPort;
 import com.nido.api.authentication.domain.port.out.PasswordHasherPort;
 import com.nido.api.authentication.domain.port.out.PasswordVerifierPort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenConfigPort;
 import com.nido.api.authentication.domain.port.out.RefreshTokenIssuerPort;
-import com.nido.api.authentication.domain.port.out.TotpChallengeStorePort;
-import com.nido.api.authentication.domain.port.out.TotpStatusQueryPort;
+import com.nido.api.authentication.domain.port.out.TwoFactorChallengePort;
+import com.nido.api.authentication.domain.port.out.TwoFactorChallengeStorePort;
 import com.nido.api.authentication.domain.port.out.UserCredentialsPort;
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.shared.model.TwoFactorMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Set;
 
 @ApplicationService
 public class LoginHandler implements LoginUseCase {
@@ -29,8 +34,8 @@ public class LoginHandler implements LoginUseCase {
     private final PasswordVerifierPort passwordVerifier;
     private final AccessTokenPort accessTokenPort;
     private final RefreshTokenIssuerPort refreshTokenPort;
-    private final TotpChallengeStorePort totpChallengeStore;
-    private final TotpStatusQueryPort totpStatusQuery;
+    private final TwoFactorChallengeStorePort challengeStore;
+    private final TwoFactorChallengePort secondFactor;
     private final RefreshTokenConfigPort tokenConfig;
     private final String dummyHash;
 
@@ -40,15 +45,15 @@ public class LoginHandler implements LoginUseCase {
                         AccessTokenPort accessTokenPort,
                         RefreshTokenIssuerPort refreshTokenPort,
                         RefreshTokenConfigPort tokenConfig,
-                        TotpChallengeStorePort totpChallengeStore,
-                        TotpStatusQueryPort totpStatusQuery) {
+                        TwoFactorChallengeStorePort challengeStore,
+                        TwoFactorChallengePort secondFactor) {
         this.userCredentialsPort = userCredentialsPort;
         this.passwordHasher = passwordHasher;
         this.passwordVerifier = passwordVerifier;
         this.accessTokenPort = accessTokenPort;
         this.refreshTokenPort = refreshTokenPort;
-        this.totpChallengeStore = totpChallengeStore;
-        this.totpStatusQuery = totpStatusQuery;
+        this.challengeStore = challengeStore;
+        this.secondFactor = secondFactor;
         this.tokenConfig = tokenConfig;
         // Precomputed hash for constant-time dummy comparison — prevents timing-based account enumeration
         this.dummyHash = passwordHasher.hash("nido-timing-sentinel");
@@ -78,10 +83,18 @@ public class LoginHandler implements LoginUseCase {
             throw new AuthenticationException.UserNotActive();
         }
 
-        if (totpStatusQuery.isTotpEnabled(creds.id())) {
-            String challengeId = totpChallengeStore.createChallenge(creds.id());
-            log.info("TOTP challenge created for user: {}", creds.id());
-            return new LoginResult.TotpRequired(challengeId, creds.username());
+        Set<TwoFactorMethod> usable = secondFactor.usableMethods(creds.id());
+        if (!usable.isEmpty()) {
+            String challengeId = challengeStore.createChallenge(creds.id());
+            String maskedEmail = usable.contains(TwoFactorMethod.MAIL) ? MaskedEmail.of(creds.email()) : null;
+            // The mail as only method: the server sends the code itself. A browser sending it from the code screen
+            // would send it twice in development (StrictMode), the second time refused for being too soon.
+            MailCodeDelivery mailCode = usable.equals(Set.of(TwoFactorMethod.MAIL))
+                ? secondFactor.sendMailCode(creds.id(), challengeId)
+                : null;
+            log.info("Two-factor challenge created for user: {}", creds.id());
+            return new LoginResult.TwoFactorRequired(challengeId, creds.username(), TwoFactorMethod.ordered(usable),
+                maskedEmail, mailCode);
         }
 
         log.info("Successful login for user: {}", creds.id());
@@ -89,6 +102,6 @@ public class LoginHandler implements LoginUseCase {
             accessTokenPort.generate(creds),
             refreshTokenPort.generate(creds, tokenConfig.refreshTokenExpiryDays())
         );
-        return new LoginResult.Success(tokens, creds);
+        return new LoginResult.Success(tokens, creds, TwoFactorMethod.ordered(secondFactor.activeMethods(creds.id())));
     }
 }

@@ -2,7 +2,9 @@ package com.nido.api.identity.domain.model;
 
 import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TwoFactorMethod;
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 
 public record UserSelfView(
@@ -11,6 +13,6 @@ public record UserSelfView(
     String email,
     Role role,
     Instant createdAt,
-    boolean totpEnabled,
+    Set<TwoFactorMethod> twoFactorMethods,
     Language language
 ) {}

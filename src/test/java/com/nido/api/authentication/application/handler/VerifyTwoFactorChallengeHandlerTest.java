@@ -1,20 +1,22 @@
 package com.nido.api.authentication.application.handler;
 
-import com.nido.api.authentication.application.dto.VerifyTotpChallengeCommand;
+import com.nido.api.authentication.application.dto.VerifyTwoFactorChallengeCommand;
 import com.nido.api.authentication.domain.model.AuthenticationException;
 import com.nido.api.authentication.domain.model.LoginResult;
-import com.nido.api.authentication.domain.model.TotpVerificationResult;
+import com.nido.api.authentication.domain.model.SecondFactorCheck;
 import com.nido.api.authentication.domain.model.UserCredentials;
 import com.nido.api.authentication.domain.model.*;
 import com.nido.api.authentication.domain.port.out.*;
 import com.nido.api.authentication.domain.port.out.*;
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TwoFactorMethod;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.EnumSet;
 import java.util.Optional;
 import java.time.Instant;
 import java.util.UUID;
@@ -25,12 +27,12 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class VerifyTotpChallengeHandlerTest {
+class VerifyTwoFactorChallengeHandlerTest {
 
     @Mock
-    TotpChallengeStorePort challengeStore;
+    TwoFactorChallengeStorePort challengeStore;
     @Mock
-    MfaTotpVerifierPort mfaVerifier;
+    TwoFactorChallengePort secondFactor;
     @Mock UserCredentialsPort userCredentialsPort;
     @Mock
     AccessTokenPort accessTokenPort;
@@ -39,7 +41,7 @@ class VerifyTotpChallengeHandlerTest {
     @Mock
     RefreshTokenConfigPort tokenConfig;
 
-    private VerifyTotpChallengeHandler handler;
+    private VerifyTwoFactorChallengeHandler handler;
 
     private final UUID userId = UUID.randomUUID();
     private final UserCredentials creds = new UserCredentials(
@@ -49,8 +51,10 @@ class VerifyTotpChallengeHandlerTest {
     @BeforeEach
     void setUp() {
         lenient().when(tokenConfig.refreshTokenExpiryDays()).thenReturn(30);
-        handler = new VerifyTotpChallengeHandler(
-            challengeStore, mfaVerifier, userCredentialsPort,
+        lenient().when(secondFactor.activeMethods(any())).thenReturn(EnumSet.of(TwoFactorMethod.APP));
+        lenient().when(secondFactor.usableMethods(any())).thenReturn(EnumSet.of(TwoFactorMethod.APP));
+        handler = new VerifyTwoFactorChallengeHandler(
+            challengeStore, secondFactor, userCredentialsPort,
             accessTokenPort, refreshTokenPort, tokenConfig
         );
     }
@@ -59,11 +63,11 @@ class VerifyTotpChallengeHandlerTest {
     void verify_validChallenge_validCode_returnsSuccess() {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
-        when(mfaVerifier.verifyAndConsume(userId, "123456")).thenReturn(TotpVerificationResult.SUCCESS);
+        when(secondFactor.verify(userId, TwoFactorMethod.APP, "challenge-id", "123456")).thenReturn(SecondFactorCheck.SUCCESS);
         when(accessTokenPort.generate(creds)).thenReturn("jwt-token");
         when(refreshTokenPort.generate(eq(creds), anyInt())).thenReturn("refresh-token");
 
-        LoginResult.Success result = handler.verify(new VerifyTotpChallengeCommand("challenge-id", "123456"));
+        LoginResult.Success result = handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "123456"));
 
         assertThat(result.tokens().accessToken()).isEqualTo("jwt-token");
         assertThat(result.tokens().refreshToken()).isEqualTo("refresh-token");
@@ -74,11 +78,11 @@ class VerifyTotpChallengeHandlerTest {
     void verify_validChallenge_validCode_invalidatesChallenge() {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
-        when(mfaVerifier.verifyAndConsume(userId, "123456")).thenReturn(TotpVerificationResult.SUCCESS);
+        when(secondFactor.verify(userId, TwoFactorMethod.APP, "challenge-id", "123456")).thenReturn(SecondFactorCheck.SUCCESS);
         when(accessTokenPort.generate(any())).thenReturn("jwt");
         when(refreshTokenPort.generate(any(), anyInt())).thenReturn("refresh");
 
-        handler.verify(new VerifyTotpChallengeCommand("challenge-id", "123456"));
+        handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "123456"));
 
         verify(challengeStore).invalidateChallenge("challenge-id");
     }
@@ -87,19 +91,19 @@ class VerifyTotpChallengeHandlerTest {
     void verify_expiredChallenge_throwsTotpChallengeExpired() {
         when(challengeStore.resolveChallenge("expired-id")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("expired-id", "123456")))
-            .isInstanceOf(AuthenticationException.TotpChallengeExpired.class);
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("expired-id", TwoFactorMethod.APP, "123456")))
+            .isInstanceOf(AuthenticationException.TwoFactorChallengeExpired.class);
     }
 
     @Test
     void verify_invalidCode_throwsTotpCodeInvalid() {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
-        when(mfaVerifier.verifyAndConsume(userId, "000000")).thenReturn(TotpVerificationResult.INVALID);
+        when(secondFactor.verify(userId, TwoFactorMethod.APP, "challenge-id", "000000")).thenReturn(SecondFactorCheck.INVALID);
         when(challengeStore.recordFailedAttempt(userId)).thenReturn(1);
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "000000")))
-            .isInstanceOf(AuthenticationException.TotpCodeInvalid.class);
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "000000")))
+            .isInstanceOf(AuthenticationException.TwoFactorCodeInvalid.class);
     }
 
     @Test
@@ -109,7 +113,7 @@ class VerifyTotpChallengeHandlerTest {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(inactive));
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "123456")))
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "123456")))
             .isInstanceOf(AuthenticationException.UserNotActive.class);
     }
 
@@ -118,7 +122,7 @@ class VerifyTotpChallengeHandlerTest {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "123456")))
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "123456")))
             .isInstanceOf(AuthenticationException.UserNotFound.class);
     }
 
@@ -126,11 +130,11 @@ class VerifyTotpChallengeHandlerTest {
     void verify_invalidCode_recordsTheAttemptAgainstTheAccount() {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
-        when(mfaVerifier.verifyAndConsume(userId, "000000")).thenReturn(TotpVerificationResult.INVALID);
+        when(secondFactor.verify(userId, TwoFactorMethod.APP, "challenge-id", "000000")).thenReturn(SecondFactorCheck.INVALID);
         when(challengeStore.recordFailedAttempt(userId)).thenReturn(1);
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "000000")))
-            .isInstanceOf(AuthenticationException.TotpCodeInvalid.class);
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "000000")))
+            .isInstanceOf(AuthenticationException.TwoFactorCodeInvalid.class);
 
         verify(challengeStore).recordFailedAttempt(userId);
     }
@@ -139,11 +143,11 @@ class VerifyTotpChallengeHandlerTest {
     void verify_invalidCode_atMaxAttempts_throwsTotpMaxAttemptsExceededAndInvalidates() {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
-        when(mfaVerifier.verifyAndConsume(userId, "000000")).thenReturn(TotpVerificationResult.INVALID);
+        when(secondFactor.verify(userId, TwoFactorMethod.APP, "challenge-id", "000000")).thenReturn(SecondFactorCheck.INVALID);
         when(challengeStore.recordFailedAttempt(userId)).thenReturn(5);
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "000000")))
-            .isInstanceOf(AuthenticationException.TotpMaxAttemptsExceeded.class);
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "000000")))
+            .isInstanceOf(AuthenticationException.TwoFactorMaxAttemptsExceeded.class);
 
         verify(challengeStore).invalidateChallenge("challenge-id");
     }
@@ -154,11 +158,11 @@ class VerifyTotpChallengeHandlerTest {
         // the challenge is consumed (accepted trade-off: user must re-login from scratch)
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
-        when(mfaVerifier.verifyAndConsume(userId, "123456")).thenReturn(TotpVerificationResult.SUCCESS);
+        when(secondFactor.verify(userId, TwoFactorMethod.APP, "challenge-id", "123456")).thenReturn(SecondFactorCheck.SUCCESS);
         when(accessTokenPort.generate(creds)).thenReturn("jwt");
         when(refreshTokenPort.generate(eq(creds), anyInt())).thenThrow(new RuntimeException("DB error"));
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "123456")))
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "123456")))
             .isInstanceOf(RuntimeException.class)
             .hasMessage("DB error");
         verify(challengeStore).invalidateChallenge("challenge-id");
@@ -168,11 +172,11 @@ class VerifyTotpChallengeHandlerTest {
     void verify_invalidCode_belowMaxAttempts_doesNotInvalidateChallenge() {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
-        when(mfaVerifier.verifyAndConsume(userId, "000000")).thenReturn(TotpVerificationResult.INVALID);
+        when(secondFactor.verify(userId, TwoFactorMethod.APP, "challenge-id", "000000")).thenReturn(SecondFactorCheck.INVALID);
         when(challengeStore.recordFailedAttempt(userId)).thenReturn(4);
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "000000")))
-            .isInstanceOf(AuthenticationException.TotpCodeInvalid.class);
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "000000")))
+            .isInstanceOf(AuthenticationException.TwoFactorCodeInvalid.class);
 
         verify(challengeStore, never()).invalidateChallenge(any());
     }
@@ -181,10 +185,10 @@ class VerifyTotpChallengeHandlerTest {
     void verify_replayedCode_doesNotIncrementFailedAttempts() {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
-        when(mfaVerifier.verifyAndConsume(userId, "123456")).thenReturn(TotpVerificationResult.REPLAYED);
+        when(secondFactor.verify(userId, TwoFactorMethod.APP, "challenge-id", "123456")).thenReturn(SecondFactorCheck.REPLAYED);
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "123456")))
-            .isInstanceOf(AuthenticationException.TotpCodeInvalid.class);
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "123456")))
+            .isInstanceOf(AuthenticationException.TwoFactorCodeInvalid.class);
 
         verify(challengeStore, never()).recordFailedAttempt(any());
     }
@@ -193,10 +197,10 @@ class VerifyTotpChallengeHandlerTest {
     void verify_replayedCode_doesNotInvalidateChallenge() {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
-        when(mfaVerifier.verifyAndConsume(userId, "123456")).thenReturn(TotpVerificationResult.REPLAYED);
+        when(secondFactor.verify(userId, TwoFactorMethod.APP, "challenge-id", "123456")).thenReturn(SecondFactorCheck.REPLAYED);
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "123456")))
-            .isInstanceOf(AuthenticationException.TotpCodeInvalid.class);
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "123456")))
+            .isInstanceOf(AuthenticationException.TwoFactorCodeInvalid.class);
 
         verify(challengeStore, never()).invalidateChallenge(any());
     }
@@ -212,10 +216,10 @@ class VerifyTotpChallengeHandlerTest {
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
         when(challengeStore.failedAttempts(userId)).thenReturn(5);
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("fresh-challenge", "123456")))
-            .isInstanceOf(AuthenticationException.TotpMaxAttemptsExceeded.class);
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("fresh-challenge", TwoFactorMethod.APP, "123456")))
+            .isInstanceOf(AuthenticationException.TwoFactorMaxAttemptsExceeded.class);
 
-        verifyNoInteractions(mfaVerifier);
+        verify(secondFactor, never()).verify(any(), any(), any(), any());
     }
 
     @Test
@@ -226,8 +230,8 @@ class VerifyTotpChallengeHandlerTest {
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
         when(challengeStore.failedAttempts(userId)).thenReturn(7);
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("fresh-challenge", "000000")))
-            .isInstanceOf(AuthenticationException.TotpMaxAttemptsExceeded.class);
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("fresh-challenge", TwoFactorMethod.APP, "000000")))
+            .isInstanceOf(AuthenticationException.TwoFactorMaxAttemptsExceeded.class);
 
         verify(challengeStore, never()).recordFailedAttempt(any());
     }
@@ -237,11 +241,11 @@ class VerifyTotpChallengeHandlerTest {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
         when(challengeStore.failedAttempts(userId)).thenReturn(4);
-        when(mfaVerifier.verifyAndConsume(userId, "123456")).thenReturn(TotpVerificationResult.SUCCESS);
+        when(secondFactor.verify(userId, TwoFactorMethod.APP, "challenge-id", "123456")).thenReturn(SecondFactorCheck.SUCCESS);
         when(accessTokenPort.generate(creds)).thenReturn("jwt");
         when(refreshTokenPort.generate(eq(creds), anyInt())).thenReturn("refresh");
 
-        LoginResult.Success result = handler.verify(new VerifyTotpChallengeCommand("challenge-id", "123456"));
+        LoginResult.Success result = handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "123456"));
 
         assertThat(result.credentials()).isEqualTo(creds);
     }
@@ -252,11 +256,11 @@ class VerifyTotpChallengeHandlerTest {
         // failures into their next login.
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
-        when(mfaVerifier.verifyAndConsume(userId, "123456")).thenReturn(TotpVerificationResult.SUCCESS);
+        when(secondFactor.verify(userId, TwoFactorMethod.APP, "challenge-id", "123456")).thenReturn(SecondFactorCheck.SUCCESS);
         when(accessTokenPort.generate(creds)).thenReturn("jwt");
         when(refreshTokenPort.generate(eq(creds), anyInt())).thenReturn("refresh");
 
-        handler.verify(new VerifyTotpChallengeCommand("challenge-id", "123456"));
+        handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "123456"));
 
         verify(challengeStore).clearFailedAttempts(userId);
     }
@@ -265,12 +269,34 @@ class VerifyTotpChallengeHandlerTest {
     void verify_invalidCode_doesNotClearTheAccountCounter() {
         when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
         when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
-        when(mfaVerifier.verifyAndConsume(userId, "000000")).thenReturn(TotpVerificationResult.INVALID);
+        when(secondFactor.verify(userId, TwoFactorMethod.APP, "challenge-id", "000000")).thenReturn(SecondFactorCheck.INVALID);
         when(challengeStore.recordFailedAttempt(userId)).thenReturn(2);
 
-        assertThatThrownBy(() -> handler.verify(new VerifyTotpChallengeCommand("challenge-id", "000000")))
-            .isInstanceOf(AuthenticationException.TotpCodeInvalid.class);
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.APP, "000000")))
+            .isInstanceOf(AuthenticationException.TwoFactorCodeInvalid.class);
 
         verify(challengeStore, never()).clearFailedAttempts(any());
+    }
+
+    @Test
+    void a_method_removed_during_the_challenge_is_refused_by_name() {
+        when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
+        when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
+        when(secondFactor.activeMethods(userId)).thenReturn(EnumSet.of(TwoFactorMethod.APP));
+
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.MAIL, "004213")))
+            .isInstanceOf(AuthenticationException.MethodNotEnabled.class);
+        verify(challengeStore, never()).recordFailedAttempt(any());
+    }
+
+    @Test
+    void a_paused_method_is_refused_by_name() {
+        when(challengeStore.resolveChallenge("challenge-id")).thenReturn(Optional.of(userId));
+        when(userCredentialsPort.findById(userId)).thenReturn(Optional.of(creds));
+        when(secondFactor.activeMethods(userId)).thenReturn(EnumSet.of(TwoFactorMethod.MAIL));
+        when(secondFactor.usableMethods(userId)).thenReturn(EnumSet.noneOf(TwoFactorMethod.class));
+
+        assertThatThrownBy(() -> handler.verify(new VerifyTwoFactorChallengeCommand("challenge-id", TwoFactorMethod.MAIL, "004213")))
+            .isInstanceOf(AuthenticationException.MethodUnavailable.class);
     }
 }

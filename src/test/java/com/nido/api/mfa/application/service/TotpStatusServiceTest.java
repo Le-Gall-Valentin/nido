@@ -1,6 +1,5 @@
 package com.nido.api.mfa.application.service;
 
-import com.nido.api.mfa.domain.model.UserTotpProfile;
 import com.nido.api.mfa.domain.port.out.UserTotpQueryPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,7 +7,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,25 +29,9 @@ class TotpStatusServiceTest {
     }
 
     @Test
-    void isTotpEnabled_userFoundAndTotpEnabled_returnsTrue() {
-        UserTotpProfile profile = new UserTotpProfile(userId,true, Optional.of("SECRET"));
-        when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
+    void the_accounts_with_the_app_on_are_read_from_the_store() {
+        when(userTotpQuery.findTotpEnabledAmong(List.of(userId))).thenReturn(Set.of(userId));
 
-        assertThat(service.isTotpEnabled(userId)).isTrue();
-    }
-
-    @Test
-    void isTotpEnabled_userFoundAndTotpDisabled_returnsFalse() {
-        UserTotpProfile profile = new UserTotpProfile(userId,false, Optional.empty());
-        when(userTotpQuery.findById(userId)).thenReturn(Optional.of(profile));
-
-        assertThat(service.isTotpEnabled(userId)).isFalse();
-    }
-
-    @Test
-    void isTotpEnabled_userNotFound_returnsFalse() {
-        when(userTotpQuery.findById(userId)).thenReturn(Optional.empty());
-
-        assertThat(service.isTotpEnabled(userId)).isFalse();
+        assertThat(service.findTotpEnabledAmong(List.of(userId))).containsExactly(userId);
     }
 }

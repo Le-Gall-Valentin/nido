@@ -19,15 +19,6 @@ class IdentityTotpStatusAdapterTest {
     @Mock GetTotpStatusUseCase getTotpStatusUseCase;
 
     @Test
-    void isTotpEnabled_delegatesToGetTotpStatusUseCase() {
-        IdentityTotpStatusAdapter adapter = new IdentityTotpStatusAdapter(getTotpStatusUseCase);
-        UUID userId = UUID.randomUUID();
-        when(getTotpStatusUseCase.isTotpEnabled(userId)).thenReturn(true);
-
-        assertThat(adapter.isTotpEnabled(userId)).isTrue();
-    }
-
-    @Test
     void findTotpEnabledAmong_delegatesToGetTotpStatusUseCase() {
         IdentityTotpStatusAdapter adapter = new IdentityTotpStatusAdapter(getTotpStatusUseCase);
         UUID enabledId = UUID.randomUUID();

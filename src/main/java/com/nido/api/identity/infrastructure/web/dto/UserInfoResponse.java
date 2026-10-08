@@ -1,8 +1,10 @@
 package com.nido.api.identity.infrastructure.web.dto;
 
 import com.nido.api.shared.model.Role;
+import com.nido.api.shared.model.TwoFactorMethod;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 // Intentional duplication: authentication BC has an identical record. Keep both in sync.
@@ -23,8 +25,8 @@ public record UserInfoResponse(
     @Schema(description = "Date de création du compte (UTC)", example = "2024-01-15T10:30:00Z")
     Instant createdAt,
 
-    @Schema(description = "Indique si l'authentification à deux facteurs est activée", example = "false")
-    boolean totpEnabled,
+    @Schema(description = "Les méthodes de double authentification activées, en pause comprises (APP, MAIL)")
+    List<TwoFactorMethod> twoFactorMethods,
 
     @Schema(description = "Langue du compte (fr, en), ou null tant qu'aucune n'a été enregistrée", example = "fr", nullable = true)
     String language

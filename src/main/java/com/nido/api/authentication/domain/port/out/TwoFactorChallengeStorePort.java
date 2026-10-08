@@ -3,7 +3,7 @@ package com.nido.api.authentication.domain.port.out;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface TotpChallengeStorePort {
+public interface TwoFactorChallengeStorePort {
     String createChallenge(UUID userId);
     Optional<UUID> resolveChallenge(String challengeId);
     void invalidateChallenge(String challengeId);

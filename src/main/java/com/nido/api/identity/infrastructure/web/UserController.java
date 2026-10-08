@@ -9,6 +9,7 @@ import com.nido.api.identity.application.port.in.ListUsersUseCase;
 import com.nido.api.identity.application.port.in.ResendInvitationUseCase;
 import com.nido.api.identity.application.port.in.UpdateUserUseCase;
 import com.nido.api.shared.model.Language;
+import com.nido.api.shared.model.TwoFactorMethod;
 import com.nido.api.shared.security.AuthenticatedUser;
 import com.nido.api.shared.security.CurrentUser;
 import com.nido.api.identity.application.port.in.DeactivateUserUseCase;
@@ -148,7 +149,8 @@ public class UserController {
     public ResponseEntity<UserInfoResponse> me(@Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
         UserSelfView view = getCurrentUserUseCase.getCurrentUser(caller.userId());
         return ResponseEntity.ok(new UserInfoResponse(
-            view.id(), view.username(), view.email(), view.role(), view.createdAt(), view.totpEnabled(),
+            view.id(), view.username(), view.email(), view.role(), view.createdAt(),
+            TwoFactorMethod.ordered(view.twoFactorMethods()),
             view.language() == null ? null : view.language().code()));
     }
 

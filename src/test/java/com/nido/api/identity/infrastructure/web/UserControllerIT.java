@@ -135,11 +135,11 @@ class UserControllerIT {
             .andExpect(jsonPath("$.email").value("testuser@test.com"))
             .andExpect(jsonPath("$.role").value("USER"))
             .andExpect(jsonPath("$.createdAt").isNotEmpty())
-            .andExpect(jsonPath("$.totpEnabled").value(false));
+            .andExpect(jsonPath("$.twoFactorMethods").isEmpty());
     }
 
     @Test
-    void me_withTotpEnabled_returnsTotpEnabledTrue() throws Exception {
+    void me_withTheAppOn_namesIt() throws Exception {
         UserIdentityEntity totpUser = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").get();
         // Build a valid access token directly — loginAs would be blocked by TOTP challenge
         Instant now = Instant.now();
@@ -158,7 +158,7 @@ class UserControllerIT {
 
         mockMvc.perform(get("/api/users/me").cookie(access))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.totpEnabled").value(true))
+            .andExpect(jsonPath("$.twoFactorMethods[0]").value("APP"))
             .andExpect(jsonPath("$.username").value("totpuser"))
             .andExpect(jsonPath("$.email").value("totpuser@test.com"));
     }

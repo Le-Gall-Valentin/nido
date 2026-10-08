@@ -18,12 +18,12 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class RedisTotpChallengeStoreTest {
+class RedisTwoFactorChallengeStoreTest {
 
     @Mock StringRedisTemplate redisTemplate;
     @Mock ValueOperations<String, String> valueOps;
 
-    private RedisTotpChallengeStore store;
+    private RedisTwoFactorChallengeStore store;
     private final UUID userId = UUID.randomUUID();
 
     @BeforeEach
@@ -31,7 +31,7 @@ class RedisTotpChallengeStoreTest {
         lenient().when(redisTemplate.opsForValue()).thenReturn(valueOps);
         var properties = new NidoProperties(null, null, null, null, null, null,
             new NidoProperties.SecurityProperties(20, 30, 15));
-        store = new RedisTotpChallengeStore(redisTemplate, properties);
+        store = new RedisTwoFactorChallengeStore(redisTemplate, properties);
     }
 
     @Test
