@@ -1,9 +1,12 @@
 package com.nido.api.identity.application.handler;
 
+import com.nido.api.identity.domain.model.EmailAddress;
 import com.nido.api.identity.domain.model.IdentityException;
+import com.nido.api.identity.domain.model.ProfileUpdate;
 import com.nido.api.identity.domain.model.UpdateProfileCommand;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.AccountRecoveryPort;
+import com.nido.api.identity.domain.port.out.AddressChangeCodePort;
 import com.nido.api.identity.domain.port.out.PasswordCheckPort;
 import com.nido.api.identity.domain.port.out.ProfileMailPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
@@ -20,6 +23,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -35,6 +39,7 @@ class UpdateMyProfileHandlerTest {
     @Mock PasswordCheckPort passwordCheck;
     @Mock ProfileMailPort profileMail;
     @Mock AccountRecoveryPort accountRecovery;
+    @Mock AddressChangeCodePort addressChangeCode;
 
     private final UUID userId = UUID.randomUUID();
     private final User jane = new User(userId, "jane", "jane@test.com", Role.USER, true, Instant.now(), Language.FR);
@@ -42,7 +47,8 @@ class UpdateMyProfileHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new UpdateMyProfileHandler(userRepository, userCommandPort, passwordCheck, profileMail, accountRecovery);
+        handler = new UpdateMyProfileHandler(userRepository, userCommandPort, passwordCheck, profileMail, accountRecovery,
+            addressChangeCode);
     }
 
     @Test
@@ -155,5 +161,91 @@ class UpdateMyProfileHandlerTest {
 
         assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "xyz", "x@test.com", null)))
             .isInstanceOf(IdentityException.UserNotFound.class);
+    }
+
+    @Test
+    void with_the_mail_method_on_a_new_address_first_gets_a_code_and_nothing_is_saved() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
+        when(passwordCheck.matches(userId, "password")).thenReturn(true);
+        when(addressChangeCode.required(userId)).thenReturn(true);
+        when(userRepository.findByEmail(new EmailAddress("new@test.com"))).thenReturn(Optional.empty());
+        when(addressChangeCode.send(userId, "new@test.com")).thenReturn(60L);
+
+        ProfileUpdate update = handler.updateProfile(new UpdateProfileCommand(userId, "jane", "New@Test.com", "password"));
+
+        assertThat(update).isEqualTo(new ProfileUpdate.EmailCodeSent("new@test.com", 60));
+        verify(userCommandPort, never()).updateProfile(any());
+        verifyNoInteractions(profileMail, accountRecovery);
+    }
+
+    @Test
+    void the_right_code_saves_the_address_and_tells_the_old_one() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
+        when(passwordCheck.matches(userId, "password")).thenReturn(true);
+        when(addressChangeCode.required(userId)).thenReturn(true);
+        when(userRepository.findByEmail(new EmailAddress("new@test.com"))).thenReturn(Optional.empty());
+        when(addressChangeCode.check(userId, "new@test.com", "004213")).thenReturn(true);
+        UpdateProfileCommand command = new UpdateProfileCommand(userId, "jane", "new@test.com", "password", "004213");
+
+        assertThat(handler.updateProfile(command)).isEqualTo(new ProfileUpdate.Saved());
+        verify(userCommandPort).updateProfile(command);
+        verify(profileMail).emailChanged("jane", "jane@test.com", "new@test.com", Language.FR);
+    }
+
+    @Test
+    void a_wrong_code_saves_nothing() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
+        when(passwordCheck.matches(userId, "password")).thenReturn(true);
+        when(addressChangeCode.required(userId)).thenReturn(true);
+        when(userRepository.findByEmail(new EmailAddress("new@test.com"))).thenReturn(Optional.empty());
+        when(addressChangeCode.check(userId, "new@test.com", "000000")).thenReturn(false);
+
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com", "password", "000000")))
+            .isInstanceOf(IdentityException.EmailCodeInvalid.class);
+        verify(userCommandPort, never()).updateProfile(any());
+    }
+
+    @Test
+    void an_address_another_account_uses_is_refused_before_any_code_leaves() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
+        when(passwordCheck.matches(userId, "password")).thenReturn(true);
+        when(addressChangeCode.required(userId)).thenReturn(true);
+        User john = new User(UUID.randomUUID(), "john", "john@test.com", Role.USER, true, Instant.now(), null);
+        when(userRepository.findByEmail(new EmailAddress("john@test.com"))).thenReturn(Optional.of(john));
+
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "john@test.com", "password")))
+            .isInstanceOf(IdentityException.EmailAlreadyExists.class);
+        verify(addressChangeCode, never()).send(any(), any());
+    }
+
+    @Test
+    void the_password_is_checked_before_a_code_is_sent() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
+        when(passwordCheck.matches(userId, "wrong")).thenReturn(false);
+
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com", "wrong")))
+            .isInstanceOf(IdentityException.InvalidCurrentPassword.class);
+        verifyNoInteractions(addressChangeCode);
+    }
+
+    @Test
+    void without_the_mail_method_or_with_it_paused_the_address_is_saved_as_before() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
+        when(passwordCheck.matches(userId, "password")).thenReturn(true);
+        when(addressChangeCode.required(userId)).thenReturn(false);
+        UpdateProfileCommand command = new UpdateProfileCommand(userId, "jane", "new@test.com", "password");
+
+        assertThat(handler.updateProfile(command)).isEqualTo(new ProfileUpdate.Saved());
+        verify(userCommandPort).updateProfile(command);
+        verify(addressChangeCode, never()).send(any(), any());
+    }
+
+    @Test
+    void a_letter_case_change_asks_for_no_code() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
+        UpdateProfileCommand command = new UpdateProfileCommand(userId, "jane", "Jane@Test.com", null);
+
+        assertThat(handler.updateProfile(command)).isEqualTo(new ProfileUpdate.Saved());
+        verifyNoInteractions(addressChangeCode);
     }
 }

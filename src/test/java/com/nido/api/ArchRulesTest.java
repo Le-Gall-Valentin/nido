@@ -619,7 +619,7 @@ class ArchRulesTest {
         // identity.infra → mfa.application.port.in
         new CrossBcAppDep("identity",
             new String[]{BASE + "mfa.application.port.in.."},
-            Set.of("MfaTwoFactorMethodsAdapter")),
+            Set.of("MfaTwoFactorMethodsAdapter", "MfaAddressChangeCodeAdapter")),
 
         // mfa.infra → identity.application.port.in
         new CrossBcAppDep("mfa",

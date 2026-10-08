@@ -8,6 +8,7 @@ public abstract sealed class IdentityException extends RuntimeException
             IdentityException.InvalidUsername,
             IdentityException.UsernameAlreadyExists,
             IdentityException.EmailAlreadyExists,
+            IdentityException.EmailCodeInvalid,
             IdentityException.InsufficientPermissions,
             IdentityException.CurrentPasswordRequired,
             IdentityException.InvalidCurrentPassword,
@@ -37,6 +38,11 @@ public abstract sealed class IdentityException extends RuntimeException
     }
     public static final class EmailAlreadyExists extends IdentityException {
         public EmailAlreadyExists() { super("Email already taken"); }
+    }
+
+    /** The code given for a new address is not the one sent there — or no longer valid. */
+    public static final class EmailCodeInvalid extends IdentityException {
+        public EmailCodeInvalid() { super("The code sent to the new address is invalid or expired"); }
     }
     public static final class InsufficientPermissions extends IdentityException {
         public InsufficientPermissions() { super("Insufficient permissions"); }

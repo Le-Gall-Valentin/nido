@@ -50,6 +50,10 @@ public class IdentityExceptionHandler {
             case IdentityException.EmailAlreadyExists ex ->
                     response(409, ex, "Email already registered.");
 
+            case IdentityException.EmailCodeInvalid ex ->
+                    new IdentityErrorResponse(400, ex.getClass().getSimpleName(),
+                        "The code sent to the new address is invalid or expired.", "email_code_invalid");
+
             case IdentityException.CurrentPasswordRequired ex ->
                     response(400, ex, "The current password is required to change the email address.");
 
@@ -71,13 +75,16 @@ public class IdentityExceptionHandler {
         ProblemDetail problem = ProblemDetailFactory.of(
                 HttpStatus.valueOf(response.status()), response.title(), response.detail(),
                 URI.create(request.getRequestURI()));
+        if (response.errorCode() != null) {
+            problem.setProperty("error_code", response.errorCode());
+        }
 
         return ResponseEntity.status(response.status()).body(problem);
     }
 
     private static IdentityErrorResponse response(int status, IdentityException e, String detail) {
-        return new IdentityErrorResponse(status, e.getClass().getSimpleName(), detail);
+        return new IdentityErrorResponse(status, e.getClass().getSimpleName(), detail, null);
     }
 
-    private record IdentityErrorResponse(int status, String title, String detail) {}
+    private record IdentityErrorResponse(int status, String title, String detail, String errorCode) {}
 }

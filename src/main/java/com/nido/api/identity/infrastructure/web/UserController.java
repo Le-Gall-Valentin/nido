@@ -21,6 +21,7 @@ import com.nido.api.identity.domain.model.AdminResetTwoFactorCommand;
 import com.nido.api.identity.domain.model.ChangeMyPasswordCommand;
 import com.nido.api.identity.domain.model.DeactivateUserCommand;
 import com.nido.api.identity.domain.model.DeleteUserCommand;
+import com.nido.api.identity.domain.model.ProfileUpdate;
 import com.nido.api.identity.domain.model.RegisterCommand;
 import com.nido.api.identity.domain.model.RegisteredAccount;
 import com.nido.api.identity.domain.model.ResendInvitationCommand;
@@ -33,6 +34,7 @@ import com.nido.api.identity.infrastructure.web.dto.ChangePasswordRequest;
 import com.nido.api.identity.infrastructure.web.dto.InvitationDeliveryResponse;
 import com.nido.api.identity.infrastructure.web.dto.InvitationStateResponse;
 import com.nido.api.identity.infrastructure.web.dto.PageResponse;
+import com.nido.api.identity.infrastructure.web.dto.ProfileUpdateResponse;
 import com.nido.api.identity.infrastructure.web.dto.RegisterRequest;
 import com.nido.api.identity.infrastructure.web.dto.RegisteredUserResponse;
 import com.nido.api.identity.infrastructure.web.dto.ResetTwoFactorRequest;
@@ -580,13 +582,23 @@ public class UserController {
             Retourne `409` si le nouveau nom d'utilisateur ou la nouvelle adresse email est déjà pris.
             Changer l'adresse (hors casse) exige `currentPassword` (`400` s'il manque, `422` s'il est faux) ;
             l'ancienne adresse en est prévenue par mail.
+
+            Si la double authentification par mail est active (et l'envoi de mails aussi), un changement d'adresse
+            répond d'abord **202** `{ emailCodeRequired, sentTo, resendAfterSeconds }` sans rien enregistrer : un
+            code est parti à la nouvelle adresse ; la même requête avec `emailCode` enregistre. `400`
+            `email_code_invalid` si le code est faux ou expiré ; `429` `resend_too_soon` ou `send_limit_reached`.
             """
     )
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Profil mis à jour", content = @Content),
         @ApiResponse(
+            responseCode = "202",
+            description = "Rien n'est enregistré : un code est parti à la nouvelle adresse (double authentification par mail active)",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ProfileUpdateResponse.class))
+        ),
+        @ApiResponse(
             responseCode = "400",
-            description = "Corps invalide (champs manquants ou non conformes aux contraintes), ou adresse changée sans le mot de passe actuel (`CurrentPasswordRequired`)",
+            description = "Corps invalide (champs manquants ou non conformes aux contraintes), adresse changée sans le mot de passe actuel (`CurrentPasswordRequired`), ou code de la nouvelle adresse faux ou expiré (`email_code_invalid`)",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
         ),
         @ApiResponse(
@@ -624,11 +636,15 @@ public class UserController {
     @RateLimiting(max = 20)
     @RateLimiting(mode = RateLimitMode.USER, max = 5)
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> updateProfile(@Valid @RequestBody UpdateProfileRequest request,
-                                              @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
-        updateMyProfileUseCase.updateProfile(
-            new UpdateProfileCommand(caller.userId(), request.username(), request.email(), request.currentPassword()));
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ProfileUpdateResponse> updateProfile(@Valid @RequestBody UpdateProfileRequest request,
+                                                               @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
+        ProfileUpdate update = updateMyProfileUseCase.updateProfile(new UpdateProfileCommand(
+            caller.userId(), request.username(), request.email(), request.currentPassword(), request.emailCode()));
+        return switch (update) {
+            case ProfileUpdate.Saved saved -> ResponseEntity.noContent().build();
+            case ProfileUpdate.EmailCodeSent sent ->
+                ResponseEntity.accepted().body(new ProfileUpdateResponse(true, sent.sentTo(), sent.resendAfterSeconds()));
+        };
     }
 
     @Operation(

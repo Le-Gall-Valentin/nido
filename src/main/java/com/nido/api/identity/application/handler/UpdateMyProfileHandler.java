@@ -3,9 +3,11 @@ package com.nido.api.identity.application.handler;
 import com.nido.api.identity.application.port.in.UpdateMyProfileUseCase;
 import com.nido.api.identity.domain.model.EmailAddress;
 import com.nido.api.identity.domain.model.IdentityException;
+import com.nido.api.identity.domain.model.ProfileUpdate;
 import com.nido.api.identity.domain.model.UpdateProfileCommand;
 import com.nido.api.identity.domain.model.User;
 import com.nido.api.identity.domain.port.out.AccountRecoveryPort;
+import com.nido.api.identity.domain.port.out.AddressChangeCodePort;
 import com.nido.api.identity.domain.port.out.PasswordCheckPort;
 import com.nido.api.identity.domain.port.out.ProfileMailPort;
 import com.nido.api.identity.domain.port.out.UserCommandPort;
@@ -23,15 +25,17 @@ public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
     private final PasswordCheckPort passwordCheck;
     private final ProfileMailPort profileMail;
     private final AccountRecoveryPort accountRecovery;
+    private final AddressChangeCodePort addressChangeCode;
 
     public UpdateMyProfileHandler(UserRepository userRepository, UserCommandPort userCommandPort,
                                   PasswordCheckPort passwordCheck, ProfileMailPort profileMail,
-                                  AccountRecoveryPort accountRecovery) {
+                                  AccountRecoveryPort accountRecovery, AddressChangeCodePort addressChangeCode) {
         this.userRepository = userRepository;
         this.userCommandPort = userCommandPort;
         this.passwordCheck = passwordCheck;
         this.profileMail = profileMail;
         this.accountRecovery = accountRecovery;
+        this.addressChangeCode = addressChangeCode;
     }
 
     /**
@@ -41,10 +45,16 @@ public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
      * the previous address is told — it is the one the holder still reads if the change was not theirs —
      * and the reset links it was sent stop working. A change of letter case only is the same mailbox,
      * and asks for nothing.
+     *
+     * <p>When the account's second factor is the mail, the new address must prove it receives mail first: a
+     * typo would otherwise lock its holder out at the next sign-in. The first request sends a code there and
+     * saves nothing; the same request with the code saves. A taken address is refused before anything is sent —
+     * the code would land in someone else's mailbox. A wrong code is counted next to it, in this transaction, so
+     * that error does not roll the count back.
      */
     @Override
-    @Transactional
-    public void updateProfile(UpdateProfileCommand command) {
+    @Transactional(noRollbackFor = IdentityException.EmailCodeInvalid.class)
+    public ProfileUpdate updateProfile(UpdateProfileCommand command) {
         User user = userRepository.findById(command.userId())
             .orElseThrow(IdentityException.UserNotFound::new);
         if (!user.isActive()) {
@@ -58,6 +68,20 @@ public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
             if (!passwordCheck.matches(user.id(), command.currentPassword())) {
                 throw new IdentityException.InvalidCurrentPassword();
             }
+            if (addressChangeCode.required(user.id())) {
+                boolean taken = userRepository.findByEmail(new EmailAddress(command.email()))
+                    .filter(other -> !other.id().equals(user.id()))
+                    .isPresent();
+                if (taken) {
+                    throw new IdentityException.EmailAlreadyExists();
+                }
+                if (command.emailCode() == null) {
+                    return new ProfileUpdate.EmailCodeSent(command.email(), addressChangeCode.send(user.id(), command.email()));
+                }
+                if (!addressChangeCode.check(user.id(), command.email(), command.emailCode())) {
+                    throw new IdentityException.EmailCodeInvalid();
+                }
+            }
         }
         userCommandPort.updateProfile(command);
         if (addressChanges) {
@@ -68,5 +92,6 @@ public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
         if (addressChanges && user.email() != null) {
             profileMail.emailChanged(user.username(), user.email(), command.email(), user.language());
         }
+        return new ProfileUpdate.Saved();
     }
 }

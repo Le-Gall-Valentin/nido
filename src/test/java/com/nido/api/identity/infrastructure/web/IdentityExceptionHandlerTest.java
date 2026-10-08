@@ -94,4 +94,12 @@ class IdentityExceptionHandlerTest {
         assertThat(response.getBody().getInstance()).isNotNull();
         assertThat(response.getBody().getInstance().toString()).isEqualTo("/api/users");
     }
+
+    @Test
+    void a_wrong_address_code_is_a_bad_request_named_for_the_client_never_a_401() {
+        var response = handler.handle(new IdentityException.EmailCodeInvalid(), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().getProperties()).containsEntry("error_code", "email_code_invalid");
+    }
 }
