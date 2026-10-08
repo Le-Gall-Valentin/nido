@@ -1,28 +1,61 @@
 import { useState } from 'react'
-import type { User } from '@/entities/user'
-import type { LoginOutcome } from '@/features/auth'
+import type { TwoFactorMethod, User } from '@/entities/user'
+import type { LoginOutcome, TwoFactorChallenge } from '@/features/auth'
 import { useAuth } from '@/features/auth'
+import type { CodeChoice, MailSetupData } from '@/features/two-factor'
 
-type LoginStep = 'credentials' | 'totp' | 'enroll' | 'setup'
+type LoginStep =
+  | { name: 'credentials' }
+  | { name: 'choose' }
+  | { name: 'code'; method: TwoFactorMethod; resendAfterSeconds: number; mailLimitSeconds: number | null }
+  | { name: 'propose' }
+  | { name: 'setup_app' }
+  | { name: 'setup_mail'; sentTo: string; resendAfterSeconds: number }
+
+const CREDENTIALS: LoginStep = { name: 'credentials' }
 
 export function useLoginFlow() {
   const finalizeLogin = useAuth(s => s.finalizeLogin)
-  const [step, setStep] = useState<LoginStep>('credentials')
+  const [step, setStep] = useState<LoginStep>(CREDENTIALS)
+  const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null)
   const [pendingUser, setPendingUser] = useState<User | null>(null)
-  const [pendingUsername, setPendingUsername] = useState('')
 
-  // 'authenticated' is intentionally excluded: login() never returns it because
-  // a successful non-TOTP login always proposes enrollment first (finalizeLogin
-  // is called separately). If LoginOutcome ever gains new variants, TypeScript
-  // will surface a compile error here via the exhaustive else-if chain below.
+  // 'authenticated' never reaches here: LoginForm keeps it, the store has already signed the account in.
   function handleLoginOutcome(outcome: Exclude<LoginOutcome, { kind: 'authenticated' }>) {
-    if (outcome.kind === 'totp_required') {
-      setPendingUsername(outcome.username)
-      setStep('totp')
-    } else if (outcome.kind === 'enrollment_proposed') {
+    if (outcome.kind === 'enrollment_proposed') {
       setPendingUser(outcome.user)
-      setStep('enroll')
+      setStep({ name: 'propose' })
+      return
     }
+    const { challenge: next } = outcome
+    setChallenge(next)
+    if (next.methods.length > 1) {
+      setStep({ name: 'choose' })
+      return
+    }
+    const method = next.methods[0]
+    // The server never asks for a second factor without naming one; were it to, the identifiers are the way on.
+    if (method === undefined) {
+      setStep({ name: 'credentials' })
+      return
+    }
+    const mailCode = next.mailCode
+    setStep({
+      name: 'code',
+      method,
+      resendAfterSeconds: mailCode?.sent ? mailCode.resendAfterSeconds : 0,
+      mailLimitSeconds: mailCode && !mailCode.sent ? mailCode.retryAfterSeconds : null,
+    })
+  }
+
+  function handleChoice(choice: CodeChoice) {
+    setStep(choice.method === 'APP'
+      ? { name: 'code', method: 'APP', resendAfterSeconds: 0, mailLimitSeconds: null }
+      : { name: 'code', method: 'MAIL', resendAfterSeconds: choice.resendAfterSeconds, mailLimitSeconds: null })
+  }
+
+  function handleChooseAnother() {
+    setStep({ name: 'choose' })
   }
 
   function handleVerified(user: User) {
@@ -30,21 +63,29 @@ export function useLoginFlow() {
   }
 
   function handleBack() {
-    setStep('credentials')
+    setStep(CREDENTIALS)
+    setChallenge(null)
     setPendingUser(null)
-    setPendingUsername('')
   }
 
-  function handleActivate() {
-    setStep('setup')
+  function handleAppChosen() {
+    setStep({ name: 'setup_app' })
+  }
+
+  function handleMailStarted(setup: MailSetupData) {
+    setStep({ name: 'setup_mail', sentTo: setup.sentTo, resendAfterSeconds: setup.resendAfterSeconds })
+  }
+
+  function handleBackToProposal() {
+    setStep({ name: 'propose' })
   }
 
   function handleSkip() {
     if (pendingUser) finalizeLogin(pendingUser)
   }
 
-  function handleSetupSuccess() {
-    if (pendingUser) finalizeLogin(pendingUser)
+  function handleSetupSuccess(method: TwoFactorMethod) {
+    if (pendingUser) finalizeLogin({ ...pendingUser, twoFactorMethods: [method] })
   }
 
   function handleSetupDismiss() {
@@ -52,15 +93,8 @@ export function useLoginFlow() {
   }
 
   return {
-    step,
-    pendingUser,
-    pendingUsername,
-    handleLoginOutcome,
-    handleVerified,
-    handleBack,
-    handleActivate,
-    handleSkip,
-    handleSetupSuccess,
-    handleSetupDismiss,
+    step, challenge, pendingUser,
+    handleLoginOutcome, handleChoice, handleChooseAnother, handleVerified, handleBack,
+    handleAppChosen, handleMailStarted, handleBackToProposal, handleSkip, handleSetupSuccess, handleSetupDismiss,
   }
 }

@@ -8,28 +8,50 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }))
 
+const ALICE = vi.hoisted(() => ({ id: '1', username: 'alice', email: 'alice@x.fr', role: 'USER', createdAt: '2026-01-01T00:00:00Z', twoFactorMethods: [] as string[] }))
+
 vi.mock('@/features/auth', () => ({
   LoginForm: ({ labelId, onLoginOutcome, initialIdentifier }: { labelId?: string; onLoginOutcome?: (o: unknown) => void; initialIdentifier?: string }) => (
     <div>
       <form aria-label="login" aria-labelledby={labelId} />
       <output data-testid="identifier">{initialIdentifier ?? ''}</output>
-      <button onClick={() => onLoginOutcome?.({ kind: 'totp_required', username: 'alice' })}>trigger-totp</button>
-      <button onClick={() => onLoginOutcome?.({ kind: 'enrollment_proposed', user: { id: '1', username: 'alice', role: 'USER' } })}>trigger-enroll</button>
+      <button onClick={() => onLoginOutcome?.({ kind: 'two_factor_required', challenge: { username: 'alice', methods: ['APP'], maskedEmail: null, mailCode: null } })}>trigger-app</button>
+      <button onClick={() => onLoginOutcome?.({ kind: 'two_factor_required', challenge: { username: 'alice', methods: ['MAIL'], maskedEmail: 'a••••••e@x.fr', mailCode: { sent: true, resendAfterSeconds: 60 } } })}>trigger-mail</button>
+      <button onClick={() => onLoginOutcome?.({ kind: 'two_factor_required', challenge: { username: 'alice', methods: ['MAIL'], maskedEmail: 'a••••••e@x.fr', mailCode: { sent: false, retryAfterSeconds: 420 } } })}>trigger-mail-limit</button>
+      <button onClick={() => onLoginOutcome?.({ kind: 'two_factor_required', challenge: { username: 'alice', methods: ['APP', 'MAIL'], maskedEmail: 'a••••••e@x.fr', mailCode: null } })}>trigger-both</button>
+      <button onClick={() => onLoginOutcome?.({ kind: 'enrollment_proposed', user: ALICE })}>trigger-enroll</button>
     </div>
   ),
   useAuth: vi.fn(),
 }))
 
 vi.mock('@/features/two-factor', () => ({
-  CodeStep: ({ onVerified, onBack }: { onVerified: (u: unknown) => void; onBack: () => void }) => (
+  MethodChoiceStep: ({ onChoose, onBack }: { onChoose: (c: unknown) => void; onBack: () => void }) => (
     <div>
-      <button onClick={() => onVerified({ id: '1', username: 'alice', role: 'USER' })}>verify</button>
+      <span>choice</span>
+      <button onClick={() => onChoose({ method: 'APP' })}>choose-app</button>
+      <button onClick={() => onChoose({ method: 'MAIL', resendAfterSeconds: 60 })}>choose-mail</button>
       <button onClick={onBack}>back</button>
     </div>
   ),
-  EnrollProposal: ({ onAppChosen, onSkip }: { onAppChosen: () => void; onSkip: () => void }) => (
+  CodeStep: ({ method, resendAfterSeconds, mailLimitSeconds, onVerified, onBack, onChooseAnother }: {
+    method: string; resendAfterSeconds?: number; mailLimitSeconds?: number | null
+    onVerified: (u: unknown) => void; onBack: () => void; onChooseAnother?: () => void
+  }) => (
     <div>
-      <button onClick={onAppChosen}>activate</button>
+      <span>{`code-${method}-${resendAfterSeconds ?? 0}-${mailLimitSeconds ?? 'none'}`}</span>
+      <button onClick={() => onVerified(ALICE)}>verify</button>
+      <button onClick={onBack}>back</button>
+      {onChooseAnother && <button onClick={onChooseAnother}>choose-another</button>}
+    </div>
+  ),
+  EnrollProposal: ({ mailAvailable, onAppChosen, onMailStarted, onSkip }: {
+    mailAvailable: boolean; onAppChosen: () => void; onMailStarted: (s: unknown) => void; onSkip: () => void
+  }) => (
+    <div>
+      <span>{`proposal-mail-${mailAvailable}`}</span>
+      <button onClick={onAppChosen}>activate-app</button>
+      <button onClick={() => onMailStarted({ sentTo: 'alice@x.fr', resendAfterSeconds: 60 })}>activate-mail</button>
       <button onClick={onSkip}>skip</button>
     </div>
   ),
@@ -39,25 +61,31 @@ vi.mock('@/features/two-factor', () => ({
       {onDismiss && <button onClick={onDismiss}>setup-dismiss</button>}
     </div>
   ),
+  MailSetupStep: ({ sentTo, onSuccess, onBack, onDismiss }: { sentTo: string; onSuccess: () => void; onBack?: () => void; onDismiss?: () => void }) => (
+    <div>
+      <span>{`mail-setup-${sentTo}`}</span>
+      <button onClick={onSuccess}>mail-setup-success</button>
+      {onBack && <button onClick={onBack}>mail-setup-back</button>}
+      {onDismiss && <button onClick={onDismiss}>mail-setup-dismiss</button>}
+    </div>
+  ),
   twoFactorApi: {},
 }))
 
-const availability = vi.hoisted(() => ({ current: 'unavailable' as 'loading' | 'available' | 'unavailable' }))
+const availability = vi.hoisted(() => ({ reset: 'unavailable' as 'loading' | 'available' | 'unavailable', mail: 'unavailable' as 'loading' | 'available' | 'unavailable' }))
 
 vi.mock('@/entities/capabilities', () => ({
-  usePasswordResetAvailability: () => availability.current,
+  usePasswordResetAvailability: () => availability.reset,
+  useMailAvailability: () => availability.mail,
   capabilitiesApi: {},
 }))
 
 const mockFinalizeLogin = vi.fn()
-const mockTwoFactorApi = {
-  verify: vi.fn(), sendMailCode: vi.fn(), list: vi.fn(), setupApp: vi.fn(), setupMail: vi.fn(),
-  confirm: vi.fn(), sendDisableCode: vi.fn(), disable: vi.fn(),
-}
 
 describe('LoginPage', () => {
   beforeEach(() => {
-    availability.current = 'unavailable'
+    availability.reset = 'unavailable'
+    availability.mail = 'unavailable'
     vi.mocked(useAuth).mockImplementation((selector) =>
       selector({ finalizeLogin: mockFinalizeLogin, user: null, isInitializing: false, signedOut: false, signingIn: null, login: vi.fn(), logout: vi.fn(), initialize: vi.fn(), patchUser: vi.fn() })
     )
@@ -68,7 +96,7 @@ describe('LoginPage', () => {
     beforeEach(() => {
       render(
         <MemoryRouter>
-          <LoginPage twoFactorApi={mockTwoFactorApi} />
+          <LoginPage />
         </MemoryRouter>
       )
     })
@@ -110,68 +138,110 @@ describe('LoginPage', () => {
     })
   })
 
-  describe('step transitions', () => {
-    it('shows the code step when login outcome is totp_required', () => {
-      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
-      fireEvent.click(screen.getByText('trigger-totp'))
-      expect(screen.getByText('verify')).not.toBeNull()
-      expect(screen.getByText('back')).not.toBeNull()
-      expect(screen.queryByRole('form')).toBeNull()
+  describe('second factor', () => {
+    const renderPage = () => render(<MemoryRouter><LoginPage /></MemoryRouter>)
+
+    it('the app alone goes straight to its code, with no way to another method', () => {
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-app'))
+
+      expect(screen.getByText('code-APP-0-none')).toBeTruthy()
+      expect(screen.queryByText('choose-another')).toBeNull()
     })
 
-    it('shows the enrol proposal when login outcome is enrollment_proposed', () => {
-      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
-      fireEvent.click(screen.getByText('trigger-enroll'))
-      expect(screen.getByText('activate')).not.toBeNull()
-      expect(screen.getByText('skip')).not.toBeNull()
-      expect(screen.queryByRole('form')).toBeNull()
+    it('the mail alone goes to its code, already sent', () => {
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-mail'))
+
+      expect(screen.getByText('code-MAIL-60-none')).toBeTruthy()
     })
 
-    it('returns to credentials step when back is clicked from totp step', () => {
-      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
-      fireEvent.click(screen.getByText('trigger-totp'))
+    it('a code the login could not send carries the wait', () => {
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-mail-limit'))
+
+      expect(screen.getByText('code-MAIL-0-420')).toBeTruthy()
+    })
+
+    it('both lead to the choice, and back to it under the same sign-in', () => {
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-both'))
+      expect(screen.getByText('choice')).toBeTruthy()
+
+      fireEvent.click(screen.getByText('choose-mail'))
+      expect(screen.getByText('code-MAIL-60-none')).toBeTruthy()
+
+      fireEvent.click(screen.getByText('choose-another'))
+      fireEvent.click(screen.getByText('choose-app'))
+      expect(screen.getByText('code-APP-0-none')).toBeTruthy()
+    })
+
+    it('back from a code returns to the identifiers', () => {
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-app'))
       fireEvent.click(screen.getByText('back'))
-      expect(screen.getByRole('form')).not.toBeNull()
-      expect(screen.queryByText('verify')).toBeNull()
+
+      expect(screen.getByRole('form')).toBeTruthy()
     })
 
-    it('shows the app setup when user activates from enrollment proposal', () => {
-      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
-      fireEvent.click(screen.getByText('trigger-enroll'))
-      fireEvent.click(screen.getByText('activate'))
-      expect(screen.getByText('setup-success')).not.toBeNull()
-      expect(screen.getByText('setup-dismiss')).not.toBeNull()
-      expect(screen.queryByText('activate')).toBeNull()
-    })
-
-    it('calls finalizeLogin after totp verify', () => {
-      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
-      fireEvent.click(screen.getByText('trigger-totp'))
+    it('a right code finishes the sign-in', () => {
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-app'))
       fireEvent.click(screen.getByText('verify'))
-      expect(mockFinalizeLogin).toHaveBeenCalledWith({ id: '1', username: 'alice', role: 'USER' })
+
+      expect(mockFinalizeLogin).toHaveBeenCalledWith(ALICE)
+    })
+  })
+
+  describe('proposal', () => {
+    const renderPage = () => render(<MemoryRouter><LoginPage /></MemoryRouter>)
+
+    it('offers the mail only when the server can send it', () => {
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-enroll'))
+      expect(screen.getByText('proposal-mail-false')).toBeTruthy()
     })
 
-    it('calls finalizeLogin when skip is chosen from enrollment proposal', () => {
-      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
+    it('offers both when mail is on', () => {
+      availability.mail = 'available'
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-enroll'))
+      expect(screen.getByText('proposal-mail-true')).toBeTruthy()
+    })
+
+    it('the app, once set up, signs in with the method on', () => {
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-enroll'))
+      fireEvent.click(screen.getByText('activate-app'))
+      fireEvent.click(screen.getByText('setup-success'))
+
+      expect(mockFinalizeLogin).toHaveBeenCalledWith({ ...ALICE, twoFactorMethods: ['APP'] })
+    })
+
+    it('the mail goes to the address check, and back to the proposal if wanted', () => {
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-enroll'))
+      fireEvent.click(screen.getByText('activate-mail'))
+      expect(screen.getByText('mail-setup-alice@x.fr')).toBeTruthy()
+
+      fireEvent.click(screen.getByText('mail-setup-back'))
+      expect(screen.getByText(/proposal-mail/)).toBeTruthy()
+    })
+
+    it('the mail, once confirmed, signs in with the method on', () => {
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-enroll'))
+      fireEvent.click(screen.getByText('activate-mail'))
+      fireEvent.click(screen.getByText('mail-setup-success'))
+
+      expect(mockFinalizeLogin).toHaveBeenCalledWith({ ...ALICE, twoFactorMethods: ['MAIL'] })
+    })
+
+    it('skipping or leaving a setup signs in as is', () => {
+      renderPage()
       fireEvent.click(screen.getByText('trigger-enroll'))
       fireEvent.click(screen.getByText('skip'))
-      expect(mockFinalizeLogin).toHaveBeenCalledWith({ id: '1', username: 'alice', role: 'USER' })
-    })
-
-    it('calls finalizeLogin after setup success', () => {
-      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
-      fireEvent.click(screen.getByText('trigger-enroll'))
-      fireEvent.click(screen.getByText('activate'))
-      fireEvent.click(screen.getByText('setup-success'))
-      expect(mockFinalizeLogin).toHaveBeenCalledWith({ id: '1', username: 'alice', role: 'USER' })
-    })
-
-    it('calls finalizeLogin when setup is dismissed', () => {
-      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
-      fireEvent.click(screen.getByText('trigger-enroll'))
-      fireEvent.click(screen.getByText('activate'))
-      fireEvent.click(screen.getByText('setup-dismiss'))
-      expect(mockFinalizeLogin).toHaveBeenCalledWith({ id: '1', username: 'alice', role: 'USER' })
+      expect(mockFinalizeLogin).toHaveBeenLastCalledWith(ALICE)
     })
   })
 
@@ -182,15 +252,15 @@ describe('LoginPage', () => {
     }
 
     it('offers the link under the form when the server can send it', () => {
-      availability.current = 'available'
-      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
+      availability.reset = 'available'
+      render(<MemoryRouter><LoginPage /></MemoryRouter>)
 
       expect(screen.getByRole('link', { name: 'forgot.link' }).getAttribute('href')).toBe('/forgot-password')
     })
 
     it.each(['unavailable', 'loading'] as const)('shows the page as it always was when %s', (state) => {
-      availability.current = state
-      render(<MemoryRouter><LoginPage twoFactorApi={mockTwoFactorApi} /></MemoryRouter>)
+      availability.reset = state
+      render(<MemoryRouter><LoginPage /></MemoryRouter>)
 
       expect(screen.queryByRole('link', { name: 'forgot.link' })).toBeNull()
       expect(screen.getByText('help.contact_admin')).not.toBeNull()
@@ -200,7 +270,7 @@ describe('LoginPage', () => {
       render(
         <MemoryRouter initialEntries={[{ pathname: '/login', state: { invitation: 'accepted', identifier: 'carol' } }]}>
           <Routes>
-            <Route path="/login" element={<><LoginPage twoFactorApi={mockTwoFactorApi} /><Where /></>} />
+            <Route path="/login" element={<><LoginPage /><Where /></>} />
           </Routes>
         </MemoryRouter>,
       )
@@ -216,7 +286,7 @@ describe('LoginPage', () => {
       render(
         <MemoryRouter initialEntries={[{ pathname: '/login', state: { passwordReset: 'done' } }]}>
           <Routes>
-            <Route path="/login" element={<><LoginPage twoFactorApi={mockTwoFactorApi} /><Where /></>} />
+            <Route path="/login" element={<><LoginPage /><Where /></>} />
           </Routes>
         </MemoryRouter>,
       )

@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { LoginForm } from '@/features/auth'
-import { CodeStep, EnrollProposal, AppSetupFlow, twoFactorApi as defaultTwoFactorApi } from '@/features/two-factor'
+import { MethodChoiceStep, CodeStep, EnrollProposal, AppSetupFlow, MailSetupStep, twoFactorApi as defaultTwoFactorApi } from '@/features/two-factor'
 import type { ITwoFactorChallengeApi, ITwoFactorMethodsApi } from '@/features/two-factor'
-import { capabilitiesApi as defaultCapabilitiesApi, usePasswordResetAvailability, type ICapabilitiesApi } from '@/entities/capabilities'
+import { capabilitiesApi as defaultCapabilitiesApi, useMailAvailability, usePasswordResetAvailability, type ICapabilitiesApi } from '@/entities/capabilities'
 import { ROUTES } from '@/shared/config'
 import { Alert } from '@/shared/ui'
 import { AuthShell } from './AuthShell'
@@ -26,14 +26,19 @@ export function LoginPage({ twoFactorApi = defaultTwoFactorApi, capabilitiesApi 
   const [resetDone] = useState(() => isPasswordResetDone(location.state))
   const [welcomed] = useState(() => acceptedInvitationIdentifier(location.state))
   const passwordReset = usePasswordResetAvailability(capabilitiesApi)
+  const mail = useMailAvailability(capabilitiesApi)
   const {
     step,
+    challenge,
     pendingUser,
-    pendingUsername,
     handleLoginOutcome,
+    handleChoice,
+    handleChooseAnother,
     handleVerified,
     handleBack,
-    handleActivate,
+    handleAppChosen,
+    handleMailStarted,
+    handleBackToProposal,
     handleSkip,
     handleSetupSuccess,
     handleSetupDismiss,
@@ -47,7 +52,7 @@ export function LoginPage({ twoFactorApi = defaultTwoFactorApi, capabilitiesApi 
 
   return (
     <AuthShell>
-      {step === 'credentials' && (
+      {step.name === 'credentials' && (
         <>
           {resetDone && <Alert variant="success" className="mb-6">{t('reset.done')}</Alert>}
           {welcomed !== null && <Alert variant="success" className="mb-6">{t('welcome.done')}</Alert>}
@@ -72,32 +77,54 @@ export function LoginPage({ twoFactorApi = defaultTwoFactorApi, capabilitiesApi 
         </>
       )}
 
-      {step === 'totp' && (
-        <CodeStep
-          username={pendingUsername}
-          method="APP"
+      {step.name === 'choose' && challenge && (
+        <MethodChoiceStep
+          username={challenge.username}
+          maskedEmail={challenge.maskedEmail}
           api={twoFactorApi}
-          onVerified={handleVerified}
+          onChoose={handleChoice}
           onBack={handleBack}
         />
       )}
 
-      {step === 'enroll' && pendingUser && (
+      {step.name === 'code' && challenge && (
+        <CodeStep
+          username={challenge.username}
+          method={step.method}
+          maskedEmail={challenge.maskedEmail}
+          resendAfterSeconds={step.resendAfterSeconds}
+          mailLimitSeconds={step.mailLimitSeconds}
+          api={twoFactorApi}
+          onVerified={handleVerified}
+          onBack={handleBack}
+          onChooseAnother={challenge.methods.length > 1 ? handleChooseAnother : undefined}
+        />
+      )}
+
+      {step.name === 'propose' && pendingUser && (
         <EnrollProposal
           username={pendingUser.username}
           email={pendingUser.email}
-          mailAvailable={false}
+          mailAvailable={mail === 'available'}
           api={twoFactorApi}
-          onAppChosen={handleActivate}
-          onMailStarted={handleActivate}
+          onAppChosen={handleAppChosen}
+          onMailStarted={handleMailStarted}
           onSkip={handleSkip}
         />
       )}
 
-      {step === 'setup' && (
-        <AppSetupFlow
+      {step.name === 'setup_app' && (
+        <AppSetupFlow api={twoFactorApi} onSuccess={() => handleSetupSuccess('APP')} onDismiss={handleSetupDismiss} />
+      )}
+
+      {step.name === 'setup_mail' && (
+        <MailSetupStep
+          variant="page"
+          sentTo={step.sentTo}
+          resendAfterSeconds={step.resendAfterSeconds}
           api={twoFactorApi}
-          onSuccess={handleSetupSuccess}
+          onSuccess={() => handleSetupSuccess('MAIL')}
+          onBack={handleBackToProposal}
           onDismiss={handleSetupDismiss}
         />
       )}

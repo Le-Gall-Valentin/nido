@@ -24,10 +24,5 @@ export interface ResendData {
   resendAfterSeconds: number
 }
 
-/** What the sign-in said of the code by mail, when the mail was the only method. */
-export type MailCodeState =
-  | { sent: true; resendAfterSeconds: number }
-  | { sent: false; retryAfterSeconds: number }
-
 /** What the choice screen moves on with: the app, or the mail with the wait before another code. */
 export type CodeChoice = { method: 'APP' } | { method: 'MAIL'; resendAfterSeconds: number }

@@ -145,8 +145,9 @@ describe('LoginForm', () => {
     expect(submitBtn.disabled).toBe(false)
   })
 
-  it('calls onLoginOutcome when login returns totp_required', async () => {
-    const mockLogin = vi.fn().mockResolvedValue({ kind: 'totp_required', username: 'alice' })
+  it('calls onLoginOutcome when login asks for a second factor', async () => {
+    const outcome = { kind: 'two_factor_required', challenge: { username: 'alice', methods: ['APP'], maskedEmail: null, mailCode: null } }
+    const mockLogin = vi.fn().mockResolvedValue(outcome)
     const onLoginOutcome = vi.fn()
     const { getByLabelText } = setup(mockLogin, { onLoginOutcome })
 
@@ -154,7 +155,7 @@ describe('LoginForm', () => {
     fireEvent.change(getByLabelText('field.password'), { target: { value: 'secret' } })
     fireEvent.submit(getByLabelText('field.identifier').closest('form')!)
 
-    await waitFor(() => expect(onLoginOutcome).toHaveBeenCalledWith({ kind: 'totp_required', username: 'alice' }))
+    await waitFor(() => expect(onLoginOutcome).toHaveBeenCalledWith(outcome))
   })
 
   it('calls onLoginOutcome when login returns enrollment_proposed', async () => {

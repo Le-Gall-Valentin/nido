@@ -71,17 +71,34 @@ describe('authStore', () => {
     expect(store.getState().signingIn).toBeNull()
   })
 
-  it('login returns totp_required with the name the server gave, not what was typed', async () => {
+  it('login hands the challenge over, with the name the server gave', async () => {
     const api = createApiMock()
-    vi.mocked(api.login).mockResolvedValue({ type: 'totp_required', username: 'alice' })
+    const challenge = {
+      username: 'alice', methods: ['MAIL' as const], maskedEmail: 'a••••••e@x.fr',
+      mailCode: { sent: true as const, resendAfterSeconds: 60 },
+    }
+    vi.mocked(api.login).mockResolvedValue({ type: 'two_factor_required', challenge })
     const store = createAuthStore(api)
 
-    const outcome = await store.getState().login({ identifier: 'Alice@Test.com', password: 'secret' })
-
-    expect(outcome).toEqual({ kind: 'totp_required', username: 'alice' })
+    await expect(store.getState().login({ identifier: 'alice@x.fr', password: 'pw' }))
+      .resolves.toEqual({ kind: 'two_factor_required', challenge })
     expect(mockedSetSessionHint).not.toHaveBeenCalled()
     expect(mockedNotifyLoginSuccess).not.toHaveBeenCalled()
     expect(store.getState().user).toBeNull()
+  })
+
+  it('an account whose methods are all paused signs in at once, without a proposal', async () => {
+    const api = createApiMock()
+    const user = {
+      id: '1', username: 'alice', role: 'USER' as const, email: 'a@x.fr', createdAt: '2024-01-01T00:00:00Z',
+      twoFactorMethods: ['MAIL' as const],
+    }
+    vi.mocked(api.login).mockResolvedValue({ type: 'success', user })
+    const store = createAuthStore(api)
+
+    await expect(store.getState().login({ identifier: 'alice', password: 'pw' })).resolves.toEqual({ kind: 'authenticated' })
+    expect(store.getState().user).toEqual(user)
+    expect(store.getState().signingIn).toBeNull()
   })
 
 

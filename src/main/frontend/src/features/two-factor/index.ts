@@ -1,6 +1,6 @@
 export type { ITwoFactorChallengeApi } from './model/ITwoFactorChallengeApi'
 export type { ITwoFactorMethodsApi } from './model/ITwoFactorMethodsApi'
-export type { AppSetupData, MailSetupData, MethodState, ResendData, MailCodeState, CodeChoice } from './model/types'
+export type { AppSetupData, MailSetupData, MethodState, ResendData, CodeChoice } from './model/types'
 export {
   CodeError, ChallengeExpiredError, MaxAttemptsError, ConfirmMaxAttemptsError, EnrolmentExpiredError,
   MethodUnavailableError, MethodNotEnabledError, MethodAlreadyEnabledError, ResendTooSoonError, SendLimitError,
