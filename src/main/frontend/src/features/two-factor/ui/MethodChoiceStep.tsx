@@ -47,6 +47,7 @@ export function MethodChoiceStep({ username, maskedEmail, api, onChoose, onBack 
       <button
         type="button"
         onClick={onBack}
+        disabled={sending}
         className="mb-5 flex items-center gap-1 bg-transparent border-0 p-0 text-[13.5px] text-fg-2 cursor-pointer hover:text-fg-0"
       >
         <ChevronLeft className="size-[15px]" />

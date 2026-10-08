@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, within, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { LoginPage } from './LoginPage'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -6,6 +6,11 @@ import { useAuth } from '@/features/auth'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
+}))
+
+/** The last callback the choice was given: what a request still in flight answers to once it lands. */
+const late = vi.hoisted(() => ({
+  choose: null as null | ((choice: unknown) => void),
 }))
 
 const ALICE = vi.hoisted(() => ({ id: '1', username: 'alice', email: 'alice@x.fr', role: 'USER', createdAt: '2026-01-01T00:00:00Z', twoFactorMethods: [] as string[] }))
@@ -27,6 +32,7 @@ vi.mock('@/features/auth', () => ({
 
 vi.mock('@/features/two-factor', () => ({
   MethodChoiceStep: ({ onChoose, onBack }: { onChoose: (c: unknown) => void; onBack: () => void }) => (
+    late.choose = onChoose,
     <div>
       <span>choice</span>
       <button onClick={() => onChoose({ method: 'APP' })}>choose-app</button>
@@ -174,6 +180,20 @@ describe('LoginPage', () => {
       fireEvent.click(screen.getByText('choose-another'))
       fireEvent.click(screen.getByText('choose-app'))
       expect(screen.getByText('code-APP-0-none')).toBeTruthy()
+    })
+
+    it('a code that lands after going back leaves the identifiers in place', () => {
+      // The mail's code was on its way when "back" was pressed: its answer must not open a code screen
+      // for a sign-in that is no longer there — the column would stay empty until a reload.
+      renderPage()
+      fireEvent.click(screen.getByText('trigger-both'))
+      const choose = late.choose
+      fireEvent.click(screen.getByText('back'))
+
+      act(() => choose?.({ method: 'MAIL', resendAfterSeconds: 60 }))
+
+      expect(screen.getByRole('form')).toBeTruthy()
+      expect(screen.queryByText('code-MAIL-60-none')).toBeNull()
     })
 
     it('back from a code returns to the identifiers', () => {

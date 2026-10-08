@@ -48,10 +48,15 @@ export function useLoginFlow() {
     })
   }
 
+  // The mail's code answers after it left: by then the person may have gone back to the identifiers, and a
+  // code screen without its sign-in would leave the column empty.
   function handleChoice(choice: CodeChoice) {
-    setStep(choice.method === 'APP'
-      ? { name: 'code', method: 'APP', resendAfterSeconds: 0, mailLimitSeconds: null }
-      : { name: 'code', method: 'MAIL', resendAfterSeconds: choice.resendAfterSeconds, mailLimitSeconds: null })
+    setStep(current => {
+      if (current.name !== 'choose') return current
+      return choice.method === 'APP'
+        ? { name: 'code', method: 'APP', resendAfterSeconds: 0, mailLimitSeconds: null }
+        : { name: 'code', method: 'MAIL', resendAfterSeconds: choice.resendAfterSeconds, mailLimitSeconds: null }
+    })
   }
 
   function handleChooseAnother() {

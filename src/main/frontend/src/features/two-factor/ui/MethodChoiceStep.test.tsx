@@ -50,6 +50,19 @@ describe('MethodChoiceStep', () => {
     await waitFor(() => expect(onChoose).toHaveBeenCalledWith({ method: 'MAIL', resendAfterSeconds: 35 }))
   })
 
+  it('going back waits for the code on its way', async () => {
+    // Back while the code is leaving would leave its answer with nowhere to land.
+    let deliver: (data: { resendAfterSeconds: number }) => void = () => {}
+    const { onChoose } = setup(vi.fn().mockReturnValue(new Promise(resolve => { deliver = resolve })))
+
+    fireEvent.click(card(/method\.mail_title/))
+
+    expect((screen.getByRole('button', { name: /verify\.back/ }) as HTMLButtonElement).disabled).toBe(true)
+    deliver({ resendAfterSeconds: 60 })
+    await waitFor(() => expect(onChoose).toHaveBeenCalled())
+    expect((screen.getByRole('button', { name: /verify\.back/ }) as HTMLButtonElement).disabled).toBe(false)
+  })
+
   it('a refusal is said on the choice and nothing moves on', async () => {
     const sendMailCode = vi.fn()
       .mockRejectedValueOnce(new SendLimitError(600))
