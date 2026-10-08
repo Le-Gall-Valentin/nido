@@ -45,15 +45,32 @@
   },
   "twofa": {
     "title": "Double authentification (2FA)",
-    "subtitle": "Un code à 6 chiffres généré par votre application sera demandé à chaque connexion.",
+    "subtitle": "Un code vous est demandé à chaque connexion, en plus du mot de passe. Avec les deux méthodes, vous choisissez à chaque connexion.",
     "status_enabled": "Activée",
     "status_disabled": "Désactivée",
-    "desc_enabled": "Votre compte est protégé par une application d'authentification (Google Authenticator, 1Password, etc.). Si vous perdez votre appareil, demandez à un administrateur de réinitialiser votre 2FA.",
-    "desc_disabled": "Votre compte n'est protégé que par votre mot de passe. Activez la double authentification pour ajouter une seconde couche de sécurité.",
-    "btn_enable": "Activer la 2FA",
+    "status_paused": "En pause",
+    "status_unavailable": "Indisponible",
+    "app_title": "Application d'authentification",
+    "app_desc": "Google Authenticator, 1Password, Bitwarden…",
+    "mail_title": "Code par mail",
+    "mail_desc": "Un code envoyé à {{address}}. Pratique quand le téléphone n'est pas sous la main.",
+    "mail_paused": "L'envoi de mails est coupé : aucun code n'est demandé à la connexion tant qu'il ne revient pas. Activez l'application pour rester protégé.",
+    "mail_unavailable": "L'envoi de mails n'est pas configuré sur ce Nido. Demandez à un administrateur.",
+    "help": "Plus accès à aucune de vos méthodes ? Un administrateur peut réinitialiser votre double authentification.",
+    "btn_enable": "Activer",
     "btn_disable": "Désactiver",
-    "success_enabled": "Double authentification activée.",
-    "success_disabled": "Double authentification désactivée."
+    "enable_app_title": "Activer l'application d'authentification",
+    "enable_mail_title": "Activer le code par mail",
+    "success_enabled_app": "Application d'authentification activée.",
+    "success_enabled_mail": "Code par mail activé.",
+    "success_disabled": "Méthode désactivée.",
+    "error": {
+      "mail_unavailable": "L'envoi de mails est coupé : le code par mail ne peut pas être utilisé.",
+      "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min.",
+      "load": "Impossible de charger vos méthodes. Rechargez la page.",
+      "network": "Réseau indisponible.",
+      "server": "Une erreur est survenue. Veuillez réessayer."
+    }
   },
   "password": {
     "title": "Changer de mot de passe",

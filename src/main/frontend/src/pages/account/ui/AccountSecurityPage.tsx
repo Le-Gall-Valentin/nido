@@ -30,11 +30,7 @@ export function AccountSecurityPage({ api = accountApi }: AccountSecurityPagePro
         <p className="mt-1 text-[15px] text-fg-2">{t('pages.security.subtitle')}</p>
       </div>
 
-      <TwoFactorSection
-        user={user}
-        onPatch={patchUser}
-        enrollApi={twoFactorApi}
-      />
+      <TwoFactorSection user={user} onPatch={patchUser} api={twoFactorApi} />
 
       <ChangePasswordSection
         onChangePassword={(current, next) => api.changePassword(current, next)}

@@ -67,8 +67,13 @@
       "max_attempts": "Too many incorrect attempts.",
       "rate_limit": "Too many attempts. Please wait.",
       "network": "Network unavailable.",
-      "server": "A server error occurred."
-    }
+      "server": "A server error occurred.",
+      "send_limit": "Too many codes sent. Try again in {{minutes}} min."
+    },
+    "title_app": "Turn off the authenticator app",
+    "title_mail": "Turn off codes by email",
+    "subtitle_mail": "We sent a code to {{address}}. Enter it to confirm.",
+    "paused": "Email is switched off: codes by email are paused and turn off without a code."
   },
   "method": {
     "app_title": "Authenticator app",

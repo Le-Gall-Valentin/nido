@@ -67,8 +67,13 @@
       "max_attempts": "Trop de tentatives incorrectes.",
       "rate_limit": "Trop de tentatives. Veuillez patienter.",
       "network": "Réseau indisponible.",
-      "server": "Une erreur serveur est survenue."
-    }
+      "server": "Une erreur serveur est survenue.",
+      "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min."
+    },
+    "title_app": "Désactiver l'application d'authentification",
+    "title_mail": "Désactiver le code par mail",
+    "subtitle_mail": "Nous avons envoyé un code à {{address}}. Saisissez-le pour confirmer.",
+    "paused": "L'envoi de mails est coupé : le code par mail est en pause et se désactive sans code."
   },
   "method": {
     "app_title": "Application d'authentification",

@@ -1,143 +1,122 @@
-import { render, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { TwoFactorSection } from './TwoFactorSection'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { describe, expect, it, vi } from 'vitest'
+import { createTestQueryClient } from '@/shared/test'
 import type { User } from '@/entities/user'
-import type { ITwoFactorMethodsApi } from '@/features/two-factor'
+import type { ITwoFactorMethodsApi, MethodState } from '@/features/two-factor'
+import { MethodUnavailableError } from '@/features/two-factor'
+import { TwoFactorSection } from './TwoFactorSection'
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  useTranslation: () => ({ t: (k: string, o?: Record<string, unknown>) => (o ? `${k}:${JSON.stringify(o)}` : k) }),
 }))
 
-vi.mock('@/shared/ui', () => ({
-  Button: ({ children, onClick, disabled, style, className }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-    <button onClick={onClick} disabled={disabled} style={style} className={className}>{children}</button>
-  ),
-  Dialog: ({ open, children, onClose }: { open: boolean; children: React.ReactNode; onClose: () => void; title: string; maxWidth?: string }) =>
-    open ? <div data-testid="enable-dialog"><button onClick={onClose}>close-dialog</button>{children}</div> : null,
-  CTA_BUTTON_STYLE: {},
-}))
-
-vi.mock('@/features/two-factor', () => ({
-  AppSetupFlow: ({ onSuccess, onDismiss }: { onSuccess: () => void; onDismiss: () => void }) => (
-    <div>
-      <button onClick={onSuccess}>totp-success</button>
-      <button onClick={onDismiss}>totp-dismiss</button>
-    </div>
+vi.mock('@/features/two-factor', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/two-factor')>()),
+  AppSetupFlow: ({ onSuccess }: { onSuccess: () => void }) => <button onClick={onSuccess}>app-setup-success</button>,
+  MailSetupStep: ({ sentTo, onSuccess }: { sentTo: string; onSuccess: () => void }) => (
+    <div><span>{`mail-setup-${sentTo}`}</span><button onClick={onSuccess}>mail-setup-success</button></div>
   ),
 }))
 
-vi.mock('./DisableTotpModal', () => ({
-  DisableTotpModal: ({ open, onSuccess, onClose }: { open: boolean; onSuccess: () => void; onClose: () => void; onDisable: (code: string) => Promise<void> }) =>
-    open ? (
-      <div data-testid="disable-modal">
-        <button onClick={onSuccess}>disable-success</button>
-        <button onClick={onClose}>close-modal</button>
-      </div>
-    ) : null,
+vi.mock('./DisableMethodDialog', () => ({
+  DisableMethodDialog: ({ method, paused, resendAfterSeconds, onSuccess }: { method: string; paused: boolean; resendAfterSeconds: number; onSuccess: () => void }) => (
+    <div><span>{`disable-${method}-${paused}-${resendAfterSeconds}`}</span><button onClick={onSuccess}>disable-success</button></div>
+  ),
 }))
 
-const BASE_USER: User = {
-  id: '1', username: 'alice', email: 'alice@test.com',
-  role: 'USER', createdAt: '2024-01-01T00:00:00Z', twoFactorMethods: [],
+const USER: User = { id: '1', username: 'camille', email: 'camille@exemple.fr', role: 'USER', createdAt: '2026-01-01T00:00:00Z', twoFactorMethods: ['APP'] }
+
+function state(method: 'APP' | 'MAIL', enabled: boolean, usable: boolean): MethodState {
+  return { method, enabled, usable }
 }
-const ENABLED_USER: User = { ...BASE_USER, twoFactorMethods: ['APP'] }
 
-const mockEnrollApi: ITwoFactorMethodsApi = {
-  list: vi.fn(),
-  setupApp: vi.fn(),
-  setupMail: vi.fn(),
-  confirm: vi.fn(),
-  sendDisableCode: vi.fn(),
-  disable: vi.fn(),
+function setup(methods: MethodState[], overrides: Partial<ITwoFactorMethodsApi> = {}, user: User = USER) {
+  const api: ITwoFactorMethodsApi = {
+    list: vi.fn().mockResolvedValue(methods), setupApp: vi.fn(), setupMail: vi.fn(), confirm: vi.fn(),
+    sendDisableCode: vi.fn(), disable: vi.fn(), ...overrides,
+  }
+  const onPatch = vi.fn()
+  render(
+    <QueryClientProvider client={createTestQueryClient()}>
+      <TwoFactorSection user={user} onPatch={onPatch} api={api} />
+    </QueryClientProvider>,
+  )
+  return { api, onPatch }
 }
 
 describe('TwoFactorSection', () => {
-  beforeEach(() => vi.clearAllMocks())
+  it('lists both methods and sums them up in the title', async () => {
+    setup([state('APP', true, true), state('MAIL', false, true)])
 
-  it('shows disabled status when the app is off', () => {
-    const { getByText } = render(
-      <TwoFactorSection user={BASE_USER} onPatch={vi.fn()} enrollApi={mockEnrollApi} />
-    )
-    expect(getByText('twofa.status_disabled')).toBeDefined()
+    expect(await screen.findByText('twofa.app_title')).toBeTruthy()
+    expect(screen.getByText('twofa.mail_title')).toBeTruthy()
+    expect(screen.getAllByText('twofa.status_enabled').length).toBe(2)
   })
 
-  it('shows enabled status when the app is on', () => {
-    const { getByText } = render(
-      <TwoFactorSection user={ENABLED_USER} onPatch={vi.fn()} enrollApi={mockEnrollApi} />
-    )
-    expect(getByText('twofa.status_enabled')).toBeDefined()
+  it('the title says paused when every method on is paused', async () => {
+    setup([state('APP', false, true), state('MAIL', true, false)])
+
+    await screen.findByText('twofa.mail_paused')
+    expect(screen.getAllByText('twofa.status_paused').length).toBe(2)
   })
 
-  it('shows enable button when 2FA is disabled', () => {
-    const { getByText } = render(
-      <TwoFactorSection user={BASE_USER} onPatch={vi.fn()} enrollApi={mockEnrollApi} />
-    )
-    expect(getByText('twofa.btn_enable')).toBeDefined()
+  it('turning the app on opens its setup, and success records it', async () => {
+    const { onPatch } = setup([state('APP', false, true), state('MAIL', true, true)], {}, { ...USER, twoFactorMethods: ['MAIL'] })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_enable' }))
+    fireEvent.click(await screen.findByText('app-setup-success'))
+
+    expect(onPatch).toHaveBeenCalledWith({ twoFactorMethods: ['APP', 'MAIL'] })
+    expect(await screen.findByText('twofa.success_enabled_app')).toBeTruthy()
   })
 
-  it('shows disable button when 2FA is enabled', () => {
-    const { getByText } = render(
-      <TwoFactorSection user={ENABLED_USER} onPatch={vi.fn()} enrollApi={mockEnrollApi} />
-    )
-    expect(getByText('twofa.btn_disable')).toBeDefined()
+  it('turning the mail on sends the code on the click, then asks for it', async () => {
+    const setupMail = vi.fn().mockResolvedValue({ sentTo: 'camille@exemple.fr', resendAfterSeconds: 60 })
+    const { onPatch } = setup([state('APP', true, true), state('MAIL', false, true)], { setupMail })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_enable' }))
+    expect(await screen.findByText('mail-setup-camille@exemple.fr')).toBeTruthy()
+    fireEvent.click(screen.getByText('mail-setup-success'))
+
+    expect(setupMail).toHaveBeenCalledOnce()
+    expect(onPatch).toHaveBeenCalledWith({ twoFactorMethods: ['APP', 'MAIL'] })
   })
 
-  it('opens setup dialog when enable button is clicked', () => {
-    const { getByText, getByTestId } = render(
-      <TwoFactorSection user={BASE_USER} onPatch={vi.fn()} enrollApi={mockEnrollApi} />
-    )
-    fireEvent.click(getByText('twofa.btn_enable'))
-    expect(getByTestId('enable-dialog')).toBeDefined()
+  it('mail switched off since the page loaded is said, not a generic error', async () => {
+    setup([state('APP', true, true), state('MAIL', false, true)], { setupMail: vi.fn().mockRejectedValue(new MethodUnavailableError()) })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_enable' }))
+
+    expect(await screen.findByText('twofa.error.mail_unavailable')).toBeTruthy()
   })
 
-  it('opens disable modal when disable button is clicked', () => {
-    const { getByText, getByTestId } = render(
-      <TwoFactorSection user={ENABLED_USER} onPatch={vi.fn()} enrollApi={mockEnrollApi} />
-    )
-    fireEvent.click(getByText('twofa.btn_disable'))
-    expect(getByTestId('disable-modal')).toBeDefined()
-  })
+  it('turning the mail off sends its code on the click, then opens the dialog', async () => {
+    const sendDisableCode = vi.fn().mockResolvedValue({ resendAfterSeconds: 60 })
+    const { onPatch } = setup([state('APP', false, true), state('MAIL', true, true)], { sendDisableCode }, { ...USER, twoFactorMethods: ['MAIL'] })
 
-  it('calls onPatch with the app on and shows success flash after setup', () => {
-    const onPatch = vi.fn()
-    const { getByText } = render(
-      <TwoFactorSection user={BASE_USER} onPatch={onPatch} enrollApi={mockEnrollApi} />
-    )
-    fireEvent.click(getByText('twofa.btn_enable'))
-    fireEvent.click(getByText('totp-success'))
-    expect(onPatch).toHaveBeenCalledWith({ twoFactorMethods: ['APP'] })
-    expect(getByText('twofa.success_enabled')).toBeDefined()
-  })
+    fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_disable' }))
+    expect(await screen.findByText('disable-MAIL-false-60')).toBeTruthy()
+    fireEvent.click(screen.getByText('disable-success'))
 
-  it('calls onPatch with the app off and shows success flash after disable', () => {
-    const onPatch = vi.fn()
-    const { getByText } = render(
-      <TwoFactorSection user={ENABLED_USER} onPatch={onPatch} enrollApi={mockEnrollApi} />
-    )
-    fireEvent.click(getByText('twofa.btn_disable'))
-    fireEvent.click(getByText('disable-success'))
     expect(onPatch).toHaveBeenCalledWith({ twoFactorMethods: [] })
-    expect(getByText('twofa.success_disabled')).toBeDefined()
   })
 
-  it('closes dialog when dismiss is clicked', () => {
-    const { getByText, queryByTestId } = render(
-      <TwoFactorSection user={BASE_USER} onPatch={vi.fn()} enrollApi={mockEnrollApi} />
-    )
-    fireEvent.click(getByText('twofa.btn_enable'))
-    fireEvent.click(getByText('totp-dismiss'))
-    expect(queryByTestId('enable-dialog')).toBeNull()
+  it('a paused mail opens the dialog without sending anything', async () => {
+    const sendDisableCode = vi.fn()
+    setup([state('APP', false, true), state('MAIL', true, false)], { sendDisableCode }, { ...USER, twoFactorMethods: ['MAIL'] })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_disable' }))
+
+    expect(await screen.findByText('disable-MAIL-true-0')).toBeTruthy()
+    expect(sendDisableCode).not.toHaveBeenCalled()
   })
 
-  it('clears flashTimer on unmount', () => {
-    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
-    const { getByText, unmount } = render(
-      <TwoFactorSection user={BASE_USER} onPatch={vi.fn()} enrollApi={mockEnrollApi} />
-    )
-    fireEvent.click(getByText('twofa.btn_enable'))
-    fireEvent.click(getByText('totp-success'))
-    unmount()
-    expect(clearTimeoutSpy).toHaveBeenCalled()
-    clearTimeoutSpy.mockRestore()
+  it('the app is turned off from its own dialog, no code sent', async () => {
+    setup([state('APP', true, true), state('MAIL', false, true)])
+
+    fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_disable' }))
+
+    await waitFor(() => expect(screen.getByText('disable-APP-false-0')).toBeTruthy())
   })
 })
