@@ -6,7 +6,7 @@ import { NetworkError } from '@/shared/lib'
 import {
   CodeInput, ResendCode, ResendTooSoonError, SendLimitError, useResendCountdown, type CodeInputHandle,
 } from '@/features/two-factor'
-import { EmailCodeInvalidError } from '../api/accountApi'
+import { EmailCodeInvalidError, EmailCodeSpentError } from '../api/accountApi'
 
 interface EmailCodeDialogProps {
   sentTo: string
@@ -38,6 +38,7 @@ export function EmailCodeDialog({ sentTo, previousAddress, resendAfterSeconds, o
     } catch (e) {
       setCode('')
       if (e instanceof EmailCodeInvalidError) { setError({ key: 'profile.email_code.error.invalid_code' }); inputRef.current?.focus() }
+      else if (e instanceof EmailCodeSpentError) setError({ key: 'profile.email_code.error.spent' })
       else if (e instanceof NetworkError) setError({ key: 'profile.email_code.error.network' })
       else setError({ key: 'profile.email_code.error.server' })
     } finally {

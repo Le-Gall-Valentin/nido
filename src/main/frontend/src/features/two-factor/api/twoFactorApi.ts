@@ -6,7 +6,7 @@ import type { ITwoFactorChallengeApi } from '../model/ITwoFactorChallengeApi'
 import type { ITwoFactorMethodsApi } from '../model/ITwoFactorMethodsApi'
 import type { AppSetupData, MailSetupData, MethodState, ResendData } from '../model/types'
 import {
-  ChallengeExpiredError, CodeError, ConfirmMaxAttemptsError, EnrolmentExpiredError, MaxAttemptsError,
+  ChallengeExpiredError, CodeError, CodeSpentError, ConfirmMaxAttemptsError, EnrolmentExpiredError, MaxAttemptsError,
   MethodAlreadyEnabledError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError,
 } from '../model/errors'
 
@@ -25,6 +25,7 @@ function fail(error: unknown, lockout: () => Error): never {
     case 'method_unavailable': throw new MethodUnavailableError()
     case 'method_not_enabled': throw new MethodNotEnabledError()
     case 'method_already_enabled': throw new MethodAlreadyEnabledError()
+    case 'code_spent': throw new CodeSpentError()
     case 'resend_too_soon': throw new ResendTooSoonError(data.retryAfterSeconds ?? retryAfter ?? 60)
     case 'send_limit_reached': throw new SendLimitError(data.retryAfterSeconds ?? retryAfter ?? 900)
   }

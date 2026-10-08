@@ -106,4 +106,15 @@ class MailCodeRepositoryAdapterIT {
         assertThat(codes.take(jane, CodePurpose.LOGIN, "hash-b1")).isFalse();
         assertThat(codes.find(jane, CodePurpose.LOGIN)).isEmpty();
     }
+
+    @Test
+    void a_code_with_five_failures_recorded_cannot_be_taken_even_by_a_guess_already_under_way() {
+        // Requests running at once can each compare a guess before the fifth failure deletes the code.
+        codes.replace(code(CodePurpose.EMAIL_CHANGE, "b1", NOW));
+        for (int i = 0; i < 5; i++) {
+            codes.recordFailure(jane, CodePurpose.EMAIL_CHANGE);
+        }
+
+        assertThat(codes.take(jane, CodePurpose.EMAIL_CHANGE, "hash-b1")).isFalse();
+    }
 }

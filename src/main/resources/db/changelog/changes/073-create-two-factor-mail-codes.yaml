@@ -4,9 +4,10 @@ databaseChangeLog:
       author: nido
       comment: >
         The codes sent by mail: one at a time per account and purpose, a new one replacing the last. Neither
-        the code nor what it is bound to is kept: code_hash is an HMAC of the code keyed by what it is bound
-        to (the sign-in challenge, the account, or the address being confirmed), binding_hash only a SHA-256
-        that tells a resend from a new request. Expiry is checked on use; a scheduled purge clears the rest.
+        the code nor what it is bound to is kept: code_hash is an HMAC of the code and of what it is bound to
+        (the sign-in challenge, the account, or the address being confirmed), binding_hash an HMAC of the
+        binding alone that tells a resend from a new request — both under a key derived from the master key,
+        which the database does not hold. Expiry is checked on use; a scheduled purge clears the rest.
       changes:
         - sql:
             sql: >

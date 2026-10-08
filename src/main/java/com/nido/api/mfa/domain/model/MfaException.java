@@ -3,7 +3,7 @@ package com.nido.api.mfa.domain.model;
 public abstract sealed class MfaException extends RuntimeException
     permits MfaException.UserNotFound, MfaException.MethodAlreadyEnabled, MfaException.MethodNotEnabled,
             MfaException.MethodUnavailable, MfaException.MethodSendsNoCode, MfaException.EnrolmentNotStarted,
-            MfaException.CodeInvalid, MfaException.ConfirmMaxAttemptsExceeded, MfaException.ResendTooSoon,
+            MfaException.CodeInvalid, MfaException.CodeSpent, MfaException.ConfirmMaxAttemptsExceeded, MfaException.ResendTooSoon,
             MfaException.SendLimitReached, MfaException.InsufficientPermissions {
 
     private MfaException(String message) { super(message); }
@@ -32,6 +32,11 @@ public abstract sealed class MfaException extends RuntimeException
     public static final class CodeInvalid extends MfaException {
         public CodeInvalid() { super("Invalid or expired code"); }
     }
+    /** Too many wrong guesses took the code with it — or none is waiting: a new one has to be asked for. */
+    public static final class CodeSpent extends MfaException {
+        public CodeSpent() { super("This code no longer works. Please ask for a new one."); }
+    }
+
     public static final class ConfirmMaxAttemptsExceeded extends MfaException {
         public ConfirmMaxAttemptsExceeded() { super("Too many failed confirmation attempts. Please restart the setup."); }
     }

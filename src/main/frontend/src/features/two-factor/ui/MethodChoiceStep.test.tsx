@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { MethodChoiceStep } from './MethodChoiceStep'
-import { ChallengeExpiredError, MethodUnavailableError, ResendTooSoonError, SendLimitError } from '../model/errors'
+import { ChallengeExpiredError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError } from '../model/errors'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, o?: Record<string, unknown>) => (o ? `${k}:${JSON.stringify(o)}` : k) }),
@@ -72,5 +72,15 @@ describe('MethodChoiceStep', () => {
     fireEvent.click(screen.getByText('verify.back'))
 
     expect(onBack).toHaveBeenCalled()
+  })
+
+  it('a mail method removed meanwhile is said by name, and the app is still there to choose', async () => {
+    const { onChoose } = setup(vi.fn().mockRejectedValue(new MethodNotEnabledError()))
+
+    fireEvent.click(card(/method\.mail_title/))
+
+    expect(await screen.findByText('choose.error.mail_not_enabled')).toBeTruthy()
+    fireEvent.click(card(/method\.app_title/))
+    expect(onChoose).toHaveBeenCalledWith({ method: 'APP' })
   })
 })

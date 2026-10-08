@@ -24,4 +24,13 @@ class MfaAddressChangeCodeAdapterTest {
         assertThat(adapter.send(jane, "new@test.com")).isEqualTo(60);
         assertThat(adapter.check(jane, "new@test.com", "004213")).isTrue();
     }
+
+    @Test
+    void whether_a_code_is_still_waiting_is_mfa_s() {
+        AddressChangeCodeUseCase codes = mock(AddressChangeCodeUseCase.class);
+        UUID jane = UUID.randomUUID();
+        when(codes.pending(jane)).thenReturn(true);
+
+        assertThat(new MfaAddressChangeCodeAdapter(codes).pending(jane)).isTrue();
+    }
 }

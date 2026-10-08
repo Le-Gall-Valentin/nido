@@ -6,7 +6,8 @@ import { Dialog } from '@/shared/ui'
 import { NetworkError } from '@/shared/lib'
 import type { TwoFactorMethod, User } from '@/entities/user'
 import {
-  AppSetupFlow, MailSetupStep, MethodUnavailableError, ResendTooSoonError, SendLimitError,
+  AppSetupFlow, MailSetupStep, MethodAlreadyEnabledError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError,
+  SendLimitError,
   type ITwoFactorMethodsApi, type MailSetupData, type MethodState,
 } from '@/features/two-factor'
 import { MethodRow, StatusBadge } from './MethodRow'
@@ -62,6 +63,10 @@ export function TwoFactorSection({ user, onPatch, api }: TwoFactorSectionProps) 
   function showError(error: unknown) {
     if (error instanceof MethodUnavailableError) {
       showFlash('error', 'twofa.error.mail_unavailable')
+      void queryClient.invalidateQueries({ queryKey: METHODS_KEY })
+    } else if (error instanceof MethodAlreadyEnabledError || error instanceof MethodNotEnabledError) {
+      // Turned on or off meanwhile — in another tab, or by an administrator: the list shows where things stand.
+      showFlash('error', 'twofa.error.changed')
       void queryClient.invalidateQueries({ queryKey: METHODS_KEY })
     } else if (error instanceof SendLimitError) {
       showFlash('error', 'twofa.error.send_limit', { minutes: Math.ceil(error.seconds / 60) })
@@ -175,6 +180,11 @@ export function TwoFactorSection({ user, onPatch, api }: TwoFactorSectionProps) 
           api={api}
           onClose={() => setOpen(null)}
           onSuccess={() => { settle(open.method, false); setOpen(null); showFlash('success', 'twofa.success_disabled') }}
+          onStale={() => {
+            setOpen(null)
+            showFlash('error', 'twofa.error.changed')
+            void queryClient.invalidateQueries({ queryKey: METHODS_KEY })
+          }}
         />
       )}
     </section>

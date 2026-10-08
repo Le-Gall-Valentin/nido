@@ -14,4 +14,7 @@ public interface AddressChangeCodePort {
     long send(UUID userId, String newAddress);
 
     boolean check(UUID userId, String newAddress, String code);
+
+    /** Whether a code is still waiting: five wrong guesses take it with them. */
+    boolean pending(UUID userId);
 }

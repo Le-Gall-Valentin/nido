@@ -102,4 +102,12 @@ class IdentityExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().getProperties()).containsEntry("error_code", "email_code_invalid");
     }
+
+    @Test
+    void a_spent_address_code_is_a_bad_request_named_for_the_client() {
+        var response = handler.handle(new IdentityException.EmailCodeSpent(), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().getProperties()).containsEntry("error_code", "email_code_spent");
+    }
 }

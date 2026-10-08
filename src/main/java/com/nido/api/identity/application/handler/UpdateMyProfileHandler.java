@@ -53,7 +53,7 @@ public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
      * that error does not roll the count back.
      */
     @Override
-    @Transactional(noRollbackFor = IdentityException.EmailCodeInvalid.class)
+    @Transactional(noRollbackFor = {IdentityException.EmailCodeInvalid.class, IdentityException.EmailCodeSpent.class})
     public ProfileUpdate updateProfile(UpdateProfileCommand command) {
         User user = userRepository.findById(command.userId())
             .orElseThrow(IdentityException.UserNotFound::new);
@@ -79,6 +79,10 @@ public class UpdateMyProfileHandler implements UpdateMyProfileUseCase {
                     return new ProfileUpdate.EmailCodeSent(command.email(), addressChangeCode.send(user.id(), command.email()));
                 }
                 if (!addressChangeCode.check(user.id(), command.email(), command.emailCode())) {
+                    // The fifth wrong code took the code with it: even the right one is refused from now on.
+                    if (!addressChangeCode.pending(user.id())) {
+                        throw new IdentityException.EmailCodeSpent();
+                    }
                     throw new IdentityException.EmailCodeInvalid();
                 }
             }

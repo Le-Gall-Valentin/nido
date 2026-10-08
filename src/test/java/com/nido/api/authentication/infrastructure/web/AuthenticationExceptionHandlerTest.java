@@ -169,4 +169,13 @@ class AuthenticationExceptionHandlerTest {
         assertThat(handler.handle(new AuthenticationException.MethodUnavailable(), request).getBody().getProperties())
             .containsEntry("error_code", "method_unavailable");
     }
+
+    @Test
+    void a_lockout_at_sign_in_says_when_to_come_back() {
+        var response = handler.handle(new AuthenticationException.TwoFactorLockedOut(600), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(response.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("600");
+        assertThat(response.getBody().getProperties()).containsEntry("error_code", "two_factor_locked");
+    }
 }

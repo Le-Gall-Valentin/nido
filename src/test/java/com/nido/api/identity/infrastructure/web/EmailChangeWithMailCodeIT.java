@@ -39,6 +39,7 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -171,7 +172,19 @@ class EmailChangeWithMailCodeIT {
         }
         rateLimits.clearAll();
 
-        change(newAddress, right).andExpect(status().isBadRequest());
+        change(newAddress, right)
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("email_code_spent"));
+    }
+
+    @Test
+    void saving_the_same_change_again_within_the_minute_says_when_a_code_can_leave() throws Exception {
+        change(newAddress, null).andExpect(status().isAccepted());
+
+        change(newAddress, null)
+            .andExpect(status().isTooManyRequests())
+            .andExpect(header().exists("Retry-After"))
+            .andExpect(jsonPath("$.error_code").value("resend_too_soon"));
     }
 
     @Test

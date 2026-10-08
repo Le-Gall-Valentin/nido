@@ -64,6 +64,10 @@ public class AuthenticationExceptionHandler {
             case AuthenticationException.MethodUnavailable ignored ->
                     response(409, "This two-factor method cannot be used right now.", "method_unavailable");
 
+            case AuthenticationException.TwoFactorLockedOut locked ->
+                    new AuthErrorResponse(429, "AuthenticationError", "Too many incorrect codes.", "two_factor_locked",
+                        locked.retryAfterSeconds());
+
             case AuthenticationException.MailCodeRefused refused ->
                     new AuthErrorResponse(429, "AuthenticationError",
                         refused.tooSoon() ? "A code was sent moments ago." : "Too many codes sent by mail.",

@@ -53,7 +53,8 @@
         "incomplete": "Please enter all 6 digits.",
         "send_limit": "Too many codes sent. Try again in {{minutes}} min.",
         "network": "Network unavailable.",
-        "server": "An error occurred. Please try again."
+        "server": "An error occurred. Please try again.",
+        "spent": "Too many wrong codes: this one no longer works. Ask for a new one."
       }
     }
   },
@@ -83,7 +84,8 @@
       "send_limit": "Too many codes sent. Try again in {{minutes}} min.",
       "load": "Your methods could not be loaded. Reload the page.",
       "network": "Network unavailable.",
-      "server": "An error occurred. Please try again."
+      "server": "An error occurred. Please try again.",
+      "changed": "Your methods changed meanwhile: the list is up to date."
     }
   },
   "password": {

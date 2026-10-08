@@ -3,6 +3,7 @@ package com.nido.api.mfa.infrastructure.persistence.adapter;
 import com.nido.api.mfa.domain.model.CodePurpose;
 import com.nido.api.mfa.domain.model.SentMailCode;
 import com.nido.api.mfa.domain.port.out.MailCodeStorePort;
+import com.nido.api.shared.model.TwoFactorPolicy;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
@@ -76,14 +77,16 @@ public class MailCodeRepositoryAdapter implements MailCodeStorePort {
 
     @Override
     public boolean take(UUID userId, CodePurpose purpose, String codeHash) {
-        // The row lock makes a second delete wait for the first to commit, then find nothing.
+        // The row lock makes a second delete wait for the first to commit, then find nothing. The failure count is
+        // read again here: guesses running at once may each have compared a code before the fifth failure took it.
         return jdbc.sql("""
                 DELETE FROM two_factor_mail_codes
-                WHERE user_id = :userId AND purpose = :purpose AND code_hash = :codeHash
+                WHERE user_id = :userId AND purpose = :purpose AND code_hash = :codeHash AND failed_attempts < :maxAttempts
                 """)
             .param("userId", userId)
             .param("purpose", purpose.name())
             .param("codeHash", codeHash)
+            .param("maxAttempts", TwoFactorPolicy.MAX_ATTEMPTS)
             .update() == 1;
     }
 

@@ -16,4 +16,7 @@ public interface AddressChangeCodeUseCase {
 
     /** A right code is used up: true once. */
     boolean check(UUID userId, String newAddress, String code);
+
+    /** Whether a code for the new address is still waiting: five wrong guesses take it with them. */
+    boolean pending(UUID userId);
 }

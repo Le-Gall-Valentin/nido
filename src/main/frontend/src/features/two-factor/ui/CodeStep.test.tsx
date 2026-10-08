@@ -2,7 +2,7 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { CodeStep } from './CodeStep'
 import type { ITwoFactorChallengeApi } from '../model/ITwoFactorChallengeApi'
-import { CodeError, ChallengeExpiredError, MaxAttemptsError, MethodNotEnabledError } from '../model/errors'
+import { CodeError, ChallengeExpiredError, MaxAttemptsError, MethodNotEnabledError, ResendTooSoonError } from '../model/errors'
 import { RateLimitError, NetworkError, ServerError } from '@/shared/lib'
 
 vi.mock('react-i18next', () => ({
@@ -366,5 +366,29 @@ describe('CodeStep by mail', () => {
     fireEvent.click(getByText('verify.back_choose'))
 
     expect(onChooseAnother).toHaveBeenCalled()
+  })
+
+  it('asking again within the minute says a code just left, and when another can', async () => {
+    // Another tab of the same browser signed in moments ago: its code is the live one, in the mailbox.
+    const sendMailCode = vi.fn().mockRejectedValue(new ResendTooSoonError(20))
+    const { getByText, findByText } = render(
+      <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr" resendAfterSeconds={0}
+        api={mailApi({ sendMailCode })} onVerified={vi.fn()} onBack={vi.fn()} />)
+
+    fireEvent.click(getByText('resend.action'))
+
+    expect(await findByText('mail.recent')).toBeTruthy()
+    expect(getByText('resend.wait:{"time":"0:20"}')).toBeTruthy()
+  })
+
+  it('a resend stopped by the route\'s limit says how long to wait', async () => {
+    const sendMailCode = vi.fn().mockRejectedValue(new RateLimitError(30))
+    const { getByText, findByText } = render(
+      <CodeStep username="camille" method="MAIL" maskedEmail="c••••••n@exemple.fr" resendAfterSeconds={0}
+        api={mailApi({ sendMailCode })} onVerified={vi.fn()} onBack={vi.fn()} />)
+
+    fireEvent.click(getByText('resend.action'))
+
+    expect(await findByText('verify.error.rate_limit_timed:{"seconds":30}')).toBeTruthy()
   })
 })

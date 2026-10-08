@@ -9,7 +9,7 @@
     "error": {
       "invalid_code": "Code invalide ou expiré.",
       "challenge_expired": "Session expirée. Veuillez vous reconnecter.",
-      "max_attempts": "Trop de tentatives incorrectes. Veuillez vous reconnecter.",
+      "max_attempts": "Trop de codes incorrects. Réessayez de vous connecter dans quelques minutes.",
       "incomplete": "Saisissez les 6 chiffres.",
       "rate_limit": "Trop de tentatives. Veuillez patienter avant de réessayer.",
       "rate_limit_timed": "Trop de tentatives. Veuillez patienter {{seconds}} secondes avant de réessayer.",
@@ -68,7 +68,8 @@
       "rate_limit": "Trop de tentatives. Veuillez patienter.",
       "network": "Réseau indisponible.",
       "server": "Une erreur serveur est survenue.",
-      "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min."
+      "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min.",
+      "code_spent": "Trop de codes faux : ce code ne marche plus. Demandez-en un nouveau."
     },
     "title_app": "Désactiver l'application d'authentification",
     "title_mail": "Désactiver le code par mail",
@@ -93,7 +94,8 @@
       "mail_unavailable": "L'envoi de mails est coupé. Utilisez votre application.",
       "challenge_expired": "Session expirée. Veuillez vous reconnecter.",
       "network": "Réseau indisponible. Vérifiez votre connexion.",
-      "server": "Une erreur serveur est survenue. Veuillez réessayer."
+      "server": "Une erreur serveur est survenue. Veuillez réessayer.",
+      "mail_not_enabled": "Le code par mail n'est plus actif sur votre compte. Utilisez votre application."
     }
   },
   "mail": {
@@ -104,7 +106,8 @@
     "resent": "Nouveau code envoyé. L'ancien ne marche plus.",
     "error": {
       "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min."
-    }
+    },
+    "recent": "Un code est parti il y a moins d'une minute : regardez vos mails."
   },
   "resend": {
     "question": "Pas reçu ?",

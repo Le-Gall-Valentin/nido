@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import axios, { type AxiosError } from 'axios'
-import { accountApi, ConflictError, EmailCodeInvalidError, InvalidCurrentPasswordError } from './accountApi'
+import { accountApi, ConflictError, EmailCodeInvalidError, EmailCodeSpentError, InvalidCurrentPasswordError } from './accountApi'
 import { ResendTooSoonError, SendLimitError } from '@/features/two-factor'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
@@ -72,6 +72,12 @@ describe('accountApi', () => {
       mockedClient.patch.mockRejectedValue(makeAxiosError(400, {}, { error_code: 'email_code_invalid' }))
 
       await expect(accountApi.updateProfile('a', 'new@test.com', 'secret', '000000')).rejects.toBeInstanceOf(EmailCodeInvalidError)
+    })
+
+    it('a code spent by wrong guesses is its own error', async () => {
+      mockedClient.patch.mockRejectedValue(makeAxiosError(400, {}, { error_code: 'email_code_spent' }))
+
+      await expect(accountApi.updateProfile('a', 'new@test.com', 'secret', '000000')).rejects.toBeInstanceOf(EmailCodeSpentError)
     })
 
     it('a code asked again too soon or too often says when', async () => {

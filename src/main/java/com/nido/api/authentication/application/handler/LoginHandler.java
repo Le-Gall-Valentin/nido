@@ -18,6 +18,7 @@ import com.nido.api.authentication.domain.port.out.TwoFactorChallengeStorePort;
 import com.nido.api.authentication.domain.port.out.UserCredentialsPort;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.shared.model.TwoFactorMethod;
+import com.nido.api.shared.model.TwoFactorPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,6 +86,10 @@ public class LoginHandler implements LoginUseCase {
 
         Set<TwoFactorMethod> usable = secondFactor.usableMethods(creds.id());
         if (!usable.isEmpty()) {
+            // Locked out by wrong codes: no new challenge, and no code mailed into a sign-in that would refuse it.
+            if (challengeStore.failedAttempts(creds.id()) >= TwoFactorPolicy.MAX_ATTEMPTS) {
+                throw new AuthenticationException.TwoFactorLockedOut(challengeStore.lockoutSecondsLeft(creds.id()));
+            }
             String challengeId = challengeStore.createChallenge(creds.id());
             String maskedEmail = usable.contains(TwoFactorMethod.MAIL) ? MaskedEmail.of(creds.email()) : null;
             // The mail as only method: the server sends the code itself. A browser sending it from the code screen
@@ -92,9 +97,14 @@ public class LoginHandler implements LoginUseCase {
             MailCodeDelivery mailCode = usable.equals(Set.of(TwoFactorMethod.MAIL))
                 ? secondFactor.sendMailCode(creds.id(), challengeId)
                 : null;
-            log.info("Two-factor challenge created for user: {}", creds.id());
-            return new LoginResult.TwoFactorRequired(challengeId, creds.username(), TwoFactorMethod.ordered(usable),
-                maskedEmail, mailCode);
+            if (!(mailCode instanceof MailCodeDelivery.Unavailable)) {
+                log.info("Two-factor challenge created for user: {}", creds.id());
+                return new LoginResult.TwoFactorRequired(challengeId, creds.username(), TwoFactorMethod.ordered(usable),
+                    maskedEmail, mailCode);
+            }
+            // Mail went off between the check and the send: the method is paused after all, and a paused
+            // method lets the password through.
+            challengeStore.invalidateChallenge(challengeId);
         }
 
         log.info("Successful login for user: {}", creds.id());

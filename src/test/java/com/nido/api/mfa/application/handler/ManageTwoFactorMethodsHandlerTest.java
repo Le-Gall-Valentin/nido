@@ -163,4 +163,17 @@ class ManageTwoFactorMethodsHandlerTest {
         assertThatThrownBy(() -> handler.disable(jane, TwoFactorMethod.MAIL, "004213"))
             .isInstanceOf(MfaException.MethodNotEnabled.class);
     }
+
+    @Test
+    void a_disable_code_spent_by_wrong_guesses_says_to_ask_for_another() {
+        // The fifth wrong code takes the code with it: from then on even the right one is refused, and "invalid"
+        // would send the person round in circles.
+        when(store.activeMethods(jane)).thenReturn(EnumSet.of(TwoFactorMethod.MAIL));
+        when(mail.check(jane, CodePurpose.DISABLE, jane.toString(), "000000")).thenReturn(CodeCheck.INVALID);
+        when(mail.codePending(jane, CodePurpose.DISABLE)).thenReturn(false);
+
+        assertThatThrownBy(() -> handler.disable(jane, TwoFactorMethod.MAIL, "000000"))
+            .isInstanceOf(MfaException.CodeSpent.class);
+        verify(store, never()).disable(any(), any());
+    }
 }

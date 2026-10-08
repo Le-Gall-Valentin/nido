@@ -5,7 +5,7 @@ import { twoFactorApi } from './twoFactorApi'
 import { client } from '@/shared/api'
 import {
   ChallengeExpiredError, CodeError, ConfirmMaxAttemptsError, EnrolmentExpiredError, MaxAttemptsError,
-  MethodAlreadyEnabledError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError,
+  CodeSpentError, MethodAlreadyEnabledError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError,
 } from '../model/errors'
 import { NetworkError, RateLimitError, ServerError } from '@/shared/lib'
 
@@ -139,5 +139,11 @@ describe('twoFactorApi', () => {
 
     mocked.get.mockRejectedValueOnce(new Error('offline'))
     await expect(twoFactorApi.list()).rejects.toBeInstanceOf(NetworkError)
+  })
+
+  it('names a code that wrong guesses spent', async () => {
+    mocked.delete.mockRejectedValueOnce(problem(410, { error_code: 'code_spent' }))
+
+    await expect(twoFactorApi.disable('MAIL', '004213')).rejects.toBeInstanceOf(CodeSpentError)
   })
 })

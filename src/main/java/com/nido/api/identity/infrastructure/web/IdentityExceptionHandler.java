@@ -54,6 +54,10 @@ public class IdentityExceptionHandler {
                     new IdentityErrorResponse(400, ex.getClass().getSimpleName(),
                         "The code sent to the new address is invalid or expired.", "email_code_invalid");
 
+            case IdentityException.EmailCodeSpent ex ->
+                    new IdentityErrorResponse(400, ex.getClass().getSimpleName(),
+                        "The code sent to the new address no longer works: ask for a new one.", "email_code_spent");
+
             case IdentityException.CurrentPasswordRequired ex ->
                     response(400, ex, "The current password is required to change the email address.");
 

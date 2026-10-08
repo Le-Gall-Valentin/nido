@@ -307,4 +307,38 @@ class LoginHandlerTest {
         assertThat(result.twoFactorMethods()).containsExactly(TwoFactorMethod.MAIL);
         verifyNoInteractions(challengeStore);
     }
+
+    @Test
+    void a_locked_out_account_gets_no_challenge_and_no_code_and_is_told_how_long() {
+        // Five wrong codes lock the account for a while: a new sign-in would mail a code its check refuses anyway.
+        when(userCredentialsPort.findByIdentifier("user2")).thenReturn(Optional.of(activeUser2));
+        when(passwordVerifier.matches("password", "hashed_pw")).thenReturn(true);
+        when(secondFactor.usableMethods(activeUser2.id())).thenReturn(EnumSet.of(TwoFactorMethod.MAIL));
+        when(challengeStore.failedAttempts(activeUser2.id())).thenReturn(5);
+        when(challengeStore.lockoutSecondsLeft(activeUser2.id())).thenReturn(600L);
+
+        assertThatThrownBy(() -> handler.login(new LoginCommand("user2", "password")))
+            .isInstanceOfSatisfying(AuthenticationException.TwoFactorLockedOut.class,
+                locked -> assertThat(locked.retryAfterSeconds()).isEqualTo(600));
+        verify(challengeStore, never()).createChallenge(any());
+        verify(secondFactor, never()).sendMailCode(any(), any());
+    }
+
+    @Test
+    void mail_switched_off_between_the_check_and_the_send_lets_the_password_through_like_a_paused_method() {
+        when(userCredentialsPort.findByIdentifier("user2")).thenReturn(Optional.of(activeUser2));
+        when(passwordVerifier.matches("password", "hashed_pw")).thenReturn(true);
+        when(secondFactor.usableMethods(activeUser2.id())).thenReturn(EnumSet.of(TwoFactorMethod.MAIL));
+        when(secondFactor.activeMethods(activeUser2.id())).thenReturn(EnumSet.of(TwoFactorMethod.MAIL));
+        when(challengeStore.createChallenge(activeUser2.id())).thenReturn("challenge-uuid");
+        when(secondFactor.sendMailCode(activeUser2.id(), "challenge-uuid")).thenReturn(new MailCodeDelivery.Unavailable());
+        when(accessTokenPort.generate(activeUser2)).thenReturn("jwt_access");
+        when(refreshTokenPort.generate(eq(activeUser2), anyInt())).thenReturn("raw_refresh");
+
+        LoginResult result = handler.login(new LoginCommand("user2", "password"));
+
+        assertThat(result).isInstanceOfSatisfying(LoginResult.Success.class,
+            success -> assertThat(success.twoFactorMethods()).containsExactly(TwoFactorMethod.MAIL));
+        verify(challengeStore).invalidateChallenge("challenge-uuid");
+    }
 }

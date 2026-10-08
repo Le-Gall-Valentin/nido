@@ -84,7 +84,7 @@ public class ManageTwoFactorMethodsHandler implements ManageTwoFactorMethodsUseC
 
     /** Same reason as {@link #confirmEnrolment}: a wrong code is counted, so the error does not undo the count. */
     @Override
-    @Transactional(noRollbackFor = MfaException.CodeInvalid.class)
+    @Transactional(noRollbackFor = {MfaException.CodeInvalid.class, MfaException.CodeSpent.class})
     public void disable(UUID userId, TwoFactorMethod method, String code) {
         Set<TwoFactorMethod> active = store.activeMethods(userId);
         if (!active.contains(method)) {
@@ -94,6 +94,10 @@ public class ManageTwoFactorMethodsHandler implements ManageTwoFactorMethodsUseC
         // A paused method protects nothing and has no way to prove itself: it goes on the session alone.
         if (handler.usableNow()) {
             if (code == null || handler.check(userId, CodePurpose.DISABLE, userId.toString(), code) != CodeCheck.SUCCESS) {
+                // The fifth wrong code took the code with it: "invalid" would have the person try the right one in vain.
+                if (code != null && handler.deliversCodes() && !handler.codePending(userId, CodePurpose.DISABLE)) {
+                    throw new MfaException.CodeSpent();
+                }
                 throw new MfaException.CodeInvalid();
             }
         }

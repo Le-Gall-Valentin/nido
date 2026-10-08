@@ -13,6 +13,11 @@ export class MaxAttemptsError extends Error {
   constructor() { super('Too many incorrect codes'); this.name = 'MaxAttemptsError' }
 }
 
+/** Wrong guesses took the code with it — even the right one is refused now: ask for a new one. */
+export class CodeSpentError extends Error {
+  constructor() { super('This code no longer works'); this.name = 'CodeSpentError' }
+}
+
 /** Too many wrong first codes: the enrolment is cancelled and starts again. */
 export class ConfirmMaxAttemptsError extends Error {
   constructor() { super('Too many failed confirmation attempts'); this.name = 'ConfirmMaxAttemptsError' }

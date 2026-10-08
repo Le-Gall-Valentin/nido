@@ -80,6 +80,11 @@ public class MailMethod implements TwoFactorMethodHandler {
     }
 
     @Override
+    public boolean codePending(UUID userId, CodePurpose purpose) {
+        return issuer.isPending(userId, purpose);
+    }
+
+    @Override
     public void forgetPending(UUID userId) {
         issuer.forget(userId);
     }

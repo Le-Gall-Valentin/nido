@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { DisableMethodDialog } from './DisableMethodDialog'
-import { CodeError, MaxAttemptsError, SendLimitError, type ITwoFactorMethodsApi } from '@/features/two-factor'
+import { CodeError, CodeSpentError, MaxAttemptsError, SendLimitError, type ITwoFactorMethodsApi } from '@/features/two-factor'
 
 type DisableApi = Pick<ITwoFactorMethodsApi, 'disable' | 'sendDisableCode'>
 
@@ -14,7 +14,7 @@ function fill(code: string) {
 }
 
 function open(method: 'APP' | 'MAIL', paused = false, api: Partial<DisableApi> = {}) {
-  const handlers = { onClose: vi.fn(), onSuccess: vi.fn() }
+  const handlers = { onClose: vi.fn(), onSuccess: vi.fn(), onStale: vi.fn() }
   const full: DisableApi = { disable: api.disable ?? vi.fn().mockResolvedValue(undefined), sendDisableCode: api.sendDisableCode ?? vi.fn() }
   render(<DisableMethodDialog method={method} paused={paused} address="camille@exemple.fr" resendAfterSeconds={0} api={full} {...handlers} />)
   return { ...handlers, api: full }
@@ -66,5 +66,24 @@ describe('DisableMethodDialog', () => {
     fireEvent.click(screen.getByText('resend.action'))
 
     expect(await screen.findByText('disable.error.send_limit:{"minutes":5}')).toBeTruthy()
+  })
+
+  it('a paused mail that came back while the dialog was open hands back to the page', async () => {
+    // Opened without a code field; the server now wants a code. Saying "invalid code" would leave nowhere to type one.
+    const { onStale, onSuccess } = open('MAIL', true, { disable: vi.fn().mockRejectedValue(new CodeError()) })
+
+    fireEvent.click(screen.getByRole('button', { name: /disable\.submit/ }))
+
+    await waitFor(() => expect(onStale).toHaveBeenCalled())
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('a code spent by wrong guesses says to ask for a new one', async () => {
+    open('MAIL', false, { disable: vi.fn().mockRejectedValue(new CodeSpentError()) })
+
+    fill('004213')
+    fireEvent.click(screen.getByRole('button', { name: /disable\.submit/ }))
+
+    expect(await screen.findByText('disable.error.code_spent')).toBeTruthy()
   })
 })

@@ -131,4 +131,12 @@ class RedisTwoFactorChallengeStoreTest {
 
         verify(redisTemplate).delete("totp:attempts:user:" + userId);
     }
+
+    @Test
+    void the_lockout_tells_how_long_it_still_runs_and_nothing_when_there_is_none() {
+        when(redisTemplate.getExpire("totp:attempts:user:" + userId, java.util.concurrent.TimeUnit.SECONDS)).thenReturn(312L, -2L);
+
+        assertThat(store.lockoutSecondsLeft(userId)).isEqualTo(312);
+        assertThat(store.lockoutSecondsLeft(userId)).isZero();
+    }
 }

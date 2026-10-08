@@ -53,7 +53,8 @@
         "incomplete": "Saisissez les 6 chiffres.",
         "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min.",
         "network": "Réseau indisponible.",
-        "server": "Une erreur est survenue. Veuillez réessayer."
+        "server": "Une erreur est survenue. Veuillez réessayer.",
+        "spent": "Trop de codes faux : ce code ne marche plus. Demandez-en un nouveau."
       }
     }
   },
@@ -83,7 +84,8 @@
       "send_limit": "Trop de codes envoyés. Réessayez dans {{minutes}} min.",
       "load": "Impossible de charger vos méthodes. Rechargez la page.",
       "network": "Réseau indisponible.",
-      "server": "Une erreur est survenue. Veuillez réessayer."
+      "server": "Une erreur est survenue. Veuillez réessayer.",
+      "changed": "Vos méthodes ont changé entre-temps : la liste est à jour."
     }
   },
   "password": {

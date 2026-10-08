@@ -13,6 +13,9 @@ import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJ
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.mfa.infrastructure.persistence.repository.TwoFactorMethodJpaRepository;
 import com.nido.api.shared.model.Role;
+import org.springframework.test.web.servlet.MvcResult;
+import com.nido.api.shared.model.TwoFactorMethod;
+import com.nido.api.mfa.infrastructure.persistence.entity.TwoFactorMethodEntity;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
@@ -166,5 +169,45 @@ class TwoFactorMailMethodIT {
         mockMvc.perform(post("/api/auth/2fa/mail/confirm").cookie(access).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"" + right + "\"}"))
             .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    void wrong_codes_to_turn_the_mail_off_stay_counted_and_the_fifth_spends_the_code() throws Exception {
+        // Each wrong answer is an error that rolls nothing back: without that, guessing would never end.
+        methods.save(new TwoFactorMethodEntity(users.findNotDeletedByUsernameIgnoreCase("jane").orElseThrow().getId(),
+            TwoFactorMethod.MAIL, null));
+        Cookie access = loginWithMailCode();
+        mockMvc.perform(post("/api/auth/2fa/mail/disable-code").cookie(access)).andExpect(status().isOk());
+        String right = codeOfMail(1);
+        String wrong = right.equals("000000") ? "111111" : "000000";
+
+        for (int i = 0; i < 4; i++) {
+            rateLimits.clearAll();
+            mockMvc.perform(delete("/api/auth/2fa/mail").cookie(access).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"code\":\"" + wrong + "\"}"))
+                .andExpect(status().isUnauthorized());
+        }
+        rateLimits.clearAll();
+        mockMvc.perform(delete("/api/auth/2fa/mail").cookie(access).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"" + wrong + "\"}"))
+            .andExpect(status().isGone())
+            .andExpect(jsonPath("$.error_code").value("code_spent"));
+        rateLimits.clearAll();
+        mockMvc.perform(delete("/api/auth/2fa/mail").cookie(access).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"code\":\"" + right + "\"}"))
+            .andExpect(status().isGone());
+        mockMvc.perform(get("/api/auth/2fa").cookie(access))
+            .andExpect(jsonPath("$[1].enabled").value(true));
+    }
+
+    private Cookie loginWithMailCode() throws Exception {
+        MvcResult login = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest("jane", "password"))))
+            .andReturn();
+        Cookie challenge = login.getResponse().getCookie("two_factor_challenge");
+        return mockMvc.perform(post("/api/auth/2fa/verify").cookie(challenge).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"method\":\"MAIL\",\"code\":\"" + codeOfMail(0) + "\"}"))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getCookie("access_token");
     }
 }

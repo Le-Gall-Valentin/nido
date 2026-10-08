@@ -76,4 +76,12 @@ class MfaExceptionHandlerTest {
             .as("the client tells a lockout from a rate limit by the missing Retry-After").isFalse();
         assertThat(codeOf(lockout)).isNull();
     }
+
+    @Test
+    void a_spent_code_is_gone_and_named_for_the_client() {
+        var response = handler.handle(new MfaException.CodeSpent(), request);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(410);
+        assertThat(response.getBody().getProperties()).containsEntry("error_code", "code_spent");
+    }
 }

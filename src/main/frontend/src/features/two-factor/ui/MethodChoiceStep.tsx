@@ -5,7 +5,7 @@ import { NetworkError } from '@/shared/lib'
 import { MethodCard } from './MethodCard'
 import type { ITwoFactorChallengeApi } from '../model/ITwoFactorChallengeApi'
 import type { CodeChoice } from '../model/types'
-import { ChallengeExpiredError, MethodUnavailableError, ResendTooSoonError, SendLimitError } from '../model/errors'
+import { ChallengeExpiredError, MethodNotEnabledError, MethodUnavailableError, ResendTooSoonError, SendLimitError } from '../model/errors'
 
 interface MethodChoiceStepProps {
   username: string
@@ -33,6 +33,7 @@ export function MethodChoiceStep({ username, maskedEmail, api, onChoose, onBack 
       if (e instanceof ResendTooSoonError) onChoose({ method: 'MAIL', resendAfterSeconds: e.seconds })
       else if (e instanceof SendLimitError) setError({ key: 'choose.error.send_limit', values: { minutes: Math.ceil(e.seconds / 60) } })
       else if (e instanceof MethodUnavailableError) setError({ key: 'choose.error.mail_unavailable' })
+      else if (e instanceof MethodNotEnabledError) setError({ key: 'choose.error.mail_not_enabled' })
       else if (e instanceof ChallengeExpiredError) setError({ key: 'choose.error.challenge_expired' })
       else if (e instanceof NetworkError) setError({ key: 'choose.error.network' })
       else setError({ key: 'choose.error.server' })

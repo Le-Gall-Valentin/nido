@@ -12,6 +12,11 @@ export class InvalidCurrentPasswordError extends Error {
   constructor() { super('Invalid current password'); this.name = 'InvalidCurrentPasswordError' }
 }
 
+/** Wrong guesses took the code for the new address with them: a new one has to be asked for. */
+export class EmailCodeSpentError extends Error {
+  constructor() { super('The code for the new address no longer works'); this.name = 'EmailCodeSpentError' }
+}
+
 /** The code given for the new address is not the one sent there, or no longer valid — not the session, not the password. */
 export class EmailCodeInvalidError extends Error {
   constructor() { super('The code for the new address is invalid'); this.name = 'EmailCodeInvalidError' }
@@ -37,6 +42,7 @@ export const accountApi: IAccountApi = {
         const data = (error.response?.data ?? {}) as { error_code?: string; retryAfterSeconds?: number }
         const retryAfter = parseRetryAfter(error.response?.headers)
         if (data.error_code === 'email_code_invalid') throw new EmailCodeInvalidError()
+        if (data.error_code === 'email_code_spent') throw new EmailCodeSpentError()
         if (data.error_code === 'resend_too_soon') throw new ResendTooSoonError(data.retryAfterSeconds ?? retryAfter ?? 60)
         if (data.error_code === 'send_limit_reached') throw new SendLimitError(data.retryAfterSeconds ?? retryAfter ?? 900)
         if (status === 409) throw new ConflictError()

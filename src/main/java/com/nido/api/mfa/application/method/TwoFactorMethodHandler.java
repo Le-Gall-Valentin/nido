@@ -43,6 +43,14 @@ public interface TwoFactorMethodHandler {
 
     CodeCheck check(UUID userId, CodePurpose purpose, String binding, String code);
 
+    /**
+     * Whether a code for this purpose is still waiting. A method whose codes are not sent has nothing to spend.
+     * Five wrong guesses take a sent code with it: then even the right one is refused.
+     */
+    default boolean codePending(UUID userId, CodePurpose purpose) {
+        return true;
+    }
+
     /** Drops what is under way for this account: an enrolment, the codes sent. */
     void forgetPending(UUID userId);
 }

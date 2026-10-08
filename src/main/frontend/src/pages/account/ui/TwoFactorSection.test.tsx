@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createTestQueryClient } from '@/shared/test'
 import type { User } from '@/entities/user'
 import type { ITwoFactorMethodsApi, MethodState } from '@/features/two-factor'
-import { MethodUnavailableError } from '@/features/two-factor'
+import { MethodAlreadyEnabledError, MethodNotEnabledError, MethodUnavailableError } from '@/features/two-factor'
 import { TwoFactorSection } from './TwoFactorSection'
 
 vi.mock('react-i18next', () => ({
@@ -20,8 +20,14 @@ vi.mock('@/features/two-factor', async (importOriginal) => ({
 }))
 
 vi.mock('./DisableMethodDialog', () => ({
-  DisableMethodDialog: ({ method, paused, resendAfterSeconds, onSuccess }: { method: string; paused: boolean; resendAfterSeconds: number; onSuccess: () => void }) => (
-    <div><span>{`disable-${method}-${paused}-${resendAfterSeconds}`}</span><button onClick={onSuccess}>disable-success</button></div>
+  DisableMethodDialog: ({ method, paused, resendAfterSeconds, onSuccess, onStale }: {
+    method: string; paused: boolean; resendAfterSeconds: number; onSuccess: () => void; onStale: () => void
+  }) => (
+    <div>
+      <span>{`disable-${method}-${paused}-${resendAfterSeconds}`}</span>
+      <button onClick={onSuccess}>disable-success</button>
+      <button onClick={onStale}>disable-stale</button>
+    </div>
   ),
 }))
 
@@ -118,5 +124,36 @@ describe('TwoFactorSection', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_disable' }))
 
     await waitFor(() => expect(screen.getByText('disable-APP-false-0')).toBeTruthy())
+  })
+
+  it('a method turned on meanwhile, in another tab, is said and the list reloaded', async () => {
+    const setupMail = vi.fn().mockRejectedValue(new MethodAlreadyEnabledError())
+    const { api } = setup([state('APP', true, true), state('MAIL', false, true)], { setupMail })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_enable' }))
+
+    expect(await screen.findByText('twofa.error.changed')).toBeTruthy()
+    await waitFor(() => expect(api.list).toHaveBeenCalledTimes(2))
+  })
+
+  it('a method turned off meanwhile is said and the list reloaded', async () => {
+    const sendDisableCode = vi.fn().mockRejectedValue(new MethodNotEnabledError())
+    const { api } = setup([state('APP', false, true), state('MAIL', true, true)], { sendDisableCode }, { ...USER, twoFactorMethods: ['MAIL'] })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_disable' }))
+
+    expect(await screen.findByText('twofa.error.changed')).toBeTruthy()
+    await waitFor(() => expect(api.list).toHaveBeenCalledTimes(2))
+  })
+
+  it('a paused mail that came back while its dialog was open closes it, says so and reloads the list', async () => {
+    const { api } = setup([state('APP', false, true), state('MAIL', true, false)], {}, { ...USER, twoFactorMethods: ['MAIL'] })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'twofa.btn_disable' }))
+    fireEvent.click(await screen.findByText('disable-stale'))
+
+    expect(await screen.findByText('twofa.error.changed')).toBeTruthy()
+    expect(screen.queryByText('disable-stale')).toBeNull()
+    await waitFor(() => expect(api.list).toHaveBeenCalledTimes(2))
   })
 })

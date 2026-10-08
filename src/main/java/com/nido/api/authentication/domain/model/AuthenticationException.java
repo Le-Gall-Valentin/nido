@@ -13,6 +13,7 @@ public abstract sealed class AuthenticationException extends RuntimeException
             AuthenticationException.MethodNotEnabled,
             AuthenticationException.MethodUnavailable,
             AuthenticationException.MailCodeRefused,
+            AuthenticationException.TwoFactorLockedOut,
             AuthenticationException.InvalidCurrentPassword,
             AuthenticationException.InvalidResetToken,
             AuthenticationException.InvalidInvitationToken,
@@ -67,6 +68,16 @@ public abstract sealed class AuthenticationException extends RuntimeException
     /** On, but paused: the mail method while mail is off. */
     public static final class MethodUnavailable extends AuthenticationException {
         public MethodUnavailable() { super("This two-factor method cannot be used right now"); }
+    }
+
+    /** The right password, but too many wrong codes lately: no new challenge until the lockout runs out. */
+    public static final class TwoFactorLockedOut extends AuthenticationException {
+        private final long retryAfterSeconds;
+        public TwoFactorLockedOut(long retryAfterSeconds) {
+            super("Too many incorrect codes");
+            this.retryAfterSeconds = retryAfterSeconds;
+        }
+        public long retryAfterSeconds() { return retryAfterSeconds; }
     }
 
     /** The sign-in code could not leave now: too soon after the last one, or too many in the window. */

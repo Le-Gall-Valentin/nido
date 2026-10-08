@@ -3,6 +3,7 @@ package com.nido.api.mfa.application.method;
 import com.nido.api.mfa.domain.model.CodePurpose;
 import com.nido.api.mfa.domain.model.SentMailCode;
 import com.nido.api.mfa.domain.port.out.MailCodeStorePort;
+import com.nido.api.shared.model.TwoFactorPolicy;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -48,7 +49,8 @@ class InMemoryMailCodeStore implements MailCodeStorePort {
     @Override
     public boolean take(UUID userId, CodePurpose purpose, String codeHash) {
         SentMailCode live = codes.get(new Key(userId, purpose));
-        return live != null && live.codeHash().equals(codeHash) && codes.remove(new Key(userId, purpose), live);
+        return live != null && live.codeHash().equals(codeHash) && live.failedAttempts() < TwoFactorPolicy.MAX_ATTEMPTS
+            && codes.remove(new Key(userId, purpose), live);
     }
 
     @Override

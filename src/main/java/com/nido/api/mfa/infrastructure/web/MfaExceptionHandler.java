@@ -29,6 +29,7 @@ public class MfaExceptionHandler {
             case MfaException.MethodSendsNoCode ex          -> new MfaError(400, "method_sends_no_code", null);
             case MfaException.EnrolmentNotStarted ex        -> new MfaError(422, null, null);
             case MfaException.CodeInvalid ex                -> new MfaError(401, null, null);
+            case MfaException.CodeSpent ex                  -> new MfaError(410, "code_spent", null);
             // No Retry-After: that is how the client tells this lockout from the rate limiter.
             case MfaException.ConfirmMaxAttemptsExceeded ex -> new MfaError(429, null, null);
             case MfaException.ResendTooSoon ex              -> new MfaError(429, "resend_too_soon", ex.seconds());

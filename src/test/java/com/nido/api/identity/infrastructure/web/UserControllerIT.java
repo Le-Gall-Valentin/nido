@@ -1304,4 +1304,14 @@ class UserControllerIT {
         assertThat(userTotpJpaRepository.findByUserId(targetId)).extracting(TwoFactorMethodEntity::getMethod)
             .containsExactly(TwoFactorMethod.APP);
     }
+
+    @Test
+    void resetTwoFactor_withAnEmptyMethod_returns400() throws Exception {
+        Cookie access = loginAs("superadmin", "adminpass");
+        UUID targetId = userIdentityJpaRepository.findNotDeletedByUsernameIgnoreCase("totpuser").get().getId();
+
+        mockMvc.perform(post("/api/users/" + targetId + "/2fa/reset").cookie(access)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"methods\":[null]}"))
+            .andExpect(status().isBadRequest());
+    }
 }

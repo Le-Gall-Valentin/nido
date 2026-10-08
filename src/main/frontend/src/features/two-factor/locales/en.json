@@ -9,7 +9,7 @@
     "error": {
       "invalid_code": "Invalid or expired code.",
       "challenge_expired": "Session expired. Please log in again.",
-      "max_attempts": "Too many incorrect attempts. Please log in again.",
+      "max_attempts": "Too many incorrect codes. Try signing in again in a few minutes.",
       "incomplete": "Please enter all 6 digits.",
       "rate_limit": "Too many attempts. Please wait before trying again.",
       "rate_limit_timed": "Too many attempts. Please wait {{seconds}} seconds before trying again.",
@@ -68,7 +68,8 @@
       "rate_limit": "Too many attempts. Please wait.",
       "network": "Network unavailable.",
       "server": "A server error occurred.",
-      "send_limit": "Too many codes sent. Try again in {{minutes}} min."
+      "send_limit": "Too many codes sent. Try again in {{minutes}} min.",
+      "code_spent": "Too many wrong codes: this one no longer works. Ask for a new one."
     },
     "title_app": "Turn off the authenticator app",
     "title_mail": "Turn off codes by email",
@@ -93,7 +94,8 @@
       "mail_unavailable": "Email is switched off. Use your app.",
       "challenge_expired": "Session expired. Please log in again.",
       "network": "Network unavailable. Please check your connection.",
-      "server": "A server error occurred. Please try again."
+      "server": "A server error occurred. Please try again.",
+      "mail_not_enabled": "Codes by email are no longer on for your account. Use your app."
     }
   },
   "mail": {
@@ -104,7 +106,8 @@
     "resent": "New code sent. The previous one no longer works.",
     "error": {
       "send_limit": "Too many codes sent. Try again in {{minutes}} min."
-    }
+    },
+    "recent": "A code left less than a minute ago: check your inbox."
   },
   "resend": {
     "question": "Didn't get it?",

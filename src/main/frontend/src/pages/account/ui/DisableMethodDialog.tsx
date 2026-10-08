@@ -5,7 +5,7 @@ import { Dialog, Button } from '@/shared/ui'
 import { NetworkError, RateLimitError } from '@/shared/lib'
 import type { TwoFactorMethod } from '@/entities/user'
 import {
-  CodeError, CodeInput, MaxAttemptsError, MethodNotEnabledError, ResendCode, ResendTooSoonError, SendLimitError,
+  CodeError, CodeInput, CodeSpentError, MaxAttemptsError, MethodNotEnabledError, ResendCode, ResendTooSoonError, SendLimitError,
   useResendCountdown, type CodeInputHandle, type ITwoFactorMethodsApi,
 } from '@/features/two-factor'
 
@@ -19,9 +19,11 @@ interface DisableMethodDialogProps {
   api: Pick<ITwoFactorMethodsApi, 'disable' | 'sendDisableCode'>
   onClose: () => void
   onSuccess: () => void
+  /** Opened for a paused method, but mail came back meanwhile: the method now wants its code, which this dialog has no field for. */
+  onStale: () => void
 }
 
-export function DisableMethodDialog({ method, paused, address, resendAfterSeconds, api, onClose, onSuccess }: DisableMethodDialogProps) {
+export function DisableMethodDialog({ method, paused, address, resendAfterSeconds, api, onClose, onSuccess, onStale }: DisableMethodDialogProps) {
   const { t } = useTranslation('twoFactor')
   const [code, setCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -45,8 +47,10 @@ export function DisableMethodDialog({ method, paused, address, resendAfterSecond
     } catch (e) {
       // Already off — another tab, or an administrator: what was asked is done.
       if (e instanceof MethodNotEnabledError) { onSuccess(); return }
+      if (e instanceof CodeError && paused) { onStale(); return }
       setCode('')
       if (e instanceof CodeError) { setError({ key: 'disable.error.invalid_code' }); inputRef.current?.focus() }
+      else if (e instanceof CodeSpentError) setError({ key: 'disable.error.code_spent' })
       else if (e instanceof MaxAttemptsError) setError({ key: 'disable.error.max_attempts' })
       else if (e instanceof RateLimitError) setError({ key: 'disable.error.rate_limit' })
       else if (e instanceof NetworkError) setError({ key: 'disable.error.network' })

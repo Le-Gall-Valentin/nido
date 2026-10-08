@@ -102,13 +102,16 @@ export function CodeStep({
       setNotice({ tone: 'ok', key: 'mail.resent' })
     } catch (error) {
       if (error instanceof ResendTooSoonError) {
+        // Another tab of this browser signed in moments ago: its code is the live one, already in the mailbox.
         countdown.restart(error.seconds)
+        setNotice({ tone: 'ok', key: 'mail.recent' })
       } else if (error instanceof SendLimitError) {
         countdown.restart(error.seconds)
         setNotice({ tone: 'error', key: 'mail.error.send_limit', values: { minutes: Math.ceil(error.seconds / 60) } })
       } else {
         const key = errorKeyOf(error)
-        setNotice({ tone: 'error', key })
+        const values = error instanceof RateLimitError && error.retryAfterSeconds !== null ? { seconds: error.retryAfterSeconds } : undefined
+        setNotice({ tone: 'error', key, values })
         if (RESTARTING.has(key)) setAutoBack(true)
       }
     }

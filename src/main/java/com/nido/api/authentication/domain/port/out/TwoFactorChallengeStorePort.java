@@ -24,6 +24,9 @@ public interface TwoFactorChallengeStorePort {
      */
     int recordFailedAttempt(UUID userId);
 
+    /** Seconds before the account's lockout window ends — 0 when nothing is recorded. */
+    long lockoutSecondsLeft(UUID userId);
+
     /** Wipes the counter. A successful verification clears the slate. */
     void clearFailedAttempts(UUID userId);
 }

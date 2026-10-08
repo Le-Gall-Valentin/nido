@@ -39,6 +39,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -485,7 +486,7 @@ class TwoFactorControllerIT {
     // ─── B4 : le compteur d'échecs suit le compte, pas le challenge ────────
 
     @Test
-    void verify_theLockoutSurvivesLoggingInAgainForAFreshChallenge() throws Exception {
+    void verify_theLockoutSurvivesLoggingInAgain() throws Exception {
         // The bypass: the attempt counter used to hang off the challenge id, and every login
         // mints a new one — so using up five attempts and logging back in handed the caller a
         // clean slate, five guesses at a time, without limit. Rate limits capped that at five
@@ -505,15 +506,15 @@ class TwoFactorControllerIT {
         // Cleared so the assertion below cannot pass on the rate limiter's own 429 — the point
         // is the account lockout, and the two are otherwise indistinguishable by status alone.
         rateLimitBucketStore.clearAll();
-        Cookie secondChallenge = loginAndGetChallengeCookie("totpuser", "totppass");
-        assertThat(secondChallenge).isNotNull();
-        assertThat(secondChallenge.getValue()).isNotEqualTo(firstChallenge.getValue());
-
-        mockMvc.perform(post("/api/auth/2fa/verify").cookie(secondChallenge)
+        // Logging in again hands out no fresh challenge at all while the lockout runs: the right
+        // password is answered with the lockout and how long it lasts.
+        mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"method\":\"APP\",\"code\":\"000006\"}"))
+                .content(objectMapper.writeValueAsString(new LoginRequest("totpuser", "totppass"))))
             .andExpect(status().isTooManyRequests())
-            .andExpect(jsonPath("$.title").value("AuthenticationError"));
+            .andExpect(jsonPath("$.error_code").value("two_factor_locked"))
+            .andExpect(header().exists("Retry-After"))
+            .andExpect(cookie().doesNotExist("two_factor_challenge"));
     }
 
     @Test

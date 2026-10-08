@@ -54,5 +54,10 @@ databaseChangeLog:
             sql: >
               INSERT INTO user_totp (user_id, totp_secret, totp_enabled)
               SELECT user_id, secret, true FROM two_factor_methods WHERE method = 'APP'
+        - sql:
+            comment: The version before reads one row per account, and only updates it when TOTP is turned on.
+            sql: >
+              INSERT INTO user_totp (user_id, totp_secret, totp_enabled)
+              SELECT id, NULL, false FROM users u WHERE NOT EXISTS (SELECT 1 FROM user_totp t WHERE t.user_id = u.id)
         - dropTable:
             tableName: two_factor_methods

@@ -29,4 +29,9 @@ public class MfaAddressChangeCodeAdapter implements AddressChangeCodePort {
     public boolean check(UUID userId, String newAddress, String code) {
         return codes.check(userId, newAddress, code);
     }
+
+    @Override
+    public boolean pending(UUID userId) {
+        return codes.pending(userId);
+    }
 }

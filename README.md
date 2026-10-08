@@ -159,7 +159,7 @@ sign in, fix the address on the settings page, then remove the line and `docker 
 
 Spring Boot (Java 21) backend with an embedded React/TypeScript frontend, built with Maven.
 
-- Java 21, Spring Boot 4, Spring Data JPA + PostgreSQL, Liquibase, Spring Security + JWT, optional TOTP
+- Java 21, Spring Boot 4, Spring Data JPA + PostgreSQL, Liquibase, Spring Security + JWT, optional two-factor authentication (authenticator app or code by mail)
 - Redis (rate limiting, ephemeral stores)
 - React/TypeScript frontend (`src/main/frontend`), bundled at build time
 - Java 21+, Docker; Node.js is provided at build time by the Maven frontend plugin

@@ -199,6 +199,7 @@ class UpdateMyProfileHandlerTest {
         when(addressChangeCode.required(userId)).thenReturn(true);
         when(userRepository.findByEmail(new EmailAddress("new@test.com"))).thenReturn(Optional.empty());
         when(addressChangeCode.check(userId, "new@test.com", "000000")).thenReturn(false);
+        when(addressChangeCode.pending(userId)).thenReturn(true);
 
         assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com", "password", "000000")))
             .isInstanceOf(IdentityException.EmailCodeInvalid.class);
@@ -247,5 +248,19 @@ class UpdateMyProfileHandlerTest {
 
         assertThat(handler.updateProfile(command)).isEqualTo(new ProfileUpdate.Saved());
         verifyNoInteractions(addressChangeCode);
+    }
+
+    @Test
+    void a_code_spent_by_wrong_guesses_says_to_ask_for_another() {
+        when(userRepository.findById(userId)).thenReturn(Optional.of(jane));
+        when(passwordCheck.matches(userId, "password")).thenReturn(true);
+        when(addressChangeCode.required(userId)).thenReturn(true);
+        when(userRepository.findByEmail(new EmailAddress("new@test.com"))).thenReturn(Optional.empty());
+        when(addressChangeCode.check(userId, "new@test.com", "000000")).thenReturn(false);
+        when(addressChangeCode.pending(userId)).thenReturn(false);
+
+        assertThatThrownBy(() -> handler.updateProfile(new UpdateProfileCommand(userId, "jane", "new@test.com", "password", "000000")))
+            .isInstanceOf(IdentityException.EmailCodeSpent.class);
+        verify(userCommandPort, never()).updateProfile(any());
     }
 }

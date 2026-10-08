@@ -81,6 +81,24 @@ class TwoFactorMethodsMigrationIT {
     }
 
     @Test
+    void rolling_back_gives_every_account_the_row_the_version_before_expects() throws Exception {
+        // The version before reads one user_totp row per account and only updates it when TOTP is turned on:
+        // an account left without its row could never turn TOTP on again after a rollback.
+        migrateUpTo("072-");
+        UUID jane = account("jane");
+        UUID john = account("john");
+        String janeSecret = encrypted(jane);
+        execute("INSERT INTO user_totp (user_id, totp_secret, totp_enabled) VALUES ('" + jane + "', '" + janeSecret + "', true)");
+        execute("INSERT INTO user_totp (user_id, totp_secret, totp_enabled) VALUES ('" + john + "', NULL, false)");
+        migrateToTheEnd();
+
+        liquibase.rollback(2, "");
+
+        assertThat(strings("SELECT user_id || ' ' || coalesce(totp_secret, '-') || ' ' || totp_enabled FROM user_totp"))
+            .containsExactlyInAnyOrder(jane + " " + janeSecret + " true", john + " - false");
+    }
+
+    @Test
     void a_carried_over_secret_still_opens_with_its_account_key() throws Exception {
         migrateUpTo("072-");
         UUID jane = account("jane");

@@ -20,8 +20,8 @@ public interface MailCodeStorePort {
     int recordFailure(UUID userId, CodePurpose purpose);
 
     /**
-     * Deletes the code if it is still the one with this hash: of two requests carrying the right code at once,
-     * one takes it and the other finds nothing.
+     * Deletes the code if it is still the one with this hash and fewer than five failures are recorded against it:
+     * of two requests carrying the right code at once, one takes it and the other finds nothing.
      *
      * @return whether this caller took it
      */

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { EmailCodeDialog } from './EmailCodeDialog'
-import { EmailCodeInvalidError } from '../api/accountApi'
+import { EmailCodeInvalidError, EmailCodeSpentError } from '../api/accountApi'
 import { SendLimitError } from '@/features/two-factor'
 
 vi.mock('react-i18next', () => ({
@@ -70,5 +70,14 @@ describe('EmailCodeDialog', () => {
     fireEvent.click(screen.getByText('profile.email_code.cancel:{"address":"camille@ancienne.fr"}'))
 
     expect(onCancel).toHaveBeenCalled()
+  })
+
+  it('a code spent by wrong guesses says to ask for a new one', async () => {
+    open({ onConfirm: vi.fn().mockRejectedValue(new EmailCodeSpentError()) })
+
+    fireEvent.change(document.querySelector('input[autocomplete="one-time-code"]')!, { target: { value: '004213' } })
+    fireEvent.click(screen.getByRole('button', { name: /profile\.email_code\.submit/ }))
+
+    expect(await screen.findByText('profile.email_code.error.spent')).toBeTruthy()
   })
 })

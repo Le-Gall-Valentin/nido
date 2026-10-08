@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class RedisTwoFactorChallengeStore implements TwoFactorChallengeStorePort {
@@ -84,6 +85,13 @@ public class RedisTwoFactorChallengeStore implements TwoFactorChallengeStorePort
         // keeps hammering cannot extend it.
         redisTemplate.expire(key, lockoutWindow);
         return (int) attempts;
+    }
+
+    @Override
+    public long lockoutSecondsLeft(UUID userId) {
+        Long seconds = redisTemplate.getExpire(ATTEMPTS_PREFIX + userId, TimeUnit.SECONDS);
+        // -2: no counter; -1: a counter without expiry, which recordFailedAttempt never leaves behind.
+        return seconds == null ? 0 : Math.max(0, seconds);
     }
 
     @Override
