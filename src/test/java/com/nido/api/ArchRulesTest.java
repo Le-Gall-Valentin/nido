@@ -624,12 +624,12 @@ class ArchRulesTest {
         // mfa.infra → identity.application.port.in
         new CrossBcAppDep("mfa",
             new String[]{BASE + "identity.application.port.in.."},
-            Set.of("TotpMailAdapter", "AccountAddressAdapter")),
+            Set.of("TotpMailAdapter", "AccountAddressAdapter", "TwoFactorMailAdapter")),
 
         // mfa.infra → mail.application.port.in
         new CrossBcAppDep("mfa",
             new String[]{BASE + "mail.application.port.in.."},
-            Set.of("TotpMailAdapter")),
+            Set.of("TotpMailAdapter", "TwoFactorMailAdapter", "MailAvailabilityAdapter")),
 
         // identity.infra → space.application.port.in
         new CrossBcAppDep("identity",
