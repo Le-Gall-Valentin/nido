@@ -24,7 +24,7 @@ export function baseActions(overrides: Partial<DashboardActions> = {}): Dashboar
     canWrite: true,
     isShared: true,
     currentUserId: 'u-me',
-    memberName: (id) => NAMES[id] ?? 'member_unknown',
+    memberName: (id) => NAMES[id] ?? 'member.former',
     settle: () => {},
     reportError: () => {},
     ...overrides,

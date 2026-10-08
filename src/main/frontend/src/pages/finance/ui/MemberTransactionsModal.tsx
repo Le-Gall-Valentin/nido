@@ -5,19 +5,20 @@ import type { Transaction } from '@/entities/finance'
 import { formatAmount } from '@/shared/lib'
 
 interface MemberTransactionsModalProps {
+  memberId: string
   memberLabel: string
   transactions: Transaction[]
   onSelectTransaction: (transaction: Transaction) => void
   onClose: () => void
 }
 
-export function MemberTransactionsModal({ memberLabel, transactions, onSelectTransaction, onClose }: MemberTransactionsModalProps) {
+export function MemberTransactionsModal({ memberId, memberLabel, transactions, onSelectTransaction, onClose }: MemberTransactionsModalProps) {
   const { t } = useTranslation('finance')
 
   return (
     <Dialog open onClose={onClose} title={memberLabel} maxWidth="max-w-lg" showCloseButton>
       <div className="mb-4 flex items-center gap-3 pr-8">
-        <UserAvatar username={memberLabel} role="USER" className="size-9 shrink-0 rounded-full text-sm" />
+        <UserAvatar userId={memberId} username={memberLabel} className="size-9 shrink-0 rounded-full text-sm" />
         <h3 className="min-w-0 truncate text-[17px] font-semibold text-fg-0">{memberLabel}</h3>
       </div>
 

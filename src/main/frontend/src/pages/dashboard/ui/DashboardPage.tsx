@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
@@ -6,7 +6,7 @@ import { Alert } from '@/shared/ui'
 import { resolveLocale, useInvalidateOnAnyWrite, useNow } from '@/shared/lib'
 import { useAuth } from '@/features/auth'
 import { useSpaceTimezone } from '@/features/space-switcher'
-import { useSpaceMembers } from '@/entities/space'
+import { useMemberName, useSpaceMembers } from '@/entities/space'
 import { dashboardApi, dashboardKey, DashboardApiProvider, useDashboard, type IDashboardApi } from '@/entities/dashboard'
 import { FinanceApiProvider, financeApi as defaultFinanceApi, type IFinanceApi } from '@/entities/finance'
 import { KitchenApiProvider, kitchenApi as defaultKitchenApi, type IKitchenApi } from '@/entities/kitchen'
@@ -59,13 +59,7 @@ function DashboardPageContent() {
   const [addingTask, setAddingTask] = useState(false)
   const [actionFailed, setActionFailed] = useState(false)
 
-  // "Former member" only once the list is known and the id is not in it: a list that could not be
-  // read says nothing about who left, so everyone is then just "a member".
-  const memberName = useCallback(
-    (memberId: string) => members
-      ? members.find((member) => member.userId === memberId)?.username ?? t('member_unknown')
-      : t('member_generic'),
-    [members, t])
+  const memberName = useMemberName(members)
 
   const actions = useMemo<DashboardActions>(() => ({
     spaceId,

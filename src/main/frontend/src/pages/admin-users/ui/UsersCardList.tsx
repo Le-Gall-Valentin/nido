@@ -117,7 +117,7 @@ function UserCard({
     <div className={`rounded-2xl border border-border bg-bg-1 p-4 ${isMe ? 'ring-1 ring-accent/20' : ''}`}>
       {/* Identity */}
       <div className="flex items-start gap-3">
-        <UserAvatar username={user.username} role={user.role} className="size-10 rounded-full text-xs" />
+        <UserAvatar userId={user.id} username={user.username} className="size-10 rounded-full text-xs" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="text-[14.5px] font-semibold text-fg-0 truncate">{user.username}</span>

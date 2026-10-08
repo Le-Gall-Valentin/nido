@@ -13,7 +13,8 @@ import { RecurringTaskSeriesDetailModal } from './RecurringTaskSeriesDetailModal
 
 interface RecurringSeriesPanelProps {
   spaceId: string
-  members: SpaceMember[]
+  /** Undefined while not known: the detail then calls nobody a former member. */
+  members: SpaceMember[] | undefined
   isPersonal: boolean
   onClose: () => void
 }
@@ -67,7 +68,7 @@ export function RecurringSeriesPanel({ spaceId, members, isPersonal, onClose }: 
       {editing && (
         <RecurringTaskSeriesFormModal
           series={editing}
-          members={members}
+          members={members ?? []}
           isPersonal={isPersonal}
           onSubmit={handleUpdateSubmit}
           onCancel={() => {

@@ -69,11 +69,11 @@
   --btn-primary-fg: #ffffff;
   --btn-primary-shadow: 0 2px 6px rgba(92, 122, 88, 0.25);
 
-  /* Avatars (warm taupe; admin shifts to the brand green) */
-  --avatar-from: #9a8d7b;
-  --avatar-to: #8a7d6b;
-  --avatar-admin-from: #6f8f6a;
-  --avatar-admin-to: #5c7a58;
+  /* Avatars: each person's hue comes from their id (UserAvatar), the lightness and chroma from here.
+     From 0.55 to 0.48 at 0.08, white initials keep 4.6:1 or more on every hue, all inside sRGB. */
+  --avatar-l-from: 0.55;
+  --avatar-l-to: 0.48;
+  --avatar-c: 0.08;
 }
 
 /* ── Dark theme override ────────────────────────────────────────── */

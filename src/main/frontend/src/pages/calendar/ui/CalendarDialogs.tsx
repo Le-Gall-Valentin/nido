@@ -35,7 +35,9 @@ export function CalendarDialogs({
 }: CalendarDialogsProps) {
   const navigate = useNavigate()
   const { open, show, close, act, answerScope, closeForm } = dialog
-  const { data: members = [] } = useSpaceMembers(spaceId)
+  const { data: knownMembers } = useSpaceMembers(spaceId)
+  // Forms pick among the list; details only name people, and say "a member" while it is not known.
+  const members = knownMembers ?? []
   // Whether the caller is already a participant decides between offering "join" and "leave".
   const currentUserId = useAuth((state) => state.user?.id) ?? ''
   const joinEvent = useJoinEvent(spaceId)
@@ -61,7 +63,7 @@ export function CalendarDialogs({
       if (!occurrence) return null
       if (occurrence.source !== 'EVENT') {
         return (
-          <OccurrenceRouter spaceId={spaceId} occurrence={occurrence} members={members}
+          <OccurrenceRouter spaceId={spaceId} occurrence={occurrence} members={knownMembers}
             onOpenInModule={(item) => {
               close()
               // A task still to come has no row to open here: its series lives on the tasks page.
@@ -72,7 +74,7 @@ export function CalendarDialogs({
         )
       }
       return (
-        <EventDetailModal occurrence={occurrence} members={members} currentUserId={currentUserId}
+        <EventDetailModal occurrence={occurrence} members={knownMembers} currentUserId={currentUserId}
           canWrite={canWrite} isPersonal={isPersonal}
           onEdit={() => act(occurrence, 'edit')} onDelete={() => act(occurrence, 'delete')}
           onCopy={() => show({ kind: 'transfer', occurrence, operation: 'copy' })}

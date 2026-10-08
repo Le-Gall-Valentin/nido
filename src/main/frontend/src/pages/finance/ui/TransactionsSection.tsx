@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { Pencil, Repeat, Trash2 } from 'lucide-react'
+import { Tooltip } from '@/shared/ui'
 import { UserAvatar } from '@/entities/user'
-import type { SpaceMember } from '@/entities/space'
+import { useMemberName, type SpaceMember } from '@/entities/space'
 import type { Category, Transaction } from '@/entities/finance'
 import { CategoryIconBadge } from './CategoryIconBadge'
 import { formatAmount } from '@/shared/lib'
@@ -21,6 +22,7 @@ export function TransactionsSection({
   transactions, categoryById, members, canWrite, onManageRecurring, onSelectTransaction, onEdit, onDelete,
 }: TransactionsSectionProps) {
   const { t } = useTranslation('finance')
+  const memberName = useMemberName(members)
 
   return (
     <section className="mt-4 rounded-2xl border border-border bg-bg-1 p-4">
@@ -52,7 +54,11 @@ export function TransactionsSection({
                   </p>
                   <p className="truncate text-xs text-fg-3">{category?.label} · {transaction.date}</p>
                 </div>
-                {payer && <UserAvatar username={payer.username ?? '?'} role="USER" className="size-6 shrink-0 rounded-full text-[10px]" />}
+                {payer && (
+                  <Tooltip label={memberName(payer.userId)} className="shrink-0">
+                    <UserAvatar userId={payer.userId} username={memberName(payer.userId)} className="size-6 rounded-full text-[10px]" />
+                  </Tooltip>
+                )}
                 <span className={`shrink-0 text-sm font-semibold ${transaction.type === 'EXPENSE' ? 'text-fg-0' : 'text-status-green'}`}>
                   {transaction.type === 'EXPENSE' ? '-' : '+'}{formatAmount(transaction.amount)}
                 </span>

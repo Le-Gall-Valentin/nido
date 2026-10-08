@@ -5,10 +5,10 @@ import { Plus, Pencil, ArrowRightLeft, Repeat } from 'lucide-react'
 import { DndContext, DragOverlay, useDraggable, useDroppable, type DragEndEvent } from '@dnd-kit/core'
 import { Alert, Dialog, Spinner } from '@/shared/ui'
 import { todayIso, underThePointerFirst, useDragSensors } from '@/shared/lib'
-import { useSpaceMembers } from '@/entities/space'
+import { useMemberName, useSpaceMembers } from '@/entities/space'
 import { useSpaceTimezone } from '@/features/space-switcher'
 import { isOverdue } from '../lib/isOverdue'
-import { UserAvatar } from '@/entities/user'
+import { UserAvatarStack } from '@/entities/user'
 import { tasksApi, TasksApiProvider, type TasksApi, type Task, type TaskStatus } from '@/entities/tasks'
 import {
   TaskDetailModal, TaskFormPanel, DeleteTaskPanel, MoveTaskPanel, RecurringSeriesPanel,
@@ -74,6 +74,7 @@ function TaskCardContent({ task, today, members, canWriteHere, onToggleDone, onT
   const meta = TASK_PRIORITY_META[task.priority]
   const doneSubtasks = task.subtasks.filter((s) => s.done).length
   const viewDetailsLabel = t('view_details', { title: task.title })
+  const memberName = useMemberName(members)
 
   const priorityRowContent = (
     <>
@@ -83,12 +84,7 @@ function TaskCardContent({ task, today, members, canWriteHere, onToggleDone, onT
       </span>
       {task.dueDate && <span className={isOverdue(task.dueDate, today) ? 'text-status-red' : 'text-fg-4'}>{task.dueDate}</span>}
       {task.assigneeIds.length > 0 && (
-        <div className="ml-auto flex -space-x-1.5">
-          {task.assigneeIds.map((userId) => {
-            const member = members?.find((m) => m.userId === userId)
-            return <UserAvatar key={userId} username={member?.username ?? '?'} role="USER" className="size-6 rounded-full border-2 border-bg-1 text-[10px]" />
-          })}
-        </div>
+        <UserAvatarStack people={task.assigneeIds.map((userId) => ({ userId, name: memberName(userId) }))} className="ml-auto" />
       )}
     </>
   )
@@ -294,7 +290,7 @@ function TasksPageContent() {
         <TaskDetailModal
           task={viewingTask}
           series={seriesForTask(viewingTask)}
-          members={members ?? []}
+          members={members}
           onClose={() => setViewingTask(null)}
           onChangeStatus={canWriteHere ? () => { setStatusPickerTask(viewingTask); setViewingTask(null) } : undefined}
         />
@@ -303,7 +299,7 @@ function TasksPageContent() {
       {managingRecurringSeries && (
         <RecurringSeriesPanel
           spaceId={spaceId}
-          members={members ?? []}
+          members={members}
           isPersonal={spaceIsPersonal}
           onClose={() => setManagingRecurringSeries(false)}
         />

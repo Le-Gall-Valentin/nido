@@ -75,4 +75,10 @@ describe('TaskDetailModal', () => {
 
     expect(screen.queryByText('detail.rotation_participants_label')).toBeNull()
   })
+
+  it('calls nobody a former member while the members are not known', () => {
+    render(<TaskDetailModal task={TASK} series={null} members={undefined} onClose={vi.fn()} />)
+    expect(screen.getAllByText('member.generic').length).toBeGreaterThan(0)
+    expect(screen.queryByText('member.former')).toBeNull()
+  })
 })

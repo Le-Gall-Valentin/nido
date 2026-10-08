@@ -18,21 +18,21 @@ const courses: Transaction = {
 
 describe('MemberTransactionsModal', () => {
   it('lists every transaction paid by the member', () => {
-    render(<MemberTransactionsModal memberLabel="alice" transactions={[salaire, courses]} onSelectTransaction={vi.fn()} onClose={vi.fn()} />)
+    render(<MemberTransactionsModal memberId="u-alice" memberLabel="alice" transactions={[salaire, courses]} onSelectTransaction={vi.fn()} onClose={vi.fn()} />)
 
     expect(screen.getByText('Salaire')).toBeDefined()
     expect(screen.getByText('Courses')).toBeDefined()
   })
 
   it('shows an empty state when the member paid nothing this month', () => {
-    render(<MemberTransactionsModal memberLabel="alice" transactions={[]} onSelectTransaction={vi.fn()} onClose={vi.fn()} />)
+    render(<MemberTransactionsModal memberId="u-alice" memberLabel="alice" transactions={[]} onSelectTransaction={vi.fn()} onClose={vi.fn()} />)
 
     expect(screen.getByText('balances.member_payments_empty')).toBeDefined()
   })
 
   it('requests the detail of the clicked transaction', () => {
     const onSelectTransaction = vi.fn()
-    render(<MemberTransactionsModal memberLabel="alice" transactions={[courses]} onSelectTransaction={onSelectTransaction} onClose={vi.fn()} />)
+    render(<MemberTransactionsModal memberId="u-alice" memberLabel="alice" transactions={[courses]} onSelectTransaction={onSelectTransaction} onClose={vi.fn()} />)
 
     fireEvent.click(screen.getByText('Courses'))
 

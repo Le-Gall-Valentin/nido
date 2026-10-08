@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { UserAvatar } from '@/entities/user'
-import type { SpaceMember } from '@/entities/space'
+import { useMemberName, type SpaceMember } from '@/entities/space'
 import type { TransactionType } from '@/entities/finance'
 import { contributionLabelKeys } from '../lib/contributionLabelKeys'
 
@@ -26,6 +26,7 @@ export function ContributorsPicker({
   customizeShares, onCustomizeSharesChange, customShares, onCustomShareChange,
 }: ContributorsPickerProps) {
   const { t } = useTranslation('finance')
+  const memberName = useMemberName(members)
   const labels = contributionLabelKeys(type)
 
   return (
@@ -33,7 +34,7 @@ export function ContributorsPicker({
       <div className="flex flex-col gap-1.5">
         <label htmlFor="finance-payer" className="text-[13px] font-semibold text-fg-1">{t(labels.holder)}</label>
         <select id="finance-payer" value={payerId} onChange={(e) => onPayerChange(e.target.value)} className={SELECT_CLASSNAME}>
-          {members.map((m) => <option key={m.userId} value={m.userId}>{m.username ?? m.email}</option>)}
+          {members.map((m) => <option key={m.userId} value={m.userId}>{memberName(m.userId)}</option>)}
         </select>
       </div>
 
@@ -43,8 +44,8 @@ export function ContributorsPicker({
           {members.map((member) => (
             <button key={member.userId} type="button" onClick={() => onToggleContributor(member.userId)}
               className={`flex items-center gap-2 rounded-[9px] p-1.5 text-left text-sm ${contributorIds.includes(member.userId) ? 'bg-accent-dim' : 'hover:bg-bg-2'}`}>
-              <UserAvatar username={member.username ?? '?'} role="USER" className="size-6 rounded-full text-[10px]" />
-              <span className="text-fg-1">{member.username ?? member.email}</span>
+              <UserAvatar userId={member.userId} username={memberName(member.userId)} className="size-6 rounded-full text-[10px]" />
+              <span className="text-fg-1">{memberName(member.userId)}</span>
             </button>
           ))}
         </div>
@@ -56,17 +57,14 @@ export function ContributorsPicker({
           {t('form.customize_shares_label')}
         </label>
       )}
-      {customizeShares && contributorIds.map((id) => {
-        const member = members.find((m) => m.userId === id)
-        return (
-          <div key={id} className="flex items-center gap-2">
-            <span className="w-32 text-sm text-fg-1">{member?.username ?? member?.email}</span>
-            <input type="number" step="0.01" value={customShares[id] ?? ''}
-              onChange={(e) => onCustomShareChange(id, Number(e.target.value))}
-              className="w-24 rounded-[8px] border-[1.5px] border-border bg-bg-1 px-2 py-1 text-sm text-fg-0 outline-none focus:border-accent" />
-          </div>
-        )
-      })}
+      {customizeShares && contributorIds.map((id) => (
+        <div key={id} className="flex items-center gap-2">
+          <span className="w-32 text-sm text-fg-1">{memberName(id)}</span>
+          <input type="number" step="0.01" value={customShares[id] ?? ''}
+            onChange={(e) => onCustomShareChange(id, Number(e.target.value))}
+            className="w-24 rounded-[8px] border-[1.5px] border-border bg-bg-1 px-2 py-1 text-sm text-fg-0 outline-none focus:border-accent" />
+        </div>
+      ))}
     </>
   )
 }

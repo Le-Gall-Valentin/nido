@@ -4,13 +4,13 @@ import { Wallet } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 import { formatAmount, resolveLocale } from '@/shared/lib'
 import type { BudgetWatch, FinanceCard as FinanceCardData, MemberBalance, UpcomingOperation } from '@/entities/dashboard'
+import { UserAvatar } from '@/entities/user'
 import { useDashboardActions } from '../model/dashboardActions'
 import { formatMonthName, formatShortDay } from '../lib/dates'
 import { DashboardCard } from './DashboardCard'
 import { CardRow, RowLead } from './CardRow'
 import { CardGroup } from './CardGroup'
 import { SmallButton } from './cardParts'
-import { AvatarStack } from './AvatarStack'
 
 function signed(amount: number): string {
   return amount > 0 ? `+${formatAmount(amount)}` : formatAmount(amount)
@@ -61,7 +61,7 @@ function BalanceRow({ balance }: { balance: MemberBalance }) {
   const amount = formatAmount(balance.amount)
   const iOwe = balance.direction === 'I_OWE'
   return (
-    <CardRow lead={<AvatarStack memberIds={[balance.memberId]} />}
+    <CardRow lead={<UserAvatar userId={balance.memberId} username={name} className="size-6 rounded-full text-[10px]" />}
       title={iOwe ? t('finance.i_owe', { amount, name }) : t('finance.owes_me', { name, amount })}
       trail={iOwe && canWrite
         ? <SmallButton onClick={() => settle({ toMemberId: balance.memberId, amount: balance.amount })}>{t('finance.settle')}</SmallButton>

@@ -5,7 +5,7 @@ import { Alert, Spinner } from '@/shared/ui'
 import { useAuth } from '@/features/auth'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
 import { monthIso, useCreateIntent } from '@/shared/lib'
-import { canWrite, isPersonal, useSpaceMembers } from '@/entities/space'
+import { canWrite, isPersonal, useMemberName, useSpaceMembers } from '@/entities/space'
 import {
   financeApi, FinanceApiProvider, useCategories, useTransactions, useFinanceStats, useProjection, useRecurringSeries,
   type IFinanceApi, type Transaction, type TransactionType,
@@ -71,9 +71,7 @@ function FinancePageContent() {
   const [managingBudget, setManagingBudget] = useState(false)
   const [managingRecurringSeries, setManagingRecurringSeries] = useState(false)
 
-  function memberLabel(memberId: string): string {
-    return members?.find((m) => m.userId === memberId)?.username ?? memberId
-  }
+  const memberLabel = useMemberName(members)
 
   const currentSpace = mySpaces?.find((s) => s.id === spaceId)
   const canWriteHere = currentSpace ? canWrite(currentSpace.myRole) : false
@@ -232,7 +230,7 @@ function FinancePageContent() {
         <TransactionDetailModal
           transaction={viewingTransaction}
           category={categoryById.get(viewingTransaction.categoryId)}
-          members={members ?? []}
+          members={members}
           onClose={() => setViewingTransaction(null)}
         />
       )}

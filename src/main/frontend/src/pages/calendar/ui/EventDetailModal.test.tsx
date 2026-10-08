@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { EventDetailModal } from './EventDetailModal'
 import type { CalendarOccurrence } from '@/entities/calendar'
+import type { SpaceMember } from '@/entities/space'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -51,6 +52,20 @@ describe('EventDetailModal', () => {
     expect(screen.getByRole('button', { name: 'detail.join' })).toBeTruthy()
   })
 
+  it('writes each participant\'s name next to their avatar, a member who left included', () => {
+    const members: SpaceMember[] = [
+      { userId: 'u1', username: 'victor.lemoine', email: null, role: 'OWNER', joinedAt: '2026-01-01T00:00:00Z' },
+      { userId: 'u2', username: 'valerie.lambert', email: null, role: 'MEMBER', joinedAt: '2026-01-02T00:00:00Z' },
+    ]
+    render(
+      <EventDetailModal occurrence={{ ...concert, participantIds: ['u1', 'u2', 'u-gone'] }} members={members} currentUserId="u1"
+        canWrite isPersonal={false} onEdit={vi.fn()} onDelete={vi.fn()} onCopy={vi.fn()} onMove={vi.fn()}
+        onJoin={vi.fn()} onLeave={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getByText('victor.lemoine')).toBeTruthy()
+    expect(screen.getByText('valerie.lambert')).toBeTruthy()
+    expect(screen.getByText('member.former')).toBeTruthy()
+  })
+
   it('says nothing of participants in a personal context — its owner always takes part', () => {
     renderDetail({ ...concert, participantIds: ['u1'] }, true)
     expect(screen.queryByText('detail.participants')).toBeNull()
@@ -62,5 +77,14 @@ describe('EventDetailModal', () => {
     renderDetail(concert)
     const labels = screen.getAllByRole('button').map((button) => button.textContent)
     expect(labels.indexOf('detail.edit')).toBeLessThan(labels.indexOf('detail.delete'))
+  })
+
+  it('calls nobody a former member while the members are not known', () => {
+    render(
+      <EventDetailModal occurrence={{ ...concert, participantIds: ['u1'] }} members={undefined} currentUserId="u1"
+        canWrite isPersonal={false} onEdit={vi.fn()} onDelete={vi.fn()} onCopy={vi.fn()} onMove={vi.fn()}
+        onJoin={vi.fn()} onLeave={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getByText('member.generic')).toBeTruthy()
+    expect(screen.queryByText('member.former')).toBeNull()
   })
 })

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { UserAvatar } from '@/entities/user'
-import type { SpaceMember } from '@/entities/space'
+import { useMemberName, type SpaceMember } from '@/entities/space'
 import type { RecurrenceInterval, RecurringTaskSeries, TaskPriority } from '@/entities/tasks'
 import type { RecurringTaskSeriesFormInput } from '../model/types'
 import { TASK_PRIORITY_ORDER, TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
@@ -28,6 +28,7 @@ interface RecurringTaskSeriesFormModalProps {
 
 export function RecurringTaskSeriesFormModal({ series, members, isPersonal, onSubmit, onCancel, submitError = null }: RecurringTaskSeriesFormModalProps) {
   const { t } = useTranslation('tasks')
+  const memberName = useMemberName(members)
   const [title, setTitle] = useState(series.title)
   const [priority, setPriority] = useState<TaskPriority>(series.priority)
   const [memberIds, setMemberIds] = useState<string[]>(series.rotationMemberIds)
@@ -124,8 +125,8 @@ export function RecurringTaskSeriesFormModal({ series, members, isPersonal, onSu
               {members.map((member) => (
                 <button key={member.userId} type="button" onClick={() => toggleMember(member.userId)}
                   className={`flex items-center gap-2 rounded-[9px] p-1.5 text-left text-sm ${memberIds.includes(member.userId) ? 'bg-accent-dim' : 'hover:bg-bg-2'}`}>
-                  <UserAvatar username={member.username ?? '?'} role="USER" className="size-6 rounded-full text-[10px]" />
-                  <span className="text-fg-1">{member.username ?? member.email}</span>
+                  <UserAvatar userId={member.userId} username={memberName(member.userId)} className="size-6 rounded-full text-[10px]" />
+                  <span className="text-fg-1">{memberName(member.userId)}</span>
                   {memberIds.includes(member.userId) && (
                     <span className="ml-auto text-xs font-semibold text-fg-3">#{memberIds.indexOf(member.userId) + 1}</span>
                   )}

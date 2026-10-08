@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Repeat } from 'lucide-react'
 import { Dialog, Button } from '@/shared/ui'
 import { UserAvatar } from '@/entities/user'
-import type { SpaceMember } from '@/entities/space'
+import { useMemberName, type SpaceMember } from '@/entities/space'
 import type { RecurringTaskSeries, Task } from '@/entities/tasks'
 import { TASK_PRIORITY_META } from '../lib/taskPriorityMeta'
 
@@ -11,7 +11,8 @@ interface TaskDetailModalProps {
   /** The series this task was materialized from, or null for a one-off task (or a
    * recurring occurrence whose series has since been deleted). */
   series: RecurringTaskSeries | null
-  members: SpaceMember[]
+  /** Undefined while not known: nobody is then called a former member. */
+  members: SpaceMember[] | undefined
   onClose: () => void
   /** Offered only to someone who may change it — the way to move a task without dragging it. */
   onChangeStatus?: () => void
@@ -21,10 +22,7 @@ export function TaskDetailModal({ task, series, members, onClose, onChangeStatus
   const { t } = useTranslation('tasks')
   const priorityMeta = TASK_PRIORITY_META[task.priority]
 
-  function memberLabel(memberId: string): string {
-    const member = members.find((m) => m.userId === memberId)
-    return member?.username ?? member?.email ?? memberId
-  }
+  const memberLabel = useMemberName(members)
 
   return (
     <Dialog open onClose={onClose} title={t('detail.title')} maxWidth="max-w-lg">
@@ -57,7 +55,7 @@ export function TaskDetailModal({ task, series, members, onClose, onChangeStatus
           <dd className="flex items-center gap-1.5 font-medium text-fg-0">
             {task.createdBy ? (
               <>
-                <UserAvatar username={memberLabel(task.createdBy)} role="USER" className="size-5 rounded-full text-[9px]" />
+                <UserAvatar userId={task.createdBy} username={memberLabel(task.createdBy)} className="size-5 rounded-full text-[9px]" />
                 {memberLabel(task.createdBy)}
               </>
             ) : t('detail.unknown_creator')}
@@ -71,7 +69,7 @@ export function TaskDetailModal({ task, series, members, onClose, onChangeStatus
           <ul className="space-y-1.5">
             {task.assigneeIds.map((memberId) => (
               <li key={memberId} className="flex items-center gap-2 text-sm">
-                <UserAvatar username={memberLabel(memberId)} role="USER" className="size-6 shrink-0 rounded-full text-[10px]" />
+                <UserAvatar userId={memberId} username={memberLabel(memberId)} className="size-6 shrink-0 rounded-full text-[10px]" />
                 <span className="flex-1 truncate text-fg-1">{memberLabel(memberId)}</span>
               </li>
             ))}
@@ -103,7 +101,7 @@ export function TaskDetailModal({ task, series, members, onClose, onChangeStatus
           <ul className="space-y-1.5">
             {series.rotationMemberIds.map((memberId) => (
               <li key={memberId} className="flex items-center gap-2 text-sm">
-                <UserAvatar username={memberLabel(memberId)} role="USER" className="size-6 shrink-0 rounded-full text-[10px]" />
+                <UserAvatar userId={memberId} username={memberLabel(memberId)} className="size-6 shrink-0 rounded-full text-[10px]" />
                 <span className="flex-1 truncate text-fg-1">{memberLabel(memberId)}</span>
                 {task.assigneeIds.includes(memberId) && (
                   <span className="rounded-full bg-accent-dim px-2 py-0.5 text-[10.5px] font-semibold text-accent">
