@@ -124,6 +124,15 @@ class MailMethodTest {
     }
 
     @Test
+    void a_send_holds_the_code_before_reading_it_so_two_at_once_queue_up() {
+        // Read before the first had written, the second of two sends at once would mail a code of its own and
+        // leave the first one dead in the mailbox.
+        mail.sendCode(jane, CodePurpose.LOGIN, "c1");
+
+        assertThat(codes.calls).startsWith("lock LOGIN", "find LOGIN");
+    }
+
+    @Test
     void a_second_login_replaces_the_first_code_at_once() {
         mail.sendCode(jane, CodePurpose.LOGIN, "first-tab");
         now = START.plusSeconds(5);

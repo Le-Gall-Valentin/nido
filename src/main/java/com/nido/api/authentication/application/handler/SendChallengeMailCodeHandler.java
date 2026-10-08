@@ -9,6 +9,7 @@ import com.nido.api.authentication.domain.port.out.TwoFactorChallengeStorePort;
 import com.nido.api.authentication.domain.port.out.UserCredentialsPort;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.shared.model.TwoFactorMethod;
+import com.nido.api.shared.model.TwoFactorPolicy;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -42,6 +43,10 @@ public class SendChallengeMailCodeHandler implements SendChallengeMailCodeUseCas
         }
         if (!secondFactor.usableMethods(userId).contains(TwoFactorMethod.MAIL)) {
             throw new AuthenticationException.MethodUnavailable();
+        }
+        // Locked out by wrong codes, as at /login: no code mailed into a sign-in that would refuse it.
+        if (challenges.failedAttempts(userId) >= TwoFactorPolicy.MAX_ATTEMPTS) {
+            throw new AuthenticationException.TwoFactorLockedOut(challenges.lockoutSecondsLeft(userId));
         }
         return switch (secondFactor.sendMailCode(userId, challengeId)) {
             case MailCodeDelivery.Sent sent -> sent.resendAfterSeconds();

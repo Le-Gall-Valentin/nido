@@ -6,4 +6,4 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record MailSetupResponse(
     @Schema(description = "L'adresse du compte, où le code est parti", example = "jane@example.fr") String sentTo,
     @Schema(description = "Secondes avant de pouvoir demander un nouveau code", example = "60") long resendAfterSeconds
-) {}
+) implements SetupResponse {}

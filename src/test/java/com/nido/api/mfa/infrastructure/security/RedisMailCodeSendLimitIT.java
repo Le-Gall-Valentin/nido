@@ -7,6 +7,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -18,6 +20,7 @@ class RedisMailCodeSendLimitIT {
 
     @Autowired MailCodeSendLimitPort limit;
     @Autowired StringRedisTemplate redis;
+    @Autowired PlatformTransactionManager transactions;
 
     private final UUID account = UUID.randomUUID();
 
@@ -44,6 +47,25 @@ class RedisMailCodeSendLimitIT {
 
         Long ttl = redis.getExpire("totp:mail-sends:user:" + account, TimeUnit.SECONDS);
         assertThat(ttl).isBetween(1L, TwoFactorPolicy.MAIL_SEND_WINDOW.toSeconds());
+    }
+
+    @Test
+    void a_mail_whose_transaction_rolls_back_never_left_and_is_given_back() {
+        // The mail is queued in the same transaction: rolled back, it never leaves, and must not use up the window.
+        limit.tryCount(account);
+        new TransactionTemplate(transactions).executeWithoutResult(status -> {
+            limit.tryCount(account);
+            status.setRollbackOnly();
+        });
+
+        assertThat(redis.opsForValue().get("totp:mail-sends:user:" + account)).isEqualTo("1");
+    }
+
+    @Test
+    void a_mail_whose_transaction_commits_stays_counted() {
+        new TransactionTemplate(transactions).executeWithoutResult(status -> limit.tryCount(account));
+
+        assertThat(redis.opsForValue().get("totp:mail-sends:user:" + account)).isEqualTo("1");
     }
 
     @Test

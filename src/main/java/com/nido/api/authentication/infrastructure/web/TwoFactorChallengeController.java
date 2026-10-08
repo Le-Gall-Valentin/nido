@@ -109,8 +109,20 @@ public class TwoFactorChallengeController {
         Pendant une connexion en deux étapes (cookie `two_factor_challenge`), envoie à l'adresse du compte un code
         valable 10 minutes, lié à cette connexion. Sert au choix « Code par mail » et à « Renvoyer ».
         `200 { sent: true, resendAfterSeconds }` ; `429` `resend_too_soon` ou `send_limit_reached` avec
-        `Retry-After` ; `409` `method_not_enabled` ou `method_unavailable` ; `401` `two_factor_challenge_expired`.
-        Rate limit : 5 requêtes par fenêtre.""")
+        `Retry-After`, ou `two_factor_locked` (trop de codes faux : la connexion attend) ; `409` `method_not_enabled`
+        ou `method_unavailable` ; `401` `two_factor_challenge_expired`. Rate limit : 5 requêtes par fenêtre.""")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Le code est parti",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = MailCodeResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Connexion expirée ou absente (`two_factor_challenge_expired`)",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "409",
+            description = "Code par mail pas activé (`method_not_enabled`) ou en pause (`method_unavailable`)",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "429",
+            description = "Demandé à nouveau trop tôt (`resend_too_soon`), plafond d'envois atteint (`send_limit_reached`), compte verrouillé par des codes faux (`two_factor_locked`) ou rate limit — toujours avec `Retry-After`",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    })
     @PostMapping("/challenge/mail")
     @RateLimiting(max = 5)
     public ResponseEntity<MailCodeResponse> sendMailCode(HttpServletRequest httpRequest) {

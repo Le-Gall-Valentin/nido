@@ -6,7 +6,9 @@ import com.nido.api.mfa.domain.port.out.MailCodeStorePort;
 import com.nido.api.shared.model.TwoFactorPolicy;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,9 +21,17 @@ class InMemoryMailCodeStore implements MailCodeStorePort {
     final Map<Key, SentMailCode> codes = new HashMap<>();
     /** Another request takes the code right after the next read: two requests carrying the same code at once. */
     boolean takenRightAfterNextFind;
+    /** Locks taken and reads made, in order. */
+    final List<String> calls = new ArrayList<>();
+
+    @Override
+    public void lock(UUID userId, CodePurpose purpose) {
+        calls.add("lock " + purpose);
+    }
 
     @Override
     public Optional<SentMailCode> find(UUID userId, CodePurpose purpose) {
+        calls.add("find " + purpose);
         Optional<SentMailCode> found = Optional.ofNullable(codes.get(new Key(userId, purpose)));
         if (takenRightAfterNextFind) {
             takenRightAfterNextFind = false;

@@ -84,7 +84,7 @@ public class AuthController {
         ),
         @ApiResponse(
             responseCode = "429",
-            description = "Trop de tentatives de connexion. Respecter le header `Retry-After`.",
+            description = "Trop de tentatives de connexion, ou compte verrouillé par des codes de double authentification faux (`two_factor_locked`). Respecter le header `Retry-After`.",
             content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))
         )
     })

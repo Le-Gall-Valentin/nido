@@ -8,6 +8,7 @@ import com.nido.api.mfa.infrastructure.web.dto.DisableMethodRequest;
 import com.nido.api.mfa.infrastructure.web.dto.MailSetupResponse;
 import com.nido.api.mfa.infrastructure.web.dto.MethodStateResponse;
 import com.nido.api.mfa.infrastructure.web.dto.ResendResponse;
+import com.nido.api.mfa.infrastructure.web.dto.SetupResponse;
 import com.nido.api.mfa.infrastructure.web.dto.TwoFactorCodeRequest;
 import com.nido.api.shared.model.TwoFactorMethod;
 import com.nido.api.shared.security.AuthenticatedUser;
@@ -15,11 +16,14 @@ import com.nido.api.shared.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -66,11 +70,14 @@ public class TwoFactorController {
         `409` `method_already_enabled` (déjà active) ou `method_unavailable` (envoi de mails coupé) ;
         `429` `resend_too_soon` ou `send_limit_reached`, avec `Retry-After` ; `404` pour une autre méthode.
         Rate limit : 5 req/fenêtre.""")
+    @ApiResponse(responseCode = "200", description = "`app` : le secret à scanner ; `mail` : le code est parti",
+        content = @Content(mediaType = "application/json",
+            schema = @Schema(oneOf = {AppSetupResponse.class, MailSetupResponse.class})))
     @PostMapping("/{method}/setup")
     @RateLimiting(max = 5)
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Object> setup(@PathVariable("method") String method,
-                                        @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
+    public ResponseEntity<SetupResponse> setup(@PathVariable("method") String method,
+                                               @Parameter(hidden = true) @CurrentUser AuthenticatedUser caller) {
         EnrolmentStarted started = methods.startEnrolment(caller.userId(), parse(method));
         return ResponseEntity.ok(switch (started) {
             case EnrolmentStarted.AppEnrolment app -> new AppSetupResponse(app.otpauthUri(), app.secret());
@@ -107,8 +114,19 @@ public class TwoFactorController {
     @Operation(summary = "Désactiver une méthode", description = """
         Demande le code de la méthode (de l'application, ou reçu par mail après `/disable-code`). Une méthode en
         pause (`MAIL` pendant que l'envoi de mails est coupé) se désactive sans code. `401` si le code est faux ou
-        manque ; `409` `method_not_enabled`. Un mail prévient le compte. Rate limit : 5 req/fenêtre.""")
-    @ApiResponse(responseCode = "204", description = "Méthode désactivée", content = @Content)
+        manque ; `410` `code_expired` si aucun code n'attend plus (expiré, jamais demandé) ou `code_spent` après le
+        cinquième code faux — pour `mail` il faut en demander un autre, pour `app` attendre un quart d'heure ;
+        `409` `method_not_enabled`. Un mail prévient le compte. Rate limit : 5 req/fenêtre.""")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Méthode désactivée", content = @Content),
+        @ApiResponse(responseCode = "401", description = "Code faux ou manquant",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "409", description = "Méthode pas activée (`method_not_enabled`)",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class))),
+        @ApiResponse(responseCode = "410",
+            description = "Plus de code en attente (`code_expired`), ou cinq codes faux (`code_spent`)",
+            content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
+    })
     @DeleteMapping("/{method}")
     @RateLimiting(max = 5)
     @PreAuthorize("isAuthenticated()")

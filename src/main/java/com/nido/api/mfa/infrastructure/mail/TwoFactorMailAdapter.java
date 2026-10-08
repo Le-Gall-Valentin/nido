@@ -27,6 +27,7 @@ import java.util.function.Function;
 public class TwoFactorMailAdapter implements TwoFactorMailPort {
 
     private static final Logger log = LoggerFactory.getLogger(TwoFactorMailAdapter.class);
+    private static final AppPath SECURITY = new AppPath("/account/security");
 
     private final FindUserUseCase findUser;
     private final SendMailUseCase sendMail;
@@ -46,8 +47,6 @@ public class TwoFactorMailAdapter implements TwoFactorMailPort {
             .ifPresentOrElse(sendMail::send,
                 () -> log.warn("Account {} cannot be written to: its {} code is not sent", userId, purpose));
     }
-
-    private static final AppPath SECURITY = new AppPath("/account/security");
 
     @Override
     public void methodEnabled(UUID userId, TwoFactorMethod method) {

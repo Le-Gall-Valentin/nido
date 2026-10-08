@@ -48,7 +48,8 @@ public class MailCodeIssuer {
     }
 
     /**
-     * Writes a new code, replacing the last one for this purpose, and queues its mail to {@code address}.
+     * Writes a new code, replacing the last one for this purpose, and queues its mail to {@code address}. Called
+     * inside a transaction: the code is held until it ends.
      *
      * @param binding what the code is bound to: the challenge id, the account id, or the new address
      */
@@ -56,6 +57,9 @@ public class MailCodeIssuer {
         if (!availability.isAvailable()) {
             return new CodeDelivery.Unavailable();
         }
+        // Read before the first had written, the second of two sends at once would mail a code of its own and
+        // leave the first one dead in the mailbox: it waits, then finds it too soon.
+        codes.lock(userId, purpose);
         Instant now = clock.instant();
         String bindingHash = hasher.bindingHash(binding);
         Optional<SentMailCode> previous = codes.find(userId, purpose);

@@ -8,12 +8,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTestConfig
 class MailCodeRepositoryAdapterIT {
@@ -22,6 +28,7 @@ class MailCodeRepositoryAdapterIT {
 
     @Autowired MailCodeStorePort codes;
     @Autowired JdbcClient jdbc;
+    @Autowired PlatformTransactionManager transactions;
 
     private UUID jane;
 
@@ -35,6 +42,44 @@ class MailCodeRepositoryAdapterIT {
 
     private SentMailCode code(CodePurpose purpose, String binding, Instant sentAt) {
         return new SentMailCode(jane, purpose, binding, "hash-" + binding, 0, sentAt, sentAt.plus(10, ChronoUnit.MINUTES));
+    }
+
+    @Test
+    void a_second_hold_on_the_same_code_waits_for_the_first_transaction_to_end() throws Exception {
+        TransactionTemplate inTransaction = new TransactionTemplate(transactions);
+        CountDownLatch held = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        CompletableFuture<Void> first = CompletableFuture.runAsync(() -> inTransaction.executeWithoutResult(status -> {
+            codes.lock(jane, CodePurpose.LOGIN);
+            held.countDown();
+            await(release);
+        }));
+        assertThat(held.await(10, TimeUnit.SECONDS)).isTrue();
+
+        CompletableFuture<Void> second = CompletableFuture.runAsync(() ->
+            inTransaction.executeWithoutResult(status -> codes.lock(jane, CodePurpose.LOGIN)));
+        CompletableFuture<Void> otherPurpose = CompletableFuture.runAsync(() ->
+            inTransaction.executeWithoutResult(status -> codes.lock(jane, CodePurpose.DISABLE)));
+
+        otherPurpose.get(10, TimeUnit.SECONDS);
+        Thread.sleep(300);
+        assertThat(second).as("waiting on the first").isNotDone();
+        release.countDown();
+        first.get(10, TimeUnit.SECONDS);
+        second.get(10, TimeUnit.SECONDS);
+    }
+
+    @Test
+    void a_hold_outside_a_transaction_is_refused_rather_than_released_at_once() {
+        assertThatThrownBy(() -> codes.lock(jane, CodePurpose.LOGIN)).isInstanceOf(IllegalStateException.class);
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Test

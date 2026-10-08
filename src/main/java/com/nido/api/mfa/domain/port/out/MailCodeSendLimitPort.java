@@ -9,6 +9,9 @@ import java.util.UUID;
  */
 public interface MailCodeSendLimitPort {
 
-    /** Counts one mail against the account: empty when it may leave, else the seconds until it may. */
+    /**
+     * Counts one mail against the account: empty when it may leave, else the seconds until it may. A mail whose
+     * transaction rolls back never leaves, and is given back.
+     */
     OptionalLong tryCount(UUID userId);
 }

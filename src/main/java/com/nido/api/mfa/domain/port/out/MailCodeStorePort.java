@@ -10,6 +10,12 @@ import java.util.UUID;
 /** The live code of each account and purpose. */
 public interface MailCodeStorePort {
 
+    /**
+     * Holds this account's code for this purpose until the transaction ends: of two sends at once, the second
+     * waits, then reads what the first wrote. Only inside a transaction.
+     */
+    void lock(UUID userId, CodePurpose purpose);
+
     /** Expired or not: the caller decides. */
     Optional<SentMailCode> find(UUID userId, CodePurpose purpose);
 

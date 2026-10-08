@@ -7,7 +7,7 @@ import com.nido.api.shared.model.TwoFactorMethod;
 import java.util.Set;
 import java.util.UUID;
 
-/** Port inter-BC : authentication définit, mfa implémente via authentication.infrastructure. */
+/** The second factor of a sign-in, as authentication needs it: defined here, answered by mfa through an adapter. */
 public interface TwoFactorChallengePort {
 
     /** On, paused or not — what the browser is told the account has. */

@@ -18,7 +18,10 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SendChallengeMailCodeHandlerTest {
@@ -53,6 +56,17 @@ class SendChallengeMailCodeHandlerTest {
             refused -> { assertThat(refused.tooSoon()).isTrue(); assertThat(refused.retryAfterSeconds()).isEqualTo(30); });
         assertThatThrownBy(() -> handler.send("c")).isInstanceOfSatisfying(AuthenticationException.MailCodeRefused.class,
             refused -> { assertThat(refused.tooSoon()).isFalse(); assertThat(refused.retryAfterSeconds()).isEqualTo(420); });
+    }
+
+    @Test
+    void an_account_locked_by_wrong_codes_gets_no_code_its_sign_in_would_refuse() {
+        // A challenge still open in another tab would otherwise keep mailing codes that verification turns down.
+        when(challenges.failedAttempts(jane)).thenReturn(5);
+        when(challenges.lockoutSecondsLeft(jane)).thenReturn(600L);
+
+        assertThatThrownBy(() -> handler.send("c")).isInstanceOfSatisfying(AuthenticationException.TwoFactorLockedOut.class,
+            locked -> assertThat(locked.retryAfterSeconds()).isEqualTo(600));
+        verify(secondFactor, never()).sendMailCode(any(), any());
     }
 
     @Test

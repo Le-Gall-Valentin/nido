@@ -6,6 +6,7 @@ import com.nido.api.mfa.domain.port.out.MailCodeStorePort;
 import com.nido.api.shared.model.TwoFactorPolicy;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.sql.Types;
 import java.time.Instant;
@@ -14,13 +15,34 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * The codes in Postgres. Two sends at once are put in line by an advisory lock — a row lock would hold nothing
+ * the first time, when there is no row yet — bounded like {@code PostgresAccountLock}'s, in a space of its own.
+ */
 @Component
 public class MailCodeRepositoryAdapter implements MailCodeStorePort {
+
+    /** mfa's own space of advisory keys; the second key is the account and purpose. */
+    static final int LOCK_NAMESPACE = 1_002;
+    static final String LOCK_TIMEOUT = "10s";
 
     private final JdbcClient jdbc;
 
     public MailCodeRepositoryAdapter(JdbcClient jdbc) {
         this.jdbc = jdbc;
+    }
+
+    @Override
+    public void lock(UUID userId, CodePurpose purpose) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException("A code is held until its transaction ends: hold it inside one");
+        }
+        jdbc.sql("SET LOCAL lock_timeout = '" + LOCK_TIMEOUT + "'").update();
+        jdbc.sql("SELECT pg_advisory_xact_lock(:namespace, hashtext(:code))")
+            .param("namespace", LOCK_NAMESPACE)
+            .param("code", userId + "/" + purpose.name())
+            .query((rs, rowNum) -> Boolean.TRUE)
+            .single();
     }
 
     @Override

@@ -15,12 +15,14 @@ public record MailCodeResponse(
         return new MailCodeResponse(true, resendAfterSeconds, null);
     }
 
+    /** For a code screen: a sign-in whose code could not leave at all lets the password through and shows none. */
     public static MailCodeResponse of(MailCodeDelivery delivery) {
         return switch (delivery) {
             case MailCodeDelivery.Sent sent -> sent(sent.resendAfterSeconds());
             case MailCodeDelivery.TooSoon tooSoon -> new MailCodeResponse(false, null, tooSoon.retryAfterSeconds());
             case MailCodeDelivery.LimitReached limit -> new MailCodeResponse(false, null, limit.retryAfterSeconds());
-            case MailCodeDelivery.Unavailable unavailable -> new MailCodeResponse(false, null, 0L);
+            case MailCodeDelivery.Unavailable unavailable ->
+                throw new IllegalArgumentException("A code that cannot leave has no code screen to describe");
         };
     }
 }
