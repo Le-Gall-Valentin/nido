@@ -218,6 +218,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <!-- Sans cette option, javac resume toute deprecation en une note "[INFO] Some input
+                     files use or override a deprecated API" que personne ne lit. Avec, chaque usage
+                     sort en [WARNING] fichier:[ligne,col] : setup-java en fait une annotation de la CI. -->
+                <configuration>
+                    <showDeprecation>true</showDeprecation>
+                </configuration>
                 <executions>
                     <execution>
                         <id>default-compile</id>

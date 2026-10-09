@@ -9,12 +9,14 @@ on:
 jobs:
   backend:
     name: Backend tests
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest, here and in every job: the runner image changes when a pull
+    # request says so and its CI has passed on it, not on GitHub's schedule in the middle of a release.
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
@@ -25,15 +27,15 @@ jobs:
 
   frontend:
     name: Frontend tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     defaults:
       run:
         working-directory: src/main/frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22.14.0'
           cache: npm
@@ -55,21 +57,41 @@ jobs:
 
       # Two audits, because they answer different questions and deserve different verdicts.
       # What ships is the one that can fail the build: a vulnerability in a runtime dependency
-      # reaches users. Everything flagged today is build tooling — vitest, browserslist — which
-      # never leaves the machine, so it is reported as a warning instead of blocking delivery for
-      # something nobody can exploit. Both are at zero as of this commit.
+      # reaches users. Build tooling never leaves the machine, so a finding there becomes a warning
+      # on the run instead of blocking delivery for something nobody can exploit.
       - name: Audit shipped dependencies
         run: npm audit --omit=dev --audit-level=high
 
+      # A tooling advisory nobody can fix yet is accepted here, by id and with its reason, rather
+      # than left to turn every run red until the signal stops being read:
+      # - GHSA-vfj7-8cjw-p6xm, braces: no patched release exists (every version up to 3.0.3). It
+      #   reaches us only through eslint-plugin-boundaries → micromatch, which expands the globs
+      #   written in eslint.config.js — our own patterns, never a stranger's input.
+      # An accepted advisory that stops being reported is flagged, so the list cannot outlive its reasons.
       - name: Audit build tooling (informational)
-        run: npm audit --audit-level=high
+        env:
+          ACCEPTED: GHSA-vfj7-8cjw-p6xm
+        run: |
+          npm audit --json > audit.json || true
+          jq -r --arg accepted "$ACCEPTED" '
+            ($accepted | split(" ")) as $accepted
+            | [.vulnerabilities[].via[] | objects | select(.severity == "high" or .severity == "critical")]
+            | unique_by(.url)
+            | map(. + {id: (.url | split("/") | last)}) as $found
+            | ($found[] | if (.id | IN($accepted[]))
+                then "Accepted: \(.name) — \(.title) (\(.url))"
+                else "::warning title=npm audit (build tooling)::\(.name) — \(.title) (\(.severity), \(.url))"
+                end),
+              ($accepted[] | select(IN($found[].id) | not)
+                | "::warning title=npm audit (build tooling)::\(.) is accepted in ci.yml but no longer reported: remove it from the list")
+          ' audit.json
         continue-on-error: true
 
   compose:
     name: Production compose
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build the image
         run: docker build -t nido:ci .

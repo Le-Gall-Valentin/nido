@@ -3,7 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import type { IFinanceApi } from './IFinanceApi'
-import { FinanceApiProvider } from './financeApiContext'
+import { FinanceApiProvider } from './FinanceApiProvider'
 import {
   useCategories, useBudgets, useTransactions, useRecurringSeries, useFinanceStats, useProjection,
   useBalances, useSettlementsBetween, useSavingsGoals,

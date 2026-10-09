@@ -5,7 +5,8 @@ export { UserAvatar } from './ui/UserAvatar'
 export type { AvatarPerson } from './ui/UserAvatarStack'
 export { UserAvatarStack } from './ui/UserAvatarStack'
 export type { IAdminUsersApi, UsersPage } from './model/IAdminUsersApi'
-export { AdminUsersApiProvider, useAdminUsersApi } from './model/adminUsersApiContext'
+export { AdminUsersApiProvider } from './model/AdminUsersApiProvider'
+export { useAdminUsersApi } from './model/adminUsersApiContext'
 export { USERS_QUERY_KEY, USERS_PAGE_SIZE, useUsers } from './model/useUsers'
 export {
   useCreateUser, useUpdateUserRole, useDeleteUser, useResetTwoFactor, useToggleUserActive, useResendInvitation,

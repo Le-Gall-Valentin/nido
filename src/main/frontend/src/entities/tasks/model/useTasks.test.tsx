@@ -4,7 +4,8 @@ import type { ReactNode } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import type { Task } from './types'
-import { TasksApiProvider, type TasksApi } from './tasksApiContext'
+import { TasksApiProvider } from './TasksApiProvider'
+import type { TasksApi } from './tasksApiContext'
 import { useTasks, tasksKey } from './useTasks'
 
 const TASKS: Task[] = [{ id: 't-1', title: 'T', status: 'TODO', priority: 'MED', dueDate: null, assigneeIds: [], subtasks: [], recurring: false, recurringSeriesId: null, createdBy: null }]

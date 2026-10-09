@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { AdminUser } from '@/entities/user'
 import type { IAdminUsersApi, UsersPage } from './IAdminUsersApi'
-import { AdminUsersApiProvider } from './adminUsersApiContext'
+import { AdminUsersApiProvider } from './AdminUsersApiProvider'
 import { USERS_QUERY_KEY } from './useUsers'
 import { useCreateUser, useResendInvitation, useResetTwoFactor, useToggleUserActive } from './useUserMutations'
 

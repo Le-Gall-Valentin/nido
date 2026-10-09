@@ -54,6 +54,7 @@
   },
   "overrides": {
     "browserslist": "^4.28.9",
-    "baseline-browser-mapping": "^2.11.23"
+    "baseline-browser-mapping": "^2.11.23",
+    "handlebars": "^4.7.10"
   }
 }

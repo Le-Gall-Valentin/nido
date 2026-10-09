@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { LanguageProvider, useLanguage } from './LanguageProvider'
+import { useLanguage } from '@/shared/lib/language'
+import { LanguageProvider } from './LanguageProvider'
 
 const mockChangeLanguage = vi.fn().mockResolvedValue(undefined)
 const listeners: Record<string, ((lng: string) => void)[]> = {}

@@ -5,7 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import type { SpaceMember } from './types'
 import type { ISpaceMembersApi } from './ISpaceMembersApi'
-import { SpaceMembersApiProvider } from './spaceMembersApiContext'
+import { SpaceMembersApiProvider } from './SpaceMembersApiProvider'
 import { useSpaceMembers, spaceMembersKey } from './useSpaceMembers'
 
 const MEMBERS: SpaceMember[] = [

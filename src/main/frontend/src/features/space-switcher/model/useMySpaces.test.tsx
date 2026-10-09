@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import type { ReactNode } from 'react'
-import { SpacesApiProvider } from './spacesApiContext'
+import { SpacesApiProvider } from './SpacesApiProvider'
 import { useMySpaces } from './useMySpaces'
 import { SPACES_QUERY_KEY } from '@/entities/space'
 import type { ISpacesApi } from './ISpacesApi'

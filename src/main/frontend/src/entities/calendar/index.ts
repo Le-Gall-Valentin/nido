@@ -10,7 +10,8 @@ export {
 export type { ICalendarApi } from './model/ICalendarApi'
 export type { IRecurringEventSeriesApi } from './model/IRecurringEventSeriesApi'
 export type { CalendarApi } from './model/calendarApiContext'
-export { CalendarApiProvider, useCalendarApi, useRecurringEventSeriesApi } from './model/calendarApiContext'
+export { CalendarApiProvider } from './model/CalendarApiProvider'
+export { useCalendarApi, useRecurringEventSeriesApi } from './model/calendarApiContext'
 export {
   calendarKey, occurrencesKey, useOccurrences, recurringEventSeriesKey, useRecurringEventSeries,
 } from './model/useCalendarQueries'

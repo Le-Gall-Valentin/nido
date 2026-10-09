@@ -165,7 +165,7 @@ class SpaceInvitationControllerIT {
                 .cookie(accessTokenFor(aliceId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     @Test
@@ -307,7 +307,7 @@ class SpaceInvitationControllerIT {
                 .cookie(accessTokenFor(aliceId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"identifier\":\"ghost\",\"role\":\"MEMBER\"}"))
-            .andExpect(status().isUnprocessableEntity())
+            .andExpect(status().isUnprocessableContent())
             .andExpect(jsonPath("$.title").value("NoAccountForIdentifier"));
     }
 
@@ -319,7 +319,7 @@ class SpaceInvitationControllerIT {
                 .cookie(accessTokenFor(aliceId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     @Test
@@ -331,7 +331,7 @@ class SpaceInvitationControllerIT {
                 .cookie(accessTokenFor(aliceId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     private UUID createInvitation(UUID spaceId, UUID inviteeId, SpaceRole role, UUID createdBy) {

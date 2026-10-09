@@ -151,7 +151,7 @@ class FinanceControllerIT {
         mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":20.01,\"date\":\"2026-01-02\"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     @Test
@@ -159,7 +159,7 @@ class FinanceControllerIT {
         mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":20.00,\"date\":\"2026-01-02\"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     @Test
@@ -246,7 +246,7 @@ class FinanceControllerIT {
         mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":150.00,\"date\":\"2026-01-02\"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
         mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"fromMemberId\":\"" + aliceId + "\",\"toMemberId\":\"" + bobId + "\",\"amount\":150.00,\"date\":\"2026-01-02\"}"))
@@ -372,7 +372,7 @@ class FinanceControllerIT {
         mockMvc.perform(patch("/api/spaces/" + spaceId + "/finance/savings-goals/" + goalId)
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Vacances\",\"targetAmount\":400.00,\"color\":\"#5c7a58\",\"glyph\":\"🎯\"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     @Test

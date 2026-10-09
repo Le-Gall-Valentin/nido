@@ -1,6 +1,7 @@
 package com.nido.api.infrastructure.ratelimit;
 
 import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
+import io.github.bucket4j.redis.lettuce.Bucket4jLettuce;
 import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -47,8 +48,8 @@ class RedisRateLimitBucketStoreTest {
 
         RedisClient lettuceClient = (RedisClient) springFactory.getNativeClient();
         lettuceConnection = lettuceClient.connect(RedisCodec.of(StringCodec.UTF8, ByteArrayCodec.INSTANCE));
-        proxyManager = LettuceBasedProxyManager.builderFor(lettuceConnection)
-            .withExpirationStrategy(
+        proxyManager = Bucket4jLettuce.casBasedBuilder(lettuceConnection)
+            .expirationAfterWrite(
                 ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(Duration.ofSeconds(1)))
             .build();
     }

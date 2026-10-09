@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { CalendarApiProvider, type CalendarApi } from './calendarApiContext'
+import { CalendarApiProvider } from './CalendarApiProvider'
+import type { CalendarApi } from './calendarApiContext'
 import { useOccurrences } from './useCalendarQueries'
 
 describe('useOccurrences', () => {

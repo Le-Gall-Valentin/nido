@@ -160,7 +160,7 @@ class SpaceControllerIT {
                 .cookie(accessTokenFor(bobId, Role.USER))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     @Test
@@ -236,7 +236,7 @@ class SpaceControllerIT {
         mockMvc.perform(patch("/api/spaces/" + sharedSpaceId)
                 .cookie(accessTokenFor(aliceId, Role.USER)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"timezone\":\"Europe/Atlantis\"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     @Test
@@ -247,7 +247,7 @@ class SpaceControllerIT {
             mockMvc.perform(patch("/api/spaces/" + sharedSpaceId)
                     .cookie(accessTokenFor(aliceId, Role.USER)).contentType(MediaType.APPLICATION_JSON)
                     .content("{\"timezone\":\"+02:00\"}"))
-                .andExpect(status().isUnprocessableEntity()))
+                .andExpect(status().isUnprocessableContent()))
             .doesNotThrowAnyException();
     }
 
@@ -259,7 +259,7 @@ class SpaceControllerIT {
                 .cookie(accessTokenFor(aliceId, Role.USER))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"   \"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     @Test
@@ -272,10 +272,10 @@ class SpaceControllerIT {
                 .cookie(accessTokenFor(aliceId, Role.USER))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
 
         mockMvc.perform(delete("/api/spaces/" + personalId).cookie(accessTokenFor(aliceId, Role.USER)))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     @Test
@@ -380,7 +380,7 @@ class SpaceControllerIT {
 
         mockMvc.perform(delete("/api/spaces/" + personalId + "/membership")
                 .cookie(accessTokenFor(aliceId, Role.USER)))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     protected UUID saveUser(String username, Role role) {

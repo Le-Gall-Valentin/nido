@@ -22,7 +22,7 @@ public class RateLimitConfig {
         // Match methods annotated with @RateLimiting (single) OR @RateLimitingList (multiple)
         Pointcut single   = AnnotationMatchingPointcut.forMethodAnnotation(RateLimiting.class);
         Pointcut multiple = AnnotationMatchingPointcut.forMethodAnnotation(RateLimitingList.class);
-        Pointcut combined = new ComposablePointcut(single).union((Pointcut) multiple);
+        Pointcut combined = new ComposablePointcut(single).union(multiple);
         return new DefaultPointcutAdvisor(combined, interceptor);
     }
 

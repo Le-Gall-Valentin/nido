@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ThemeProvider, useTheme } from './ThemeProvider'
+import { useTheme } from '@/shared/lib/theme'
+import { ThemeProvider } from './ThemeProvider'
 
 class MemoryStorage implements Storage {
   private readonly map = new Map<string, string>()

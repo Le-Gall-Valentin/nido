@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext } from 'react'
 
 /** A debt the caller is about to settle, opened from "À traiter" or from the finance card. */
 export interface PendingSettlement {
@@ -31,11 +31,7 @@ export interface DashboardActions {
   reportError: () => void
 }
 
-const DashboardActionsContext = createContext<DashboardActions | null>(null)
-
-export function DashboardActionsProvider({ value, children }: { value: DashboardActions; children: ReactNode }) {
-  return <DashboardActionsContext.Provider value={value}>{children}</DashboardActionsContext.Provider>
-}
+export const DashboardActionsContext = createContext<DashboardActions | null>(null)
 
 export function useDashboardActions(): DashboardActions {
   const actions = useContext(DashboardActionsContext)

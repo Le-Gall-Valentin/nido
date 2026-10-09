@@ -5,7 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
 import type { ReceivedInvitation } from '@/entities/space'
 import type { ISpaceApi } from './ISpaceApi'
-import { SpaceApiProvider } from './spaceApiContext'
+import { SpaceApiProvider } from './SpaceApiProvider'
 import { useReceivedInvitations, RECEIVED_INVITATIONS_QUERY_KEY } from './useReceivedInvitations'
 
 const RECEIVED: ReceivedInvitation[] = [
