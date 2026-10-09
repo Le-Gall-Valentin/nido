@@ -1,7 +1,6 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { IShoppingApi } from './IShoppingApi'
-
-const ShoppingApiContext = createContext<IShoppingApi | null>(null)
+import { ShoppingApiContext } from './shoppingApiContext'
 
 interface ShoppingApiProviderProps {
   api: IShoppingApi
@@ -11,12 +10,4 @@ interface ShoppingApiProviderProps {
 /** Injects the IShoppingApi implementation consumed by the shopping-list page and the menu-export feature's hooks. */
 export function ShoppingApiProvider({ api, children }: ShoppingApiProviderProps) {
   return <ShoppingApiContext.Provider value={api}>{children}</ShoppingApiContext.Provider>
-}
-
-export function useShoppingApi(): IShoppingApi {
-  const api = useContext(ShoppingApiContext)
-  if (!api) {
-    throw new Error('useShoppingApi must be used within a ShoppingApiProvider')
-  }
-  return api
 }

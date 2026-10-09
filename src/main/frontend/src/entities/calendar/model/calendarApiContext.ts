@@ -1,20 +1,10 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext } from 'react'
 import type { ICalendarApi } from './ICalendarApi'
 import type { IRecurringEventSeriesApi } from './IRecurringEventSeriesApi'
 
 export type CalendarApi = ICalendarApi & IRecurringEventSeriesApi
 
-const CalendarApiContext = createContext<CalendarApi | null>(null)
-
-interface CalendarApiProviderProps {
-  api: CalendarApi
-  children: ReactNode
-}
-
-/** Injects the ICalendarApi/IRecurringEventSeriesApi implementation the calendar's hooks consume. */
-export function CalendarApiProvider({ api, children }: CalendarApiProviderProps) {
-  return <CalendarApiContext.Provider value={api}>{children}</CalendarApiContext.Provider>
-}
+export const CalendarApiContext = createContext<CalendarApi | null>(null)
 
 function useCalendarApiContext(): CalendarApi {
   const api = useContext(CalendarApiContext)

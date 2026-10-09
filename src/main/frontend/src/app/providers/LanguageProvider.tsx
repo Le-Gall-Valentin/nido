@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { LanguageContext, type Language } from '@/shared/lib/language'
 import i18n from '../i18n'
-export { useLanguage, type Language } from '@/shared/lib/language'
 
 function toLanguage(lng: string): Language {
   return lng.startsWith('fr') ? 'fr' : 'en'

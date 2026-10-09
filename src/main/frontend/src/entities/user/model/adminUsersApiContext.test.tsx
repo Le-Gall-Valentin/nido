@@ -1,7 +1,8 @@
 import { render, renderHook } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import type { ReactNode } from 'react'
-import { AdminUsersApiProvider, useAdminUsersApi } from './adminUsersApiContext'
+import { AdminUsersApiProvider } from './AdminUsersApiProvider'
+import { useAdminUsersApi } from './adminUsersApiContext'
 import type { IAdminUsersApi } from './IAdminUsersApi'
 
 function fakeApi(): IAdminUsersApi {

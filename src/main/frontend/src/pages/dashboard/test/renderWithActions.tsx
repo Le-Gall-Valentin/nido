@@ -6,7 +6,8 @@ import { createTestQueryClient } from '@/shared/test'
 import { TasksApiProvider, type TasksApi } from '@/entities/tasks'
 import { SpaceApiProvider, type ISpaceApi } from '@/entities/space'
 import { KitchenApiProvider, type IKitchenApi } from '@/entities/kitchen'
-import { DashboardActionsProvider, type DashboardActions } from '../model/dashboardActions'
+import { DashboardActionsProvider } from '../model/DashboardActionsProvider'
+import type { DashboardActions } from '../model/dashboardActions'
 
 /**
  * Renders one dashboard block the way the page mounts it — router, query client, the APIs the blocks

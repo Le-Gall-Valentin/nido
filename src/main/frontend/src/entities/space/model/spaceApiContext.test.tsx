@@ -1,7 +1,8 @@
 import { render, renderHook } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import type { ReactNode } from 'react'
-import { SpaceApiProvider, useSpaceApi } from './spaceApiContext'
+import { SpaceApiProvider } from './SpaceApiProvider'
+import { useSpaceApi } from './spaceApiContext'
 import type { ISpaceApi } from './ISpaceApi'
 
 function fakeApi(): ISpaceApi {

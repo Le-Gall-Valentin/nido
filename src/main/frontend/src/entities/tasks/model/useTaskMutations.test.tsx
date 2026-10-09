@@ -3,7 +3,8 @@ import { describe, it, expect, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Task } from './types'
-import { TasksApiProvider, type TasksApi } from './tasksApiContext'
+import { TasksApiProvider } from './TasksApiProvider'
+import type { TasksApi } from './tasksApiContext'
 import {
   useCreateTask, useCreateRecurringTask, useUpdateTask, useChangeTaskStatus,
   useToggleSubtask, useDeleteTask, useMoveTask, useUpdateRecurringTaskSeries, useDeleteRecurringTaskSeries,

@@ -1,20 +1,10 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext } from 'react'
 import type { ITasksApi } from './ITasksApi'
 import type { IRecurringTaskSeriesApi } from './IRecurringTaskSeriesApi'
 
 export type TasksApi = ITasksApi & IRecurringTaskSeriesApi
 
-const TasksApiContext = createContext<TasksApi | null>(null)
-
-interface TasksApiProviderProps {
-  api: TasksApi
-  children: ReactNode
-}
-
-/** Injects the ITasksApi/IRecurringTaskSeriesApi implementation consumed by the tasks page's hooks. */
-export function TasksApiProvider({ api, children }: TasksApiProviderProps) {
-  return <TasksApiContext.Provider value={api}>{children}</TasksApiContext.Provider>
-}
+export const TasksApiContext = createContext<TasksApi | null>(null)
 
 function useTasksApiContext(): TasksApi {
   const api = useContext(TasksApiContext)

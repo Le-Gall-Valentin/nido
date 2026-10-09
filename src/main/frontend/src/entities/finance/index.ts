@@ -11,7 +11,8 @@ export type { IRecurringSeriesApi } from './model/IRecurringSeriesApi'
 export type { IFinanceStatsApi } from './model/IFinanceStatsApi'
 export type { IBalancesApi } from './model/IBalancesApi'
 export type { ISavingsGoalsApi } from './model/ISavingsGoalsApi'
-export { FinanceApiProvider, useFinanceApi } from './model/financeApiContext'
+export { FinanceApiProvider } from './model/FinanceApiProvider'
+export { useFinanceApi } from './model/financeApiContext'
 export {
   categoriesKey, budgetsKey, transactionsKey, recurringSeriesKey, financeStatsKey, projectionKey, balancesKey, savingsGoalsKey,
   settlementsBetweenKey,

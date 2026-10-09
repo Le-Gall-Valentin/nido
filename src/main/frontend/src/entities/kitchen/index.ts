@@ -1,6 +1,7 @@
 export type { MenuEntry, Recipe, RecipeIngredient, RecipeInput, RecipeCategory, ShoppingListLine, MeasurementUnit } from './model/types'
 export type { IKitchenApi } from './model/IKitchenApi'
-export { KitchenApiProvider, useKitchenApi } from './model/kitchenApiContext'
+export { KitchenApiProvider } from './model/KitchenApiProvider'
+export { useKitchenApi } from './model/kitchenApiContext'
 export { recipesKey, useRecipes } from './model/useRecipes'
 export { recipeKey, useRecipe } from './model/useRecipe'
 export { menuEntriesKey, useMenuEntries } from './model/useMenuEntries'
