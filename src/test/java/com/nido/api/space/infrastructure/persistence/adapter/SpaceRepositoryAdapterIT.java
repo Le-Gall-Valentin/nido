@@ -193,7 +193,7 @@ class SpaceRepositoryAdapterIT {
 
         Map<String, Object> row = jdbc.queryForMap("SELECT name_encrypted, description_encrypted FROM spaces WHERE id = ?", space.id());
         SpaceSealer sealer = sealers.forSpace(space.id());
-        assertThat((String) row.get("name_encrypted")).startsWith("v2:").doesNotContain("Famille");
+        assertThat((String) row.get("name_encrypted")).startsWith("v3:").doesNotContain("Famille");
         assertThat(sealer.open(SpaceEntity.NAME, space.id(), (String) row.get("name_encrypted"))).isEqualTo("Famille Le Gall 🏡");
         assertThat(sealer.open(SpaceEntity.DESCRIPTION, space.id(), (String) row.get("description_encrypted"))).isEqualTo("Rue des Lilas");
         assertThat(adapter.findById(space.id()).orElseThrow())
@@ -228,7 +228,7 @@ class SpaceRepositoryAdapterIT {
         adapter.update(new UpdateSpaceCommand(space.id(), null, "Rue des Lilas", null, null, null));
 
         String stored = jdbc.queryForObject("SELECT description_encrypted FROM spaces WHERE id = ?", String.class, space.id());
-        assertThat(stored).startsWith("v2:").doesNotContain("Lilas");
+        assertThat(stored).startsWith("v3:").doesNotContain("Lilas");
         assertThat(sealers.forSpace(space.id()).open(SpaceEntity.DESCRIPTION, space.id(), stored)).isEqualTo("Rue des Lilas");
         assertThat(adapter.findById(space.id()).orElseThrow().description()).isEqualTo("Rue des Lilas");
     }

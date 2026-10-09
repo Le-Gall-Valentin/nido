@@ -6,6 +6,7 @@ import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
+import com.nido.api.infrastructure.encryption.LegacyKeys;
 import com.nido.api.infrastructure.sealing.EncryptionBackfillRunner;
 import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.infrastructure.sealing.SealedColumns;
@@ -37,7 +38,6 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 
 import java.io.PrintWriter;
@@ -59,7 +59,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 /**
- * 0.14.0 on a database written by an earlier version. What that version stored in clear, and what it encrypted
+ * The first start on a database written by an earlier version. What that version stored in clear, and what it encrypted
  * without the place it belongs to, is sealed at the first start, before anyone can be served, and the columns that
  * held values in clear go at the next start. Every start validates the schema as production does — the shared test
  * context does not.
@@ -135,7 +135,7 @@ class EncryptionBackfillIT {
             + "VALUES (?, 'Alimentation', '#f59e0b', 'Utensils', 'EXPENSE', true)", spaceA);
         db.update("INSERT INTO finance_categories (space_id, label, color, icon, type, is_default) "
             + "VALUES (?, 'Cantine des enfants', '#6366f1', 'Home', 'EXPENSE', true)", spaceA);
-        TextEncryptor v1 = Encryptors.delux(KEY, SALT_A);
+        TextEncryptor v1 = LegacyKeys.writer(KEY, SALT_A);
         UUID holidays = id("INSERT INTO finance_categories (space_id, label_encrypted, color, icon, type, is_default) "
             + "VALUES (?, ?, '#ec4899', 'Star', 'EXPENSE', false) RETURNING id", spaceA, v1.encrypt("Vacances"));
         for (String[] spent : new String[][] {{"Loyer", "850.00"}, {"Café", "3.50"}}) {
@@ -143,7 +143,7 @@ class EncryptionBackfillIT {
                 + "VALUES (?, ?, ?, 'EXPENSE', ?, DATE '2026-10-01')", spaceA, v1.encrypt(spent[0]), v1.encrypt(spent[1]), holidays);
         }
         db.update("INSERT INTO calendar_events (space_id, title_encrypted, all_day, start_date, end_date, created_by) "
-            + "VALUES (?, ?, true, DATE '2026-10-06', DATE '2026-10-06', ?)", spaceB, Encryptors.delux(KEY, SALT_B).encrypt("Dîner chez Mamie"), admin);
+            + "VALUES (?, ?, true, DATE '2026-10-06', DATE '2026-10-06', ?)", spaceB, LegacyKeys.writer(KEY, SALT_B).encrypt("Dîner chez Mamie"), admin);
     }
 
     private void everythingReadsAsItWasWritten(ConfigurableApplicationContext app) {
@@ -184,7 +184,7 @@ class EncryptionBackfillIT {
             for (SealedColumns columns : app.getBeansOfType(SealedColumns.class).values()) {
                 for (SealedColumn column : columns.columns()) {
                     assertThat(db.queryForObject("SELECT count(*) FROM " + column.table() + " WHERE " + column.column()
-                        + " IS NOT NULL AND " + column.column() + " NOT LIKE 'v2:%'", Long.class)).as(column.toString()).isZero();
+                        + " IS NOT NULL AND " + column.column() + " NOT LIKE 'v3:%'", Long.class)).as(column.toString()).isZero();
                 }
             }
             assertThat(db.queryForList("SELECT DISTINCT length(amount_encrypted) FROM finance_transactions", Integer.class))
@@ -309,7 +309,7 @@ class EncryptionBackfillIT {
         }
 
         assertThat(PlaintextPerimeter.valuesInClear(db)).isZero();
-        assertThat(db.queryForObject("SELECT count(*) FROM finance_transactions WHERE amount_encrypted NOT LIKE 'v2:%'", Long.class))
+        assertThat(db.queryForObject("SELECT count(*) FROM finance_transactions WHERE amount_encrypted NOT LIKE 'v3:%'", Long.class))
             .isZero();
     }
 
@@ -444,13 +444,13 @@ class EncryptionBackfillIT {
         admin = id("INSERT INTO users (username, email, role) VALUES ('admin', 'admin@example.fr', 'SUPER_ADMIN') RETURNING id");
         db.update("UPDATE instance SET setup_completed_at = now() WHERE id = 1");
         spaceA = id("INSERT INTO spaces (type, name_encrypted, accent, glyph, encryption_salt) "
-            + "VALUES ('SHARED', ?, '#c17a5c', '🏡', ?) RETURNING id", Encryptors.delux(KEY, SALT_A).encrypt("Famille"), SALT_A);
+            + "VALUES ('SHARED', ?, '#c17a5c', '🏡', ?) RETURNING id", LegacyKeys.writer(KEY, SALT_A).encrypt("Famille"), SALT_A);
         db.update("INSERT INTO finance_categories (space_id, label_encrypted, color, icon, type, is_default) "
-            + "VALUES (?, ?, '#f59e0b', 'Utensils', 'EXPENSE', true)", spaceA, Encryptors.delux(KEY, SALT_A).encrypt("Alimentation"));
+            + "VALUES (?, ?, '#f59e0b', 'Utensils', 'EXPENSE', true)", spaceA, LegacyKeys.writer(KEY, SALT_A).encrypt("Alimentation"));
         UUID aisle = id("INSERT INTO shopping_categories (space_id, name_encrypted, position) VALUES (?, ?, 0) RETURNING id",
-            spaceA, Encryptors.delux(KEY, SALT_A).encrypt("Épicerie"));
+            spaceA, LegacyKeys.writer(KEY, SALT_A).encrypt("Épicerie"));
         db.update("INSERT INTO shopping_items (space_id, category_id, name_encrypted, position) VALUES (?, ?, ?, 0)",
-            spaceA, aisle, Encryptors.delux(KEY, SALT_A).encrypt("Pâtes"));
+            spaceA, aisle, LegacyKeys.writer(KEY, SALT_A).encrypt("Pâtes"));
         db.update("INSERT INTO shopping_items (space_id, category_id, name, position) VALUES (?, ?, 'Riz', 1)", spaceA, aisle);
         long financeFiles = filenode("finance_categories");
 
@@ -473,7 +473,7 @@ class EncryptionBackfillIT {
         admin = id("INSERT INTO users (username, email, role) VALUES ('admin', 'admin@example.fr', 'SUPER_ADMIN') RETURNING id");
         String userSalt = admin.toString().replace("-", "");
         db.update("INSERT INTO user_totp (user_id, totp_secret, totp_enabled) VALUES (?, ?, true)",
-            admin, Encryptors.delux(KEY, userSalt).encrypt("JBSWY3DPEHPK3PXP"));
+            admin, LegacyKeys.writer(KEY, userSalt).encrypt("JBSWY3DPEHPK3PXP"));
 
         assertThatThrownBy(() -> start(OTHER).close()).hasStackTraceContaining("does not decrypt the two-factor secrets");
 

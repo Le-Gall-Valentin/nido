@@ -33,7 +33,9 @@ class EncryptorCacheTest {
     }
 
     private static TextEncryptor anyEncryptor() {
-        return Encryptors.delux("0123456789abcdef0123456789abcdef", "aabbccddeeff00112233445566778899");
+        // Any encryptor will do: the cache is under test, not the key. A real derivation, ~130 ms, would make filling
+        // the cache take twenty minutes.
+        return Encryptors.noOpText();
     }
 
     @Test
@@ -50,7 +52,7 @@ class EncryptorCacheTest {
 
     @Test
     void derives_a_key_once_and_reuses_it_within_the_window() {
-        // The whole reason the cache exists: deriving costs ~2 ms against ~6 µs for a decryption.
+        // The whole reason the cache exists: deriving costs ~130 ms against microseconds for a decryption.
         AtomicInteger derivations = new AtomicInteger();
         LoadingCache<UUID, TextEncryptor> cache = EncryptorCache.build(
             id -> { derivations.incrementAndGet(); return anyEncryptor(); }, new FakeTicker());

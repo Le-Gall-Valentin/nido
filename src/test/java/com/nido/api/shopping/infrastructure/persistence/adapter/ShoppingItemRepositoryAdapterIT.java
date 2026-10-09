@@ -178,7 +178,7 @@ class ShoppingItemRepositoryAdapterIT {
         adapter.update(new UpdateShoppingItemCommand(created.id(), spaceId, categoryId, "Crème fraîche 🥛", null, null));
 
         String stored = jdbc.queryForObject("SELECT name_encrypted FROM shopping_items WHERE id = ?", String.class, created.id());
-        assertThat(stored).startsWith("v2:").doesNotContain("Crème");
+        assertThat(stored).startsWith("v3:").doesNotContain("Crème");
         assertThat(sealers.forSpace(spaceId).open(ShoppingItemEntity.NAME, created.id(), stored)).isEqualTo("Crème fraîche 🥛");
         assertThat(adapter.findById(created.id()).orElseThrow().name()).isEqualTo("Crème fraîche 🥛");
     }

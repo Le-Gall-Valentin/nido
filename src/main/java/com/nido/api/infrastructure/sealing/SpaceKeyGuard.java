@@ -13,6 +13,8 @@ import java.util.UUID;
  * encrypted in the sealed columns must open with the key this start was given — at least one of them. A space refuses
  * the start only when it holds encrypted values and none opens: a single damaged value is left to the migration, which
  * names it, rather than taken for a wrong key. A sealed value that decrypts but belongs elsewhere still proves the key.
+ * A value of the current format opens with the current key; one of a format before 0.16.0 with the legacy key
+ * (LegacySpaceOpener).
  */
 @Component
 public class SpaceKeyGuard implements ExistingCiphertextCheck {
@@ -22,17 +24,20 @@ public class SpaceKeyGuard implements ExistingCiphertextCheck {
 
     private final JdbcClient jdbc;
     private final SpaceSealers sealers;
+    private final LegacySpaceOpeners legacy;
     private final List<SealedColumns> declared;
 
-    public SpaceKeyGuard(JdbcClient jdbc, SpaceSealers sealers, List<SealedColumns> declared) {
+    public SpaceKeyGuard(JdbcClient jdbc, SpaceSealers sealers, LegacySpaceOpeners legacy, List<SealedColumns> declared) {
         this.jdbc = jdbc;
         this.sealers = sealers;
+        this.legacy = legacy;
         this.declared = declared;
     }
 
     @Override
     public void verify() {
         Map<UUID, Boolean> proven = new LinkedHashMap<>();
+        LegacySpaceOpeners remembered = LegacySpaceOpeners.remembering(legacy);
         for (SealedColumns columns : declared) {
             for (SealedColumn column : columns.columns()) {
                 jdbc.sql("SELECT space_id, id, value FROM (SELECT " + column.spaceOf() + " AS space_id, t.id, t."
@@ -44,7 +49,7 @@ public class SpaceKeyGuard implements ExistingCiphertextCheck {
                     .list()
                     .stream()
                     .filter(sample -> !proven.getOrDefault(sample.spaceId(), false))
-                    .forEach(sample -> proven.merge(sample.spaceId(), opens(column, sample), Boolean::logicalOr));
+                    .forEach(sample -> proven.merge(sample.spaceId(), opens(column, sample, remembered), Boolean::logicalOr));
             }
         }
         proven.forEach((space, opened) -> {
@@ -55,21 +60,24 @@ public class SpaceKeyGuard implements ExistingCiphertextCheck {
         });
     }
 
-    private boolean opens(SealedColumn column, Sample sample) {
-        SpaceSealer sealer = sealerOf(sample.spaceId());
+    private boolean opens(SealedColumn column, Sample sample, LegacySpaceOpeners legacy) {
         if (SpaceSealer.isSealed(sample.value())) {
             try {
-                sealer.open(column, sample.id(), sample.value());
+                sealerOf(sample.spaceId()).open(column, sample.id(), sample.value());
                 return true;
             } catch (SealedValueRejected rejected) {
                 return rejected.reason() != SealedValueRejected.Reason.UNDECRYPTABLE;
             }
         }
+        return legacyOf(sample.spaceId(), legacy).decrypts(sample.value());
+    }
+
+    private LegacySpaceOpener legacyOf(UUID spaceId, LegacySpaceOpeners legacy) {
         try {
-            sealer.openUnsealed(sample.value());
-            return true;
+            return legacy.forSpace(spaceId);
         } catch (RuntimeException e) {
-            return false;
+            throw new IllegalStateException("Could not derive the key of space " + spaceId + " ("
+                + e.getClass().getSimpleName() + "): its salt may be damaged. Nothing was encrypted.");
         }
     }
 

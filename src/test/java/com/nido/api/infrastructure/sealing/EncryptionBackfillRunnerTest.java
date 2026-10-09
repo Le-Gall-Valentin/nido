@@ -15,6 +15,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
@@ -31,6 +32,7 @@ class EncryptionBackfillRunnerTest {
     private final ExistingCiphertextCheck finance = mock(ExistingCiphertextCheck.class);
     private final SealedValueMigration migration = mock(SealedValueMigration.class);
     private final SpaceSealers sealers = space -> { throw new AssertionError("not used"); };
+    private final LegacySpaceOpeners legacy = space -> { throw new AssertionError("not used"); };
     private final SealingLock lock = mock(SealingLock.class);
     private final PendingVacuum pendingVacuum = mock(PendingVacuum.class);
     private final TableVacuum vacuum = mock(TableVacuum.class);
@@ -40,7 +42,7 @@ class EncryptionBackfillRunnerTest {
 
     private EncryptionBackfillRunner runner(StartKey key) {
         return new EncryptionBackfillRunner(List.of(SealedColumns.of(titles), SealedColumns.of(items)), List.of(finance), migration,
-            sealers, lock, vacuum, pendingVacuum, key);
+            sealers, legacy, lock, vacuum, pendingVacuum, key);
     }
 
     private final Logger logger = (Logger) LoggerFactory.getLogger(EncryptionBackfillRunner.class);
@@ -67,7 +69,7 @@ class EncryptionBackfillRunnerTest {
         runner.afterSingletonsInstantiated();
 
         verify(finance, never()).verify();
-        verify(migration, never()).migrate(any(), any());
+        verify(migration, never()).migrate(any(), any(), any());
         verifyNoInteractions(vacuum, lock);
         assertThat(logged.list).isEmpty();
     }
@@ -75,14 +77,14 @@ class EncryptionBackfillRunnerTest {
     @Test
     void the_key_is_checked_under_the_lock_before_anything_is_sealed() {
         when(migration.pending(titles)).thenReturn(true);
-        when(migration.migrate(titles, sealers)).thenReturn(4);
+        when(migration.migrate(eq(titles), eq(sealers), any())).thenReturn(4);
 
         runner.afterSingletonsInstantiated();
 
         InOrder order = inOrder(lock, finance, migration);
         order.verify(lock).whileHeld(any());
         order.verify(finance).verify();
-        order.verify(migration).migrate(titles, sealers);
+        order.verify(migration).migrate(eq(titles), eq(sealers), any());
     }
 
     @Test
@@ -92,7 +94,7 @@ class EncryptionBackfillRunnerTest {
 
         assertThatThrownBy(runner::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
 
-        verify(migration, never()).migrate(any(), any());
+        verify(migration, never()).migrate(any(), any(), any());
         verifyNoInteractions(vacuum);
     }
 
@@ -101,13 +103,13 @@ class EncryptionBackfillRunnerTest {
         // A start cut short leaves tables sealed then, whose columns in clear 068 has since dropped
         // without rewriting them: their earlier versions are still in their files.
         when(migration.pending(items)).thenReturn(true);
-        when(migration.migrate(items, sealers)).thenReturn(2);
+        when(migration.migrate(eq(items), eq(sealers), any())).thenReturn(2);
 
         runner.afterSingletonsInstantiated();
 
         verify(pendingVacuum).owe(Set.of("tasks", "shopping_items"));
         assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
-            .containsExactly("Sealed 2 values of shopping_items.name_encrypted that earlier versions stored");
+            .containsExactly("Sealed 2 values of shopping_items.name_encrypted with the current key");
     }
 
     @Test
@@ -116,7 +118,7 @@ class EncryptionBackfillRunnerTest {
 
         runner.afterSingletonsInstantiated();
 
-        verify(migration, never()).migrate(any(), any());
+        verify(migration, never()).migrate(any(), any(), any());
         verifyNoInteractions(vacuum);
     }
 
@@ -128,7 +130,7 @@ class EncryptionBackfillRunnerTest {
         order.verify(finance).verify();
         order.verify(unconfirmedKey).confirm();
         verify(unconfirmedKey, never()).forget();
-        verify(migration, never()).migrate(any(), any());
+        verify(migration, never()).migrate(any(), any(), any());
         verifyNoInteractions(vacuum);
     }
 
@@ -172,7 +174,7 @@ class EncryptionBackfillRunnerTest {
 
         InOrder order = inOrder(pendingVacuum, migration, vacuum);
         order.verify(pendingVacuum).owe(Set.of("tasks", "shopping_items"));
-        order.verify(migration).migrate(titles, sealers);
+        order.verify(migration).migrate(eq(titles), eq(sealers), any());
         order.verify(vacuum).vacuumFull("shopping_items");
         order.verify(pendingVacuum).settle("shopping_items");
         order.verify(vacuum).vacuumFull("tasks");
@@ -191,7 +193,7 @@ class EncryptionBackfillRunnerTest {
         InOrder order = inOrder(vacuum, pendingVacuum);
         order.verify(vacuum).vacuumFull("tasks");
         order.verify(pendingVacuum).settle("tasks");
-        verify(migration, never()).migrate(any(), any());
+        verify(migration, never()).migrate(any(), any(), any());
         verify(pendingVacuum, never()).owe(any());
     }
 

@@ -160,7 +160,7 @@ class RecurringTaskSeriesRepositoryAdapterIT {
         SpaceSealer sealer = sealers.forSpace(spaceId);
 
         String title = jdbc.queryForObject("SELECT title_encrypted FROM recurring_task_series WHERE id = ?", String.class, created.id());
-        assertThat(title).startsWith("v2:");
+        assertThat(title).startsWith("v3:");
         assertThat(sealer.open(RecurringTaskSeriesEntity.TITLE, created.id(), title)).isEqualTo("Sortir les poubelles");
         assertThat(jdbc.query("SELECT id, text_encrypted FROM recurring_task_series_subtask_templates WHERE series_id = ?",
                 (rs, rowNum) -> sealer.open(RecurringTaskSeriesSubtaskTemplateEntity.TEXT, rs.getObject("id", UUID.class),

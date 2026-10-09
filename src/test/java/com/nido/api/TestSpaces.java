@@ -1,9 +1,10 @@
 package com.nido.api;
 
+import com.nido.api.infrastructure.encryption.DataKeys;
 import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.shared.security.EncryptionKey;
 import com.nido.api.space.infrastructure.persistence.SpaceSalt;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
-import org.springframework.security.crypto.encrypt.Encryptors;
 
 /**
  * A space row written straight through JPA — the way many tests set one up — with its name sealed as
@@ -21,7 +22,7 @@ public final class TestSpaces {
         if (space.getEncryptionSalt() == null) {
             space.setEncryptionSalt(SpaceSalt.random());
         }
-        space.setNameEncrypted(SpaceSealer.of(Encryptors.delux(ENCRYPTION_KEY, space.getEncryptionSalt()))
+        space.setNameEncrypted(SpaceSealer.of(DataKeys.current(new EncryptionKey(ENCRYPTION_KEY), space.getEncryptionSalt()))
             .seal(SpaceEntity.NAME, space.getId(), name));
     }
 }

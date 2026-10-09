@@ -39,18 +39,20 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
     private final List<ExistingCiphertextCheck> checks;
     private final SealedValueMigration migration;
     private final SpaceSealers sealers;
+    private final LegacySpaceOpeners legacyOpeners;
     private final SealingLock lock;
     private final TableVacuum vacuum;
     private final PendingVacuum pendingVacuum;
     private final StartKey key;
 
     public EncryptionBackfillRunner(List<SealedColumns> sealedColumns, List<ExistingCiphertextCheck> checks,
-                                    SealedValueMigration migration, SpaceSealers sealers, SealingLock lock,
-                                    TableVacuum vacuum, PendingVacuum pendingVacuum, StartKey key) {
+                                    SealedValueMigration migration, SpaceSealers sealers, LegacySpaceOpeners legacyOpeners,
+                                    SealingLock lock, TableVacuum vacuum, PendingVacuum pendingVacuum, StartKey key) {
         this.sealedColumns = sealedColumns;
         this.checks = checks;
         this.migration = migration;
         this.sealers = sealers;
+        this.legacyOpeners = legacyOpeners;
         this.lock = lock;
         this.vacuum = vacuum;
         this.pendingVacuum = pendingVacuum;
@@ -79,10 +81,11 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
                 Set<String> tables = new LinkedHashSet<>();
                 columns.forEach(column -> tables.add(column.table()));
                 pendingVacuum.owe(tables);
+                LegacySpaceOpeners remembered = LegacySpaceOpeners.remembering(legacyOpeners);
                 for (SealedColumn column : columns) {
-                    int rows = migration.migrate(column, sealers);
+                    int rows = migration.migrate(column, sealers, remembered);
                     if (rows > 0) {
-                        log.info("Sealed {} values of {} that earlier versions stored", rows, column);
+                        log.info("Sealed {} values of {} with the current key", rows, column);
                     }
                 }
             }

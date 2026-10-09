@@ -91,7 +91,7 @@ class CalendarEventRepositoryAdapterIT {
             "SELECT description_encrypted FROM calendar_events WHERE id = ?", String.class, created.id());
         String storedLocation = jdbc.queryForObject(
             "SELECT location_encrypted FROM calendar_events WHERE id = ?", String.class, created.id());
-        assertThat(storedTitle).startsWith("v2:").doesNotContain("oncologue");
+        assertThat(storedTitle).startsWith("v3:").doesNotContain("oncologue");
         assertThat(storedDescription).doesNotContain("résultats");
         assertThat(storedLocation).doesNotContain("Saint-Louis");
         assertThat(sealers.forSpace(spaceId).open(CalendarEventEntity.TITLE, created.id(), storedTitle)).isEqualTo("RDV oncologue");
@@ -290,7 +290,7 @@ class CalendarEventRepositoryAdapterIT {
         UUID seriesId = weeklySeries();
         String stored = jdbc.queryForObject(
             "SELECT title_encrypted FROM calendar_recurring_event_series WHERE id = ?", String.class, seriesId);
-        assertThat(stored).startsWith("v2:").doesNotContain("Piano");
+        assertThat(stored).startsWith("v3:").doesNotContain("Piano");
         assertThat(sealers.forSpace(spaceId).open(CalendarRecurringEventSeriesEntity.TITLE, seriesId, stored)).isEqualTo("Piano");
         assertThat(series.findById(seriesId)).get().extracting(s -> s.title()).isEqualTo("Piano");
     }
