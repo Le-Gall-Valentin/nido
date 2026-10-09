@@ -46,13 +46,19 @@ public final class SpaceSealer {
         try {
             return Envelope.unwrap(column.referenceFor(rowId), envelope);
         } catch (EnvelopeRejected rejected) {
-            // A place that is no place can only come from a text someone typed, encrypted in the format before: it is
-            // not repeated in the log.
-            throw rejected.claimedReference()
-                .filter(SealedColumn::isReference)
-                .map(claimed -> new SealedValueRejected(column, rowId, SealedValueRejected.Reason.ELSEWHERE, "sealed for " + claimed))
-                .orElseGet(() -> new SealedValueRejected(column, rowId, SealedValueRejected.Reason.MALFORMED, null));
+            throw rejected(column, rowId, rejected);
         }
+    }
+
+    /**
+     * A place that is no place can only come from a text someone typed, encrypted in the format before 0.14.0: it is not
+     * repeated in the log.
+     */
+    static SealedValueRejected rejected(SealedColumn column, UUID rowId, EnvelopeRejected rejected) {
+        return rejected.claimedReference()
+            .filter(SealedColumn::isReference)
+            .map(claimed -> new SealedValueRejected(column, rowId, SealedValueRejected.Reason.ELSEWHERE, "sealed for " + claimed))
+            .orElseGet(() -> new SealedValueRejected(column, rowId, SealedValueRejected.Reason.MALFORMED, null));
     }
 
     public String openNullable(SealedColumn column, UUID rowId, String stored) {
