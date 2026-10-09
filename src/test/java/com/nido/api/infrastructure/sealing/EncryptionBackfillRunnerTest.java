@@ -31,6 +31,7 @@ class EncryptionBackfillRunnerTest {
     private final SealedColumn items = SealedColumn.ofSpace("shopping_items", "name_encrypted");
     private final ExistingCiphertextCheck finance = mock(ExistingCiphertextCheck.class);
     private final SealedValueMigration migration = mock(SealedValueMigration.class);
+    private final RekeyMigration rekeying = mock(RekeyMigration.class);
     private final SpaceSealers sealers = space -> { throw new AssertionError("not used"); };
     private final LegacySpaceOpeners legacy = space -> { throw new AssertionError("not used"); };
     private final SealingLock lock = mock(SealingLock.class);
@@ -41,8 +42,8 @@ class EncryptionBackfillRunnerTest {
     private final EncryptionBackfillRunner runner = runner(knownKey);
 
     private EncryptionBackfillRunner runner(StartKey key) {
-        return new EncryptionBackfillRunner(List.of(SealedColumns.of(titles), SealedColumns.of(items)), List.of(finance), migration,
-            sealers, legacy, lock, vacuum, pendingVacuum, key);
+        return new EncryptionBackfillRunner(List.of(SealedColumns.of(titles), SealedColumns.of(items)), List.of(), List.of(finance),
+            migration, rekeying, sealers, legacy, lock, vacuum, pendingVacuum, key);
     }
 
     private final Logger logger = (Logger) LoggerFactory.getLogger(EncryptionBackfillRunner.class);
@@ -219,5 +220,43 @@ class EncryptionBackfillRunnerTest {
 
         verify(pendingVacuum).settle("tasks");
         verify(pendingVacuum, never()).settle("shopping_items");
+    }
+
+    @Test
+    void a_column_under_a_key_of_its_own_is_owed_a_vacuum_and_re_encrypted_after_the_sealed_ones() {
+        RekeyedColumn secrets = RekeyedColumn.of("two_factor_methods", "secret", "user_id", "method = 'APP'", key -> {
+            throw new AssertionError("not used");
+        });
+        EncryptionBackfillRunner withSecrets = new EncryptionBackfillRunner(List.of(SealedColumns.of(titles)),
+            List.of(RekeyedColumns.of(secrets)), List.of(finance), migration, rekeying, sealers, legacy, lock, vacuum,
+            pendingVacuum, knownKey);
+        when(migration.pending(titles)).thenReturn(true);
+        when(rekeying.pending(secrets)).thenReturn(true);
+        when(rekeying.migrate(secrets)).thenReturn(3);
+
+        withSecrets.afterSingletonsInstantiated();
+
+        InOrder order = inOrder(pendingVacuum, migration, rekeying);
+        order.verify(pendingVacuum).owe(Set.of("tasks", "two_factor_methods"));
+        order.verify(migration).migrate(eq(titles), eq(sealers), any());
+        order.verify(rekeying).migrate(secrets);
+        assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
+            .contains("Re-encrypted 3 values of two_factor_methods.secret with the current key");
+    }
+
+    @Test
+    void a_column_under_a_key_of_its_own_alone_pending_is_enough_to_run() {
+        RekeyedColumn queue = RekeyedColumn.of("mail_outbox", "payload", "id", null, key -> {
+            throw new AssertionError("not used");
+        });
+        EncryptionBackfillRunner withQueue = new EncryptionBackfillRunner(List.of(SealedColumns.of(titles)),
+            List.of(RekeyedColumns.of(queue)), List.of(finance), migration, rekeying, sealers, legacy, lock, vacuum,
+            pendingVacuum, knownKey);
+        when(rekeying.pending(queue)).thenReturn(true);
+
+        withQueue.afterSingletonsInstantiated();
+
+        verify(finance).verify();
+        verify(rekeying).migrate(queue);
     }
 }

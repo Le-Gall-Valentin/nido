@@ -6,20 +6,28 @@ import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceCategoryEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionEntity;
+import com.nido.api.infrastructure.encryption.CurrentOrLegacyTextEncryptor;
 import com.nido.api.infrastructure.encryption.LegacyKeys;
 import com.nido.api.infrastructure.sealing.EncryptionBackfillRunner;
 import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.infrastructure.sealing.SealedColumns;
 import com.nido.api.infrastructure.sealing.SealedValueRejected;
+import com.nido.api.instance.domain.model.SettingKey;
+import com.nido.api.instance.domain.port.out.SettingsStorePort;
 import com.nido.api.kitchen.domain.model.Recipe;
 import com.nido.api.kitchen.domain.model.RecipeIngredient;
 import com.nido.api.kitchen.domain.port.out.RecipeRepository;
+import com.nido.api.mfa.infrastructure.config.TotpEncryptorFactory;
+import com.nido.api.shared.security.EncryptionKey;
 import com.nido.api.shopping.domain.model.ShoppingCategory;
 import com.nido.api.shopping.domain.model.ShoppingItem;
 import com.nido.api.shopping.domain.port.out.ShoppingCategoryRepository;
 import com.nido.api.shopping.domain.port.out.ShoppingItemRepository;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.port.out.SpaceRepository;
+import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.tasks.domain.model.RecurringTaskSeries;
 import com.nido.api.tasks.domain.model.Subtask;
 import com.nido.api.tasks.domain.model.Task;
@@ -34,6 +42,7 @@ import org.springframework.boot.context.event.ApplicationPreparedEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.logging.LoggingSystem;
 import org.springframework.boot.web.server.context.WebServerInitializedEvent;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -84,6 +93,7 @@ class EncryptionBackfillIT {
     private UUID admin;
     private UUID spaceA;
     private UUID spaceB;
+    private UUID jane;
 
     @BeforeEach
     void aDatabaseOfItsOwn() {
@@ -480,5 +490,140 @@ class EncryptionBackfillIT {
         try (ConfigurableApplicationContext ignored = start(KEY)) {
             // the right key starts
         }
+    }
+
+    /**
+     * What 0.15.2 left: the final schema, values sealed v2: under the legacy key, and two-factor secret, SMTP password and
+     * a queued mail under the legacy key without a prefix. The first start of this version made the schema; the rows are
+     * then written as 0.15.2 wrote them.
+     */
+    private void writtenBy0_15() {
+        try (ConfigurableApplicationContext ignored = start(KEY)) {
+            // a new installation: the final schema, nothing to rewrite
+        }
+        admin = id("INSERT INTO users (username, email, role) VALUES ('admin', 'admin@example.fr', 'SUPER_ADMIN') RETURNING id");
+        jane = id("INSERT INTO users (username, email, role) VALUES ('jane', 'jane@example.fr', 'USER') RETURNING id");
+        spaceA = UUID.randomUUID();
+        db.update("INSERT INTO spaces (id, type, name_encrypted, accent, glyph, encryption_salt) VALUES (?, 'SHARED', ?, '#c17a5c', '🏡', ?)",
+            spaceA, LegacyKeys.sealedV2(KEY, SALT_A, SpaceEntity.NAME, spaceA, "Famille Le Gall 🏡"), SALT_A);
+        UUID category = UUID.randomUUID();
+        db.update("INSERT INTO finance_categories (id, space_id, label_encrypted, color, icon, type) VALUES (?, ?, ?, '#f59e0b', 'Utensils', 'EXPENSE')",
+            category, spaceA, LegacyKeys.sealedV2(KEY, SALT_A, FinanceCategoryEntity.LABEL, category, "Alimentation"));
+        UUID rent = UUID.randomUUID();
+        db.update("INSERT INTO finance_transactions (id, space_id, label_encrypted, amount_encrypted, type, category_id, date) "
+                + "VALUES (?, ?, ?, ?, 'EXPENSE', ?, DATE '2026-10-01')", rent, spaceA,
+            LegacyKeys.sealedV2(KEY, SALT_A, FinanceTransactionEntity.LABEL, rent, "Loyer"),
+            LegacyKeys.sealedV2(KEY, SALT_A, FinanceTransactionEntity.AMOUNT, rent, "850.00"), category);
+        db.update("INSERT INTO two_factor_methods (user_id, method, secret) VALUES (?, 'APP', ?)",
+            jane, LegacyKeys.writer(KEY, jane.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP"));
+        db.update("INSERT INTO instance_settings (key, value, updated_at) VALUES ('mail.password', ?, now())",
+            LegacyKeys.writer(KEY, SETTINGS_SALT).encrypt("s3cret"));
+        db.update("INSERT INTO mail_outbox (id, kind, payload, created_at, next_attempt_at, expires_at) "
+                + "VALUES (gen_random_uuid(), 'test', ?, now(), now(), now() + interval '1 day')",
+            LegacyKeys.writer(KEY, OUTBOX_SALT).encrypt(QUEUED_MAIL));
+    }
+
+    private static final String SETTINGS_SALT = "6e69646f2d696e7374616e63652d73657474696e6773";
+    private static final String OUTBOX_SALT = "6e69646f2d6d61696c2d6f7574626f78";
+    private static final String QUEUED_MAIL =
+        "{\"address\":\"john@example.fr\",\"displayName\":\"John\",\"subject\":\"Bonjour\",\"html\":\"<p>Bonjour</p>\",\"text\":\"Bonjour\"}";
+
+    /** Every value of the perimeter that is not of the current format: sealed v3:, or k2: for the three stores. */
+    private long valuesNotCurrent(JdbcTemplate jdbc, ApplicationContext app) {
+        long count = 0;
+        for (SealedColumns columns : app.getBeansOfType(SealedColumns.class).values()) {
+            for (SealedColumn column : columns.columns()) {
+                count += jdbc.queryForObject("SELECT count(*) FROM " + column.table() + " WHERE " + column.column()
+                    + " IS NOT NULL AND " + column.column() + " NOT LIKE 'v3:%'", Long.class);
+            }
+        }
+        count += jdbc.queryForObject("SELECT count(*) FROM two_factor_methods WHERE secret IS NOT NULL AND secret NOT LIKE 'k2:%'", Long.class);
+        count += jdbc.queryForObject("SELECT count(*) FROM instance_settings WHERE key = 'mail.password' AND value NOT LIKE 'k2:%'", Long.class);
+        count += jdbc.queryForObject("SELECT count(*) FROM mail_outbox WHERE payload NOT LIKE 'k2:%'", Long.class);
+        return count;
+    }
+
+    @Test
+    void an_installation_of_0_15_is_brought_to_the_current_key_before_serving_and_reads_as_it_was_written() throws Exception {
+        writtenBy0_15();
+        long twoFactorFiles = filenode("two_factor_methods");
+        long transactionFiles = filenode("finance_transactions");
+        AtomicLong notCurrentWhenServing = new AtomicLong(-1);
+        ApplicationListener<WebServerInitializedEvent> whenServing = event -> notCurrentWhenServing.set(
+            valuesNotCurrent(event.getApplicationContext().getBean(JdbcTemplate.class), event.getApplicationContext()));
+
+        try (ConfigurableApplicationContext app = InstallationTestSupport.boot(database, dataDir, List.of(whenServing), arguments(KEY))) {
+            assertThat(notCurrentWhenServing).as("values not current when the web server opened").hasValue(0);
+            assertThat(app.getBean(SpaceRepository.class).findById(spaceA).orElseThrow().name()).isEqualTo("Famille Le Gall 🏡");
+            assertThat(app.getBean(TransactionRepository.class).findAllBySpaceId(spaceA))
+                .extracting(Transaction::label, t -> t.amount().toPlainString()).containsExactly(tuple("Loyer", "850.00"));
+            assertThat(app.getBean(CategoryRepository.class).findBySpaceId(spaceA)).extracting(Category::label).containsExactly("Alimentation");
+            assertThat(app.getBean(TotpEncryptorFactory.class).forUser(jane)
+                .decrypt(db.queryForObject("SELECT secret FROM two_factor_methods WHERE user_id = ?", String.class, jane)))
+                .isEqualTo("JBSWY3DPEHPK3PXP");
+            assertThat(app.getBean(SettingsStorePort.class).load()).containsEntry(SettingKey.MAIL_PASSWORD, "s3cret");
+            String payload = db.queryForObject("SELECT payload FROM mail_outbox WHERE kind = 'test'", String.class);
+            assertThat(payload).startsWith("k2:");
+            assertThat(CurrentOrLegacyTextEncryptor.of(new EncryptionKey(KEY), OUTBOX_SALT).decrypt(payload)).isEqualTo(QUEUED_MAIL);
+        }
+        assertThat(filenode("two_factor_methods")).as("rewritten by VACUUM FULL").isNotEqualTo(twoFactorFiles);
+        assertThat(filenode("finance_transactions")).as("rewritten by VACUUM FULL").isNotEqualTo(transactionFiles);
+    }
+
+    @Test
+    void settings_read_before_the_migration_still_hold_the_smtp_password() throws Exception {
+        // InstanceStartup reads them in no set order with the migration: here, for sure, before it.
+        writtenBy0_15();
+        ApplicationListener<ApplicationPreparedEvent> readingSettingsFirst = event -> event.getApplicationContext()
+            .getBeanFactory().addBeanPostProcessor(new BeanPostProcessor() {
+                @Override
+                public Object postProcessBeforeInitialization(Object bean, String name) {
+                    if (bean instanceof EncryptionBackfillRunner) {
+                        event.getApplicationContext().getBean(SettingsStorePort.class).load();
+                    }
+                    return bean;
+                }
+            });
+
+        try (ConfigurableApplicationContext app = InstallationTestSupport.boot(database, dataDir, List.of(readingSettingsFirst), arguments(KEY))) {
+            assertThat(app.getBean(SettingsStorePort.class).load()).containsEntry(SettingKey.MAIL_PASSWORD, "s3cret");
+        }
+    }
+
+    @Test
+    void the_start_after_the_one_that_rewrote_everything_rewrites_nothing() throws Exception {
+        writtenBy0_15();
+        try (ConfigurableApplicationContext ignored = start(KEY)) {
+            // the first start of this version: everything rewritten
+        }
+        String secret = db.queryForObject("SELECT secret FROM two_factor_methods WHERE user_id = ?", String.class, jane);
+        long transactionFiles = filenode("finance_transactions");
+
+        try (ConfigurableApplicationContext ignored = start(KEY)) {
+            assertThat(db.queryForObject("SELECT secret FROM two_factor_methods WHERE user_id = ?", String.class, jane)).isEqualTo(secret);
+            assertThat(filenode("finance_transactions")).isEqualTo(transactionFiles);
+        }
+    }
+
+    @Test
+    void a_queued_mail_no_key_reads_is_dropped_and_the_start_goes_on() throws Exception {
+        writtenBy0_15();
+        db.update("INSERT INTO mail_outbox (id, kind, payload, created_at, next_attempt_at, expires_at) "
+            + "VALUES (gen_random_uuid(), 'broken', 'not-a-ciphertext', now(), now(), now() + interval '1 day')");
+
+        try (ConfigurableApplicationContext ignored = start(KEY)) {
+            assertThat(db.queryForObject("SELECT count(*) FROM mail_outbox WHERE kind = 'broken'", Long.class)).isZero();
+            assertThat(db.queryForObject("SELECT count(*) FROM mail_outbox WHERE kind = 'test'", Long.class)).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void a_damaged_two_factor_secret_beside_a_good_one_stops_the_start_and_names_its_row() throws Exception {
+        writtenBy0_15();
+        UUID john = id("INSERT INTO users (username, email, role) VALUES ('john', 'john@example.fr', 'USER') RETURNING id");
+        db.update("INSERT INTO two_factor_methods (user_id, method, secret) VALUES (?, 'APP', 'not-a-ciphertext')", john);
+
+        assertThatThrownBy(() -> start(KEY).close())
+            .hasStackTraceContaining("Could not re-encrypt row " + john + " of two_factor_methods.secret");
     }
 }

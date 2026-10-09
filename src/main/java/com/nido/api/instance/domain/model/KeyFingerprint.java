@@ -10,11 +10,11 @@ import java.util.Arrays;
 /**
  * What the database remembers of the encryption key: enough to recognise it, never enough to recover it.
  *
- * <p>600 000 iterations of PBKDF2, and that number is the point. The data itself is encrypted with keys
- * derived in 1 024 iterations, so a fast fingerprint — one HMAC — would hand anyone with a dump a way to
- * test guesses against a weak, hand-picked key 600 times faster than the data allows. At this cost a
- * guess is dearer here than anywhere else in the database: the fingerprint opens no shortcut. It is paid
- * once per start, around 0.3 s.
+ * <p>600 000 iterations of PBKDF2, and that number is the point. The data is encrypted with keys derived
+ * the same way (DataKeys), so a fast fingerprint — one HMAC — would hand anyone with a dump a way to test
+ * guesses against a weak, hand-picked key far faster than the data allows. At this cost a guess is no
+ * cheaper here than anywhere else in the database: the fingerprint opens no shortcut. It is paid once per
+ * start, around 0.3 s.
  */
 public record KeyFingerprint(byte[] hash, byte[] salt) {
 
