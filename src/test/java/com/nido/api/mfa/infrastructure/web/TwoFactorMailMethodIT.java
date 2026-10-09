@@ -168,7 +168,7 @@ class TwoFactorMailMethodIT {
 
         mockMvc.perform(post("/api/auth/2fa/mail/confirm").cookie(access).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"" + right + "\"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     @Test

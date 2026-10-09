@@ -508,7 +508,7 @@ class TwoFactorControllerIT {
         mockMvc.perform(post("/api/auth/2fa/app/confirm").cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"code\":\"000000\"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
     // ─── B4 : le compteur d'échecs suit le compte, pas le challenge ────────
 

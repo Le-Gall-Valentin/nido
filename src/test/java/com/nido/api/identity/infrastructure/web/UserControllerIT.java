@@ -495,7 +495,7 @@ class UserControllerIT {
         mockMvc.perform(patch("/api/users/me").cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\":\"testuser\",\"email\":\"elsewhere@test.com\",\"currentPassword\":\"wrong\"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
 
         assertThat(userIdentityJpaRepository.findByEmailAndDeletedFalse("testuser@test.com")).isPresent();
     }
@@ -583,7 +583,7 @@ class UserControllerIT {
                 .cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currentPassword\":\"wrong\",\"newPassword\":\"Newpassword1!\"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     @Test
@@ -1276,7 +1276,7 @@ class UserControllerIT {
         mockMvc.perform(patch("/api/users/me/password").cookie(access)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"currentPassword\":\"wrong-password\",\"newPassword\":\"N3wS3cr3t!\"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
 
         assertThat(refreshTokenJpaRepository.findAll())
             .filteredOn(token -> token.getUserId().equals(userId))

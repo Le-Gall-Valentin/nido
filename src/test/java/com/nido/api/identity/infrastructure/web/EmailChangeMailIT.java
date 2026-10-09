@@ -97,7 +97,7 @@ class EmailChangeMailIT {
         mockMvc.perform(patch("/api/users/me").cookie(login())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\":\"jane\",\"email\":\"jane.doe@example.fr\",\"currentPassword\":\"wrong\"}"))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
 
         assertThat(SharedGreenMail.server().waitForIncomingEmail(1_500, 1)).isFalse();
     }

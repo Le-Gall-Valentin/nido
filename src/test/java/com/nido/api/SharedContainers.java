@@ -2,7 +2,7 @@ package com.nido.api;
 
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * The Postgres and Redis every integration test talks to — one pair for the whole run.
@@ -28,7 +28,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 public class SharedContainers {
 
     @ServiceConnection
-    public static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16");
+    public static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16");
 
     @ServiceConnection
     @SuppressWarnings("resource")

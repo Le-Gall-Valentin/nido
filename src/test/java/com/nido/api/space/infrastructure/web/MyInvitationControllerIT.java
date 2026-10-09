@@ -284,7 +284,7 @@ class MyInvitationControllerIT {
                 .cookie(accessTokenFor(carolId, "carol@test.com"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload))
-            .andExpect(status().isUnprocessableEntity());
+            .andExpect(status().isUnprocessableContent());
     }
 
     @Test
