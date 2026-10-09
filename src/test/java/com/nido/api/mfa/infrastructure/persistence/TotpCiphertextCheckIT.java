@@ -1,11 +1,14 @@
 package com.nido.api.mfa.infrastructure.persistence;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
+import com.nido.api.infrastructure.encryption.CurrentOrLegacyTextEncryptor;
+import com.nido.api.infrastructure.encryption.LegacyKeys;
 import com.nido.api.mfa.infrastructure.config.TotpEncryptorFactory;
+import com.nido.api.shared.security.EncryptionKey;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -53,7 +56,22 @@ class TotpCiphertextCheckIT {
     void secrets_none_of_which_opens_refuse_the_key() {
         String otherKey = "a-key-someone-typed-by-mistake-32-chars+";
         withSecrets(() -> assertThatThrownBy(check::verify).hasMessageContaining("does not decrypt the two-factor secrets"),
-            Encryptors.delux(otherKey, FIRST.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP"),
-            Encryptors.delux(otherKey, SECOND.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP"));
+            LegacyKeys.writer(otherKey, FIRST.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP"),
+            LegacyKeys.writer(otherKey, SECOND.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP"));
+    }
+
+    @Test
+    void a_secret_of_either_generation_proves_the_key() {
+        withSecrets(() -> assertThatCode(check::verify).doesNotThrowAnyException(),
+            LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, FIRST.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP"),
+            encryptors.forUser(SECOND).encrypt("JBSWY3DPEHPK3PXP"));
+    }
+
+    @Test
+    void current_secrets_of_another_key_refuse_it() {
+        EncryptionKey other = new EncryptionKey("a-key-someone-typed-by-mistake-32-chars+");
+        withSecrets(() -> assertThatThrownBy(check::verify).hasMessageContaining("does not decrypt the two-factor secrets"),
+            CurrentOrLegacyTextEncryptor.of(other, FIRST.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP"),
+            CurrentOrLegacyTextEncryptor.of(other, SECOND.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP"));
     }
 }

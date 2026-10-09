@@ -1,5 +1,7 @@
 package com.nido.api.instance.infrastructure.persistence;
 
+import com.nido.api.infrastructure.encryption.CurrentOrLegacyTextEncryptor;
+import com.nido.api.infrastructure.sealing.RekeyedColumn;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.instance.domain.port.out.SettingsStorePort;
 import com.nido.api.shared.security.EncryptionKey;
@@ -7,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -17,12 +18,14 @@ import java.sql.Types;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * The saved settings, read from Postgres once and kept in memory until a change commits. Settings are
@@ -35,7 +38,7 @@ public class SettingsStoreAdapter implements SettingsStorePort {
 
     private static final Logger log = LoggerFactory.getLogger(SettingsStoreAdapter.class);
 
-    /** "nido-instance-settings", hex-encoded as Encryptors expects. Not a secret: it separates keys. */
+    /** "nido-instance-settings", hex-encoded as the key derivation expects. Not a secret: it separates keys. */
     static final String SALT = "6e69646f2d696e7374616e63652d73657474696e6773";
 
     private final JdbcClient jdbc;
@@ -50,12 +53,23 @@ public class SettingsStoreAdapter implements SettingsStorePort {
 
     @Autowired
     public SettingsStoreAdapter(JdbcClient jdbc, EncryptionKey encryptionKey) {
-        this(jdbc, Encryptors.delux(encryptionKey.value(), SALT));
+        this(jdbc, CurrentOrLegacyTextEncryptor.of(encryptionKey, SALT));
     }
 
     SettingsStoreAdapter(JdbcClient jdbc, TextEncryptor encryptor) {
         this.jdbc = jdbc;
         this.encryptor = encryptor;
+    }
+
+    /**
+     * The secret settings, brought to the current key at start — see RekeyMigration. The codes are the enum's own
+     * constants: nothing typed reaches this condition.
+     */
+    public RekeyedColumn rekeyedColumn() {
+        String secretKeys = Arrays.stream(SettingKey.values()).filter(SettingKey::secret)
+            .map(key -> "'" + key.code() + "'")
+            .collect(Collectors.joining(", "));
+        return RekeyedColumn.of("instance_settings", "value", "key", "key IN (" + secretKeys + ")", key -> encryptor);
     }
 
     @Override

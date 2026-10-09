@@ -1,5 +1,6 @@
 package com.nido.api;
 
+import com.nido.api.infrastructure.encryption.LegacyKeys;
 import liquibase.Liquibase;
 import liquibase.changelog.ChangeSet;
 import liquibase.database.Database;
@@ -12,7 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.encrypt.Encryptors;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -107,7 +107,7 @@ class TwoFactorMethodsMigrationIT {
         migrateToTheEnd();
 
         String stored = strings("SELECT secret FROM two_factor_methods WHERE user_id = '" + jane + "'").getFirst();
-        assertThat(Encryptors.delux(TestSpaces.ENCRYPTION_KEY, jane.toString().replace("-", "")).decrypt(stored))
+        assertThat(LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, jane.toString().replace("-", "")).decrypt(stored))
             .isEqualTo(SECRET);
     }
 
@@ -143,7 +143,7 @@ class TwoFactorMethodsMigrationIT {
     }
 
     private static String encrypted(UUID user) {
-        return Encryptors.delux(TestSpaces.ENCRYPTION_KEY, user.toString().replace("-", "")).encrypt(SECRET);
+        return LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, user.toString().replace("-", "")).encrypt(SECRET);
     }
 
     /** Applies every changeset that comes before the first one whose id starts with the prefix. */

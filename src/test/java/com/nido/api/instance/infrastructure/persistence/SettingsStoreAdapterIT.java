@@ -1,6 +1,8 @@
 package com.nido.api.instance.infrastructure.persistence;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
+import com.nido.api.infrastructure.encryption.LegacyKeys;
 import com.nido.api.instance.InstanceSettingsTestSupport;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.shared.security.EncryptionKey;
@@ -102,5 +104,24 @@ class SettingsStoreAdapterIT {
         } finally {
             jdbc.sql("DELETE FROM instance_settings WHERE key = 'future.setting'").update();
         }
+    }
+
+    @Test
+    void the_smtp_password_is_written_with_the_current_key_and_one_written_before_0_16_still_reads() {
+        store.save(Map.of(SettingKey.MAIL_PASSWORD, Optional.of("s3cret")), null, Instant.now());
+        assertThat(jdbc.sql("SELECT value FROM instance_settings WHERE key = 'mail.password'").query(String.class).single())
+            .startsWith("k2:");
+
+        jdbc.sql("UPDATE instance_settings SET value = :v WHERE key = 'mail.password'")
+            .param("v", LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, SettingsStoreAdapter.SALT).encrypt("0ld-s3cret")).update();
+        // A save empties the cache: one that touches nothing else, so the row written above is read from the table.
+        store.save(Map.of(SettingKey.SWAGGER, Optional.empty()), null, Instant.now());
+
+        assertThat(store.load()).containsEntry(SettingKey.MAIL_PASSWORD, "0ld-s3cret");
+    }
+
+    @Test
+    void only_the_secret_settings_are_declared_for_the_migration() {
+        assertThat(store.rekeyedColumn()).hasToString("instance_settings.value");
     }
 }
