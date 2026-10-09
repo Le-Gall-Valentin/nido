@@ -45,6 +45,8 @@ jobs:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: gh release upload "$RELEASE_TAG" target/*.jar
 
+      - uses: ./.github/actions/docker-hub-mirror
+
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:

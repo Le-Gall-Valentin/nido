@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.6</version>
+        <version>4.0.8</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.nido</groupId>
@@ -33,6 +33,14 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+        <!-- Ahead of the Boot BOM, for advisories its latest 4.0.x (4.0.8) does not cover yet. Each
+             line goes once Boot manages that version or a later one: check them on every Boot upgrade.
+             Tomcat, fixed in 11.0.25: CVE-2026-65182, CVE-2026-65905, CVE-2026-68525.
+             Jackson, fixed in 2.21.7 and 3.1.7: CVE-2026-89407, CVE-2026-89425, CVE-2026-91776,
+             CVE-2026-91777. -->
+        <tomcat.version>11.0.26</tomcat.version>
+        <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+        <jackson-bom.version>3.1.7</jackson-bom.version>
     </properties>
     <dependencies>
         <dependency>
@@ -77,7 +85,7 @@
         <dependency>
             <groupId>com.bucket4j</groupId>
             <artifactId>bucket4j_jdk17-lettuce</artifactId>
-            <version>8.14.0</version>
+            <version>8.21.0</version>
         </dependency>
         <dependency>
             <groupId>dev.samstevens.totp</groupId>
@@ -148,7 +156,7 @@
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit-junit5</artifactId>
-            <version>1.3.0</version>
+            <version>1.5.1</version>
             <scope>test</scope>
         </dependency>
         <!-- An SMTP server inside the test JVM: the mail tests need no container. -->
@@ -163,18 +171,18 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.12.6</version>
+            <version>0.13.0</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.12.6</version>
+            <version>0.13.0</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.12.6</version>
+            <version>0.13.0</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -275,11 +283,11 @@
             <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
-                <version>1.15.1</version>
+                <version>2.0.2</version>
                 <configuration>
                     <workingDirectory>src/main/frontend</workingDirectory>
                     <installDirectory>target</installDirectory>
-                    <nodeVersion>v22.14.0</nodeVersion>
+                    <nodeVersion>v22.23.3</nodeVersion>
                 </configuration>
                 <executions>
                     <execution>

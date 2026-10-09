@@ -1,0 +1,21 @@
+name: Docker Hub through mirror.gcr.io
+description: >
+  Docker Hub limits anonymous pulls per address, and a hosted runner shares its address with other
+  jobs: on 2026-10-09 it answered 429 Too Many Requests to the image build and to Testcontainers'
+  postgres pull alike. The Docker daemon is told to pull Docker Hub images from Google's mirror of
+  it first, and from Docker Hub itself only what the mirror does not hold. Nothing else changes:
+  image names stay docker.io ones, and docker build, compose and Testcontainers all go through
+  the daemon.
+runs:
+  using: composite
+  steps:
+    - name: Pull Docker Hub images through mirror.gcr.io
+      shell: bash
+      run: |
+        config=/etc/docker/daemon.json
+        current='{}'
+        if sudo test -s "$config"; then current=$(sudo cat "$config"); fi
+        echo "$current" | jq '. + {"registry-mirrors": ["https://mirror.gcr.io"]}' \
+          | sudo tee "$config" > /dev/null
+        sudo systemctl restart docker
+        docker info --format 'Registry mirrors: {{.RegistryConfig.Mirrors}}'
