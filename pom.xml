@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.6</version>
+        <version>4.0.8</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.nido</groupId>
@@ -33,6 +33,14 @@
     </scm>
     <properties>
         <java.version>21</java.version>
+        <!-- Ahead of the Boot BOM, for advisories its latest 4.0.x (4.0.8) does not cover yet. Each
+             line goes once Boot manages that version or a later one: check them on every Boot upgrade.
+             Tomcat, fixed in 11.0.25: CVE-2026-65182, CVE-2026-65905, CVE-2026-68525.
+             Jackson, fixed in 2.21.7 and 3.1.7: CVE-2026-89407, CVE-2026-89425, CVE-2026-91776,
+             CVE-2026-91777. -->
+        <tomcat.version>11.0.26</tomcat.version>
+        <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+        <jackson-bom.version>3.1.7</jackson-bom.version>
     </properties>
     <dependencies>
         <dependency>
