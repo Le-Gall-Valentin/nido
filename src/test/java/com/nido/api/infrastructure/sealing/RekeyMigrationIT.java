@@ -8,6 +8,7 @@ import com.nido.api.shared.security.EncryptionKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
@@ -138,5 +139,44 @@ class RekeyMigrationIT {
 
         assertThat(migration.migrate(VALUE)).isEqualTo(1200);
         assertThat(migration.pending(VALUE)).isFalse();
+    }
+
+    @Test
+    // Without the check, the value is rewritten and read back as pending, batch after batch: a hang, not a failure.
+    @Timeout(value = 60, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    void an_encryptor_that_would_write_without_the_current_prefix_stops_before_writing_anything() {
+        UUID id = row("SECRET", LEGACY_WRITER.encrypt("s3cret"));
+        // Reads like the real one, writes like versions up to 0.15.x: the value would stay pending for ever.
+        TextEncryptor legacyWriting = new TextEncryptor() {
+            @Override public String encrypt(String text) { return LEGACY_WRITER.encrypt(text); }
+            @Override public String decrypt(String stored) { return ENCRYPTOR.decrypt(stored); }
+        };
+
+        assertThatThrownBy(() -> migration.migrate(RekeyedColumn.of("rekey_probes", "value", "id", "kind = 'SECRET'", key -> legacyWriting)))
+            .hasMessageContaining("would not give its value back");
+        assertThat(CurrentOrLegacyTextEncryptor.isCurrent(value(id))).isFalse();
+    }
+
+    @Test
+    void a_value_changed_after_it_was_read_is_not_overwritten() {
+        UUID changed = row("SECRET", LEGACY_WRITER.encrypt("ancien"));
+        UUID other = row("SECRET", LEGACY_WRITER.encrypt("s3cret"));
+        String newer = ENCRYPTOR.encrypt("nouveau");
+        // Someone saves the setting while the migration holds the old value in hand.
+        TextEncryptor racing = new TextEncryptor() {
+            @Override public String encrypt(String text) { return ENCRYPTOR.encrypt(text); }
+            @Override public String decrypt(String stored) {
+                String value = ENCRYPTOR.decrypt(stored);
+                if ("ancien".equals(value)) {
+                    jdbc.sql("UPDATE rekey_probes SET value = :v WHERE id = :id").param("v", newer).param("id", changed).update();
+                }
+                return value;
+            }
+        };
+
+        migration.migrate(RekeyedColumn.of("rekey_probes", "value", "id", "kind = 'SECRET'", key -> racing));
+
+        assertThat(value(changed)).isEqualTo(newer);
+        assertThat(ENCRYPTOR.decrypt(value(other))).isEqualTo("s3cret");
     }
 }
