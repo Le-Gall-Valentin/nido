@@ -2,6 +2,8 @@ package com.nido.api.space.infrastructure.config;
 
 import com.nido.api.TestSpaces;
 import com.nido.api.infrastructure.config.SpaceKeyCache;
+import com.nido.api.infrastructure.encryption.DataKeys;
+import com.nido.api.infrastructure.encryption.LegacyKeys;
 import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.infrastructure.sealing.SealedValueRejected;
 import com.nido.api.infrastructure.sealing.SpaceSealer;
@@ -9,7 +11,6 @@ import com.nido.api.infrastructure.sealing.SpaceSealers;
 import com.nido.api.shared.security.EncryptionKey;
 import com.nido.api.space.application.port.in.GetSpaceEncryptionSaltUseCase;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.crypto.encrypt.Encryptors;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,13 +41,22 @@ class SpaceEncryptionConfigTest {
     }
 
     @Test
-    void a_space_key_is_the_one_finance_and_the_calendar_always_derived() {
-        // Encryptors.delux(master key, salt of the space), as up to 0.13: what they encrypted can be converted.
+    void a_space_key_is_the_current_key_of_its_salt() {
         UUID spaceId = UUID.randomUUID();
         UUID row = UUID.randomUUID();
         String sealed = sealers.forSpace(spaceId).seal(LABEL, row, "Loyer octobre");
 
-        assertThat(SpaceSealer.of(Encryptors.delux(KEY.value(), saltFor(spaceId))).open(LABEL, row, sealed)).isEqualTo("Loyer octobre");
+        assertThat(SpaceSealer.of(DataKeys.current(KEY, saltFor(spaceId))).open(LABEL, row, sealed)).isEqualTo("Loyer octobre");
+    }
+
+    @Test
+    void the_legacy_opener_of_a_space_reads_what_0_15_sealed_for_it() {
+        UUID spaceId = UUID.randomUUID();
+        UUID row = UUID.randomUUID();
+        String sealed = LegacyKeys.sealedV2(KEY.value(), saltFor(spaceId), LABEL, row, "Loyer octobre");
+
+        assertThat(new SpaceEncryptionConfig().legacySpaceOpeners(KEY, salts()).forSpace(spaceId).open(LABEL, row, sealed))
+            .isEqualTo("Loyer octobre");
     }
 
     @Test

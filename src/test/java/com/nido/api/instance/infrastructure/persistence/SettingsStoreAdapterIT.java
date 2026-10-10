@@ -1,6 +1,9 @@
 package com.nido.api.instance.infrastructure.persistence;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
+import com.nido.api.infrastructure.encryption.LegacyKeys;
+import com.nido.api.infrastructure.sealing.LegacyFormats;
 import com.nido.api.instance.InstanceSettingsTestSupport;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.shared.security.EncryptionKey;
@@ -13,6 +16,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,6 +31,7 @@ class SettingsStoreAdapterIT {
     @Autowired JdbcClient jdbc;
     @Autowired TransactionTemplate transactions;
     @Autowired EncryptionKey encryptionKey;
+    @Autowired LegacyFormats legacyFormats;
 
     @AfterEach
     void clean() {
@@ -76,7 +81,7 @@ class SettingsStoreAdapterIT {
     void a_read_that_raced_a_change_does_not_keep_the_old_values() {
         store.save(Map.of(SettingKey.MAIL_HOST, Optional.of("before")), null, Instant.now());
         AtomicBoolean raced = new AtomicBoolean();
-        SettingsStoreAdapter racing = new SettingsStoreAdapter(jdbc, encryptionKey) {
+        SettingsStoreAdapter racing = new SettingsStoreAdapter(jdbc, encryptionKey, legacyFormats) {
             @Override
             Map<SettingKey, String> read() {
                 Map<SettingKey, String> seen = super.read();
@@ -102,5 +107,49 @@ class SettingsStoreAdapterIT {
         } finally {
             jdbc.sql("DELETE FROM instance_settings WHERE key = 'future.setting'").update();
         }
+    }
+
+    @Test
+    void the_smtp_password_is_written_with_the_current_key_and_one_written_before_0_16_still_reads() {
+        store.save(Map.of(SettingKey.MAIL_PASSWORD, Optional.of("s3cret")), null, Instant.now());
+        assertThat(jdbc.sql("SELECT value FROM instance_settings WHERE key = 'mail.password'").query(String.class).single())
+            .startsWith("k2:");
+
+        jdbc.sql("UPDATE instance_settings SET value = :v WHERE key = 'mail.password'")
+            .param("v", LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, SettingsStoreAdapter.SALT).encrypt("0ld-s3cret")).update();
+
+        // Before the first start of 0.16.0 is over — the shared context's own start closed earlier formats long ago.
+        assertThat(new SettingsStoreAdapter(jdbc, encryptionKey, open()).load()).containsEntry(SettingKey.MAIL_PASSWORD, "0ld-s3cret");
+    }
+
+    @Test
+    void once_every_value_is_current_an_smtp_password_of_an_earlier_format_is_ignored_as_unreadable() {
+        jdbc.sql("INSERT INTO instance_settings (key, value, updated_at) VALUES ('mail.password', :v, now())")
+            .param("v", LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, SettingsStoreAdapter.SALT).encrypt("0ld-s3cret")).update();
+        // A save empties the cache: one that touches nothing else, so the row written above is read from the table.
+        store.save(Map.of(SettingKey.SWAGGER, Optional.empty()), null, Instant.now());
+
+        assertThat(legacyFormats.closed()).isTrue();
+        assertThat(store.load()).doesNotContainKey(SettingKey.MAIL_PASSWORD);
+    }
+
+    private static LegacyFormats open() {
+        return new LegacyFormats() {
+            @Override public boolean closed() { return false; }
+            @Override public void closeForGood() { throw new AssertionError("not used"); }
+        };
+    }
+
+    @Test
+    void only_the_secret_settings_are_declared_for_the_migration() {
+        assertThat(store.rekeyedColumn()).hasToString("instance_settings.value");
+    }
+
+    @Test
+    void the_rows_of_the_secret_settings_are_named_and_none_without_any() {
+        assertThat(SettingsStoreAdapter.secretKeysCondition(List.of(SettingKey.MAIL_HOST, SettingKey.MAIL_PASSWORD)))
+            .isEqualTo("key IN ('mail.password')");
+        // With no secret setting, "key IN ()" would not even parse: every start would stop on it.
+        assertThat(SettingsStoreAdapter.secretKeysCondition(List.of(SettingKey.MAIL_HOST))).isEqualTo("FALSE");
     }
 }

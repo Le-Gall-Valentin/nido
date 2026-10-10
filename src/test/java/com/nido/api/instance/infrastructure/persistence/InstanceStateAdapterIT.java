@@ -110,4 +110,15 @@ class InstanceStateAdapterIT {
         assertThat(adapter.forgetFingerprint(fingerprint)).isFalse();
         assertThat(adapter.load().fingerprint()).contains(fingerprint);
     }
+
+    @Test
+    void earlier_formats_close_once_and_stay_closed() {
+        // Every context of the run closed them at its first start; the row is left closed again, as found.
+        jdbc.sql("UPDATE instance SET legacy_formats_closed_at = NULL WHERE id = 1").update();
+
+        assertThat(adapter.legacyFormatsClosed()).isFalse();
+        assertThat(adapter.closeLegacyFormats(Instant.now())).isTrue();
+        assertThat(adapter.closeLegacyFormats(Instant.now())).isFalse();
+        assertThat(adapter.legacyFormatsClosed()).isTrue();
+    }
 }

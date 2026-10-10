@@ -211,7 +211,7 @@ class TaskRepositoryAdapterIT {
             List.of(), List.of(new SubtaskInput("Apporter l’ordonnance", false)), null, aliceId));
 
         String title = jdbc.queryForObject("SELECT title_encrypted FROM tasks WHERE id = ?", String.class, created.id());
-        assertThat(title).startsWith("v2:").doesNotContain("oncologue");
+        assertThat(title).startsWith("v3:").doesNotContain("oncologue");
         assertThat(sealers.forSpace(spaceId).open(TaskEntity.TITLE, created.id(), title)).isEqualTo("Rendez-vous oncologue");
         assertThat(storedSubtaskTexts(created.id())).containsExactly("Apporter l’ordonnance");
     }

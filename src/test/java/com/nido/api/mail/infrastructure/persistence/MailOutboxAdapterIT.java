@@ -1,15 +1,18 @@
 package com.nido.api.mail.infrastructure.persistence;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.infrastructure.encryption.CurrentOrLegacyTextEncryptor;
+import com.nido.api.infrastructure.encryption.LegacyKeys;
 import com.nido.api.mail.domain.model.OutboxEntry;
 import com.nido.api.mail.domain.model.OutgoingMail;
 import com.nido.api.mail.domain.model.Recipient;
 import com.nido.api.mail.domain.model.RenderedMail;
+import com.nido.api.shared.security.EncryptionKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.security.crypto.encrypt.Encryptors;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.ObjectMapper;
 
@@ -38,6 +41,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MailOutboxAdapterIT {
 
     private static final String SECRET = "integration-test-encryption-secret-32chars!";
+    private static final TextEncryptor ENCRYPTOR = CurrentOrLegacyTextEncryptor.of(new EncryptionKey(SECRET), MailOutboxAdapter.SALT, () -> true);
+    private static final TextEncryptor ANOTHER_KEY =
+        CurrentOrLegacyTextEncryptor.of(new EncryptionKey("another-encryption-secret-at-least-32-chars"), MailOutboxAdapter.SALT, () -> true);
 
     @Autowired JdbcClient jdbc;
     @Autowired ObjectMapper json;
@@ -50,7 +56,7 @@ class MailOutboxAdapterIT {
     @BeforeEach
     void setUp() {
         jdbc.sql("DELETE FROM mail_outbox").update();
-        outbox = new MailOutboxAdapter(jdbc, json, Encryptors.delux(SECRET, MailOutboxAdapter.SALT));
+        outbox = new MailOutboxAdapter(jdbc, json, ENCRYPTOR);
     }
 
     private static OutgoingMail mail(String address) {
@@ -192,8 +198,7 @@ class MailOutboxAdapterIT {
     @Test
     void a_row_this_key_cannot_read_is_dropped_not_retried_forever() {
         // What NIDO_ENCRYPTION_SECRET changing under a queued mail looks like.
-        MailOutboxAdapter withAnotherKey = new MailOutboxAdapter(jdbc, json,
-            Encryptors.delux("another-encryption-secret-at-least-32-chars", MailOutboxAdapter.SALT));
+        MailOutboxAdapter withAnotherKey = new MailOutboxAdapter(jdbc, json, ANOTHER_KEY);
         withAnotherKey.enqueue("k", mail("jane@example.com"), now, null);
         outbox.enqueue("readable", mail("john@example.com"), now, null);
 
@@ -215,8 +220,7 @@ class MailOutboxAdapterIT {
 
     @Test
     void a_row_this_key_cannot_read_is_left_to_the_dispatcher() {
-        MailOutboxAdapter withAnotherKey = new MailOutboxAdapter(jdbc, json,
-            Encryptors.delux("another-encryption-secret-at-least-32-chars", MailOutboxAdapter.SALT));
+        MailOutboxAdapter withAnotherKey = new MailOutboxAdapter(jdbc, json, ANOTHER_KEY);
         withAnotherKey.enqueue("k", mail("jane@example.com"), now, null);
 
         assertThat(outbox.deleteAddressedTo("jane@example.com")).isZero();
@@ -239,5 +243,21 @@ class MailOutboxAdapterIT {
 
         assertThat(jdbc.sql("SELECT expires_at FROM mail_outbox").query(OffsetDateTime.class).single()
             .withOffsetSameInstant(ZoneOffset.UTC).toInstant()).isEqualTo(now.plusSeconds(1800));
+    }
+
+    @Test
+    void a_mail_is_queued_under_the_current_key_and_one_queued_before_0_16_is_still_sent() {
+        outbox.enqueue("k", mail("jane@example.com"), now, null);
+        assertThat(jdbc.sql("SELECT payload FROM mail_outbox").query(String.class).single()).startsWith("k2:");
+        jdbc.sql("DELETE FROM mail_outbox").update();
+
+        new MailOutboxAdapter(jdbc, json, LegacyKeys.writer(SECRET, MailOutboxAdapter.SALT)).enqueue("old", mail("john@example.com"), now, null);
+
+        assertThat(outbox.claimDue(now, 20, lease)).extracting(entry -> entry.mail().to().address()).containsExactly("john@example.com");
+    }
+
+    @Test
+    void the_queue_is_declared_for_the_migration_and_drops_what_no_key_reads() {
+        assertThat(outbox.rekeyedColumn()).hasToString("mail_outbox.payload");
     }
 }

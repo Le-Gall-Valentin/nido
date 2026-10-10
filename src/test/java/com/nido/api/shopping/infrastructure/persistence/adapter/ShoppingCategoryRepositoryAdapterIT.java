@@ -101,7 +101,7 @@ class ShoppingCategoryRepositoryAdapterIT {
         adapter.rename(created.id(), "Primeur 🍎");
 
         String stored = jdbc.queryForObject("SELECT name_encrypted FROM shopping_categories WHERE id = ?", String.class, created.id());
-        assertThat(stored).startsWith("v2:").doesNotContain("Primeur");
+        assertThat(stored).startsWith("v3:").doesNotContain("Primeur");
         assertThat(sealers.forSpace(spaceId).open(ShoppingCategoryEntity.NAME, created.id(), stored)).isEqualTo("Primeur 🍎");
         assertThat(adapter.findById(created.id()).orElseThrow().name()).isEqualTo("Primeur 🍎");
     }

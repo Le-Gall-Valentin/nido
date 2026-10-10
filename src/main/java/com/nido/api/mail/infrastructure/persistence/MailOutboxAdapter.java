@@ -1,5 +1,8 @@
 package com.nido.api.mail.infrastructure.persistence;
 
+import com.nido.api.infrastructure.encryption.CurrentOrLegacyTextEncryptor;
+import com.nido.api.infrastructure.sealing.LegacyFormats;
+import com.nido.api.infrastructure.sealing.RekeyedColumn;
 import com.nido.api.mail.domain.model.OutboxEntry;
 import com.nido.api.mail.domain.model.OutgoingMail;
 import com.nido.api.mail.domain.model.Recipient;
@@ -10,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -41,7 +43,7 @@ public class MailOutboxAdapter implements MailOutboxPort {
 
     private static final Logger log = LoggerFactory.getLogger(MailOutboxAdapter.class);
 
-    /** "nido-mail-outbox", hex-encoded as Encryptors expects. Not a secret: it separates keys. */
+    /** "nido-mail-outbox", hex-encoded as the key derivation expects. Not a secret: it separates keys. */
     static final String SALT = "6e69646f2d6d61696c2d6f7574626f78";
 
     private static final int LAST_ERROR_LENGTH = 500;
@@ -51,14 +53,22 @@ public class MailOutboxAdapter implements MailOutboxPort {
     private final TextEncryptor encryptor;
 
     @Autowired
-    public MailOutboxAdapter(JdbcClient jdbc, ObjectMapper json, EncryptionKey encryptionKey) {
-        this(jdbc, json, Encryptors.delux(encryptionKey.value(), SALT));
+    public MailOutboxAdapter(JdbcClient jdbc, ObjectMapper json, EncryptionKey encryptionKey, LegacyFormats legacyFormats) {
+        this(jdbc, json, CurrentOrLegacyTextEncryptor.of(encryptionKey, SALT, () -> !legacyFormats.closed()));
     }
 
     MailOutboxAdapter(JdbcClient jdbc, ObjectMapper json, TextEncryptor encryptor) {
         this.jdbc = jdbc;
         this.json = json;
         this.encryptor = encryptor;
+    }
+
+    /**
+     * The queued mails, brought to the current key at start — see RekeyMigration. One no key reads is dropped, as
+     * claimDue drops it: it would never become sendable.
+     */
+    public RekeyedColumn rekeyedColumn() {
+        return RekeyedColumn.of("mail_outbox", "payload", "id", null, id -> encryptor).deletingUnreadableRows();
     }
 
     @Override
