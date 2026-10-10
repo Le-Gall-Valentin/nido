@@ -626,4 +626,15 @@ class EncryptionBackfillIT {
         assertThatThrownBy(() -> start(KEY).close())
             .hasStackTraceContaining("Could not re-encrypt row " + john + " of two_factor_methods.secret");
     }
+
+    @Test
+    void an_smtp_password_no_key_reads_is_dropped_as_the_settings_already_ignore_it_and_the_start_goes_on() throws Exception {
+        writtenBy0_15();
+        db.update("UPDATE instance_settings SET value = 'not-a-ciphertext' WHERE key = 'mail.password'");
+
+        try (ConfigurableApplicationContext app = start(KEY)) {
+            assertThat(db.queryForObject("SELECT count(*) FROM instance_settings WHERE key = 'mail.password'", Long.class)).isZero();
+            assertThat(app.getBean(SettingsStorePort.class).load()).doesNotContainKey(SettingKey.MAIL_PASSWORD);
+        }
+    }
 }

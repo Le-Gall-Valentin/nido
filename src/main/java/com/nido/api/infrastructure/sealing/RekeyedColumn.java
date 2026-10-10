@@ -41,7 +41,10 @@ public final class RekeyedColumn {
             rows == null ? "TRUE" : rows, Objects.requireNonNull(encryptorForRow, "encryptorForRow"), false);
     }
 
-    /** A row whose value no key opens is deleted instead of stopping the start — the mail queue, whose dispatcher drops it anyway. */
+    /**
+     * A row whose value no key opens is deleted instead of stopping the start: the mail queue, whose dispatcher drops such
+     * a mail anyway, and the secret settings, which reading already treats as unset.
+     */
     public RekeyedColumn deletingUnreadableRows() {
         return new RekeyedColumn(table, column, rowKey, rows, encryptorForRow, true);
     }

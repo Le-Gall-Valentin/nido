@@ -15,6 +15,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -123,5 +124,13 @@ class SettingsStoreAdapterIT {
     @Test
     void only_the_secret_settings_are_declared_for_the_migration() {
         assertThat(store.rekeyedColumn()).hasToString("instance_settings.value");
+    }
+
+    @Test
+    void the_rows_of_the_secret_settings_are_named_and_none_without_any() {
+        assertThat(SettingsStoreAdapter.secretKeysCondition(List.of(SettingKey.MAIL_HOST, SettingKey.MAIL_PASSWORD)))
+            .isEqualTo("key IN ('mail.password')");
+        // With no secret setting, "key IN ()" would not even parse: every start would stop on it.
+        assertThat(SettingsStoreAdapter.secretKeysCondition(List.of(SettingKey.MAIL_HOST))).isEqualTo("FALSE");
     }
 }

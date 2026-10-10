@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
@@ -62,14 +63,22 @@ public class SettingsStoreAdapter implements SettingsStorePort {
     }
 
     /**
-     * The secret settings, brought to the current key at start — see RekeyMigration. The codes are the enum's own
-     * constants: nothing typed reaches this condition.
+     * The secret settings, brought to the current key at start — see RekeyMigration. One no key reads is dropped, as
+     * reading the settings already ignores it: the setting is unset, and the administration can enter it again — where
+     * stopping the start would leave it nowhere to do so. The codes are the enum's own constants: nothing typed reaches
+     * this condition.
      */
     public RekeyedColumn rekeyedColumn() {
-        String secretKeys = Arrays.stream(SettingKey.values()).filter(SettingKey::secret)
+        return RekeyedColumn.of("instance_settings", "value", "key", secretKeysCondition(Arrays.asList(SettingKey.values())),
+            key -> encryptor).deletingUnreadableRows();
+    }
+
+    /** The rows of the secret settings among these; none at all reads FALSE, where "key IN ()" would not parse. */
+    static String secretKeysCondition(Collection<SettingKey> keys) {
+        String secretKeys = keys.stream().filter(SettingKey::secret)
             .map(key -> "'" + key.code() + "'")
             .collect(Collectors.joining(", "));
-        return RekeyedColumn.of("instance_settings", "value", "key", "key IN (" + secretKeys + ")", key -> encryptor);
+        return secretKeys.isEmpty() ? "FALSE" : "key IN (" + secretKeys + ")";
     }
 
     @Override
