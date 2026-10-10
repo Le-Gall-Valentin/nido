@@ -57,6 +57,9 @@ final class InstanceFakes {
             return true;
         }
         @Override public boolean markSetupCompleted(Instant at) { boolean was = setupCompleted; setupCompleted = true; return !was; }
+        boolean legacyFormatsClosed;
+        @Override public boolean legacyFormatsClosed() { return legacyFormatsClosed; }
+        @Override public boolean closeLegacyFormats(Instant at) { boolean was = legacyFormatsClosed; legacyFormatsClosed = true; return !was; }
     }
 
     static final class MemoryStore implements SettingsStorePort {

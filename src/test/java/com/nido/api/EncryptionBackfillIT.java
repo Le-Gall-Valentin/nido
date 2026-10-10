@@ -346,11 +346,13 @@ class EncryptionBackfillIT {
         assertThat(filenode("shopping_items")).as("rewritten by VACUUM FULL").isNotEqualTo(itemFiles);
         assertThat(filenode("calendar_events")).as("its values were sealed, then its old row versions vacuumed").isNotEqualTo(eventFiles);
         assertThat(filenode("space_members")).as("nothing of it is sealed").isEqualTo(memberFiles);
+        assertThat(legacyFormatsClosed()).as("open while the columns in clear are still there").isFalse();
 
         try (ConfigurableApplicationContext app = start(KEY)) {
             everythingReadsAsItWasWritten(app);
         }
         assertThat(PlaintextPerimeter.columnsInClear(db)).isEmpty();
+        assertThat(legacyFormatsClosed()).as("closed by the start that dropped them").isTrue();
         assertThat(PlaintextPerimeter.requiredEncryptedColumnsAcceptingNull(db)).isEmpty();
     }
 
@@ -501,6 +503,8 @@ class EncryptionBackfillIT {
         try (ConfigurableApplicationContext ignored = start(KEY)) {
             // a new installation: the final schema, nothing to rewrite
         }
+        // That start closed earlier formats, as any new installation does: 0.15.2 had no such record.
+        db.update("UPDATE instance SET legacy_formats_closed_at = NULL WHERE id = 1");
         admin = id("INSERT INTO users (username, email, role) VALUES ('admin', 'admin@example.fr', 'SUPER_ADMIN') RETURNING id");
         jane = id("INSERT INTO users (username, email, role) VALUES ('jane', 'jane@example.fr', 'USER') RETURNING id");
         spaceA = UUID.randomUUID();
@@ -564,10 +568,11 @@ class EncryptionBackfillIT {
             assertThat(app.getBean(SettingsStorePort.class).load()).containsEntry(SettingKey.MAIL_PASSWORD, "s3cret");
             String payload = db.queryForObject("SELECT payload FROM mail_outbox WHERE kind = 'test'", String.class);
             assertThat(payload).startsWith("k2:");
-            assertThat(CurrentOrLegacyTextEncryptor.of(new EncryptionKey(KEY), OUTBOX_SALT).decrypt(payload)).isEqualTo(QUEUED_MAIL);
+            assertThat(CurrentOrLegacyTextEncryptor.of(new EncryptionKey(KEY), OUTBOX_SALT, () -> false).decrypt(payload)).isEqualTo(QUEUED_MAIL);
         }
         assertThat(filenode("two_factor_methods")).as("rewritten by VACUUM FULL").isNotEqualTo(twoFactorFiles);
         assertThat(filenode("finance_transactions")).as("rewritten by VACUUM FULL").isNotEqualTo(transactionFiles);
+        assertThat(legacyFormatsClosed()).as("everything converted: earlier formats closed").isTrue();
     }
 
     @Test
@@ -625,6 +630,7 @@ class EncryptionBackfillIT {
 
         assertThatThrownBy(() -> start(KEY).close())
             .hasStackTraceContaining("Could not re-encrypt row " + john + " of two_factor_methods.secret");
+        assertThat(legacyFormatsClosed()).as("a start stopped halfway keeps earlier formats open").isFalse();
     }
 
     @Test
@@ -635,6 +641,53 @@ class EncryptionBackfillIT {
         try (ConfigurableApplicationContext app = start(KEY)) {
             assertThat(db.queryForObject("SELECT count(*) FROM instance_settings WHERE key = 'mail.password'", Long.class)).isZero();
             assertThat(app.getBean(SettingsStorePort.class).load()).doesNotContainKey(SettingKey.MAIL_PASSWORD);
+        }
+    }
+
+    private boolean legacyFormatsClosed() {
+        return Boolean.TRUE.equals(db.queryForObject("SELECT legacy_formats_closed_at IS NOT NULL FROM instance WHERE id = 1", Boolean.class));
+    }
+
+    @Test
+    void a_new_installation_closes_earlier_formats_at_its_first_start() {
+        try (ConfigurableApplicationContext ignored = start(KEY)) {
+            assertThat(legacyFormatsClosed()).isTrue();
+        }
+    }
+
+    @Test
+    void a_value_of_an_earlier_format_written_after_the_conversion_is_refused_and_never_converted() throws Exception {
+        writtenBy0_15();
+        try (ConfigurableApplicationContext ignored = start(KEY)) {
+            // the first start of this version: everything converted, earlier formats closed
+        }
+        // What someone with access to the database could put back: the row's amount as 0.15.2 stored it, from a backup.
+        UUID rent = db.queryForObject("SELECT id FROM finance_transactions WHERE space_id = ?", UUID.class, spaceA);
+        String replayed = LegacyKeys.sealedV2(KEY, SALT_A, FinanceTransactionEntity.AMOUNT, rent, "1.00");
+        db.update("UPDATE finance_transactions SET amount_encrypted = ? WHERE id = ?", replayed, rent);
+
+        try (ConfigurableApplicationContext app = start(KEY)) {
+            assertThat(db.queryForObject("SELECT amount_encrypted FROM finance_transactions WHERE id = ?", String.class, rent))
+                .as("never converted into the value of its row").isEqualTo(replayed);
+            assertThatThrownBy(() -> app.getBean(TransactionRepository.class).findAllBySpaceId(spaceA))
+                .isInstanceOf(SealedValueRejected.class);
+        }
+    }
+
+    @Test
+    void a_two_factor_secret_of_an_earlier_format_written_after_the_conversion_is_refused_and_never_converted() throws Exception {
+        writtenBy0_15();
+        try (ConfigurableApplicationContext ignored = start(KEY)) {
+            // the first start of this version: everything converted, earlier formats closed
+        }
+        String replayed = LegacyKeys.writer(KEY, jane.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP");
+        db.update("UPDATE two_factor_methods SET secret = ? WHERE user_id = ?", replayed, jane);
+
+        try (ConfigurableApplicationContext app = start(KEY)) {
+            assertThat(db.queryForObject("SELECT secret FROM two_factor_methods WHERE user_id = ?", String.class, jane))
+                .isEqualTo(replayed);
+            assertThatThrownBy(() -> app.getBean(TotpEncryptorFactory.class).forUser(jane).decrypt(replayed))
+                .isInstanceOf(IllegalStateException.class);
         }
     }
 }

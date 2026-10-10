@@ -23,7 +23,7 @@ class RekeyMigrationIT {
 
     private static final String SALT = "6e69646f2d6d61696c2d6f7574626f78";
     private static final CurrentOrLegacyTextEncryptor ENCRYPTOR =
-        CurrentOrLegacyTextEncryptor.of(new EncryptionKey(TestSpaces.ENCRYPTION_KEY), SALT);
+        CurrentOrLegacyTextEncryptor.of(new EncryptionKey(TestSpaces.ENCRYPTION_KEY), SALT, () -> true);
     private static final TextEncryptor LEGACY_WRITER = LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, SALT);
     private static final RekeyedColumn VALUE = RekeyedColumn.of("rekey_probes", "value", "id", "kind = 'SECRET'", id -> ENCRYPTOR);
 

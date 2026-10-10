@@ -3,6 +3,7 @@ package com.nido.api.instance.infrastructure.persistence;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.TestSpaces;
 import com.nido.api.infrastructure.encryption.LegacyKeys;
+import com.nido.api.infrastructure.sealing.LegacyFormats;
 import com.nido.api.instance.InstanceSettingsTestSupport;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.shared.security.EncryptionKey;
@@ -30,6 +31,7 @@ class SettingsStoreAdapterIT {
     @Autowired JdbcClient jdbc;
     @Autowired TransactionTemplate transactions;
     @Autowired EncryptionKey encryptionKey;
+    @Autowired LegacyFormats legacyFormats;
 
     @AfterEach
     void clean() {
@@ -79,7 +81,7 @@ class SettingsStoreAdapterIT {
     void a_read_that_raced_a_change_does_not_keep_the_old_values() {
         store.save(Map.of(SettingKey.MAIL_HOST, Optional.of("before")), null, Instant.now());
         AtomicBoolean raced = new AtomicBoolean();
-        SettingsStoreAdapter racing = new SettingsStoreAdapter(jdbc, encryptionKey) {
+        SettingsStoreAdapter racing = new SettingsStoreAdapter(jdbc, encryptionKey, legacyFormats) {
             @Override
             Map<SettingKey, String> read() {
                 Map<SettingKey, String> seen = super.read();
@@ -115,10 +117,27 @@ class SettingsStoreAdapterIT {
 
         jdbc.sql("UPDATE instance_settings SET value = :v WHERE key = 'mail.password'")
             .param("v", LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, SettingsStoreAdapter.SALT).encrypt("0ld-s3cret")).update();
+
+        // Before the first start of 0.16.0 is over — the shared context's own start closed earlier formats long ago.
+        assertThat(new SettingsStoreAdapter(jdbc, encryptionKey, open()).load()).containsEntry(SettingKey.MAIL_PASSWORD, "0ld-s3cret");
+    }
+
+    @Test
+    void once_every_value_is_current_an_smtp_password_of_an_earlier_format_is_ignored_as_unreadable() {
+        jdbc.sql("INSERT INTO instance_settings (key, value, updated_at) VALUES ('mail.password', :v, now())")
+            .param("v", LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, SettingsStoreAdapter.SALT).encrypt("0ld-s3cret")).update();
         // A save empties the cache: one that touches nothing else, so the row written above is read from the table.
         store.save(Map.of(SettingKey.SWAGGER, Optional.empty()), null, Instant.now());
 
-        assertThat(store.load()).containsEntry(SettingKey.MAIL_PASSWORD, "0ld-s3cret");
+        assertThat(legacyFormats.closed()).isTrue();
+        assertThat(store.load()).doesNotContainKey(SettingKey.MAIL_PASSWORD);
+    }
+
+    private static LegacyFormats open() {
+        return new LegacyFormats() {
+            @Override public boolean closed() { return false; }
+            @Override public void closeForGood() { throw new AssertionError("not used"); }
+        };
     }
 
     @Test

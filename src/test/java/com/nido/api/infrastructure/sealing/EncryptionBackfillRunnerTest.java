@@ -1,5 +1,6 @@
 package com.nido.api.infrastructure.sealing;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
@@ -32,6 +33,7 @@ class EncryptionBackfillRunnerTest {
     private final ExistingCiphertextCheck finance = mock(ExistingCiphertextCheck.class);
     private final SealedValueMigration migration = mock(SealedValueMigration.class);
     private final RekeyMigration rekeying = mock(RekeyMigration.class);
+    private final LegacyFormats legacyFormats = mock(LegacyFormats.class);
     private final SpaceSealers sealers = space -> { throw new AssertionError("not used"); };
     private final LegacySpaceOpeners legacy = space -> { throw new AssertionError("not used"); };
     private final SealingLock lock = mock(SealingLock.class);
@@ -43,7 +45,7 @@ class EncryptionBackfillRunnerTest {
 
     private EncryptionBackfillRunner runner(StartKey key) {
         return new EncryptionBackfillRunner(List.of(SealedColumns.of(titles), SealedColumns.of(items)), List.of(), List.of(finance),
-            migration, rekeying, sealers, legacy, lock, vacuum, pendingVacuum, key);
+            migration, rekeying, sealers, legacy, legacyFormats, lock, vacuum, pendingVacuum, key);
     }
 
     private final Logger logger = (Logger) LoggerFactory.getLogger(EncryptionBackfillRunner.class);
@@ -228,8 +230,8 @@ class EncryptionBackfillRunnerTest {
             throw new AssertionError("not used");
         });
         EncryptionBackfillRunner withSecrets = new EncryptionBackfillRunner(List.of(SealedColumns.of(titles)),
-            List.of(RekeyedColumns.of(secrets)), List.of(finance), migration, rekeying, sealers, legacy, lock, vacuum,
-            pendingVacuum, knownKey);
+            List.of(RekeyedColumns.of(secrets)), List.of(finance), migration, rekeying, sealers, legacy, legacyFormats, lock,
+            vacuum, pendingVacuum, knownKey);
         when(migration.pending(titles)).thenReturn(true);
         when(rekeying.pending(secrets)).thenReturn(true);
         when(rekeying.migrate(secrets)).thenReturn(3);
@@ -250,13 +252,101 @@ class EncryptionBackfillRunnerTest {
             throw new AssertionError("not used");
         });
         EncryptionBackfillRunner withQueue = new EncryptionBackfillRunner(List.of(SealedColumns.of(titles)),
-            List.of(RekeyedColumns.of(queue)), List.of(finance), migration, rekeying, sealers, legacy, lock, vacuum,
-            pendingVacuum, knownKey);
+            List.of(RekeyedColumns.of(queue)), List.of(finance), migration, rekeying, sealers, legacy, legacyFormats, lock,
+            vacuum, pendingVacuum, knownKey);
         when(rekeying.pending(queue)).thenReturn(true);
 
         withQueue.afterSingletonsInstantiated();
 
         verify(finance).verify();
         verify(rekeying).migrate(queue);
+    }
+
+    @Test
+    void a_start_that_brings_everything_to_the_current_format_closes_the_earlier_ones() {
+        when(migration.pending(titles)).thenReturn(true, true, false);
+
+        runner.afterSingletonsInstantiated();
+
+        InOrder order = inOrder(migration, legacyFormats);
+        order.verify(migration).migrate(eq(titles), eq(sealers), any());
+        order.verify(legacyFormats).closeForGood();
+    }
+
+    @Test
+    void a_start_with_nothing_of_an_earlier_format_closes_them_at_once() {
+        // A new installation, or one converted by a start of this version that stopped before closing them.
+        runner.afterSingletonsInstantiated();
+
+        verify(legacyFormats).closeForGood();
+        verifyNoInteractions(lock);
+    }
+
+    @Test
+    void a_start_stopped_before_everything_is_current_leaves_the_earlier_formats_open() {
+        when(migration.pending(titles)).thenReturn(true);
+        when(migration.migrate(eq(titles), eq(sealers), any())).thenThrow(new IllegalStateException("Could not seal row"));
+
+        assertThatThrownBy(runner::afterSingletonsInstantiated).hasMessageContaining("Could not seal row");
+
+        verify(legacyFormats, never()).closeForGood();
+    }
+
+    @Test
+    void once_closed_a_value_of_an_earlier_format_is_never_converted_and_its_column_is_named_in_an_error() {
+        when(legacyFormats.closed()).thenReturn(true);
+        when(migration.pending(items)).thenReturn(true);
+
+        runner.afterSingletonsInstantiated();
+
+        verify(migration, never()).migrate(any(), any(), any());
+        verify(pendingVacuum, never()).owe(any());
+        verify(legacyFormats, never()).closeForGood();
+        assertThat(logged.list).filteredOn(event -> event.getLevel() == Level.ERROR)
+            .extracting(ILoggingEvent::getFormattedMessage)
+            .singleElement().asString().contains("shopping_items.name_encrypted").contains("refused");
+    }
+
+    @Test
+    void once_closed_a_column_under_a_key_of_its_own_is_never_converted_either() {
+        RekeyedColumn secrets = RekeyedColumn.of("two_factor_methods", "secret", "user_id", "method = 'APP'", key -> {
+            throw new AssertionError("not used");
+        });
+        EncryptionBackfillRunner withSecrets = new EncryptionBackfillRunner(List.of(SealedColumns.of(titles)),
+            List.of(RekeyedColumns.of(secrets)), List.of(finance), migration, rekeying, sealers, legacy, legacyFormats, lock,
+            vacuum, pendingVacuum, knownKey);
+        when(legacyFormats.closed()).thenReturn(true);
+        when(rekeying.pending(secrets)).thenReturn(true);
+
+        withSecrets.afterSingletonsInstantiated();
+
+        verify(rekeying, never()).migrate(any());
+        assertThat(logged.list).filteredOn(event -> event.getLevel() == Level.ERROR)
+            .extracting(ILoggingEvent::getFormattedMessage).singleElement().asString().contains("two_factor_methods.secret");
+    }
+
+    @Test
+    void a_column_in_clear_of_0_13_still_there_keeps_earlier_formats_open_until_068_drops_it() {
+        // A start of a 0.13 database converts everything, and 068 drops the columns in clear only at the next start: a
+        // value written there in between must still be sealed then.
+        when(migration.clearColumnRemains(items)).thenReturn(true);
+
+        runner.afterSingletonsInstantiated();
+
+        verify(legacyFormats, never()).closeForGood();
+    }
+
+    @Test
+    void once_closed_a_start_that_still_owes_a_vacuum_converts_nothing_either() {
+        // It takes the lock for the VACUUM: a value of an earlier format found then is still never converted.
+        when(legacyFormats.closed()).thenReturn(true);
+        when(pendingVacuum.anyOwed()).thenReturn(true);
+        when(migration.pending(items)).thenReturn(true);
+
+        runner.afterSingletonsInstantiated();
+
+        verify(lock).whileHeld(any());
+        verify(migration, never()).migrate(any(), any(), any());
+        verify(pendingVacuum, never()).owe(any());
     }
 }

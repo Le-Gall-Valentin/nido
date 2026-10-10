@@ -10,7 +10,7 @@ class CurrentOrLegacyTextEncryptorTest {
 
     private static final String MASTER = "integration-test-encryption-secret-32chars!";
     private static final String SALT = "6e69646f2d6d61696c2d6f7574626f78";
-    private static final CurrentOrLegacyTextEncryptor ENCRYPTOR = CurrentOrLegacyTextEncryptor.of(new EncryptionKey(MASTER), SALT);
+    private static final CurrentOrLegacyTextEncryptor ENCRYPTOR = CurrentOrLegacyTextEncryptor.of(new EncryptionKey(MASTER), SALT, () -> true);
 
     @Test
     void it_always_writes_with_the_current_key_behind_k2() {
@@ -40,9 +40,20 @@ class CurrentOrLegacyTextEncryptorTest {
 
     @Test
     void another_master_key_opens_neither_format() {
-        CurrentOrLegacyTextEncryptor other = CurrentOrLegacyTextEncryptor.of(new EncryptionKey("a-key-someone-typed-by-mistake-32-chars+"), SALT);
+        CurrentOrLegacyTextEncryptor other = CurrentOrLegacyTextEncryptor.of(new EncryptionKey("a-key-someone-typed-by-mistake-32-chars+"), SALT, () -> true);
 
         assertThatThrownBy(() -> other.decrypt(ENCRYPTOR.encrypt("s3cret"))).isInstanceOf(RuntimeException.class);
         assertThatThrownBy(() -> other.decrypt(LegacyKeys.writer(MASTER, SALT).encrypt("s3cret"))).isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void once_every_value_is_current_what_earlier_versions_wrote_is_refused_and_the_current_format_still_reads() {
+        CurrentOrLegacyTextEncryptor closed = CurrentOrLegacyTextEncryptor.of(new EncryptionKey(MASTER), SALT, () -> false);
+        String legacy = LegacyKeys.writer(MASTER, SALT).encrypt("s3cret");
+
+        assertThatThrownBy(() -> closed.decrypt(legacy))
+            .isInstanceOf(IllegalStateException.class)
+            .satisfies(e -> assertThat(e.getMessage()).doesNotContain("s3cret"));
+        assertThat(closed.decrypt(closed.encrypt("s3cret"))).isEqualTo("s3cret");
     }
 }

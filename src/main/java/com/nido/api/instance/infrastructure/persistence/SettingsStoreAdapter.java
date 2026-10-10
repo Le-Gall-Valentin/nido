@@ -1,6 +1,7 @@
 package com.nido.api.instance.infrastructure.persistence;
 
 import com.nido.api.infrastructure.encryption.CurrentOrLegacyTextEncryptor;
+import com.nido.api.infrastructure.sealing.LegacyFormats;
 import com.nido.api.infrastructure.sealing.RekeyedColumn;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.instance.domain.port.out.SettingsStorePort;
@@ -53,8 +54,8 @@ public class SettingsStoreAdapter implements SettingsStorePort {
     private final AtomicReference<Cached> cache = new AtomicReference<>(new Cached(null));
 
     @Autowired
-    public SettingsStoreAdapter(JdbcClient jdbc, EncryptionKey encryptionKey) {
-        this(jdbc, CurrentOrLegacyTextEncryptor.of(encryptionKey, SALT));
+    public SettingsStoreAdapter(JdbcClient jdbc, EncryptionKey encryptionKey, LegacyFormats legacyFormats) {
+        this(jdbc, CurrentOrLegacyTextEncryptor.of(encryptionKey, SALT, () -> !legacyFormats.closed()));
     }
 
     SettingsStoreAdapter(JdbcClient jdbc, TextEncryptor encryptor) {

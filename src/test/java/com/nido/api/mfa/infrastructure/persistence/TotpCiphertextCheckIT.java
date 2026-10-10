@@ -71,7 +71,7 @@ class TotpCiphertextCheckIT {
     void current_secrets_of_another_key_refuse_it() {
         EncryptionKey other = new EncryptionKey("a-key-someone-typed-by-mistake-32-chars+");
         withSecrets(() -> assertThatThrownBy(check::verify).hasMessageContaining("does not decrypt the two-factor secrets"),
-            CurrentOrLegacyTextEncryptor.of(other, FIRST.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP"),
-            CurrentOrLegacyTextEncryptor.of(other, SECOND.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP"));
+            CurrentOrLegacyTextEncryptor.of(other, FIRST.toString().replace("-", ""), () -> true).encrypt("JBSWY3DPEHPK3PXP"),
+            CurrentOrLegacyTextEncryptor.of(other, SECOND.toString().replace("-", ""), () -> true).encrypt("JBSWY3DPEHPK3PXP"));
     }
 }

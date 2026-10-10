@@ -1,6 +1,7 @@
 package com.nido.api.mail.infrastructure.persistence;
 
 import com.nido.api.infrastructure.encryption.CurrentOrLegacyTextEncryptor;
+import com.nido.api.infrastructure.sealing.LegacyFormats;
 import com.nido.api.infrastructure.sealing.RekeyedColumn;
 import com.nido.api.mail.domain.model.OutboxEntry;
 import com.nido.api.mail.domain.model.OutgoingMail;
@@ -52,8 +53,8 @@ public class MailOutboxAdapter implements MailOutboxPort {
     private final TextEncryptor encryptor;
 
     @Autowired
-    public MailOutboxAdapter(JdbcClient jdbc, ObjectMapper json, EncryptionKey encryptionKey) {
-        this(jdbc, json, CurrentOrLegacyTextEncryptor.of(encryptionKey, SALT));
+    public MailOutboxAdapter(JdbcClient jdbc, ObjectMapper json, EncryptionKey encryptionKey, LegacyFormats legacyFormats) {
+        this(jdbc, json, CurrentOrLegacyTextEncryptor.of(encryptionKey, SALT, () -> !legacyFormats.closed()));
     }
 
     MailOutboxAdapter(JdbcClient jdbc, ObjectMapper json, TextEncryptor encryptor) {

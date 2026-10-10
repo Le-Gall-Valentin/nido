@@ -41,9 +41,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MailOutboxAdapterIT {
 
     private static final String SECRET = "integration-test-encryption-secret-32chars!";
-    private static final TextEncryptor ENCRYPTOR = CurrentOrLegacyTextEncryptor.of(new EncryptionKey(SECRET), MailOutboxAdapter.SALT);
+    private static final TextEncryptor ENCRYPTOR = CurrentOrLegacyTextEncryptor.of(new EncryptionKey(SECRET), MailOutboxAdapter.SALT, () -> true);
     private static final TextEncryptor ANOTHER_KEY =
-        CurrentOrLegacyTextEncryptor.of(new EncryptionKey("another-encryption-secret-at-least-32-chars"), MailOutboxAdapter.SALT);
+        CurrentOrLegacyTextEncryptor.of(new EncryptionKey("another-encryption-secret-at-least-32-chars"), MailOutboxAdapter.SALT, () -> true);
 
     @Autowired JdbcClient jdbc;
     @Autowired ObjectMapper json;

@@ -114,6 +114,11 @@ public class SealedValueMigration {
             + "and the next start resumes.");
     }
 
+    /** Whether the column that held its values in clear up to 0.13 is still there: 068 drops it at the start after. */
+    public boolean clearColumnRemains(SealedColumn column) {
+        return hasClearColumn(column);
+    }
+
     private boolean hasClearColumn(SealedColumn column) {
         return column.clearColumn().map(clear -> Boolean.TRUE.equals(jdbc.sql("""
                 SELECT EXISTS (SELECT 1 FROM information_schema.columns
