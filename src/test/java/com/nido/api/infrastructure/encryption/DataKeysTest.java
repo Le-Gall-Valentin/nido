@@ -2,7 +2,13 @@ package com.nido.api.infrastructure.encryption;
 
 import com.nido.api.shared.security.EncryptionKey;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.crypto.codec.Hex;
+import org.springframework.security.crypto.encrypt.AesGcmBytesEncryptor;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
+
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -74,5 +80,22 @@ class DataKeysTest {
 
         assertThatThrownBy(() -> DataKeys.current(KEY, "fedcba9876543210fedcba9876543210").decrypt(stored))
             .isInstanceOf(RuntimeException.class);
+    }
+
+    /**
+     * The database keeps the key's fingerprint: PBKDF2-HMAC-SHA256 of the master key, 600 000 iterations, 256 bits,
+     * with a 16-byte salt stored beside it (KeyFingerprint), in every installation since 0.12 and in its backups. Were a
+     * data key the same function, someone able to write to the database could give a space that salt, and read the
+     * space's key in the instance table.
+     */
+    @Test
+    void no_data_key_is_the_key_fingerprint_of_its_salt() throws Exception {
+        byte[] salt = Hex.decode(SPACE_SALT);
+        byte[] fingerprint = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+            .generateSecret(new PBEKeySpec(MASTER.toCharArray(), salt, 600_000, 256)).getEncoded();
+        String stored = DataKeys.current(KEY, SPACE_SALT).encrypt("Loyer");
+
+        assertThatThrownBy(() -> AesGcmBytesEncryptor.withSecretKey(new SecretKeySpec(fingerprint, "AES")).build()
+            .decrypt(Hex.decode(stored))).isInstanceOf(RuntimeException.class);
     }
 }
