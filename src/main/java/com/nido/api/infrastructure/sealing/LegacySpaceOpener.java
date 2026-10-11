@@ -24,11 +24,8 @@ public final class LegacySpaceOpener {
         return new LegacySpaceOpener(Objects.requireNonNull(decryptor, "decryptor"));
     }
 
-    /**
-     * The value, checked to belong to this place when it was sealed; a value without an envelope cannot say. Public for
-     * the space module's configuration test; called by the migration only.
-     */
-    public String open(SealedColumn column, UUID rowId, String stored) {
+    /** The value, checked to belong to this place when it was sealed; a value without an envelope cannot say. */
+    String open(SealedColumn column, UUID rowId, String stored) {
         boolean sealed = stored.startsWith(PREFIX);
         String decrypted;
         try {

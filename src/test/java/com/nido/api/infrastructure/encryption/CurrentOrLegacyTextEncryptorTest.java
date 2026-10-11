@@ -3,6 +3,9 @@ package com.nido.api.infrastructure.encryption;
 import com.nido.api.shared.security.EncryptionKey;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -55,5 +58,27 @@ class CurrentOrLegacyTextEncryptorTest {
             .isInstanceOf(IllegalStateException.class)
             .satisfies(e -> assertThat(e.getMessage()).doesNotContain("s3cret"));
         assertThat(closed.decrypt(closed.encrypt("s3cret"))).isEqualTo("s3cret");
+    }
+
+    @Test
+    void the_legacy_key_is_derived_once_and_only_to_read_an_earlier_format_while_it_is_taken() {
+        EncryptionKey key = new EncryptionKey(MASTER);
+        AtomicInteger derivations = new AtomicInteger();
+        AtomicBoolean taken = new AtomicBoolean();
+        CurrentOrLegacyTextEncryptor encryptor = new CurrentOrLegacyTextEncryptor(DataKeys.current(key, SALT), () -> {
+            derivations.incrementAndGet();
+            return DataKeys.legacy(key, SALT);
+        }, taken::get);
+        String legacy = LegacyKeys.writer(MASTER, SALT).encrypt("s3cret");
+
+        encryptor.decrypt(encryptor.encrypt("s3cret"));
+        assertThatThrownBy(() -> encryptor.decrypt(legacy)).isInstanceOf(IllegalStateException.class);
+        assertThat(derivations).as("current values, and an earlier format refused").hasValue(0);
+
+        taken.set(true);
+        encryptor.decrypt(legacy);
+        encryptor.decrypt(legacy);
+
+        assertThat(derivations).hasValue(1);
     }
 }

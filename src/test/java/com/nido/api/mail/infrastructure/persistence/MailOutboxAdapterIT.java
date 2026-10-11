@@ -1,8 +1,11 @@
 package com.nido.api.mail.infrastructure.persistence;
 
 import com.nido.api.IntegrationTestConfig;
-import com.nido.api.infrastructure.encryption.CurrentOrLegacyTextEncryptor;
 import com.nido.api.infrastructure.encryption.LegacyKeys;
+import com.nido.api.infrastructure.sealing.FixedLegacyFormats;
+import com.nido.api.infrastructure.sealing.LegacyFormats;
+import com.nido.api.infrastructure.sealing.OwnKeyEncryptors;
+import com.nido.api.infrastructure.sealing.RekeyMigration;
 import com.nido.api.mail.domain.model.OutboxEntry;
 import com.nido.api.mail.domain.model.OutgoingMail;
 import com.nido.api.mail.domain.model.Recipient;
@@ -34,20 +37,24 @@ import java.util.concurrent.Future;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Mail is off in this context, so the adapter is not a bean here: it is built by hand on the
- * context's own JdbcClient and ObjectMapper, which costs no extra Spring context.
+ * The adapter is built by hand on the context's own JdbcClient and ObjectMapper, with an encryptor of the test's
+ * choosing: its key, and whether earlier formats are still taken — the context's own start closed them.
  */
 @IntegrationTestConfig
 class MailOutboxAdapterIT {
 
     private static final String SECRET = "integration-test-encryption-secret-32chars!";
-    private static final TextEncryptor ENCRYPTOR = CurrentOrLegacyTextEncryptor.of(new EncryptionKey(SECRET), MailOutboxAdapter.SALT, () -> true);
-    private static final TextEncryptor ANOTHER_KEY =
-        CurrentOrLegacyTextEncryptor.of(new EncryptionKey("another-encryption-secret-at-least-32-chars"), MailOutboxAdapter.SALT, () -> true);
+    private static final TextEncryptor ENCRYPTOR = encryptor(SECRET, FixedLegacyFormats.open());
+    private static final TextEncryptor ANOTHER_KEY = encryptor("another-encryption-secret-at-least-32-chars", FixedLegacyFormats.open());
+
+    private static TextEncryptor encryptor(String masterKey, LegacyFormats formats) {
+        return new OwnKeyEncryptors(new EncryptionKey(masterKey), formats).forSalt(MailOutboxAdapter.SALT);
+    }
 
     @Autowired JdbcClient jdbc;
     @Autowired ObjectMapper json;
     @Autowired TransactionTemplate transactions;
+    @Autowired RekeyMigration rekeying;
 
     private MailOutboxAdapter outbox;
     private final Instant now = Instant.parse("2026-09-28T10:00:00Z");
@@ -257,7 +264,24 @@ class MailOutboxAdapterIT {
     }
 
     @Test
-    void the_queue_is_declared_for_the_migration_and_drops_what_no_key_reads() {
-        assertThat(outbox.rekeyedColumn()).hasToString("mail_outbox.payload");
+    void once_every_value_is_current_a_mail_queued_before_0_16_is_dropped_not_sent() {
+        new MailOutboxAdapter(jdbc, json, LegacyKeys.writer(SECRET, MailOutboxAdapter.SALT)).enqueue("old", mail("john@example.com"), now, null);
+        MailOutboxAdapter closed = new MailOutboxAdapter(jdbc, json, encryptor(SECRET, FixedLegacyFormats.closed()));
+        closed.enqueue("current", mail("jane@example.com"), now, null);
+
+        assertThat(closed.claimDue(now, 20, lease)).extracting(OutboxEntry::kind).containsExactly("current");
+        assertThat(rows()).isEqualTo(1);
+    }
+
+    @Test
+    void the_migration_brings_the_queue_to_the_current_key_and_drops_a_mail_no_key_reads() {
+        new MailOutboxAdapter(jdbc, json, LegacyKeys.writer(SECRET, MailOutboxAdapter.SALT)).enqueue("old", mail("john@example.com"), now, null);
+        new MailOutboxAdapter(jdbc, json, LegacyKeys.writer("another-encryption-secret-at-least-32-chars", MailOutboxAdapter.SALT))
+            .enqueue("unreadable", mail("jane@example.com"), now, null);
+
+        rekeying.migrate(MailOutboxAdapter.rekeyedColumn(ENCRYPTOR));
+
+        assertThat(jdbc.sql("SELECT payload FROM mail_outbox").query(String.class).list()).singleElement().asString().startsWith("k2:");
+        assertThat(outbox.claimDue(now, 20, lease)).extracting(OutboxEntry::kind).containsExactly("old");
     }
 }

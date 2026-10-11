@@ -38,14 +38,13 @@ class EncryptionBackfillRunnerTest {
     private final LegacySpaceOpeners legacy = space -> { throw new AssertionError("not used"); };
     private final SealingLock lock = mock(SealingLock.class);
     private final PendingVacuum pendingVacuum = mock(PendingVacuum.class);
-    private final TableVacuum vacuum = mock(TableVacuum.class);
     private final StartKey knownKey = mock(StartKey.class);
     private final StartKey unconfirmedKey = mock(StartKey.class);
     private final EncryptionBackfillRunner runner = runner(knownKey);
 
     private EncryptionBackfillRunner runner(StartKey key) {
-        return new EncryptionBackfillRunner(List.of(SealedColumns.of(titles), SealedColumns.of(items)), List.of(), List.of(finance),
-            migration, rekeying, sealers, legacy, legacyFormats, lock, vacuum, pendingVacuum, key);
+        return new EncryptionBackfillRunner(List.of(SealedColumns.of(titles), SealedColumns.of(items)), List.of(),
+            new StartKeyCheck(List.of(finance), key), migration, rekeying, sealers, legacy, legacyFormats, lock, pendingVacuum);
     }
 
     private final Logger logger = (Logger) LoggerFactory.getLogger(EncryptionBackfillRunner.class);
@@ -73,7 +72,8 @@ class EncryptionBackfillRunnerTest {
 
         verify(finance, never()).verify();
         verify(migration, never()).migrate(any(), any(), any());
-        verifyNoInteractions(vacuum, lock);
+        verify(pendingVacuum, never()).vacuumOwed();
+        verifyNoInteractions(lock);
         assertThat(logged.list).isEmpty();
     }
 
@@ -98,7 +98,7 @@ class EncryptionBackfillRunnerTest {
         assertThatThrownBy(runner::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
 
         verify(migration, never()).migrate(any(), any(), any());
-        verifyNoInteractions(vacuum);
+        verify(pendingVacuum, never()).vacuumOwed();
     }
 
     @Test
@@ -122,7 +122,6 @@ class EncryptionBackfillRunnerTest {
         runner.afterSingletonsInstantiated();
 
         verify(migration, never()).migrate(any(), any(), any());
-        verifyNoInteractions(vacuum);
     }
 
     @Test
@@ -134,68 +133,28 @@ class EncryptionBackfillRunnerTest {
         order.verify(unconfirmedKey).confirm();
         verify(unconfirmedKey, never()).forget();
         verify(migration, never()).migrate(any(), any(), any());
-        verifyNoInteractions(vacuum);
     }
 
     @Test
-    void a_key_confirmed_already_is_neither_confirmed_again_nor_taken_back() {
+    void the_vacuum_is_owed_before_the_first_row_is_rewritten_and_run_after_the_last() {
         when(migration.pending(titles)).thenReturn(true);
 
         runner.afterSingletonsInstantiated();
 
-        verify(knownKey, never()).confirm();
-        verify(knownKey, never()).forget();
-    }
-
-    @Test
-    void an_unconfirmed_key_that_does_not_decrypt_has_its_fingerprint_taken_back_so_the_right_key_can_start_next() {
-        doThrow(new IllegalStateException("does not decrypt")).when(finance).verify();
-
-        assertThatThrownBy(runner(unconfirmedKey)::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
-
-        verify(unconfirmedKey).forget();
-        verify(unconfirmedKey, never()).confirm();
-    }
-
-    @Test
-    void a_known_key_that_does_not_decrypt_keeps_its_fingerprint() {
-        when(migration.pending(titles)).thenReturn(true);
-        doThrow(new IllegalStateException("does not decrypt")).when(finance).verify();
-
-        assertThatThrownBy(runner::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
-
-        verify(knownKey, never()).forget();
-    }
-
-    @Test
-    void the_vacuum_is_owed_before_the_first_row_is_rewritten_and_settled_table_by_table_once_it_ran() {
-        when(migration.pending(titles)).thenReturn(true);
-        when(pendingVacuum.stillOwed()).thenReturn(List.of("shopping_items", "tasks"));
-        when(vacuum.vacuumFull(any())).thenReturn(true);
-
-        runner.afterSingletonsInstantiated();
-
-        InOrder order = inOrder(pendingVacuum, migration, vacuum);
+        InOrder order = inOrder(pendingVacuum, migration);
         order.verify(pendingVacuum).owe(Set.of("tasks", "shopping_items"));
         order.verify(migration).migrate(eq(titles), eq(sealers), any());
-        order.verify(vacuum).vacuumFull("shopping_items");
-        order.verify(pendingVacuum).settle("shopping_items");
-        order.verify(vacuum).vacuumFull("tasks");
-        order.verify(pendingVacuum).settle("tasks");
+        order.verify(pendingVacuum).vacuumOwed();
     }
 
     @Test
     void a_vacuum_a_stopped_start_still_owes_is_run_with_nothing_left_to_seal() {
         // A start stopped after its last batch and before its VACUUM: nothing is pending any more.
         when(pendingVacuum.anyOwed()).thenReturn(true);
-        when(pendingVacuum.stillOwed()).thenReturn(List.of("tasks"));
-        when(vacuum.vacuumFull("tasks")).thenReturn(true);
 
         runner.afterSingletonsInstantiated();
 
-        InOrder order = inOrder(vacuum, pendingVacuum);
-        order.verify(vacuum).vacuumFull("tasks");
-        order.verify(pendingVacuum).settle("tasks");
+        verify(pendingVacuum).vacuumOwed();
         verify(migration, never()).migrate(any(), any(), any());
         verify(pendingVacuum, never()).owe(any());
     }
@@ -204,24 +163,10 @@ class EncryptionBackfillRunnerTest {
     void a_start_that_only_owes_a_vacuum_checks_no_key() {
         // Nothing is rewritten and the key is confirmed already: the key check would only cost a scan of every table.
         when(pendingVacuum.anyOwed()).thenReturn(true);
-        when(pendingVacuum.stillOwed()).thenReturn(List.of("tasks"));
 
         runner.afterSingletonsInstantiated();
 
         verify(finance, never()).verify();
-    }
-
-    @Test
-    void a_table_the_vacuum_could_not_take_stays_owed_and_the_others_are_settled() {
-        when(migration.pending(titles)).thenReturn(true);
-        when(pendingVacuum.stillOwed()).thenReturn(List.of("shopping_items", "tasks"));
-        when(vacuum.vacuumFull("shopping_items")).thenReturn(false);
-        when(vacuum.vacuumFull("tasks")).thenReturn(true);
-
-        runner.afterSingletonsInstantiated();
-
-        verify(pendingVacuum).settle("tasks");
-        verify(pendingVacuum, never()).settle("shopping_items");
     }
 
     @Test
@@ -230,8 +175,8 @@ class EncryptionBackfillRunnerTest {
             throw new AssertionError("not used");
         });
         EncryptionBackfillRunner withSecrets = new EncryptionBackfillRunner(List.of(SealedColumns.of(titles)),
-            List.of(RekeyedColumns.of(secrets)), List.of(finance), migration, rekeying, sealers, legacy, legacyFormats, lock,
-            vacuum, pendingVacuum, knownKey);
+            List.of(RekeyedColumns.of(secrets)), new StartKeyCheck(List.of(finance), knownKey), migration, rekeying, sealers, legacy,
+            legacyFormats, lock, pendingVacuum);
         when(migration.pending(titles)).thenReturn(true);
         when(rekeying.pending(secrets)).thenReturn(true);
         when(rekeying.migrate(secrets)).thenReturn(3);
@@ -252,8 +197,8 @@ class EncryptionBackfillRunnerTest {
             throw new AssertionError("not used");
         });
         EncryptionBackfillRunner withQueue = new EncryptionBackfillRunner(List.of(SealedColumns.of(titles)),
-            List.of(RekeyedColumns.of(queue)), List.of(finance), migration, rekeying, sealers, legacy, legacyFormats, lock,
-            vacuum, pendingVacuum, knownKey);
+            List.of(RekeyedColumns.of(queue)), new StartKeyCheck(List.of(finance), knownKey), migration, rekeying, sealers, legacy,
+            legacyFormats, lock, pendingVacuum);
         when(rekeying.pending(queue)).thenReturn(true);
 
         withQueue.afterSingletonsInstantiated();
@@ -313,8 +258,8 @@ class EncryptionBackfillRunnerTest {
             throw new AssertionError("not used");
         });
         EncryptionBackfillRunner withSecrets = new EncryptionBackfillRunner(List.of(SealedColumns.of(titles)),
-            List.of(RekeyedColumns.of(secrets)), List.of(finance), migration, rekeying, sealers, legacy, legacyFormats, lock,
-            vacuum, pendingVacuum, knownKey);
+            List.of(RekeyedColumns.of(secrets)), new StartKeyCheck(List.of(finance), knownKey), migration, rekeying, sealers, legacy,
+            legacyFormats, lock, pendingVacuum);
         when(legacyFormats.closed()).thenReturn(true);
         when(rekeying.pending(secrets)).thenReturn(true);
 

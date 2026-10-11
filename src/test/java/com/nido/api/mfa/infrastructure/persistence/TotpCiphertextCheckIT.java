@@ -2,9 +2,9 @@ package com.nido.api.mfa.infrastructure.persistence;
 
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.TestSpaces;
-import com.nido.api.infrastructure.encryption.CurrentOrLegacyTextEncryptor;
 import com.nido.api.infrastructure.encryption.LegacyKeys;
 import com.nido.api.infrastructure.sealing.FixedLegacyFormats;
+import com.nido.api.infrastructure.sealing.OwnKeyEncryptors;
 import com.nido.api.mfa.infrastructure.config.TotpEncryptorFactory;
 import com.nido.api.shared.security.EncryptionKey;
 import org.junit.jupiter.api.Test;
@@ -35,9 +35,8 @@ class TotpCiphertextCheckIT {
      * would refuse a secret of an earlier format whatever the key, and prove nothing about the key.
      */
     private TotpCiphertextCheck beforeEveryValueIsCurrent() {
-        EncryptionKey key = new EncryptionKey(TestSpaces.ENCRYPTION_KEY);
-        return new TotpCiphertextCheck(jdbc,
-            user -> CurrentOrLegacyTextEncryptor.of(key, user.toString().replace("-", ""), () -> true), FixedLegacyFormats.open());
+        OwnKeyEncryptors open = new OwnKeyEncryptors(new EncryptionKey(TestSpaces.ENCRYPTION_KEY), FixedLegacyFormats.open());
+        return new TotpCiphertextCheck(jdbc, user -> open.forSalt(user.toString().replace("-", "")), FixedLegacyFormats.open());
     }
 
     private void withSecrets(Runnable test, String firstSecret, String secondSecret) {
@@ -100,7 +99,7 @@ class TotpCiphertextCheckIT {
     void current_secrets_of_another_key_refuse_it() {
         EncryptionKey other = new EncryptionKey("a-key-someone-typed-by-mistake-32-chars+");
         withSecrets(() -> assertThatThrownBy(check::verify).hasMessageContaining("does not decrypt the two-factor secrets"),
-            CurrentOrLegacyTextEncryptor.of(other, FIRST.toString().replace("-", ""), () -> true).encrypt("JBSWY3DPEHPK3PXP"),
-            CurrentOrLegacyTextEncryptor.of(other, SECOND.toString().replace("-", ""), () -> true).encrypt("JBSWY3DPEHPK3PXP"));
+            new OwnKeyEncryptors(other, FixedLegacyFormats.closed()).forSalt(FIRST.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP"),
+            new OwnKeyEncryptors(other, FixedLegacyFormats.closed()).forSalt(SECOND.toString().replace("-", "")).encrypt("JBSWY3DPEHPK3PXP"));
     }
 }

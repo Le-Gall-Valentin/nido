@@ -4,6 +4,7 @@ import com.nido.api.TestSpaces;
 import com.nido.api.infrastructure.config.SpaceKeyCache;
 import com.nido.api.infrastructure.encryption.DataKeys;
 import com.nido.api.infrastructure.encryption.LegacyKeys;
+import com.nido.api.infrastructure.sealing.LegacyOpening;
 import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.infrastructure.sealing.SealedValueRejected;
 import com.nido.api.infrastructure.sealing.SpaceSealer;
@@ -55,7 +56,7 @@ class SpaceEncryptionConfigTest {
         UUID row = UUID.randomUUID();
         String sealed = LegacyKeys.sealedV2(KEY.value(), saltFor(spaceId), LABEL, row, "Loyer octobre");
 
-        assertThat(new SpaceEncryptionConfig().legacySpaceOpeners(KEY, salts()).forSpace(spaceId).open(LABEL, row, sealed))
+        assertThat(LegacyOpening.open(new SpaceEncryptionConfig().legacySpaceOpeners(KEY, salts()).forSpace(spaceId), LABEL, row, sealed))
             .isEqualTo("Loyer octobre");
     }
 

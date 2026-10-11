@@ -2,11 +2,9 @@ package com.nido.api.mfa.infrastructure.config;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.nido.api.infrastructure.config.EncryptorCache;
-import com.nido.api.infrastructure.encryption.CurrentOrLegacyTextEncryptor;
-import com.nido.api.infrastructure.sealing.LegacyFormats;
+import com.nido.api.infrastructure.sealing.OwnKeyEncryptors;
 import com.nido.api.infrastructure.sealing.RekeyedColumn;
 import com.nido.api.infrastructure.sealing.RekeyedColumns;
-import com.nido.api.shared.security.EncryptionKey;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
@@ -26,13 +24,12 @@ public class TotpEncryptionConfig {
     //   3. Users turn the app on again at their next login
     // There is no in-place rotation of the master key: an old ciphertext requires the old master key.
     @Bean
-    TotpEncryptorFactory totpEncryptorFactory(EncryptionKey encryptionKey, LegacyFormats legacyFormats) {
+    TotpEncryptorFactory totpEncryptorFactory(OwnKeyEncryptors encryptors) {
         // Bounded and expiring — see EncryptorCache for why a derived key must not live forever. Reads what versions up
         // to 0.15.x wrote too, for the migration to bring it to the current key, until every value is current
         // (LegacyFormats). Not an enrolment begun before the upgrade: Redis is not migrated, and the first start closes
         // that format before serving — RedisPendingTotpEnrolmentStore drops it, and the user starts again.
-        LoadingCache<UUID, TextEncryptor> cache = EncryptorCache.build(id ->
-            CurrentOrLegacyTextEncryptor.of(encryptionKey, id.toString().replace("-", ""), () -> !legacyFormats.closed()));
+        LoadingCache<UUID, TextEncryptor> cache = EncryptorCache.build(id -> encryptors.forSalt(id.toString().replace("-", "")));
         return cache::get;
     }
 

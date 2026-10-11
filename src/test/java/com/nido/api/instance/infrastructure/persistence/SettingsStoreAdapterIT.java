@@ -3,15 +3,20 @@ package com.nido.api.instance.infrastructure.persistence;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.TestSpaces;
 import com.nido.api.infrastructure.encryption.LegacyKeys;
+import com.nido.api.infrastructure.sealing.FixedLegacyFormats;
 import com.nido.api.infrastructure.sealing.LegacyFormats;
+import com.nido.api.infrastructure.sealing.OwnKeyEncryptors;
+import com.nido.api.infrastructure.sealing.RekeyMigration;
 import com.nido.api.instance.InstanceSettingsTestSupport;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.shared.security.EncryptionKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.codec.Hex;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
@@ -32,6 +37,17 @@ class SettingsStoreAdapterIT {
     @Autowired TransactionTemplate transactions;
     @Autowired EncryptionKey encryptionKey;
     @Autowired LegacyFormats legacyFormats;
+    @Autowired @Qualifier(SettingsStoreAdapter.ENCRYPTOR) TextEncryptor encryptor;
+    @Autowired RekeyMigration rekeying;
+
+    /** The encryptor before the first start of 0.16.0 is over — the shared context's own start closed earlier formats. */
+    private TextEncryptor beforeEveryValueIsCurrent() {
+        return new OwnKeyEncryptors(encryptionKey, FixedLegacyFormats.open()).forSalt(SettingsStoreAdapter.SALT);
+    }
+
+    private String stored(String key) {
+        return jdbc.sql("SELECT value FROM instance_settings WHERE key = :key").param("key", key).query(String.class).optional().orElse(null);
+    }
 
     @AfterEach
     void clean() {
@@ -81,7 +97,7 @@ class SettingsStoreAdapterIT {
     void a_read_that_raced_a_change_does_not_keep_the_old_values() {
         store.save(Map.of(SettingKey.MAIL_HOST, Optional.of("before")), null, Instant.now());
         AtomicBoolean raced = new AtomicBoolean();
-        SettingsStoreAdapter racing = new SettingsStoreAdapter(jdbc, encryptionKey, legacyFormats) {
+        SettingsStoreAdapter racing = new SettingsStoreAdapter(jdbc, encryptor) {
             @Override
             Map<SettingKey, String> read() {
                 Map<SettingKey, String> seen = super.read();
@@ -118,8 +134,7 @@ class SettingsStoreAdapterIT {
         jdbc.sql("UPDATE instance_settings SET value = :v WHERE key = 'mail.password'")
             .param("v", LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, SettingsStoreAdapter.SALT).encrypt("0ld-s3cret")).update();
 
-        // Before the first start of 0.16.0 is over — the shared context's own start closed earlier formats long ago.
-        assertThat(new SettingsStoreAdapter(jdbc, encryptionKey, open()).load()).containsEntry(SettingKey.MAIL_PASSWORD, "0ld-s3cret");
+        assertThat(new SettingsStoreAdapter(jdbc, beforeEveryValueIsCurrent()).load()).containsEntry(SettingKey.MAIL_PASSWORD, "0ld-s3cret");
     }
 
     @Test
@@ -133,16 +148,27 @@ class SettingsStoreAdapterIT {
         assertThat(store.load()).doesNotContainKey(SettingKey.MAIL_PASSWORD);
     }
 
-    private static LegacyFormats open() {
-        return new LegacyFormats() {
-            @Override public boolean closed() { return false; }
-            @Override public void closeForGood() { throw new AssertionError("not used"); }
-        };
+    @Test
+    void the_migration_brings_the_secret_settings_alone_to_the_current_key() {
+        jdbc.sql("INSERT INTO instance_settings (key, value, updated_at) VALUES ('mail.host', 'smtp.example.com', now()), "
+                + "('mail.password', :v, now())")
+            .param("v", LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, SettingsStoreAdapter.SALT).encrypt("0ld-s3cret")).update();
+        TextEncryptor encryptor = beforeEveryValueIsCurrent();
+
+        rekeying.migrate(SettingsStoreAdapter.rekeyedColumn(encryptor));
+
+        assertThat(stored("mail.host")).isEqualTo("smtp.example.com");
+        assertThat(stored("mail.password")).startsWith("k2:");
+        assertThat(encryptor.decrypt(stored("mail.password"))).isEqualTo("0ld-s3cret");
     }
 
     @Test
-    void only_the_secret_settings_are_declared_for_the_migration() {
-        assertThat(store.rekeyedColumn()).hasToString("instance_settings.value");
+    void the_migration_drops_a_secret_setting_no_key_reads() {
+        jdbc.sql("INSERT INTO instance_settings (key, value, updated_at) VALUES ('mail.password', 'not-a-ciphertext', now())").update();
+
+        rekeying.migrate(SettingsStoreAdapter.rekeyedColumn(beforeEveryValueIsCurrent()));
+
+        assertThat(stored("mail.password")).isNull();
     }
 
     @Test

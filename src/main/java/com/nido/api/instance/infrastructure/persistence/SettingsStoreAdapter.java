@@ -1,14 +1,11 @@
 package com.nido.api.instance.infrastructure.persistence;
 
-import com.nido.api.infrastructure.encryption.CurrentOrLegacyTextEncryptor;
-import com.nido.api.infrastructure.sealing.LegacyFormats;
 import com.nido.api.infrastructure.sealing.RekeyedColumn;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.instance.domain.port.out.SettingsStorePort;
-import com.nido.api.shared.security.EncryptionKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Component;
@@ -34,6 +31,9 @@ import java.util.stream.Collectors;
  * asked for on every token issued and every mail written, so a query each time would be a query per
  * request for ten rows that change a few times a year. One instance of Nido runs at a time — the
  * derived keys and the setup code are in memory already — so forgetting the cache locally is enough.
+ *
+ * <p>The secret settings are encrypted under a key of their own, with the salt below: the encryptor is a bean of
+ * InstanceEncryptionConfig, shared with the migration that brings them to the current key.
  */
 @Component
 public class SettingsStoreAdapter implements SettingsStorePort {
@@ -41,7 +41,10 @@ public class SettingsStoreAdapter implements SettingsStorePort {
     private static final Logger log = LoggerFactory.getLogger(SettingsStoreAdapter.class);
 
     /** "nido-instance-settings", hex-encoded as the key derivation expects. Not a secret: it separates keys. */
-    static final String SALT = "6e69646f2d696e7374616e63652d73657474696e6773";
+    public static final String SALT = "6e69646f2d696e7374616e63652d73657474696e6773";
+
+    /** The name of the encryptor bean of the secret settings. */
+    public static final String ENCRYPTOR = "settingsEncryptor";
 
     private final JdbcClient jdbc;
     private final TextEncryptor encryptor;
@@ -53,12 +56,7 @@ public class SettingsStoreAdapter implements SettingsStorePort {
 
     private final AtomicReference<Cached> cache = new AtomicReference<>(new Cached(null));
 
-    @Autowired
-    public SettingsStoreAdapter(JdbcClient jdbc, EncryptionKey encryptionKey, LegacyFormats legacyFormats) {
-        this(jdbc, CurrentOrLegacyTextEncryptor.of(encryptionKey, SALT, () -> !legacyFormats.closed()));
-    }
-
-    SettingsStoreAdapter(JdbcClient jdbc, TextEncryptor encryptor) {
+    public SettingsStoreAdapter(JdbcClient jdbc, @Qualifier(ENCRYPTOR) TextEncryptor encryptor) {
         this.jdbc = jdbc;
         this.encryptor = encryptor;
     }
@@ -69,7 +67,7 @@ public class SettingsStoreAdapter implements SettingsStorePort {
      * stopping the start would leave it nowhere to do so. The codes are the enum's own constants: nothing typed reaches
      * this condition.
      */
-    public RekeyedColumn rekeyedColumn() {
+    public static RekeyedColumn rekeyedColumn(TextEncryptor encryptor) {
         return RekeyedColumn.of("instance_settings", "value", "key", secretKeysCondition(Arrays.asList(SettingKey.values())),
             key -> encryptor).deletingUnreadableRows();
     }
