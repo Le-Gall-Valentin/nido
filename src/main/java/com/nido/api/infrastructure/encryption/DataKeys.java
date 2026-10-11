@@ -19,9 +19,10 @@ import java.security.GeneralSecurityException;
  * iterations, AES-256-GCM — over the salt behind a label of its own, {@value #CURRENT_LABEL}. The key fingerprint the
  * database keeps (KeyFingerprint) is PBKDF2-HMAC-SHA256 at 600 000 iterations too, over 16 random bytes: without the
  * label, a space given the fingerprint's salt by someone able to write to the database would have, for key, the
- * fingerprint stored in the instance table. With it, the salt of a data key is longer than any fingerprint salt, and the
- * two can never be the same. Deriving a key costs ~130 ms (~5 ms for the legacy key), which is why the keys of spaces
- * and users are cached — see EncryptorCache.
+ * fingerprint stored in the instance table. With it, the salt of a data key begins with the label, and a random
+ * fingerprint salt cannot be expected to — whatever salt a space is given. Deriving a key costs ~130 ms (~5 ms for the
+ * legacy key), which is why the keys of spaces and users are cached — see EncryptorCache. Changing the label, or how
+ * the salt is put together, makes every value written since 0.16.0 unreadable: DataKeysTest keeps one.
  *
  * <p>{@link #legacy}: what {@code Encryptors.delux} derived up to 0.15.x — PBKDF2-HMAC-SHA1, 1 024 iterations, 256 bits,
  * the same AES-256-GCM with a 16-byte IV. Spring Security deprecates delux and its AesBytesEncryptor, so the derivation

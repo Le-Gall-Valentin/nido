@@ -6,6 +6,11 @@ package com.nido.api.infrastructure.sealing;
  * access to the database — a ciphertext from an old backup, say. It is refused where it is read, and named at start;
  * never converted, so it cannot pass for the value of the row it was put in. Recorded in the database by the instance
  * module, which owns the installation's state.
+ *
+ * <p>What it guards against is a value put back into the current database — not someone who also clears the record,
+ * which is in the same database: the next start converts again, as it does after the restore of a whole backup from
+ * before 0.16.0, which is the legitimate way back and looks the same. A record kept outside the database would tell the
+ * two apart only by refusing that restore too.
  */
 public interface LegacyFormats {
 
@@ -14,7 +19,8 @@ public interface LegacyFormats {
 
     /**
      * Records that every value is of the current format. Does nothing when that is recorded already. Not named
-     * {@code close}: Spring would take that for the destroy method of the bean, and call it at every shutdown.
+     * {@code close} nor {@code shutdown}: Spring would take either for the destroy method of the bean, and call it at
+     * every shutdown.
      */
     void closeForGood();
 }
