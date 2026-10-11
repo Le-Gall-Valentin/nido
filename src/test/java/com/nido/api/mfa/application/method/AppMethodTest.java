@@ -78,6 +78,29 @@ class AppMethodTest {
     }
 
     @Test
+    void an_enrolment_gone_between_the_two_calls_is_started_afresh() {
+        // Expired in between, or dropped because the key no longer opens it.
+        when(addresses.addressOf(jane)).thenReturn(Optional.of("jane@example.fr"));
+        when(secrets.generateSecret()).thenReturn("NEWSECRET");
+        when(pending.startIfAbsent(jane, "NEWSECRET")).thenReturn(false, true);
+        when(pending.find(jane)).thenReturn(Optional.empty());
+        when(uris.buildOtpauthUri("NEWSECRET", "jane@example.fr")).thenReturn("otpauth://new");
+
+        assertThat(app.startEnrolment(jane)).isEqualTo(new EnrolmentStarted.AppEnrolment("NEWSECRET", "otpauth://new"));
+    }
+
+    @Test
+    void an_enrolment_another_tab_starts_in_between_is_the_one_shown() {
+        when(addresses.addressOf(jane)).thenReturn(Optional.of("jane@example.fr"));
+        when(secrets.generateSecret()).thenReturn("NEWSECRET");
+        when(pending.startIfAbsent(jane, "NEWSECRET")).thenReturn(false, false);
+        when(pending.find(jane)).thenReturn(Optional.empty(), Optional.of("OTHERTAB"));
+        when(uris.buildOtpauthUri("OTHERTAB", "jane@example.fr")).thenReturn("otpauth://other");
+
+        assertThat(app.startEnrolment(jane)).isEqualTo(new EnrolmentStarted.AppEnrolment("OTHERTAB", "otpauth://other"));
+    }
+
+    @Test
     void an_account_without_an_address_cannot_enrol() {
         when(addresses.addressOf(jane)).thenReturn(Optional.empty());
 

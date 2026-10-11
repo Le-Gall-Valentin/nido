@@ -64,12 +64,23 @@ public class AppMethod implements TwoFactorMethodHandler {
         String address = addresses.addressOf(userId).orElseThrow(MfaException.UserNotFound::new);
         String candidate = secrets.generateSecret();
         if (pending.startIfAbsent(userId, candidate)) {
-            return new EnrolmentStarted.AppEnrolment(candidate, uris.buildOtpauthUri(candidate, address));
+            return enrolment(candidate, address);
         }
-        // An enrolment was already under way: hand back the one being shown rather than a second QR code.
-        // It can still have expired between the two calls, in which case there is nothing to hand back.
-        String existing = pending.find(userId).orElseThrow(MfaException.EnrolmentNotStarted::new);
-        return new EnrolmentStarted.AppEnrolment(existing, uris.buildOtpauthUri(existing, address));
+        // An enrolment was already under way: hand back the one being shown rather than a second QR code. It can be
+        // gone by now — expired, or dropped because the key no longer opens it — and this one starts instead, unless
+        // another tab started one in between.
+        Optional<String> existing = pending.find(userId);
+        if (existing.isPresent()) {
+            return enrolment(existing.get(), address);
+        }
+        if (pending.startIfAbsent(userId, candidate)) {
+            return enrolment(candidate, address);
+        }
+        return enrolment(pending.find(userId).orElseThrow(MfaException.EnrolmentNotStarted::new), address);
+    }
+
+    private EnrolmentStarted enrolment(String secret, String address) {
+        return new EnrolmentStarted.AppEnrolment(secret, uris.buildOtpauthUri(secret, address));
     }
 
     @Override

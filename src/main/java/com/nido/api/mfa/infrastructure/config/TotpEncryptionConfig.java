@@ -28,8 +28,9 @@ public class TotpEncryptionConfig {
     @Bean
     TotpEncryptorFactory totpEncryptorFactory(EncryptionKey encryptionKey, LegacyFormats legacyFormats) {
         // Bounded and expiring — see EncryptorCache for why a derived key must not live forever. Reads what versions up
-        // to 0.15.x wrote too — an enrolment begun before the upgrade waits in Redis under the legacy key — until every
-        // value is current (LegacyFormats).
+        // to 0.15.x wrote too, for the migration to bring it to the current key, until every value is current
+        // (LegacyFormats). Not an enrolment begun before the upgrade: Redis is not migrated, and the first start closes
+        // that format before serving — RedisPendingTotpEnrolmentStore drops it, and the user starts again.
         LoadingCache<UUID, TextEncryptor> cache = EncryptorCache.build(id ->
             CurrentOrLegacyTextEncryptor.of(encryptionKey, id.toString().replace("-", ""), () -> !legacyFormats.closed()));
         return cache::get;

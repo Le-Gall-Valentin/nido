@@ -24,12 +24,15 @@ public interface PendingTotpEnrolmentPort {
      * Records this enrolment unless one is already in progress.
      *
      * @return false when an enrolment was already under way, in which case it is left untouched and
-     *         {@link #find(UUID)} returns it. Two tabs on the enrolment page must not end up
+     *         {@link #find(UUID)} returns it — unless it is gone by then. Two tabs on the enrolment page must not end up
      *         showing two different QR codes, or the user scans one and confirms against the other.
      */
     boolean startIfAbsent(UUID userId, String secret);
 
-    /** Empty when no enrolment is under way, or when the one that was has expired. */
+    /**
+     * Empty when no enrolment is under way, or when the one that was has expired — or could no longer be read, and is
+     * dropped: a new one can start.
+     */
     Optional<String> find(UUID userId);
 
     /** Idempotent: discarding an enrolment that is not there is not an error. */

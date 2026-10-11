@@ -1,6 +1,8 @@
 package com.nido.api.mfa.infrastructure.security;
 
 import com.nido.api.IntegrationTestConfig;
+import com.nido.api.TestSpaces;
+import com.nido.api.infrastructure.encryption.LegacyKeys;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -83,6 +85,19 @@ class RedisPendingTotpEnrolmentStoreIT {
         store.discard(userId);
 
         assertThat(store.find(userId)).isEmpty();
+        assertThat(store.startIfAbsent(userId, "FRESHSECRETVALUE")).isTrue();
+    }
+
+    @Test
+    void an_enrolment_the_key_no_longer_opens_is_dropped_so_that_a_new_one_can_start() {
+        // Begun under 0.15.x, with the legacy key: the first start of 0.16.0 closed that format before serving, as the
+        // start of this test context did.
+        UUID userId = UUID.randomUUID();
+        redisTemplate.opsForValue().set(keyFor(userId),
+            LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, userId.toString().replace("-", "")).encrypt(SECRET), 15, TimeUnit.MINUTES);
+
+        assertThat(store.find(userId)).isEmpty();
+        assertThat(redisTemplate.hasKey(keyFor(userId))).isFalse();
         assertThat(store.startIfAbsent(userId, "FRESHSECRETVALUE")).isTrue();
     }
 

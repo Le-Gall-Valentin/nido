@@ -65,7 +65,7 @@ class TotpEncryptionConfigTest {
     }
 
     @Test
-    void a_secret_written_before_0_16_still_reads_an_enrolment_waiting_in_redis_included() {
+    void a_secret_written_before_0_16_reads_while_earlier_formats_are_taken() {
         TotpEncryptorFactory factory = new TotpEncryptionConfig().totpEncryptorFactory(keyOf(TestSpaces.ENCRYPTION_KEY), OPEN);
         String legacy = LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, "00000000000040008000000000000001").encrypt("JBSWY3DPEHPK3PXP");
 
