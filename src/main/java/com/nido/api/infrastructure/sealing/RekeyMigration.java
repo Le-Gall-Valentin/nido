@@ -10,21 +10,18 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Brings the values of a {@link RekeyedColumn} to the current key ({@value CurrentOrLegacyTextEncryptor#PREFIX}), in
- * batches, one transaction each. Each value is checked to open back to itself before it is written, and written only if
- * it is still the one read. A value no key opens stops the start, naming its row — or, for a column that says so, has its
- * row deleted. Never shows a value, nor the message of a cause that could hold one.
+ * batches, one transaction each — see BatchedRewrite. Each value is checked to open back to itself before it is
+ * written, and written only if it is still the one read. A value no key opens stops the start, naming its row — or, for
+ * a column that says so, has its row deleted. Never shows a value, nor the message of a cause that could hold one. A row
+ * is found again by its key compared in the key's own type, so through its index.
  */
 @Component
 public class RekeyMigration {
 
     private static final Logger log = LoggerFactory.getLogger(RekeyMigration.class);
-
-    /** Rows per transaction: a start that fails loses at most this much work, and the next one redoes it. */
-    static final int BATCH_SIZE = 500;
 
     private final JdbcClient jdbc;
     private final TransactionTemplate transactions;
@@ -39,72 +36,62 @@ public class RekeyMigration {
             .query(Boolean.class).single());
     }
 
-    /** @return how many values were re-encrypted, or — for a column that deletes them — dropped as unreadable */
-    public int migrate(RekeyedColumn column) {
-        int done = 0;
-        int batch;
-        do {
-            batch = Objects.requireNonNull(transactions.execute(status -> migrateOneBatch(column)));
-            done += batch;
-        } while (batch > 0);
-        return done;
+    /** @return the values re-encrypted, and — for a column that deletes them — those dropped as unreadable */
+    public MigratedRows migrate(RekeyedColumn column) {
+        return BatchedRewrite.untilNoneLeft(transactions, () -> migrateOneBatch(column));
     }
 
-    private int migrateOneBatch(RekeyedColumn column) {
-        List<Row> rows = jdbc.sql("SELECT " + column.rowKey() + "::text AS row_key, " + column.column() + " AS stored FROM "
-                + column.table() + " WHERE " + pendingCondition(column) + " LIMIT " + BATCH_SIZE)
-            .query((rs, rowNum) -> new Row(rs.getString("row_key"), rs.getString("stored")))
+    private MigratedRows migrateOneBatch(RekeyedColumn column) {
+        List<Row> rows = jdbc.sql("SELECT " + column.rowKey() + " AS row_key, " + column.column() + " AS stored FROM "
+                + column.table() + " WHERE " + pendingCondition(column) + " LIMIT " + BatchedRewrite.SIZE)
+            .query((rs, rowNum) -> new Row(rs.getObject("row_key"), rs.getString("stored")))
             .list();
-        int changed = 0;
+        MigratedRows changed = MigratedRows.NONE;
         for (Row row : rows) {
-            changed += rekey(column, row);
+            changed = changed.plus(rekey(column, row));
         }
-        if (changed == 0 && !rows.isEmpty()) {
-            // Rows that would not change: looping would read them again for ever.
-            throw new IllegalStateException(rows.size() + " rows of " + column + " stay under the legacy key after being re-encrypted");
-        }
+        BatchedRewrite.requireProgress(rows.size(), changed, column, "stay under the legacy key after being re-encrypted");
         return changed;
     }
 
-    private int rekey(RekeyedColumn column, Row row) {
+    private MigratedRows rekey(RekeyedColumn column, Row row) {
         TextEncryptor encryptor;
         String value;
         try {
-            encryptor = column.encryptorFor(row.key());
+            encryptor = column.encryptorFor(String.valueOf(row.key()));
         } catch (RuntimeException e) {
-            throw failure(column, row, e);
+            throw BatchedRewrite.failure("re-encrypt", row.key(), column, e);
         }
         try {
             value = encryptor.decrypt(row.stored());
         } catch (RuntimeException e) {
             if (column.deletesUnreadable()) {
                 log.error("Row {} of {} cannot be read with the key and is dropped: {}", row.key(), column, e.getClass().getSimpleName());
-                return where(column, "DELETE FROM " + column.table(), row).update() > 0 ? 1 : 0;
+                return where(column, "DELETE FROM " + column.table(), row).update() > 0 ? MigratedRows.ONE_DROPPED : MigratedRows.NONE;
             }
-            throw failure(column, row, e);
+            throw BatchedRewrite.failure("re-encrypt", row.key(), column, e);
         }
         String rekeyed;
         try {
             rekeyed = encryptor.encrypt(value);
         } catch (RuntimeException e) {
-            throw failure(column, row, e);
+            throw BatchedRewrite.failure("re-encrypt", row.key(), column, e);
         }
         if (!CurrentOrLegacyTextEncryptor.isCurrent(rekeyed) || !value.equals(opened(encryptor, rekeyed))) {
-            throw new IllegalStateException("Re-encrypting row " + row.key() + " of " + column + " would not give its value back: "
-                + "nothing of its batch was written.");
+            throw BatchedRewrite.wouldNotReadBack("Re-encrypting", row.key(), column);
         }
         try {
             return where(column, "UPDATE " + column.table() + " SET " + column.column() + " = :rekeyed", row)
                 .param("rekeyed", rekeyed)
-                .update() > 0 ? 1 : 0;
+                .update() > 0 ? MigratedRows.ONE_REENCRYPTED : MigratedRows.NONE;
         } catch (RuntimeException e) {
-            throw failure(column, row, e);
+            throw BatchedRewrite.failure("re-encrypt", row.key(), column, e);
         }
     }
 
     /** The row as it was read: its key, the rows of the column, and the value still the one read. */
     private JdbcClient.StatementSpec where(RekeyedColumn column, String statement, Row row) {
-        return jdbc.sql(statement + " WHERE " + column.rowKey() + "::text = :key AND (" + column.rows() + ") AND "
+        return jdbc.sql(statement + " WHERE " + column.rowKey() + " = :key AND (" + column.rows() + ") AND "
                 + column.column() + " = :old")
             .param("key", row.key())
             .param("old", row.stored());
@@ -118,17 +105,11 @@ public class RekeyMigration {
         }
     }
 
-    // Neither the value nor the cause: a driver's message can quote the whole row.
-    private static IllegalStateException failure(RekeyedColumn column, Row row, RuntimeException e) {
-        return new IllegalStateException("Could not re-encrypt row " + row.key() + " of " + column + " ("
-            + e.getClass().getSimpleName() + "). Its batch was rolled back; the rows re-encrypted before it stay so, "
-            + "and the next start resumes.");
-    }
-
     private static String pendingCondition(RekeyedColumn column) {
         return "(" + column.rows() + ") AND " + column.column() + " IS NOT NULL AND " + column.column()
             + " NOT LIKE '" + CurrentOrLegacyTextEncryptor.PREFIX + "%'";
     }
 
-    private record Row(String key, String stored) {}
+    /** The key as the driver reads it — a UUID, a string —, so that it is compared in its column's own type. */
+    private record Row(Object key, String stored) {}
 }

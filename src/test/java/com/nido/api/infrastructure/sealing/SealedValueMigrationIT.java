@@ -68,7 +68,7 @@ class SealedValueMigrationIT {
     void a_value_in_clear_is_sealed_and_its_clear_column_emptied() {
         UUID id = row("Crème fraîche 🥛", null, null);
 
-        assertThat(migration.migrate(LABEL, SEALERS, LEGACY)).isEqualTo(1);
+        assertThat(migration.migrate(LABEL, SEALERS, LEGACY)).isEqualTo(new MigratedRows(1, 0, 0));
 
         assertThat(read(id).get("label")).isNull();
         assertThat(SpaceSealer.of(CURRENT).open(LABEL, id, (String) read(id).get("label_encrypted"))).isEqualTo("Crème fraîche 🥛");
@@ -79,7 +79,7 @@ class SealedValueMigrationIT {
         UUID id = row(null, null, LEGACY_WRITER.encrypt("Loyer"));
 
         assertThat(migration.pending(NOTE)).isTrue();
-        migration.migrate(NOTE, SEALERS, LEGACY);
+        assertThat(migration.migrate(NOTE, SEALERS, LEGACY)).as("never sealed before").isEqualTo(new MigratedRows(1, 0, 0));
 
         assertThat(migration.pending(NOTE)).isFalse();
         assertThat(SpaceSealer.of(CURRENT).open(NOTE, id, (String) read(id).get("note_encrypted"))).isEqualTo("Loyer");
@@ -104,7 +104,7 @@ class SealedValueMigrationIT {
         jdbc.sql("INSERT INTO sealing_probes (id, space_id, label_encrypted) VALUES (:id, :s, :v)")
             .param("id", sealed).param("s", A).param("v", alreadySealed).update();
 
-        assertThat(migration.migrate(LABEL, SEALERS, LEGACY)).isEqualTo(1);
+        assertThat(migration.migrate(LABEL, SEALERS, LEGACY)).isEqualTo(new MigratedRows(1, 0, 0));
 
         assertThat(SpaceSealer.of(CURRENT).open(LABEL, clearWins, (String) read(clearWins).get("label_encrypted"))).isEqualTo("Nouveau");
         assertThat(read(sealed).get("label_encrypted")).isEqualTo(alreadySealed);
@@ -146,7 +146,7 @@ class SealedValueMigrationIT {
         Object sealed = read(id).get("label_encrypted");
 
         assertThat(migration.pending(LABEL)).isFalse();
-        assertThat(migration.migrate(LABEL, SEALERS, LEGACY)).isZero();
+        assertThat(migration.migrate(LABEL, SEALERS, LEGACY)).isEqualTo(MigratedRows.NONE);
         assertThat(read(id).get("label_encrypted")).isEqualTo(sealed);
     }
 
@@ -193,7 +193,7 @@ class SealedValueMigrationIT {
             .param("id", id).param("s", A).param("v", LegacyKeys.sealedV2(TestSpaces.ENCRYPTION_KEY, SALT, NOTE, id, "Loyer")).update();
 
         assertThat(migration.pending(NOTE)).isTrue();
-        assertThat(migration.migrate(NOTE, SEALERS, LEGACY)).isEqualTo(1);
+        assertThat(migration.migrate(NOTE, SEALERS, LEGACY)).isEqualTo(new MigratedRows(0, 1, 0));
 
         String stored = (String) read(id).get("note_encrypted");
         assertThat(stored).startsWith("v3:");
@@ -212,7 +212,7 @@ class SealedValueMigrationIT {
         jdbc.sql("INSERT INTO sealing_probes (id, space_id, note_encrypted) VALUES (:id, :s, :v)")
             .param("id", v3).param("s", A).param("v", current).update();
 
-        assertThat(migration.migrate(NOTE, SEALERS, LEGACY)).isEqualTo(2);
+        assertThat(migration.migrate(NOTE, SEALERS, LEGACY)).isEqualTo(new MigratedRows(1, 1, 0));
 
         assertThat(SpaceSealer.of(CURRENT).open(NOTE, v1, (String) read(v1).get("note_encrypted"))).isEqualTo("Ancien");
         assertThat(SpaceSealer.of(CURRENT).open(NOTE, v2, (String) read(v2).get("note_encrypted"))).isEqualTo("Scellé");

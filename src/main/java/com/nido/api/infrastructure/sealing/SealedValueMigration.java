@@ -6,7 +6,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -14,13 +13,10 @@ import java.util.UUID;
  * starts from whatever an earlier version stored — in clear (up to 0.13), encrypted without an envelope (up to 0.13), or
  * sealed with the legacy key ({@code v2:}, 0.14 to 0.15) — column by column, in batches. Each value is checked to open
  * back to itself before it is written, so a sealing that would not read back stops the start before its batch is
- * written. Through JDBC: the entities no longer know the columns in clear.
+ * written — see BatchedRewrite. Through JDBC: the entities no longer know the columns in clear.
  */
 @Component
 public class SealedValueMigration {
-
-    /** Rows per transaction: a start that fails loses at most this much work, and the next one redoes it. */
-    static final int BATCH_SIZE = 500;
 
     private final JdbcClient jdbc;
     private final TransactionTemplate transactions;
@@ -36,38 +32,29 @@ public class SealedValueMigration {
             .query(Boolean.class).single());
     }
 
-    /** @return how many rows were sealed */
-    public int migrate(SealedColumn column, SpaceSealers sealers, LegacySpaceOpeners legacy) {
-        int sealed = 0;
-        int batch;
-        do {
-            batch = Objects.requireNonNull(transactions.execute(status -> migrateOneBatch(column, sealers, legacy)));
-            sealed += batch;
-        } while (batch > 0);
-        return sealed;
+    /** @return the values sealed — in clear or without an envelope, up to 0.13 — and those sealed with the legacy key */
+    public MigratedRows migrate(SealedColumn column, SpaceSealers sealers, LegacySpaceOpeners legacy) {
+        return BatchedRewrite.untilNoneLeft(transactions, () -> migrateOneBatch(column, sealers, legacy));
     }
 
-    private int migrateOneBatch(SealedColumn column, SpaceSealers sealers, LegacySpaceOpeners legacy) {
+    private MigratedRows migrateOneBatch(SealedColumn column, SpaceSealers sealers, LegacySpaceOpeners legacy) {
         boolean withClear = hasClearColumn(column);
         List<Row> rows = jdbc.sql("SELECT t.id, " + column.spaceOf() + " AS space_id, t." + column.column() + " AS sealed"
                 + (withClear ? ", t." + column.clearColumn().orElseThrow() + " AS clear" : "")
                 + " FROM " + column.table() + " t " + column.join()
-                + " WHERE " + pendingCondition(column, withClear) + " LIMIT " + BATCH_SIZE)
+                + " WHERE " + pendingCondition(column, withClear) + " LIMIT " + BatchedRewrite.SIZE)
             .query((rs, rowNum) -> new Row(rs.getObject("id", UUID.class), rs.getObject("space_id", UUID.class),
                 rs.getString("sealed"), withClear ? rs.getString("clear") : null))
             .list();
-        int rewritten = 0;
+        MigratedRows rewritten = MigratedRows.NONE;
         for (Row row : rows) {
-            rewritten += seal(column, withClear, row, sealers, legacy);
+            rewritten = rewritten.plus(seal(column, withClear, row, sealers, legacy));
         }
-        if (rewritten == 0 && !rows.isEmpty()) {
-            // Rows that would not change: looping would read them again for ever.
-            throw new IllegalStateException(rows.size() + " rows of " + column + " stay unsealed after being sealed");
-        }
+        BatchedRewrite.requireProgress(rows.size(), rewritten, column, "stay unsealed after being sealed");
         return rewritten;
     }
 
-    private int seal(SealedColumn column, boolean withClear, Row row, SpaceSealers sealers, LegacySpaceOpeners legacy) {
+    private MigratedRows seal(SealedColumn column, boolean withClear, Row row, SpaceSealers sealers, LegacySpaceOpeners legacy) {
         SpaceSealer sealer;
         String value;
         String sealed;
@@ -76,12 +63,14 @@ public class SealedValueMigration {
             value = row.clear() != null ? row.clear() : legacy.forSpace(row.spaceId()).open(column, row.id(), row.sealed());
             sealed = sealer.seal(column, row.id(), value);
         } catch (RuntimeException e) {
-            throw failure(column, row, e);
+            throw BatchedRewrite.failure("seal", row.id(), column, e);
         }
         if (!opensBackTo(sealer, column, row.id(), sealed, value)) {
-            throw new IllegalStateException("Sealing row " + row.id() + " of " + column + " would not give its value back: "
-                + "nothing of its batch was written.");
+            throw BatchedRewrite.wouldNotReadBack("Sealing", row.id(), column);
         }
+        // Sealed with the legacy key by 0.14 to 0.15.x: only the key changes. Otherwise sealed for the first time.
+        MigratedRows done = row.clear() == null && row.sealed().startsWith(LegacySpaceOpener.PREFIX)
+            ? MigratedRows.ONE_REENCRYPTED : MigratedRows.ONE_SEALED;
         try {
             String clear = column.clearColumn().orElse(null);
             return jdbc.sql("UPDATE " + column.table() + " SET " + column.column() + " = :sealed"
@@ -92,9 +81,9 @@ public class SealedValueMigration {
                 .param("id", row.id())
                 .param("old", row.sealed())
                 .param("oldClear", row.clear())
-                .update() > 0 ? 1 : 0;
+                .update() > 0 ? done : MigratedRows.NONE;
         } catch (RuntimeException e) {
-            throw failure(column, row, e);
+            throw BatchedRewrite.failure("seal", row.id(), column, e);
         }
     }
 
@@ -104,14 +93,6 @@ public class SealedValueMigration {
         } catch (SealedValueRejected e) {
             return false;
         }
-    }
-
-    // Neither the value nor the cause: a driver's message can quote the whole row ("Failing row contains ..."), and a
-    // start that fails prints every cause it is given.
-    private static IllegalStateException failure(SealedColumn column, Row row, RuntimeException e) {
-        return new IllegalStateException("Could not seal row " + row.id() + " of " + column + " ("
-            + e.getClass().getSimpleName() + "). Its batch was rolled back; the rows sealed before it stay sealed, "
-            + "and the next start resumes.");
     }
 
     /** Whether the column that held its values in clear up to 0.13 is still there: 068 drops it at the start after. */

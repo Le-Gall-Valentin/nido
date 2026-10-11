@@ -55,7 +55,7 @@ class RekeyMigrationIT {
         UUID id = row("SECRET", LEGACY_WRITER.encrypt("s3cret"));
 
         assertThat(migration.pending(VALUE)).isTrue();
-        assertThat(migration.migrate(VALUE)).isEqualTo(1);
+        assertThat(migration.migrate(VALUE)).isEqualTo(new MigratedRows(0, 1, 0));
 
         assertThat(value(id)).startsWith("k2:");
         assertThat(ENCRYPTOR.decrypt(value(id))).isEqualTo("s3cret");
@@ -70,7 +70,7 @@ class RekeyMigrationIT {
         UUID other = row("PLAIN", "smtp.example.com");
 
         assertThat(migration.pending(VALUE)).isFalse();
-        assertThat(migration.migrate(VALUE)).isZero();
+        assertThat(migration.migrate(VALUE)).isEqualTo(MigratedRows.NONE);
 
         assertThat(value(done)).isEqualTo(current);
         assertThat(value(empty)).isNull();
@@ -96,7 +96,7 @@ class RekeyMigrationIT {
         UUID good = row("SECRET", LEGACY_WRITER.encrypt("s3cret"));
         UUID broken = row("SECRET", "not-a-ciphertext");
 
-        assertThat(migration.migrate(VALUE.deletingUnreadableRows())).isEqualTo(2);
+        assertThat(migration.migrate(VALUE.deletingUnreadableRows())).isEqualTo(new MigratedRows(0, 1, 1));
 
         assertThat(value(broken)).isNull();
         assertThat(jdbc.sql("SELECT count(*) FROM rekey_probes WHERE id = :id").param("id", broken).query(Long.class).single()).isZero();
@@ -137,7 +137,7 @@ class RekeyMigrationIT {
         String legacy = LEGACY_WRITER.encrypt("s3cret");
         jdbc.sql("INSERT INTO rekey_probes (kind, value) SELECT 'SECRET', :v FROM generate_series(1, 1200)").param("v", legacy).update();
 
-        assertThat(migration.migrate(VALUE)).isEqualTo(1200);
+        assertThat(migration.migrate(VALUE)).isEqualTo(new MigratedRows(0, 1200, 0));
         assertThat(migration.pending(VALUE)).isFalse();
     }
 

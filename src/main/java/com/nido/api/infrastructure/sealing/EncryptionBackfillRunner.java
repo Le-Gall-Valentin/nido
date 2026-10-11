@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Brings, at start, every encrypted value to the current format: the values of spaces sealed {@code v3:} with the space's
@@ -103,16 +104,10 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
                 pendingVacuum.owe(tables);
                 LegacySpaceOpeners remembered = LegacySpaceOpeners.remembering(legacyOpeners);
                 for (SealedColumn column : columns) {
-                    int rows = migration.migrate(column, sealers, remembered);
-                    if (rows > 0) {
-                        log.info("Sealed {} values of {} with the current key", rows, column);
-                    }
+                    report(column, migration.migrate(column, sealers, remembered));
                 }
                 for (RekeyedColumn column : rekeyed) {
-                    int rows = rekeying.migrate(column);
-                    if (rows > 0) {
-                        log.info("Re-encrypted {} values of {} with the current key", rows, column);
-                    }
+                    report(column, rekeying.migrate(column));
                 }
             }
             if (!closed && everythingCurrent(columns, rekeyed)) {
@@ -130,11 +125,22 @@ public class EncryptionBackfillRunner implements SmartInitializingSingleton {
         return !anythingPending(columns, rekeyed) && columns.stream().noneMatch(migration::clearColumnRemains);
     }
 
+    private static void report(Object column, MigratedRows rows) {
+        if (rows.sealed() > 0) {
+            log.info("Sealed {} values of {} with the current key", rows.sealed(), column);
+        }
+        if (rows.reencrypted() > 0) {
+            log.info("Re-encrypted {} values of {} with the current key", rows.reencrypted(), column);
+        }
+        if (rows.dropped() > 0) {
+            log.warn("Dropped {} values of {} that no key reads", rows.dropped(), column);
+        }
+    }
+
     private void reportEarlierFormats(List<SealedColumn> columns, List<RekeyedColumn> rekeyed) {
-        columns.stream().filter(migration::pending).forEach(column -> log.error("{} holds values of a format before 0.16.0, "
-            + "written after every value was brought to the current one: they are refused, never converted", column));
-        rekeyed.stream().filter(rekeying::pending).forEach(column -> log.error("{} holds values of a format before 0.16.0, "
-            + "written after every value was brought to the current one: they are refused, never converted", column));
+        Stream.concat(columns.stream().filter(migration::pending), rekeyed.stream().filter(rekeying::pending))
+            .forEach(column -> log.error("{} holds values of a format before 0.16.0, written after every value was brought "
+                + "to the current one: they are refused, never converted", column));
     }
 
     private boolean anythingPending(List<SealedColumn> columns, List<RekeyedColumn> rekeyed) {

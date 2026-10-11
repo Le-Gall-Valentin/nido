@@ -53,6 +53,8 @@ class EncryptionBackfillRunnerTest {
     @BeforeEach
     void listen() {
         when(unconfirmedKey.awaitsConfirmation()).thenReturn(true);
+        when(migration.migrate(any(), any(), any())).thenReturn(MigratedRows.NONE);
+        when(rekeying.migrate(any())).thenReturn(MigratedRows.NONE);
         logged.start();
         logger.addAppender(logged);
         doAnswer(call -> {
@@ -80,7 +82,7 @@ class EncryptionBackfillRunnerTest {
     @Test
     void the_key_is_checked_under_the_lock_before_anything_is_sealed() {
         when(migration.pending(titles)).thenReturn(true);
-        when(migration.migrate(eq(titles), eq(sealers), any())).thenReturn(4);
+        when(migration.migrate(eq(titles), eq(sealers), any())).thenReturn(new MigratedRows(4, 0, 0));
 
         runner.afterSingletonsInstantiated();
 
@@ -106,13 +108,14 @@ class EncryptionBackfillRunnerTest {
         // A start cut short leaves tables sealed then, whose columns in clear 068 has since dropped
         // without rewriting them: their earlier versions are still in their files.
         when(migration.pending(items)).thenReturn(true);
-        when(migration.migrate(eq(items), eq(sealers), any())).thenReturn(2);
+        when(migration.migrate(eq(items), eq(sealers), any())).thenReturn(new MigratedRows(2, 3, 0));
 
         runner.afterSingletonsInstantiated();
 
         verify(pendingVacuum).owe(Set.of("tasks", "shopping_items"));
-        assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
-            .containsExactly("Sealed 2 values of shopping_items.name_encrypted with the current key");
+        assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage).containsExactly(
+            "Sealed 2 values of shopping_items.name_encrypted with the current key",
+            "Re-encrypted 3 values of shopping_items.name_encrypted with the current key");
     }
 
     @Test
@@ -179,7 +182,7 @@ class EncryptionBackfillRunnerTest {
             legacyFormats, lock, pendingVacuum);
         when(migration.pending(titles)).thenReturn(true);
         when(rekeying.pending(secrets)).thenReturn(true);
-        when(rekeying.migrate(secrets)).thenReturn(3);
+        when(rekeying.migrate(secrets)).thenReturn(new MigratedRows(0, 3, 1));
 
         withSecrets.afterSingletonsInstantiated();
 
@@ -189,6 +192,8 @@ class EncryptionBackfillRunnerTest {
         order.verify(rekeying).migrate(secrets);
         assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage)
             .contains("Re-encrypted 3 values of two_factor_methods.secret with the current key");
+        assertThat(logged.list).filteredOn(event -> event.getLevel() == Level.WARN).extracting(ILoggingEvent::getFormattedMessage)
+            .containsExactly("Dropped 1 values of two_factor_methods.secret that no key reads");
     }
 
     @Test

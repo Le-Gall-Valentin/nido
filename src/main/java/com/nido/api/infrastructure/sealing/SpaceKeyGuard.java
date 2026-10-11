@@ -76,19 +76,22 @@ public class SpaceKeyGuard implements ExistingCiphertextCheck {
         try {
             return legacy.forSpace(spaceId);
         } catch (RuntimeException e) {
-            throw new IllegalStateException("Could not derive the key of space " + spaceId + " ("
-                + e.getClass().getSimpleName() + "): its salt may be damaged. Nothing was encrypted.");
+            throw underivable(spaceId, e);
         }
     }
 
-    /** A salt that yields no key is not a wrong key: saying so would send the operator the wrong way. */
     private SpaceSealer sealerOf(UUID spaceId) {
         try {
             return sealers.forSpace(spaceId);
         } catch (RuntimeException e) {
-            throw new IllegalStateException("Could not derive the key of space " + spaceId + " ("
-                + e.getClass().getSimpleName() + "): its salt may be damaged. Nothing was encrypted.");
+            throw underivable(spaceId, e);
         }
+    }
+
+    /** A salt that yields no key is not a wrong key: saying so would send the operator the wrong way. */
+    private static IllegalStateException underivable(UUID spaceId, RuntimeException e) {
+        return new IllegalStateException("Could not derive the key of space " + spaceId + " ("
+            + e.getClass().getSimpleName() + "): its salt may be damaged. Nothing was encrypted.");
     }
 
     private record Sample(UUID spaceId, UUID id, String value) {}
