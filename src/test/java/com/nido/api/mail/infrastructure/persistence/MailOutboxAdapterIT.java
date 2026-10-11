@@ -11,6 +11,7 @@ import com.nido.api.mail.domain.model.OutgoingMail;
 import com.nido.api.mail.domain.model.Recipient;
 import com.nido.api.mail.domain.model.RenderedMail;
 import com.nido.api.shared.security.EncryptionKey;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,6 +65,12 @@ class MailOutboxAdapterIT {
     void setUp() {
         jdbc.sql("DELETE FROM mail_outbox").update();
         outbox = new MailOutboxAdapter(jdbc, json, ENCRYPTOR);
+    }
+
+    /** The queue is the run's: a mail left due here is sent by the dispatcher of the next test that switches mail on. */
+    @AfterEach
+    void emptyTheQueue() {
+        jdbc.sql("DELETE FROM mail_outbox").update();
     }
 
     private static OutgoingMail mail(String address) {
