@@ -51,8 +51,10 @@ class LegacySpaceOpenerTest {
     void a_value_of_another_key_or_of_the_current_key_does_not_open() {
         String otherKey = LegacyKeys.writer("another-encryption-secret-32chr!", SALT).encrypt("850.00");
         String current = SpaceSealer.of(DataKeys.current(new EncryptionKey(MASTER), SALT)).seal(AMOUNT, rent, "850.00");
+        // Without its v3: prefix, it is hex like a legacy value: what refuses it then is the key.
+        String currentCiphertext = current.substring("v3:".length());
 
-        for (String stored : new String[] {otherKey, current, "not-a-ciphertext"}) {
+        for (String stored : new String[] {otherKey, current, currentCiphertext, "not-a-ciphertext"}) {
             assertThatThrownBy(() -> OPENER.open(AMOUNT, rent, stored))
                 .isInstanceOfSatisfying(SealedValueRejected.class, e -> assertThat(e.reason()).isEqualTo(SealedValueRejected.Reason.UNDECRYPTABLE));
             assertThat(OPENER.decrypts(stored)).isFalse();

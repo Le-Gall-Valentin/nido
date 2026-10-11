@@ -9,6 +9,7 @@ import org.springframework.security.crypto.encrypt.TextEncryptor;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,6 +45,35 @@ class DataKeysTest {
             + "ecfd71f58cd7ec680e06240db259908edbe8fc4d983c0dc1070a9dcda0f29aff00be5f98"))
             .isEqualTo("finance_transactions.amount_encrypted:550e8400-e29b-41d4-a716-446655440000|000000006|850.00"
                 + "#".repeat(26));
+    }
+
+    /**
+     * Written by DataKeys.current on Spring Security 7.1.1 — nido 0.16.0 — on 2026-10-11, with the master key above. Every
+     * value of 0.16.0 is under such a key: a change of the label, of how the salt is put together, or of what
+     * withPassword derives — Spring has changed its defaults before — would leave them all unreadable after an upgrade.
+     */
+    @Test
+    void the_current_key_opens_what_0_16_0_wrote() {
+        assertThat(DataKeys.current(KEY, SPACE_SALT).decrypt(
+            "ff8de476978b36d08a73ae8a320adb2c14be96833e80983baadea642143c19c09e4aac6a3fad5c9e690eec7e363c0128942c"))
+            .isEqualTo("Loyer octobre 🏡");
+    }
+
+    /** Derived without Spring's help: PBKDF2-HMAC-SHA256, 600 000 iterations, 256 bits, over the label then the salt. */
+    @Test
+    void the_current_key_is_pbkdf2_sha256_over_the_label_then_the_salt() throws Exception {
+        byte[] label = "nido/data-key:".getBytes(StandardCharsets.UTF_8);
+        byte[] salt = Hex.decode(SPACE_SALT);
+        byte[] labelled = new byte[label.length + salt.length];
+        System.arraycopy(label, 0, labelled, 0, label.length);
+        System.arraycopy(salt, 0, labelled, label.length, salt.length);
+        byte[] key = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+            .generateSecret(new PBEKeySpec(MASTER.toCharArray(), labelled, 600_000, 256)).getEncoded();
+        String stored = DataKeys.current(KEY, SPACE_SALT).encrypt("Loyer");
+
+        byte[] opened = AesGcmBytesEncryptor.withSecretKey(new SecretKeySpec(key, "AES")).build().decrypt(Hex.decode(stored));
+
+        assertThat(new String(opened, StandardCharsets.UTF_8)).isEqualTo("Loyer");
     }
 
     @Test

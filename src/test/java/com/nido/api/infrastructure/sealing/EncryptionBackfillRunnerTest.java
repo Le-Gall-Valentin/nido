@@ -233,6 +233,39 @@ class EncryptionBackfillRunnerTest {
     }
 
     @Test
+    void a_key_the_data_has_yet_to_confirm_closes_earlier_formats_only_once_confirmed() {
+        runner(unconfirmedKey).afterSingletonsInstantiated();
+
+        InOrder order = inOrder(finance, unconfirmedKey, legacyFormats);
+        order.verify(finance).verify();
+        order.verify(unconfirmedKey).confirm();
+        order.verify(legacyFormats).closeForGood();
+    }
+
+    @Test
+    void a_key_the_data_refuses_closes_nothing() {
+        doThrow(new IllegalStateException("does not decrypt")).when(finance).verify();
+
+        assertThatThrownBy(runner(unconfirmedKey)::afterSingletonsInstantiated).hasMessageContaining("does not decrypt");
+
+        verify(legacyFormats, never()).closeForGood();
+    }
+
+    @Test
+    void once_closed_a_key_the_data_has_yet_to_confirm_is_checked_but_nothing_is_converted() {
+        when(legacyFormats.closed()).thenReturn(true);
+        when(migration.pending(items)).thenReturn(true);
+
+        runner(unconfirmedKey).afterSingletonsInstantiated();
+
+        verify(finance).verify();
+        verify(unconfirmedKey).confirm();
+        verify(migration, never()).migrate(any(), any(), any());
+        verify(pendingVacuum, never()).owe(any());
+        verify(legacyFormats, never()).closeForGood();
+    }
+
+    @Test
     void a_start_stopped_before_everything_is_current_leaves_the_earlier_formats_open() {
         when(migration.pending(titles)).thenReturn(true);
         when(migration.migrate(eq(titles), eq(sealers), any())).thenThrow(new IllegalStateException("Could not seal row"));

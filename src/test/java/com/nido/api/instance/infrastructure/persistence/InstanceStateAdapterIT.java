@@ -32,10 +32,11 @@ class InstanceStateAdapterIT {
     @BeforeEach
     void keep() {
         saved = jdbc.sql("""
-                SELECT setup_completed_at, key_fingerprint, key_fingerprint_salt, key_generated, key_fingerprint_confirmed
+                SELECT setup_completed_at, key_fingerprint, key_fingerprint_salt, key_generated, key_fingerprint_confirmed,
+                       legacy_formats_closed_at
                 FROM instance WHERE id = 1""")
             .query((rs, n) -> new Object[]{rs.getObject(1, OffsetDateTime.class), rs.getBytes(2), rs.getBytes(3), rs.getBoolean(4),
-                rs.getBoolean(5)})
+                rs.getBoolean(5), rs.getObject(6, OffsetDateTime.class)})
             .single();
     }
 
@@ -43,13 +44,15 @@ class InstanceStateAdapterIT {
     void restore() {
         jdbc.sql("""
                 UPDATE instance SET setup_completed_at = :done, key_fingerprint = :hash, key_fingerprint_salt = :salt,
-                                    key_generated = :generated, key_fingerprint_confirmed = :confirmed WHERE id = 1
+                                    key_generated = :generated, key_fingerprint_confirmed = :confirmed,
+                                    legacy_formats_closed_at = :closed WHERE id = 1
                 """)
             .param("done", saved[0], Types.TIMESTAMP_WITH_TIMEZONE)
             .param("hash", saved[1], Types.BINARY)
             .param("salt", saved[2], Types.BINARY)
             .param("generated", saved[3])
             .param("confirmed", saved[4])
+            .param("closed", saved[5], Types.TIMESTAMP_WITH_TIMEZONE)
             .update();
     }
 
@@ -113,7 +116,7 @@ class InstanceStateAdapterIT {
 
     @Test
     void earlier_formats_close_once_and_stay_closed() {
-        // Every context of the run closed them at its first start; the row is left closed again, as found.
+        // Every context of the run closed them at its first start: the row is put back as found, whatever happens here.
         jdbc.sql("UPDATE instance SET legacy_formats_closed_at = NULL WHERE id = 1").update();
 
         assertThat(adapter.legacyFormatsClosed()).isFalse();

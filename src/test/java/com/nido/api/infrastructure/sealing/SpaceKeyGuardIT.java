@@ -129,4 +129,13 @@ class SpaceKeyGuardIT {
         assertThatCode(guard(TestSpaces.ENCRYPTION_KEY)::verify).doesNotThrowAnyException();
         assertThatThrownBy(guard(WRONG_MASTER)::verify).hasMessageContaining("does not decrypt the data already encrypted in space " + A);
     }
+
+    @Test
+    void a_space_holding_only_values_sealed_by_0_14_to_0_15_proves_the_key_with_them() {
+        UUID id = UUID.randomUUID();
+        row(id, LegacyKeys.sealedV2(TestSpaces.ENCRYPTION_KEY, SALT, LABEL, id, "Loyer"), null);
+
+        assertThatCode(guard(TestSpaces.ENCRYPTION_KEY)::verify).doesNotThrowAnyException();
+        assertThatThrownBy(guard(WRONG_MASTER)::verify).hasMessageContaining("does not decrypt the data already encrypted in space " + A);
+    }
 }
