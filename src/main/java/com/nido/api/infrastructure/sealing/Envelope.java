@@ -14,7 +14,7 @@ import java.util.Objects;
  * what the padding hides. The padding, made of {@code #}, brings the value to the next power of two of at least
  * {@value #MIN_BUCKET} bytes of UTF-8: within a column, the stored length tells nothing but that power of two.
  *
- * <p>Plain text handling — no key, no cipher. The encryption is still {@code Encryptors.delux}, whose GCM
+ * <p>Plain text handling — no key, no cipher. The encryption is the space's AES-GCM key (DataKeys), whose GCM
  * authenticates all of this: the reference cannot be rewritten without the key.
  */
 public final class Envelope {

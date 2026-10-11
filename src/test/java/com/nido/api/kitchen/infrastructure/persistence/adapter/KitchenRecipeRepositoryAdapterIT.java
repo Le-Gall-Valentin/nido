@@ -143,7 +143,7 @@ class KitchenRecipeRepositoryAdapterIT {
 
         Map<String, Object> recipe = jdbc.queryForMap(
             "SELECT name_encrypted, description_encrypted, note_encrypted FROM kitchen_recipes WHERE id = ?", created.id());
-        assertThat((String) recipe.get("name_encrypted")).startsWith("v2:");
+        assertThat((String) recipe.get("name_encrypted")).startsWith("v3:");
         assertThat(sealer.open(RecipeEntity.NAME, created.id(), (String) recipe.get("name_encrypted"))).isEqualTo("Pâtes bolognaise");
         assertThat(sealer.open(RecipeEntity.DESCRIPTION, created.id(), (String) recipe.get("description_encrypted")))
             .isEqualTo("Un classique familial.");

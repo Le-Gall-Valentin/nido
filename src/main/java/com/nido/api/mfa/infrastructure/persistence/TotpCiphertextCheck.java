@@ -1,6 +1,8 @@
 package com.nido.api.mfa.infrastructure.persistence;
 
+import com.nido.api.infrastructure.encryption.CurrentOrLegacyTextEncryptor;
 import com.nido.api.infrastructure.sealing.ExistingCiphertextCheck;
+import com.nido.api.infrastructure.sealing.LegacyFormats;
 import com.nido.api.mfa.infrastructure.config.TotpEncryptorFactory;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
@@ -12,7 +14,9 @@ import java.util.UUID;
 /**
  * Two-factor secrets are encrypted with the master key too, under a key per user rather than per space: on an
  * installation whose only encrypted data they are, they are what proves the key — see ExistingCiphertextCheck. As for
- * the spaces, one secret that opens is enough: a single damaged one is not taken for a wrong key.
+ * the spaces, one secret that opens is enough: a single damaged one is not taken for a wrong key. Once earlier formats
+ * are closed, only secrets of the current one are tried: one of an earlier format can only have been written since, by
+ * someone with access to the database, and is refused whatever the key — it would pass for proof of a wrong key.
  */
 @Component
 public class TotpCiphertextCheck implements ExistingCiphertextCheck {
@@ -22,16 +26,19 @@ public class TotpCiphertextCheck implements ExistingCiphertextCheck {
 
     private final JdbcClient jdbc;
     private final TotpEncryptorFactory encryptors;
+    private final LegacyFormats legacyFormats;
 
-    public TotpCiphertextCheck(JdbcClient jdbc, TotpEncryptorFactory encryptors) {
+    public TotpCiphertextCheck(JdbcClient jdbc, TotpEncryptorFactory encryptors, LegacyFormats legacyFormats) {
         this.jdbc = jdbc;
         this.encryptors = encryptors;
+        this.legacyFormats = legacyFormats;
     }
 
     @Override
     public void verify() {
+        String currentOnly = legacyFormats.closed() ? " AND secret LIKE '" + CurrentOrLegacyTextEncryptor.PREFIX + "%'" : "";
         List<Map.Entry<UUID, String>> samples = jdbc.sql("SELECT user_id, secret FROM two_factor_methods "
-                + "WHERE method = 'APP' ORDER BY user_id LIMIT " + SAMPLES)
+                + "WHERE method = 'APP'" + currentOnly + " ORDER BY user_id LIMIT " + SAMPLES)
             .query((rs, rowNum) -> Map.entry(rs.getObject("user_id", UUID.class), rs.getString("secret")))
             .list();
         if (!samples.isEmpty() && samples.stream().noneMatch(this::opens)) {

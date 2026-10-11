@@ -11,6 +11,7 @@ import com.nido.api.mail.domain.model.AppPath;
 import com.nido.api.mail.domain.model.MailRequest;
 import com.nido.api.mail.domain.model.Recipient;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,8 @@ class MailHotSwitchIT {
     @Autowired TransactionTemplate transactions;
     @Autowired JdbcClient jdbc;
 
+    /** Before too: the first mail delivered must be this test's, not one another test left due in the queue. */
+    @BeforeEach
     @AfterEach
     void clean() {
         InstanceSettingsTestSupport.clear(store);

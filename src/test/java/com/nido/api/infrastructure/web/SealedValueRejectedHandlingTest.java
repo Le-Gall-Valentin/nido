@@ -3,9 +3,11 @@ package com.nido.api.infrastructure.web;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.nido.api.infrastructure.encryption.DataKeys;
 import com.nido.api.infrastructure.sealing.SealedColumn;
 import com.nido.api.infrastructure.sealing.SealedValueRejected;
 import com.nido.api.infrastructure.sealing.SpaceSealer;
+import com.nido.api.shared.security.EncryptionKey;
 import com.nido.api.shared.security.StoredValueRejected;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
@@ -13,7 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.method.annotation.ExceptionHandlerMethodResolver;
@@ -31,7 +32,7 @@ class SealedValueRejectedHandlingTest {
     void a_refused_value_answers_500_data_integrity_and_logs_its_place_never_its_value() {
         SealedColumn amount = SealedColumn.ofSpace("finance_transactions", "amount_encrypted");
         UUID row = UUID.randomUUID();
-        SpaceSealer sealer = SpaceSealer.of(Encryptors.delux("test-encryption-secret-32chars!!", "00112233445566778899aabbccddeeff"));
+        SpaceSealer sealer = SpaceSealer.of(DataKeys.current(new EncryptionKey("test-encryption-secret-32chars!!"), "00112233445566778899aabbccddeeff"));
         String sealedElsewhere = sealer.seal(amount, UUID.randomUUID(), "850.00");
         SealedValueRejected rejected = catchThrowableOfType(SealedValueRejected.class, () -> sealer.open(amount, row, sealedElsewhere));
         Logger logger = (Logger) LoggerFactory.getLogger(GlobalExceptionHandler.class);

@@ -3,6 +3,8 @@ package com.nido.api.mfa.infrastructure.security;
 import com.nido.api.infrastructure.config.NidoProperties;
 import com.nido.api.mfa.domain.port.out.PendingTotpEnrolmentPort;
 import com.nido.api.mfa.infrastructure.config.TotpEncryptorFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -27,11 +29,13 @@ import java.util.UUID;
  * <p><b>The secret is encrypted before it is written.</b> It is encrypted at rest in Postgres with a
  * per-user salt, and moving it must not quietly downgrade that: this Redis has neither password nor
  * TLS and persists to disk. The same {@link TotpEncryptorFactory} is used, so the protection
- * travels with the value.
+ * travels with the value. An enrolment the key no longer opens — begun before the upgrade to 0.16.0, whose first
+ * start refuses the earlier format — is dropped like an expired one: there is nothing to confirm, and a new one can start.
  */
 @Component
 public class RedisPendingTotpEnrolmentStore implements PendingTotpEnrolmentPort {
 
+    private static final Logger log = LoggerFactory.getLogger(RedisPendingTotpEnrolmentStore.class);
     private static final String PREFIX = "totp:enrolment:user:";
     private static final int DEFAULT_TTL_MINUTES = 15;
 
@@ -60,8 +64,18 @@ public class RedisPendingTotpEnrolmentStore implements PendingTotpEnrolmentPort 
 
     @Override
     public Optional<String> find(UUID userId) {
-        return Optional.ofNullable(redisTemplate.opsForValue().get(PREFIX + userId))
-            .map(stored -> encryptorFactory.forUser(userId).decrypt(stored));
+        String stored = redisTemplate.opsForValue().get(PREFIX + userId);
+        if (stored == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(encryptorFactory.forUser(userId).decrypt(stored));
+        } catch (RuntimeException e) {
+            log.warn("The two-factor enrolment under way for user {} cannot be read with the key and is dropped: {}",
+                userId, e.getClass().getSimpleName());
+            discard(userId);
+            return Optional.empty();
+        }
     }
 
     @Override

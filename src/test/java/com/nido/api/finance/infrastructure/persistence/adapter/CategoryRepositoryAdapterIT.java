@@ -71,7 +71,7 @@ class CategoryRepositoryAdapterIT {
         assertThat(created.label()).isEqualTo("Alimentation");
         assertThat(created.isDefault()).isTrue();
         String stored = jpaRepository.findById(created.id()).orElseThrow().getLabelEncrypted();
-        assertThat(stored).startsWith("v2:").doesNotContain("Alimentation");
+        assertThat(stored).startsWith("v3:").doesNotContain("Alimentation");
         assertThat(sealers.forSpace(spaceId).open(FinanceCategoryEntity.LABEL, created.id(), stored)).isEqualTo("Alimentation");
     }
 

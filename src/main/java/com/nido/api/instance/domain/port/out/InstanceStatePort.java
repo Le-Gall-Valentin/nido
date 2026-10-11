@@ -26,4 +26,10 @@ public interface InstanceStatePort {
      * already over — two browsers finishing at the same second get one true between them.
      */
     boolean markSetupCompleted(Instant at);
+
+    /** Whether a start brought every encrypted value to the current format — see LegacyFormats. */
+    boolean legacyFormatsClosed();
+
+    /** Records it, in the caller's transaction. True when this call did; false when it was recorded already. */
+    boolean closeLegacyFormats(Instant at);
 }

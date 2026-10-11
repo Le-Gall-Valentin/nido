@@ -1,16 +1,15 @@
 package com.nido.api.mail.infrastructure.persistence;
 
+import com.nido.api.infrastructure.sealing.RekeyedColumn;
 import com.nido.api.mail.domain.model.OutboxEntry;
 import com.nido.api.mail.domain.model.OutgoingMail;
 import com.nido.api.mail.domain.model.Recipient;
 import com.nido.api.mail.domain.model.RenderedMail;
 import com.nido.api.mail.domain.port.out.MailOutboxPort;
-import com.nido.api.shared.security.EncryptionKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -34,15 +33,19 @@ import java.util.UUID;
  *
  * <p>The payload is encrypted with a key derived from the instance encryption key and a salt that belongs
  * to the outbox alone, so it can never be mistaken for the finance, calendar or TOTP keys. The key is
- * derived once: the salt never rotates, so there is nothing for an expiring cache to pick up.
+ * derived once: the salt never rotates, so there is nothing for an expiring cache to pick up. Its encryptor
+ * is a bean of MailEncryptionConfig, shared with the migration that brings the queue to the current key.
  */
 @Component
 public class MailOutboxAdapter implements MailOutboxPort {
 
     private static final Logger log = LoggerFactory.getLogger(MailOutboxAdapter.class);
 
-    /** "nido-mail-outbox", hex-encoded as Encryptors expects. Not a secret: it separates keys. */
-    static final String SALT = "6e69646f2d6d61696c2d6f7574626f78";
+    /** "nido-mail-outbox", hex-encoded as the key derivation expects. Not a secret: it separates keys. */
+    public static final String SALT = "6e69646f2d6d61696c2d6f7574626f78";
+
+    /** The name of the encryptor bean of the queue. */
+    public static final String ENCRYPTOR = "mailOutboxEncryptor";
 
     private static final int LAST_ERROR_LENGTH = 500;
 
@@ -50,15 +53,18 @@ public class MailOutboxAdapter implements MailOutboxPort {
     private final ObjectMapper json;
     private final TextEncryptor encryptor;
 
-    @Autowired
-    public MailOutboxAdapter(JdbcClient jdbc, ObjectMapper json, EncryptionKey encryptionKey) {
-        this(jdbc, json, Encryptors.delux(encryptionKey.value(), SALT));
-    }
-
-    MailOutboxAdapter(JdbcClient jdbc, ObjectMapper json, TextEncryptor encryptor) {
+    public MailOutboxAdapter(JdbcClient jdbc, ObjectMapper json, @Qualifier(ENCRYPTOR) TextEncryptor encryptor) {
         this.jdbc = jdbc;
         this.json = json;
         this.encryptor = encryptor;
+    }
+
+    /**
+     * The queued mails, brought to the current key at start — see RekeyMigration. One no key reads is dropped, as
+     * claimDue drops it: it would never become sendable.
+     */
+    public static RekeyedColumn rekeyedColumn(TextEncryptor encryptor) {
+        return RekeyedColumn.of("mail_outbox", "payload", "id", null, id -> encryptor).deletingUnreadableRows();
     }
 
     @Override

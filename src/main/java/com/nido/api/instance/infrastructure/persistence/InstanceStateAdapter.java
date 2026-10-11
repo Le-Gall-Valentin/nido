@@ -79,4 +79,17 @@ public class InstanceStateAdapter implements InstanceStatePort {
             .param("at", OffsetDateTime.ofInstant(at, ZoneOffset.UTC))
             .update() == 1;
     }
+
+    @Override
+    public boolean legacyFormatsClosed() {
+        return Boolean.TRUE.equals(jdbc.sql("SELECT legacy_formats_closed_at IS NOT NULL FROM instance WHERE id = 1")
+            .query(Boolean.class).single());
+    }
+
+    @Override
+    public boolean closeLegacyFormats(Instant at) {
+        return jdbc.sql("UPDATE instance SET legacy_formats_closed_at = :at WHERE id = 1 AND legacy_formats_closed_at IS NULL")
+            .param("at", OffsetDateTime.ofInstant(at, ZoneOffset.UTC))
+            .update() == 1;
+    }
 }

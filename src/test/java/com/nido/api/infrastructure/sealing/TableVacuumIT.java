@@ -6,6 +6,8 @@ import ch.qos.logback.core.read.ListAppender;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.SharedContainers;
 import com.nido.api.TestSpaces;
+import com.nido.api.infrastructure.encryption.DataKeys;
+import com.nido.api.shared.security.EncryptionKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,7 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-import org.springframework.security.crypto.encrypt.Encryptors;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,8 +32,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class TableVacuumIT {
 
     private static final UUID A = UUID.randomUUID();
-    private static final SpaceSealers SEALERS =
-        space -> SpaceSealer.of(Encryptors.delux(TestSpaces.ENCRYPTION_KEY, "0123456789abcdef0123456789abcdef"));
+    private static final String SALT = "0123456789abcdef0123456789abcdef";
+    private static final TextEncryptor CURRENT = DataKeys.current(new EncryptionKey(TestSpaces.ENCRYPTION_KEY), SALT);
+    private static final SpaceSealers SEALERS = space -> SpaceSealer.of(CURRENT);
+    private static final LegacySpaceOpeners LEGACY = space -> LegacySpaceOpener.of(DataKeys.legacy(new EncryptionKey(TestSpaces.ENCRYPTION_KEY), SALT));
     private static final SealedColumn LABEL = SealedColumn.ofSpace("vacuum_probes", "label_encrypted").withClearColumn("label");
 
     @Autowired JdbcClient jdbc;
@@ -79,7 +83,7 @@ class TableVacuumIT {
         jdbc.sql("ANALYZE vacuum_probes").update();
         assertThat(statisticsOfLabel()).as("what autoanalyze keeps of the column").contains("Secret de famille");
 
-        migration.migrate(LABEL, SEALERS);
+        migration.migrate(LABEL, SEALERS, LEGACY);
         vacuum.vacuumFull("vacuum_probes");
 
         assertThat(statisticsOfLabel()).doesNotContain("Secret de famille");

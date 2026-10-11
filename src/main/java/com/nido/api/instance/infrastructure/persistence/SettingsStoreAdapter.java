@@ -1,13 +1,12 @@
 package com.nido.api.instance.infrastructure.persistence;
 
+import com.nido.api.infrastructure.sealing.RekeyedColumn;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.instance.domain.port.out.SettingsStorePort;
-import com.nido.api.shared.security.EncryptionKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.security.crypto.encrypt.Encryptors;
 import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -17,26 +16,35 @@ import java.sql.Types;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * The saved settings, read from Postgres once and kept in memory until a change commits. Settings are
  * asked for on every token issued and every mail written, so a query each time would be a query per
  * request for ten rows that change a few times a year. One instance of Nido runs at a time — the
  * derived keys and the setup code are in memory already — so forgetting the cache locally is enough.
+ *
+ * <p>The secret settings are encrypted under a key of their own, with the salt below: the encryptor is a bean of
+ * InstanceEncryptionConfig, shared with the migration that brings them to the current key.
  */
 @Component
 public class SettingsStoreAdapter implements SettingsStorePort {
 
     private static final Logger log = LoggerFactory.getLogger(SettingsStoreAdapter.class);
 
-    /** "nido-instance-settings", hex-encoded as Encryptors expects. Not a secret: it separates keys. */
-    static final String SALT = "6e69646f2d696e7374616e63652d73657474696e6773";
+    /** "nido-instance-settings", hex-encoded as the key derivation expects. Not a secret: it separates keys. */
+    public static final String SALT = "6e69646f2d696e7374616e63652d73657474696e6773";
+
+    /** The name of the encryptor bean of the secret settings. */
+    public static final String ENCRYPTOR = "settingsEncryptor";
 
     private final JdbcClient jdbc;
     private final TextEncryptor encryptor;
@@ -48,14 +56,28 @@ public class SettingsStoreAdapter implements SettingsStorePort {
 
     private final AtomicReference<Cached> cache = new AtomicReference<>(new Cached(null));
 
-    @Autowired
-    public SettingsStoreAdapter(JdbcClient jdbc, EncryptionKey encryptionKey) {
-        this(jdbc, Encryptors.delux(encryptionKey.value(), SALT));
-    }
-
-    SettingsStoreAdapter(JdbcClient jdbc, TextEncryptor encryptor) {
+    public SettingsStoreAdapter(JdbcClient jdbc, @Qualifier(ENCRYPTOR) TextEncryptor encryptor) {
         this.jdbc = jdbc;
         this.encryptor = encryptor;
+    }
+
+    /**
+     * The secret settings, brought to the current key at start — see RekeyMigration. One no key reads is dropped, as
+     * reading the settings already ignores it: the setting is unset, and the administration can enter it again — where
+     * stopping the start would leave it nowhere to do so. The codes are the enum's own constants: nothing typed reaches
+     * this condition.
+     */
+    public static RekeyedColumn rekeyedColumn(TextEncryptor encryptor) {
+        return RekeyedColumn.of("instance_settings", "value", "key", secretKeysCondition(Arrays.asList(SettingKey.values())),
+            key -> encryptor).deletingUnreadableRows();
+    }
+
+    /** The rows of the secret settings among these; none at all reads FALSE, where "key IN ()" would not parse. */
+    static String secretKeysCondition(Collection<SettingKey> keys) {
+        String secretKeys = keys.stream().filter(SettingKey::secret)
+            .map(key -> "'" + key.code() + "'")
+            .collect(Collectors.joining(", "));
+        return secretKeys.isEmpty() ? "FALSE" : "key IN (" + secretKeys + ")";
     }
 
     @Override

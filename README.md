@@ -80,8 +80,9 @@ docker compose up -d
 
 Pin the version with `NIDO_VERSION=0.12.0` in `.env`, so that `pull` never moves you to a new version by surprise.
 
-Before updating to 0.14.0, back up the database (see below): its first start rewrites every encrypted value, and
-the previous version cannot read them afterwards.
+Before updating to 0.14.0 or to 0.16.0, back up the database (see below): their first start rewrites every
+encrypted value, and the previous version cannot read them afterwards. That backup is the only way back: restore it
+whole, database and all, and start the previous version.
 
 ## Backups
 
@@ -109,7 +110,8 @@ The value of finance_transactions.amount_encrypted in row 3f… belongs to anoth
 
 To get the page back, put that value right, in this order of preference:
 
-1. Restore the row from a backup taken before the change.
+1. Restore the row from a backup taken before the change — on 0.16.0 or later, from one taken since the update to
+   0.16.0: a value an earlier version wrote is refused (see below).
 2. If the column may be empty — the description of a space, a recipe or an event, the note of a recipe, the place of
    an event, recurring events included — empty it: `UPDATE <table> SET <column> = NULL WHERE id = '<row>';`
 3. Otherwise, if you can do without the row, delete it — knowing that Postgres deletes what depends on it too:
@@ -119,8 +121,22 @@ To get the page back, put that value right, in this order of preference:
    - a task, a recipe, a transaction or a savings goal only takes what belongs to it: subtasks, ingredients, steps
      and menu entries, shares, contributions.
 
-The same goes for the start that updates to 0.14.0: if it stops on `Could not seal row … of <table>.<column>`, put that
-row right the same way, then start again — the work already done is kept.
+The same goes for the start that updates to 0.14.0 or to 0.16.0: if it stops on `Could not seal row … of
+<table>.<column>` or `Could not re-encrypt row … of <table>.<column>`, put that row right the same way, then start
+again — the work already done is kept. For `two_factor_methods.secret`, delete the row: its owner turns the
+authenticator app on again at their next sign-in.
+
+Once a start of 0.16.0 has brought every value to the current format, values of an earlier format are refused for
+good: one put back since — from a backup taken before that update, or by anyone with write access to the database —
+is refused where it is read, and every start names its column in an ERROR line:
+
+```
+shopping_items.name_encrypted holds values of a format before 0.16.0, written after every value was brought to the current one: they are refused, never converted
+```
+
+Put those rows right as above, from a backup taken after the update. This guards against a value put back into the
+database, not against someone who can also change what Nido records there of that update: keep the database, and its
+backups, out of reach.
 
 ## Settings
 

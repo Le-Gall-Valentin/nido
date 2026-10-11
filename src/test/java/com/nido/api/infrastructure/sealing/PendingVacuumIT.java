@@ -10,6 +10,9 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @IntegrationTestConfig
 class PendingVacuumIT {
@@ -70,5 +73,20 @@ class PendingVacuumIT {
         jdbc.sql("DROP TABLE pending_vacuum_probes").update();
 
         assertThat(pendingVacuum.stillOwed()).isEmpty();
+    }
+
+    @Test
+    void what_is_owed_is_vacuumed_and_settled_table_by_table_a_table_the_vacuum_could_not_take_staying_owed() {
+        TableVacuum vacuum = mock(TableVacuum.class);
+        when(vacuum.vacuumFull("pending_vacuum_others")).thenReturn(false);
+        when(vacuum.vacuumFull("pending_vacuum_probes")).thenReturn(true);
+        PendingVacuum vacuums = new PendingVacuum(jdbc, vacuum);
+        vacuums.owe(List.of("pending_vacuum_probes", "pending_vacuum_others"));
+
+        vacuums.vacuumOwed();
+
+        verify(vacuum).vacuumFull("pending_vacuum_others");
+        verify(vacuum).vacuumFull("pending_vacuum_probes");
+        assertThat(vacuums.stillOwed()).containsExactly("pending_vacuum_others");
     }
 }

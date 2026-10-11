@@ -287,7 +287,7 @@ class TransactionRepositoryAdapterIT {
 
         String label = jdbc.queryForObject("SELECT label_encrypted FROM finance_transactions WHERE id = ?", String.class, rent.id());
         String amount = jdbc.queryForObject("SELECT amount_encrypted FROM finance_transactions WHERE id = ?", String.class, rent.id());
-        assertThat(amount).startsWith("v2:");
+        assertThat(amount).startsWith("v3:");
         assertThat(sealer.open(FinanceTransactionEntity.LABEL, rent.id(), label)).isEqualTo("Loyer");
         assertThat(sealer.open(FinanceTransactionEntity.AMOUNT, rent.id(), amount)).isEqualTo("850.00");
         assertThat(jdbc.query("SELECT id, share_amount_encrypted FROM finance_transaction_contributors WHERE transaction_id = ?",

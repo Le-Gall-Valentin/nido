@@ -21,9 +21,11 @@ public class PendingVacuum {
     private static final Logger log = LoggerFactory.getLogger(PendingVacuum.class);
 
     private final JdbcClient jdbc;
+    private final TableVacuum vacuum;
 
-    public PendingVacuum(JdbcClient jdbc) {
+    public PendingVacuum(JdbcClient jdbc, TableVacuum vacuum) {
         this.jdbc = jdbc;
+        this.vacuum = vacuum;
     }
 
     public boolean anyOwed() {
@@ -52,6 +54,15 @@ public class PendingVacuum {
             .list()
             .forEach(table -> log.info("The earlier versions of the values of {} are gone: the table was rewritten since", table));
         return jdbc.sql("SELECT table_name FROM sealing_vacuum_owed ORDER BY table_name").query(String.class).list();
+    }
+
+    /** Runs the VACUUM still owed, table by table: one that ran is settled, one that did not stays owed to the next start. */
+    public void vacuumOwed() {
+        for (String table : stillOwed()) {
+            if (vacuum.vacuumFull(table)) {
+                settle(table);
+            }
+        }
     }
 
     public void settle(String table) {
