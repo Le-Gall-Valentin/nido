@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -94,7 +95,7 @@ class RedisPendingTotpEnrolmentStoreIT {
         // start of this test context did.
         UUID userId = UUID.randomUUID();
         redisTemplate.opsForValue().set(keyFor(userId),
-            LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, userId.toString().replace("-", "")).encrypt(SECRET), 15, TimeUnit.MINUTES);
+            LegacyKeys.writer(TestSpaces.ENCRYPTION_KEY, userId.toString().replace("-", "")).encrypt(SECRET), Duration.ofMinutes(15));
 
         assertThat(store.find(userId)).isEmpty();
         assertThat(redisTemplate.hasKey(keyFor(userId))).isFalse();
