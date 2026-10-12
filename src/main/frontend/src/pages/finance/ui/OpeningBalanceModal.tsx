@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { todayIso } from '@/shared/lib'
+import { parseAmount, todayIso } from '@/shared/lib'
 import type { OpeningBalance } from '@/entities/finance'
 
 interface OpeningBalanceModalProps {
@@ -13,12 +13,9 @@ interface OpeningBalanceModalProps {
   onClose: () => void
   /** While a save or a removal is on its way: a second click would send it again. */
   isSaving?: boolean
-  /** Set by the caller when the backend rejected the last save or removal. */
+  /** Set by the caller when the backend rejected the last save. */
   submitError?: string | null
 }
-
-/** Two decimals at most, a sign allowed: an overdraft is a balance too. */
-const AMOUNT_PATTERN = /^-?\d+(\.\d{1,2})?$/
 
 export function OpeningBalanceModal({
   openingBalance, spaceTimezone, onSave, onClear, onClose, isSaving = false, submitError = null,
@@ -31,9 +28,10 @@ export function OpeningBalanceModal({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const trimmed = amount.trim()
-    if (!AMOUNT_PATTERN.test(trimmed)) {
-      setError(t('opening_balance.amount_invalid'))
+    // A sign allowed: an overdraft is a balance too.
+    const parsed = parseAmount(amount, { allowNegative: true })
+    if ('problem' in parsed) {
+      setError(t(`opening_balance.amount_${parsed.problem}`))
       return
     }
     if (!asOf) {
@@ -45,11 +43,11 @@ export function OpeningBalanceModal({
       return
     }
     setError(null)
-    onSave(Number(trimmed), asOf)
+    onSave(parsed.value, asOf)
   }
 
   return (
-    <Dialog open onClose={onClose} title={t('opening_balance.title')} maxWidth="max-w-md" showCloseButton>
+    <Dialog open onClose={onClose} title={t('opening_balance.title')} maxWidth="max-w-md">
       {/* noValidate: the browser's own check of max would block the submission with a tooltip in its language, and
           the form's message would never show. max stays, to grey out the future in the picker. */}
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">

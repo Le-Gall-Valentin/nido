@@ -64,6 +64,12 @@ describe('OpeningBalanceModal', () => {
     expect(props.onClear).toHaveBeenCalled()
   })
 
+  it('has no corner cross: Cancel closes it, and the focus opens on the form', () => {
+    renderModal()
+
+    expect(screen.queryByTestId('dialog-close-button')).toBeNull()
+  })
+
   it('saves an overdraft', () => {
     const props = renderModal()
 
@@ -80,7 +86,7 @@ describe('OpeningBalanceModal', () => {
     fireEvent.change(amountInput(), { target: { value: '12.345' } })
     fireEvent.click(screen.getByText('form.save'))
 
-    expect(screen.getByText('opening_balance.amount_invalid')).toBeDefined()
+    expect(screen.getByText('opening_balance.amount_too_precise')).toBeDefined()
     expect(props.onSave).not.toHaveBeenCalled()
   })
 
@@ -101,6 +107,25 @@ describe('OpeningBalanceModal', () => {
     fireEvent.click(screen.getByText('form.save'))
 
     expect(screen.getByText('opening_balance.date_in_future')).toBeDefined()
+    expect(props.onSave).not.toHaveBeenCalled()
+  })
+
+  it('reads an amount written without its leading zero', () => {
+    const props = renderModal()
+
+    fireEvent.change(amountInput(), { target: { value: '.5' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(props.onSave).toHaveBeenCalledWith(0.5, expect.any(String))
+  })
+
+  it('refuses an amount the server would not keep, saying so', () => {
+    const props = renderModal()
+
+    fireEvent.change(amountInput(), { target: { value: '1000000000000' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    expect(screen.getByText('opening_balance.amount_too_large')).toBeDefined()
     expect(props.onSave).not.toHaveBeenCalled()
   })
 })

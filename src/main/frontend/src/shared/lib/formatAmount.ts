@@ -13,3 +13,12 @@ export function formatAmount(amount: number): string {
   // `=== 'fr'` was false there — every amount in the application read €1,234.56.
   return new Intl.NumberFormat(resolveLocale(i18next.language), { style: 'currency', currency: CURRENCY }).format(amount)
 }
+
+/**
+ * The same, with the sign of a gain written out as well as the sign of a loss — for a movement (a month's result, what
+ * a member is owed or owes), never for a balance, which is not a gain. Zero has no sign.
+ */
+export function formatSignedAmount(amount: number): string {
+  return new Intl.NumberFormat(resolveLocale(i18next.language), { style: 'currency', currency: CURRENCY, signDisplay: 'exceptZero' })
+    .format(amount)
+}

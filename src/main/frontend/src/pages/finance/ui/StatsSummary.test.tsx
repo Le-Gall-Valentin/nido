@@ -48,10 +48,10 @@ describe('StatsSummary', () => {
 
   it("shows the month's own result under the balance, signed", () => {
     const { rerender } = render(<StatsSummary stats={stats} isCurrentMonth />)
-    expect(screen.getByText(/stats\.month_net:.*\+ 579,70/)).toBeDefined()
+    expect(screen.getByText(/stats\.month_net:.*\+579,70/)).toBeDefined()
 
     rerender(<StatsSummary stats={{ ...stats, monthNet: -42 }} isCurrentMonth />)
-    expect(screen.getByText(/stats\.month_net:.*– 42,00/)).toBeDefined()
+    expect(screen.getByText(/stats\.month_net:.*-42,00/)).toBeDefined()
   })
 
   it('offers to adjust the balance only when given the means, outside the card button', () => {
@@ -66,11 +66,12 @@ describe('StatsSummary', () => {
     expect(onAdjustBalance).toHaveBeenCalled()
   })
 
-  it('requests the operations list when the balance card is clicked', () => {
+  it('opens the operations list from the whole balance card, named after its label', () => {
+    // The card's button covers the whole card, the strip under the pencil included: the pencil sits on top of it.
     const onSelectOperations = vi.fn()
-    render(<StatsSummary stats={stats} isCurrentMonth onSelectOperations={onSelectOperations} />)
+    render(<StatsSummary stats={stats} isCurrentMonth onSelectOperations={onSelectOperations} onAdjustBalance={vi.fn()} />)
 
-    fireEvent.click(screen.getByText('stats.balance_today'))
+    fireEvent.click(screen.getByRole('button', { name: 'stats.balance_today' }))
 
     expect(onSelectOperations).toHaveBeenCalled()
   })
@@ -79,7 +80,7 @@ describe('StatsSummary', () => {
     const onSelectExpenseBreakdown = vi.fn()
     render(<StatsSummary stats={stats} isCurrentMonth onSelectExpenseBreakdown={onSelectExpenseBreakdown} />)
 
-    fireEvent.click(screen.getByText('stats.spent'))
+    fireEvent.click(screen.getByRole('button', { name: 'stats.spent' }))
 
     expect(onSelectExpenseBreakdown).toHaveBeenCalled()
   })
@@ -88,7 +89,7 @@ describe('StatsSummary', () => {
     const onSelectIncomeBreakdown = vi.fn()
     render(<StatsSummary stats={stats} isCurrentMonth onSelectIncomeBreakdown={onSelectIncomeBreakdown} />)
 
-    fireEvent.click(screen.getByText('stats.income'))
+    fireEvent.click(screen.getByRole('button', { name: 'stats.income' }))
 
     expect(onSelectIncomeBreakdown).toHaveBeenCalled()
   })

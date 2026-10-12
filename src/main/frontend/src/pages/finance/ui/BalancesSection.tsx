@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { ArrowRight, CheckCircle2, HandCoins } from 'lucide-react'
 import { UserAvatar } from '@/entities/user'
 import type { Balances, SuggestedTransfer } from '@/entities/finance'
-import { formatAmount } from '@/shared/lib'
+import { formatAmount, formatSignedAmount } from '@/shared/lib'
 
 interface BalancesSectionProps {
   balances?: Balances
@@ -43,7 +43,7 @@ export function BalancesSection({
                     <p className="text-xs text-fg-3">{t(`balances.${statusKey}`)}</p>
                   </div>
                   <span className={`shrink-0 text-[14.5px] font-semibold ${netColor}`}>
-                    {row.net > 0 ? '+ ' : row.net < 0 ? '– ' : ''}{formatAmount(Math.abs(row.net))}
+                    {formatSignedAmount(row.net)}
                   </span>
                 </button>
               </li>

@@ -18,10 +18,15 @@
     "explanation": "Your account balance on this date, as your bank shows it, that day's transactions included. Every month's balance is computed from it.",
     "date_label": "Date",
     "amount_label": "Balance on that date",
-    "amount_invalid": "Enter an amount with at most two decimals.",
+    "amount_invalid": "Enter an amount.",
     "date_required": "Enter a date.",
     "date_in_future": "The date cannot be in the future.",
     "load_failed": "Could not load the opening balance.",
+    "amount_too_precise": "The amount cannot have more than two decimals.",
+    "amount_too_large": "The amount cannot have more than twelve digits before the decimal point.",
+    "clear_title": "Remove the opening balance?",
+    "clear_message": "Every month's balance will be computed without it, from zero. To set it again, you will need your bank balance on a date.",
+    "clear_confirm": "Remove",
     "clear": "Remove the opening balance"
   },
   "breakdown": {

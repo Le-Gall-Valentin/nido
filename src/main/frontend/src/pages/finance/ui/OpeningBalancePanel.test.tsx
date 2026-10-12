@@ -70,6 +70,7 @@ describe('OpeningBalancePanel', () => {
     const onClose = renderPanel(fakeApi({ getOpeningBalance: vi.fn().mockResolvedValue(CURRENT), clearOpeningBalance }))
 
     fireEvent.click(await screen.findByText('opening_balance.clear'))
+    fireEvent.click(screen.getByText('opening_balance.clear_confirm'))
 
     await waitFor(() => expect(onClose).toHaveBeenCalled())
     expect(clearOpeningBalance).toHaveBeenCalledWith('space-1')
@@ -91,8 +92,22 @@ describe('OpeningBalancePanel', () => {
     }))
 
     fireEvent.click(await screen.findByText('opening_balance.clear'))
+    fireEvent.click(screen.getByText('opening_balance.clear_confirm'))
 
     await waitFor(() => expect(screen.getByText('form.submit_error')).toBeDefined())
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('asks before removing the opening balance, and removes nothing when told not to', async () => {
+    const clearOpeningBalance = vi.fn().mockResolvedValue(undefined)
+    const onClose = renderPanel(fakeApi({ getOpeningBalance: vi.fn().mockResolvedValue(CURRENT), clearOpeningBalance }))
+
+    fireEvent.click(await screen.findByText('opening_balance.clear'))
+    expect(screen.getAllByText('opening_balance.clear_title').length).toBeGreaterThan(0)
+    fireEvent.click(screen.getByText('delete_confirm.cancel'))
+
+    expect(screen.queryAllByText('opening_balance.clear_title')).toHaveLength(0)
+    expect(clearOpeningBalance).not.toHaveBeenCalled()
     expect(onClose).not.toHaveBeenCalled()
   })
 })

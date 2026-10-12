@@ -271,7 +271,7 @@ describe('FinancePage', () => {
     }))
 
     await waitFor(() => expect(screen.getByText('stats.income')).toBeDefined())
-    fireEvent.click(screen.getByText('stats.income'))
+    fireEvent.click(screen.getByRole('button', { name: 'stats.income' }))
 
     const breakdownModal = await waitFor(() => screen.getByRole('dialog', { name: 'breakdown.title_INCOME' }))
     fireEvent.click(within(breakdownModal).getByText('Revenu'))

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
 import { Wallet } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
-import { formatAmount, resolveLocale } from '@/shared/lib'
+import { formatAmount, formatSignedAmount, resolveLocale } from '@/shared/lib'
 import type { BudgetWatch, FinanceCard as FinanceCardData, MemberBalance, UpcomingOperation } from '@/entities/dashboard'
 import { UserAvatar } from '@/entities/user'
 import { useDashboardActions } from '../model/dashboardActions'
@@ -11,10 +11,6 @@ import { DashboardCard } from './DashboardCard'
 import { CardRow, RowLead } from './CardRow'
 import { CardGroup } from './CardGroup'
 import { SmallButton } from './cardParts'
-
-function signed(amount: number): string {
-  return amount > 0 ? `+${formatAmount(amount)}` : formatAmount(amount)
-}
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -49,7 +45,7 @@ function UpcomingRow({ operation, locale }: { operation: UpcomingOperation; loca
   return (
     <CardRow lead={<RowLead className="w-[58px]">{formatShortDay(operation.date, locale)}</RowLead>} title={operation.label}
       trail={<span className={`text-sm font-semibold tabular-nums ${income ? 'text-status-green' : 'text-fg-1'}`}>
-        {income ? '+' : '−'}{formatAmount(operation.amount)}
+        {formatSignedAmount(income ? operation.amount : -operation.amount)}
       </span>} />
   )
 }
@@ -85,7 +81,7 @@ export function FinanceCard({ card }: { card: FinanceCardData }) {
       aside={<span className="text-[13px] font-medium text-fg-3">{formatMonthName(card.month, locale)}</span>}
       link={{ to: ROUTES.spaceFinance(spaceId), label: t('finance.link') }}>
       <div className="mb-1.5 mt-0.5 grid grid-cols-2 gap-2 @lg:grid-cols-4">
-        <Stat label={t('finance.balance')} value={signed(card.balance)} />
+        <Stat label={t('finance.balance')} value={formatAmount(card.balance)} />
         <Stat label={t('finance.spent')} value={formatAmount(card.totalExpense)} />
         <Stat label={t('finance.income')} value={formatAmount(card.totalIncome)} />
         <Stat label={t('finance.remaining_budget')} value={formatAmount(card.remainingBudget)} />

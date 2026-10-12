@@ -2,15 +2,15 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Wallet, TrendingDown, TrendingUp, PiggyBank, Pencil } from 'lucide-react'
 import type { FinanceStats } from '@/entities/finance'
-import { formatAmount } from '@/shared/lib'
+import { formatAmount, formatSignedAmount } from '@/shared/lib'
 
 function StatCard({ icon: Icon, tintClassName, label, value, detail, onClick, action }: {
   icon: typeof Wallet; tintClassName: string; label: string; value: string; detail?: string; onClick?: () => void
-  /** A control of its own, beside the card's — never inside its button. */
+  /** A control of its own, on top of the card's button — never inside it. */
   action?: ReactNode
 }) {
   const content = (
-    <>
+    <div className="pointer-events-none relative flex min-w-0 flex-1 items-center gap-3 p-4">
       <div className={`grid size-9 shrink-0 place-items-center rounded-[10px] ${tintClassName}`}>
         <Icon size={18} />
       </div>
@@ -19,27 +19,20 @@ function StatCard({ icon: Icon, tintClassName, label, value, detail, onClick, ac
         <p className="text-[21px] font-semibold text-fg-0">{value}</p>
         {detail && <p className="truncate text-xs text-fg-3">{detail}</p>}
       </div>
-    </>
-  )
-
-  return (
-    <div className="flex items-start rounded-2xl border border-border bg-bg-1">
-      {onClick ? (
-        <button type="button" onClick={onClick}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-4 text-left transition-colors hover:bg-bg-2">
-          {content}
-        </button>
-      ) : (
-        <div className="flex min-w-0 flex-1 items-center gap-3 p-4">{content}</div>
-      )}
-      {action}
     </div>
   )
-}
 
-/** "+ 12,00 €", "– 12,00 €": the sign spelled out, as the balances between members show it. */
-function signed(amount: number): string {
-  return `${amount > 0 ? '+ ' : amount < 0 ? '– ' : ''}${formatAmount(Math.abs(amount))}`
+  if (!onClick) {
+    return <div className="flex items-start rounded-2xl border border-border bg-bg-1">{content}{action}</div>
+  }
+  // The button covers the whole card, the strip under the action included; the action sits on top of it.
+  return (
+    <div className="relative flex items-start rounded-2xl border border-border bg-bg-1 transition-colors hover:bg-bg-2">
+      <button type="button" onClick={onClick} aria-label={label} className="absolute inset-0 rounded-2xl" />
+      {content}
+      {action && <div className="relative">{action}</div>}
+    </div>
+  )
 }
 
 /** Whether an ISO date (YYYY-MM-DD) is the last day of its month. */
@@ -72,7 +65,7 @@ export function StatsSummary({
       <StatCard icon={Wallet} tintClassName="bg-accent-dim text-accent"
         label={t(balanceIsToday ? 'stats.balance_today' : 'stats.balance_end_of_month')}
         value={formatAmount(stats?.balance ?? 0)}
-        detail={stats ? t('stats.month_net', { amount: signed(stats.monthNet) }) : undefined}
+        detail={stats ? t('stats.month_net', { amount: formatSignedAmount(stats.monthNet) }) : undefined}
         onClick={onSelectOperations}
         action={onAdjustBalance && (
           <button type="button" aria-label={t('stats.adjust')} title={t('stats.adjust')} onClick={onAdjustBalance}

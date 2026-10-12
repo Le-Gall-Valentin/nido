@@ -18,10 +18,15 @@
     "explanation": "Le solde de votre compte à cette date, tel que votre banque l'affiche, opérations du jour comprises. Le solde de chaque mois est calculé à partir de lui.",
     "date_label": "Date",
     "amount_label": "Solde à cette date",
-    "amount_invalid": "Indiquez un montant, avec deux décimales au plus.",
+    "amount_invalid": "Indiquez un montant.",
     "date_required": "Indiquez une date.",
     "date_in_future": "La date ne peut pas être dans le futur.",
     "load_failed": "Impossible de charger le solde de départ.",
+    "amount_too_precise": "Le montant ne peut pas avoir plus de deux décimales.",
+    "amount_too_large": "Le montant ne peut pas dépasser douze chiffres avant la virgule.",
+    "clear_title": "Retirer le solde de départ ?",
+    "clear_message": "Le solde de chaque mois sera calculé sans lui, à partir de zéro. Pour le remettre, il faudra retrouver le solde de votre banque à une date.",
+    "clear_confirm": "Retirer",
     "clear": "Retirer le solde de départ"
   },
   "breakdown": {
