@@ -7,6 +7,7 @@ import com.nido.api.finance.infrastructure.persistence.repository.FinanceMonthMe
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceMonthTotalJpaRepository;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceSettlementRecordJpaRepository;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransactionContributorJpaRepository;
+import com.nido.api.finance.infrastructure.persistence.repository.FinanceTotalsStateJpaRepository;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransactionJpaRepository;
 import com.nido.api.infrastructure.sealing.SpaceSealer;
 import com.nido.api.infrastructure.sealing.SpaceSealers;
@@ -54,16 +55,19 @@ public class MonthTotalsWriter {
     private final FinanceSettlementRecordJpaRepository settlements;
     private final FinanceMonthTotalJpaRepository monthTotals;
     private final FinanceMonthMemberTotalJpaRepository memberTotals;
+    private final FinanceTotalsStateJpaRepository states;
     private final SpaceSealers sealers;
 
     public MonthTotalsWriter(FinanceTransactionJpaRepository transactions, FinanceTransactionContributorJpaRepository contributors,
                              FinanceSettlementRecordJpaRepository settlements, FinanceMonthTotalJpaRepository monthTotals,
-                             FinanceMonthMemberTotalJpaRepository memberTotals, SpaceSealers sealers) {
+                             FinanceMonthMemberTotalJpaRepository memberTotals, FinanceTotalsStateJpaRepository states,
+                             SpaceSealers sealers) {
         this.transactions = transactions;
         this.contributors = contributors;
         this.settlements = settlements;
         this.monthTotals = monthTotals;
         this.memberTotals = memberTotals;
+        this.states = states;
         this.sealers = sealers;
     }
 
@@ -105,15 +109,15 @@ public class MonthTotalsWriter {
                 settlements.findBySpaceId(spaceId))
             .monthTotals()
             .forEach(totals -> write(spaceId, sealer, totals));
-        monthTotals.saveTotalsVersion(spaceId, TOTALS_VERSION);
+        states.saveVersion(spaceId, TOTALS_VERSION);
     }
 
     private boolean isCurrent(UUID spaceId) {
-        return monthTotals.findTotalsVersion(spaceId).filter(version -> version >= TOTALS_VERSION).isPresent();
+        return states.findVersion(spaceId).filter(version -> version >= TOTALS_VERSION).isPresent();
     }
 
     private void lock(UUID spaceId) {
-        monthTotals.lockTotals("finance-totals|" + spaceId);
+        states.lockTotals("finance-totals|" + spaceId);
     }
 
     private void write(UUID spaceId, SpaceSealer sealer, MonthTotals totals) {

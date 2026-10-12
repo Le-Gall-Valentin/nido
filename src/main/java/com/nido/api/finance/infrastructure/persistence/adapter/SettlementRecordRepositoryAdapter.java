@@ -5,6 +5,7 @@ import com.nido.api.finance.domain.model.SettlementRecord;
 import com.nido.api.finance.domain.port.out.SettlementRecordRepository;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceSettlementRecordEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceSettlementRecordJpaRepository;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
 import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,7 +61,12 @@ public class SettlementRecordRepositoryAdapter implements SettlementRecordReposi
     }
 
     private SettlementRecord toDomain(FinanceSettlementRecordEntity e) {
-        BigDecimal amount = SealedAmounts.open(sealers.forSpace(e.getSpaceId()), FinanceSettlementRecordEntity.AMOUNT, e.getId(), e.getAmountEncrypted());
+        return opened(sealers.forSpace(e.getSpaceId()), e);
+    }
+
+    /** A stored settlement, its amount opened with the key of its space: the one place that does it. */
+    static SettlementRecord opened(SpaceSealer sealer, FinanceSettlementRecordEntity e) {
+        BigDecimal amount = SealedAmounts.open(sealer, FinanceSettlementRecordEntity.AMOUNT, e.getId(), e.getAmountEncrypted());
         return new SettlementRecord(e.getId(), e.getSpaceId(), e.getFromUserId(), e.getToUserId(), amount, e.getSettledDate());
     }
 }

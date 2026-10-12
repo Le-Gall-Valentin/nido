@@ -46,9 +46,7 @@ final class Ledger {
                 sharesByTransaction.getOrDefault(row.transactionId(), List.of()), row.type()), Collectors.toList())));
         Map<YearMonth, List<SettlementRecord>> settlementsByMonth = settlements.stream().collect(Collectors.groupingBy(
             e -> YearMonth.from(e.getSettledDate()), TreeMap::new,
-            Collectors.mapping(e -> new SettlementRecord(e.getId(), e.getSpaceId(), e.getFromUserId(), e.getToUserId(),
-                SealedAmounts.open(sealer, FinanceSettlementRecordEntity.AMOUNT, e.getId(), e.getAmountEncrypted()),
-                e.getSettledDate()), Collectors.toList())));
+            Collectors.mapping(e -> SettlementRecordRepositoryAdapter.opened(sealer, e), Collectors.toList())));
         return new Ledger(transactionsByMonth, settlementsByMonth);
     }
 

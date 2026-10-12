@@ -2,19 +2,19 @@ package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.GetFinanceStatsUseCase;
 import com.nido.api.finance.application.service.RunningBalanceReader;
-import com.nido.api.finance.domain.model.RunningBalance;
 import com.nido.api.finance.domain.model.Budget;
 import com.nido.api.finance.domain.model.BudgetLine;
 import com.nido.api.finance.domain.model.CategoryAmount;
 import com.nido.api.finance.domain.model.FinanceStats;
+import com.nido.api.finance.domain.model.RunningBalance;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.BudgetRepository;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.shared.annotation.ApplicationService;
-import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
+import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -36,8 +36,7 @@ public class GetFinanceStatsHandler implements GetFinanceStatsUseCase {
 
     public GetFinanceStatsHandler(
             TransactionRepository transactionRepository, RecurringTransactionSeriesRepository seriesRepository,
-            BudgetRepository budgetRepository, RunningBalanceReader runningBalanceReader,
-                            GetSpaceTodayUseCase spaceToday) {
+            BudgetRepository budgetRepository, RunningBalanceReader runningBalanceReader, GetSpaceTodayUseCase spaceToday) {
         this.transactionRepository = transactionRepository;
         this.seriesRepository = seriesRepository;
         this.budgetRepository = budgetRepository;

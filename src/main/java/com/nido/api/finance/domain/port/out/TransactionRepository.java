@@ -35,8 +35,8 @@ public interface TransactionRepository {
     void delete(UUID transactionId);
 
     /**
-     * The operations of the space dated within the range, added with their sign: incomes up, expenses down. Only the
-     * amounts are opened. The balance reads it for the part of a month up to a day.
+     * The operations of the space dated within the range, added with their sign: incomes up, expenses down. The balance
+     * reads it for the part of a month up to a day.
      */
     BigDecimal sumRecordedBetween(UUID spaceId, LocalDate from, LocalDate to);
 }
