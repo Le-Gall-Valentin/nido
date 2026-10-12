@@ -23,8 +23,6 @@ public interface TransactionRepository {
      * without being called several times and stitched back together.
      */
     List<Transaction> findBySpaceIdAndDateBetween(UUID spaceId, LocalDate from, LocalDate to);
-    /** Every transaction ever recorded in the space — balances/settlements span all time, not just one month. */
-    List<Transaction> findAllBySpaceId(UUID spaceId);
 
     /**
      * {@code contributors} must already be resolved (equal split applied, custom shares

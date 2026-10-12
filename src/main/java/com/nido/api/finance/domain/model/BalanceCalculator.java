@@ -20,10 +20,6 @@ public final class BalanceCalculator {
 
     private BalanceCalculator() {}
 
-    public static Balances calculate(List<SplitTransaction> transactions, List<SettlementRecord> settlements) {
-        return fromNets(fold(transactions, settlements));
-    }
-
     /**
      * Each member's net over these transactions and settlements, unrounded. Every member they touch has an entry, even
      * one that comes back to zero: the balances list that member as settled.

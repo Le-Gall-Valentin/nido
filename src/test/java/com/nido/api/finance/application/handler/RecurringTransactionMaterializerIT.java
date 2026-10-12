@@ -34,6 +34,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.IntStream;
 
+import static com.nido.api.finance.FinanceTestReads.allTransactions;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -167,7 +168,7 @@ class RecurringTransactionMaterializerIT {
             .as("a read that has nothing to materialize must not serialize every other reader "
                 + "of the same space behind an advisory lock")
             .isZero();
-        assertThat(transactionRepository.findAllBySpaceId(spaceId)).isEmpty();
+        assertThat(allTransactions(transactionRepository, spaceId)).isEmpty();
     }
 
     @Test
@@ -184,7 +185,7 @@ class RecurringTransactionMaterializerIT {
         statsHandler.getStats(YearMonth.of(2026, 1), caller, LocalDate.of(2026, 1, 10));
 
         assertThat(materializationLocksHeldByThisTransaction()).isEqualTo(1);
-        assertThat(transactionRepository.findAllBySpaceId(spaceId))
+        assertThat(allTransactions(transactionRepository, spaceId))
             .extracting(Transaction::date).containsExactly(anchor);
     }
 }

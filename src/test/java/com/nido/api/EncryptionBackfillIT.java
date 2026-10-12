@@ -63,6 +63,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.nido.api.finance.FinanceTestReads.allTransactions;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
@@ -179,7 +180,7 @@ class EncryptionBackfillIT {
         assertThat(recipe.steps()).containsExactly("Battre les œufs");
         assertThat(app.getBean(CategoryRepository.class).findBySpaceId(spaceA)).extracting(Category::label)
             .containsExactlyInAnyOrder("Alimentation", "Cantine des enfants", "Vacances");
-        assertThat(app.getBean(TransactionRepository.class).findAllBySpaceId(spaceA))
+        assertThat(allTransactions(app.getBean(TransactionRepository.class), spaceA))
             .extracting(Transaction::label, t -> t.amount().toPlainString())
             .containsExactlyInAnyOrder(tuple("Loyer", "850.00"), tuple("Café", "3.50"));
         assertThat(app.getBean(CalendarEventRepository.class)
@@ -204,7 +205,7 @@ class EncryptionBackfillIT {
                 UPDATE finance_transactions t SET amount_encrypted = o.amount_encrypted FROM finance_transactions o
                 WHERE t.space_id = o.space_id AND t.id <> o.id""");
 
-            assertThatThrownBy(() -> app.getBean(TransactionRepository.class).findAllBySpaceId(spaceA))
+            assertThatThrownBy(() -> allTransactions(app.getBean(TransactionRepository.class), spaceA))
                 .isInstanceOf(SealedValueRejected.class);
         }
     }
@@ -559,7 +560,7 @@ class EncryptionBackfillIT {
         try (ConfigurableApplicationContext app = InstallationTestSupport.boot(database, dataDir, List.of(whenServing), arguments(KEY))) {
             assertThat(notCurrentWhenServing).as("values not current when the web server opened").hasValue(0);
             assertThat(app.getBean(SpaceRepository.class).findById(spaceA).orElseThrow().name()).isEqualTo("Famille Le Gall 🏡");
-            assertThat(app.getBean(TransactionRepository.class).findAllBySpaceId(spaceA))
+            assertThat(allTransactions(app.getBean(TransactionRepository.class), spaceA))
                 .extracting(Transaction::label, t -> t.amount().toPlainString()).containsExactly(tuple("Loyer", "850.00"));
             assertThat(app.getBean(CategoryRepository.class).findBySpaceId(spaceA)).extracting(Category::label).containsExactly("Alimentation");
             assertThat(app.getBean(TotpEncryptorFactory.class).forUser(jane)
@@ -669,7 +670,7 @@ class EncryptionBackfillIT {
         try (ConfigurableApplicationContext app = start(KEY)) {
             assertThat(db.queryForObject("SELECT amount_encrypted FROM finance_transactions WHERE id = ?", String.class, rent))
                 .as("never converted into the value of its row").isEqualTo(replayed);
-            assertThatThrownBy(() -> app.getBean(TransactionRepository.class).findAllBySpaceId(spaceA))
+            assertThatThrownBy(() -> allTransactions(app.getBean(TransactionRepository.class), spaceA))
                 .isInstanceOf(SealedValueRejected.class);
         }
     }

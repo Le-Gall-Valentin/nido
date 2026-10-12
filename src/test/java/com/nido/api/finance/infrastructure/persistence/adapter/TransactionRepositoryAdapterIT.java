@@ -150,16 +150,6 @@ class TransactionRepositoryAdapterIT {
     }
 
     @Test
-    void findAllBySpaceId_returns_every_transaction_regardless_of_month() {
-        adapter.create(new CreateTransactionCommand(spaceId, "Janvier", new BigDecimal("10.00"),
-            TransactionType.EXPENSE, categoryId, LocalDate.of(2026, 1, 15), null, List.of(), null), List.of());
-        adapter.create(new CreateTransactionCommand(spaceId, "Février", new BigDecimal("10.00"),
-            TransactionType.EXPENSE, categoryId, LocalDate.of(2026, 2, 1), null, List.of(), null), List.of());
-
-        assertThat(adapter.findAllBySpaceId(spaceId)).hasSize(2);
-    }
-
-    @Test
     void delete_removes_the_transaction() {
         Transaction created = adapter.create(new CreateTransactionCommand(spaceId, "T", new BigDecimal("10.00"),
             TransactionType.EXPENSE, categoryId, LocalDate.of(2026, 1, 1), null, List.of(), null), List.of());

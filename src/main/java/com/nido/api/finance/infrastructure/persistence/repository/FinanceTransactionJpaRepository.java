@@ -23,8 +23,6 @@ public interface FinanceTransactionJpaRepository extends JpaRepository<FinanceTr
     List<FinanceTransactionEntity> findBySpaceIdAndDateBetween(
         @Param("spaceId") UUID spaceId, @Param("from") LocalDate from, @Param("to") LocalDate to);
 
-    List<FinanceTransactionEntity> findBySpaceId(UUID spaceId);
-
 
     /** The operations of a space dated within a range, reduced to what a total is made of; ciphertext untouched. */
     @Query("""

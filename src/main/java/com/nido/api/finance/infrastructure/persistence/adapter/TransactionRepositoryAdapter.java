@@ -62,11 +62,6 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     }
 
     @Override
-    public List<Transaction> findAllBySpaceId(UUID spaceId) {
-        return toDomainList(transactions.findBySpaceId(spaceId));
-    }
-
-    @Override
     @Transactional
     public Transaction create(CreateTransactionCommand command, List<Contribution> resolvedContributors) {
         SpaceSealer sealer = sealers.forSpace(command.spaceId());

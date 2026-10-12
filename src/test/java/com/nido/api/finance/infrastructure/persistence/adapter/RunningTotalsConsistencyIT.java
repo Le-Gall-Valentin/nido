@@ -25,6 +25,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static com.nido.api.finance.FinanceTestReads.allTransactions;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @IntegrationTestConfig
@@ -70,7 +71,7 @@ class RunningTotalsConsistencyIT extends RunningTotalsITSupport {
     }
 
     private void assertTotalsAreTheFoldOfTheLedger(String where) {
-        List<Transaction> ledger = transactions.findAllBySpaceId(spaceId);
+        List<Transaction> ledger = allTransactions(transactions, spaceId);
         List<SettlementRecord> settled = settlements.findBetweenMembers(spaceId, aliceId, bobId);
         Map<YearMonth, BigDecimal> expectedNets = ledger.stream().collect(Collectors.groupingBy(t -> YearMonth.from(t.date()),
             Collectors.reducing(BigDecimal.ZERO, t -> t.type() == TransactionType.INCOME ? t.amount() : t.amount().negate(), BigDecimal::add)));
