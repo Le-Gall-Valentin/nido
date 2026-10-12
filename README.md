@@ -87,7 +87,9 @@ whole, database and all, and start the previous version.
 Updating to 0.17.0: the finance balance now carries over from month to month, from an opening balance set with
 **Adjust the balance** on the balance card. If you entered an income every month to carry the balance over by hand,
 delete those incomes, then set the opening balance. The first opening of each space's finance page after the update
-takes a little longer: it builds the monthly totals, once.
+takes a little longer: it builds the monthly totals, once. To go back to 0.16, restore the backup taken before the
+update. If 0.16 ran on the database of 0.17 instead, run `DELETE FROM finance_totals_states;` before updating again:
+0.16 does not keep the monthly totals up to date, and the statement makes every space rebuild them at its next read.
 
 ## Backups
 
@@ -129,7 +131,8 @@ To get the page back, put that value right, in this order of preference:
 After restoring or deleting a finance row by hand — an operation, a share, a settlement, a category with its
 operations — also run `DELETE FROM finance_totals_states;`. Nido keeps each month's totals to read balances quickly,
 and a change made outside Nido does not update them: that statement makes every space rebuild them from its operations
-at its next read.
+at its next read. When the refused value is itself one of those totals, in `finance_month_totals` or
+`finance_month_member_totals`, run that statement instead of deleting the row.
 
 The same goes for the start that updates to 0.14.0 or to 0.16.0: if it stops on `Could not seal row … of
 <table>.<column>` or `Could not re-encrypt row … of <table>.<column>`, put that row right the same way, then start

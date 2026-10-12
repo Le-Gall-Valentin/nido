@@ -85,7 +85,7 @@ describe('FinancePage', () => {
   it('renders the month-end projection once loaded', async () => {
     renderPage(fakeApi({
       getProjection: vi.fn().mockResolvedValue({
-        actualBalanceSoFar: -50, upcoming: [{ seriesId: 's1', label: 'Loyer', amount: 800, type: 'EXPENSE', date: '2026-01-28' }],
+        recordedEndOfMonthBalance: -50, upcoming: [{ seriesId: 's1', label: 'Loyer', amount: 800, type: 'EXPENSE', date: '2026-01-28' }],
         projectedEndOfMonthBalance: -850,
       }),
     }))
