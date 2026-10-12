@@ -78,19 +78,66 @@ class GetProjectionHandlerTest {
     }
 
     @Test
-    void a_future_month_adds_only_its_own_recurring_operations_to_the_balance_carried_over() {
+    void a_future_month_adds_every_recurring_operation_from_tomorrow_to_its_end_and_lists_its_own() {
+        // Its estimate carries the months before it: the rent of January and February is paid before March ends.
         LocalDate today = LocalDate.of(2026, 1, 10);
         when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
         when(runningBalanceReader.read(spaceId)).thenReturn(RunningBalance.of(Map.of(YearMonth.of(2026, 1), new BigDecimal("1000.00"))));
-        RecurringTransactionSeries rent = new RecurringTransactionSeries(UUID.randomUUID(), spaceId, "Loyer",
-            new BigDecimal("800.00"), TransactionType.EXPENSE, categoryId, null, List.of(),
-            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 28), null, null);
-        when(seriesRepository.findActiveBySpaceId(spaceId, LocalDate.of(2026, 3, 1))).thenReturn(List.of(rent));
+        when(seriesRepository.findActiveBySpaceId(spaceId, today.plusDays(1))).thenReturn(List.of(monthlyRent(LocalDate.of(2026, 1, 28), null)));
 
         Projection projection = handler.getProjection(YearMonth.of(2026, 3), membership(), today);
 
         assertThat(projection.upcoming()).extracting(ProjectedOccurrence::date).containsExactly(LocalDate.of(2026, 3, 28));
-        assertThat(projection.projectedEndOfMonthBalance()).isEqualByComparingTo("200.00");
+        assertThat(projection.projectedEndOfMonthBalance()).isEqualByComparingTo("-1400.00");
+    }
+
+    @Test
+    void a_series_ended_before_the_month_counts_until_its_end_only() {
+        LocalDate today = LocalDate.of(2026, 1, 10);
+        when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
+        when(runningBalanceReader.read(spaceId)).thenReturn(RunningBalance.of(Map.of(YearMonth.of(2026, 1), new BigDecimal("1000.00"))));
+        when(seriesRepository.findActiveBySpaceId(spaceId, today.plusDays(1)))
+            .thenReturn(List.of(monthlyRent(LocalDate.of(2026, 1, 28), LocalDate.of(2026, 2, 28))));
+
+        Projection projection = handler.getProjection(YearMonth.of(2026, 3), membership(), today);
+
+        assertThat(projection.upcoming()).isEmpty();
+        assertThat(projection.projectedEndOfMonthBalance()).isEqualByComparingTo("-600.00");
+    }
+
+    @Test
+    void a_month_ten_years_ahead_counts_a_daily_series_whole_and_lists_only_its_own_days() {
+        LocalDate today = LocalDate.of(2026, 1, 10);
+        when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
+        when(runningBalanceReader.read(spaceId)).thenReturn(RunningBalance.of(Map.of()));
+        RecurringTransactionSeries coffee = new RecurringTransactionSeries(UUID.randomUUID(), spaceId, "Café",
+            new BigDecimal("1.00"), TransactionType.EXPENSE, categoryId, null, List.of(),
+            RecurrenceInterval.DAILY, 1, LocalDate.of(2026, 1, 1), null, null);
+        when(seriesRepository.findActiveBySpaceId(spaceId, today.plusDays(1))).thenReturn(List.of(coffee));
+
+        Projection projection = handler.getProjection(YearMonth.of(2036, 1), membership(), today);
+
+        long days = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.of(2026, 1, 11), LocalDate.of(2036, 2, 1));
+        assertThat(projection.upcoming()).hasSize(31);
+        assertThat(projection.projectedEndOfMonthBalance()).isEqualByComparingTo(BigDecimal.valueOf(-days));
+    }
+
+    @Test
+    void a_past_month_projects_nothing_beyond_what_it_recorded() {
+        LocalDate today = LocalDate.of(2026, 1, 10);
+        when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
+        when(runningBalanceReader.read(spaceId)).thenReturn(RunningBalance.of(Map.of(YearMonth.of(2025, 12), new BigDecimal("300.00"))));
+
+        Projection projection = handler.getProjection(YearMonth.of(2025, 12), membership(), today);
+
+        assertThat(projection.upcoming()).isEmpty();
+        assertThat(projection.projectedEndOfMonthBalance()).isEqualByComparingTo("300.00");
+        verify(seriesRepository, never()).findActiveBySpaceId(any(), any());
+    }
+
+    private RecurringTransactionSeries monthlyRent(LocalDate anchor, LocalDate endDate) {
+        return new RecurringTransactionSeries(UUID.randomUUID(), spaceId, "Loyer", new BigDecimal("800.00"), TransactionType.EXPENSE,
+            categoryId, null, List.of(), RecurrenceInterval.MONTHLY, 1, anchor, endDate, null);
     }
 
     @Test

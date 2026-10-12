@@ -128,7 +128,8 @@
   },
   "projection": {
     "title": "End-of-month projection",
-    "end_of_month_balance": "Estimated end-of-month balance: {{amount}}"
+    "end_of_month_balance": "Estimated end-of-month balance: {{amount}}",
+    "includes_earlier_months": "Also counts the recurring transactions of the months until then; only this month's are listed."
   },
   "form": {
     "create_title": "New transaction",

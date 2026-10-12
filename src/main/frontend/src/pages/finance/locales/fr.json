@@ -128,7 +128,8 @@
   },
   "projection": {
     "title": "Projection de fin de mois",
-    "end_of_month_balance": "Solde estimé en fin de mois : {{amount}}"
+    "end_of_month_balance": "Solde estimé en fin de mois : {{amount}}",
+    "includes_earlier_months": "Compte aussi les opérations récurrentes des mois d'ici là ; seules celles de ce mois sont listées."
   },
   "form": {
     "create_title": "Nouvelle opération",

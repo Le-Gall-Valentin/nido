@@ -121,7 +121,7 @@ function FinancePageContent() {
         />
       </div>
 
-      <ProjectionSection projection={projection} />
+      <ProjectionSection projection={projection} isLaterMonth={month > currentMonth(spaceTimezone)} />
 
       {!spaceIsPersonal && (
         <BalancesPanel

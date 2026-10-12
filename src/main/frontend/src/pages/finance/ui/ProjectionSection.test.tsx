@@ -26,4 +26,13 @@ describe('ProjectionSection', () => {
 
     expect(screen.queryByRole('list')).toBeNull()
   })
+
+  it('says that a later month counts the recurring operations of the months before it, which it does not list', () => {
+    const projection: Projection = { recordedEndOfMonthBalance: 1000, upcoming: [], projectedEndOfMonthBalance: -1400 }
+    const { rerender } = render(<ProjectionSection projection={projection} isLaterMonth />)
+    expect(screen.getByText('projection.includes_earlier_months')).toBeDefined()
+
+    rerender(<ProjectionSection projection={projection} isLaterMonth={false} />)
+    expect(screen.queryByText('projection.includes_earlier_months')).toBeNull()
+  })
 })

@@ -58,29 +58,33 @@ public class GetProjectionHandler implements GetProjectionUseCase {
     Projection getProjection(YearMonth month, SpaceMembership caller, LocalDate today) {
         RecurringTransactionMaterializer.materializeDueOccurrences(transactionRepository, seriesRepository, caller.spaceId(), today);
         // Everything recorded up to the month end, carried over from the months before: an operation entered for later
-        // counts in it, a recurring one only once created — the rest is what the projection adds, month by month.
+        // counts in it, a recurring one only once created.
         BigDecimal recorded = runningBalanceReader.read(caller.spaceId()).atEndOf(month);
 
+        // Every recurring operation still to come before the month ends is added — those of the months between now and
+        // then too, or a month ahead would be estimated as though no rent fell due before it. From tomorrow, whatever
+        // the month: today's occurrences were just created and are recorded, on the 1st too. They are counted, not
+        // listed one by one, so a month years ahead costs no more than the next one; only the month's own are listed.
+        LocalDate afterToday = today.plusDays(1);
         LocalDate monthStart = month.atDay(1);
         LocalDate monthEnd = month.atEndOfMonth();
-        // After today, whatever the month: today's occurrences were just created and are recorded — on the 1st too.
-        LocalDate afterToday = today.plusDays(1);
-        LocalDate rangeStart = afterToday.isAfter(monthStart) ? afterToday : monthStart;
+        LocalDate listedFrom = afterToday.isAfter(monthStart) ? afterToday : monthStart;
 
         List<ProjectedOccurrence> upcoming = new ArrayList<>();
-        if (!rangeStart.isAfter(monthEnd)) {
-            for (RecurringTransactionSeries series : seriesRepository.findActiveBySpaceId(caller.spaceId(), rangeStart)) {
+        BigDecimal projectedDelta = BigDecimal.ZERO;
+        if (!afterToday.isAfter(monthEnd)) {
+            for (RecurringTransactionSeries series : seriesRepository.findActiveBySpaceId(caller.spaceId(), afterToday)) {
+                long dueBeforeTheMonthEnds = RecurrenceProjector.occurrenceCountBetween(
+                    series.anchorDate(), series.intervalType(), series.intervalCount(), series.endDate(), afterToday, monthEnd);
+                projectedDelta = projectedDelta.add(series.type().signed(series.amount()).multiply(BigDecimal.valueOf(dueBeforeTheMonthEnds)));
                 List<LocalDate> dates = RecurrenceProjector.occurrencesBetween(
-                    series.anchorDate(), series.intervalType(), series.intervalCount(), series.endDate(), rangeStart, monthEnd,
+                    series.anchorDate(), series.intervalType(), series.intervalCount(), series.endDate(), listedFrom, monthEnd,
                     MAX_PROJECTED_OCCURRENCES_PER_SERIES);
                 for (LocalDate date : dates) {
                     upcoming.add(new ProjectedOccurrence(series.id(), series.label(), series.amount(), series.type(), date));
                 }
             }
         }
-        BigDecimal projectedDelta = upcoming.stream()
-            .map(o -> o.type().signed(o.amount()))
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return new Projection(recorded, upcoming, recorded.add(projectedDelta));
     }

@@ -5,9 +5,11 @@ import { formatAmount } from '@/shared/lib'
 
 interface ProjectionSectionProps {
   projection?: Projection
+  /** A month after the current one: its estimate counts the recurring operations of the months before it, unlisted. */
+  isLaterMonth?: boolean
 }
 
-export function ProjectionSection({ projection }: ProjectionSectionProps) {
+export function ProjectionSection({ projection, isLaterMonth = false }: ProjectionSectionProps) {
   const { t } = useTranslation('finance')
 
   return (
@@ -18,6 +20,7 @@ export function ProjectionSection({ projection }: ProjectionSectionProps) {
       <p className="text-sm text-fg-1">
         {t('projection.end_of_month_balance', { amount: formatAmount(projection?.projectedEndOfMonthBalance ?? 0) })}
       </p>
+      {isLaterMonth && <p className="mt-1 text-xs text-fg-3">{t('projection.includes_earlier_months')}</p>}
       {(projection?.upcoming.length ?? 0) > 0 && (
         <ul className="mt-2 space-y-1 text-sm text-fg-3">
           {projection?.upcoming.map((occurrence) => (
