@@ -16,13 +16,16 @@ function fakeApi(overrides: Partial<IFinanceApi>): IFinanceApi {
   } as unknown as IFinanceApi
 }
 
-function renderPanel(api: IFinanceApi) {
-  return renderWithQuery(
+function renderPanel(api: IFinanceApi, onClose = vi.fn()) {
+  renderWithQuery(
     <FinanceApiProvider api={api}>
-      <OpeningBalancePanel spaceId="space-1" spaceTimezone="Europe/Paris" onClose={vi.fn()} />
+      <OpeningBalancePanel spaceId="space-1" spaceTimezone="Europe/Paris" onClose={onClose} />
     </FinanceApiProvider>
   )
+  return onClose
 }
+
+const CURRENT = { amount: 1200, asOf: '2026-09-30' }
 
 describe('OpeningBalancePanel', () => {
   it('shows that it is loading, rather than nothing, while the current opening balance loads', () => {
@@ -49,5 +52,47 @@ describe('OpeningBalancePanel', () => {
     await waitFor(() => expect(screen.getByText('form.save').closest('button')?.disabled).toBe(true))
     fireEvent.click(screen.getByText('form.save'))
     expect(setOpeningBalance).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes once the opening balance is saved', async () => {
+    const setOpeningBalance = vi.fn().mockResolvedValue(CURRENT)
+    const onClose = renderPanel(fakeApi({ setOpeningBalance }))
+
+    fireEvent.change(await screen.findByLabelText('opening_balance.amount_label'), { target: { value: '1200' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(setOpeningBalance).toHaveBeenCalledWith('space-1', 1200, expect.any(String))
+  })
+
+  it('removes the opening balance of this space and closes', async () => {
+    const clearOpeningBalance = vi.fn().mockResolvedValue(undefined)
+    const onClose = renderPanel(fakeApi({ getOpeningBalance: vi.fn().mockResolvedValue(CURRENT), clearOpeningBalance }))
+
+    fireEvent.click(await screen.findByText('opening_balance.clear'))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(clearOpeningBalance).toHaveBeenCalledWith('space-1')
+  })
+
+  it('stays open and says so when the save is refused', async () => {
+    const onClose = renderPanel(fakeApi({ setOpeningBalance: vi.fn().mockRejectedValue(new Error('boom')) }))
+
+    fireEvent.change(await screen.findByLabelText('opening_balance.amount_label'), { target: { value: '1200' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    await waitFor(() => expect(screen.getByText('form.submit_error')).toBeDefined())
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('stays open and says so when the removal is refused', async () => {
+    const onClose = renderPanel(fakeApi({
+      getOpeningBalance: vi.fn().mockResolvedValue(CURRENT), clearOpeningBalance: vi.fn().mockRejectedValue(new Error('boom')),
+    }))
+
+    fireEvent.click(await screen.findByText('opening_balance.clear'))
+
+    await waitFor(() => expect(screen.getByText('form.submit_error')).toBeDefined())
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

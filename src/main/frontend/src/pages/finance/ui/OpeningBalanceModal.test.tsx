@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { todayIso } from '@/shared/lib'
 import { OpeningBalanceModal } from './OpeningBalanceModal'
 
 vi.mock('react-i18next', () => ({
@@ -26,12 +25,34 @@ function dateInput() {
 }
 
 describe('OpeningBalanceModal', () => {
-  it("opens on today's date, on the household's calendar, with no amount when there is none yet", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("opens on today's date on the household's calendar, not the browser's, with no amount when there is none yet", () => {
+    // 22:30 in UTC is already the 12th in Paris: a form that read the browser's calendar would open on the 11th.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-11T22:30:00Z'))
     renderModal()
 
-    expect(dateInput().value).toBe(todayIso(new Date(), ZONE))
+    expect(dateInput().value).toBe('2026-10-12')
     expect(amountInput().value).toBe('')
     expect(screen.queryByText('opening_balance.clear')).toBeNull()
+  })
+
+  it("accepts the household's today and refuses its tomorrow, whatever the browser's calendar says", () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-11T22:30:00Z'))
+    const props = renderModal()
+
+    fireEvent.change(amountInput(), { target: { value: '100' } })
+    fireEvent.change(dateInput(), { target: { value: '2026-10-13' } })
+    fireEvent.click(screen.getByText('form.save'))
+    expect(screen.getByText('opening_balance.date_in_future')).toBeDefined()
+
+    fireEvent.change(dateInput(), { target: { value: '2026-10-12' } })
+    fireEvent.click(screen.getByText('form.save'))
+    expect(props.onSave).toHaveBeenCalledWith(100, '2026-10-12')
   })
 
   it('opens on the current opening balance, and offers to remove it', () => {
