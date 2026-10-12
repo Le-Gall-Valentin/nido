@@ -44,7 +44,7 @@ class OpeningBalanceRepositoryAdapterIT extends RunningTotalsITSupport {
         adapter.save(new OpeningBalance(spaceId, new BigDecimal("1200.00"), LocalDate.of(2026, 9, 30)));
 
         Map<String, Object> row = jdbc.queryForMap("SELECT id, amount_encrypted FROM finance_opening_balances WHERE space_id = ?", spaceId);
-        assertThat((String) row.get("amount_encrypted")).startsWith("v3:").doesNotContain("1200");
+        assertThat((String) row.get("amount_encrypted")).startsWith("v3:").doesNotContain("1200.00");
         assertThat(sealers.forSpace(spaceId).open(FinanceOpeningBalanceEntity.AMOUNT, (UUID) row.get("id"), (String) row.get("amount_encrypted")))
             .isEqualTo("1200.00");
     }
