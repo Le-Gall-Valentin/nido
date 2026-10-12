@@ -31,6 +31,9 @@ public class DeleteCategoryHandler implements DeleteCategoryUseCase {
         if (!existing.spaceId().equals(spaceId)) {
             throw new FinanceException.CategoryNotFound();
         }
+        // Locked before the check: an operation being saved in this category is waited for and seen, instead of being
+        // taken along by the foreign key once the category is deleted.
+        categoryRepository.lockForDeletion(categoryId);
         if (categoryRepository.isReferencedByTransactions(categoryId)) {
             throw new FinanceException.CategoryInUse();
         }
