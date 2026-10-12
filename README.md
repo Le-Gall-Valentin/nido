@@ -84,6 +84,11 @@ Before updating to 0.14.0 or to 0.16.0, back up the database (see below): their 
 encrypted value, and the previous version cannot read them afterwards. That backup is the only way back: restore it
 whole, database and all, and start the previous version.
 
+Updating to 0.17.0: the finance balance now carries over from month to month, from an opening balance set with
+**Adjust the balance** on the balance card. If you entered an income every month to carry the balance over by hand,
+delete those incomes, then set the opening balance. The first opening of each space's finance page after the update
+takes a little longer: it builds the monthly totals, once.
+
 ## Backups
 
 Back up two things, **and keep them apart**:
