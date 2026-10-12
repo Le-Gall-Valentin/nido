@@ -549,7 +549,7 @@ class FinanceControllerIT {
             .andExpect(status().isCreated());
 
         settle("60.00").andExpect(status().isCreated());
-        settle("50.00").andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.title").value("SettlementExceedsDebt"));
+        settle("50.00").andExpect(status().isUnprocessableContent()).andExpect(jsonPath("$.title").value("SettlementExceedsDebt"));
         settle("40.00").andExpect(status().isCreated());
     }
 
