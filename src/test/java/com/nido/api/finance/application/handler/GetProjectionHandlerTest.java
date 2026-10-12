@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -89,6 +91,24 @@ class GetProjectionHandlerTest {
 
         assertThat(projection.upcoming()).extracting(ProjectedOccurrence::date).containsExactly(LocalDate.of(2026, 3, 28));
         assertThat(projection.projectedEndOfMonthBalance()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
+    void on_the_first_of_the_month_what_recurs_that_day_is_already_recorded_and_not_projected_again() {
+        // Today's occurrences are created by the read itself, so they are in the recorded balance: the projection only
+        // adds what comes after today — on the 1st as on any other day.
+        LocalDate today = LocalDate.of(2026, 1, 1);
+        when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
+        when(runningBalanceReader.read(spaceId)).thenReturn(RunningBalance.of(Map.of(YearMonth.of(2026, 1), new BigDecimal("-800.00"))));
+        RecurringTransactionSeries rent = new RecurringTransactionSeries(UUID.randomUUID(), spaceId, "Loyer",
+            new BigDecimal("800.00"), TransactionType.EXPENSE, categoryId, null, List.of(),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null, null);
+        when(seriesRepository.findActiveBySpaceId(eq(spaceId), any())).thenReturn(List.of(rent));
+
+        Projection projection = handler.getProjection(YearMonth.of(2026, 1), membership(), today);
+
+        assertThat(projection.upcoming()).isEmpty();
+        assertThat(projection.projectedEndOfMonthBalance()).isEqualByComparingTo("-800.00");
     }
 
     /**

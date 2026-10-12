@@ -64,7 +64,9 @@ public class GetProjectionHandler implements GetProjectionUseCase {
 
         LocalDate monthStart = month.atDay(1);
         LocalDate monthEnd = month.atEndOfMonth();
-        LocalDate rangeStart = today.isAfter(monthStart) ? today.plusDays(1) : monthStart;
+        // After today, whatever the month: today's occurrences were just created and are recorded — on the 1st too.
+        LocalDate afterToday = today.plusDays(1);
+        LocalDate rangeStart = afterToday.isAfter(monthStart) ? afterToday : monthStart;
 
         List<ProjectedOccurrence> upcoming = new ArrayList<>();
         if (!rangeStart.isAfter(monthEnd)) {
