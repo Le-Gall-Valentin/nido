@@ -96,6 +96,7 @@ function FinancePageContent() {
 
       <StatsSummary
         stats={stats}
+        isCurrentMonth={month === currentMonth(spaceTimezone)}
         onSelectExpenseBreakdown={() => setBreakdownModalType('EXPENSE')}
         onSelectIncomeBreakdown={() => setBreakdownModalType('INCOME')}
         onSelectOperations={() => document.getElementById('finance-operations')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}

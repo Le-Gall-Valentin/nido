@@ -4,7 +4,15 @@
   "loading": "Chargement…",
   "error": { "load_failed": "Impossible de charger les finances." },
   "type": { "EXPENSE": "Dépense", "INCOME": "Revenu" },
-  "stats": { "balance": "Solde", "spent": "Dépensé ce mois", "income": "Entrées ce mois", "remaining_budget": "Reste à dépenser" },
+  "stats": {
+    "balance_today": "Solde aujourd'hui",
+    "balance_end_of_month": "Solde fin de mois",
+    "month_net": "{{amount}} ce mois",
+    "adjust": "Ajuster le solde",
+    "spent": "Dépensé ce mois",
+    "income": "Entrées ce mois",
+    "remaining_budget": "Reste à dépenser"
+  },
   "breakdown": {
     "title_EXPENSE": "Répartition des dépenses",
     "title_INCOME": "Répartition des revenus",

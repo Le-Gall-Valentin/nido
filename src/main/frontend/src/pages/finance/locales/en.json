@@ -4,7 +4,15 @@
   "loading": "Loading…",
   "error": { "load_failed": "Could not load finances." },
   "type": { "EXPENSE": "Expense", "INCOME": "Income" },
-  "stats": { "balance": "Balance", "spent": "Spent this month", "income": "Income this month", "remaining_budget": "Left to spend" },
+  "stats": {
+    "balance_today": "Balance today",
+    "balance_end_of_month": "End-of-month balance",
+    "month_net": "{{amount}} this month",
+    "adjust": "Adjust the balance",
+    "spent": "Spent this month",
+    "income": "Income this month",
+    "remaining_budget": "Left to spend"
+  },
   "breakdown": {
     "title_EXPENSE": "Spending breakdown",
     "title_INCOME": "Income breakdown",

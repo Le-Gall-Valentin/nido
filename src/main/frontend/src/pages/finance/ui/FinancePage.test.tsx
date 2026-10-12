@@ -73,7 +73,7 @@ describe('FinancePage', () => {
   it('renders the stat cards once data has loaded', async () => {
     renderPage(fakeApi())
 
-    await waitFor(() => expect(screen.getByText('stats.balance')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('stats.balance_today')).toBeDefined())
   })
 
   it('shows an error state when transactions fail to load', async () => {
@@ -363,14 +363,14 @@ describe('FinancePage', () => {
   it('shows the manage-categories button to a member who can write', async () => {
     renderPage(fakeApi())
 
-    await waitFor(() => expect(screen.getByText('stats.balance')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('stats.balance_today')).toBeDefined())
     expect(screen.getByText('categories.manage')).toBeDefined()
   })
 
   it('hides the manage-categories button from a read-only viewer, since every action inside it requires write access', async () => {
     renderPage(fakeApi(), { ...CURRENT_SPACE, myRole: 'VIEWER' })
 
-    await waitFor(() => expect(screen.getByText('stats.balance')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('stats.balance_today')).toBeDefined())
     expect(screen.queryByText('categories.manage')).toBeNull()
   })
 
@@ -398,7 +398,7 @@ describe('FinancePage', () => {
     const deleteCategory = vi.fn()
     renderPage(fakeApi({ deleteCategory }))
 
-    await waitFor(() => expect(screen.getByText('stats.balance')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('stats.balance_today')).toBeDefined())
     fireEvent.click(screen.getByText('categories.manage'))
     fireEvent.click(screen.getByRole('button', { name: 'categories.delete' }))
 
