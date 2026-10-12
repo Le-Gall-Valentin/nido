@@ -6,7 +6,6 @@ import com.nido.api.finance.domain.model.ProjectedOccurrence;
 import com.nido.api.finance.domain.model.Projection;
 import com.nido.api.finance.domain.model.RecurrenceProjector;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
-import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.shared.annotation.ApplicationService;
@@ -80,7 +79,7 @@ public class GetProjectionHandler implements GetProjectionUseCase {
             }
         }
         BigDecimal projectedDelta = upcoming.stream()
-            .map(o -> o.type() == TransactionType.INCOME ? o.amount() : o.amount().negate())
+            .map(o -> o.type().signed(o.amount()))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return new Projection(recorded, upcoming, recorded.add(projectedDelta));

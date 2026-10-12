@@ -34,6 +34,6 @@ public record SplitTransaction(
 ) {
     /** What it moves the space's balance by: up for an income, down for an expense. */
     public BigDecimal signedAmount() {
-        return type == TransactionType.INCOME ? amount : amount.negate();
+        return type.signed(amount);
     }
 }

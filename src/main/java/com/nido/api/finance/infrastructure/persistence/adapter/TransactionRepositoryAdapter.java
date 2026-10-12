@@ -4,7 +4,6 @@ import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.CreateTransactionCommand;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.Transaction;
-import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionContributorEntity;
@@ -14,6 +13,9 @@ import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransac
 import com.nido.api.finance.infrastructure.persistence.repository.LedgerRow;
 import com.nido.api.infrastructure.sealing.SpaceSealer;
 import com.nido.api.infrastructure.sealing.SpaceSealers;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,14 +36,16 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     private final FinanceTransactionContributorJpaRepository contributors;
     private final SpaceSealers sealers;
     private final MonthTotalsWriter monthTotalsWriter;
+    private final EntityManager entityManager;
 
     public TransactionRepositoryAdapter(
             FinanceTransactionJpaRepository transactions, FinanceTransactionContributorJpaRepository contributors,
-            SpaceSealers sealers, MonthTotalsWriter monthTotalsWriter) {
+            SpaceSealers sealers, MonthTotalsWriter monthTotalsWriter, EntityManager entityManager) {
         this.transactions = transactions;
         this.contributors = contributors;
         this.sealers = sealers;
         this.monthTotalsWriter = monthTotalsWriter;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -83,12 +87,11 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     @Override
     @Transactional
     public Transaction update(UpdateTransactionCommand command, List<Contribution> resolvedContributors) {
-        FinanceTransactionEntity e = transactions.findById(command.transactionId()).orElseThrow(FinanceException.TransactionNotFound::new);
+        FinanceTransactionEntity e = lockedAsStored(command.transactionId()).orElseThrow(FinanceException.TransactionNotFound::new);
         // The key of the space the row is stored in, whatever the command says.
         SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
-        // The month the row holds now, under its lock: the entity was loaded before, maybe before another request moved
-        // the operation, and an operation moved to another month leaves the one it was really in.
-        YearMonth previousMonth = lockStoredMonth(e.getId()).orElseThrow(FinanceException.TransactionNotFound::new);
+        // An operation moved to another month leaves the one it is stored in.
+        YearMonth previousMonth = YearMonth.from(e.getDate());
         e.setLabelEncrypted(sealer.seal(FinanceTransactionEntity.LABEL, e.getId(), command.label()));
         e.setAmountEncrypted(SealedAmounts.seal(sealer, FinanceTransactionEntity.AMOUNT, e.getId(), command.amount()));
         e.setType(command.type());
@@ -106,17 +109,29 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     @Override
     @Transactional
     public void delete(UUID transactionId) {
-        // The month the row holds now, under its lock — see update. A missing row is silently ignored, as deleteById did.
-        lockStoredMonth(transactionId).ifPresent(month -> {
-            FinanceTransactionEntity e = transactions.findById(transactionId).orElseThrow();
+        // A missing row is silently ignored, as deleteById did.
+        lockedAsStored(transactionId).ifPresent(e -> {
+            YearMonth month = YearMonth.from(e.getDate());
             transactions.delete(e);
             transactions.flush();
             monthTotalsWriter.refresh(e.getSpaceId(), List.of(month));
         });
     }
 
-    private Optional<YearMonth> lockStoredMonth(UUID transactionId) {
-        return transactions.lockStoredDate(transactionId).map(LocalDate::parse).map(YearMonth::from);
+    /**
+     * The operation as its row stands now, locked until the transaction ends. The entity a handler loaded before may be
+     * out of date — another request may have moved the operation, or deleted its series, since — and writing it back
+     * would undo that: every column is read again under the lock.
+     */
+    private Optional<FinanceTransactionEntity> lockedAsStored(UUID transactionId) {
+        return transactions.findById(transactionId).flatMap(e -> {
+            try {
+                entityManager.refresh(e, LockModeType.PESSIMISTIC_WRITE);
+                return Optional.of(e);
+            } catch (EntityNotFoundException deletedMeanwhile) {
+                return Optional.empty();
+            }
+        });
     }
 
     @Override
@@ -125,7 +140,7 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         BigDecimal sum = BigDecimal.ZERO;
         for (LedgerRow row : transactions.findLedgerRows(spaceId, from, to)) {
             BigDecimal amount = SealedAmounts.open(sealer, FinanceTransactionEntity.AMOUNT, row.transactionId(), row.amountEncrypted());
-            sum = sum.add(row.type() == TransactionType.INCOME ? amount : amount.negate());
+            sum = sum.add(row.type().signed(amount));
         }
         return sum;
     }

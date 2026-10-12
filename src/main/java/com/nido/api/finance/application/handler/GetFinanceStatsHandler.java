@@ -99,7 +99,7 @@ public class GetFinanceStatsHandler implements GetFinanceStatsUseCase {
     }
 
     private static BigDecimal signedSum(List<Transaction> transactions) {
-        return sum(transactions, TransactionType.INCOME).subtract(sum(transactions, TransactionType.EXPENSE));
+        return transactions.stream().map(t -> t.type().signed(t.amount())).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private static BigDecimal sum(List<Transaction> transactions, TransactionType type) {

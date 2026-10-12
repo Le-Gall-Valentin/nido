@@ -7,7 +7,6 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 public interface FinanceTransactionJpaRepository extends JpaRepository<FinanceTransactionEntity, UUID> {
@@ -41,12 +40,4 @@ public interface FinanceTransactionJpaRepository extends JpaRepository<FinanceTr
         where t.spaceId = :spaceId
         """)
     List<LedgerRow> findLedgerRowsBySpaceId(@Param("spaceId") UUID spaceId);
-
-    /**
-     * The date the row holds now, as text, read under a row lock held until the transaction ends. The entity a handler
-     * loaded before may be out of date: another request may have moved the operation since, and the month it leaves is
-     * the one the row holds.
-     */
-    @Query(value = "select to_char(date, 'YYYY-MM-DD') from finance_transactions where id = :id for update", nativeQuery = true)
-    Optional<String> lockStoredDate(@Param("id") UUID id);
 }
