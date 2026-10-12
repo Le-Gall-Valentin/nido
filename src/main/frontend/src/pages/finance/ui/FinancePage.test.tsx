@@ -200,7 +200,7 @@ describe('FinancePage', () => {
   it('shows a tooltip with the category, percentage and amount when hovering a donut segment', async () => {
     renderPage(fakeApi({
       getStats: vi.fn().mockResolvedValue({
-        balance: 0, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
+        balance: 0, balanceAsOf: '2026-10-11', monthNet: -45.3, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
         breakdown: [{ categoryId: 'c1', amount: 45.3 }], budgetVsActual: [],
       }),
     }))
@@ -236,7 +236,7 @@ describe('FinancePage', () => {
   it('opens the category transactions, then the full detail of one, from the breakdown legend', async () => {
     renderPage(fakeApi({
       getStats: vi.fn().mockResolvedValue({
-        balance: 0, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
+        balance: 0, balanceAsOf: '2026-10-11', monthNet: -45.3, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
         breakdown: [{ categoryId: 'c1', amount: 45.3 }], budgetVsActual: [],
       }),
       listTransactions: vi.fn().mockResolvedValue([{
@@ -261,7 +261,7 @@ describe('FinancePage', () => {
         { id: 'c2', label: 'Revenu', color: '#22c55e', icon: 'Wallet', isDefault: true, type: 'INCOME' },
       ]),
       getStats: vi.fn().mockResolvedValue({
-        balance: 954.7, totalExpense: 45.3, totalIncome: 1000, remainingBudget: 0,
+        balance: 954.7, balanceAsOf: '2026-10-11', monthNet: 954.7, totalExpense: 45.3, totalIncome: 1000, remainingBudget: 0,
         breakdown: [{ categoryId: 'c1', amount: 45.3 }, { categoryId: 'c2', amount: 1000 }], budgetVsActual: [],
       }),
       listTransactions: vi.fn().mockResolvedValue([{

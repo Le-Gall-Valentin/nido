@@ -42,9 +42,16 @@ function signed(amount: number): string {
   return `${amount > 0 ? '+ ' : amount < 0 ? '– ' : ''}${formatAmount(Math.abs(amount))}`
 }
 
+/** Whether an ISO date (YYYY-MM-DD) is the last day of its month. */
+function isMonthEnd(isoDate: string): boolean {
+  const nextDay = new Date(`${isoDate}T00:00:00Z`)
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1)
+  return nextDay.getUTCDate() === 1
+}
+
 interface StatsSummaryProps {
   stats?: FinanceStats
-  /** The household's current month shows today's balance; any other, the balance at its end. */
+  /** The household's current month shows today's balance; any other, the balance at its end. Names it while it loads. */
   isCurrentMonth: boolean
   onSelectExpenseBreakdown?: () => void
   onSelectIncomeBreakdown?: () => void
@@ -57,11 +64,13 @@ export function StatsSummary({
   stats, isCurrentMonth, onSelectExpenseBreakdown, onSelectIncomeBreakdown, onSelectOperations, onAdjustBalance,
 }: StatsSummaryProps) {
   const { t } = useTranslation('finance')
+  // Once loaded, the day the server dates the balance names it: today's on the household's calendar, or a month's end.
+  const balanceIsToday = stats ? !isMonthEnd(stats.balanceAsOf) : isCurrentMonth
 
   return (
     <div className="grid grid-cols-[repeat(auto-fit,minmax(min(210px,100%),1fr))] gap-3">
       <StatCard icon={Wallet} tintClassName="bg-accent-dim text-accent"
-        label={t(isCurrentMonth ? 'stats.balance_today' : 'stats.balance_end_of_month')}
+        label={t(balanceIsToday ? 'stats.balance_today' : 'stats.balance_end_of_month')}
         value={formatAmount(stats?.balance ?? 0)}
         detail={stats ? t('stats.month_net', { amount: signed(stats.monthNet) }) : undefined}
         onClick={onSelectOperations}

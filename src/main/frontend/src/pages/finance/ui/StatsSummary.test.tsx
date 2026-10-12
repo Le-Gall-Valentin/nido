@@ -8,7 +8,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 const stats: FinanceStats = {
-  balance: 579.7, balanceAsOf: '2026-01-31', monthNet: 579.7, totalExpense: 420.3, totalIncome: 1000, remainingBudget: 1285.2,
+  balance: 579.7, balanceAsOf: '2026-01-20', monthNet: 579.7, totalExpense: 420.3, totalIncome: 1000, remainingBudget: 1285.2,
   breakdown: [], budgetVsActual: [],
 }
 
@@ -28,11 +28,21 @@ describe('StatsSummary', () => {
     expect(screen.getAllByText(/0,00/).length).toBe(4)
   })
 
-  it("calls the current month's balance today's, and any other month's its end-of-month one", () => {
-    const { rerender } = render(<StatsSummary stats={stats} isCurrentMonth />)
+  it('names the balance after the day the server dates it: a month end, or today', () => {
+    // The server dates any month's balance at its end, and the current month's at today on the household's calendar,
+    // which the page may not know yet: the label follows the server, so it always says what the figure is.
+    const { rerender } = render(<StatsSummary stats={{ ...stats, balanceAsOf: '2026-10-12' }} isCurrentMonth={false} />)
     expect(screen.getByText('stats.balance_today')).toBeDefined()
 
-    rerender(<StatsSummary stats={stats} isCurrentMonth={false} />)
+    rerender(<StatsSummary stats={{ ...stats, balanceAsOf: '2026-02-28' }} isCurrentMonth />)
+    expect(screen.getByText('stats.balance_end_of_month')).toBeDefined()
+  })
+
+  it('names the balance after the month on screen while the figures load', () => {
+    const { rerender } = render(<StatsSummary isCurrentMonth />)
+    expect(screen.getByText('stats.balance_today')).toBeDefined()
+
+    rerender(<StatsSummary isCurrentMonth={false} />)
     expect(screen.getByText('stats.balance_end_of_month')).toBeDefined()
   })
 
