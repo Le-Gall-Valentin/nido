@@ -142,18 +142,6 @@ class SettleDebtHandlerTest {
     }
 
     @Test
-    void a_settlement_already_recorded_reduces_how_much_more_can_be_settled() {
-        when(runningTotals.findNetByMember(spaceId)).thenReturn(debt("40.00"));
-        CreateSettlementCommand command = command(new BigDecimal("40.00"));
-        SettlementRecord created = new SettlementRecord(UUID.randomUUID(), spaceId, debtorId, creditorId, command.amount(), command.date());
-        when(settlementRecordRepository.create(command)).thenReturn(created);
-
-        SettlementRecord result = handler.settle(command, membership(debtorId, SpaceRole.VIEWER));
-
-        assertThat(result).isEqualTo(created);
-    }
-
-    @Test
     void rejects_a_settlement_when_there_is_no_debt_at_all_between_the_two_members() {
         when(runningTotals.findNetByMember(spaceId)).thenReturn(Map.of());
         CreateSettlementCommand command = command(new BigDecimal("0.01"));
