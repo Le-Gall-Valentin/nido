@@ -8,8 +8,8 @@ import com.nido.api.finance.domain.model.CreateSettlementCommand;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SettlementRecord;
 import com.nido.api.finance.domain.model.SuggestedTransfer;
+import com.nido.api.finance.domain.port.out.RunningTotalsRepository;
 import com.nido.api.finance.domain.port.out.SettlementRecordRepository;
-import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,14 +21,14 @@ import java.util.UUID;
 public class SettleDebtHandler implements SettleDebtUseCase {
 
     private final SettlementRecordRepository settlementRecordRepository;
-    private final TransactionRepository transactionRepository;
+    private final RunningTotalsRepository runningTotals;
     private final SpaceMemberValidator spaceMemberValidator;
 
     public SettleDebtHandler(
-            SettlementRecordRepository settlementRecordRepository, TransactionRepository transactionRepository,
+            SettlementRecordRepository settlementRecordRepository, RunningTotalsRepository runningTotals,
             SpaceMemberValidator spaceMemberValidator) {
         this.settlementRecordRepository = settlementRecordRepository;
-        this.transactionRepository = transactionRepository;
+        this.runningTotals = runningTotals;
         this.spaceMemberValidator = spaceMemberValidator;
     }
 
@@ -61,8 +61,7 @@ public class SettleDebtHandler implements SettleDebtUseCase {
     }
 
     private BigDecimal realDebt(UUID spaceId, UUID fromMemberId, UUID toMemberId) {
-        Balances balances = BalanceCalculator.calculate(
-            transactionRepository.findSplitsBySpaceId(spaceId), settlementRecordRepository.findBySpaceId(spaceId));
+        Balances balances = BalanceCalculator.fromNets(runningTotals.findNetByMember(spaceId));
         return balances.suggestedTransfers().stream()
             .filter(t -> t.fromMemberId().equals(fromMemberId) && t.toMemberId().equals(toMemberId))
             .map(SuggestedTransfer::amount)

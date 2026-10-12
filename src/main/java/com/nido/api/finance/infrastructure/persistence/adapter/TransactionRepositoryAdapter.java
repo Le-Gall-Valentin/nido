@@ -3,7 +3,6 @@ package com.nido.api.finance.infrastructure.persistence.adapter;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.CreateTransactionCommand;
 import com.nido.api.finance.domain.model.FinanceException;
-import com.nido.api.finance.domain.model.SplitTransaction;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
@@ -11,10 +10,8 @@ import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionContributorEntity;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransactionContributorJpaRepository;
-import com.nido.api.finance.infrastructure.persistence.repository.ContributorShareRow;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransactionJpaRepository;
 import com.nido.api.finance.infrastructure.persistence.repository.LedgerRow;
-import com.nido.api.finance.infrastructure.persistence.repository.SplitTransactionRow;
 import com.nido.api.infrastructure.sealing.SpaceSealer;
 import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
@@ -62,32 +59,6 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         List<FinanceTransactionEntity> found = transactions.findBySpaceIdAndDateBetween(
             spaceId, month.atDay(1), month.atEndOfMonth());
         return toDomainList(found);
-    }
-
-    @Override
-    public List<SplitTransaction> findSplitsBySpaceId(UUID spaceId) {
-        List<SplitTransactionRow> rows = transactions.findSplitRowsBySpaceId(spaceId);
-        if (rows.isEmpty()) {
-            return List.of();
-        }
-        // One sealer for the space, and only the amounts pass through it: the labels stay
-        // ciphertext in the database, unread.
-        SpaceSealer sealer = sealers.forSpace(spaceId);
-        Map<UUID, List<ContributorShareRow>> sharesByTransaction = contributors
-            .findShareRowsByTransactionIdIn(rows.stream().map(SplitTransactionRow::transactionId).toList())
-            .stream()
-            .collect(Collectors.groupingBy(ContributorShareRow::transactionId));
-        return rows.stream()
-            .map(row -> new SplitTransaction(
-                row.payerId(),
-                SealedAmounts.open(sealer, FinanceTransactionEntity.AMOUNT, row.transactionId(), row.amountEncrypted()),
-                sharesByTransaction.getOrDefault(row.transactionId(), List.of()).stream()
-                    .map(share -> new Contribution(
-                        share.userId(),
-                        SealedAmounts.open(sealer, FinanceTransactionContributorEntity.SHARE_AMOUNT, share.id(), share.shareAmountEncrypted())))
-                    .toList(),
-                row.type()))
-            .toList();
     }
 
     @Override

@@ -73,15 +73,6 @@ class SettlementRecordRepositoryAdapterIT {
         assertThat(sealers.forSpace(spaceId).open(FinanceSettlementRecordEntity.AMOUNT, created.id(), rawAmount)).isEqualTo("20.00");
     }
 
-    @Test
-    void findBySpaceId_returns_every_settlement_in_the_space() {
-        adapter.create(new CreateSettlementCommand(spaceId, bobId, aliceId, new BigDecimal("20.00"), LocalDate.of(2026, 1, 2)));
-        adapter.create(new CreateSettlementCommand(spaceId, aliceId, bobId, new BigDecimal("5.00"), LocalDate.of(2026, 1, 3)));
-
-        List<SettlementRecord> found = adapter.findBySpaceId(spaceId);
-
-        assertThat(found).hasSize(2);
-    }
     // ─── B7 : le filtre par paire est passé du Java au SQL ─────────────────
 
     @Test

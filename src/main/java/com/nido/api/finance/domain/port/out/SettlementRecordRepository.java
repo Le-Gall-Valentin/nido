@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface SettlementRecordRepository {
-    List<SettlementRecord> findBySpaceId(UUID spaceId);
-
     /** The settlements between one pair, either direction, most recent first. */
     List<SettlementRecord> findBetweenMembers(UUID spaceId, UUID memberAId, UUID memberBId);
     SettlementRecord create(CreateSettlementCommand command);

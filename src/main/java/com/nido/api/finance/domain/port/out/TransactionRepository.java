@@ -2,7 +2,6 @@ package com.nido.api.finance.domain.port.out;
 
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.CreateTransactionCommand;
-import com.nido.api.finance.domain.model.SplitTransaction;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
 
@@ -27,12 +26,6 @@ public interface TransactionRepository {
     /** Every transaction ever recorded in the space — balances/settlements span all time, not just one month. */
     List<Transaction> findAllBySpaceId(UUID spaceId);
 
-    /**
-     * Everything a balance is folded from, and nothing else: payer, amount and shares of the
-     * transactions that actually move a balance. See {@link SplitTransaction} for why the
-     * balance is folded from the ledger every time rather than stored.
-     */
-    List<SplitTransaction> findSplitsBySpaceId(UUID spaceId);
     /**
      * {@code contributors} must already be resolved (equal split applied, custom shares
      * validated to sum to the amount) — that is the caller's job via

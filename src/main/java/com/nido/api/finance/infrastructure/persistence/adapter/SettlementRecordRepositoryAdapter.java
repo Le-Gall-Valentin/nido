@@ -29,11 +29,6 @@ public class SettlementRecordRepositoryAdapter implements SettlementRecordReposi
     }
 
     @Override
-    public List<SettlementRecord> findBySpaceId(UUID spaceId) {
-        return settlements.findBySpaceId(spaceId).stream().map(this::toDomain).toList();
-    }
-
-    @Override
     public List<SettlementRecord> findBetweenMembers(UUID spaceId, UUID memberAId, UUID memberBId) {
         return settlements.findBetweenMembers(spaceId, memberAId, memberBId).stream()
             .map(this::toDomain)
