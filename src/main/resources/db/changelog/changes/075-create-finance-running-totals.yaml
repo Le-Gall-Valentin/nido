@@ -1,0 +1,68 @@
+databaseChangeLog:
+  - changeSet:
+      id: 075-create-finance-running-totals
+      author: nido
+      comment: >
+        What a balance is read from without going through every operation ever recorded. finance_month_totals holds the
+        net of each month of a space (income minus expenses), finance_month_member_totals the movement of each member's
+        balance in it (shared operations and settlements): both sealed, both a cache of the operations and settlements,
+        rebuilt from them whenever finance_totals_states says they are missing or of an earlier version.
+        finance_opening_balances anchors the balance: its amount at the end of a day, sealed. Nothing is filled here: a
+        migration cannot read a sealed value, so each space builds its totals at its first read.
+      changes:
+        - sql:
+            sql: >
+              CREATE TABLE finance_month_totals (
+                id UUID NOT NULL,
+                space_id UUID NOT NULL,
+                month_start DATE NOT NULL,
+                net_encrypted TEXT NOT NULL,
+                CONSTRAINT pk_finance_month_totals PRIMARY KEY (id),
+                CONSTRAINT uq_finance_month_totals_space_month UNIQUE (space_id, month_start),
+                CONSTRAINT fk_finance_month_totals_space FOREIGN KEY (space_id) REFERENCES spaces (id) ON DELETE CASCADE,
+                CONSTRAINT ck_finance_month_totals_month_start CHECK (EXTRACT(DAY FROM month_start) = 1)
+              )
+        - sql:
+            sql: >
+              CREATE TABLE finance_month_member_totals (
+                id UUID NOT NULL,
+                space_id UUID NOT NULL,
+                month_start DATE NOT NULL,
+                member_id UUID NOT NULL,
+                net_encrypted TEXT NOT NULL,
+                CONSTRAINT pk_finance_month_member_totals PRIMARY KEY (id),
+                CONSTRAINT uq_finance_month_member_totals_space_month_member UNIQUE (space_id, month_start, member_id),
+                CONSTRAINT fk_finance_month_member_totals_space FOREIGN KEY (space_id) REFERENCES spaces (id) ON DELETE CASCADE,
+                CONSTRAINT fk_finance_month_member_totals_member FOREIGN KEY (member_id) REFERENCES users (id) ON DELETE CASCADE,
+                CONSTRAINT ck_finance_month_member_totals_month_start CHECK (EXTRACT(DAY FROM month_start) = 1)
+              )
+        - sql:
+            sql: CREATE INDEX idx_finance_month_member_totals_member_id ON finance_month_member_totals (member_id)
+        - sql:
+            sql: >
+              CREATE TABLE finance_totals_states (
+                space_id UUID NOT NULL,
+                version INT NOT NULL,
+                CONSTRAINT pk_finance_totals_states PRIMARY KEY (space_id),
+                CONSTRAINT fk_finance_totals_states_space FOREIGN KEY (space_id) REFERENCES spaces (id) ON DELETE CASCADE
+              )
+        - sql:
+            sql: >
+              CREATE TABLE finance_opening_balances (
+                id UUID NOT NULL,
+                space_id UUID NOT NULL,
+                amount_encrypted TEXT NOT NULL,
+                as_of DATE NOT NULL,
+                CONSTRAINT pk_finance_opening_balances PRIMARY KEY (id),
+                CONSTRAINT uq_finance_opening_balances_space UNIQUE (space_id),
+                CONSTRAINT fk_finance_opening_balances_space FOREIGN KEY (space_id) REFERENCES spaces (id) ON DELETE CASCADE
+              )
+      rollback:
+        - dropTable:
+            tableName: finance_opening_balances
+        - dropTable:
+            tableName: finance_totals_states
+        - dropTable:
+            tableName: finance_month_member_totals
+        - dropTable:
+            tableName: finance_month_totals
