@@ -13,6 +13,16 @@
     "income": "Entrées ce mois",
     "remaining_budget": "Reste à dépenser"
   },
+  "opening_balance": {
+    "title": "Solde de départ",
+    "explanation": "Le solde de votre compte à cette date, tel que votre banque l'affiche, opérations du jour comprises. Le solde de chaque mois est calculé à partir de lui.",
+    "date_label": "Date",
+    "amount_label": "Solde à cette date",
+    "amount_invalid": "Indiquez un montant, avec deux décimales au plus.",
+    "date_required": "Indiquez une date.",
+    "date_in_future": "La date ne peut pas être dans le futur.",
+    "clear": "Retirer le solde de départ"
+  },
   "breakdown": {
     "title_EXPENSE": "Répartition des dépenses",
     "title_INCOME": "Répartition des revenus",

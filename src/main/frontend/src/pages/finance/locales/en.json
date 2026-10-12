@@ -13,6 +13,16 @@
     "income": "Income this month",
     "remaining_budget": "Left to spend"
   },
+  "opening_balance": {
+    "title": "Opening balance",
+    "explanation": "Your account balance on this date, as your bank shows it, that day's transactions included. Every month's balance is computed from it.",
+    "date_label": "Date",
+    "amount_label": "Balance on that date",
+    "amount_invalid": "Enter an amount with at most two decimals.",
+    "date_required": "Enter a date.",
+    "date_in_future": "The date cannot be in the future.",
+    "clear": "Remove the opening balance"
+  },
   "breakdown": {
     "title_EXPENSE": "Spending breakdown",
     "title_INCOME": "Income breakdown",

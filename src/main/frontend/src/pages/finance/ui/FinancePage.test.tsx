@@ -435,4 +435,24 @@ describe('FinancePage', () => {
     await screen.findByRole('heading', { level: 1 })
     expect(screen.queryByLabelText('form.label_label')).toBeNull()
   })
+
+  it('lets a member set the opening balance from the balance card', async () => {
+    const setOpeningBalance = vi.fn().mockResolvedValue({ amount: -150.5, asOf: '2026-10-01' })
+    const api = fakeApi({ setOpeningBalance })
+    renderPage(api)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'stats.adjust' }))
+    fireEvent.change(await screen.findByLabelText('opening_balance.amount_label'), { target: { value: '-150.5' } })
+    fireEvent.change(screen.getByLabelText('opening_balance.date_label'), { target: { value: '2026-10-01' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    await waitFor(() => expect(setOpeningBalance).toHaveBeenCalledWith('space-1', -150.5, '2026-10-01'))
+  })
+
+  it('does not offer a viewer to adjust the balance', async () => {
+    renderPage(fakeApi(), { ...CURRENT_SPACE, myRole: 'VIEWER' })
+
+    await waitFor(() => expect(screen.getByText('stats.balance_today')).toBeDefined())
+    expect(screen.queryByRole('button', { name: 'stats.adjust' })).toBeNull()
+  })
 })
