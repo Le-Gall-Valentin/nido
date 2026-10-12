@@ -11,6 +11,8 @@ interface OpeningBalanceModalProps {
   onSave: (amount: number, asOf: string) => void
   onClear: () => void
   onClose: () => void
+  /** While a save or a removal is on its way: a second click would send it again. */
+  isSaving?: boolean
   /** Set by the caller when the backend rejected the last save or removal. */
   submitError?: string | null
 }
@@ -18,7 +20,9 @@ interface OpeningBalanceModalProps {
 /** Two decimals at most, a sign allowed: an overdraft is a balance too. */
 const AMOUNT_PATTERN = /^-?\d+(\.\d{1,2})?$/
 
-export function OpeningBalanceModal({ openingBalance, spaceTimezone, onSave, onClear, onClose, submitError = null }: OpeningBalanceModalProps) {
+export function OpeningBalanceModal({
+  openingBalance, spaceTimezone, onSave, onClear, onClose, isSaving = false, submitError = null,
+}: OpeningBalanceModalProps) {
   const { t } = useTranslation('finance')
   const today = todayIso(new Date(), spaceTimezone)
   const [asOf, setAsOf] = useState(openingBalance?.asOf ?? today)
@@ -58,13 +62,13 @@ export function OpeningBalanceModal({ openingBalance, spaceTimezone, onSave, onC
 
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
           {openingBalance ? (
-            <button type="button" onClick={onClear} className="text-sm font-semibold text-status-red">
+            <button type="button" onClick={onClear} disabled={isSaving} className="text-sm font-semibold text-status-red disabled:opacity-50">
               {t('opening_balance.clear')}
             </button>
           ) : <span />}
           <div className="flex gap-2">
             <Button type="button" onClick={onClose}>{t('form.cancel')}</Button>
-            <Button type="submit" style={CTA_BUTTON_STYLE}>{t('form.save')}</Button>
+            <Button type="submit" isLoading={isSaving} style={CTA_BUTTON_STYLE}>{t('form.save')}</Button>
           </div>
         </div>
       </form>

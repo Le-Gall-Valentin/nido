@@ -21,6 +21,7 @@
     "amount_invalid": "Indiquez un montant, avec deux décimales au plus.",
     "date_required": "Indiquez une date.",
     "date_in_future": "La date ne peut pas être dans le futur.",
+    "load_failed": "Impossible de charger le solde de départ.",
     "clear": "Retirer le solde de départ"
   },
   "breakdown": {

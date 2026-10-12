@@ -21,6 +21,7 @@
     "amount_invalid": "Enter an amount with at most two decimals.",
     "date_required": "Enter a date.",
     "date_in_future": "The date cannot be in the future.",
+    "load_failed": "Could not load the opening balance.",
     "clear": "Remove the opening balance"
   },
   "breakdown": {
