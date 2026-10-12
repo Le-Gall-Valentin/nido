@@ -13,5 +13,5 @@ public interface FinanceOpeningBalanceJpaRepository extends JpaRepository<Financ
     void deleteBySpaceId(UUID spaceId);
 
     @Query(value = "select pg_advisory_xact_lock(hashtext(:key))", nativeQuery = true)
-    void lockForSave(@Param("key") String key);
+    void lockForWrite(@Param("key") String key);
 }

@@ -3,7 +3,11 @@ package com.nido.api.finance.infrastructure.persistence.adapter;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
+import com.nido.api.finance.domain.model.CreateRecurringSeriesCommand;
 import com.nido.api.finance.domain.model.CreateSettlementCommand;
+import com.nido.api.finance.domain.model.CreateTransactionCommand;
+import com.nido.api.finance.domain.model.RecurrenceInterval;
+import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
@@ -32,6 +36,7 @@ class RunningTotalsUpkeepIT extends RunningTotalsITSupport {
 
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired FinanceTransactionJpaRepository transactionJpa;
+    @Autowired RecurringTransactionSeriesRepositoryAdapter series;
 
     @BeforeEach
     void buildFirst() {
@@ -164,6 +169,25 @@ class RunningTotalsUpkeepIT extends RunningTotalsITSupport {
         });
 
         assertThat(totals.findNetByMonth(spaceId)).isEmpty();
+    }
+
+    @Test
+    void an_edit_that_read_the_operation_before_its_series_was_deleted_writes_back_none_of_what_it_read() {
+        // Deleting a series lets its operations go on without it (recurring_series_id set to NULL). An edit that loaded
+        // the operation before must not write the old series back: it would point at a series that no longer exists.
+        RecurringTransactionSeries rent = series.create(new CreateRecurringSeriesCommand(spaceId, "Loyer", new BigDecimal("800.00"),
+            TransactionType.EXPENSE, categoryId, null, List.of(), RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 5), null), List.of());
+        Transaction january = transactions.create(new CreateTransactionCommand(spaceId, "Loyer", new BigDecimal("800.00"),
+            TransactionType.EXPENSE, categoryId, LocalDate.of(2026, 1, 5), null, List.of(), rent.id()), List.of());
+
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            transactionJpa.findById(january.id()).orElseThrow();
+            inAnotherTransaction(() -> series.delete(rent.id()));
+            transactions.update(moved(january, LocalDate.of(2026, 1, 6)), List.of());
+        });
+
+        assertThat(transactionJpa.findById(january.id()).orElseThrow().getRecurringSeriesId()).isNull();
+        assertNets(totals.findNetByMonth(spaceId), Map.of(YearMonth.of(2026, 1), "-800.00"));
     }
 
     private UpdateTransactionCommand moved(Transaction transaction, LocalDate date) {

@@ -30,8 +30,8 @@ public class OpeningBalanceRepositoryAdapter implements OpeningBalanceRepository
     @Override
     @Transactional
     public OpeningBalance save(OpeningBalance openingBalance) {
-        // One save of a space at a time: two first saves at once — a double click — would both find nothing and insert.
-        openingBalances.lockForSave("finance-opening|" + openingBalance.spaceId());
+        // Two first saves at once — a double click — would both find nothing and insert.
+        lockForWrite(openingBalance.spaceId());
         FinanceOpeningBalanceEntity e = openingBalances.findBySpaceId(openingBalance.spaceId()).orElseGet(() -> {
             FinanceOpeningBalanceEntity created = new FinanceOpeningBalanceEntity();
             created.setSpaceId(openingBalance.spaceId());
@@ -46,8 +46,15 @@ public class OpeningBalanceRepositoryAdapter implements OpeningBalanceRepository
     @Override
     @Transactional
     public void deleteBySpaceId(UUID spaceId) {
+        // A save that already read the row would otherwise update a row this just deleted.
+        lockForWrite(spaceId);
         openingBalances.deleteBySpaceId(spaceId);
         openingBalances.flush();
+    }
+
+    /** One write of a space's opening balance at a time, until the transaction ends. */
+    private void lockForWrite(UUID spaceId) {
+        openingBalances.lockForWrite("finance-opening|" + spaceId);
     }
 
     private OpeningBalance toDomain(FinanceOpeningBalanceEntity e) {
