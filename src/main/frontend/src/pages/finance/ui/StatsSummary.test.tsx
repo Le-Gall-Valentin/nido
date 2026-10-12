@@ -8,7 +8,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 const stats: FinanceStats = {
-  balance: 579.7, totalExpense: 420.3, totalIncome: 1000, remainingBudget: 1285.2, breakdown: [], budgetVsActual: [],
+  balance: 579.7, balanceAsOf: '2026-01-31', monthNet: 579.7, totalExpense: 420.3, totalIncome: 1000, remainingBudget: 1285.2, breakdown: [], budgetVsActual: [],
 }
 
 describe('StatsSummary', () => {

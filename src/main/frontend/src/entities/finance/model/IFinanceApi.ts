@@ -5,6 +5,7 @@ import type { IRecurringSeriesApi } from './IRecurringSeriesApi'
 import type { IFinanceStatsApi } from './IFinanceStatsApi'
 import type { IBalancesApi } from './IBalancesApi'
 import type { ISavingsGoalsApi } from './ISavingsGoalsApi'
+import type { IOpeningBalanceApi } from './IOpeningBalanceApi'
 
 /**
  * Port for the Finance page, composed from the per-concern sub-interfaces below.
@@ -13,4 +14,5 @@ import type { ISavingsGoalsApi } from './ISavingsGoalsApi'
  * which is injected as a whole through FinanceApiProvider.
  */
 export interface IFinanceApi extends
-  ICategoriesApi, IBudgetsApi, ITransactionsApi, IRecurringSeriesApi, IFinanceStatsApi, IBalancesApi, ISavingsGoalsApi {}
+  ICategoriesApi, IBudgetsApi, ITransactionsApi, IRecurringSeriesApi, IFinanceStatsApi, IBalancesApi, ISavingsGoalsApi,
+  IOpeningBalanceApi {}

@@ -6,7 +6,7 @@ import type { IFinanceApi } from './IFinanceApi'
 import { FinanceApiProvider } from './FinanceApiProvider'
 import {
   useCategories, useBudgets, useTransactions, useRecurringSeries, useFinanceStats, useProjection,
-  useBalances, useSettlementsBetween, useSavingsGoals,
+  useBalances, useSettlementsBetween, useSavingsGoals, useOpeningBalance,
 } from './useFinanceQueries'
 
 function wrapper(api: IFinanceApi) {
@@ -25,6 +25,7 @@ function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
     listTransactions: vi.fn(), createTransaction: vi.fn(), updateTransaction: vi.fn(), deleteTransaction: vi.fn(),
     listRecurringSeries: vi.fn(), createRecurringSeries: vi.fn(), updateRecurringSeries: vi.fn(), deleteRecurringSeries: vi.fn(),
     getStats: vi.fn(), getProjection: vi.fn(),
+    getOpeningBalance: vi.fn(), setOpeningBalance: vi.fn(), clearOpeningBalance: vi.fn(),
     getBalances: vi.fn(), settleDebt: vi.fn(), listSettlements: vi.fn(),
     listSavingsGoals: vi.fn(), createSavingsGoal: vi.fn(), updateSavingsGoal: vi.fn(), deleteSavingsGoal: vi.fn(), addSavingsContribution: vi.fn(),
     ...overrides,
@@ -83,7 +84,7 @@ describe('useRecurringSeries', () => {
 
 describe('useFinanceStats', () => {
   it('fetches stats for the given space and month', async () => {
-    const stats = { balance: 100, totalExpense: 50, totalIncome: 150, remainingBudget: 350, breakdown: [], budgetVsActual: [] }
+    const stats = { balance: 100, balanceAsOf: '2026-01-31', monthNet: 100, totalExpense: 50, totalIncome: 150, remainingBudget: 350, breakdown: [], budgetVsActual: [] }
     const api = fakeApi({ getStats: vi.fn().mockResolvedValue(stats) })
 
     const { result } = renderHook(() => useFinanceStats('space-1', '2026-01'), { wrapper: wrapper(api) })
@@ -94,7 +95,7 @@ describe('useFinanceStats', () => {
 
 describe('useProjection', () => {
   it('fetches the projection for the given space and month', async () => {
-    const projection = { actualBalanceSoFar: -50, upcoming: [], projectedEndOfMonthBalance: -850 }
+    const projection = { recordedEndOfMonthBalance: -50, upcoming: [], projectedEndOfMonthBalance: -850 }
     const api = fakeApi({ getProjection: vi.fn().mockResolvedValue(projection) })
 
     const { result } = renderHook(() => useProjection('space-1', '2026-01'), { wrapper: wrapper(api) })
@@ -136,5 +137,16 @@ describe('useSavingsGoals', () => {
 
     await waitFor(() => expect(result.current.data).toEqual(goals))
     expect(api.listSavingsGoals).toHaveBeenCalledWith('space-1')
+  })
+})
+
+describe('useOpeningBalance', () => {
+  it('fetches the opening balance of the space', async () => {
+    const openingBalance = { amount: 1200, asOf: '2026-09-30' }
+    const api = fakeApi({ getOpeningBalance: vi.fn().mockResolvedValue(openingBalance) })
+    const { result } = renderHook(() => useOpeningBalance('space-1'), { wrapper: wrapper(api) })
+
+    await waitFor(() => expect(result.current.data).toEqual(openingBalance))
+    expect(api.getOpeningBalance).toHaveBeenCalledWith('space-1')
   })
 })

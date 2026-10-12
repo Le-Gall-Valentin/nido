@@ -9,6 +9,7 @@ import {
   useCreateTransaction, useUpdateTransaction, useDeleteTransaction,
   useCreateRecurringSeries, useUpdateRecurringSeries, useDeleteRecurringSeries,
   useSettleDebt, useCreateSavingsGoal, useUpdateSavingsGoal, useDeleteSavingsGoal, useAddSavingsContribution,
+  useSetOpeningBalance, useClearOpeningBalance,
 } from './useFinanceMutations'
 
 function makeQueryClient() {
@@ -30,6 +31,7 @@ function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
     listTransactions: vi.fn(), createTransaction: vi.fn(), updateTransaction: vi.fn(), deleteTransaction: vi.fn(),
     listRecurringSeries: vi.fn(), createRecurringSeries: vi.fn(), updateRecurringSeries: vi.fn(), deleteRecurringSeries: vi.fn(),
     getStats: vi.fn(), getProjection: vi.fn(),
+    getOpeningBalance: vi.fn(), setOpeningBalance: vi.fn(), clearOpeningBalance: vi.fn(),
     getBalances: vi.fn(), settleDebt: vi.fn(), listSettlements: vi.fn(),
     listSavingsGoals: vi.fn(), createSavingsGoal: vi.fn(), updateSavingsGoal: vi.fn(), deleteSavingsGoal: vi.fn(), addSavingsContribution: vi.fn(),
     ...overrides,
@@ -246,5 +248,29 @@ describe('useAddSavingsContribution', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(api.addSavingsContribution).toHaveBeenCalledWith('space-1', 'g1', 'alice', 100, '2026-01-05')
+  })
+})
+
+describe('useSetOpeningBalance', () => {
+  it('calls setOpeningBalance with the amount and the date', async () => {
+    const api = fakeApi({ setOpeningBalance: vi.fn().mockResolvedValue({ amount: -80, asOf: '2026-10-01' }) })
+    const { result } = renderHook(() => useSetOpeningBalance('space-1'), { wrapper: wrapper(api, makeQueryClient()) })
+
+    act(() => result.current.mutate({ amount: -80, asOf: '2026-10-01' }))
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(api.setOpeningBalance).toHaveBeenCalledWith('space-1', -80, '2026-10-01')
+  })
+})
+
+describe('useClearOpeningBalance', () => {
+  it('calls clearOpeningBalance', async () => {
+    const api = fakeApi({ clearOpeningBalance: vi.fn().mockResolvedValue(undefined) })
+    const { result } = renderHook(() => useClearOpeningBalance('space-1'), { wrapper: wrapper(api, makeQueryClient()) })
+
+    act(() => result.current.mutate())
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(api.clearOpeningBalance).toHaveBeenCalledWith('space-1')
   })
 })

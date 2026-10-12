@@ -7,6 +7,7 @@ import type { IRecurringSeriesApi } from './IRecurringSeriesApi'
 import type { IFinanceStatsApi } from './IFinanceStatsApi'
 import type { IBalancesApi } from './IBalancesApi'
 import type { ISavingsGoalsApi } from './ISavingsGoalsApi'
+import type { IOpeningBalanceApi } from './IOpeningBalanceApi'
 
 export function categoriesKey(spaceId: string) {
   return ['finance', spaceId, 'categories'] as const
@@ -34,6 +35,10 @@ export function settlementsBetweenKey(spaceId: string, memberAId: string, member
 }
 export function savingsGoalsKey(spaceId: string) {
   return ['finance', spaceId, 'savings-goals'] as const
+}
+
+export function openingBalanceKey(spaceId: string) {
+  return ['finance', spaceId, 'opening-balance'] as const
 }
 
 export function useCategories(spaceId: string | undefined) {
@@ -113,6 +118,15 @@ export function useSavingsGoals(spaceId: string | undefined) {
   return useQuery({
     queryKey: savingsGoalsKey(spaceId ?? ''),
     queryFn: () => api.listSavingsGoals(spaceId as string),
+    enabled: !!spaceId,
+  })
+}
+
+export function useOpeningBalance(spaceId: string | undefined) {
+  const api: IOpeningBalanceApi = useFinanceApi()
+  return useQuery({
+    queryKey: openingBalanceKey(spaceId ?? ''),
+    queryFn: () => api.getOpeningBalance(spaceId as string),
     enabled: !!spaceId,
   })
 }

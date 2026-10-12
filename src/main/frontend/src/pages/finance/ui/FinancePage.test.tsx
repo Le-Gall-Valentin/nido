@@ -34,10 +34,11 @@ function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
     listBudgets: vi.fn().mockResolvedValue([]), setBudget: vi.fn(), deleteBudget: vi.fn(),
     listTransactions: vi.fn().mockResolvedValue([]), createTransaction: vi.fn(), updateTransaction: vi.fn(), deleteTransaction: vi.fn(),
     listRecurringSeries: vi.fn().mockResolvedValue([]), createRecurringSeries: vi.fn(), updateRecurringSeries: vi.fn(), deleteRecurringSeries: vi.fn(),
-    getStats: vi.fn().mockResolvedValue({ balance: 0, totalExpense: 0, totalIncome: 0, remainingBudget: 0, breakdown: [], budgetVsActual: [] }),
-    getProjection: vi.fn().mockResolvedValue({ actualBalanceSoFar: 0, upcoming: [], projectedEndOfMonthBalance: 0 }),
+    getStats: vi.fn().mockResolvedValue({ balance: 0, balanceAsOf: '2026-10-11', monthNet: 0, totalExpense: 0, totalIncome: 0, remainingBudget: 0, breakdown: [], budgetVsActual: [] }),
+    getProjection: vi.fn().mockResolvedValue({ recordedEndOfMonthBalance: 0, upcoming: [], projectedEndOfMonthBalance: 0 }),
     getBalances: vi.fn().mockResolvedValue({ netByMember: [], suggestedTransfers: [] }), settleDebt: vi.fn(),
     listSettlements: vi.fn().mockResolvedValue([]),
+    getOpeningBalance: vi.fn().mockResolvedValue(null), setOpeningBalance: vi.fn(), clearOpeningBalance: vi.fn(),
     listSavingsGoals: vi.fn().mockResolvedValue([]), createSavingsGoal: vi.fn(), updateSavingsGoal: vi.fn(), deleteSavingsGoal: vi.fn(), addSavingsContribution: vi.fn(),
     ...overrides,
   }
