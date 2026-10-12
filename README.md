@@ -126,6 +126,11 @@ To get the page back, put that value right, in this order of preference:
    - a task, a recipe, a transaction or a savings goal only takes what belongs to it: subtasks, ingredients, steps
      and menu entries, shares, contributions.
 
+After restoring or deleting a finance row by hand — an operation, a share, a settlement, a category with its
+operations — also run `DELETE FROM finance_totals_states;`. Nido keeps each month's totals to read balances quickly,
+and a change made outside Nido does not update them: that statement makes every space rebuild them from its operations
+at its next read.
+
 The same goes for the start that updates to 0.14.0 or to 0.16.0: if it stops on `Could not seal row … of
 <table>.<column>` or `Could not re-encrypt row … of <table>.<column>`, put that row right the same way, then start
 again — the work already done is kept. For `two_factor_methods.secret`, delete the row: its owner turns the
