@@ -39,6 +39,7 @@ public class FinanceExceptionHandler {
             case FinanceException.TargetAmountBelowContributed ignored -> new FinanceErrorResponse(422, "The target amount cannot be lowered below what has already been contributed.");
             case FinanceException.CategoryTypeMismatch ignored -> new FinanceErrorResponse(422, "The category's type does not match this operation's type.");
             case FinanceException.BudgetRequiresExpenseCategory ignored -> new FinanceErrorResponse(422, "Only expense categories can be budgeted.");
+            case FinanceException.OpeningBalanceInFuture ignored -> new FinanceErrorResponse(400, "The opening balance cannot be dated after today.");
             case FinanceException.RecurrenceBacklogTooLarge ex -> new FinanceErrorResponse(400,
                 "This recurring series would generate " + ex.pendingOccurrences()
                     + " past occurrences at once (maximum " + ex.maximum()

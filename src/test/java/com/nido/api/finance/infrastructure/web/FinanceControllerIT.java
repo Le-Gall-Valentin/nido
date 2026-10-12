@@ -422,6 +422,34 @@ class FinanceControllerIT {
             .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void a_member_sets_the_opening_balance_and_a_viewer_only_reads_it() throws Exception {
+        String route = "/api/spaces/" + spaceId + "/finance/opening-balance";
+        String body = "{\"amount\":-150.50,\"asOf\":\"" + LocalDate.now().minusDays(1) + "\"}";
+
+        mockMvc.perform(get(route).cookie(accessTokenFor(bobId))).andExpect(status().isNoContent());
+        mockMvc.perform(put(route).cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.amount").value(-150.50));
+        mockMvc.perform(get(route).cookie(accessTokenFor(bobId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.amount").value(-150.50));
+        mockMvc.perform(put(route).cookie(accessTokenFor(bobId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(delete(route).cookie(accessTokenFor(bobId))).andExpect(status().isForbidden());
+        mockMvc.perform(delete(route).cookie(accessTokenFor(aliceId))).andExpect(status().isNoContent());
+        mockMvc.perform(get(route).cookie(accessTokenFor(aliceId))).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void an_opening_balance_dated_after_today_is_refused() throws Exception {
+        mockMvc.perform(put("/api/spaces/" + spaceId + "/finance/opening-balance").cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"amount\":100.00,\"asOf\":\"" + LocalDate.now().plusDays(2) + "\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("OpeningBalanceInFuture"));
+    }
+
     /** The seeded set has exactly one INCOME category ("Revenu"); the rest are expenses. */
     private String incomeCategoryId() throws Exception {
         String categories = mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/categories").cookie(accessTokenFor(aliceId)))

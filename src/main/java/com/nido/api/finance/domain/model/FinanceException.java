@@ -10,7 +10,7 @@ public abstract sealed class FinanceException extends RuntimeException
             FinanceException.MemberNotInSpace, FinanceException.SettlementExceedsDebt,
             FinanceException.TargetAmountBelowContributed, FinanceException.CategoryTypeMismatch,
             FinanceException.BudgetRequiresExpenseCategory,
-            FinanceException.RecurrenceBacklogTooLarge {
+            FinanceException.RecurrenceBacklogTooLarge, FinanceException.OpeningBalanceInFuture {
 
     private FinanceException(String message) { super(message); }
 
@@ -115,5 +115,10 @@ public abstract sealed class FinanceException extends RuntimeException
         public long pendingOccurrences() { return pendingOccurrences; }
 
         public int maximum() { return maximum; }
+    }
+
+    /** Thrown when an opening balance is dated after today on the household's calendar: no bank shows that balance yet. */
+    public static final class OpeningBalanceInFuture extends FinanceException {
+        public OpeningBalanceInFuture() { super("The opening balance cannot be dated after today"); }
     }
 }
