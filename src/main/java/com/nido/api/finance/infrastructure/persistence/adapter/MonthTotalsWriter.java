@@ -38,6 +38,11 @@ import java.util.UUID;
  * <p>Both run under the space's totals lock. A transaction takes it after any other finance lock it holds — the
  * materialization of recurring operations, a settlement between two members — and never before one, so no two
  * transactions wait on each other.
+ *
+ * <p>The refresh reads the month once it holds the lock, and sees what another writer committed meanwhile only because
+ * each statement reads what is committed when it starts: READ COMMITTED, PostgreSQL's default and this application's.
+ * Under REPEATABLE READ or SERIALIZABLE it would read the month as it was when its transaction began, and the totals
+ * would drift.
  */
 @Component
 public class MonthTotalsWriter {
