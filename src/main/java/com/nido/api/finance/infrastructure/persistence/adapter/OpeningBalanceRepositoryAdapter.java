@@ -30,6 +30,8 @@ public class OpeningBalanceRepositoryAdapter implements OpeningBalanceRepository
     @Override
     @Transactional
     public OpeningBalance save(OpeningBalance openingBalance) {
+        // One save of a space at a time: two first saves at once — a double click — would both find nothing and insert.
+        openingBalances.lockForSave("finance-opening|" + openingBalance.spaceId());
         FinanceOpeningBalanceEntity e = openingBalances.findBySpaceId(openingBalance.spaceId()).orElseGet(() -> {
             FinanceOpeningBalanceEntity created = new FinanceOpeningBalanceEntity();
             created.setSpaceId(openingBalance.spaceId());
