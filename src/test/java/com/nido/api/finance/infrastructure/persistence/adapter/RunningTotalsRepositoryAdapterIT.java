@@ -15,6 +15,8 @@ import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransac
 import com.nido.api.infrastructure.sealing.SealedValueRejected;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -34,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class RunningTotalsRepositoryAdapterIT extends RunningTotalsITSupport {
 
     @Autowired FinanceTransactionJpaRepository transactionJpa;
+    @Autowired PlatformTransactionManager transactionManager;
 
     @Test
     void the_first_read_builds_the_totals_of_everything_recorded_before_them() {
@@ -156,5 +159,22 @@ class RunningTotalsRepositoryAdapterIT extends RunningTotalsITSupport {
         }
         assertThat(jdbc.queryForObject("SELECT count(*) FROM finance_month_totals WHERE space_id = ?", Integer.class, spaceId))
             .isEqualTo(2);
+    }
+
+    @Test
+    void a_read_of_built_totals_takes_no_lock() {
+        // Every finance read once queued behind its space's lock for work that did not exist (B8). Only the first read
+        // of a space, the one that builds its totals, may take the totals lock.
+        create("Courses", "50.00", TransactionType.EXPENSE, LocalDate.of(2026, 1, 15), null, List.of());
+        totals.findNetByMonth(spaceId);
+
+        Integer locks = new TransactionTemplate(transactionManager).execute(status -> {
+            totals.findNetByMonth(spaceId);
+            totals.findNetByMember(spaceId);
+            return jdbc.queryForObject("select count(*) from pg_locks where locktype = 'advisory' and pid = pg_backend_pid()",
+                Integer.class);
+        });
+
+        assertThat(locks).isZero();
     }
 }

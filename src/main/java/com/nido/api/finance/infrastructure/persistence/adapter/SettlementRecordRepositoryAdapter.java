@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,10 +19,13 @@ public class SettlementRecordRepositoryAdapter implements SettlementRecordReposi
 
     private final FinanceSettlementRecordJpaRepository settlements;
     private final SpaceSealers sealers;
+    private final MonthTotalsWriter monthTotalsWriter;
 
-    public SettlementRecordRepositoryAdapter(FinanceSettlementRecordJpaRepository settlements, SpaceSealers sealers) {
+    public SettlementRecordRepositoryAdapter(FinanceSettlementRecordJpaRepository settlements, SpaceSealers sealers,
+                                             MonthTotalsWriter monthTotalsWriter) {
         this.settlements = settlements;
         this.sealers = sealers;
+        this.monthTotalsWriter = monthTotalsWriter;
     }
 
     @Override
@@ -56,6 +60,7 @@ public class SettlementRecordRepositoryAdapter implements SettlementRecordReposi
             command.amount()));
         e.setSettledDate(command.date());
         FinanceSettlementRecordEntity saved = settlements.saveAndFlush(e);
+        monthTotalsWriter.refresh(saved.getSpaceId(), List.of(YearMonth.from(saved.getSettledDate())));
         return toDomain(saved);
     }
 

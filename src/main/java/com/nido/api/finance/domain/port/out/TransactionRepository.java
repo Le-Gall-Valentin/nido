@@ -6,6 +6,7 @@ import com.nido.api.finance.domain.model.SplitTransaction;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -41,4 +42,10 @@ public interface TransactionRepository {
     Transaction create(CreateTransactionCommand command, List<Contribution> contributors);
     Transaction update(UpdateTransactionCommand command, List<Contribution> contributors);
     void delete(UUID transactionId);
+
+    /**
+     * The operations of the space dated within the range, added with their sign: incomes up, expenses down. Only the
+     * amounts are opened. The balance reads it for the part of a month up to a day.
+     */
+    BigDecimal sumRecordedBetween(UUID spaceId, LocalDate from, LocalDate to);
 }

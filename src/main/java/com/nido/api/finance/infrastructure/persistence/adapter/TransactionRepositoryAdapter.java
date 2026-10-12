@@ -5,6 +5,7 @@ import com.nido.api.finance.domain.model.CreateTransactionCommand;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SplitTransaction;
 import com.nido.api.finance.domain.model.Transaction;
+import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionContributorEntity;
@@ -12,12 +13,14 @@ import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransaction
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransactionContributorJpaRepository;
 import com.nido.api.finance.infrastructure.persistence.repository.ContributorShareRow;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransactionJpaRepository;
+import com.nido.api.finance.infrastructure.persistence.repository.LedgerRow;
 import com.nido.api.finance.infrastructure.persistence.repository.SplitTransactionRow;
 import com.nido.api.infrastructure.sealing.SpaceSealer;
 import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Collection;
@@ -33,13 +36,15 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     private final FinanceTransactionJpaRepository transactions;
     private final FinanceTransactionContributorJpaRepository contributors;
     private final SpaceSealers sealers;
+    private final MonthTotalsWriter monthTotalsWriter;
 
     public TransactionRepositoryAdapter(
             FinanceTransactionJpaRepository transactions, FinanceTransactionContributorJpaRepository contributors,
-            SpaceSealers sealers) {
+            SpaceSealers sealers, MonthTotalsWriter monthTotalsWriter) {
         this.transactions = transactions;
         this.contributors = contributors;
         this.sealers = sealers;
+        this.monthTotalsWriter = monthTotalsWriter;
     }
 
     @Override
@@ -105,6 +110,7 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         e.setRecurringSeriesId(command.recurringSeriesId());
         FinanceTransactionEntity saved = transactions.saveAndFlush(e);
         List<FinanceTransactionContributorEntity> savedContributors = saveContributors(saved.getId(), sealer, resolvedContributors);
+        monthTotalsWriter.refresh(saved.getSpaceId(), List.of(YearMonth.from(saved.getDate())));
         return toDomain(saved, savedContributors);
     }
 
@@ -114,6 +120,8 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         FinanceTransactionEntity e = transactions.findById(command.transactionId()).orElseThrow(FinanceException.TransactionNotFound::new);
         // The key of the space the row is stored in, whatever the command says.
         SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
+        // Read before the date changes: an operation moved to another month leaves the first one.
+        YearMonth previousMonth = YearMonth.from(e.getDate());
         e.setLabelEncrypted(sealer.seal(FinanceTransactionEntity.LABEL, e.getId(), command.label()));
         e.setAmountEncrypted(SealedAmounts.seal(sealer, FinanceTransactionEntity.AMOUNT, e.getId(), command.amount()));
         e.setType(command.type());
@@ -124,13 +132,30 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         contributors.deleteByTransactionId(e.getId());
         contributors.flush();
         List<FinanceTransactionContributorEntity> savedContributors = saveContributors(e.getId(), sealer, resolvedContributors);
+        monthTotalsWriter.refresh(e.getSpaceId(), List.of(previousMonth, YearMonth.from(saved.getDate())));
         return toDomain(saved, savedContributors);
     }
 
     @Override
+    @Transactional
     public void delete(UUID transactionId) {
-        transactions.deleteById(transactionId);
-        transactions.flush();
+        // A missing row is silently ignored, as deleteById did.
+        transactions.findById(transactionId).ifPresent(e -> {
+            transactions.delete(e);
+            transactions.flush();
+            monthTotalsWriter.refresh(e.getSpaceId(), List.of(YearMonth.from(e.getDate())));
+        });
+    }
+
+    @Override
+    public BigDecimal sumRecordedBetween(UUID spaceId, LocalDate from, LocalDate to) {
+        SpaceSealer sealer = sealers.forSpace(spaceId);
+        BigDecimal sum = BigDecimal.ZERO;
+        for (LedgerRow row : transactions.findLedgerRows(spaceId, from, to)) {
+            BigDecimal amount = SealedAmounts.open(sealer, FinanceTransactionEntity.AMOUNT, row.transactionId(), row.amountEncrypted());
+            sum = sum.add(row.type() == TransactionType.INCOME ? amount : amount.negate());
+        }
+        return sum;
     }
 
     private List<FinanceTransactionContributorEntity> saveContributors(UUID transactionId, SpaceSealer sealer, List<Contribution> resolved) {
