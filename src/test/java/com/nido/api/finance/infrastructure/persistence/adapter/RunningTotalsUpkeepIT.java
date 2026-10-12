@@ -7,8 +7,12 @@ import com.nido.api.finance.domain.model.CreateSettlementCommand;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
+import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransactionJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -16,6 +20,7 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -24,6 +29,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @IntegrationTestConfig
 class RunningTotalsUpkeepIT extends RunningTotalsITSupport {
+
+    @Autowired PlatformTransactionManager transactionManager;
+    @Autowired FinanceTransactionJpaRepository transactionJpa;
 
     @BeforeEach
     void buildFirst() {
@@ -128,5 +136,50 @@ class RunningTotalsUpkeepIT extends RunningTotalsITSupport {
 
         assertThat(transactions.sumRecordedBetween(spaceId, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 10)))
             .isEqualByComparingTo("70.00");
+    }
+
+    @Test
+    void an_edit_that_read_the_operation_before_another_moved_it_does_not_leave_it_counted_twice() {
+        Transaction groceries = create("Courses", "30.00", TransactionType.EXPENSE, LocalDate.of(2026, 1, 15), null, List.of());
+
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            // Loaded in January, the way UpdateTransactionHandler loads it before calling the adapter…
+            transactionJpa.findById(groceries.id()).orElseThrow();
+            // …while another request moves it to February and commits.
+            inAnotherTransaction(() -> transactions.update(moved(groceries, LocalDate.of(2026, 2, 10)), List.of()));
+            transactions.update(moved(groceries, LocalDate.of(2026, 3, 5)), List.of());
+        });
+
+        assertNets(totals.findNetByMonth(spaceId), Map.of(YearMonth.of(2026, 3), "-30.00"));
+    }
+
+    @Test
+    void a_deletion_that_read_the_operation_before_another_moved_it_leaves_no_month_counting_it() {
+        Transaction groceries = create("Courses", "30.00", TransactionType.EXPENSE, LocalDate.of(2026, 1, 15), null, List.of());
+
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            transactionJpa.findById(groceries.id()).orElseThrow();
+            inAnotherTransaction(() -> transactions.update(moved(groceries, LocalDate.of(2026, 2, 10)), List.of()));
+            transactions.delete(groceries.id());
+        });
+
+        assertThat(totals.findNetByMonth(spaceId)).isEmpty();
+    }
+
+    private UpdateTransactionCommand moved(Transaction transaction, LocalDate date) {
+        return new UpdateTransactionCommand(transaction.id(), spaceId, transaction.label(), transaction.amount(), transaction.type(),
+            categoryId, date, null, List.of());
+    }
+
+    /** Runs a write in a transaction of its own, on another thread, and waits for it to commit. */
+    private static void inAnotherTransaction(Runnable write) {
+        ExecutorService other = Executors.newSingleThreadExecutor();
+        try {
+            other.submit(write).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new IllegalStateException(e);
+        } finally {
+            other.shutdownNow();
+        }
     }
 }

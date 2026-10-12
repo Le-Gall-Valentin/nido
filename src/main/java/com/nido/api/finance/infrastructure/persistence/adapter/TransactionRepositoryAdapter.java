@@ -91,8 +91,9 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         FinanceTransactionEntity e = transactions.findById(command.transactionId()).orElseThrow(FinanceException.TransactionNotFound::new);
         // The key of the space the row is stored in, whatever the command says.
         SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
-        // Read before the date changes: an operation moved to another month leaves the first one.
-        YearMonth previousMonth = YearMonth.from(e.getDate());
+        // The month the row holds now, under its lock: the entity was loaded before, maybe before another request moved
+        // the operation, and an operation moved to another month leaves the one it was really in.
+        YearMonth previousMonth = lockStoredMonth(e.getId()).orElseThrow(FinanceException.TransactionNotFound::new);
         e.setLabelEncrypted(sealer.seal(FinanceTransactionEntity.LABEL, e.getId(), command.label()));
         e.setAmountEncrypted(SealedAmounts.seal(sealer, FinanceTransactionEntity.AMOUNT, e.getId(), command.amount()));
         e.setType(command.type());
@@ -110,12 +111,17 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     @Override
     @Transactional
     public void delete(UUID transactionId) {
-        // A missing row is silently ignored, as deleteById did.
-        transactions.findById(transactionId).ifPresent(e -> {
+        // The month the row holds now, under its lock — see update. A missing row is silently ignored, as deleteById did.
+        lockStoredMonth(transactionId).ifPresent(month -> {
+            FinanceTransactionEntity e = transactions.findById(transactionId).orElseThrow();
             transactions.delete(e);
             transactions.flush();
-            monthTotalsWriter.refresh(e.getSpaceId(), List.of(YearMonth.from(e.getDate())));
+            monthTotalsWriter.refresh(e.getSpaceId(), List.of(month));
         });
+    }
+
+    private Optional<YearMonth> lockStoredMonth(UUID transactionId) {
+        return transactions.lockStoredDate(transactionId).map(LocalDate::parse).map(YearMonth::from);
     }
 
     @Override
