@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Target } from 'lucide-react'
 import type { Projection } from '@/entities/finance'
-import { formatAmount } from '@/shared/lib'
+import { formatAmount, formatIsoDate, formatSignedAmount } from '@/shared/lib'
 
 interface ProjectionSectionProps {
   projection?: Projection
@@ -25,7 +25,7 @@ export function ProjectionSection({ projection, isLaterMonth = false }: Projecti
         <ul className="mt-2 space-y-1 text-sm text-fg-3">
           {projection?.upcoming.map((occurrence) => (
             <li key={`${occurrence.seriesId}-${occurrence.date}`}>
-              {occurrence.date} — {occurrence.label} ({occurrence.type === 'EXPENSE' ? '-' : '+'}{formatAmount(occurrence.amount)})
+              {formatIsoDate(occurrence.date)} — {occurrence.label} ({formatSignedAmount(occurrence.type === 'EXPENSE' ? -occurrence.amount : occurrence.amount)})
             </li>
           ))}
         </ul>

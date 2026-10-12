@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ProjectionSection } from './ProjectionSection'
 import type { Projection } from '@/entities/finance'
+import { formatSignedAmount } from '@/shared/lib'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, opts?: Record<string, unknown>) => (opts ? `${k}:${JSON.stringify(opts)}` : k) }),
@@ -18,6 +19,22 @@ describe('ProjectionSection', () => {
 
     expect(screen.getByText(/-850,00/)).toBeDefined()
     expect(screen.getByText(/Loyer/)).toBeDefined()
+  })
+
+  it('writes each occurrence with its day in full and its amount signed as the rest of the page signs one', () => {
+    const projection: Projection = {
+      recordedEndOfMonthBalance: 0,
+      upcoming: [
+        { seriesId: 's1', label: 'Loyer', amount: 800, type: 'EXPENSE', date: '2026-01-28' },
+        { seriesId: 's2', label: 'Salaire', amount: 2000, type: 'INCOME', date: '2026-01-30' },
+      ],
+      projectedEndOfMonthBalance: 1200,
+    }
+    render(<ProjectionSection projection={projection} />)
+
+    const [rent, salary] = screen.getAllByRole('listitem').map((item) => item.textContent)
+    expect(rent).toBe(`28 janvier 2026 — Loyer (${formatSignedAmount(-800)})`)
+    expect(salary).toBe(`30 janvier 2026 — Salaire (${formatSignedAmount(2000)})`)
   })
 
   it('does not render an upcoming list when there is nothing scheduled', () => {
