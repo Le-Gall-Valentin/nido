@@ -17,7 +17,7 @@ public class GetBalancesHandler implements GetBalancesUseCase {
         this.runningTotals = runningTotals;
     }
 
-    /** Not read-only: the first read of a space builds its month totals. */
+    /** Not read-only: see RunningTotalsRepository, whose first read of a space builds its totals. */
     @Override
     @Transactional
     public Balances getBalances(SpaceMembership caller) {

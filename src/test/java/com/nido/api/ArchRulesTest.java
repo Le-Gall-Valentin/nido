@@ -1,18 +1,26 @@
 package com.nido.api;
 
 import com.nido.api.authentication.domain.port.out.RefreshTokenConfigPort;
+import com.nido.api.finance.application.service.RunningBalanceReader;
+import com.nido.api.finance.domain.port.out.RunningTotalsRepository;
 import com.nido.api.notifications.domain.model.Notification;
 import com.nido.api.notifications.domain.model.NotificationKind;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaAnnotation;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
+import com.tngtech.archunit.lang.ArchCondition;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import jakarta.persistence.Entity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URISyntaxException;
 import java.nio.file.Path;
@@ -22,6 +30,7 @@ import java.util.stream.Stream;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 
 class ArchRulesTest {
 
@@ -53,6 +62,37 @@ class ArchRulesTest {
             .filter(source -> "file".equals(source.getUri().getScheme()))
             .map(source -> Path.of(source.getUri()).startsWith(TEST_OUTPUT))
             .orElse(false);
+    }
+
+    // -------------------------------------------------------------------------
+    // Finance: the month totals are built at their first read
+    // -------------------------------------------------------------------------
+
+    /**
+     * A space's month totals are built by their first read (RunningTotalsRepository): a read-only transaction makes the
+     * connection read-only too, and that first read would fail — after a deploy, on a space nobody has opened yet, never
+     * in a test that wrote before it read.
+     */
+    @Test
+    void the_month_totals_are_never_read_from_a_read_only_transaction() {
+        DescribedPredicate<JavaAnnotation<?>> readOnly = DescribedPredicate.describe("@Transactional(readOnly = true)",
+            annotation -> annotation.getRawType().isEquivalentTo(Transactional.class)
+                && Boolean.TRUE.equals(annotation.get("readOnly").orElse(false)));
+        ArchCondition<JavaMethod> notReadTheMonthTotals = new ArchCondition<>("not read the month totals") {
+            @Override
+            public void check(JavaMethod method, ConditionEvents events) {
+                method.getMethodCallsFromSelf().stream()
+                    .filter(call -> call.getTargetOwner().isAssignableTo(RunningTotalsRepository.class)
+                        || call.getTargetOwner().isAssignableTo(RunningBalanceReader.class))
+                    .forEach(call -> events.add(SimpleConditionEvent.violated(method,
+                        method.getFullName() + " calls " + call.getTarget().getFullName())));
+            }
+        };
+        methods()
+            .that().areAnnotatedWith(readOnly)
+            .should(notReadTheMonthTotals)
+            .because("their first read builds them, which a read-only transaction refuses")
+            .check(classes);
     }
 
     // -------------------------------------------------------------------------

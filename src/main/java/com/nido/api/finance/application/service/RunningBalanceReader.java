@@ -11,7 +11,8 @@ import java.util.UUID;
 
 /**
  * The balance of a space at any day: its month totals, anchored on its opening balance when it has one. Reads a dozen
- * figures a year, and one month of amounts more when there is an opening balance — never the whole history.
+ * figures a year, and one month of amounts more when there is an opening balance — never the whole history. Call it
+ * from a read-write transaction only: see RunningTotalsRepository.
  */
 @ApplicationService
 public class RunningBalanceReader {
