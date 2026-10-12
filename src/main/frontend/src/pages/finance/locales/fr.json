@@ -4,7 +4,32 @@
   "loading": "Chargement…",
   "error": { "load_failed": "Impossible de charger les finances." },
   "type": { "EXPENSE": "Dépense", "INCOME": "Revenu" },
-  "stats": { "balance": "Solde", "spent": "Dépensé ce mois", "income": "Entrées ce mois", "remaining_budget": "Reste à dépenser" },
+  "stats": {
+    "balance_today": "Solde aujourd'hui",
+    "balance_end_of_month": "Solde fin de mois",
+    "month_net": "{{amount}} ce mois",
+    "adjust": "Ajuster le solde",
+    "spent": "Dépensé ce mois",
+    "income": "Entrées ce mois",
+    "remaining_budget": "Reste à dépenser"
+  },
+  "opening_balance": {
+    "title": "Solde de départ",
+    "explanation": "Le solde de votre compte à la fin de ce jour, tel que votre relevé l'indique, opérations du jour comprises. Le solde de chaque mois est calculé à partir de lui. Hier est proposé : le solde d'un jour terminé est le même sur tous les relevés.",
+    "date_label": "Date",
+    "amount_label": "Solde à la fin de ce jour",
+    "amount_invalid": "Indiquez un montant.",
+    "date_required": "Indiquez une date.",
+    "date_in_future": "La date ne peut pas être dans le futur.",
+    "load_failed": "Impossible de charger le solde de départ.",
+    "amount_too_precise": "Le montant ne peut pas avoir plus de deux décimales.",
+    "amount_too_large": "Le montant ne peut pas dépasser douze chiffres avant la virgule.",
+    "clear_title": "Retirer le solde de départ ?",
+    "clear_message": "Le solde de chaque mois sera calculé sans lui, à partir de zéro. Pour le remettre, il faudra retrouver le solde de votre banque à une date.",
+    "clear_confirm": "Retirer",
+    "clear": "Retirer le solde de départ",
+    "current": "Actuellement : {{amount}} à la fin du {{date}}"
+  },
   "breakdown": {
     "title_EXPENSE": "Répartition des dépenses",
     "title_INCOME": "Répartition des revenus",
@@ -103,7 +128,8 @@
   },
   "projection": {
     "title": "Projection de fin de mois",
-    "end_of_month_balance": "Solde estimé en fin de mois : {{amount}}"
+    "end_of_month_balance": "Solde estimé en fin de mois : {{amount}}",
+    "includes_earlier_months": "Compte aussi les opérations récurrentes des mois d'ici là ; seules celles de ce mois sont listées."
   },
   "form": {
     "create_title": "Nouvelle opération",

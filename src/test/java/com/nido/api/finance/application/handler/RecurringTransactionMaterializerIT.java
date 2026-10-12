@@ -34,6 +34,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.IntStream;
 
+import static com.nido.api.finance.FinanceTestReads.allTransactions;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -133,10 +134,17 @@ class RecurringTransactionMaterializerIT {
      * Advisory locks taken with {@code pg_advisory_xact_lock} are held until the transaction
      * ends, so counting them from inside the same transaction shows exactly what the read took.
      */
-    private int advisoryLocksHeldByThisTransaction() {
-        Integer held = jdbcTemplate.queryForObject(
-            "select count(*) from pg_locks where locktype = 'advisory' and pid = pg_backend_pid()",
-            Integer.class);
+    /**
+     * The space's materialization lock, recognised by its key. A read may also take the space's totals lock — when it
+     * creates an operation, or builds the totals of a space read for the first time — and that one is not what these
+     * tests are about.
+     */
+    private int materializationLocksHeldByThisTransaction() {
+        Integer held = jdbcTemplate.queryForObject("""
+            select count(*) from pg_locks
+            where locktype = 'advisory' and pid = pg_backend_pid() and objsubid = 1
+              and ((classid::bigint << 32) | objid::bigint) = hashtext(?)::bigint
+            """, Integer.class, "finance-materialize|" + spaceId);
         return held == null ? 0 : held;
     }
 
@@ -156,11 +164,11 @@ class RecurringTransactionMaterializerIT {
         // A month before the anchor: the series exists but owes nothing yet.
         statsHandler.getStats(YearMonth.of(2026, 2), caller, LocalDate.of(2026, 2, 10));
 
-        assertThat(advisoryLocksHeldByThisTransaction())
+        assertThat(materializationLocksHeldByThisTransaction())
             .as("a read that has nothing to materialize must not serialize every other reader "
                 + "of the same space behind an advisory lock")
             .isZero();
-        assertThat(transactionRepository.findAllBySpaceId(spaceId)).isEmpty();
+        assertThat(allTransactions(transactionRepository, spaceId)).isEmpty();
     }
 
     @Test
@@ -176,8 +184,8 @@ class RecurringTransactionMaterializerIT {
 
         statsHandler.getStats(YearMonth.of(2026, 1), caller, LocalDate.of(2026, 1, 10));
 
-        assertThat(advisoryLocksHeldByThisTransaction()).isEqualTo(1);
-        assertThat(transactionRepository.findAllBySpaceId(spaceId))
+        assertThat(materializationLocksHeldByThisTransaction()).isEqualTo(1);
+        assertThat(allTransactions(transactionRepository, spaceId))
             .extracting(Transaction::date).containsExactly(anchor);
     }
 }

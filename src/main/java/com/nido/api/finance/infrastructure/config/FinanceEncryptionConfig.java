@@ -2,6 +2,9 @@ package com.nido.api.finance.infrastructure.config;
 
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceBudgetEntity;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceCategoryEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceMonthMemberTotalEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceMonthTotalEntity;
+import com.nido.api.finance.infrastructure.persistence.entity.FinanceOpeningBalanceEntity;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceRecurringSeriesContributorEntity;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceRecurringSeriesEntity;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceSavingsContributionEntity;
@@ -22,6 +25,7 @@ public class FinanceEncryptionConfig {
         return SealedColumns.of(FinanceCategoryEntity.LABEL, FinanceTransactionEntity.LABEL, FinanceTransactionEntity.AMOUNT,
             FinanceTransactionContributorEntity.SHARE_AMOUNT, FinanceRecurringSeriesEntity.LABEL, FinanceRecurringSeriesEntity.AMOUNT,
             FinanceRecurringSeriesContributorEntity.SHARE_AMOUNT, FinanceBudgetEntity.MONTHLY_LIMIT, FinanceSavingsGoalEntity.NAME,
-            FinanceSavingsGoalEntity.TARGET_AMOUNT, FinanceSavingsContributionEntity.AMOUNT, FinanceSettlementRecordEntity.AMOUNT);
+            FinanceSavingsGoalEntity.TARGET_AMOUNT, FinanceSavingsContributionEntity.AMOUNT, FinanceSettlementRecordEntity.AMOUNT,
+            FinanceMonthTotalEntity.NET, FinanceMonthMemberTotalEntity.NET, FinanceOpeningBalanceEntity.AMOUNT);
     }
 }

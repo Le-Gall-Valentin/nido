@@ -3,21 +3,23 @@ package com.nido.api.finance.infrastructure.persistence.adapter;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.CreateTransactionCommand;
 import com.nido.api.finance.domain.model.FinanceException;
-import com.nido.api.finance.domain.model.SplitTransaction;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionContributorEntity;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceTransactionEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransactionContributorJpaRepository;
-import com.nido.api.finance.infrastructure.persistence.repository.ContributorShareRow;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceTransactionJpaRepository;
-import com.nido.api.finance.infrastructure.persistence.repository.SplitTransactionRow;
+import com.nido.api.finance.infrastructure.persistence.repository.LedgerRow;
 import com.nido.api.infrastructure.sealing.SpaceSealer;
 import com.nido.api.infrastructure.sealing.SpaceSealers;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Collection;
@@ -33,13 +35,17 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     private final FinanceTransactionJpaRepository transactions;
     private final FinanceTransactionContributorJpaRepository contributors;
     private final SpaceSealers sealers;
+    private final MonthTotalsWriter monthTotalsWriter;
+    private final EntityManager entityManager;
 
     public TransactionRepositoryAdapter(
             FinanceTransactionJpaRepository transactions, FinanceTransactionContributorJpaRepository contributors,
-            SpaceSealers sealers) {
+            SpaceSealers sealers, MonthTotalsWriter monthTotalsWriter, EntityManager entityManager) {
         this.transactions = transactions;
         this.contributors = contributors;
         this.sealers = sealers;
+        this.monthTotalsWriter = monthTotalsWriter;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -60,37 +66,6 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     }
 
     @Override
-    public List<SplitTransaction> findSplitsBySpaceId(UUID spaceId) {
-        List<SplitTransactionRow> rows = transactions.findSplitRowsBySpaceId(spaceId);
-        if (rows.isEmpty()) {
-            return List.of();
-        }
-        // One sealer for the space, and only the amounts pass through it: the labels stay
-        // ciphertext in the database, unread.
-        SpaceSealer sealer = sealers.forSpace(spaceId);
-        Map<UUID, List<ContributorShareRow>> sharesByTransaction = contributors
-            .findShareRowsByTransactionIdIn(rows.stream().map(SplitTransactionRow::transactionId).toList())
-            .stream()
-            .collect(Collectors.groupingBy(ContributorShareRow::transactionId));
-        return rows.stream()
-            .map(row -> new SplitTransaction(
-                row.payerId(),
-                SealedAmounts.open(sealer, FinanceTransactionEntity.AMOUNT, row.transactionId(), row.amountEncrypted()),
-                sharesByTransaction.getOrDefault(row.transactionId(), List.of()).stream()
-                    .map(share -> new Contribution(
-                        share.userId(),
-                        SealedAmounts.open(sealer, FinanceTransactionContributorEntity.SHARE_AMOUNT, share.id(), share.shareAmountEncrypted())))
-                    .toList(),
-                row.type()))
-            .toList();
-    }
-
-    @Override
-    public List<Transaction> findAllBySpaceId(UUID spaceId) {
-        return toDomainList(transactions.findBySpaceId(spaceId));
-    }
-
-    @Override
     @Transactional
     public Transaction create(CreateTransactionCommand command, List<Contribution> resolvedContributors) {
         SpaceSealer sealer = sealers.forSpace(command.spaceId());
@@ -105,15 +80,18 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         e.setRecurringSeriesId(command.recurringSeriesId());
         FinanceTransactionEntity saved = transactions.saveAndFlush(e);
         List<FinanceTransactionContributorEntity> savedContributors = saveContributors(saved.getId(), sealer, resolvedContributors);
+        monthTotalsWriter.refresh(saved.getSpaceId(), List.of(YearMonth.from(saved.getDate())));
         return toDomain(saved, savedContributors);
     }
 
     @Override
     @Transactional
     public Transaction update(UpdateTransactionCommand command, List<Contribution> resolvedContributors) {
-        FinanceTransactionEntity e = transactions.findById(command.transactionId()).orElseThrow(FinanceException.TransactionNotFound::new);
+        FinanceTransactionEntity e = lockedAsStored(command.transactionId()).orElseThrow(FinanceException.TransactionNotFound::new);
         // The key of the space the row is stored in, whatever the command says.
         SpaceSealer sealer = sealers.forSpace(e.getSpaceId());
+        // An operation moved to another month leaves the one it is stored in.
+        YearMonth previousMonth = YearMonth.from(e.getDate());
         e.setLabelEncrypted(sealer.seal(FinanceTransactionEntity.LABEL, e.getId(), command.label()));
         e.setAmountEncrypted(SealedAmounts.seal(sealer, FinanceTransactionEntity.AMOUNT, e.getId(), command.amount()));
         e.setType(command.type());
@@ -124,13 +102,47 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         contributors.deleteByTransactionId(e.getId());
         contributors.flush();
         List<FinanceTransactionContributorEntity> savedContributors = saveContributors(e.getId(), sealer, resolvedContributors);
+        monthTotalsWriter.refresh(e.getSpaceId(), List.of(previousMonth, YearMonth.from(saved.getDate())));
         return toDomain(saved, savedContributors);
     }
 
     @Override
+    @Transactional
     public void delete(UUID transactionId) {
-        transactions.deleteById(transactionId);
-        transactions.flush();
+        // A missing row is silently ignored, as deleteById did.
+        lockedAsStored(transactionId).ifPresent(e -> {
+            YearMonth month = YearMonth.from(e.getDate());
+            transactions.delete(e);
+            transactions.flush();
+            monthTotalsWriter.refresh(e.getSpaceId(), List.of(month));
+        });
+    }
+
+    /**
+     * The operation as its row stands now, locked until the transaction ends. The entity a handler loaded before may be
+     * out of date — another request may have moved the operation, or deleted its series, since — and writing it back
+     * would undo that: every column is read again under the lock.
+     */
+    private Optional<FinanceTransactionEntity> lockedAsStored(UUID transactionId) {
+        return transactions.findById(transactionId).flatMap(e -> {
+            try {
+                entityManager.refresh(e, LockModeType.PESSIMISTIC_WRITE);
+                return Optional.of(e);
+            } catch (EntityNotFoundException deletedMeanwhile) {
+                return Optional.empty();
+            }
+        });
+    }
+
+    @Override
+    public BigDecimal sumRecordedBetween(UUID spaceId, LocalDate from, LocalDate to) {
+        SpaceSealer sealer = sealers.forSpace(spaceId);
+        BigDecimal sum = BigDecimal.ZERO;
+        for (LedgerRow row : transactions.findLedgerRows(spaceId, from, to)) {
+            BigDecimal amount = SealedAmounts.open(sealer, FinanceTransactionEntity.AMOUNT, row.transactionId(), row.amountEncrypted());
+            sum = sum.add(row.type().signed(amount));
+        }
+        return sum;
     }
 
     private List<FinanceTransactionContributorEntity> saveContributors(UUID transactionId, SpaceSealer sealer, List<Contribution> resolved) {

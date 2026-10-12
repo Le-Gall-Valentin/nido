@@ -77,7 +77,12 @@ export interface BudgetLine {
 }
 
 export interface FinanceStats {
+  /** Carried over from every month before: today's for the current month, the month end's for any other. */
   balance: number
+  /** ISO date (YYYY-MM-DD) the balance is at. */
+  balanceAsOf: string
+  /** The month's own result: its income minus its expenses. */
+  monthNet: number
   totalExpense: number
   totalIncome: number
   remainingBudget: number
@@ -94,9 +99,17 @@ export interface ProjectedOccurrence {
 }
 
 export interface Projection {
-  actualBalanceSoFar: number
+  /** Everything recorded up to the month end, carried over from the months before. */
+  recordedEndOfMonthBalance: number
   upcoming: ProjectedOccurrence[]
   projectedEndOfMonthBalance: number
+}
+
+/** The account's balance at the end of a day, as the bank shows it: every balance of the space is computed from it. */
+export interface OpeningBalance {
+  amount: number
+  /** ISO date (YYYY-MM-DD). */
+  asOf: string
 }
 
 export interface MemberBalance {

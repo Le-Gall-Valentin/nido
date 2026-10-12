@@ -17,6 +17,15 @@ export function Dialog({ open, onClose, title, children, maxWidth = 'max-w-md', 
   const { t } = useTranslation()
   const panelRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
+
+  // Before the focus trap: effects run in their order, and the trap moves the focus into the dialog — read after it,
+  // the element to give the focus back to would be one of the dialog's own, gone once it closes.
+  useEffect(() => {
+    if (!open) return
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    return () => previouslyFocused?.focus()
+  }, [open])
+
   useFocusTrap(panelRef, open)
 
   useEffect(() => {
@@ -27,12 +36,6 @@ export function Dialog({ open, onClose, title, children, maxWidth = 'max-w-md', 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, onClose])
-
-  useEffect(() => {
-    if (!open) return
-    const previouslyFocused = document.activeElement as HTMLElement | null
-    return () => previouslyFocused?.focus()
-  }, [open])
 
   if (!open) return null
 

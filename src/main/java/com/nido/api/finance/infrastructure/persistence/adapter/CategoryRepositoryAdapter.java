@@ -73,6 +73,12 @@ public class CategoryRepositoryAdapter implements CategoryRepository {
     }
 
     @Override
+    @Transactional
+    public void lockForDeletion(UUID categoryId) {
+        categories.lockForDeletion(categoryId);
+    }
+
+    @Override
     public void delete(UUID categoryId) {
         categories.deleteById(categoryId);
         categories.flush();

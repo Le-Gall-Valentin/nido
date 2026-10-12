@@ -171,7 +171,7 @@ describe('financeApi', () => {
   })
 
   it('getStats fetches stats for the requested month', async () => {
-    const stats = { balance: 100, totalExpense: 50, totalIncome: 150, remainingBudget: 350, breakdown: [], budgetVsActual: [] }
+    const stats = { balance: 100, balanceAsOf: '2026-01-31', monthNet: 100, totalExpense: 50, totalIncome: 150, remainingBudget: 350, breakdown: [], budgetVsActual: [] }
     vi.mocked(client.get).mockResolvedValueOnce({ data: stats })
 
     const result = await financeApi.getStats('space-1', '2026-01')
@@ -181,13 +181,45 @@ describe('financeApi', () => {
   })
 
   it('getProjection fetches the projection for the requested month', async () => {
-    const projection = { actualBalanceSoFar: -50, upcoming: [], projectedEndOfMonthBalance: -850 }
+    const projection = { recordedEndOfMonthBalance: -50, upcoming: [], projectedEndOfMonthBalance: -850 }
     vi.mocked(client.get).mockResolvedValueOnce({ data: projection })
 
     const result = await financeApi.getProjection('space-1', '2026-01')
 
     expect(client.get).toHaveBeenCalledWith('/spaces/space-1/finance/projection', { params: { month: '2026-01' } })
     expect(result).toEqual(projection)
+  })
+
+  it('getOpeningBalance returns the opening balance of the space', async () => {
+    vi.mocked(client.get).mockResolvedValueOnce({ data: { amount: -150.5, asOf: '2026-10-01' }, status: 200 })
+
+    const result = await financeApi.getOpeningBalance('space-1')
+
+    expect(client.get).toHaveBeenCalledWith('/spaces/space-1/finance/opening-balance')
+    expect(result).toEqual({ amount: -150.5, asOf: '2026-10-01' })
+  })
+
+  it('getOpeningBalance returns null when the space has none', async () => {
+    vi.mocked(client.get).mockResolvedValueOnce({ data: '', status: 204 })
+
+    expect(await financeApi.getOpeningBalance('space-1')).toBeNull()
+  })
+
+  it('setOpeningBalance puts the amount and the date', async () => {
+    vi.mocked(client.put).mockResolvedValueOnce({ data: { amount: 1200, asOf: '2026-09-30' } })
+
+    const result = await financeApi.setOpeningBalance('space-1', 1200, '2026-09-30')
+
+    expect(client.put).toHaveBeenCalledWith('/spaces/space-1/finance/opening-balance', { amount: 1200, asOf: '2026-09-30' })
+    expect(result).toEqual({ amount: 1200, asOf: '2026-09-30' })
+  })
+
+  it('clearOpeningBalance deletes it', async () => {
+    vi.mocked(client.delete).mockResolvedValueOnce({ data: undefined })
+
+    await financeApi.clearOpeningBalance('space-1')
+
+    expect(client.delete).toHaveBeenCalledWith('/spaces/space-1/finance/opening-balance')
   })
 
   it('getBalances fetches the balances for a space', async () => {

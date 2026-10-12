@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { parseAmount } from '@/shared/lib'
 import type { SavingsGoal } from '@/entities/finance'
 import { SavingsGoalAppearancePicker } from './SavingsGoalAppearancePicker'
 import { SAVINGS_GOAL_COLORS, SAVINGS_GOAL_GLYPHS } from '../lib/savingsGoalAppearance'
@@ -46,7 +47,7 @@ export function SavingsGoalFormModal({ mode, goal, onSubmit, onCancel, submitErr
       setError(t('savings.target_amount_required'))
       return
     }
-    if (!/^\d+(\.\d{1,2})?$/.test(targetAmount.trim())) {
+    if ('problem' in parseAmount(targetAmount)) {
       setError(t('savings.target_amount_too_precise'))
       return
     }

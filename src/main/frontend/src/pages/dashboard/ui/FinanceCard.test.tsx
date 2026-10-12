@@ -1,6 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
-import { formatAmount } from '@/shared/lib'
+import { formatAmount, formatSignedAmount } from '@/shared/lib'
 import type { FinanceCard as FinanceCardData } from '@/entities/dashboard'
 import { FinanceCard } from './FinanceCard'
 import { renderWithActions } from '../test/renderWithActions'
@@ -29,11 +29,11 @@ const CARD: FinanceCardData = {
 }
 
 describe('FinanceCard', () => {
-  it('shows the month\'s four figures, the balance signed', () => {
+  it('shows the month\'s four figures, the balance as it stands, with no sign of a gain', () => {
     renderWithActions(<FinanceCard card={CARD} />)
 
     expect(screen.getByText('Septembre')).toBeDefined()
-    expect(screen.getByText(plain(`+${formatAmount(1240)}`))).toBeDefined()
+    expect(screen.getByText(plain(formatAmount(1240)))).toBeDefined()
     expect(screen.getByText(plain(formatAmount(1860)))).toBeDefined()
     expect(screen.getByText(plain(formatAmount(3100)))).toBeDefined()
     expect(screen.getByText(plain(formatAmount(340)))).toBeDefined()
@@ -57,7 +57,7 @@ describe('FinanceCard', () => {
   it('signs what comes in and what goes out', () => {
     renderWithActions(<FinanceCard card={CARD} />)
 
-    expect(screen.getByText(plain(`−${formatAmount(13.49)}`))).toBeDefined()
+    expect(screen.getByText(plain(formatSignedAmount(-13.49)))).toBeDefined()
     expect(screen.getByText(plain(`+${formatAmount(2100)}`)).className).toContain('text-status-green')
   })
 

@@ -2,7 +2,9 @@ import { isAxiosError } from 'axios'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
 import type { IFinanceApi } from '../model/IFinanceApi'
-import type { Balances, Budget, Category, FinanceStats, Projection, RecurringSeries, SavingsGoal, SettlementRecord, Transaction } from '../model/types'
+import type {
+  Balances, Budget, Category, FinanceStats, OpeningBalance, Projection, RecurringSeries, SavingsGoal, SettlementRecord, Transaction,
+} from '../model/types'
 
 function handleError(error: unknown): never {
   if (isAxiosError(error)) {
@@ -132,6 +134,27 @@ export const financeApi: IFinanceApi = {
     try {
       const res = await client.get<Projection>(`/spaces/${spaceId}/finance/projection`, { params: { month } })
       return res.data
+    } catch (error) { handleError(error) }
+  },
+
+  async getOpeningBalance(spaceId) {
+    try {
+      const res = await client.get<OpeningBalance | ''>(`/spaces/${spaceId}/finance/opening-balance`)
+      // 204: the space has no opening balance.
+      return res.status === 204 || !res.data ? null : res.data
+    } catch (error) { handleError(error) }
+  },
+
+  async setOpeningBalance(spaceId, amount, asOf) {
+    try {
+      const res = await client.put<OpeningBalance>(`/spaces/${spaceId}/finance/opening-balance`, { amount, asOf })
+      return res.data
+    } catch (error) { handleError(error) }
+  },
+
+  async clearOpeningBalance(spaceId) {
+    try {
+      await client.delete(`/spaces/${spaceId}/finance/opening-balance`)
     } catch (error) { handleError(error) }
   },
 

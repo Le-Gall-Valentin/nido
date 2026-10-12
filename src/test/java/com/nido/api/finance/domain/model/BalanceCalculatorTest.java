@@ -4,7 +4,9 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,6 +21,11 @@ class BalanceCalculatorTest {
         return new SplitTransaction(payer, amount, contributors, TransactionType.EXPENSE);
     }
 
+    /** The whole history folded at once: what the month folds, added up, must agree with. */
+    private static Balances calculate(List<SplitTransaction> transactions, List<SettlementRecord> settlements) {
+        return BalanceCalculator.fromNets(BalanceCalculator.fold(transactions, settlements));
+    }
+
     @Test
     void a_transaction_with_no_contributors_does_not_affect_any_balance() {
         // The repository filters these out before they reach here, so this covers the
@@ -26,7 +33,7 @@ class BalanceCalculatorTest {
         // into a figure nobody can eyeball.
         SplitTransaction personalExpense = sharedExpense(ALICE, new BigDecimal("50.00"), List.of());
 
-        Balances balances = BalanceCalculator.calculate(List.of(personalExpense), List.of());
+        Balances balances = calculate(List.of(personalExpense), List.of());
 
         assertThat(balances.netByMember()).isEmpty();
     }
@@ -36,7 +43,7 @@ class BalanceCalculatorTest {
         SplitTransaction dinner = sharedExpense(ALICE, new BigDecimal("40.00"),
             List.of(new Contribution(ALICE, new BigDecimal("20.00")), new Contribution(BOB, new BigDecimal("20.00"))));
 
-        Balances balances = BalanceCalculator.calculate(List.of(dinner), List.of());
+        Balances balances = calculate(List.of(dinner), List.of());
 
         assertThat(balances.netByMember()).containsExactlyInAnyOrder(
             new MemberBalance(ALICE, new BigDecimal("20.00")), new MemberBalance(BOB, new BigDecimal("-20.00")));
@@ -50,7 +57,7 @@ class BalanceCalculatorTest {
             new Contribution(BOB, new BigDecimal("30.00")),
             new Contribution(CARL, new BigDecimal("20.00"))));
 
-        Balances balances = BalanceCalculator.calculate(List.of(rent), List.of());
+        Balances balances = calculate(List.of(rent), List.of());
 
         assertThat(balances.netByMember()).containsExactlyInAnyOrder(
             new MemberBalance(ALICE, new BigDecimal("50.00")),
@@ -65,7 +72,7 @@ class BalanceCalculatorTest {
         SettlementRecord settlement = new SettlementRecord(UUID.randomUUID(), UUID.randomUUID(), BOB, ALICE,
             new BigDecimal("20.00"), LocalDate.of(2026, 1, 2));
 
-        Balances balances = BalanceCalculator.calculate(List.of(dinner), List.of(settlement));
+        Balances balances = calculate(List.of(dinner), List.of(settlement));
 
         assertThat(balances.netByMember()).containsExactlyInAnyOrder(
             new MemberBalance(ALICE, BigDecimal.ZERO.setScale(2)), new MemberBalance(BOB, BigDecimal.ZERO.setScale(2)));
@@ -80,7 +87,7 @@ class BalanceCalculatorTest {
             new Contribution(BOB, new BigDecimal("30.00")),
             new Contribution(CARL, new BigDecimal("30.00"))));
 
-        Balances balances = BalanceCalculator.calculate(List.of(outing), List.of());
+        Balances balances = calculate(List.of(outing), List.of());
 
         assertThat(balances.suggestedTransfers()).containsExactlyInAnyOrder(
             new SuggestedTransfer(BOB, ALICE, new BigDecimal("30.00")),
@@ -101,7 +108,7 @@ class BalanceCalculatorTest {
             List.of(new Contribution(ALICE, new BigDecimal("150.00")),
                     new Contribution(BOB, new BigDecimal("150.00"))));
 
-        Balances balances = BalanceCalculator.calculate(List.of(refund), List.of());
+        Balances balances = calculate(List.of(refund), List.of());
 
         assertThat(balances.netByMember()).containsExactlyInAnyOrder(
             new MemberBalance(ALICE, new BigDecimal("-150.00")),
@@ -115,7 +122,7 @@ class BalanceCalculatorTest {
         SplitTransaction salary = sharedIncome(ALICE, new BigDecimal("2000.00"),
             List.of(new Contribution(ALICE, new BigDecimal("2000.00"))));
 
-        Balances balances = BalanceCalculator.calculate(List.of(salary), List.of());
+        Balances balances = calculate(List.of(salary), List.of());
 
         assertThat(balances.netByMember()).containsExactly(
             new MemberBalance(ALICE, BigDecimal.ZERO.setScale(2)));
@@ -133,7 +140,7 @@ class BalanceCalculatorTest {
             List.of(new Contribution(ALICE, new BigDecimal("50.00")),
                     new Contribution(BOB, new BigDecimal("50.00"))));
 
-        Balances balances = BalanceCalculator.calculate(List.of(expense, income), List.of());
+        Balances balances = calculate(List.of(expense, income), List.of());
 
         assertThat(balances.netByMember()).containsExactlyInAnyOrder(
             new MemberBalance(ALICE, BigDecimal.ZERO.setScale(2)),
@@ -149,10 +156,45 @@ class BalanceCalculatorTest {
         SettlementRecord alicePaysBob = new SettlementRecord(UUID.randomUUID(), UUID.randomUUID(), ALICE, BOB,
             new BigDecimal("150.00"), LocalDate.of(2026, 1, 2));
 
-        Balances balances = BalanceCalculator.calculate(List.of(refund), List.of(alicePaysBob));
+        Balances balances = calculate(List.of(refund), List.of(alicePaysBob));
 
         assertThat(balances.netByMember()).containsExactlyInAnyOrder(
             new MemberBalance(ALICE, BigDecimal.ZERO.setScale(2)),
             new MemberBalance(BOB, BigDecimal.ZERO.setScale(2)));
+    }
+
+    @Test
+    void the_monthly_folds_add_up_to_the_fold_of_the_whole_history() {
+        SplitTransaction january = sharedExpense(ALICE, new BigDecimal("40.00"),
+            List.of(new Contribution(ALICE, new BigDecimal("20.00")), new Contribution(BOB, new BigDecimal("20.00"))));
+        SplitTransaction february = new SplitTransaction(BOB, new BigDecimal("300.00"), List.of(
+            new Contribution(ALICE, new BigDecimal("100.00")), new Contribution(BOB, new BigDecimal("100.00")),
+            new Contribution(CARL, new BigDecimal("100.00"))), TransactionType.INCOME);
+        SettlementRecord march = new SettlementRecord(UUID.randomUUID(), UUID.randomUUID(), BOB, ALICE,
+            new BigDecimal("5.00"), LocalDate.of(2026, 3, 2));
+
+        Map<UUID, BigDecimal> summed = new HashMap<>();
+        List.of(BalanceCalculator.fold(List.of(january), List.of()), BalanceCalculator.fold(List.of(february), List.of()),
+                BalanceCalculator.fold(List.of(), List.of(march)))
+            .forEach(month -> month.forEach((member, net) -> summed.merge(member, net, BigDecimal::add)));
+
+        assertThat(BalanceCalculator.fromNets(summed).netByMember())
+            .containsExactlyInAnyOrderElementsOf(calculate(List.of(january, february), List.of(march)).netByMember());
+    }
+
+    @Test
+    void a_member_whose_balance_comes_back_to_zero_is_still_listed() {
+        // The balances list a member at zero as settled: dropping the entry would make them vanish from the list.
+        SplitTransaction dinner = sharedExpense(ALICE, new BigDecimal("40.00"),
+            List.of(new Contribution(ALICE, new BigDecimal("20.00")), new Contribution(BOB, new BigDecimal("20.00"))));
+        SettlementRecord settled = new SettlementRecord(UUID.randomUUID(), UUID.randomUUID(), BOB, ALICE,
+            new BigDecimal("20.00"), LocalDate.of(2026, 1, 2));
+
+        Map<UUID, BigDecimal> nets = BalanceCalculator.fold(List.of(dinner), List.of(settled));
+
+        assertThat(nets).containsOnlyKeys(ALICE, BOB);
+        assertThat(BalanceCalculator.fromNets(nets).netByMember()).containsExactlyInAnyOrder(
+            new MemberBalance(ALICE, new BigDecimal("0.00")), new MemberBalance(BOB, new BigDecimal("0.00")));
+        assertThat(BalanceCalculator.fromNets(nets).suggestedTransfers()).isEmpty();
     }
 }

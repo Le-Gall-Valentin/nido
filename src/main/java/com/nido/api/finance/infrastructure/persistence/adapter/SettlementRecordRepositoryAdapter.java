@@ -5,11 +5,13 @@ import com.nido.api.finance.domain.model.SettlementRecord;
 import com.nido.api.finance.domain.port.out.SettlementRecordRepository;
 import com.nido.api.finance.infrastructure.persistence.entity.FinanceSettlementRecordEntity;
 import com.nido.api.finance.infrastructure.persistence.repository.FinanceSettlementRecordJpaRepository;
+import com.nido.api.infrastructure.sealing.SpaceSealer;
 import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,15 +20,13 @@ public class SettlementRecordRepositoryAdapter implements SettlementRecordReposi
 
     private final FinanceSettlementRecordJpaRepository settlements;
     private final SpaceSealers sealers;
+    private final MonthTotalsWriter monthTotalsWriter;
 
-    public SettlementRecordRepositoryAdapter(FinanceSettlementRecordJpaRepository settlements, SpaceSealers sealers) {
+    public SettlementRecordRepositoryAdapter(FinanceSettlementRecordJpaRepository settlements, SpaceSealers sealers,
+                                             MonthTotalsWriter monthTotalsWriter) {
         this.settlements = settlements;
         this.sealers = sealers;
-    }
-
-    @Override
-    public List<SettlementRecord> findBySpaceId(UUID spaceId) {
-        return settlements.findBySpaceId(spaceId).stream().map(this::toDomain).toList();
+        this.monthTotalsWriter = monthTotalsWriter;
     }
 
     @Override
@@ -56,11 +56,17 @@ public class SettlementRecordRepositoryAdapter implements SettlementRecordReposi
             command.amount()));
         e.setSettledDate(command.date());
         FinanceSettlementRecordEntity saved = settlements.saveAndFlush(e);
+        monthTotalsWriter.refresh(saved.getSpaceId(), List.of(YearMonth.from(saved.getSettledDate())));
         return toDomain(saved);
     }
 
     private SettlementRecord toDomain(FinanceSettlementRecordEntity e) {
-        BigDecimal amount = SealedAmounts.open(sealers.forSpace(e.getSpaceId()), FinanceSettlementRecordEntity.AMOUNT, e.getId(), e.getAmountEncrypted());
+        return opened(sealers.forSpace(e.getSpaceId()), e);
+    }
+
+    /** A stored settlement, its amount opened with the key of its space: the one place that does it. */
+    static SettlementRecord opened(SpaceSealer sealer, FinanceSettlementRecordEntity e) {
+        BigDecimal amount = SealedAmounts.open(sealer, FinanceSettlementRecordEntity.AMOUNT, e.getId(), e.getAmountEncrypted());
         return new SettlementRecord(e.getId(), e.getSpaceId(), e.getFromUserId(), e.getToUserId(), amount, e.getSettledDate());
     }
 }

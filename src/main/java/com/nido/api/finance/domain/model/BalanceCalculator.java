@@ -8,23 +8,26 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Computes each member's net balance for a space (positive = is owed money,
- * negative = owes money) from every shared transaction — expense or income,
- * folded in opposite directions — and every recorded
- * settlement — folded from the ledger on every call, never stored; see
- * {@link SplitTransaction} for why, then proposes the smallest set of transfers that would bring
- * every member back to zero — a classic greedy largest-creditor /
- * largest-debtor match, repeated until every net is settled.
+ * Computes each member's net balance for a space (positive = is owed money, negative = owes money) from its shared
+ * transactions — expense or income, folded in opposite directions — and its settlements, then proposes the smallest set
+ * of transfers that would bring every member back to zero: a classic greedy largest-creditor / largest-debtor match,
+ * repeated until every net is settled.
+ *
+ * <p>{@link #fold} is additive: the nets of several months, added up, are the net of all of them. That is what lets
+ * MonthTotals keep a month's fold, and the balances read a dozen of them a year instead of every operation.
  */
 public final class BalanceCalculator {
 
     private BalanceCalculator() {}
 
-    public static Balances calculate(List<SplitTransaction> transactions, List<SettlementRecord> settlements) {
+    /**
+     * Each member's net over these transactions and settlements, unrounded. Every member they touch has an entry, even
+     * one that comes back to zero: the balances list that member as settled.
+     */
+    public static Map<UUID, BigDecimal> fold(List<SplitTransaction> transactions, List<SettlementRecord> settlements) {
         Map<UUID, BigDecimal> net = new LinkedHashMap<>();
         for (SplitTransaction t : transactions) {
-            // The repository already filters these out, so this is belt and braces — but a
-            // wrong filter would otherwise fold nonsense into a figure nobody can eyeball.
+            // An operation nobody shares moves no member's balance; the space's net counts it, not this fold.
             if (t.contributors().isEmpty() || t.payerId() == null) {
                 continue;
             }
@@ -43,8 +46,13 @@ public final class BalanceCalculator {
             net.merge(s.fromMemberId(), s.amount(), BigDecimal::add);
             net.merge(s.toMemberId(), s.amount().negate(), BigDecimal::add);
         }
-        net.replaceAll((memberId, amount) -> amount.setScale(2, java.math.RoundingMode.HALF_UP));
+        return net;
+    }
 
+    /** Rounds each member's net to the cent and proposes the transfers that settle them. */
+    public static Balances fromNets(Map<UUID, BigDecimal> nets) {
+        Map<UUID, BigDecimal> net = new LinkedHashMap<>();
+        nets.forEach((memberId, amount) -> net.put(memberId, amount.setScale(2, java.math.RoundingMode.HALF_UP)));
         List<MemberBalance> netByMember = net.entrySet().stream()
             .map(e -> new MemberBalance(e.getKey(), e.getValue())).toList();
         return new Balances(netByMember, settleDebts(net));

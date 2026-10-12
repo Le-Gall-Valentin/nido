@@ -29,6 +29,7 @@ import org.springframework.web.context.WebApplicationContext;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Date;
 import java.util.UUID;
 
@@ -420,6 +421,160 @@ class FinanceControllerIT {
                 .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Vacances\",\"targetAmount\":2000.999,\"color\":\"#5c7a58\",\"glyph\":\"🎯\"}"))
             .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void a_member_sets_the_opening_balance_and_a_viewer_only_reads_it() throws Exception {
+        String route = "/api/spaces/" + spaceId + "/finance/opening-balance";
+        String body = "{\"amount\":-150.50,\"asOf\":\"" + LocalDate.now().minusDays(1) + "\"}";
+
+        mockMvc.perform(get(route).cookie(accessTokenFor(bobId))).andExpect(status().isNoContent());
+        mockMvc.perform(put(route).cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.amount").value(-150.50));
+        mockMvc.perform(get(route).cookie(accessTokenFor(bobId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.amount").value(-150.50));
+        mockMvc.perform(put(route).cookie(accessTokenFor(bobId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isForbidden());
+        mockMvc.perform(delete(route).cookie(accessTokenFor(bobId))).andExpect(status().isForbidden());
+        mockMvc.perform(delete(route).cookie(accessTokenFor(aliceId))).andExpect(status().isNoContent());
+        mockMvc.perform(get(route).cookie(accessTokenFor(aliceId))).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void an_opening_balance_dated_after_today_is_refused() throws Exception {
+        mockMvc.perform(put("/api/spaces/" + spaceId + "/finance/opening-balance").cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"amount\":100.00,\"asOf\":\"" + LocalDate.now().plusDays(2) + "\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("OpeningBalanceInFuture"));
+    }
+
+    private void record(String type, String amount, LocalDate date) throws Exception {
+        String body = "{\"label\":\"Op\",\"amount\":" + amount + ",\"type\":\"" + type + "\",\"categoryId\":\""
+            + ("INCOME".equals(type) ? incomeCategoryId() : firstCategoryId()) + "\",\"date\":\"" + date + "\"}";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions stats(YearMonth month) throws Exception {
+        return mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/stats?month=" + month).cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void the_balance_carries_over_from_one_month_to_the_next() throws Exception {
+        YearMonth now = YearMonth.now();
+        record("INCOME", "2000.00", now.minusMonths(2).atDay(5));
+        record("EXPENSE", "300.00", now.minusMonths(1).atDay(10));
+
+        stats(now.minusMonths(1))
+            .andExpect(jsonPath("$.balance").value(1700.00))
+            .andExpect(jsonPath("$.monthNet").value(-300.00))
+            .andExpect(jsonPath("$.totalIncome").value(0))
+            .andExpect(jsonPath("$.balanceAsOf").value(now.minusMonths(1).atEndOfMonth().toString()));
+        stats(now)
+            .andExpect(jsonPath("$.balance").value(1700.00))
+            .andExpect(jsonPath("$.monthNet").value(0));
+    }
+
+    @Test
+    void an_expense_entered_three_months_ahead_lowers_that_month_and_the_following_ones() throws Exception {
+        YearMonth now = YearMonth.now();
+        record("INCOME", "1000.00", now.minusMonths(1).atDay(1));
+        record("EXPENSE", "200.00", now.plusMonths(3).atDay(10));
+
+        stats(now.plusMonths(2)).andExpect(jsonPath("$.balance").value(1000.00));
+        stats(now.plusMonths(3)).andExpect(jsonPath("$.balance").value(800.00));
+        stats(now.plusMonths(4)).andExpect(jsonPath("$.balance").value(800.00));
+    }
+
+    @Test
+    void the_opening_balance_anchors_every_month() throws Exception {
+        YearMonth now = YearMonth.now();
+        record("EXPENSE", "100.00", now.minusMonths(1).atDay(10));
+        record("EXPENSE", "60.00", now.atDay(1));
+        mockMvc.perform(put("/api/spaces/" + spaceId + "/finance/opening-balance").cookie(accessTokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"amount\":2500.00,\"asOf\":\"" + now.minusMonths(1).atEndOfMonth() + "\"}"))
+            .andExpect(status().isOk());
+
+        stats(now.minusMonths(2)).andExpect(jsonPath("$.balance").value(2600.00));
+        stats(now.minusMonths(1)).andExpect(jsonPath("$.balance").value(2500.00));
+        stats(now).andExpect(jsonPath("$.balance").value(2440.00));
+    }
+
+    @Test
+    void a_recurring_operation_counts_from_the_read_that_creates_it() throws Exception {
+        YearMonth now = YearMonth.now();
+        stats(now).andExpect(jsonPath("$.balance").value(0));
+        String series = "{\"label\":\"Salaire\",\"amount\":1000.00,\"type\":\"INCOME\",\"categoryId\":\"" + incomeCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":1,\"anchorDate\":\"" + now.minusMonths(1).atDay(1) + "\"}}";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/recurring-series")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(series))
+            .andExpect(status().isCreated());
+
+        stats(now).andExpect(jsonPath("$.balance").value(2000.00));
+    }
+
+    @Test
+    void a_member_settled_back_to_zero_is_still_listed() throws Exception {
+        String body = "{\"label\":\"Courses\",\"amount\":20.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\",\"date\":\"2026-01-01\","
+            + "\"payerId\":\"" + aliceId + "\",\"contributors\":[{\"memberId\":\"" + bobId + "\",\"shareAmount\":20.00}]}";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":20.00,\"date\":\"2026-01-02\"}"))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/balances").cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.netByMember.length()").value(2))
+            .andExpect(jsonPath("$.netByMember[0].net").value(0))
+            .andExpect(jsonPath("$.netByMember[1].net").value(0))
+            .andExpect(jsonPath("$.suggestedTransfers.length()").value(0));
+    }
+
+    @Test
+    void a_settlement_already_recorded_reduces_how_much_more_can_be_settled() throws Exception {
+        // The real debt is read from the month totals, which the first settlement moved: the second may only pay the rest.
+        String body = "{\"label\":\"Courses\",\"amount\":100.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\",\"date\":\"2026-01-01\","
+            + "\"payerId\":\"" + aliceId + "\",\"contributors\":[{\"memberId\":\"" + bobId + "\",\"shareAmount\":100.00}]}";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/transactions")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated());
+
+        settle("60.00").andExpect(status().isCreated());
+        settle("50.00").andExpect(status().isUnprocessableContent()).andExpect(jsonPath("$.title").value("SettlementExceedsDebt"));
+        settle("40.00").andExpect(status().isCreated());
+    }
+
+    private org.springframework.test.web.servlet.ResultActions settle(String amount) throws Exception {
+        return mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/balances/settle")
+            .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"fromMemberId\":\"" + bobId + "\",\"toMemberId\":\"" + aliceId + "\",\"amount\":" + amount + ",\"date\":\"2026-01-02\"}"));
+    }
+
+    @Test
+    void the_projection_of_next_month_starts_from_the_balance_carried_over_and_adds_its_recurring_operations() throws Exception {
+        YearMonth now = YearMonth.now();
+        record("INCOME", "1000.00", now.minusMonths(1).atDay(1));
+        String series = "{\"label\":\"Loyer\",\"amount\":800.00,\"type\":\"EXPENSE\",\"categoryId\":\"" + firstCategoryId() + "\","
+            + "\"recurrence\":{\"intervalType\":\"MONTHLY\",\"intervalCount\":1,\"anchorDate\":\"" + now.plusMonths(1).atDay(15) + "\"}}";
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/finance/recurring-series")
+                .cookie(accessTokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(series))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/finance/projection?month=" + now.plusMonths(1)).cookie(accessTokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.recordedEndOfMonthBalance").value(1000.00))
+            .andExpect(jsonPath("$.upcoming.length()").value(1))
+            .andExpect(jsonPath("$.upcoming[0].date").value(now.plusMonths(1).atDay(15).toString()))
+            .andExpect(jsonPath("$.projectedEndOfMonthBalance").value(200.00));
     }
 
     /** The seeded set has exactly one INCOME category ("Revenu"); the rest are expenses. */

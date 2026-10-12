@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface FinanceCategoryJpaRepository extends JpaRepository<FinanceCategoryEntity, UUID> {
@@ -14,6 +15,9 @@ public interface FinanceCategoryJpaRepository extends JpaRepository<FinanceCateg
 
     @Query(value = "select pg_advisory_xact_lock(hashtext(:key))", nativeQuery = true)
     void lockForSeeding(@Param("key") String key);
+
+    @Query(value = "select id from finance_categories where id = :id for update", nativeQuery = true)
+    Optional<UUID> lockForDeletion(@Param("id") UUID id);
 
     // Native, not JPQL: finance_transactions has no JPA entity yet at this point in the
     // build (it's introduced in a later task) but its table already exists (Task 3's

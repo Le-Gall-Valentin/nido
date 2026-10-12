@@ -1,12 +1,11 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.GetProjectionUseCase;
+import com.nido.api.finance.application.service.RunningBalanceReader;
 import com.nido.api.finance.domain.model.ProjectedOccurrence;
 import com.nido.api.finance.domain.model.Projection;
 import com.nido.api.finance.domain.model.RecurrenceProjector;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
-import com.nido.api.finance.domain.model.Transaction;
-import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.shared.annotation.ApplicationService;
@@ -33,11 +32,13 @@ public class GetProjectionHandler implements GetProjectionUseCase {
     private final GetSpaceTodayUseCase spaceToday;
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionSeriesRepository seriesRepository;
+    private final RunningBalanceReader runningBalanceReader;
 
     public GetProjectionHandler(TransactionRepository transactionRepository, RecurringTransactionSeriesRepository seriesRepository,
-                            GetSpaceTodayUseCase spaceToday) {
+                            RunningBalanceReader runningBalanceReader, GetSpaceTodayUseCase spaceToday) {
         this.transactionRepository = transactionRepository;
         this.seriesRepository = seriesRepository;
+        this.runningBalanceReader = runningBalanceReader;
         this.spaceToday = spaceToday;
     }
 
@@ -56,32 +57,35 @@ public class GetProjectionHandler implements GetProjectionUseCase {
     @Transactional
     Projection getProjection(YearMonth month, SpaceMembership caller, LocalDate today) {
         RecurringTransactionMaterializer.materializeDueOccurrences(transactionRepository, seriesRepository, caller.spaceId(), today);
-        List<Transaction> soFar = transactionRepository.findBySpaceIdAndMonth(caller.spaceId(), month);
-        BigDecimal actualBalanceSoFar = sum(soFar, TransactionType.INCOME).subtract(sum(soFar, TransactionType.EXPENSE));
+        // Everything recorded up to the month end, carried over from the months before: an operation entered for later
+        // counts in it, a recurring one only once created.
+        BigDecimal recorded = runningBalanceReader.read(caller.spaceId()).atEndOf(month);
 
+        // Every recurring operation still to come before the month ends is added — those of the months between now and
+        // then too, or a month ahead would be estimated as though no rent fell due before it. From tomorrow, whatever
+        // the month: today's occurrences were just created and are recorded, on the 1st too. They are counted, not
+        // listed one by one, so a month years ahead costs no more than the next one; only the month's own are listed.
+        LocalDate afterToday = today.plusDays(1);
         LocalDate monthStart = month.atDay(1);
         LocalDate monthEnd = month.atEndOfMonth();
-        LocalDate rangeStart = today.isAfter(monthStart) ? today.plusDays(1) : monthStart;
+        LocalDate listedFrom = afterToday.isAfter(monthStart) ? afterToday : monthStart;
 
         List<ProjectedOccurrence> upcoming = new ArrayList<>();
-        if (!rangeStart.isAfter(monthEnd)) {
-            for (RecurringTransactionSeries series : seriesRepository.findActiveBySpaceId(caller.spaceId(), rangeStart)) {
+        BigDecimal projectedDelta = BigDecimal.ZERO;
+        if (!afterToday.isAfter(monthEnd)) {
+            for (RecurringTransactionSeries series : seriesRepository.findActiveBySpaceId(caller.spaceId(), afterToday)) {
+                long dueBeforeTheMonthEnds = RecurrenceProjector.occurrenceCountBetween(
+                    series.anchorDate(), series.intervalType(), series.intervalCount(), series.endDate(), afterToday, monthEnd);
+                projectedDelta = projectedDelta.add(series.type().signed(series.amount()).multiply(BigDecimal.valueOf(dueBeforeTheMonthEnds)));
                 List<LocalDate> dates = RecurrenceProjector.occurrencesBetween(
-                    series.anchorDate(), series.intervalType(), series.intervalCount(), series.endDate(), rangeStart, monthEnd,
+                    series.anchorDate(), series.intervalType(), series.intervalCount(), series.endDate(), listedFrom, monthEnd,
                     MAX_PROJECTED_OCCURRENCES_PER_SERIES);
                 for (LocalDate date : dates) {
                     upcoming.add(new ProjectedOccurrence(series.id(), series.label(), series.amount(), series.type(), date));
                 }
             }
         }
-        BigDecimal projectedDelta = upcoming.stream()
-            .map(o -> o.type() == TransactionType.INCOME ? o.amount() : o.amount().negate())
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return new Projection(actualBalanceSoFar, upcoming, actualBalanceSoFar.add(projectedDelta));
-    }
-
-    private BigDecimal sum(List<Transaction> transactions, TransactionType type) {
-        return transactions.stream().filter(t -> t.type() == type).map(Transaction::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new Projection(recorded, upcoming, recorded.add(projectedDelta));
     }
 }

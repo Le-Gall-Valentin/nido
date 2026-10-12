@@ -20,6 +20,12 @@ public interface CategoryRepository {
     Optional<Category> findById(UUID categoryId);
     Category create(CreateCategoryCommand command, boolean isDefault);
     Category update(UpdateCategoryCommand command);
+    /**
+     * Locks the category's row until the caller's transaction ends. Saving an operation in a category holds a share
+     * lock on it until that save commits: taken before checking that no operation uses the category, this lock waits
+     * for any such save, so the check sees it.
+     */
+    void lockForDeletion(UUID categoryId);
     void delete(UUID categoryId);
     boolean isReferencedByTransactions(UUID categoryId);
 }

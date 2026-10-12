@@ -22,24 +22,22 @@ public interface FinanceTransactionJpaRepository extends JpaRepository<FinanceTr
     List<FinanceTransactionEntity> findBySpaceIdAndDateBetween(
         @Param("spaceId") UUID spaceId, @Param("from") LocalDate from, @Param("to") LocalDate to);
 
-    List<FinanceTransactionEntity> findBySpaceId(UUID spaceId);
 
-    /**
-     * The transactions a balance is made of, projected and filtered.
-     *
-     * <p>The two conditions mirror the guard {@code BalanceCalculator} already applies: a
-     * transaction with no payer or no contributors moves no balance. Applying them here means
-     * a household's solo expenses — most of them, typically — are never loaded or decrypted
-     * just to be skipped.
-     */
+    /** The operations of a space dated within a range, reduced to what a total is made of; ciphertext untouched. */
     @Query("""
-        select new com.nido.api.finance.infrastructure.persistence.repository.SplitTransactionRow(
-            t.id, t.payerId, t.amountEncrypted, t.type)
+        select new com.nido.api.finance.infrastructure.persistence.repository.LedgerRow(
+            t.id, t.date, t.payerId, t.amountEncrypted, t.type)
+        from FinanceTransactionEntity t
+        where t.spaceId = :spaceId and t.date >= :from and t.date <= :to
+        """)
+    List<LedgerRow> findLedgerRows(@Param("spaceId") UUID spaceId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** The same over the whole history of the space: only the building of its totals reads it. */
+    @Query("""
+        select new com.nido.api.finance.infrastructure.persistence.repository.LedgerRow(
+            t.id, t.date, t.payerId, t.amountEncrypted, t.type)
         from FinanceTransactionEntity t
         where t.spaceId = :spaceId
-          and t.payerId is not null
-          and exists (
-            select 1 from FinanceTransactionContributorEntity c where c.transactionId = t.id)
         """)
-    List<SplitTransactionRow> findSplitRowsBySpaceId(@Param("spaceId") UUID spaceId);
+    List<LedgerRow> findLedgerRowsBySpaceId(@Param("spaceId") UUID spaceId);
 }

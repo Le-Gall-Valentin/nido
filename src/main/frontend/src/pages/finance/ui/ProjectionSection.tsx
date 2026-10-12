@@ -1,13 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import { Target } from 'lucide-react'
 import type { Projection } from '@/entities/finance'
-import { formatAmount } from '@/shared/lib'
+import { formatAmount, formatIsoDate, formatSignedAmount } from '@/shared/lib'
 
 interface ProjectionSectionProps {
   projection?: Projection
+  /** A month after the current one: its estimate counts the recurring operations of the months before it, unlisted. */
+  isLaterMonth?: boolean
 }
 
-export function ProjectionSection({ projection }: ProjectionSectionProps) {
+export function ProjectionSection({ projection, isLaterMonth = false }: ProjectionSectionProps) {
   const { t } = useTranslation('finance')
 
   return (
@@ -18,11 +20,12 @@ export function ProjectionSection({ projection }: ProjectionSectionProps) {
       <p className="text-sm text-fg-1">
         {t('projection.end_of_month_balance', { amount: formatAmount(projection?.projectedEndOfMonthBalance ?? 0) })}
       </p>
+      {isLaterMonth && <p className="mt-1 text-xs text-fg-3">{t('projection.includes_earlier_months')}</p>}
       {(projection?.upcoming.length ?? 0) > 0 && (
         <ul className="mt-2 space-y-1 text-sm text-fg-3">
           {projection?.upcoming.map((occurrence) => (
             <li key={`${occurrence.seriesId}-${occurrence.date}`}>
-              {occurrence.date} — {occurrence.label} ({occurrence.type === 'EXPENSE' ? '-' : '+'}{formatAmount(occurrence.amount)})
+              {formatIsoDate(occurrence.date)} — {occurrence.label} ({formatSignedAmount(occurrence.type === 'EXPENSE' ? -occurrence.amount : occurrence.amount)})
             </li>
           ))}
         </ul>

@@ -4,7 +4,32 @@
   "loading": "Loading…",
   "error": { "load_failed": "Could not load finances." },
   "type": { "EXPENSE": "Expense", "INCOME": "Income" },
-  "stats": { "balance": "Balance", "spent": "Spent this month", "income": "Income this month", "remaining_budget": "Left to spend" },
+  "stats": {
+    "balance_today": "Balance today",
+    "balance_end_of_month": "End-of-month balance",
+    "month_net": "{{amount}} this month",
+    "adjust": "Adjust the balance",
+    "spent": "Spent this month",
+    "income": "Income this month",
+    "remaining_budget": "Left to spend"
+  },
+  "opening_balance": {
+    "title": "Opening balance",
+    "explanation": "Your account balance at the end of this day, as your statement shows it, that day's transactions included. Every month's balance is computed from it. Yesterday is suggested: a finished day's balance reads the same on every statement.",
+    "date_label": "Date",
+    "amount_label": "Balance at the end of that day",
+    "amount_invalid": "Enter an amount.",
+    "date_required": "Enter a date.",
+    "date_in_future": "The date cannot be in the future.",
+    "load_failed": "Could not load the opening balance.",
+    "amount_too_precise": "The amount cannot have more than two decimals.",
+    "amount_too_large": "The amount cannot have more than twelve digits before the decimal point.",
+    "clear_title": "Remove the opening balance?",
+    "clear_message": "Every month's balance will be computed without it, from zero. To set it again, you will need your bank balance on a date.",
+    "clear_confirm": "Remove",
+    "clear": "Remove the opening balance",
+    "current": "Currently: {{amount}} at the end of {{date}}"
+  },
   "breakdown": {
     "title_EXPENSE": "Spending breakdown",
     "title_INCOME": "Income breakdown",
@@ -103,7 +128,8 @@
   },
   "projection": {
     "title": "End-of-month projection",
-    "end_of_month_balance": "Estimated end-of-month balance: {{amount}}"
+    "end_of_month_balance": "Estimated end-of-month balance: {{amount}}",
+    "includes_earlier_months": "Also counts the recurring transactions of the months until then; only this month's are listed."
   },
   "form": {
     "create_title": "New transaction",

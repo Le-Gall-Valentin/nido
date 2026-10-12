@@ -7,6 +7,7 @@ import type { ITransactionsApi } from './ITransactionsApi'
 import type { IRecurringSeriesApi } from './IRecurringSeriesApi'
 import type { IBalancesApi } from './IBalancesApi'
 import type { ISavingsGoalsApi } from './ISavingsGoalsApi'
+import type { IOpeningBalanceApi } from './IOpeningBalanceApi'
 
 // Every mutation invalidates the whole ['finance', spaceId] branch rather than tracking
 // exact dependent keys one by one — transactions/budgets/stats/projection/balances are
@@ -176,6 +177,24 @@ export function useAddSavingsContribution(spaceId: string) {
   return useMutation({
     mutationFn: (input: { goalId: string; memberId: string; amount: number; date: string }) =>
       api.addSavingsContribution(spaceId, input.goalId, input.memberId, input.amount, input.date),
+    onSuccess: () => invalidateSpace(queryClient, spaceId),
+  })
+}
+
+export function useSetOpeningBalance(spaceId: string) {
+  const api: IOpeningBalanceApi = useFinanceApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { amount: number; asOf: string }) => api.setOpeningBalance(spaceId, input.amount, input.asOf),
+    onSuccess: () => invalidateSpace(queryClient, spaceId),
+  })
+}
+
+export function useClearOpeningBalance(spaceId: string) {
+  const api: IOpeningBalanceApi = useFinanceApi()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.clearOpeningBalance(spaceId),
     onSuccess: () => invalidateSpace(queryClient, spaceId),
   })
 }

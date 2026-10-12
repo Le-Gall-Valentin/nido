@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Alert, Spinner } from '@/shared/ui'
 import { useAuth } from '@/features/auth'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
-import { monthIso, useCreateIntent } from '@/shared/lib'
+import { monthIso, todayIso, useCreateIntent } from '@/shared/lib'
 import { canWrite, isPersonal, useMemberName, useSpaceMembers } from '@/entities/space'
 import {
   financeApi, FinanceApiProvider, useCategories, useTransactions, useFinanceStats, useProjection, useRecurringSeries,
@@ -26,6 +26,7 @@ import { BudgetManagerPanel } from './BudgetManagerPanel'
 import { FinanceRecurringSeriesPanel } from '@/widgets/finance-recurring-series'
 import { SavingsGoalsPanel } from './SavingsGoalsPanel'
 import { BalancesPanel } from './BalancesPanel'
+import { OpeningBalancePanel } from './OpeningBalancePanel'
 
 interface FinancePageProps {
   api?: IFinanceApi
@@ -70,6 +71,7 @@ function FinancePageContent() {
   const [managingCategories, setManagingCategories] = useState(false)
   const [managingBudget, setManagingBudget] = useState(false)
   const [managingRecurringSeries, setManagingRecurringSeries] = useState(false)
+  const [adjustingBalance, setAdjustingBalance] = useState(false)
 
   const memberLabel = useMemberName(members)
 
@@ -96,9 +98,12 @@ function FinancePageContent() {
 
       <StatsSummary
         stats={stats}
+        today={todayIso(new Date(), spaceTimezone)}
+        isCurrentMonth={month === currentMonth(spaceTimezone)}
         onSelectExpenseBreakdown={() => setBreakdownModalType('EXPENSE')}
         onSelectIncomeBreakdown={() => setBreakdownModalType('INCOME')}
         onSelectOperations={() => document.getElementById('finance-operations')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        onAdjustBalance={canWriteHere ? () => setAdjustingBalance(true) : undefined}
       />
 
       <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(min(360px,100%),1fr))] gap-4">
@@ -116,7 +121,7 @@ function FinancePageContent() {
         />
       </div>
 
-      <ProjectionSection projection={projection} />
+      <ProjectionSection projection={projection} isLaterMonth={month > currentMonth(spaceTimezone)} />
 
       {!spaceIsPersonal && (
         <BalancesPanel
@@ -151,6 +156,10 @@ function FinancePageContent() {
           onDelete={setDeletingTransaction}
         />
       </div>
+
+      {adjustingBalance && (
+        <OpeningBalancePanel spaceId={spaceId} spaceTimezone={spaceTimezone} onClose={() => setAdjustingBalance(false)} />
+      )}
 
       {formState && (
         <TransactionFormPanel

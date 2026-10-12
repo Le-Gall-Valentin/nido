@@ -176,8 +176,8 @@ class FinanceDashboardSourceTest {
 
     private void stats(List<BudgetLine> lines) {
         when(getStats.getStats(YearMonth.of(2026, 9), caller)).thenReturn(new FinanceStats(
-            new BigDecimal("1240.00"), new BigDecimal("1860.00"), new BigDecimal("3100.00"), new BigDecimal("340.00"),
-            List.of(), lines));
+            new BigDecimal("1240.00"), LocalDate.of(2026, 9, 30), new BigDecimal("1240.00"), new BigDecimal("1860.00"),
+            new BigDecimal("3100.00"), new BigDecimal("340.00"), List.of(), lines));
         when(listCategories.list(caller)).thenReturn(List.of(restaurants, groceries, leisure, gifts));
     }
 

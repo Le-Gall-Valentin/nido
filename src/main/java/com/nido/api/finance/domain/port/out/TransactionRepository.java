@@ -2,10 +2,10 @@ package com.nido.api.finance.domain.port.out;
 
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.CreateTransactionCommand;
-import com.nido.api.finance.domain.model.SplitTransaction;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.UpdateTransactionCommand;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -23,15 +23,7 @@ public interface TransactionRepository {
      * without being called several times and stitched back together.
      */
     List<Transaction> findBySpaceIdAndDateBetween(UUID spaceId, LocalDate from, LocalDate to);
-    /** Every transaction ever recorded in the space — balances/settlements span all time, not just one month. */
-    List<Transaction> findAllBySpaceId(UUID spaceId);
 
-    /**
-     * Everything a balance is folded from, and nothing else: payer, amount and shares of the
-     * transactions that actually move a balance. See {@link SplitTransaction} for why the
-     * balance is folded from the ledger every time rather than stored.
-     */
-    List<SplitTransaction> findSplitsBySpaceId(UUID spaceId);
     /**
      * {@code contributors} must already be resolved (equal split applied, custom shares
      * validated to sum to the amount) — that is the caller's job via
@@ -41,4 +33,10 @@ public interface TransactionRepository {
     Transaction create(CreateTransactionCommand command, List<Contribution> contributors);
     Transaction update(UpdateTransactionCommand command, List<Contribution> contributors);
     void delete(UUID transactionId);
+
+    /**
+     * The operations of the space dated within the range, added with their sign: incomes up, expenses down. The balance
+     * reads it for the part of a month up to a day.
+     */
+    BigDecimal sumRecordedBetween(UUID spaceId, LocalDate from, LocalDate to);
 }

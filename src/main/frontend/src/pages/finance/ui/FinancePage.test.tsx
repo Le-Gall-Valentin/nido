@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
+import { todayIso } from '@/shared/lib'
 import { SpacesApiProvider } from '@/features/space-switcher'
 import type { ISpacesApi } from '@/features/space-switcher'
 import { SpaceMembersApiProvider } from '@/entities/space'
@@ -34,10 +35,11 @@ function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
     listBudgets: vi.fn().mockResolvedValue([]), setBudget: vi.fn(), deleteBudget: vi.fn(),
     listTransactions: vi.fn().mockResolvedValue([]), createTransaction: vi.fn(), updateTransaction: vi.fn(), deleteTransaction: vi.fn(),
     listRecurringSeries: vi.fn().mockResolvedValue([]), createRecurringSeries: vi.fn(), updateRecurringSeries: vi.fn(), deleteRecurringSeries: vi.fn(),
-    getStats: vi.fn().mockResolvedValue({ balance: 0, totalExpense: 0, totalIncome: 0, remainingBudget: 0, breakdown: [], budgetVsActual: [] }),
-    getProjection: vi.fn().mockResolvedValue({ actualBalanceSoFar: 0, upcoming: [], projectedEndOfMonthBalance: 0 }),
+    getStats: vi.fn().mockResolvedValue({ balance: 0, balanceAsOf: todayIso(new Date(), 'Europe/Paris'), monthNet: 0, totalExpense: 0, totalIncome: 0, remainingBudget: 0, breakdown: [], budgetVsActual: [] }),
+    getProjection: vi.fn().mockResolvedValue({ recordedEndOfMonthBalance: 0, upcoming: [], projectedEndOfMonthBalance: 0 }),
     getBalances: vi.fn().mockResolvedValue({ netByMember: [], suggestedTransfers: [] }), settleDebt: vi.fn(),
     listSettlements: vi.fn().mockResolvedValue([]),
+    getOpeningBalance: vi.fn().mockResolvedValue(null), setOpeningBalance: vi.fn(), clearOpeningBalance: vi.fn(),
     listSavingsGoals: vi.fn().mockResolvedValue([]), createSavingsGoal: vi.fn(), updateSavingsGoal: vi.fn(), deleteSavingsGoal: vi.fn(), addSavingsContribution: vi.fn(),
     ...overrides,
   }
@@ -72,7 +74,7 @@ describe('FinancePage', () => {
   it('renders the stat cards once data has loaded', async () => {
     renderPage(fakeApi())
 
-    await waitFor(() => expect(screen.getByText('stats.balance')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('stats.balance_today')).toBeDefined())
   })
 
   it('shows an error state when transactions fail to load', async () => {
@@ -84,7 +86,7 @@ describe('FinancePage', () => {
   it('renders the month-end projection once loaded', async () => {
     renderPage(fakeApi({
       getProjection: vi.fn().mockResolvedValue({
-        actualBalanceSoFar: -50, upcoming: [{ seriesId: 's1', label: 'Loyer', amount: 800, type: 'EXPENSE', date: '2026-01-28' }],
+        recordedEndOfMonthBalance: -50, upcoming: [{ seriesId: 's1', label: 'Loyer', amount: 800, type: 'EXPENSE', date: '2026-01-28' }],
         projectedEndOfMonthBalance: -850,
       }),
     }))
@@ -199,7 +201,7 @@ describe('FinancePage', () => {
   it('shows a tooltip with the category, percentage and amount when hovering a donut segment', async () => {
     renderPage(fakeApi({
       getStats: vi.fn().mockResolvedValue({
-        balance: 0, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
+        balance: 0, balanceAsOf: todayIso(new Date(), 'Europe/Paris'), monthNet: -45.3, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
         breakdown: [{ categoryId: 'c1', amount: 45.3 }], budgetVsActual: [],
       }),
     }))
@@ -235,7 +237,7 @@ describe('FinancePage', () => {
   it('opens the category transactions, then the full detail of one, from the breakdown legend', async () => {
     renderPage(fakeApi({
       getStats: vi.fn().mockResolvedValue({
-        balance: 0, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
+        balance: 0, balanceAsOf: todayIso(new Date(), 'Europe/Paris'), monthNet: -45.3, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
         breakdown: [{ categoryId: 'c1', amount: 45.3 }], budgetVsActual: [],
       }),
       listTransactions: vi.fn().mockResolvedValue([{
@@ -260,7 +262,7 @@ describe('FinancePage', () => {
         { id: 'c2', label: 'Revenu', color: '#22c55e', icon: 'Wallet', isDefault: true, type: 'INCOME' },
       ]),
       getStats: vi.fn().mockResolvedValue({
-        balance: 954.7, totalExpense: 45.3, totalIncome: 1000, remainingBudget: 0,
+        balance: 954.7, balanceAsOf: todayIso(new Date(), 'Europe/Paris'), monthNet: 954.7, totalExpense: 45.3, totalIncome: 1000, remainingBudget: 0,
         breakdown: [{ categoryId: 'c1', amount: 45.3 }, { categoryId: 'c2', amount: 1000 }], budgetVsActual: [],
       }),
       listTransactions: vi.fn().mockResolvedValue([{
@@ -270,7 +272,7 @@ describe('FinancePage', () => {
     }))
 
     await waitFor(() => expect(screen.getByText('stats.income')).toBeDefined())
-    fireEvent.click(screen.getByText('stats.income'))
+    fireEvent.click(screen.getByRole('button', { name: 'stats.income' }))
 
     const breakdownModal = await waitFor(() => screen.getByRole('dialog', { name: 'breakdown.title_INCOME' }))
     fireEvent.click(within(breakdownModal).getByText('Revenu'))
@@ -362,14 +364,14 @@ describe('FinancePage', () => {
   it('shows the manage-categories button to a member who can write', async () => {
     renderPage(fakeApi())
 
-    await waitFor(() => expect(screen.getByText('stats.balance')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('stats.balance_today')).toBeDefined())
     expect(screen.getByText('categories.manage')).toBeDefined()
   })
 
   it('hides the manage-categories button from a read-only viewer, since every action inside it requires write access', async () => {
     renderPage(fakeApi(), { ...CURRENT_SPACE, myRole: 'VIEWER' })
 
-    await waitFor(() => expect(screen.getByText('stats.balance')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('stats.balance_today')).toBeDefined())
     expect(screen.queryByText('categories.manage')).toBeNull()
   })
 
@@ -397,7 +399,7 @@ describe('FinancePage', () => {
     const deleteCategory = vi.fn()
     renderPage(fakeApi({ deleteCategory }))
 
-    await waitFor(() => expect(screen.getByText('stats.balance')).toBeDefined())
+    await waitFor(() => expect(screen.getByText('stats.balance_today')).toBeDefined())
     fireEvent.click(screen.getByText('categories.manage'))
     fireEvent.click(screen.getByRole('button', { name: 'categories.delete' }))
 
@@ -433,5 +435,25 @@ describe('FinancePage', () => {
 
     await screen.findByRole('heading', { level: 1 })
     expect(screen.queryByLabelText('form.label_label')).toBeNull()
+  })
+
+  it('lets a member set the opening balance from the balance card', async () => {
+    const setOpeningBalance = vi.fn().mockResolvedValue({ amount: -150.5, asOf: '2026-10-01' })
+    const api = fakeApi({ setOpeningBalance })
+    renderPage(api)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'stats.adjust' }))
+    fireEvent.change(await screen.findByLabelText('opening_balance.amount_label'), { target: { value: '-150.5' } })
+    fireEvent.change(screen.getByLabelText('opening_balance.date_label'), { target: { value: '2026-10-01' } })
+    fireEvent.click(screen.getByText('form.save'))
+
+    await waitFor(() => expect(setOpeningBalance).toHaveBeenCalledWith('space-1', -150.5, '2026-10-01'))
+  })
+
+  it('does not offer a viewer to adjust the balance', async () => {
+    renderPage(fakeApi(), { ...CURRENT_SPACE, myRole: 'VIEWER' })
+
+    await waitFor(() => expect(screen.getByText('stats.balance_today')).toBeDefined())
+    expect(screen.queryByRole('button', { name: 'stats.adjust' })).toBeNull()
   })
 })
