@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Alert, Spinner } from '@/shared/ui'
 import { useAuth } from '@/features/auth'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
-import { monthIso, useCreateIntent } from '@/shared/lib'
+import { monthIso, todayIso, useCreateIntent } from '@/shared/lib'
 import { canWrite, isPersonal, useMemberName, useSpaceMembers } from '@/entities/space'
 import {
   financeApi, FinanceApiProvider, useCategories, useTransactions, useFinanceStats, useProjection, useRecurringSeries,
@@ -98,6 +98,7 @@ function FinancePageContent() {
 
       <StatsSummary
         stats={stats}
+        today={todayIso(new Date(), spaceTimezone)}
         isCurrentMonth={month === currentMonth(spaceTimezone)}
         onSelectExpenseBreakdown={() => setBreakdownModalType('EXPENSE')}
         onSelectIncomeBreakdown={() => setBreakdownModalType('INCOME')}

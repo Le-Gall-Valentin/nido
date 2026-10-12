@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
+import { todayIso } from '@/shared/lib'
 import { SpacesApiProvider } from '@/features/space-switcher'
 import type { ISpacesApi } from '@/features/space-switcher'
 import { SpaceMembersApiProvider } from '@/entities/space'
@@ -34,7 +35,7 @@ function fakeApi(overrides: Partial<IFinanceApi> = {}): IFinanceApi {
     listBudgets: vi.fn().mockResolvedValue([]), setBudget: vi.fn(), deleteBudget: vi.fn(),
     listTransactions: vi.fn().mockResolvedValue([]), createTransaction: vi.fn(), updateTransaction: vi.fn(), deleteTransaction: vi.fn(),
     listRecurringSeries: vi.fn().mockResolvedValue([]), createRecurringSeries: vi.fn(), updateRecurringSeries: vi.fn(), deleteRecurringSeries: vi.fn(),
-    getStats: vi.fn().mockResolvedValue({ balance: 0, balanceAsOf: '2026-10-11', monthNet: 0, totalExpense: 0, totalIncome: 0, remainingBudget: 0, breakdown: [], budgetVsActual: [] }),
+    getStats: vi.fn().mockResolvedValue({ balance: 0, balanceAsOf: todayIso(new Date(), 'Europe/Paris'), monthNet: 0, totalExpense: 0, totalIncome: 0, remainingBudget: 0, breakdown: [], budgetVsActual: [] }),
     getProjection: vi.fn().mockResolvedValue({ recordedEndOfMonthBalance: 0, upcoming: [], projectedEndOfMonthBalance: 0 }),
     getBalances: vi.fn().mockResolvedValue({ netByMember: [], suggestedTransfers: [] }), settleDebt: vi.fn(),
     listSettlements: vi.fn().mockResolvedValue([]),
@@ -200,7 +201,7 @@ describe('FinancePage', () => {
   it('shows a tooltip with the category, percentage and amount when hovering a donut segment', async () => {
     renderPage(fakeApi({
       getStats: vi.fn().mockResolvedValue({
-        balance: 0, balanceAsOf: '2026-10-11', monthNet: -45.3, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
+        balance: 0, balanceAsOf: todayIso(new Date(), 'Europe/Paris'), monthNet: -45.3, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
         breakdown: [{ categoryId: 'c1', amount: 45.3 }], budgetVsActual: [],
       }),
     }))
@@ -236,7 +237,7 @@ describe('FinancePage', () => {
   it('opens the category transactions, then the full detail of one, from the breakdown legend', async () => {
     renderPage(fakeApi({
       getStats: vi.fn().mockResolvedValue({
-        balance: 0, balanceAsOf: '2026-10-11', monthNet: -45.3, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
+        balance: 0, balanceAsOf: todayIso(new Date(), 'Europe/Paris'), monthNet: -45.3, totalExpense: 45.3, totalIncome: 0, remainingBudget: 0,
         breakdown: [{ categoryId: 'c1', amount: 45.3 }], budgetVsActual: [],
       }),
       listTransactions: vi.fn().mockResolvedValue([{
@@ -261,7 +262,7 @@ describe('FinancePage', () => {
         { id: 'c2', label: 'Revenu', color: '#22c55e', icon: 'Wallet', isDefault: true, type: 'INCOME' },
       ]),
       getStats: vi.fn().mockResolvedValue({
-        balance: 954.7, balanceAsOf: '2026-10-11', monthNet: 954.7, totalExpense: 45.3, totalIncome: 1000, remainingBudget: 0,
+        balance: 954.7, balanceAsOf: todayIso(new Date(), 'Europe/Paris'), monthNet: 954.7, totalExpense: 45.3, totalIncome: 1000, remainingBudget: 0,
         breakdown: [{ categoryId: 'c1', amount: 45.3 }, { categoryId: 'c2', amount: 1000 }], budgetVsActual: [],
       }),
       listTransactions: vi.fn().mockResolvedValue([{

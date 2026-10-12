@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
-import { parseAmount, todayIso } from '@/shared/lib'
+import { formatAmount, formatIsoDate, parseAmount, todayIso } from '@/shared/lib'
 import type { OpeningBalance } from '@/entities/finance'
 
 interface OpeningBalanceModalProps {
   openingBalance: OpeningBalance | null
-  /** The household's calendar: its today is the default date and the latest one allowed. */
+  /** The household's calendar: its yesterday is the default date, its today the latest one allowed. */
   spaceTimezone?: string
   onSave: (amount: number, asOf: string) => void
   onClear: () => void
@@ -17,13 +17,22 @@ interface OpeningBalanceModalProps {
   submitError?: string | null
 }
 
+/** The calendar day before an ISO date (YYYY-MM-DD). */
+function dayBefore(isoDate: string): string {
+  const day = new Date(`${isoDate}T00:00:00Z`)
+  day.setUTCDate(day.getUTCDate() - 1)
+  return day.toISOString().slice(0, 10)
+}
+
 export function OpeningBalanceModal({
   openingBalance, spaceTimezone, onSave, onClear, onClose, isSaving = false, submitError = null,
 }: OpeningBalanceModalProps) {
   const { t } = useTranslation('finance')
   const today = todayIso(new Date(), spaceTimezone)
-  const [asOf, setAsOf] = useState(openingBalance?.asOf ?? today)
-  const [amount, setAmount] = useState(openingBalance ? String(openingBalance.amount) : '')
+  // A new balance, even when one is set: opening on the one set would invite typing today's bank balance against its
+  // old date. Yesterday, because a finished day's balance reads the same on every statement; today's is still moving.
+  const [asOf, setAsOf] = useState(dayBefore(today))
+  const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: React.FormEvent) {
@@ -60,9 +69,14 @@ export function OpeningBalanceModal({
 
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
           {openingBalance ? (
-            <button type="button" onClick={onClear} disabled={isSaving} className="text-sm font-semibold text-status-red disabled:opacity-50">
-              {t('opening_balance.clear')}
-            </button>
+            <div className="flex flex-col gap-1">
+              <p className="text-xs text-fg-3">
+                {t('opening_balance.current', { amount: formatAmount(openingBalance.amount), date: formatIsoDate(openingBalance.asOf) })}
+              </p>
+              <button type="button" onClick={onClear} disabled={isSaving} className="self-start text-sm font-semibold text-status-red disabled:opacity-50">
+                {t('opening_balance.clear')}
+              </button>
+            </div>
           ) : <span />}
           <div className="flex gap-2">
             <Button type="button" onClick={onClose}>{t('form.cancel')}</Button>

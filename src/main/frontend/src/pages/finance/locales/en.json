@@ -15,9 +15,9 @@
   },
   "opening_balance": {
     "title": "Opening balance",
-    "explanation": "Your account balance on this date, as your bank shows it, that day's transactions included. Every month's balance is computed from it.",
+    "explanation": "Your account balance at the end of this day, as your statement shows it, that day's transactions included. Every month's balance is computed from it. Yesterday is suggested: a finished day's balance reads the same on every statement.",
     "date_label": "Date",
-    "amount_label": "Balance on that date",
+    "amount_label": "Balance at the end of that day",
     "amount_invalid": "Enter an amount.",
     "date_required": "Enter a date.",
     "date_in_future": "The date cannot be in the future.",
@@ -27,7 +27,8 @@
     "clear_title": "Remove the opening balance?",
     "clear_message": "Every month's balance will be computed without it, from zero. To set it again, you will need your bank balance on a date.",
     "clear_confirm": "Remove",
-    "clear": "Remove the opening balance"
+    "clear": "Remove the opening balance",
+    "current": "Currently: {{amount}} at the end of {{date}}"
   },
   "breakdown": {
     "title_EXPENSE": "Spending breakdown",

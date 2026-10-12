@@ -35,16 +35,11 @@ function StatCard({ icon: Icon, tintClassName, label, value, detail, onClick, ac
   )
 }
 
-/** Whether an ISO date (YYYY-MM-DD) is the last day of its month. */
-function isMonthEnd(isoDate: string): boolean {
-  const nextDay = new Date(`${isoDate}T00:00:00Z`)
-  nextDay.setUTCDate(nextDay.getUTCDate() + 1)
-  return nextDay.getUTCDate() === 1
-}
-
 interface StatsSummaryProps {
   stats?: FinanceStats
-  /** The household's current month shows today's balance; any other, the balance at its end. Names it while it loads. */
+  /** The household's today (YYYY-MM-DD): a balance the server dates at it is today's, any other a month end's. */
+  today: string
+  /** Whether the month on screen is the household's current one: names the balance while it loads. */
   isCurrentMonth: boolean
   onSelectExpenseBreakdown?: () => void
   onSelectIncomeBreakdown?: () => void
@@ -54,11 +49,12 @@ interface StatsSummaryProps {
 }
 
 export function StatsSummary({
-  stats, isCurrentMonth, onSelectExpenseBreakdown, onSelectIncomeBreakdown, onSelectOperations, onAdjustBalance,
+  stats, today, isCurrentMonth, onSelectExpenseBreakdown, onSelectIncomeBreakdown, onSelectOperations, onAdjustBalance,
 }: StatsSummaryProps) {
   const { t } = useTranslation('finance')
-  // Once loaded, the day the server dates the balance names it: today's on the household's calendar, or a month's end.
-  const balanceIsToday = stats ? !isMonthEnd(stats.balanceAsOf) : isCurrentMonth
+  // The server dates the current month's balance at today, any other month's at its end. On the last day of a month the
+  // two are the same day: only the household's today tells them apart.
+  const balanceIsToday = stats ? stats.balanceAsOf === today : isCurrentMonth
 
   return (
     <div className="grid grid-cols-[repeat(auto-fit,minmax(min(210px,100%),1fr))] gap-3">

@@ -29,15 +29,17 @@ describe('OpeningBalanceModal', () => {
     vi.useRealTimers()
   })
 
-  it("opens on today's date on the household's calendar, not the browser's, with no amount when there is none yet", () => {
-    // 22:30 in UTC is already the 12th in Paris: a form that read the browser's calendar would open on the 11th.
+  it("opens on yesterday on the household's calendar, not the browser's, with no amount when there is none yet", () => {
+    // A finished day's balance reads the same on every statement; today's is still moving. 22:30 in UTC is already the
+    // 12th in Paris: a form that read the browser's calendar would open on the 10th.
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-10-11T22:30:00Z'))
     renderModal()
 
-    expect(dateInput().value).toBe('2026-10-12')
+    expect(dateInput().value).toBe('2026-10-11')
     expect(amountInput().value).toBe('')
     expect(screen.queryByText('opening_balance.clear')).toBeNull()
+    expect(screen.queryByText(/opening_balance\.current/)).toBeNull()
   })
 
   it("accepts the household's today and refuses its tomorrow, whatever the browser's calendar says", () => {
@@ -55,11 +57,15 @@ describe('OpeningBalanceModal', () => {
     expect(props.onSave).toHaveBeenCalledWith(100, '2026-10-12')
   })
 
-  it('opens on the current opening balance, and offers to remove it', () => {
+  it('opens on a new balance even when one is set — the one set is shown beside it, with a way to remove it', () => {
+    // Opening on the one set would invite typing today's bank balance against its old date.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-11T22:30:00Z'))
     const props = renderModal({ openingBalance: { amount: 1200, asOf: '2026-09-30' } })
 
-    expect(dateInput().value).toBe('2026-09-30')
-    expect(amountInput().value).toBe('1200')
+    expect(dateInput().value).toBe('2026-10-11')
+    expect(amountInput().value).toBe('')
+    expect(screen.getByText(/opening_balance\.current:.*1\s?200,00.*30 septembre 2026/)).toBeDefined()
     fireEvent.click(screen.getByText('opening_balance.clear'))
     expect(props.onClear).toHaveBeenCalled()
   })

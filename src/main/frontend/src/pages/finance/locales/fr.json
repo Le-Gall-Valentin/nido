@@ -15,9 +15,9 @@
   },
   "opening_balance": {
     "title": "Solde de départ",
-    "explanation": "Le solde de votre compte à cette date, tel que votre banque l'affiche, opérations du jour comprises. Le solde de chaque mois est calculé à partir de lui.",
+    "explanation": "Le solde de votre compte à la fin de ce jour, tel que votre relevé l'indique, opérations du jour comprises. Le solde de chaque mois est calculé à partir de lui. Hier est proposé : le solde d'un jour terminé est le même sur tous les relevés.",
     "date_label": "Date",
-    "amount_label": "Solde à cette date",
+    "amount_label": "Solde à la fin de ce jour",
     "amount_invalid": "Indiquez un montant.",
     "date_required": "Indiquez une date.",
     "date_in_future": "La date ne peut pas être dans le futur.",
@@ -27,7 +27,8 @@
     "clear_title": "Retirer le solde de départ ?",
     "clear_message": "Le solde de chaque mois sera calculé sans lui, à partir de zéro. Pour le remettre, il faudra retrouver le solde de votre banque à une date.",
     "clear_confirm": "Retirer",
-    "clear": "Retirer le solde de départ"
+    "clear": "Retirer le solde de départ",
+    "current": "Actuellement : {{amount}} à la fin du {{date}}"
   },
   "breakdown": {
     "title_EXPENSE": "Répartition des dépenses",
