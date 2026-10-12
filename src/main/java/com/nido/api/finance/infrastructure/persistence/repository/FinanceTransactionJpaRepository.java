@@ -42,4 +42,22 @@ public interface FinanceTransactionJpaRepository extends JpaRepository<FinanceTr
             select 1 from FinanceTransactionContributorEntity c where c.transactionId = t.id)
         """)
     List<SplitTransactionRow> findSplitRowsBySpaceId(@Param("spaceId") UUID spaceId);
+
+    /** The operations of a space dated within a range, reduced to what a total is made of; ciphertext untouched. */
+    @Query("""
+        select new com.nido.api.finance.infrastructure.persistence.repository.LedgerRow(
+            t.id, t.date, t.payerId, t.amountEncrypted, t.type)
+        from FinanceTransactionEntity t
+        where t.spaceId = :spaceId and t.date >= :from and t.date <= :to
+        """)
+    List<LedgerRow> findLedgerRows(@Param("spaceId") UUID spaceId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** The same over the whole history of the space: only the building of its totals reads it. */
+    @Query("""
+        select new com.nido.api.finance.infrastructure.persistence.repository.LedgerRow(
+            t.id, t.date, t.payerId, t.amountEncrypted, t.type)
+        from FinanceTransactionEntity t
+        where t.spaceId = :spaceId
+        """)
+    List<LedgerRow> findLedgerRowsBySpaceId(@Param("spaceId") UUID spaceId);
 }

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,4 +29,6 @@ public interface FinanceSettlementRecordJpaRepository extends JpaRepository<Fina
     List<FinanceSettlementRecordEntity> findBetweenMembers(@Param("spaceId") UUID spaceId,
                                                            @Param("memberAId") UUID memberAId,
                                                            @Param("memberBId") UUID memberBId);
+
+    List<FinanceSettlementRecordEntity> findBySpaceIdAndSettledDateBetween(UUID spaceId, LocalDate from, LocalDate to);
 }
