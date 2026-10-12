@@ -14,6 +14,7 @@ import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -55,6 +56,13 @@ abstract class RunningTotalsITSupport {
         aliceId = user("alice");
         bobId = user("bob");
         categoryId = categories.create(new CreateCategoryCommand(spaceId, "Courses", "#f59e0b", "Utensils", TransactionType.EXPENSE), true).id();
+    }
+
+    /** The database is shared by every integration test: leave it as found. */
+    @AfterEach
+    void cleanUpSpace() {
+        spaceJpa.deleteAll();
+        userJpa.deleteAll();
     }
 
     Transaction create(String label, String amount, TransactionType type, LocalDate date, UUID payerId, List<Contribution> shares) {

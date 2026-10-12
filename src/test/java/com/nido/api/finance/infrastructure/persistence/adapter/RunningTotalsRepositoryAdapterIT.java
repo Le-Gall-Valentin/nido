@@ -93,6 +93,9 @@ class RunningTotalsRepositoryAdapterIT extends RunningTotalsITSupport {
         transactionJpa.saveAndFlush(stored);
 
         assertNets(totals.findNetByMonth(spaceId), Map.of(YearMonth.of(2026, 1), "-40.00"));
+        assertThatThrownBy(() -> transactions.findById(shared.id()))
+            .as("a read of the whole operation does open the label — otherwise this test proves nothing")
+            .isInstanceOf(RuntimeException.class);
     }
 
     @Test

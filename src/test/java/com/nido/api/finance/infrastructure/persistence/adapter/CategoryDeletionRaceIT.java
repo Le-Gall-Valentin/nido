@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -21,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import static com.nido.api.finance.FinanceTestReads.allTransactions;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -42,7 +44,7 @@ class CategoryDeletionRaceIT extends RunningTotalsITSupport {
                 create("Courses", "30.00", TransactionType.EXPENSE, LocalDate.of(2026, 1, 15), null, List.of());
                 // Started while the operation is saved but not committed yet.
                 Future<?> started = other.submit(() -> deleteCategory.delete(categoryId, spaceId, owner));
-                pause();
+                awaitAWriterWaitingOnALock();
                 return started;
             });
 
@@ -50,17 +52,19 @@ class CategoryDeletionRaceIT extends RunningTotalsITSupport {
         } finally {
             other.shutdownNow();
         }
-        assertThat(transactions.findAllBySpaceId(spaceId)).hasSize(1);
+        assertThat(allTransactions(transactions, spaceId)).hasSize(1);
         assertNets(totals.findNetByMonth(spaceId), Map.of(YearMonth.of(2026, 1), "-30.00"));
     }
 
-    /** Long enough for the deletion to reach the point where it waits on the uncommitted operation. */
-    private static void pause() {
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(e);
+    /** Until the deletion waits on the uncommitted operation — at most ten seconds, after which the test fails. */
+    private void awaitAWriterWaitingOnALock() {
+        long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+        while (jdbc.queryForObject("SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'",
+                Integer.class) == 0) {
+            if (System.nanoTime() > deadline) {
+                throw new AssertionError("the deletion never waited on the operation being saved");
+            }
+            Thread.onSpinWait();
         }
     }
 }
