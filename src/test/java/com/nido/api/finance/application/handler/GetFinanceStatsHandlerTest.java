@@ -18,6 +18,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.nido.api.finance.application.service.RunningBalanceReader;
+import com.nido.api.finance.domain.model.RunningBalance;
+import java.util.Map;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -25,6 +28,7 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.Mockito.lenient;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -38,6 +42,7 @@ class GetFinanceStatsHandlerTest {
     @Mock GetSpaceTodayUseCase spaceToday;
     @Mock RecurringTransactionSeriesRepository seriesRepository;
     @Mock BudgetRepository budgetRepository;
+    @Mock RunningBalanceReader runningBalanceReader;
     private GetFinanceStatsHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID foodCategory = UUID.randomUUID();
@@ -46,7 +51,8 @@ class GetFinanceStatsHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new GetFinanceStatsHandler(transactionRepository, seriesRepository, budgetRepository, spaceToday);
+        handler = new GetFinanceStatsHandler(transactionRepository, seriesRepository, budgetRepository, runningBalanceReader, spaceToday);
+        lenient().when(runningBalanceReader.read(spaceId)).thenReturn(RunningBalance.of(Map.of()));
     }
 
     private SpaceMembership membership() {
@@ -88,6 +94,8 @@ class GetFinanceStatsHandlerTest {
         assertThat(stats.totalExpense()).isEqualByComparingTo("80.00");
         assertThat(stats.totalIncome()).isEqualByComparingTo("2000.00");
         assertThat(stats.balance()).isEqualByComparingTo("1920.00");
+        assertThat(stats.monthNet()).isEqualByComparingTo("1920.00");
+        assertThat(stats.balanceAsOf()).isEqualTo(LocalDate.of(2026, 1, 20));
         // Every category appears here, not just expense ones — the frontend splits this
         // list by the category's own type for its two breakdown views.
         assertThat(stats.breakdown()).containsExactlyInAnyOrder(
@@ -122,5 +130,57 @@ class GetFinanceStatsHandlerTest {
     private static RecurringSeriesSchedule scheduleOf(RecurringTransactionSeries s) {
         return new RecurringSeriesSchedule(s.id(), s.intervalType(), s.intervalCount(),
             s.anchorDate(), s.endDate(), s.lastMaterializedDate());
+    }
+
+    private Transaction expenseOn(LocalDate date, String amount) {
+        return new Transaction(UUID.randomUUID(), spaceId, "T", new BigDecimal(amount), TransactionType.EXPENSE, foodCategory,
+            date, null, List.of(), null, Instant.now());
+    }
+
+    @Test
+    void a_past_month_shows_its_end_of_month_balance_carried_over_from_the_months_before() {
+        when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
+        when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1)))
+            .thenReturn(List.of(expenseOn(LocalDate.of(2026, 1, 15), "80.00")));
+        when(budgetRepository.findBySpaceId(spaceId)).thenReturn(List.of());
+        when(runningBalanceReader.read(spaceId)).thenReturn(RunningBalance.of(Map.of(
+            YearMonth.of(2025, 12), new BigDecimal("500.00"), YearMonth.of(2026, 1), new BigDecimal("-80.00"))));
+
+        FinanceStats stats = handler.getStats(YearMonth.of(2026, 1), membership(), LocalDate.of(2026, 3, 5));
+
+        assertThat(stats.balance()).isEqualByComparingTo("420.00");
+        assertThat(stats.balanceAsOf()).isEqualTo(LocalDate.of(2026, 1, 31));
+        assertThat(stats.monthNet()).isEqualByComparingTo("-80.00");
+    }
+
+    @Test
+    void a_future_month_without_operations_shows_the_balance_it_inherits() {
+        when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
+        when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 4))).thenReturn(List.of());
+        when(budgetRepository.findBySpaceId(spaceId)).thenReturn(List.of());
+        when(runningBalanceReader.read(spaceId)).thenReturn(RunningBalance.of(Map.of(
+            YearMonth.of(2025, 12), new BigDecimal("500.00"), YearMonth.of(2026, 1), new BigDecimal("-80.00"))));
+
+        FinanceStats stats = handler.getStats(YearMonth.of(2026, 4), membership(), LocalDate.of(2026, 1, 20));
+
+        assertThat(stats.balance()).isEqualByComparingTo("420.00");
+        assertThat(stats.balanceAsOf()).isEqualTo(LocalDate.of(2026, 4, 30));
+        assertThat(stats.monthNet()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void the_current_month_shows_todays_balance_without_what_is_dated_later_in_it() {
+        when(seriesRepository.findSchedulesBySpaceId(spaceId)).thenReturn(List.of());
+        when(transactionRepository.findBySpaceIdAndMonth(spaceId, YearMonth.of(2026, 1))).thenReturn(List.of(
+            expenseOn(LocalDate.of(2026, 1, 15), "80.00"), expenseOn(LocalDate.of(2026, 1, 25), "50.00")));
+        when(budgetRepository.findBySpaceId(spaceId)).thenReturn(List.of());
+        when(runningBalanceReader.read(spaceId)).thenReturn(RunningBalance.of(Map.of(
+            YearMonth.of(2025, 12), new BigDecimal("500.00"), YearMonth.of(2026, 1), new BigDecimal("-130.00"))));
+
+        FinanceStats stats = handler.getStats(YearMonth.of(2026, 1), membership(), LocalDate.of(2026, 1, 20));
+
+        assertThat(stats.balance()).isEqualByComparingTo("420.00");
+        assertThat(stats.balanceAsOf()).isEqualTo(LocalDate.of(2026, 1, 20));
+        assertThat(stats.monthNet()).as("the month counts what is entered for later in it").isEqualByComparingTo("-130.00");
     }
 }

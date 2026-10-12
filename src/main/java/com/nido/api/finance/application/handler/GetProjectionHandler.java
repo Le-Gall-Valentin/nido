@@ -1,11 +1,11 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.GetProjectionUseCase;
+import com.nido.api.finance.application.service.RunningBalanceReader;
 import com.nido.api.finance.domain.model.ProjectedOccurrence;
 import com.nido.api.finance.domain.model.Projection;
 import com.nido.api.finance.domain.model.RecurrenceProjector;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
-import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
@@ -33,11 +33,13 @@ public class GetProjectionHandler implements GetProjectionUseCase {
     private final GetSpaceTodayUseCase spaceToday;
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionSeriesRepository seriesRepository;
+    private final RunningBalanceReader runningBalanceReader;
 
     public GetProjectionHandler(TransactionRepository transactionRepository, RecurringTransactionSeriesRepository seriesRepository,
-                            GetSpaceTodayUseCase spaceToday) {
+                            RunningBalanceReader runningBalanceReader, GetSpaceTodayUseCase spaceToday) {
         this.transactionRepository = transactionRepository;
         this.seriesRepository = seriesRepository;
+        this.runningBalanceReader = runningBalanceReader;
         this.spaceToday = spaceToday;
     }
 
@@ -56,8 +58,9 @@ public class GetProjectionHandler implements GetProjectionUseCase {
     @Transactional
     Projection getProjection(YearMonth month, SpaceMembership caller, LocalDate today) {
         RecurringTransactionMaterializer.materializeDueOccurrences(transactionRepository, seriesRepository, caller.spaceId(), today);
-        List<Transaction> soFar = transactionRepository.findBySpaceIdAndMonth(caller.spaceId(), month);
-        BigDecimal actualBalanceSoFar = sum(soFar, TransactionType.INCOME).subtract(sum(soFar, TransactionType.EXPENSE));
+        // Everything recorded up to the month end, carried over from the months before: an operation entered for later
+        // counts in it, a recurring one only once created — the rest is what the projection adds, month by month.
+        BigDecimal recorded = runningBalanceReader.read(caller.spaceId()).atEndOf(month);
 
         LocalDate monthStart = month.atDay(1);
         LocalDate monthEnd = month.atEndOfMonth();
@@ -78,10 +81,6 @@ public class GetProjectionHandler implements GetProjectionUseCase {
             .map(o -> o.type() == TransactionType.INCOME ? o.amount() : o.amount().negate())
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return new Projection(actualBalanceSoFar, upcoming, actualBalanceSoFar.add(projectedDelta));
-    }
-
-    private BigDecimal sum(List<Transaction> transactions, TransactionType type) {
-        return transactions.stream().filter(t -> t.type() == type).map(Transaction::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new Projection(recorded, upcoming, recorded.add(projectedDelta));
     }
 }

@@ -5,9 +5,10 @@ import com.nido.api.finance.domain.model.Projection;
 import java.math.BigDecimal;
 import java.util.List;
 
-public record ProjectionResponse(BigDecimal actualBalanceSoFar, List<ProjectedOccurrenceResponse> upcoming, BigDecimal projectedEndOfMonthBalance) {
+public record ProjectionResponse(BigDecimal recordedEndOfMonthBalance, List<ProjectedOccurrenceResponse> upcoming,
+                                 BigDecimal projectedEndOfMonthBalance) {
     public static ProjectionResponse from(Projection p) {
-        return new ProjectionResponse(p.actualBalanceSoFar(), p.upcoming().stream().map(ProjectedOccurrenceResponse::from).toList(),
-            p.projectedEndOfMonthBalance());
+        return new ProjectionResponse(p.recordedEndOfMonthBalance(),
+            p.upcoming().stream().map(ProjectedOccurrenceResponse::from).toList(), p.projectedEndOfMonthBalance());
     }
 }

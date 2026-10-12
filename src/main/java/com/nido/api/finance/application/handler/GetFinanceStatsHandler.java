@@ -1,6 +1,8 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.GetFinanceStatsUseCase;
+import com.nido.api.finance.application.service.RunningBalanceReader;
+import com.nido.api.finance.domain.model.RunningBalance;
 import com.nido.api.finance.domain.model.Budget;
 import com.nido.api.finance.domain.model.BudgetLine;
 import com.nido.api.finance.domain.model.CategoryAmount;
@@ -30,14 +32,16 @@ public class GetFinanceStatsHandler implements GetFinanceStatsUseCase {
     private final TransactionRepository transactionRepository;
     private final RecurringTransactionSeriesRepository seriesRepository;
     private final BudgetRepository budgetRepository;
+    private final RunningBalanceReader runningBalanceReader;
 
     public GetFinanceStatsHandler(
             TransactionRepository transactionRepository, RecurringTransactionSeriesRepository seriesRepository,
-            BudgetRepository budgetRepository,
+            BudgetRepository budgetRepository, RunningBalanceReader runningBalanceReader,
                             GetSpaceTodayUseCase spaceToday) {
         this.transactionRepository = transactionRepository;
         this.seriesRepository = seriesRepository;
         this.budgetRepository = budgetRepository;
+        this.runningBalanceReader = runningBalanceReader;
         this.spaceToday = spaceToday;
     }
 
@@ -60,7 +64,16 @@ public class GetFinanceStatsHandler implements GetFinanceStatsUseCase {
 
         BigDecimal totalExpense = sum(transactions, TransactionType.EXPENSE);
         BigDecimal totalIncome = sum(transactions, TransactionType.INCOME);
-        BigDecimal balance = totalIncome.subtract(totalExpense);
+        BigDecimal monthNet = totalIncome.subtract(totalExpense);
+
+        // The current month shows today's balance, as a bank does: an operation entered for later in the month counts in
+        // the month's figures, not yet in the balance. Any other month shows the balance at its end.
+        RunningBalance running = runningBalanceReader.read(caller.spaceId());
+        boolean current = month.equals(YearMonth.from(today));
+        LocalDate balanceAsOf = current ? today : month.atEndOfMonth();
+        BigDecimal balance = current
+            ? running.at(today, signedSum(transactions.stream().filter(t -> !t.date().isAfter(today)).toList()))
+            : running.atEndOf(month);
 
         Map<UUID, BigDecimal> spentByCategory = transactions.stream()
             .filter(t -> t.type() == TransactionType.EXPENSE)
@@ -82,10 +95,14 @@ public class GetFinanceStatsHandler implements GetFinanceStatsUseCase {
             .map(line -> line.monthlyLimit().subtract(line.spent()))
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return new FinanceStats(balance, totalExpense, totalIncome, remainingBudget, breakdown, budgetVsActual);
+        return new FinanceStats(balance, balanceAsOf, monthNet, totalExpense, totalIncome, remainingBudget, breakdown, budgetVsActual);
     }
 
-    private BigDecimal sum(List<Transaction> transactions, TransactionType type) {
+    private static BigDecimal signedSum(List<Transaction> transactions) {
+        return sum(transactions, TransactionType.INCOME).subtract(sum(transactions, TransactionType.EXPENSE));
+    }
+
+    private static BigDecimal sum(List<Transaction> transactions, TransactionType type) {
         return transactions.stream().filter(t -> t.type() == type).map(Transaction::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
