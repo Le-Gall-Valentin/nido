@@ -85,7 +85,11 @@ export function AppLayout() {
   }, [])
 
   return (
-    <div className="fixed inset-0 flex overflow-hidden bg-bg-0">
+    // overflow-clip, not overflow-hidden: a hidden overflow is still a scroll container that scrollIntoView and focus
+    // scroll. An absolute element of a page with no positioned ancestor (a Tooltip's sr-only label) has this shell for
+    // containing block, escapes main's clipping and makes the shell overflow — scrolling it slid the whole page up for
+    // good, the Topbar gone and a dead band at the bottom. A clipped box never scrolls.
+    <div className="fixed inset-0 flex overflow-clip bg-bg-0">
       <PaletteSetups />
 
       <Sidebar hasPendingInvitations={hasPendingInvitations} openTaskCount={openTaskCount} />
