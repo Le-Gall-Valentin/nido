@@ -12,6 +12,8 @@ interface EventDetailModalProps {
   occurrence: CalendarOccurrence
   /** Undefined while not known: nobody is then called a former member. */
   members: SpaceMember[] | undefined
+  /** How a recurring event repeats, in one sentence — null while the series is not known. */
+  recurrence?: string | null
   /** The signed-in user, so "join" and "leave" can be offered as the right one of the two. */
   currentUserId: string
   canWrite: boolean
@@ -44,7 +46,7 @@ function formatWhen(occurrence: CalendarOccurrence, allDayLabel: string, locale:
 const SHARED_ROW = 'flex-[1_1_9rem] whitespace-nowrap'
 
 export function EventDetailModal({
-  occurrence, members, currentUserId, canWrite, isPersonal = false,
+  occurrence, members, currentUserId, canWrite, isPersonal = false, recurrence = null,
   onEdit, onDelete, onCopy, onMove, onJoin, onLeave, onClose,
 }: EventDetailModalProps) {
   const { t } = useTranslation('calendar')
@@ -63,6 +65,12 @@ export function EventDetailModal({
           <p className="text-sm text-fg-2">
             {formatWhen(occurrence, t('all_day_short'), resolveLocale(i18next.language))}
           </p>
+          {recurrence && (
+            <p className="flex items-center gap-1.5 text-sm text-fg-2">
+              <Repeat aria-hidden className="size-3.5 shrink-0 text-fg-3" />
+              {recurrence}
+            </p>
+          )}
         </div>
 
         {occurrence.location && (

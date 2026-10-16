@@ -74,7 +74,7 @@ describe('EventFormModal — recurrence', () => {
 
     save()
 
-    expect(onSubmit).toHaveBeenCalledWith(initial, { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: [], dayRule: 'SAME_DAY' })
+    expect(onSubmit).toHaveBeenCalledWith(initial, { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['FRIDAY'], dayRule: 'SAME_DAY' })
   })
 
   it('hands up the repetition picked', () => {
@@ -140,5 +140,54 @@ describe('EventFormModal — recurrence', () => {
     save()
 
     expect(onSubmit).toHaveBeenCalledWith(initial, { intervalType: 'MONTHLY', intervalCount: 3, until: '2027-06-30', weekdays: [], dayRule: 'SAME_DAY' })
+  })
+})
+
+describe('EventFormModal — days of a series', () => {
+  const recurring = () => fireEvent.click(screen.getByLabelText('form.recurring'))
+  const intervalType = (value: string) =>
+    fireEvent.change(screen.getByLabelText('series.interval_type'), { target: { value } })
+
+  it('repeats weekly on the start day, which cannot be unticked, and on the days ticked', () => {
+    const { onSubmit } = renderForm()
+    recurring()
+    const friday = screen.getByRole('button', { name: /vendredi|friday/i })
+    expect(friday.getAttribute('aria-pressed')).toBe('true')
+    expect((friday as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: /^(lundi|monday)$/i }))
+    save()
+    expect(onSubmit).toHaveBeenCalledWith(initial,
+      { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['MONDAY', 'FRIDAY'], dayRule: 'SAME_DAY' })
+  })
+
+  it('offers only the day rules the start date can give, and sends the one picked', () => {
+    // Friday 30 October 2026: the 30th, the last Friday — not a 2nd anything, not the last day.
+    const { onSubmit } = renderForm({ initial: { ...initial, startDate: '2026-10-30', endDate: '2026-10-30' } })
+    recurring()
+    intervalType('MONTHLY')
+    const rule = screen.getByLabelText('series.day_rule') as HTMLSelectElement
+    expect([...rule.options].map((option) => option.value)).toEqual(['SAME_DAY', 'LAST_WEEKDAY_OF_MONTH'])
+    fireEvent.change(rule, { target: { value: 'LAST_WEEKDAY_OF_MONTH' } })
+    save()
+    expect(onSubmit).toHaveBeenCalledWith(expect.anything(),
+      { intervalType: 'MONTHLY', intervalCount: 1, until: null, weekdays: [], dayRule: 'LAST_WEEKDAY_OF_MONTH' })
+  })
+
+  it('falls back to the same day when the start moves to a date the rule cannot fit', () => {
+    renderForm({ initial: { ...initial, startDate: '2026-10-30', endDate: '2026-10-30' } })
+    recurring()
+    intervalType('MONTHLY')
+    fireEvent.change(screen.getByLabelText('series.day_rule'), { target: { value: 'LAST_WEEKDAY_OF_MONTH' } })
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-10-13' } })
+    expect((screen.getByLabelText('series.day_rule') as HTMLSelectElement).value).toBe('SAME_DAY')
+  })
+
+  it('refuses an occurrence running into the next day chosen', () => {
+    const { onSubmit } = renderForm({ initial: { ...initial, allDay: true, startTime: null, endTime: null, endDate: '2026-10-05' } })
+    recurring()
+    fireEvent.click(screen.getByRole('button', { name: /^(lundi|monday)$/i }))
+    save()
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert').textContent).toBe('series.occurrence_too_long')
   })
 })

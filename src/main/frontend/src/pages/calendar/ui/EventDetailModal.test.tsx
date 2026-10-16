@@ -87,4 +87,13 @@ describe('EventDetailModal', () => {
     expect(screen.getByText('member.generic')).toBeTruthy()
     expect(screen.queryByText('member.former')).toBeNull()
   })
+
+  it('says how a recurring event repeats', () => {
+    render(
+      <EventDetailModal occurrence={{ ...concert, seriesId: 's1' }} members={[]} currentUserId="u1" canWrite
+        recurrence="Toutes les semaines le lundi et le jeudi"
+        onEdit={vi.fn()} onDelete={vi.fn()} onCopy={vi.fn()} onMove={vi.fn()}
+        onJoin={vi.fn()} onLeave={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getByText('Toutes les semaines le lundi et le jeudi')).toBeTruthy()
+  })
 })

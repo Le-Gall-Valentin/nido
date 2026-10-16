@@ -1,9 +1,14 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18next from 'i18next'
 import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { resolveLocale } from '@/shared/lib'
 import type { SpaceMember } from '@/entities/space'
-import { EVENT_COLORS, EVENT_DOT_CLASS, type EventInput, type RecurrenceInterval } from '@/entities/calendar'
+import { EVENT_COLORS, EVENT_DOT_CLASS, type DayRule, type EventInput, type RecurrenceInterval, type Weekday } from '@/entities/calendar'
 import type { Recurrence } from '../lib/seriesInput'
+import {
+  WEEKDAYS, weekdayOf, weekdayName, possibleDayRules, dayRulePhrase, capitalize,
+} from '../lib/recurrenceRule'
 import { MAX_EVENT_DAYS, coversTooManyDays, occurrenceOutlastsInterval } from '../lib/scheduleLimits'
 import { ParticipantPicker } from './ParticipantPicker'
 
@@ -30,7 +35,8 @@ export interface EventFormModalProps {
 }
 
 const INTERVALS: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
-const NO_RECURRENCE_YET: Recurrence = { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: [], dayRule: 'SAME_DAY' }
+const noRecurrenceYet = (startDate: string): Recurrence =>
+  ({ intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: [weekdayOf(startDate)], dayRule: 'SAME_DAY' })
 
 /**
  * Pure presentation: it validates what it can see and hands a well-formed input upward. The
@@ -42,7 +48,8 @@ export function EventFormModal({
   const { t } = useTranslation('calendar')
   const [form, setForm] = useState<EventInput>(initial)
   const [recurring, setRecurring] = useState(mode === 'edit-series')
-  const [recurrence, setRecurrence] = useState<Recurrence>(initialRecurrence ?? NO_RECURRENCE_YET)
+  const [recurrence, setRecurrence] = useState<Recurrence>(initialRecurrence ?? noRecurrenceYet(initial.startDate))
+  const locale = resolveLocale(i18next.language)
   const [error, setError] = useState<string | null>(null)
 
   const patch = (changes: Partial<EventInput>) => setForm((current) => ({ ...current, ...changes }))
@@ -54,6 +61,31 @@ export function EventFormModal({
       ? { allDay, startTime: null, endTime: null }
       : { allDay, startTime: form.startTime ?? '09:00', endTime: form.endTime ?? '10:00' })
   }
+
+  /** The start day is always one of a weekly series' days, and a day rule it cannot give falls back to the same day. */
+  const changeStart = (startDate: string) => {
+    patch({ startDate, endDate: form.endDate || startDate })
+    if (!startDate) return
+    setRecurrence((current) => ({
+      ...current,
+      weekdays: current.weekdays.includes(weekdayOf(startDate)) ? current.weekdays : [...current.weekdays, weekdayOf(startDate)],
+      dayRule: possibleDayRules(startDate).includes(current.dayRule) ? current.dayRule : 'SAME_DAY',
+    }))
+  }
+
+  const toggleWeekday = (day: Weekday) => setRecurrence((current) => ({
+    ...current,
+    weekdays: current.weekdays.includes(day) ? current.weekdays.filter((d) => d !== day) : [...current.weekdays, day],
+  }))
+
+  /** What is sent: days for a weekly series only — the start day always among them —, a day rule for a monthly or yearly one only. */
+  const sent = (): Recurrence => ({
+    ...recurrence,
+    weekdays: recurrence.intervalType === 'WEEKLY'
+      ? WEEKDAYS.filter((day) => recurrence.weekdays.includes(day) || day === weekdayOf(form.startDate))
+      : [],
+    dayRule: recurrence.intervalType === 'MONTHLY' || recurrence.intervalType === 'YEARLY' ? recurrence.dayRule : 'SAME_DAY',
+  })
 
   const submit = () => {
     if (!form.title.trim()) return setError(t('form.title_required'))
@@ -67,10 +99,10 @@ export function EventFormModal({
     }
     if (coversTooManyDays(form)) return setError(t('form.too_long', { days: MAX_EVENT_DAYS }))
     if (recurring && !(recurrence.intervalCount >= 1)) return setError(t('series.interval_invalid'))
-    if (recurring && occurrenceOutlastsInterval(form, recurrence)) return setError(t('series.occurrence_too_long'))
+    if (recurring && occurrenceOutlastsInterval(form, sent())) return setError(t('series.occurrence_too_long'))
     if (recurring && recurrence.until && recurrence.until < form.startDate) return setError(t('series.until_before_start'))
     setError(null)
-    onSubmit({ ...form, title: form.title.trim() }, recurring ? recurrence : null)
+    onSubmit({ ...form, title: form.title.trim() }, recurring ? sent() : null)
   }
 
   return (
@@ -92,7 +124,7 @@ export function EventFormModal({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input label={t('form.start_date')} type="date" value={form.startDate}
-            onChange={(e) => patch({ startDate: e.target.value, endDate: form.endDate || e.target.value })} />
+            onChange={(e) => changeStart(e.target.value)} />
           <Input label={t('form.end_date')} type="date" value={form.endDate}
             onChange={(e) => patch({ endDate: e.target.value })} />
           {!form.allDay && (
@@ -120,7 +152,7 @@ export function EventFormModal({
               {/* Set like the Input beside it, so the two fields sit on one line. */}
               <label className="flex flex-col gap-1.5">
                 <span className="text-[13px] font-semibold text-fg-1">{t('series.interval_type')}</span>
-                <select value={recurrence.intervalType}
+                <select aria-label={t('series.interval_type')} value={recurrence.intervalType}
                   onChange={(e) => setRecurrence({ ...recurrence, intervalType: e.target.value as RecurrenceInterval })}
                   className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent">
                   {INTERVALS.map((interval) => (
@@ -129,6 +161,38 @@ export function EventFormModal({
                 </select>
               </label>
             </div>
+            {recurrence.intervalType === 'WEEKLY' && (
+              <div role="group" aria-label={t('series.weekdays')} className="flex flex-wrap gap-1.5">
+                {WEEKDAYS.map((day) => {
+                  const isStart = day === weekdayOf(form.startDate)
+                  const on = isStart || recurrence.weekdays.includes(day)
+                  return (
+                    // The start day is always one of them: the series starts on its own first occurrence.
+                    <button key={day} type="button" aria-pressed={on} disabled={isStart}
+                      aria-label={weekdayName(day, locale)} onClick={() => toggleWeekday(day)}
+                      className={`grid size-8 place-items-center rounded-full border text-xs font-semibold
+                        ${on ? 'border-accent bg-accent text-white' : 'border-border text-fg-2 hover:bg-bg-1'}
+                        disabled:opacity-100`}>
+                      {weekdayName(day, locale, 'narrow')}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {(recurrence.intervalType === 'MONTHLY' || recurrence.intervalType === 'YEARLY') && (
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[13px] font-semibold text-fg-1">{t('series.day_rule')}</span>
+                <select aria-label={t('series.day_rule')} value={recurrence.dayRule}
+                  onChange={(e) => setRecurrence({ ...recurrence, dayRule: e.target.value as DayRule })}
+                  className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent">
+                  {possibleDayRules(form.startDate).map((rule) => (
+                    <option key={rule} value={rule}>
+                      {capitalize(dayRulePhrase(t, rule, recurrence.intervalType, form.startDate, locale))}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <Input label={t('series.until')} type="date" value={recurrence.until ?? ''}
               onChange={(e) => setRecurrence({ ...recurrence, until: e.target.value || null })} />
             {notice && <p className="text-xs text-fg-2">{notice}</p>}
