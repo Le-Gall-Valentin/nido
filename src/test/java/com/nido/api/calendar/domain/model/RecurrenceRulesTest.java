@@ -133,6 +133,22 @@ class RecurrenceRulesTest {
             LocalDate.of(2026, 1, 1))).isEmpty();
     }
 
+    @Test
+    void aHugeIntervalHasNoCandidateAndDoesNotThrow() {
+        assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", Integer.MAX_VALUE, List.of(), List.of(28, 29), List.of(2), List.of(-1)),
+            LocalDate.of(2027, 2, 28))).isEmpty();
+        assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 100_000_000, List.of(), List.of(28, 29, 30), List.of(), List.of(-1)),
+            LocalDate.of(2027, 2, 28))).isEmpty();
+    }
+
+    @Test
+    void anOutOfRangeDayOrMonthHasNoCandidate() {
+        assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 1, List.of(), List.of(28, 2_000_000_000), List.of(), List.of(-1)),
+            LocalDate.of(2027, 2, 28))).isEmpty();
+        assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", 1, List.of(), List.of(), List.of(13), List.of()),
+            LocalDate.of(2027, 2, 28))).isEmpty();
+    }
+
     private static String monthly(DayRule rule, LocalDate anchor) {
         return RecurrenceRules.toRrule(series(RecurrenceInterval.MONTHLY, 1, null, rule, anchor, null, true), TORONTO);
     }
