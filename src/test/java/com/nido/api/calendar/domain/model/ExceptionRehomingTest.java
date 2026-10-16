@@ -2,10 +2,12 @@ package com.nido.api.calendar.domain.model;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,5 +57,15 @@ class ExceptionRehomingTest {
 
         assertThat(plan.editedOccurrences()).isEmpty();
         assertThat(plan.cancellations()).isEmpty();
+    }
+
+    @Test
+    void anEditedOccurrenceFindsItsNearestDayAmongSeveralWeekdays() {
+        // Monday and Thursday from 5 Jan 2026: an occurrence edited on Wednesday the 7th goes to Thursday the 8th.
+        RecurringEventSeries target = new RecurringEventSeries(UUID.randomUUID(), UUID.randomUUID(), "Piano", null, null,
+            true, null, null, 0, null, RecurrenceInterval.WEEKLY, 1, Set.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY), null,
+            LocalDate.of(2026, 1, 5), null, null, List.of(), UUID.randomUUID(), Instant.now());
+        ExceptionRehoming.Plan plan = ExceptionRehoming.plan(target, List.of(LocalDate.of(2026, 1, 7)), List.of());
+        assertThat(plan.editedOccurrences()).containsEntry(LocalDate.of(2026, 1, 7), LocalDate.of(2026, 1, 8));
     }
 }

@@ -2,8 +2,10 @@ package com.nido.api.calendar.domain.model;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -77,5 +79,56 @@ class EventScheduleValidatorTest {
     private static void timedSeries(String start, String end, int durationDays, RecurrenceInterval intervalType) {
         EventScheduleValidator.validateSeries(false, LocalTime.parse(start), LocalTime.parse(end), durationDays,
             intervalType, 1, DAY, null);
+    }
+
+    @Test
+    void anOccurrenceOnSeveralWeekdaysMayNotRunIntoTheNextDayChosen() {
+        // Monday and Thursday: three days between them at the shortest.
+        assertThatCode(() -> ruledAllDay(2, RecurrenceInterval.WEEKLY, Set.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY), null,
+            LocalDate.of(2026, 1, 5))).doesNotThrowAnyException();
+        assertThatThrownBy(() -> ruledAllDay(3, RecurrenceInterval.WEEKLY, Set.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY), null,
+            LocalDate.of(2026, 1, 5))).isInstanceOf(CalendarException.OccurrenceLongerThanInterval.class);
+    }
+
+    @Test
+    void theGapAcrossTwoPeriodsCountsToo() {
+        // Monday and Saturday every week: Saturday to Monday is two days.
+        assertThatThrownBy(() -> ruledAllDay(2, RecurrenceInterval.WEEKLY, Set.of(DayOfWeek.MONDAY, DayOfWeek.SATURDAY), null,
+            LocalDate.of(2026, 1, 5))).isInstanceOf(CalendarException.OccurrenceLongerThanInterval.class);
+    }
+
+    @Test
+    void aYearlyWeekdayComesBackAfter364DaysAtTheShortest() {
+        assertThatCode(() -> ruledAllDay(363, RecurrenceInterval.YEARLY, null, DayRule.WEEKDAY_OF_MONTH,
+            LocalDate.of(2026, 11, 26))).doesNotThrowAnyException();
+        assertThatThrownBy(() -> ruledAllDay(364, RecurrenceInterval.YEARLY, null, DayRule.WEEKDAY_OF_MONTH,
+            LocalDate.of(2026, 11, 26))).isInstanceOf(CalendarException.OccurrenceLongerThanInterval.class);
+    }
+
+    @Test
+    void aRuleTheAnchorCannotGiveIsRefused() {
+        assertThatThrownBy(() -> ruledAllDay(0, RecurrenceInterval.MONTHLY, null, DayRule.LAST_DAY_OF_MONTH,
+            LocalDate.of(2026, 1, 30))).isInstanceOf(CalendarException.InvalidRecurrenceRule.class);
+        assertThatThrownBy(() -> ruledAllDay(0, RecurrenceInterval.MONTHLY, null, DayRule.WEEKDAY_OF_MONTH,
+            LocalDate.of(2026, 1, 29))).isInstanceOf(CalendarException.InvalidRecurrenceRule.class);
+    }
+
+    @Test
+    void weekdaysWithoutTheAnchorsOrOutsideAWeeklySeriesAreRefused() {
+        assertThatThrownBy(() -> ruledAllDay(0, RecurrenceInterval.WEEKLY, Set.of(DayOfWeek.TUESDAY), null,
+            LocalDate.of(2026, 1, 5))).isInstanceOf(CalendarException.InvalidRecurrenceRule.class);
+        assertThatThrownBy(() -> ruledAllDay(0, RecurrenceInterval.DAILY, Set.of(DayOfWeek.MONDAY), null,
+            LocalDate.of(2026, 1, 5))).isInstanceOf(CalendarException.InvalidRecurrenceRule.class);
+    }
+
+    @Test
+    void aDayRuleOutsideMonthsAndYearsIsRefused() {
+        assertThatThrownBy(() -> ruledAllDay(0, RecurrenceInterval.WEEKLY, null, DayRule.LAST_DAY_OF_MONTH,
+            LocalDate.of(2026, 1, 31))).isInstanceOf(CalendarException.InvalidRecurrenceRule.class);
+    }
+
+    private static void ruledAllDay(int durationDays, RecurrenceInterval interval, Set<DayOfWeek> weekdays,
+                                    DayRule dayRule, LocalDate anchor) {
+        EventScheduleValidator.validateSeries(true, null, null, durationDays, interval, 1, weekdays, dayRule, anchor, null);
     }
 }

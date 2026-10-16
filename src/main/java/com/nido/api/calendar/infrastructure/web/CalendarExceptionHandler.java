@@ -42,6 +42,8 @@ public class CalendarExceptionHandler {
                 new CalendarErrorResponse(400, "An occurrence cannot last longer than the time between two occurrences.");
             case CalendarException.InvalidEndDate ignored ->
                 new CalendarErrorResponse(400, "The end date must be on or after the anchor date.");
+            case CalendarException.InvalidRecurrenceRule ignored -> new CalendarErrorResponse(400,
+                "The days of a series are read off its first day: it must be one of them.", "invalid_recurrence_rule");
             case CalendarException.ReversedWindow ignored ->
                 new CalendarErrorResponse(400, "The window starts after it ends: 'from' must be on or before 'to'.");
             case CalendarException.WindowTooLarge ex -> new CalendarErrorResponse(400,
@@ -51,8 +53,15 @@ public class CalendarExceptionHandler {
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), e.getClass().getSimpleName(), response.detail(),
             URI.create(request.getRequestURI()));
+        if (response.errorCode() != null) {
+            problem.setProperty("error_code", response.errorCode());
+        }
         return ResponseEntity.status(response.status()).body(problem);
     }
 
-    private record CalendarErrorResponse(int status, String detail) {}
+    private record CalendarErrorResponse(int status, String detail, String errorCode) {
+        CalendarErrorResponse(int status, String detail) {
+            this(status, detail, null);
+        }
+    }
 }

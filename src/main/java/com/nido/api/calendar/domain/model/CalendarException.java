@@ -6,7 +6,8 @@ public abstract sealed class CalendarException extends RuntimeException
             CalendarException.InvalidTimeRange, CalendarException.InvalidEndDate,
             CalendarException.MemberNotInSpace, CalendarException.WindowTooLarge,
             CalendarException.ParticipantsFixedInPersonalSpace, CalendarException.EventTooLong,
-            CalendarException.OccurrenceLongerThanInterval, CalendarException.ReversedWindow {
+            CalendarException.OccurrenceLongerThanInterval, CalendarException.ReversedWindow,
+            CalendarException.InvalidRecurrenceRule {
 
     private CalendarException(String message) { super(message); }
 
@@ -99,5 +100,13 @@ public abstract sealed class CalendarException extends RuntimeException
 
         public int requestedDays() { return requestedDays; }
         public int maximum() { return maximum; }
+    }
+
+    /**
+     * Thrown when a series' days cannot be read off its anchor — a last day that is not one, a fifth weekday, weekdays
+     * without the anchor's — or belong to another frequency: the series would not start on its own first occurrence.
+     */
+    public static final class InvalidRecurrenceRule extends CalendarException {
+        public InvalidRecurrenceRule() { super("The recurrence rule does not fit the series' first day"); }
     }
 }
