@@ -71,6 +71,10 @@ public class SecurityConfig {
                         "/api/setup/encryption-key",
                         "/api/setup/mail-test",
                         "/api/setup/complete").permitAll()
+                // A subscription address, read by a calendar application that signs in as nobody: its token is the
+                // credential, checked by the route itself.
+                .requestMatchers(HttpMethod.GET, "/ical/*").permitAll()
+                .requestMatchers(HttpMethod.HEAD, "/ical/*").permitAll()
                 // /api/** must be evaluated before the SPA fallback so extensionless
                 // paths like /api/users/me are never matched by the GET wildcard.
                 .requestMatchers("/api/**").authenticated()

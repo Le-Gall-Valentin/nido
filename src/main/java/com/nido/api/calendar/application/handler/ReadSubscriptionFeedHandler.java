@@ -1,0 +1,72 @@
+package com.nido.api.calendar.application.handler;
+
+import com.nido.api.calendar.application.port.in.ReadSubscriptionFeedUseCase;
+import com.nido.api.calendar.application.service.CalendarFeedAssembler;
+import com.nido.api.calendar.domain.model.CalendarDigests;
+import com.nido.api.calendar.domain.model.SubscriptionLink;
+import com.nido.api.calendar.domain.model.SubscriptionTokens;
+import com.nido.api.calendar.domain.port.out.AccountLanguage;
+import com.nido.api.calendar.domain.port.out.IcalWriter;
+import com.nido.api.calendar.domain.port.out.SubscriptionLinkRepository;
+import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.space.domain.model.SpaceMembership;
+import com.nido.api.space.domain.port.out.SpaceMembershipPort;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
+
+/**
+ * What a calendar application reads at a secret address. It reads as the address' owner reads today — their current
+ * membership, not the one they had when they made it: an owner gone from the space reads nothing, whatever the reason.
+ * The time of the last read is written at most once an hour, so a phone polling every few minutes costs no write.
+ */
+@ApplicationService
+public class ReadSubscriptionFeedHandler implements ReadSubscriptionFeedUseCase {
+
+    private static final Duration READ_MARK_EVERY = Duration.ofHours(1);
+
+    private final SubscriptionLinkRepository links;
+    private final SpaceMembershipPort memberships;
+    private final CalendarFeedAssembler assembler;
+    private final IcalWriter writer;
+    private final AccountLanguage language;
+    private final Clock clock;
+
+    public ReadSubscriptionFeedHandler(SubscriptionLinkRepository links, SpaceMembershipPort memberships,
+                                       CalendarFeedAssembler assembler, IcalWriter writer, AccountLanguage language,
+                                       Clock clock) {
+        this.links = links;
+        this.memberships = memberships;
+        this.assembler = assembler;
+        this.writer = writer;
+        this.language = language;
+        this.clock = clock;
+    }
+
+    @Override
+    @Transactional
+    public Optional<String> read(String token) {
+        if (!SubscriptionTokens.wellFormed(token)) {
+            return Optional.empty();
+        }
+        Optional<SubscriptionLink> found = links.findByTokenHash(CalendarDigests.sha256Hex(token));
+        if (found.isEmpty()) {
+            return Optional.empty();
+        }
+        SubscriptionLink link = found.get();
+        Optional<SpaceMembership> reader = memberships.find(link.spaceId(), link.userId());
+        if (reader.isEmpty()) {
+            return Optional.empty();
+        }
+        String content = writer.write(assembler.assemble(reader.get(), link.sources(), link.onlyMine()),
+            language.of(link.userId()));
+        Instant now = clock.instant();
+        if (link.lastReadAt() == null || link.lastReadAt().isBefore(now.minus(READ_MARK_EVERY))) {
+            links.markRead(link.id(), now);
+        }
+        return Optional.of(content);
+    }
+}
