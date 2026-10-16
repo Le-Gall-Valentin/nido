@@ -83,10 +83,6 @@ class CalendarSubscriptionLinkControllerIT {
         saveMembership(spaceId, bobId, SpaceRole.VIEWER);
         bobsSpaceId = saveSharedSpace("Chez Bob");
         saveMembership(bobsSpaceId, bobId, SpaceRole.OWNER);
-    }
-
-    @BeforeEach
-    void publicAddress() {
         settingsStore.save(Map.of(SettingKey.PUBLIC_URL, Optional.of("https://nido.test")), null, Instant.now());
     }
 
@@ -112,6 +108,8 @@ class CalendarSubscriptionLinkControllerIT {
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].label").value("iPhone"))
             .andExpect(jsonPath("$[0].url").doesNotExist())
+            .andExpect(jsonPath("$[0].token").doesNotExist())
+            .andExpect(jsonPath("$[0].tokenHash").doesNotExist())
             .andExpect(jsonPath("$[0].lastReadAt").doesNotExist());
 
         mockMvc.perform(get(links()).cookie(tokenFor(aliceId)))
@@ -147,6 +145,30 @@ class CalendarSubscriptionLinkControllerIT {
                 .content("{\"label\":\"Un de trop\",\"sources\":[\"EVENT\"]}"))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.error_code").value("too_many_links"));
+
+        // The cap counts per person and per space: neither Alice here nor Bob elsewhere is held back.
+        create(aliceId, "Premier");
+        mockMvc.perform(post("/api/spaces/" + bobsSpaceId + "/calendar/subscription-links").cookie(tokenFor(bobId))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"label\":\"Ailleurs\",\"sources\":[\"EVENT\"]}"))
+            .andExpect(status().isCreated());
+    }
+
+    @Test
+    void an_address_of_another_space_is_not_revoked_through_this_one() throws Exception {
+        mockMvc.perform(post("/api/spaces/" + bobsSpaceId + "/calendar/subscription-links").cookie(tokenFor(bobId))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"label\":\"Chez Bob\",\"sources\":[\"EVENT\"]}"))
+            .andExpect(status().isCreated());
+        String id = jdbc.queryForObject("SELECT id::text FROM calendar_subscription_links", String.class);
+
+        mockMvc.perform(delete(links() + "/" + id).cookie(tokenFor(bobId))).andExpect(status().isNotFound());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_subscription_links", Long.class)).isEqualTo(1L);
+    }
+
+    @Test
+    void a_null_source_is_refused() throws Exception {
+        mockMvc.perform(post(links()).cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"label\":\"x\",\"sources\":[null]}"))
+            .andExpect(status().isBadRequest());
     }
 
     @Test

@@ -13,6 +13,7 @@ import com.nido.api.calendar.infrastructure.web.dto.SubscriptionLinkResponse;
 import com.nido.api.infrastructure.ratelimit.RateLimiting;
 import com.nido.api.infrastructure.web.CurrentMembership;
 import com.nido.api.instance.application.port.in.GetEffectiveSettingsQuery;
+import com.nido.api.instance.domain.model.PublicUrl;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.space.domain.model.SpaceMembership;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -71,7 +72,7 @@ public class CalendarSubscriptionLinkController {
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
         // Asked before anything is made: an address nobody could be given must not exist.
         String publicUrl = settings.current().text(SettingKey.PUBLIC_URL)
-            .map(url -> url.replaceAll("/+$", ""))
+            .flatMap(PublicUrl::parse).map(PublicUrl::value)
             .orElseThrow(CalendarException.PublicUrlMissing::new);
         CreatedSubscriptionLink created = createUseCase.create(new CreateSubscriptionLinkCommand(request.label(),
             request.sources() == null || request.sources().isEmpty()
