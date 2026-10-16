@@ -81,6 +81,11 @@ public final class EventScheduleValidator {
         return unit * intervalCount;
     }
 
+    /** The shortest time between two occurrences of {@code series}, in days. */
+    static long shortestIntervalDays(RecurringEventSeries series) {
+        return shortestIntervalDays(series.intervalType(), series.intervalCount());
+    }
+
     private static long minutesOf(LocalTime time) {
         return time.getHour() * 60L + time.getMinute();
     }

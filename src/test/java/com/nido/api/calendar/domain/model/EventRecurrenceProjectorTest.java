@@ -2,6 +2,7 @@ package com.nido.api.calendar.domain.model;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -194,6 +195,102 @@ class EventRecurrenceProjectorTest {
             .contains(LocalDate.of(2026, 1, 20));
         RecurringEventSeries ended = weekly(LocalDate.of(2026, 1, 6), LocalDate.of(2026, 1, 13), 0);
         assertThat(EventRecurrenceProjector.nearestSlot(ended, LocalDate.of(2026, 3, 2))).isEmpty();
+    }
+
+    @Test
+    void aWeeklySeriesOnSeveralDaysProducesEachOfThem() {
+        // 2026-01-05 is a Monday.
+        RecurringEventSeries series = ruled(RecurrenceInterval.WEEKLY, 1, Set.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY),
+            null, LocalDate.of(2026, 1, 5));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 18)))
+            .containsExactly(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 8), LocalDate.of(2026, 1, 12), LocalDate.of(2026, 1, 15));
+    }
+
+    @Test
+    void aWeekOfTheAnchorShowsNoDayBeforeTheAnchor() {
+        // Anchored on Thursday the 8th: the Monday of that week is not an occurrence.
+        RecurringEventSeries series = ruled(RecurrenceInterval.WEEKLY, 1, Set.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY),
+            null, LocalDate.of(2026, 1, 8));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 14)))
+            .containsExactly(LocalDate.of(2026, 1, 8), LocalDate.of(2026, 1, 12));
+    }
+
+    @Test
+    void everyOtherWeekCountsWeeksFromTheAnchorsAcrossTheNewYear() {
+        // Monday 28 Dec 2026, every two weeks on Monday and Friday: weeks of 28 Dec, 11 Jan, 25 Jan.
+        RecurringEventSeries series = ruled(RecurrenceInterval.WEEKLY, 2, Set.of(DayOfWeek.MONDAY, DayOfWeek.FRIDAY),
+            null, LocalDate.of(2026, 12, 28));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 12, 1), LocalDate.of(2027, 1, 31)))
+            .containsExactly(LocalDate.of(2026, 12, 28), LocalDate.of(2027, 1, 1), LocalDate.of(2027, 1, 11),
+                LocalDate.of(2027, 1, 15), LocalDate.of(2027, 1, 25), LocalDate.of(2027, 1, 29));
+    }
+
+    @Test
+    void aMonthlySeriesOnTheSecondTuesday() {
+        RecurringEventSeries series = ruled(RecurrenceInterval.MONTHLY, 1, null, DayRule.WEEKDAY_OF_MONTH, LocalDate.of(2026, 10, 13));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 10, 1), LocalDate.of(2027, 1, 31)))
+            .containsExactly(LocalDate.of(2026, 10, 13), LocalDate.of(2026, 11, 10), LocalDate.of(2026, 12, 8), LocalDate.of(2027, 1, 12));
+    }
+
+    @Test
+    void aMonthlySeriesOnTheLastFridayFindsItInFourAndFiveWeekMonths() {
+        RecurringEventSeries series = ruled(RecurrenceInterval.MONTHLY, 1, null, DayRule.LAST_WEEKDAY_OF_MONTH, LocalDate.of(2026, 10, 30));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 10, 1), LocalDate.of(2027, 1, 31)))
+            .containsExactly(LocalDate.of(2026, 10, 30), LocalDate.of(2026, 11, 27), LocalDate.of(2026, 12, 25), LocalDate.of(2027, 1, 29));
+    }
+
+    @Test
+    void aMonthlySeriesOnTheLastDayFollowsFebruary() {
+        RecurringEventSeries series = ruled(RecurrenceInterval.MONTHLY, 1, null, DayRule.LAST_DAY_OF_MONTH, LocalDate.of(2027, 11, 30));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2027, 11, 1), LocalDate.of(2028, 3, 31)))
+            .containsExactly(LocalDate.of(2027, 11, 30), LocalDate.of(2027, 12, 31), LocalDate.of(2028, 1, 31),
+                LocalDate.of(2028, 2, 29), LocalDate.of(2028, 3, 31));
+    }
+
+    @Test
+    void aYearlySeriesOnTheFourthThursdayOfNovember() {
+        RecurringEventSeries series = ruled(RecurrenceInterval.YEARLY, 1, null, DayRule.WEEKDAY_OF_MONTH, LocalDate.of(2026, 11, 26));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 1, 1), LocalDate.of(2028, 12, 31)))
+            .containsExactly(LocalDate.of(2026, 11, 26), LocalDate.of(2027, 11, 25), LocalDate.of(2028, 11, 23));
+    }
+
+    @Test
+    void aYearlySeriesOnTheLastSundayOfMay() {
+        RecurringEventSeries series = ruled(RecurrenceInterval.YEARLY, 1, null, DayRule.LAST_WEEKDAY_OF_MONTH, LocalDate.of(2026, 5, 31));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 1, 1), LocalDate.of(2027, 12, 31)))
+            .containsExactly(LocalDate.of(2026, 5, 31), LocalDate.of(2027, 5, 30));
+    }
+
+    @Test
+    void aYearlySeriesOnFebruaryThe29thFallsOnThe28thInOtherYears() {
+        RecurringEventSeries series = ruled(RecurrenceInterval.YEARLY, 1, null, null, LocalDate.of(2028, 2, 29));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2028, 1, 1), LocalDate.of(2030, 12, 31)))
+            .containsExactly(LocalDate.of(2028, 2, 29), LocalDate.of(2029, 2, 28), LocalDate.of(2030, 2, 28));
+    }
+
+    @Test
+    void aSeriesCarriedOnFromTheMiddleOfAWeekKeepsItsWeekdays() {
+        RecurringEventSeries series = new RecurringEventSeries(SERIES_ID, UUID.randomUUID(), "Piano", null, null,
+            true, null, null, 0, null, RecurrenceInterval.WEEKLY, 1, Set.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY), null,
+            LocalDate.of(2026, 1, 5), null, LocalDate.of(2026, 1, 14), List.of(), UUID.randomUUID(), Instant.now());
+        assertThat(EventRecurrenceProjector.firstOccurrence(series)).contains(LocalDate.of(2026, 1, 15));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 20)))
+            .containsExactly(LocalDate.of(2026, 1, 15), LocalDate.of(2026, 1, 19));
+    }
+
+    @Test
+    void aFarAnchorCostsNoMoreThanItsWindow() {
+        RecurringEventSeries series = ruled(RecurrenceInterval.WEEKLY, 1, Set.of(DayOfWeek.MONDAY, DayOfWeek.FRIDAY),
+            null, LocalDate.of(1900, 1, 1));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 10, 12), LocalDate.of(2026, 10, 18)))
+            .containsExactly(LocalDate.of(2026, 10, 12), LocalDate.of(2026, 10, 16));
+    }
+
+    private RecurringEventSeries ruled(RecurrenceInterval interval, int count, Set<DayOfWeek> weekdays, DayRule dayRule,
+                                       LocalDate anchor) {
+        return new RecurringEventSeries(SERIES_ID, UUID.randomUUID(), "Piano", null, null,
+            true, null, null, 0, null, interval, count, weekdays, dayRule, anchor, null, null,
+            List.of(), UUID.randomUUID(), Instant.now());
     }
 
     private RecurringEventSeries carriedOn(RecurrenceInterval interval, LocalDate anchor, LocalDate startsOn) {
