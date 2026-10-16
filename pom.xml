@@ -98,6 +98,19 @@
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
         </dependency>
+        <!-- iCalendar (RFC 5545): export, subscriptions, import and followed calendars. Kept in calendar.infrastructure
+             only; it never fetches anything over the network (see ical4j.properties). -->
+        <dependency>
+            <groupId>org.mnode.ical4j</groupId>
+            <artifactId>ical4j</artifactId>
+            <version>4.3.0</version>
+        </dependency>
+        <!-- Downloads followed calendars through a DNS resolver of our own, which refuses local addresses. No
+             <version>: the Boot BOM manages it. -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+        </dependency>
         <!-- Outgoing mail (the mail bounded context). Only JavaMailSenderImpl is used, built from
              nido.mail.* by MailSettingsConfiguration: Boot's own mail auto-configuration stays inert
              because spring.mail.host is never set. No <version>: the Boot BOM manages Jakarta Mail. -->
