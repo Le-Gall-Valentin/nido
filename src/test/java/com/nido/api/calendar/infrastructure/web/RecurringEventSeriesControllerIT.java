@@ -87,6 +87,67 @@ class RecurringEventSeriesControllerIT {
     }
 
     @Test
+    void a_weekly_series_on_monday_and_thursday_shows_on_both_days() throws Exception {
+        mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title": "Piano", "allDay": true, "intervalType": "WEEKLY", "intervalCount": 1,
+                     "weekdays": ["MONDAY", "THURSDAY"], "anchorDate": "2026-01-05"}
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.weekdays[0]").value("MONDAY"))
+            .andExpect(jsonPath("$.weekdays[1]").value("THURSDAY"))
+            .andExpect(jsonPath("$.dayRule").value("SAME_DAY"));
+
+        mockMvc.perform(get(occurrences() + "?from=2026-01-05&to=2026-01-11").cookie(tokenFor(aliceId)))
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].startDate").value("2026-01-05"))
+            .andExpect(jsonPath("$[1].startDate").value("2026-01-08"));
+    }
+
+    @Test
+    void a_monthly_series_on_the_last_friday() throws Exception {
+        mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title": "Apéro", "allDay": true, "intervalType": "MONTHLY", "intervalCount": 1,
+                     "dayRule": "LAST_WEEKDAY_OF_MONTH", "anchorDate": "2026-10-30"}
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.weekdays").doesNotExist());
+
+        mockMvc.perform(get(occurrences() + "?from=2026-11-01&to=2026-11-30").cookie(tokenFor(aliceId)))
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].startDate").value("2026-11-27"));
+    }
+
+    @Test
+    void a_rule_its_first_day_cannot_give_is_a_400() throws Exception {
+        mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title": "x", "allDay": true, "intervalType": "MONTHLY", "intervalCount": 1,
+                     "dayRule": "LAST_DAY_OF_MONTH", "anchorDate": "2026-10-30"}
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("invalid_recurrence_rule"));
+    }
+
+    @Test
+    void an_existing_weekly_series_keeps_its_day_after_the_migration() throws Exception {
+        // The backfill of 076, on the days it meets: ISODOW runs from 1 (Monday) to 7 (Sunday), as the codes do.
+        String backfill = "SELECT (ARRAY['MO','TU','WE','TH','FR','SA','SU'])[EXTRACT(ISODOW FROM ?::date)::int]";
+        assertThat(jdbc.queryForObject(backfill, String.class, "2026-01-05")).isEqualTo("MO");
+        assertThat(jdbc.queryForObject(backfill, String.class, "2026-01-06")).isEqualTo("TU");
+        assertThat(jdbc.queryForObject(backfill, String.class, "2026-01-11")).isEqualTo("SU");
+
+        // A client of 0.17 sends no weekdays: the series repeats on its anchor's day, stored as such.
+        String seriesId = createWeeklySeries();
+        assertThat(jdbc.queryForObject("SELECT weekdays FROM calendar_recurring_event_series WHERE id = ?::uuid",
+            String.class, seriesId)).isEqualTo("TU");
+        mockMvc.perform(get(occurrences() + "?from=2026-01-01&to=2026-01-31").cookie(tokenFor(aliceId)))
+            .andExpect(jsonPath("$.length()").value(4))
+            .andExpect(jsonPath("$[0].startDate").value("2026-01-06"));
+    }
+
+    @Test
     void every_slot_of_a_weekly_series_shows_in_the_window() throws Exception {
         createWeeklySeries();
 

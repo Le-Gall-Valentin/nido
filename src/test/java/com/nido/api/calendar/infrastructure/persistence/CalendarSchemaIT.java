@@ -157,8 +157,8 @@ class CalendarSchemaIT {
     private UUID insertSeries() {
         jdbc.update("""
             INSERT INTO calendar_recurring_event_series
-              (space_id, title_encrypted, all_day, duration_days, interval_type, interval_count, anchor_date, created_by)
-            VALUES (?, 'x', true, 0, 'WEEKLY', 1, '2026-01-03', ?)
+              (space_id, title_encrypted, all_day, duration_days, interval_type, interval_count, weekdays, anchor_date, created_by)
+            VALUES (?, 'x', true, 0, 'WEEKLY', 1, 'SA', '2026-01-03', ?)
             """, spaceId, aliceId);
         return jdbc.queryForObject(
             "SELECT id FROM calendar_recurring_event_series WHERE space_id = ? ORDER BY created_at DESC LIMIT 1",

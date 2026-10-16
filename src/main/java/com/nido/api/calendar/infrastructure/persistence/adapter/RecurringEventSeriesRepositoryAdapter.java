@@ -2,9 +2,11 @@ package com.nido.api.calendar.infrastructure.persistence.adapter;
 
 import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.CreateRecurringEventSeriesCommand;
+import com.nido.api.calendar.domain.model.DayRule;
 import com.nido.api.calendar.domain.model.RecurrenceInterval;
 import com.nido.api.calendar.domain.model.RecurringEventSeries;
 import com.nido.api.calendar.domain.model.UpdateRecurringEventSeriesCommand;
+import com.nido.api.calendar.domain.model.Weekdays;
 import com.nido.api.calendar.domain.port.out.RecurringEventSeriesRepository;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarRecurringEventSeriesEntity;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarRecurringEventSeriesParticipantEntity;
@@ -15,12 +17,14 @@ import com.nido.api.infrastructure.sealing.SpaceSealers;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -70,7 +74,8 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
         entity.setDescriptionEncrypted(sealer.sealNullable(CalendarRecurringEventSeriesEntity.DESCRIPTION, entity.getId(), command.description()));
         entity.setLocationEncrypted(sealer.sealNullable(CalendarRecurringEventSeriesEntity.LOCATION, entity.getId(), command.location()));
         apply(entity, command.allDay(), command.startTime(), command.endTime(), command.durationDays(),
-            command.color(), command.intervalType(), command.intervalCount(), command.anchorDate(), command.endDate());
+            command.color(), command.intervalType(), command.intervalCount(), command.weekdays(), command.dayRule(),
+            command.anchorDate(), command.endDate());
         entity.setStartsOn(command.startsOn());
         entity.setCreatedBy(command.createdBy());
         CalendarRecurringEventSeriesEntity saved = series.saveAndFlush(entity);
@@ -88,7 +93,8 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
         entity.setDescriptionEncrypted(sealer.sealNullable(CalendarRecurringEventSeriesEntity.DESCRIPTION, entity.getId(), command.description()));
         entity.setLocationEncrypted(sealer.sealNullable(CalendarRecurringEventSeriesEntity.LOCATION, entity.getId(), command.location()));
         apply(entity, command.allDay(), command.startTime(), command.endTime(), command.durationDays(),
-            command.color(), command.intervalType(), command.intervalCount(), command.anchorDate(), command.endDate());
+            command.color(), command.intervalType(), command.intervalCount(), command.weekdays(), command.dayRule(),
+            command.anchorDate(), command.endDate());
         CalendarRecurringEventSeriesEntity saved = series.saveAndFlush(entity);
         replaceParticipants(saved.getId(), command.participantIds());
         return toDomain(saved, List.copyOf(command.participantIds()));
@@ -113,7 +119,8 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
     private static void apply(CalendarRecurringEventSeriesEntity entity, boolean allDay,
                               LocalTime startTime, LocalTime endTime, int durationDays,
                               String color, RecurrenceInterval intervalType,
-                              int intervalCount, LocalDate anchorDate, LocalDate endDate) {
+                              int intervalCount, Set<DayOfWeek> weekdays, DayRule dayRule,
+                              LocalDate anchorDate, LocalDate endDate) {
         entity.setAllDay(allDay);
         entity.setStartTime(startTime);
         entity.setEndTime(endTime);
@@ -121,6 +128,10 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
         entity.setColor(color);
         entity.setIntervalType(intervalType);
         entity.setIntervalCount(intervalCount);
+        entity.setWeekdays(Weekdays.toCodes(intervalType == RecurrenceInterval.WEEKLY
+            ? (weekdays == null || weekdays.isEmpty() ? Weekdays.of(anchorDate.getDayOfWeek()) : weekdays)
+            : null));
+        entity.setDayRule(dayRule == null ? DayRule.SAME_DAY : dayRule);
         entity.setAnchorDate(anchorDate);
         entity.setEndDate(endDate);
     }
@@ -149,7 +160,8 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
             sealer.openNullable(CalendarRecurringEventSeriesEntity.DESCRIPTION, e.getId(), e.getDescriptionEncrypted()),
             sealer.openNullable(CalendarRecurringEventSeriesEntity.LOCATION, e.getId(), e.getLocationEncrypted()),
             e.isAllDay(), e.getStartTime(), e.getEndTime(), e.getDurationDays(), e.getColor(),
-            e.getIntervalType(), e.getIntervalCount(), e.getAnchorDate(), e.getEndDate(), e.getStartsOn(),
+            e.getIntervalType(), e.getIntervalCount(), Weekdays.fromCodes(e.getWeekdays()), e.getDayRule(),
+            e.getAnchorDate(), e.getEndDate(), e.getStartsOn(),
             participantIds, e.getCreatedBy(), e.getCreatedAt());
     }
 }
