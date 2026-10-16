@@ -7,7 +7,8 @@ public abstract sealed class CalendarException extends RuntimeException
             CalendarException.MemberNotInSpace, CalendarException.WindowTooLarge,
             CalendarException.ParticipantsFixedInPersonalSpace, CalendarException.EventTooLong,
             CalendarException.OccurrenceLongerThanInterval, CalendarException.ReversedWindow,
-            CalendarException.InvalidRecurrenceRule, CalendarException.NotAnIcalFile {
+            CalendarException.InvalidRecurrenceRule, CalendarException.NotAnIcalFile,
+            CalendarException.InvalidSources {
 
     private CalendarException(String message) { super(message); }
 
@@ -113,5 +114,10 @@ public abstract sealed class CalendarException extends RuntimeException
     /** Thrown when a file or a followed address does not hold an iCalendar document nido can read. */
     public static final class NotAnIcalFile extends CalendarException {
         public NotAnIcalFile() { super("Not an iCalendar document"); }
+    }
+
+    /** Thrown when an export or an address names no source, or one nido does not export (a followed calendar). */
+    public static final class InvalidSources extends CalendarException {
+        public InvalidSources() { super("Choose at least one of the calendar's own sources"); }
     }
 }

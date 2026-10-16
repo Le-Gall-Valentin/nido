@@ -46,6 +46,8 @@ public class CalendarExceptionHandler {
                 "The days of a series are read off its first day: it must be one of them.", "invalid_recurrence_rule");
             case CalendarException.NotAnIcalFile ignored ->
                 new CalendarErrorResponse(400, "This is not an iCalendar (.ics) document.", "not_ics");
+            case CalendarException.InvalidSources ignored -> new CalendarErrorResponse(400,
+                "Choose at least one source among events, tasks, meals, money and savings.", "invalid_sources");
             case CalendarException.ReversedWindow ignored ->
                 new CalendarErrorResponse(400, "The window starts after it ends: 'from' must be on or before 'to'.");
             case CalendarException.WindowTooLarge ex -> new CalendarErrorResponse(400,
