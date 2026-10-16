@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: 078-create-calendar-subscription-links
+      author: nido
+      comment: >
+        The secret addresses a member gives a calendar application to read a space's calendar. Only the digest of the
+        token is kept: an address is shown once, when made. The label is sealed. user_id has no foreign key: an account
+        deleted is anonymised, not removed — the space module's departure hook deletes its addresses instead.
+      changes:
+        - sql:
+            sql: >
+              CREATE TABLE calendar_subscription_links (
+                id UUID NOT NULL,
+                space_id UUID NOT NULL,
+                user_id UUID NOT NULL,
+                label_encrypted TEXT NOT NULL,
+                token_hash VARCHAR(64) NOT NULL,
+                sources VARCHAR(60) NOT NULL,
+                only_mine BOOLEAN NOT NULL DEFAULT FALSE,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                last_read_at TIMESTAMPTZ,
+                CONSTRAINT pk_calendar_subscription_links PRIMARY KEY (id),
+                CONSTRAINT uq_calendar_subscription_links_token_hash UNIQUE (token_hash),
+                CONSTRAINT fk_calendar_subscription_links_space FOREIGN KEY (space_id) REFERENCES spaces (id) ON DELETE CASCADE,
+                CONSTRAINT ck_calendar_subscription_links_sources
+                  CHECK (sources ~ '^(EVENT|TASK|FINANCE|MEAL|SAVINGS)(,(EVENT|TASK|FINANCE|MEAL|SAVINGS))*$')
+              )
+            splitStatements: false
+        - sql:
+            sql: CREATE INDEX idx_calendar_subscription_links_space_user ON calendar_subscription_links (space_id, user_id)
+      rollback:
+        - dropTable:
+            tableName: calendar_subscription_links

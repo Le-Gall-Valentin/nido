@@ -8,7 +8,8 @@ public abstract sealed class CalendarException extends RuntimeException
             CalendarException.ParticipantsFixedInPersonalSpace, CalendarException.EventTooLong,
             CalendarException.OccurrenceLongerThanInterval, CalendarException.ReversedWindow,
             CalendarException.InvalidRecurrenceRule, CalendarException.NotAnIcalFile,
-            CalendarException.InvalidSources {
+            CalendarException.InvalidSources, CalendarException.TooManySubscriptionLinks,
+            CalendarException.SubscriptionLinkNotFound, CalendarException.PublicUrlMissing {
 
     private CalendarException(String message) { super(message); }
 
@@ -119,5 +120,27 @@ public abstract sealed class CalendarException extends RuntimeException
     /** Thrown when an export or an address names no source, or one nido does not export (a followed calendar). */
     public static final class InvalidSources extends CalendarException {
         public InvalidSources() { super("Choose at least one of the calendar's own sources"); }
+    }
+
+    /** Thrown when a member already holds as many addresses for a space as one may. */
+    public static final class TooManySubscriptionLinks extends CalendarException {
+        private final int maximum;
+
+        public TooManySubscriptionLinks(int maximum) {
+            super("At most " + maximum + " subscription addresses per person and space");
+            this.maximum = maximum;
+        }
+
+        public int maximum() { return maximum; }
+    }
+
+    /** Thrown for an address that does not exist, or is not the caller's: the two are not told apart. */
+    public static final class SubscriptionLinkNotFound extends CalendarException {
+        public SubscriptionLinkNotFound() { super("Subscription address not found"); }
+    }
+
+    /** Thrown when nido does not know the address it is reached at, which every subscription address begins with. */
+    public static final class PublicUrlMissing extends CalendarException {
+        public PublicUrlMissing() { super("The public address of this installation is not set"); }
     }
 }

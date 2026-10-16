@@ -48,6 +48,13 @@ public class CalendarExceptionHandler {
                 new CalendarErrorResponse(400, "This is not an iCalendar (.ics) document.", "not_ics");
             case CalendarException.InvalidSources ignored -> new CalendarErrorResponse(400,
                 "Choose at least one source among events, tasks, meals, money and savings.", "invalid_sources");
+            case CalendarException.TooManySubscriptionLinks ex -> new CalendarErrorResponse(409,
+                "You already have " + ex.maximum() + " addresses for this space. Revoke one first.", "too_many_links");
+            case CalendarException.SubscriptionLinkNotFound ignored ->
+                new CalendarErrorResponse(404, "Subscription address not found.");
+            case CalendarException.PublicUrlMissing ignored -> new CalendarErrorResponse(409,
+                "The public address of this installation is not set: an administrator sets it in the settings.",
+                "public_url_missing");
             case CalendarException.ReversedWindow ignored ->
                 new CalendarErrorResponse(400, "The window starts after it ends: 'from' must be on or before 'to'.");
             case CalendarException.WindowTooLarge ex -> new CalendarErrorResponse(400,
