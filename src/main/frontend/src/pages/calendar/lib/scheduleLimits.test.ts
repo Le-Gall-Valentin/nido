@@ -7,7 +7,8 @@ const day: EventInput = {
   title: 'x', description: null, location: null, allDay: true,
   startDate: '2026-01-01', startTime: null, endDate: '2026-01-01', endTime: null, color: null, participantIds: [],
 }
-const every = (intervalType: Recurrence['intervalType'], intervalCount = 1): Recurrence => ({ intervalType, intervalCount, until: null })
+const every = (intervalType: Recurrence['intervalType'], intervalCount = 1): Recurrence =>
+  ({ intervalType, intervalCount, until: null, weekdays: ['THURSDAY'], dayRule: 'SAME_DAY' })
 
 describe('coversTooManyDays', () => {
   it('accepts an event covering 366 days, and no more', () => {
@@ -40,5 +41,11 @@ describe('occurrenceOutlastsInterval', () => {
   it('reads the API times, seconds included', () => {
     const shift = { ...day, allDay: false, startTime: '22:00:00', endDate: '2026-01-02', endTime: '02:00:00' }
     expect(occurrenceOutlastsInterval(shift, every('DAILY'))).toBe(false)
+  })
+
+  it('lets an occurrence of a series on several days fill the gap to the next day chosen, and no more', () => {
+    const mondayAndThursday: Recurrence = { ...every('WEEKLY'), weekdays: ['MONDAY', 'THURSDAY'] }
+    expect(occurrenceOutlastsInterval({ ...day, endDate: '2026-01-03' }, mondayAndThursday)).toBe(false)
+    expect(occurrenceOutlastsInterval({ ...day, endDate: '2026-01-04' }, mondayAndThursday)).toBe(true)
   })
 })

@@ -2,6 +2,11 @@ export type CalendarSourceType = 'EVENT' | 'TASK' | 'FINANCE' | 'MEAL' | 'SAVING
 
 export type RecurrenceInterval = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
 
+export type Weekday = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'
+
+/** Which day of a month a monthly or yearly series falls on, read off its anchor — the server's DayRule. */
+export type DayRule = 'SAME_DAY' | 'WEEKDAY_OF_MONTH' | 'LAST_WEEKDAY_OF_MONTH' | 'LAST_DAY_OF_MONTH'
+
 /**
  * One entry of the unified feed, whatever produced it.
  *
@@ -64,6 +69,9 @@ export interface RecurringEventSeries {
   color: string | null
   intervalType: RecurrenceInterval
   intervalCount: number
+  /** The days a weekly series repeats on, its anchor's among them; null for any other frequency. */
+  weekdays: Weekday[] | null
+  dayRule: DayRule
   /** Sets the rhythm. The first occurrence shown is `firstDate`, later once the series carries on an edit. */
   anchorDate: string
   endDate: string | null
@@ -101,6 +109,9 @@ export interface RecurringEventSeriesInput {
   color: string | null
   intervalType: RecurrenceInterval
   intervalCount: number
+  /** The days a weekly series repeats on, its anchor's among them; null for any other frequency. */
+  weekdays: Weekday[] | null
+  dayRule: DayRule
   anchorDate: string
   endDate: string | null
   participantIds: string[]

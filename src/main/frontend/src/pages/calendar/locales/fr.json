@@ -108,7 +108,34 @@
     "this_occurrence": "Cette occurrence",
     "whole_series": "Toute la série"
   },
+  "rule": {
+    "every": {
+      "DAILY_one": "Tous les jours",
+      "DAILY_other": "Tous les {{count}} jours",
+      "WEEKLY_one": "Toutes les semaines",
+      "WEEKLY_other": "Toutes les {{count}} semaines",
+      "MONTHLY_one": "Tous les mois",
+      "MONTHLY_other": "Tous les {{count}} mois",
+      "YEARLY_one": "Tous les ans",
+      "YEARLY_other": "Tous les {{count}} ans"
+    },
+    "weekday_item": "le {{weekday}}",
+    "on_days": "{{days}}",
+    "day": "le {{day}}",
+    "day_of_month": "le {{day}} {{month}}",
+    "rank": { "1": "1ᵉʳ", "2": "2ᵉ", "3": "3ᵉ", "4": "4ᵉ" },
+    "weekday_of_month": "le {{rank}} {{weekday}}",
+    "weekday_of_month_in": "le {{rank}} {{weekday}} {{ofMonth}}",
+    "last_weekday": "le dernier {{weekday}}",
+    "last_weekday_in": "le dernier {{weekday}} {{ofMonth}}",
+    "last_day": "le dernier jour du mois",
+    "last_day_in": "le dernier jour {{ofMonth}}",
+    "of_month": "de {{month}}",
+    "of_month_elided": "d'{{month}}"
+  },
   "series": {
+    "weekdays": "Jours",
+    "day_rule": "Jour",
     "edit_title": "Modifier la série",
     "empty": "Aucun événement récurrent.",
     "edit": "Modifier {{name}}",

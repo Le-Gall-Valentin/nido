@@ -74,7 +74,7 @@ describe('EventFormModal — recurrence', () => {
 
     save()
 
-    expect(onSubmit).toHaveBeenCalledWith(initial, { intervalType: 'WEEKLY', intervalCount: 1, until: null })
+    expect(onSubmit).toHaveBeenCalledWith(initial, { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: [], dayRule: 'SAME_DAY' })
   })
 
   it('hands up the repetition picked', () => {
@@ -86,7 +86,7 @@ describe('EventFormModal — recurrence', () => {
 
     save()
 
-    expect(onSubmit).toHaveBeenCalledWith(initial, { intervalType: 'MONTHLY', intervalCount: 2, until: '2027-06-30' })
+    expect(onSubmit).toHaveBeenCalledWith(initial, { intervalType: 'MONTHLY', intervalCount: 2, until: '2027-06-30', weekdays: [], dayRule: 'SAME_DAY' })
   })
 
   it('refuses a repetition that stops before the event starts', () => {
@@ -129,7 +129,7 @@ describe('EventFormModal — recurrence', () => {
 
   it('shows how a series repeats when the series itself is edited, with no box to untick', () => {
     const { onSubmit } = renderForm({
-      mode: 'edit-series', initialRecurrence: { intervalType: 'MONTHLY', intervalCount: 3, until: '2027-06-30' },
+      mode: 'edit-series', initialRecurrence: { intervalType: 'MONTHLY', intervalCount: 3, until: '2027-06-30', weekdays: [], dayRule: 'SAME_DAY' },
     })
     expect(screen.getByText('series.edit_title')).toBeTruthy()
     expect(screen.queryByLabelText('form.recurring')).toBeNull()
@@ -139,6 +139,6 @@ describe('EventFormModal — recurrence', () => {
 
     save()
 
-    expect(onSubmit).toHaveBeenCalledWith(initial, { intervalType: 'MONTHLY', intervalCount: 3, until: '2027-06-30' })
+    expect(onSubmit).toHaveBeenCalledWith(initial, { intervalType: 'MONTHLY', intervalCount: 3, until: '2027-06-30', weekdays: [], dayRule: 'SAME_DAY' })
   })
 })

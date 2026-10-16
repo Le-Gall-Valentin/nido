@@ -16,7 +16,7 @@ const input: EventInput = {
 
 const seriesInput: RecurringEventSeriesInput = {
   title: 'Piano', description: null, location: null, allDay: false, startTime: '18:00', endTime: '19:00',
-  durationDays: 0, color: null, intervalType: 'WEEKLY', intervalCount: 1, anchorDate: '2026-01-06',
+  durationDays: 0, color: null, intervalType: 'WEEKLY', intervalCount: 1, weekdays: ['TUESDAY'], dayRule: 'SAME_DAY', anchorDate: '2026-01-06',
   endDate: null, participantIds: [],
 }
 

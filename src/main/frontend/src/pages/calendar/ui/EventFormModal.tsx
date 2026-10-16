@@ -30,7 +30,7 @@ export interface EventFormModalProps {
 }
 
 const INTERVALS: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
-const NO_RECURRENCE_YET: Recurrence = { intervalType: 'WEEKLY', intervalCount: 1, until: null }
+const NO_RECURRENCE_YET: Recurrence = { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: [], dayRule: 'SAME_DAY' }
 
 /**
  * Pure presentation: it validates what it can see and hands a well-formed input upward. The

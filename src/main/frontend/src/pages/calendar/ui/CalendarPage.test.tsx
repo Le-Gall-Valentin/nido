@@ -288,7 +288,7 @@ describe('CalendarPage — one dialog leading to the next', () => {
 const PIANO_SERIES: RecurringEventSeries = {
   id: 's-1', title: 'Piano', description: 'Salle 3', location: 'Conservatoire', allDay: false,
   startTime: '18:00', endTime: '19:00', durationDays: 0, color: null,
-  intervalType: 'MONTHLY', intervalCount: 1, anchorDate: '2026-09-02', endDate: null,
+  intervalType: 'MONTHLY', intervalCount: 1, weekdays: null, dayRule: 'SAME_DAY', anchorDate: '2026-09-02', endDate: null,
   startsOn: null, firstDate: '2026-09-02',
   participantIds: [], createdBy: 'u-1', createdAt: '2026-01-01T00:00:00Z',
 }

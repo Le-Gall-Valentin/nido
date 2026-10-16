@@ -1,5 +1,6 @@
-import type { EventInput, RecurrenceInterval, RecurringEventSeries, RecurringEventSeriesInput } from '@/entities/calendar'
+import type { DayRule, EventInput, RecurrenceInterval, RecurringEventSeries, RecurringEventSeriesInput, Weekday } from '@/entities/calendar'
 import { addDays, daysBetween } from './calendarWindow'
+import { weekdayOf } from './recurrenceRule'
 
 /** How an event repeats: what the form's recurrence box adds to an event. */
 export interface Recurrence {
@@ -7,6 +8,17 @@ export interface Recurrence {
   intervalCount: number
   /** The last day an occurrence may start, or null for a series that never ends. */
   until: string | null
+  /** The days a weekly series repeats on; ignored for any other frequency. */
+  weekdays: Weekday[]
+  /** Which day of a month a monthly or yearly series falls on; ignored otherwise. */
+  dayRule: DayRule
+}
+
+const monthlyOrYearly = (type: RecurrenceInterval) => type === 'MONTHLY' || type === 'YEARLY'
+
+function sameDays(a: readonly Weekday[] | null, b: readonly Weekday[] | null): boolean {
+  if (a === null || b === null) return a === b
+  return a.length === b.length && a.every((day) => b.includes(day))
 }
 
 /**
@@ -18,7 +30,12 @@ export interface Recurrence {
  * its anchor once it carries on an edit: left alone, that start keeps the series' own rhythm.
  */
 export function toSeriesInput(event: EventInput, recurrence: Recurrence, edited?: RecurringEventSeries | null): RecurringEventSeriesInput {
-  const anchorDate = edited && event.startDate === shownStart(edited) ? edited.anchorDate : event.startDate
+  const weekdays = recurrence.intervalType === 'WEEKLY' ? recurrence.weekdays : null
+  const dayRule: DayRule = monthlyOrYearly(recurrence.intervalType) ? recurrence.dayRule : 'SAME_DAY'
+  // The anchor sets the rhythm and the days are read off it: it is kept only while the start and the days are left
+  // alone. Otherwise the series is anchored on the start shown — one of its occurrences, in a week of its rhythm.
+  const keepsItsDays = !!edited && sameDays(edited.weekdays ?? null, weekdays) && (edited.dayRule ?? 'SAME_DAY') === dayRule
+  const anchorDate = edited && keepsItsDays && event.startDate === shownStart(edited) ? edited.anchorDate : event.startDate
   return {
     title: event.title,
     description: event.description,
@@ -30,6 +47,8 @@ export function toSeriesInput(event: EventInput, recurrence: Recurrence, edited?
     color: event.color,
     intervalType: recurrence.intervalType,
     intervalCount: recurrence.intervalCount,
+    weekdays,
+    dayRule,
     anchorDate,
     endDate: recurrence.until,
     participantIds: event.participantIds,
@@ -65,6 +84,12 @@ export function fromSeries(series: RecurringEventSeries): { event: EventInput; r
       color: series.color,
       participantIds: series.participantIds,
     },
-    recurrence: { intervalType: series.intervalType, intervalCount: series.intervalCount, until: series.endDate },
+    recurrence: {
+      intervalType: series.intervalType,
+      intervalCount: series.intervalCount,
+      until: series.endDate,
+      weekdays: series.weekdays ?? [weekdayOf(startDate)],
+      dayRule: series.dayRule ?? 'SAME_DAY',
+    },
   }
 }

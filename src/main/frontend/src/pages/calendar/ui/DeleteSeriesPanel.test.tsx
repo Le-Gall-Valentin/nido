@@ -11,7 +11,7 @@ vi.mock('react-i18next', () => ({
 const piano: RecurringEventSeries = {
   id: 'series-1', title: 'Piano', description: null, location: null, allDay: false,
   startTime: '18:00:00', endTime: '19:00:00', durationDays: 0, color: null,
-  intervalType: 'WEEKLY', intervalCount: 1, anchorDate: '2026-09-01', endDate: null,
+  intervalType: 'WEEKLY', intervalCount: 1, weekdays: ['TUESDAY'], dayRule: 'SAME_DAY', anchorDate: '2026-09-01', endDate: null,
   startsOn: null, firstDate: '2026-09-01', participantIds: [], createdBy: 'u1', createdAt: '2026-09-01T00:00:00Z',
 }
 

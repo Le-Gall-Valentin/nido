@@ -108,7 +108,34 @@
     "this_occurrence": "This occurrence",
     "whole_series": "The whole series"
   },
+  "rule": {
+    "every": {
+      "DAILY_one": "Every day",
+      "DAILY_other": "Every {{count}} days",
+      "WEEKLY_one": "Every week",
+      "WEEKLY_other": "Every {{count}} weeks",
+      "MONTHLY_one": "Every month",
+      "MONTHLY_other": "Every {{count}} months",
+      "YEARLY_one": "Every year",
+      "YEARLY_other": "Every {{count}} years"
+    },
+    "weekday_item": "{{weekday}}",
+    "on_days": "on {{days}}",
+    "day": "on day {{day}}",
+    "day_of_month": "on {{month}} {{day}}",
+    "rank": { "1": "first", "2": "second", "3": "third", "4": "fourth" },
+    "weekday_of_month": "on the {{rank}} {{weekday}}",
+    "weekday_of_month_in": "on the {{rank}} {{weekday}} {{ofMonth}}",
+    "last_weekday": "on the last {{weekday}}",
+    "last_weekday_in": "on the last {{weekday}} {{ofMonth}}",
+    "last_day": "on the last day of the month",
+    "last_day_in": "on the last day {{ofMonth}}",
+    "of_month": "of {{month}}",
+    "of_month_elided": "of {{month}}"
+  },
   "series": {
+    "weekdays": "Days",
+    "day_rule": "Day",
     "edit_title": "Edit series",
     "empty": "No recurring events.",
     "edit": "Edit {{name}}",

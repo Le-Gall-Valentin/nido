@@ -1,6 +1,6 @@
 export type {
   CalendarOccurrence, CalendarSourceType, CalendarEvent, RecurringEventSeries,
-  RecurrenceInterval, EventInput, RecurringEventSeriesInput, ScheduleChange,
+  RecurrenceInterval, Weekday, DayRule, EventInput, RecurringEventSeriesInput, ScheduleChange,
 } from './model/types'
 export { toEventInput } from './lib/toEventInput'
 export {
