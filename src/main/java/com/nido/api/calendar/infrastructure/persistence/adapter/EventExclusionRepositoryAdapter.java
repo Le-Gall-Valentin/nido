@@ -31,6 +31,16 @@ public class EventExclusionRepositoryAdapter implements EventExclusionRepository
     }
 
     @Override
+    public Map<UUID, Set<LocalDate>> findAllSlotsOfEach(Collection<UUID> seriesIds) {
+        if (seriesIds.isEmpty()) {
+            return Map.of();
+        }
+        return exclusions.findBySeriesIdIn(seriesIds).stream()
+            .collect(Collectors.groupingBy(CalendarEventExclusionEntity::getSeriesId,
+                Collectors.mapping(CalendarEventExclusionEntity::getOriginalDate, Collectors.toSet())));
+    }
+
+    @Override
     public Set<LocalDate> findAllSlots(UUID seriesId) {
         return exclusions.findBySeriesId(seriesId).stream()
             .map(CalendarEventExclusionEntity::getOriginalDate)

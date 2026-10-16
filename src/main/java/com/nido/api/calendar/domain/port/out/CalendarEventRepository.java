@@ -30,6 +30,9 @@ public interface CalendarEventRepository {
      */
     Map<UUID, Set<LocalDate>> findDetachedSlotsOfEach(Collection<UUID> seriesIds, LocalDate from, LocalDate to);
 
+    /** Every event of the space, the occurrences edited on their own among them: what an export writes. */
+    List<CalendarEvent> findBySpaceId(UUID spaceId);
+
     Optional<CalendarEvent> findBySeriesAndOriginalDate(UUID seriesId, LocalDate originalDate);
 
     /** Every occurrence of the series edited on its own, wherever each now sits. */

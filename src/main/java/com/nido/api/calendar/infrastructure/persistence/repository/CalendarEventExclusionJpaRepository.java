@@ -25,6 +25,8 @@ public interface CalendarEventExclusionJpaRepository extends JpaRepository<Calen
 
     List<CalendarEventExclusionEntity> findBySeriesId(UUID seriesId);
 
+    List<CalendarEventExclusionEntity> findBySeriesIdIn(Collection<UUID> seriesIds);
+
     List<CalendarEventExclusionEntity> findBySeriesIdInAndOriginalDateBetween(
         Collection<UUID> seriesIds, LocalDate from, LocalDate to);
 
