@@ -24,6 +24,7 @@ import java.time.temporal.Temporal;
  */
 public final class IcalSupport {
 
+    /** Only for writing (ical4j's bundled VTIMEZONE text): no document is ever read with this shared registry. */
     private static final TimeZoneRegistry REGISTRY;
 
     static {
@@ -38,7 +39,7 @@ public final class IcalSupport {
 
     public static Calendar parse(String content) {
         try {
-            return new CalendarBuilder(REGISTRY).build(new StringReader(content));
+            return new CalendarBuilder(new DocumentZones()).build(new StringReader(content));
         } catch (ParserException | IOException | RuntimeException e) {
             throw new CalendarException.NotAnIcalFile();
         }

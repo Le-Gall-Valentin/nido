@@ -34,11 +34,7 @@ final class IcalTestSupport {
         Set<Period<Temporal>> set = event.calculateRecurrenceSet(new Period<>(from.atStartOfDay(zone), to.plusDays(1).atStartOfDay(zone)));
         LocalDateTime end = to.plusDays(1).atStartOfDay();
         // ical4j's period end is inclusive: an all-day occurrence starting exactly at it is outside the days asked for.
-        // The wall clock is read as expanded: ical4j builds the zone's rules from the VTIMEZONE and puts the summer-time
-        // change of the second Sunday of March on the first one (a bug of its ZoneRulesBuilder, not of the rule written),
-        // so converting its instants to the JDK's rules would shift a few days a year by an hour.
-        return set.stream().map(p -> p.getStart() instanceof ZonedDateTime zoned
-                ? zoned.toLocalDateTime() : IcalSupport.toLocal(p.getStart(), zone))
+        return set.stream().map(p -> IcalSupport.toLocal(p.getStart(), zone))
             .filter(start -> start.isBefore(end)).sorted().toList();
     }
 
