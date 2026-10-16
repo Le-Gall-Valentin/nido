@@ -7,7 +7,7 @@ public abstract sealed class CalendarException extends RuntimeException
             CalendarException.MemberNotInSpace, CalendarException.WindowTooLarge,
             CalendarException.ParticipantsFixedInPersonalSpace, CalendarException.EventTooLong,
             CalendarException.OccurrenceLongerThanInterval, CalendarException.ReversedWindow,
-            CalendarException.InvalidRecurrenceRule {
+            CalendarException.InvalidRecurrenceRule, CalendarException.NotAnIcalFile {
 
     private CalendarException(String message) { super(message); }
 
@@ -108,5 +108,10 @@ public abstract sealed class CalendarException extends RuntimeException
      */
     public static final class InvalidRecurrenceRule extends CalendarException {
         public InvalidRecurrenceRule() { super("The recurrence rule does not fit the series' first day"); }
+    }
+
+    /** Thrown when a file or a followed address does not hold an iCalendar document nido can read. */
+    public static final class NotAnIcalFile extends CalendarException {
+        public NotAnIcalFile() { super("Not an iCalendar document"); }
     }
 }
