@@ -10,7 +10,7 @@ public abstract sealed class CalendarException extends RuntimeException
             CalendarException.InvalidRecurrenceRule, CalendarException.NotAnIcalFile,
             CalendarException.InvalidSources, CalendarException.TooManySubscriptionLinks,
             CalendarException.SubscriptionLinkNotFound, CalendarException.PublicUrlMissing,
-            CalendarException.ImportTooLarge {
+            CalendarException.ImportTooLarge, CalendarException.ImportFileTooLarge {
 
     private CalendarException(String message) { super(message); }
 
@@ -148,5 +148,17 @@ public abstract sealed class CalendarException extends RuntimeException
     /** Thrown when a file holds more than an import takes at once: 5 000 events, or 10 000 rows to write. */
     public static final class ImportTooLarge extends CalendarException {
         public ImportTooLarge(String what) { super("This file is too large to import: " + what); }
+    }
+
+    /** Thrown when an uploaded file is larger than an import reads at all. */
+    public static final class ImportFileTooLarge extends CalendarException {
+        private final int maximumMegabytes;
+
+        public ImportFileTooLarge(int maximumMegabytes) {
+            super("Files up to " + maximumMegabytes + " MB can be imported");
+            this.maximumMegabytes = maximumMegabytes;
+        }
+
+        public int maximumMegabytes() { return maximumMegabytes; }
     }
 }
