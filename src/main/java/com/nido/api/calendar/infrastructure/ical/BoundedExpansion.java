@@ -13,6 +13,7 @@ import net.fortuna.ical4j.model.property.ExDate;
 import net.fortuna.ical4j.model.property.ExRule;
 import net.fortuna.ical4j.model.property.RDate;
 import net.fortuna.ical4j.model.property.RRule;
+import net.fortuna.ical4j.util.Configurator;
 import net.fortuna.ical4j.transform.recurrence.Frequency;
 
 import java.time.Duration;
@@ -42,8 +43,10 @@ final class BoundedExpansion {
 
     /**
      * What one reading may ask of ical4j, in candidates generated (an upper bound, see {@code perStep}). Measured on the
-     * development machine: a file of 300 rules, each charging 2 million, is read in about 0.3 s, one of them expanded
-     * and the others refused; the budget spent in full is therefore well under a second.
+     * development machine: a file of 300 rules each charging 2 million is read in about 0.3 s, one expanded and the
+     * others refused. The worst shape that fits, {@code DAILY;BYHOUR=0..23;COUNT=10000000} from 1600 (billed 3.8 million),
+     * took about 1.6 s and 540 MB: a budget spent in full costs about 2 s and some hundreds of MB, once per import or
+     * refresh, which the rate limits of imports and the spacing of refreshes make acceptable.
      */
     static final long BUDGET = 5_000_000;
 
@@ -154,16 +157,18 @@ final class BoundedExpansion {
         TemporalAmount lead = seed instanceof LocalDate ? java.time.Period.ofDays(1) : Duration.between(times.start(), times.end());
         Temporal asked = from.minus(lead);
         for (Recur<Temporal> recur : rules) {
-            charge(recur, seed instanceof LocalDate, times.start(), from.toLocalDateTime(), to.toLocalDateTime());
+            charge(recur, seed instanceof LocalDate, times.start(), from.toLocalDateTime(), to.toLocalDateTime(),
+                seed instanceof LocalDate ? 86_400 : Math.max(0, Duration.between(times.start(), times.end()).toSeconds()));
             recur.getDatesAsStream(seed, asked, to, wanted).forEach(date -> found.add(IcalSupport.toLocal(date, zone)));
         }
         return found;
     }
 
     /** Refuses a rule nido cannot hold or ical4j cannot be kept to, and otherwise spends what expanding it may cost. */
-    private void charge(Recur<Temporal> recur, boolean dateStart, LocalDateTime seed, LocalDateTime from, LocalDateTime to) {
+    private void charge(Recur<Temporal> recur, boolean dateStart, LocalDateTime seed, LocalDateTime from, LocalDateTime to,
+                        long leadSeconds) {
         Frequency frequency = recur.getFrequency();
-        if (frequency == null || recur.getInterval() > RecurrenceRules.MAX_INTERVAL
+        if (frequency == null || recur.getInterval() > RecurrenceRules.MAX_INTERVAL || !distinctAndShort(recur)
             || dateStart && (frequency == Frequency.HOURLY || !recur.getHourList().isEmpty()
                 || !recur.getMinuteList().isEmpty() || !recur.getSecondList().isEmpty())) {
             throw new Refused("BAD_RULE");
@@ -172,17 +177,40 @@ final class BoundedExpansion {
             throw new Refused("TOO_HEAVY");
         }
         long step = stepSeconds(frequency) * Math.max(1, recur.getInterval());
+        long lead = leadSeconds / step + 1;
         long fromSeed = Math.max(0, ChronoUnit.SECONDS.between(seed, to)) / step + 2;
         if (fromSeed >= OVERFLOWING_STEPS) {
             throw new Refused("TOO_HEAVY");
         }
-        // With a COUNT, ical4j counts from the seed; without, it skips ahead to the window.
-        long walked = recur.getCount() > 0 ? fromSeed : Math.max(0, ChronoUnit.SECONDS.between(from, to)) / step + 2;
-        long work = walked * perStep(recur);
+        long walked;
+        if (recur.getCount() > 0) {
+            // ical4j counts from the seed, but gives up after maxIncrementCount empty steps in a row, and each COUNT
+            // candidate (generated, or too early to count) ends such a stretch: at most (COUNT + 1) stretches.
+            long giveUp = Configurator.getIntProperty(Recur.KEY_MAX_INCREMENT_COUNT).orElse(1_000);
+            walked = giveUp > 0 ? Math.min(fromSeed, ((long) recur.getCount() + 1) * (giveUp + 1)) : fromSeed;
+        } else {
+            walked = Math.max(0, ChronoUnit.SECONDS.between(from, to)) / step + 2;
+        }
+        long work = (walked + lead) * perStep(recur);
         if (work > BUDGET - spent) {
             throw new Refused("TOO_HEAVY");
         }
         spent += work;
+    }
+
+    /**
+     * ical4j keeps duplicate entries of a BY list and expands each one again, so the cost of a list is its length, not
+     * its distinct values: a list repeating an entry, or longer than the values it can hold, is no rule to expand.
+     */
+    private static boolean distinctAndShort(Recur<Temporal> recur) {
+        return distinct(recur.getSecondList(), 61) && distinct(recur.getMinuteList(), 60) && distinct(recur.getHourList(), 24)
+            && distinct(recur.getDayList(), 7 * 106) && distinct(recur.getMonthDayList(), 62)
+            && distinct(recur.getYearDayList(), 732) && distinct(recur.getWeekNoList(), 106)
+            && distinct(recur.getMonthList(), 12) && distinct(recur.getSetPosList(), 732);
+    }
+
+    private static boolean distinct(List<?> list, int most) {
+        return list.size() <= most && new HashSet<>(list).size() == list.size();
     }
 
     private static long stepSeconds(Frequency frequency) {
@@ -197,7 +225,7 @@ final class BoundedExpansion {
         };
     }
 
-    /** An upper bound of the candidates one period of the rule produces. */
+    /** An upper bound of the candidates one period of the rule produces (its lists hold distinct entries: see {@code distinctAndShort}). */
     private static long perStep(Recur<Temporal> recur) {
         Frequency frequency = recur.getFrequency();
         boolean byMonth = !recur.getMonthList().isEmpty();
@@ -216,14 +244,6 @@ final class BoundedExpansion {
             recur.getYearDayList().size(), recur.getHourList().size(), recur.getMinuteList().size(), recur.getSecondList().size()}) {
             product = Math.min(CAP, product * Math.max(1, part));
         }
-        long instants = switch (frequency) {
-            case YEARLY -> 366;
-            case MONTHLY -> 31;
-            case WEEKLY -> 7;
-            default -> 1;
-        };
-        instants *= (recur.getHourList().isEmpty() ? 1 : 24) * (recur.getMinuteList().isEmpty() ? 1 : 60)
-            * (recur.getSecondList().isEmpty() ? 1 : 60);
-        return Math.min(product, instants);
+        return product;
     }
 }

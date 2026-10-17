@@ -100,12 +100,12 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
             List<VEvent> held = overrides.stream()
                 .filter(override -> cancelled(override) || usable(override, zone, locale, notes, ignored)).toList();
             RecurringImport.Result result = recurring.translate(master, held, texts, times, notes);
-            if (result.events().isEmpty() && result.series() == null) {
-                return Optional.empty();
-            }
             if (result.unfolded()) {
+                // Said even when nothing is kept: every occurrence lay outside the window.
                 notes.add(new ImportNote(result.partial() ? ImportNoteKind.UNFOLDED_PARTIAL : ImportNoteKind.UNFOLDED,
                     texts.title(), String.valueOf(result.unfoldedOccurrences())));
+            } else if (result.events().isEmpty() && result.series() == null) {
+                return Optional.empty();
             }
             return Optional.of(new ImportGroup(uid, result.events(), result.series(), result.unfolded(), result.unfoldedOccurrences()));
         } catch (BoundedExpansion.Refused refused) {

@@ -293,6 +293,21 @@ class RecurringImportTest {
         assertThat(reading.notes()).isEmpty();
     }
 
+    @Test
+    void aCountSeriesEndsOnTheDayTheProjectorGivesItsLastOccurrence() {
+        ImportedSeries series = only(ics(vevent("e@test", "SUMMARY:Cours", "DTSTART;VALUE=DATE:20260105",
+            "RRULE:FREQ=WEEKLY;COUNT=200")), PARIS).series();
+        assertThat(series.endDate()).isEqualTo(LocalDate.of(2026, 1, 5).plusWeeks(199));
+    }
+
+    @Test
+    void anUnfoldedRuleWhoseOccurrencesAllLieOutsideTheWindowIsStillSaid() {
+        ImportReading reading = reader.read(ics(vevent("p@test", "SUMMARY:Réunion", "DTSTART;VALUE=DATE:20150331",
+            "RRULE:FREQ=MONTHLY;BYDAY=5TU;COUNT=3")), PARIS, TODAY, Locale.FRENCH);
+        assertThat(reading.notes()).extracting(note -> note.kind(), note -> note.detail())
+            .containsExactly(tuple(ImportNoteKind.UNFOLDED_PARTIAL, "0"));
+    }
+
     private static final String WEEKLY_PIANO = vevent("o@test", "SUMMARY:Piano", "DTSTART;TZID=Europe/Paris:20260105T180000",
         "DTEND;TZID=Europe/Paris:20260105T190000", "RRULE:FREQ=WEEKLY;BYDAY=MO");
 

@@ -105,19 +105,25 @@ final class RecurringImport {
         return RecurrenceRules.candidateFor(recurrence(recur), first.toLocalDate()).flatMap(candidate -> {
             try {
                 int durationDays = (int) ChronoUnit.DAYS.between(occurrence.startDate(), occurrence.endDate());
-                LocalDate endDate = endDate(master, recur, occurrence);
+                RecurringEventSeries open = series(texts, occurrence, candidate, durationDays, null);
+                LocalDate endDate = endDate(open, recur, occurrence, first.toLocalDate());
                 EventScheduleValidator.validateSeries(occurrence.allDay(), occurrence.startTime(), occurrence.endTime(),
                     durationDays, candidate.intervalType(), candidate.intervalCount(), candidate.weekdays(),
                     candidate.dayRule(), candidate.anchorDate(), endDate);
-                return Optional.of(new RecurringEventSeries(UUID.randomUUID(), UUID.randomUUID(), texts.title(),
-                    texts.description(), texts.location(), occurrence.allDay(), occurrence.startTime(), occurrence.endTime(),
-                    durationDays, null, candidate.intervalType(), candidate.intervalCount(), candidate.weekdays(),
-                    candidate.dayRule(), candidate.anchorDate(), endDate, candidate.startsOn(), List.of(),
-                    UUID.randomUUID(), Instant.EPOCH));
+                return Optional.of(series(texts, occurrence, candidate, durationDays, endDate));
             } catch (CalendarException | IllegalArgumentException refused) {
                 return Optional.empty();
             }
         });
+    }
+
+    private static RecurringEventSeries series(IcalTexts texts, IcalTimes occurrence, RecurrenceRules.Candidate candidate,
+                                               int durationDays, LocalDate endDate) {
+        return new RecurringEventSeries(UUID.randomUUID(), UUID.randomUUID(), texts.title(),
+            texts.description(), texts.location(), occurrence.allDay(), occurrence.startTime(), occurrence.endTime(),
+            durationDays, null, candidate.intervalType(), candidate.intervalCount(), candidate.weekdays(),
+            candidate.dayRule(), candidate.anchorDate(), endDate, candidate.startsOn(), List.of(),
+            UUID.randomUUID(), Instant.EPOCH);
     }
 
     /** The rule's parts nido may say, out of ical4j's own reading of it. */
@@ -131,13 +137,21 @@ final class RecurringImport {
             recur.getSetPosList(), otherParts);
     }
 
-    /** The last day an occurrence may start on: the last one a COUNT gives (by the rule alone: an RDATE is not its end), or
-     * UNTIL's day — the day before when its time falls before the occurrence's. */
-    private LocalDate endDate(VEvent master, Recur<Temporal> recur, IcalTimes occurrence) {
+    /**
+     * The last day an occurrence may start on: the day of the COUNT-th occurrence — read off nido's own projector, which
+     * the series has been checked to agree with, rather than by walking ical4j to a far horizon — or UNTIL's day, the day
+     * before when its time falls before the occurrence's.
+     */
+    private LocalDate endDate(RecurringEventSeries open, Recur<Temporal> recur, IcalTimes occurrence, LocalDate first) {
         if (recur.getCount() > 0) {
-            ZonedDateTime from = occurrence.start().atZone(zone);
-            List<LocalDateTime> all = expansion.ofRules(master, occurrence, from, from.plusYears(COUNT_HORIZON_YEARS), Integer.MAX_VALUE);
-            return all.isEmpty() ? null : all.getLast().toLocalDate();
+            List<LocalDate> slots = List.of();
+            for (int years = 1; ; years = Math.min(COUNT_HORIZON_YEARS, years * 2)) {
+                slots = EventRecurrenceProjector.slotsBetween(open, first, first.plusYears(years));
+                if (slots.size() >= recur.getCount() || years == COUNT_HORIZON_YEARS) {
+                    break;
+                }
+            }
+            return slots.isEmpty() ? null : slots.get(Math.min(slots.size(), recur.getCount()) - 1);
         }
         if (recur.getUntil() != null) {
             LocalDateTime until = IcalSupport.toLocal(recur.getUntil(), zone);
