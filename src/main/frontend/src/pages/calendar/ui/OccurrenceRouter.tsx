@@ -40,6 +40,9 @@ export function OccurrenceRouter({
       return <SavingsOccurrence spaceId={spaceId} occurrence={occurrence} onClose={onClose} />
     case 'MEAL':
       return <ExternalOccurrence occurrence={occurrence} onOpenInModule={onOpenInModule} onClose={onClose} />
+    case 'EXTERNAL':
+      // Provisional: the followed calendar's detail arrives with its own screen.
+      return null
     case 'EVENT':
       // Events are handled by the page itself, which owns the form and delete state.
       return null

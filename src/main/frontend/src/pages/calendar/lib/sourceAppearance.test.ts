@@ -14,7 +14,7 @@ const OTHER_SOURCES = [SOURCE_TOKEN.TASK, SOURCE_TOKEN.FINANCE, SOURCE_TOKEN.MEA
 
 describe('source colours', () => {
   it('gives every source a colour of its own', () => {
-    expect(new Set(Object.values(SOURCE_TOKEN)).size).toBe(5)
+    expect(new Set(Object.values(SOURCE_TOKEN)).size).toBe(6)
   })
 
   it('paints an event with no colour of its own in violet, apart from the green of meals', () => {

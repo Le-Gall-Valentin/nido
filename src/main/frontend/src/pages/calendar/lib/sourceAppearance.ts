@@ -14,6 +14,7 @@ export const SOURCE_TOKEN = {
   FINANCE: 'status-orange',
   MEAL: 'status-green',
   SAVINGS: 'status-red',
+  EXTERNAL: 'event-graphite',
 } as const satisfies Record<CalendarSourceType, string>
 
 type Token = (typeof SOURCE_TOKEN)[CalendarSourceType] | EventColor

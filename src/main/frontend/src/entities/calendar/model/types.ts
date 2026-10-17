@@ -1,4 +1,4 @@
-export type CalendarSourceType = 'EVENT' | 'TASK' | 'FINANCE' | 'MEAL' | 'SAVINGS'
+export type CalendarSourceType = 'EVENT' | 'TASK' | 'FINANCE' | 'MEAL' | 'SAVINGS' | 'EXTERNAL'
 
 export type RecurrenceInterval = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
 
@@ -120,4 +120,68 @@ export interface RecurringEventSeriesInput {
 /** When something runs: what a drag, a resize or a selection in the grid decides, before it is written. */
 export interface ScheduleChange {
   allDay: boolean; startDate: string; startTime: string | null; endDate: string; endTime: string | null
+}
+
+/** What an export or a subscription may write: every source nido owns, a followed calendar never. */
+export type ExportableSource = Exclude<CalendarSourceType, 'EXTERNAL'>
+
+export interface SubscriptionLink {
+  id: string
+  label: string
+  sources: ExportableSource[]
+  onlyMine: boolean
+  createdAt: string
+  /** When a calendar application last read it; absent until it has. */
+  lastReadAt?: string | null
+}
+
+export interface SubscriptionLinkInput {
+  label: string
+  sources: ExportableSource[]
+  onlyMine: boolean
+}
+
+/** The one answer holding the address: it is shown once and kept nowhere. */
+export interface CreatedSubscriptionLink {
+  link: SubscriptionLink
+  url: string
+  webcalUrl: string
+}
+
+export type ImportNoteKind = 'UNFOLDED' | 'UNFOLDED_PARTIAL' | 'TRUNCATED_TEXT' | 'CONVERTED_ZONE' | 'UNKNOWN_ZONE' | 'IGNORED'
+
+export interface ImportNote {
+  kind: ImportNoteKind
+  title: string | null
+  detail: string | null
+}
+
+/** What an import did — or, `written` false, what it would do. */
+export interface ImportReport {
+  eventsCreated: number
+  seriesCreated: number
+  seriesUnfolded: number
+  occurrencesUnfolded: number
+  duplicates: number
+  ignored: number
+  notes: ImportNote[]
+  written: boolean
+}
+
+/** A calendar the space follows: its host, never its address. */
+export interface ExternalFeed {
+  id: string
+  name: string
+  host: string
+  color: string | null
+  contentFetchedAt: string
+  lastAttemptAt: string
+  /** "TIMEOUT", "HTTP_404"… — why the last attempt failed; null when it did not. */
+  lastError: string | null
+}
+
+export interface ExternalFeedInput {
+  url: string
+  name: string | null
+  color: string | null
 }
