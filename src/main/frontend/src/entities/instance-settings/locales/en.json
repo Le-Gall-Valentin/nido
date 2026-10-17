@@ -33,7 +33,8 @@
     "public-url": "Public address",
     "sessions.access-token-minutes": "Access token lifetime (minutes)",
     "sessions.refresh-token-days": "Session lifetime (days)",
-    "api.swagger": "Swagger documentation"
+    "api.swagger": "Swagger documentation",
+    "calendar.allow-private-network": "Allow calendars on the local network"
   },
   "option": {
     "starttls": "STARTTLS (port 587)",

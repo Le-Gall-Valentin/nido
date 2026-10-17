@@ -10,7 +10,8 @@ public abstract sealed class CalendarException extends RuntimeException
             CalendarException.InvalidRecurrenceRule, CalendarException.NotAnIcalFile,
             CalendarException.InvalidSources, CalendarException.TooManySubscriptionLinks,
             CalendarException.SubscriptionLinkNotFound, CalendarException.PublicUrlMissing,
-            CalendarException.ImportTooLarge, CalendarException.ImportFileTooLarge {
+            CalendarException.ImportTooLarge, CalendarException.ImportFileTooLarge,
+            CalendarException.InvalidFeedAddress {
 
     private CalendarException(String message) { super(message); }
 
@@ -148,6 +149,11 @@ public abstract sealed class CalendarException extends RuntimeException
     /** Thrown when a file holds more than an import takes at once: 5 000 events, or 10 000 rows to write. */
     public static final class ImportTooLarge extends CalendarException {
         public ImportTooLarge(String what) { super("This file is too large to import: " + what); }
+    }
+
+    /** Thrown when the address of a calendar to follow is not an http(s) address of a host, without credentials. */
+    public static final class InvalidFeedAddress extends CalendarException {
+        public InvalidFeedAddress() { super("Not an address a calendar can be followed at"); }
     }
 
     /** Thrown when an uploaded file is larger than an import reads at all. */

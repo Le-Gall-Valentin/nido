@@ -14,7 +14,8 @@ public enum SettingGroup {
     MAIL("mail", true),
     PUBLIC_URL("public-url", false),
     SESSIONS("sessions", false),
-    API("api", false);
+    API("api", false),
+    CALENDAR("calendar", false);
 
     private final String code;
     private final boolean lockedAsAWhole;

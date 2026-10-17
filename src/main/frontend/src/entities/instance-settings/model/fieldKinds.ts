@@ -17,4 +17,5 @@ export const FIELD_KINDS: Record<string, FieldKind> = {
   'sessions.access-token-minutes': { kind: 'number' },
   'sessions.refresh-token-days': { kind: 'number' },
   'api.swagger': { kind: 'switch' },
+  'calendar.allow-private-network': { kind: 'switch' },
 }

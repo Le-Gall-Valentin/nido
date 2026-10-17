@@ -1,0 +1,20 @@
+package com.nido.api.calendar.domain.model;
+
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class FeedErrorTest {
+
+    @Test
+    void anHttpStatusIsNamedWithItsCode() {
+        assertThat(FeedError.http(404).code()).isEqualTo("HTTP_404");
+        assertThat(FeedError.parse("HTTP_404")).isEqualTo(FeedError.http(404));
+    }
+
+    @Test
+    void anyOtherErrorIsNamedByItsKind() {
+        assertThat(FeedError.of(FeedErrorKind.TIMEOUT).code()).isEqualTo("TIMEOUT");
+        assertThat(FeedError.parse("BLOCKED_ADDRESS")).isEqualTo(FeedError.of(FeedErrorKind.BLOCKED_ADDRESS));
+    }
+}

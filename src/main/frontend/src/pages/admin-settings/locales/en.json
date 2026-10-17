@@ -19,6 +19,10 @@
     "api": {
       "title": "API",
       "description": "The API documentation, for developers. It requires being signed in."
+    },
+    "calendar": {
+      "title": "Calendar",
+      "description": "Followed calendars are downloaded by the server. By default it refuses addresses on the local network (a Nextcloud at home, for instance): opening them also lets a member make Nido call the other services of that network."
     }
   },
   "source": {
