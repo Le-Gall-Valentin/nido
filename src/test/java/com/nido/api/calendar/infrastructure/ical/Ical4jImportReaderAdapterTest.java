@@ -251,4 +251,24 @@ class Ical4jImportReaderAdapterTest {
         assertThat(onlyEvent(reading).startTime()).isEqualTo(LocalTime.of(9, 0));
         assertThat(reading.notes()).isEmpty();
     }
+
+    @Test
+    void anOverrideOfTheStartOfAnEventThatDoesNotRepeatReplacesIt() {
+        ImportReading reading = read(ics(vevent("y@test", "SUMMARY:Avant", "DTSTART;TZID=Europe/Paris:20261017T090000"),
+            vevent("y@test", "SUMMARY:Après", "RECURRENCE-ID;TZID=Europe/Paris:20261017T090000",
+                "DTSTART;TZID=Europe/Paris:20261017T110000")), PARIS);
+        ImportedEvent event = onlyEvent(reading);
+        assertThat(event.title()).isEqualTo("Après");
+        assertThat(event.startTime()).isEqualTo(LocalTime.of(11, 0));
+        assertThat(reading.ignored()).isZero();
+    }
+
+    @Test
+    void anyOtherOverrideOfAnEventThatDoesNotRepeatIsAnEventOfItsOwn() {
+        ImportReading reading = read(ics(vevent("z@test", "SUMMARY:Seul", "DTSTART;TZID=Europe/Paris:20261017T090000"),
+            vevent("z@test", "SUMMARY:Ailleurs", "RECURRENCE-ID;TZID=Europe/Paris:20261024T090000",
+                "DTSTART;TZID=Europe/Paris:20261024T100000")), PARIS);
+        assertThat(reading.groups()).hasSize(1);
+        assertThat(reading.groups().getFirst().events()).extracting(ImportedEvent::title).containsExactly("Seul", "Ailleurs");
+    }
 }

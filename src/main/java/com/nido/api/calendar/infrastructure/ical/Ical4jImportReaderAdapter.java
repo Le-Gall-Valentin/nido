@@ -83,22 +83,63 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
             ignored[0]++;
             notes.add(new ImportNote(ImportNoteKind.IGNORED, IcalTexts.titleOrUntitled(extra, locale), "DUPLICATE_UID"));
         });
+        boolean repeats = master.getProperty(Property.RRULE).isPresent() || master.getProperty(Property.RDATE).isPresent();
+        if (!repeats) {
+            return single(uid, master, overrides, zone, locale, notes, ignored);
+        }
         if (!usable(master, zone, locale, notes, ignored)) {
             return Optional.empty();
         }
         IcalTimes times = IcalTimes.of(master, zone).orElseThrow();
+        if (recurring.tooHeavy(master, times)) {
+            // What ical4j would have to generate to read this rule is out of all proportion: nothing is imported of it.
+            ignored[0]++;
+            notes.add(new ImportNote(ImportNoteKind.IGNORED, IcalTexts.titleOrUntitled(master, locale), "TOO_HEAVY"));
+            return Optional.empty();
+        }
         IcalTexts texts = IcalTexts.of(master, locale);
         notesOf(texts, times, notes);
-        boolean repeats = master.getProperty(Property.RRULE).isPresent() || master.getProperty(Property.RDATE).isPresent();
-        if (!repeats) {
-            return Optional.of(new ImportGroup(uid, List.of(event(texts, times)), null, false, 0));
-        }
-        RecurringImport.Result result = recurring.translate(master, overrides, texts, times);
+        // An edited occurrence nido cannot hold is set aside and said so; a cancelled one is no event, only a slot to free.
+        List<VEvent> held = overrides.stream()
+            .filter(override -> cancelled(override) || usable(override, zone, locale, notes, ignored)).toList();
+        RecurringImport.Result result = recurring.translate(master, held, texts, times);
         if (result.unfolded()) {
             notes.add(new ImportNote(result.partial() ? ImportNoteKind.UNFOLDED_PARTIAL : ImportNoteKind.UNFOLDED,
                 texts.title(), String.valueOf(result.unfoldedOccurrences())));
         }
         return Optional.of(new ImportGroup(uid, result.events(), result.series(), result.unfolded(), result.unfoldedOccurrences()));
+    }
+
+    /**
+     * An event that does not repeat. An override of its own start is a newer version of that one event, and replaces it
+     * (cancelled, it removes it); any other override, standing for nothing the file holds, is an event of its own.
+     */
+    private static Optional<ImportGroup> single(String uid, VEvent master, List<VEvent> overrides, ZoneId zone, Locale locale,
+                                                List<ImportNote> notes, int[] ignored) {
+        List<ImportedEvent> events = new ArrayList<>();
+        Optional<IcalTimes> own = IcalTimes.of(master, zone);
+        Optional<VEvent> newer = own.isEmpty() ? Optional.empty() : overrides.stream()
+            .filter(override -> RecurringImport.replaced(override, zone).filter(own.get().start()::equals).isPresent())
+            .findFirst();
+        boolean replaced = false;
+        if (newer.isPresent()) {
+            // Its newer version says what the event is now; if nido cannot hold that, the event stays as the master said.
+            boolean cancelledNewer = cancelled(newer.get());
+            boolean usableNewer = usable(newer.get(), zone, locale, notes, ignored);
+            replaced = cancelledNewer || usableNewer;
+            if (usableNewer) {
+                standaloneUsable(newer.get(), zone, locale, notes).ifPresent(events::add);
+            }
+        }
+        if (!replaced) {
+            standalone(master, zone, locale, notes, ignored).ifPresent(events::add);
+        }
+        for (VEvent override : overrides) {
+            if (newer.isEmpty() || override != newer.get()) {
+                standalone(override, zone, locale, notes, ignored).ifPresent(events::add);
+            }
+        }
+        return events.isEmpty() ? Optional.empty() : Optional.of(new ImportGroup(uid, events, null, false, 0));
     }
 
     /** An event taken on its own; set aside, counted and noted when it cannot be held. */
@@ -107,6 +148,11 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
         if (!usable(vevent, zone, locale, notes, ignored)) {
             return Optional.empty();
         }
+        return standaloneUsable(vevent, zone, locale, notes);
+    }
+
+    /** The event of one already found usable, with the notes its texts and times call for. */
+    private static Optional<ImportedEvent> standaloneUsable(VEvent vevent, ZoneId zone, Locale locale, List<ImportNote> notes) {
         IcalTimes times = IcalTimes.of(vevent, zone).orElseThrow();
         IcalTexts texts = IcalTexts.of(vevent, locale);
         notesOf(texts, times, notes);
