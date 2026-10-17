@@ -52,6 +52,17 @@ class ListCalendarEventsHandlerTest {
     }
 
     @Test
+    void reads_the_calendars_a_space_follows_besides_its_events() {
+        var handler = new ListCalendarEventsHandler(List.of(
+            source(CalendarSourceType.EVENT, allDay("Anniversaire de Léa", LocalDate.of(2026, 9, 26))),
+            source(CalendarSourceType.EXTERNAL, allDay("Vacances", LocalDate.of(2026, 9, 26))),
+            source(CalendarSourceType.TASK, allDay("Linge", LocalDate.of(2026, 9, 26)))));
+
+        assertThat(handler.list(caller, LocalDate.of(2026, 9, 26), LocalDate.of(2026, 9, 26)))
+            .extracting(CalendarOccurrence::title).containsExactlyInAnyOrder("Anniversaire de Léa", "Vacances");
+    }
+
+    @Test
     void refuses_a_window_whose_start_is_after_its_end() {
         var handler = new ListCalendarEventsHandler(List.of());
 

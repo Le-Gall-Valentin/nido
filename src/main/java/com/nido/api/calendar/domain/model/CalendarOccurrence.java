@@ -20,13 +20,26 @@ import java.util.UUID;
  * <p>{@code materialized} is false exactly when nothing in the database corresponds to this
  * entry, which is what tells a client that deleting it means excluding a slot rather than
  * deleting a row, and that it cannot simply be dragged to another date.
+ *
+ * <p>{@code externalFeedId} names the followed calendar an EXTERNAL entry comes from; null for every other source.
  */
 public record CalendarOccurrence(
     CalendarSourceType source, String sourceId, UUID seriesId, LocalDate originalDate,
     boolean materialized, String title, String description, String location, boolean allDay,
     LocalDate startDate, LocalTime startTime, LocalDate endDate, LocalTime endTime,
-    String color, List<UUID> participantIds
+    String color, List<UUID> participantIds, UUID externalFeedId
 ) {
+    /** An entry of any source but a followed calendar. */
+    public CalendarOccurrence(
+        CalendarSourceType source, String sourceId, UUID seriesId, LocalDate originalDate,
+        boolean materialized, String title, String description, String location, boolean allDay,
+        LocalDate startDate, LocalTime startTime, LocalDate endDate, LocalTime endTime,
+        String color, List<UUID> participantIds) {
+        this(source, sourceId, seriesId, originalDate, materialized, title, description, location, allDay,
+            startDate, startTime, endDate, endTime, color, participantIds, null);
+    }
+
+
     public static String projectedId(UUID seriesId, LocalDate slot) {
         return seriesId + ":" + slot;
     }

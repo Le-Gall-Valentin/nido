@@ -12,8 +12,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Receives the same {@link CalendarSource} beans as {@link ListCalendarOccurrencesHandler} and keeps
- * only the events one, so the four other sources — and their queries — never run for this read.
+ * Receives the same {@link CalendarSource} beans as {@link ListCalendarOccurrencesHandler} and keeps the space's own
+ * events and the calendars it follows — the agenda of the dashboard is the household's —, so the other sources and
+ * their queries never run for this read.
  */
 @ApplicationService
 public class ListCalendarEventsHandler implements ListCalendarEventsUseCase {
@@ -22,7 +23,7 @@ public class ListCalendarEventsHandler implements ListCalendarEventsUseCase {
 
     public ListCalendarEventsHandler(List<CalendarSource> sources) {
         this.eventSources = sources.stream()
-            .filter(source -> source.type() == CalendarSourceType.EVENT)
+            .filter(source -> source.type() == CalendarSourceType.EVENT || source.type() == CalendarSourceType.EXTERNAL)
             .toList();
     }
 

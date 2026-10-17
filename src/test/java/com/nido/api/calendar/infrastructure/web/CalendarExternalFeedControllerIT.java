@@ -246,6 +246,18 @@ class CalendarExternalFeedControllerIT {
             .andExpect(jsonPath("$[0].name").value("Chez Valentin"));
     }
 
+    @Test
+    void the_calendar_and_the_dashboard_show_a_followed_calendar() throws Exception {
+        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(SCHOOL, null, null));
+        mockMvc.perform(post(feeds()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"url\":\"https://ecole.example/v.ics\",\"color\":\"event-cyan\"}")).andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/calendar/occurrences?from=2026-10-12&to=2026-10-25").cookie(tokenFor(bobId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.source == 'EXTERNAL')].title").value("Vacances de la Toussaint"))
+            .andExpect(jsonPath("$[?(@.source == 'EXTERNAL')].externalFeedId").isNotEmpty());
+    }
+
     private String feeds() {
         return "/api/spaces/" + spaceId + "/calendar/external-feeds";
     }
