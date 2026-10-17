@@ -16,8 +16,13 @@ import java.util.regex.Pattern;
 public final class HtmlText {
 
     private static final Pattern TAG = Pattern.compile("<[a-zA-Z/!][^<>]*>");
-    private static final Pattern LINK_OPEN =
-        Pattern.compile("(?is)<a\\s[^<>]*?href\\s*=\\s*(?:\"([^\"<>]*)\"|'([^'<>]*)')[^<>]*>");
+    /** The whole opening tag, possessive: it ends at the next {@code <} or {@code >}, and never backtracks. */
+    private static final Pattern LINK_OPEN = Pattern.compile("(?i)<a(?=\\s)[^<>]*+>");
+    /**
+     * The first quoted href of a tag's text. A value stops at the next quote of either kind, so an attempt scans only up
+     * to the next quote, and attempts start right after a quote: the stretches they scan never overlap.
+     */
+    private static final Pattern HREF = Pattern.compile("(?i)\\bhref\\s*=\\s*(?:\"([^\"']*)\"|'([^\"']*)')");
     private static final Pattern LINK_CLOSE = Pattern.compile("(?i)</a\\s*>");
     private static final Pattern BLOCK_OPEN = Pattern.compile("(?i)<!--|<(script|style)(?:\\s[^<>]*)?>");
     private static final Pattern SCRIPT_CLOSE = Pattern.compile("(?i)</script\\s*>");
@@ -77,15 +82,22 @@ public final class HtmlText {
         Matcher close = LINK_CLOSE.matcher(html);
         StringBuilder out = new StringBuilder(html.length());
         int from = 0;
-        while (open.find(from)) {
+        int search = 0;
+        while (open.find(search)) {
+            search = open.end();
+            Matcher href = HREF.matcher(open.group());
+            if (!href.find()) {
+                continue;
+            }
             if (!close.find(open.end())) {
                 break;
             }
             out.append(html, from, open.start());
-            String address = (open.group(1) != null ? open.group(1) : open.group(2)).strip();
+            String address = (href.group(1) != null ? href.group(1) : href.group(2)).strip();
             String label = TAG.matcher(html.substring(open.end(), close.start())).replaceAll("").strip();
             out.append(label.isEmpty() || label.equals(address) ? address : label + " (" + address + ")");
             from = close.end();
+            search = from;
         }
         return out.append(html, from, html.length()).toString();
     }

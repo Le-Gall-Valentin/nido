@@ -32,12 +32,7 @@ record IcalTimes(boolean allDay, LocalDateTime start, LocalDateTime end, String 
         }
         Temporal start = dtStart.get().getDate();
         boolean allDay = start instanceof LocalDate;
-        LocalDateTime startLocal;
-        try {
-            startLocal = IcalSupport.toLocal(start, zone);
-        } catch (DateTimeException | ArithmeticException | IllegalArgumentException unreadable) {
-            return Optional.empty();
-        }
+        LocalDateTime startLocal = IcalSupport.toLocal(start, zone);
         LocalDateTime endLocal = endOf(event, startLocal, allDay, zone);
         Optional<String> tzid = dtStart.get().getParameter(Parameter.TZID).map(Parameter::getValue);
         // Another name of the same rules (Asia/Calcutta for Asia/Kolkata) changes no time: nothing was converted.
@@ -53,28 +48,27 @@ record IcalTimes(boolean allDay, LocalDateTime start, LocalDateTime end, String 
      * of nido can reach: it is answered with a day more than an event may last, which the caller sets aside as too long.
      */
     private static LocalDateTime endOf(VEvent event, LocalDateTime startLocal, boolean allDay, ZoneId zone) {
-        try {
-            LocalDateTime end = computeEnd(event, startLocal, allDay, zone);
-            return end.getYear() > MAX_YEAR ? tooLate(startLocal) : end;
-        } catch (DateTimeException | ArithmeticException | IllegalArgumentException incomputable) {
-            return tooLate(startLocal);
+        Optional<DtEnd<Temporal>> dtEnd = event.getProperty(Property.DTEND);
+        LocalDateTime end;
+        if (dtEnd.isPresent() && dtEnd.get().getDate() != null) {
+            end = IcalSupport.toLocal(dtEnd.get().getDate(), zone);
+        } else {
+            Optional<net.fortuna.ical4j.model.property.Duration> duration = event.getProperty(Property.DURATION);
+            if (duration.isPresent()) {
+                try {
+                    end = startLocal.plus(duration.get().getDuration());
+                } catch (DateTimeException | ArithmeticException incomputable) {
+                    return tooLate(startLocal);
+                }
+            } else {
+                end = allDay ? startLocal.plusDays(1) : startLocal;
+            }
         }
+        return end.getYear() > MAX_YEAR ? tooLate(startLocal) : end;
     }
 
     private static LocalDateTime tooLate(LocalDateTime startLocal) {
         return startLocal.plusDays(EventScheduleValidator.MAX_EVENT_DAYS + 1L);
-    }
-
-    private static LocalDateTime computeEnd(VEvent event, LocalDateTime startLocal, boolean allDay, ZoneId zone) {
-        Optional<DtEnd<Temporal>> dtEnd = event.getProperty(Property.DTEND);
-        if (dtEnd.isPresent() && dtEnd.get().getDate() != null) {
-            return IcalSupport.toLocal(dtEnd.get().getDate(), zone);
-        }
-        Optional<net.fortuna.ical4j.model.property.Duration> duration = event.getProperty(Property.DURATION);
-        if (duration.isPresent()) {
-            return startLocal.plus(duration.get().getDuration());
-        }
-        return allDay ? startLocal.plusDays(1) : startLocal;
     }
 
     LocalDate startDate() {

@@ -55,6 +55,12 @@ class HtmlTextTest {
     }
 
     @Test
+    void anOpeningTagWithManyHrefsAndNoEndIsReadInLinearTime() {
+        linear("<a " + "href=\"x\" ".repeat(20_000));
+        linear("<a " + "href='x ".repeat(25_000));
+    }
+
+    @Test
     void aLongRunOfBlanksIsReadInLinearTime() {
         linear(" ".repeat(200_000) + "x");
     }
