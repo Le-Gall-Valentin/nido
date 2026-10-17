@@ -9,7 +9,8 @@ public abstract sealed class CalendarException extends RuntimeException
             CalendarException.OccurrenceLongerThanInterval, CalendarException.ReversedWindow,
             CalendarException.InvalidRecurrenceRule, CalendarException.NotAnIcalFile,
             CalendarException.InvalidSources, CalendarException.TooManySubscriptionLinks,
-            CalendarException.SubscriptionLinkNotFound, CalendarException.PublicUrlMissing {
+            CalendarException.SubscriptionLinkNotFound, CalendarException.PublicUrlMissing,
+            CalendarException.ImportTooLarge {
 
     private CalendarException(String message) { super(message); }
 
@@ -142,5 +143,10 @@ public abstract sealed class CalendarException extends RuntimeException
     /** Thrown when nido does not know the address it is reached at, which every subscription address begins with. */
     public static final class PublicUrlMissing extends CalendarException {
         public PublicUrlMissing() { super("The public address of this installation is not set"); }
+    }
+
+    /** Thrown when a file holds more than an import takes at once: 5 000 events, or 10 000 rows to write. */
+    public static final class ImportTooLarge extends CalendarException {
+        public ImportTooLarge(String what) { super("This file is too large to import: " + what); }
     }
 }

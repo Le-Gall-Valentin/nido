@@ -55,6 +55,8 @@ public class CalendarExceptionHandler {
             case CalendarException.PublicUrlMissing ignored -> new CalendarErrorResponse(409,
                 "The public address of this installation is not set: an administrator sets it in the settings.",
                 "public_url_missing");
+            case CalendarException.ImportTooLarge ex ->
+                new CalendarErrorResponse(400, ex.getMessage() + ".", "import_too_large");
             case CalendarException.ReversedWindow ignored ->
                 new CalendarErrorResponse(400, "The window starts after it ends: 'from' must be on or before 'to'.");
             case CalendarException.WindowTooLarge ex -> new CalendarErrorResponse(400,
