@@ -164,24 +164,15 @@ class RecurringImportTest {
     }
 
     @Test
-    void aRuleOfSecondsOrMinutesIsUnfoldedOnItsFirstOccurrencesWithoutExpandingTheWindow() {
-        for (String rule : new String[] {"FREQ=SECONDLY", "FREQ=MINUTELY;INTERVAL=3"}) {
-            ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(10), () -> reader.read(ics(vevent("s@test",
+    void aRuleOfSecondsOrMinutesIsSetAsideAndSaidSo() {
+        for (String rule : new String[] {"FREQ=SECONDLY", "FREQ=MINUTELY;INTERVAL=3", "FREQ=SECONDLY;BYMONTH=2"}) {
+            ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(2), () -> reader.read(ics(vevent("s@test",
                 "SUMMARY:Tic", "DTSTART:20261013T080000", "RRULE:" + rule)), PARIS, TODAY, Locale.FRENCH), rule);
-            ImportGroup group = reading.groups().getFirst();
-            assertThat(group.unfolded()).as(rule).isTrue();
-            assertThat(group.events().size()).as(rule).isBetween(0, 500);
-            assertThat(reading.notes()).extracting(note -> note.kind()).as(rule).containsExactly(ImportNoteKind.UNFOLDED_PARTIAL);
+            assertThat(reading.groups()).as(rule).isEmpty();
+            assertThat(reading.ignored()).as(rule).isEqualTo(1);
+            assertThat(reading.notes()).extracting(note -> note.kind(), note -> note.detail()).as(rule)
+                .containsExactly(tuple(ImportNoteKind.IGNORED, "TOO_HEAVY"));
         }
-    }
-
-    @Test
-    void aRuleOfSecondsThatIsFarFromItsFirstHitComesBackAtOnceAsItsFirstDay() {
-        // ical4j gives up after a thousand empty seconds in a row, which is what bounds its work here: the rule gives
-        // nothing it found, and what is left of it is its first day.
-        ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(10), () -> reader.read(ics(vevent("b@test",
-            "SUMMARY:Tic", "DTSTART:20261013T080000", "RRULE:FREQ=SECONDLY;BYMONTH=2")), PARIS, TODAY, Locale.FRENCH));
-        assertThat(reading.groups().getFirst().events()).extracting(ImportedEvent::startDate).containsExactly(LocalDate.of(2026, 10, 13));
     }
 
     @Test
@@ -214,6 +205,138 @@ class RecurringImportTest {
         assertThat(group.unfolded()).isTrue();
         assertThat(group.events()).extracting(ImportedEvent::startDate)
             .containsExactly(LocalDate.of(2026, 10, 20), LocalDate.of(2026, 10, 27), LocalDate.of(2026, 11, 10));
+    }
+
+    private ImportReading read(String content) {
+        return assertTimeoutPreemptively(Duration.ofSeconds(5), () -> reader.read(content, PARIS, TODAY, Locale.FRENCH));
+    }
+
+    @Test
+    void anRdateOutsideTheCheckedWindowOrOffTheSeriesMakesItAnUnfoldedEvent() {
+        // A weekly series since 2020 and one date in 2026 that is not a Monday: the series would lose it.
+        ImportGroup group = only(ics(vevent("r1@test", "SUMMARY:Cours", "DTSTART;VALUE=DATE:20200106",
+            "RRULE:FREQ=WEEKLY;BYDAY=MO", "RDATE;VALUE=DATE:20261021")), PARIS);
+        assertThat(group.series()).isNull();
+        assertThat(group.unfolded()).isTrue();
+        assertThat(group.events()).extracting(ImportedEvent::startDate).contains(LocalDate.of(2026, 10, 21));
+    }
+
+    @Test
+    void anRdateOnASlotOfTheSeriesIsKeptAsASeriesWhoseEndTheCountAloneGives() {
+        ImportedSeries series = only(ics(vevent("r2@test", "SUMMARY:Cours", "DTSTART;VALUE=DATE:20260105",
+            "RRULE:FREQ=WEEKLY;COUNT=10", "RDATE;VALUE=DATE:20260112")), PARIS).series();
+        assertThat(series).isNotNull();
+        assertThat(series.endDate()).isEqualTo(LocalDate.of(2026, 3, 9));
+    }
+
+    @Test
+    void anRdateAfterTheEndOfACountMakesItUnfolded() {
+        ImportGroup group = only(ics(vevent("r3@test", "SUMMARY:Cours", "DTSTART;VALUE=DATE:20260105",
+            "RRULE:FREQ=WEEKLY;COUNT=200", "RDATE;VALUE=DATE:20350108")), PARIS);
+        assertThat(group.series()).isNull();
+        assertThat(group.unfolded()).isTrue();
+    }
+
+    @Test
+    void moreThanOneRuleIsUnfolded() {
+        ImportGroup group = only(ics(vevent("rr@test", "SUMMARY:Deux", "DTSTART;VALUE=DATE:20261012",
+            "RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=3", "RRULE:FREQ=WEEKLY;BYDAY=WE;COUNT=3")), PARIS);
+        assertThat(group.series()).isNull();
+        assertThat(group.unfolded()).isTrue();
+    }
+
+    @Test
+    void aSeriesFromAZoneWhoseSummerTimeLeavesTheSpacesLaterIsUnfolded() {
+        // 10:00 in New York on the 5th is 16:00 in Paris, but 15:00 on 2027-11-05, when the two zones disagree.
+        String monthly = ics(vevent("z1@test", "SUMMARY:Point", "DTSTART;TZID=America/New_York:20230105T100000",
+            "DTEND;TZID=America/New_York:20230105T110000", "RRULE:FREQ=MONTHLY"));
+        assertThat(only(monthly, PARIS).series()).isNull();
+        assertThat(only(monthly, PARIS).unfolded()).isTrue();
+        String berlin = ics(vevent("z2@test", "SUMMARY:Point", "DTSTART;TZID=Europe/Berlin:20230105T100000",
+            "DTEND;TZID=Europe/Berlin:20230105T110000", "RRULE:FREQ=MONTHLY"));
+        assertThat(only(berlin, PARIS).series()).isNotNull();
+    }
+
+    @Test
+    void anExdateOfAnotherTimeOfTheDayCancelsNothing() {
+        ImportedSeries series = only(ics(vevent("x1@test", "SUMMARY:Piano", "DTSTART;TZID=Europe/Paris:20260105T180000",
+            "DTEND;TZID=Europe/Paris:20260105T190000", "RRULE:FREQ=WEEKLY;BYDAY=MO",
+            "EXDATE;TZID=Europe/Paris:20260112T090000")), PARIS).series();
+        assertThat(series).isNotNull();
+        assertThat(series.cancelledSlots()).isEmpty();
+    }
+
+    @Test
+    void anExruleIsAppliedAndMakesTheEventUnfolded() {
+        ImportGroup group = only(ics(vevent("xr@test", "SUMMARY:Cours", "DTSTART;VALUE=DATE:20261012",
+            "RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=5", "EXRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=2")), PARIS);
+        assertThat(group.series()).isNull();
+        assertThat(group.events()).extracting(ImportedEvent::startDate)
+            .containsExactly(LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 2), LocalDate.of(2026, 11, 9));
+    }
+
+    @Test
+    void aFirstDayOffItsRuleIsAnOccurrenceOfTheUnfoldedEventToo() {
+        ImportGroup group = only(ics(vevent("m3@test", "SUMMARY:Réunion", "DTSTART;VALUE=DATE:20260701",
+            "RRULE:FREQ=MONTHLY;BYDAY=5TU;COUNT=2")), PARIS);
+        assertThat(group.unfolded()).isTrue();
+        assertThat(group.events()).extracting(ImportedEvent::startDate)
+            .containsExactly(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 9, 29), LocalDate.of(2026, 12, 29));
+    }
+
+    @Test
+    void aRuleWhoseOnlyOccurrenceInTheWindowIsExcludedLeavesNothing() {
+        ImportReading reading = read(ics(vevent("m4@test", "SUMMARY:Rare", "DTSTART;VALUE=DATE:20260301",
+            "RRULE:FREQ=YEARLY;INTERVAL=3", "EXDATE;VALUE=DATE:20260301")));
+        assertThat(reading.groups()).isEmpty();
+        assertThat(reading.ignored()).isZero();
+        assertThat(reading.notes()).isEmpty();
+    }
+
+    private static final String WEEKLY_PIANO = vevent("o@test", "SUMMARY:Piano", "DTSTART;TZID=Europe/Paris:20260105T180000",
+        "DTEND;TZID=Europe/Paris:20260105T190000", "RRULE:FREQ=WEEKLY;BYDAY=MO");
+
+    @Test
+    void anOverrideNidoCannotHoldIsSaidAndItsSlotKeepsTheOccurrence() {
+        String tooLong = vevent("o@test", "SUMMARY:Absurde", "RECURRENCE-ID;TZID=Europe/Paris:20260119T180000",
+            "DTSTART;TZID=Europe/Paris:20260119T180000", "DURATION:P999999999D");
+        ImportReading reading = read(ics(WEEKLY_PIANO, tooLong));
+        ImportedSeries series = reading.groups().getFirst().series();
+        assertThat(series.editedOccurrences()).isEmpty();
+        assertThat(series.cancelledSlots()).isEmpty();
+        assertThat(reading.ignored()).isEqualTo(1);
+        assertThat(reading.notes()).extracting(note -> note.kind(), note -> note.detail())
+            .containsExactly(tuple(ImportNoteKind.IGNORED, "TOO_LONG"));
+    }
+
+    @Test
+    void aRecurrenceIdInUtcFindsItsSlotInAZonedSeries() {
+        // 18:00 in Paris in January is 17:00 UTC.
+        String moved = vevent("o@test", "SUMMARY:Piano (salle 3)", "RECURRENCE-ID:20260119T170000Z",
+            "DTSTART;TZID=Europe/Paris:20260119T200000", "DTEND;TZID=Europe/Paris:20260119T210000");
+        ImportedSeries series = only(ics(WEEKLY_PIANO, moved), PARIS).series();
+        assertThat(series.editedOccurrences()).singleElement().satisfies(edited -> {
+            assertThat(edited.slot()).isEqualTo(LocalDate.of(2026, 1, 19));
+            assertThat(edited.event().startTime()).isEqualTo(LocalTime.of(20, 0));
+        });
+    }
+
+    @Test
+    void anOverrideOfADayThatIsNoSlotIsAnEventOfItsOwn() {
+        String other = vevent("o@test", "SUMMARY:Rattrapage", "RECURRENCE-ID;TZID=Europe/Paris:20260120T180000",
+            "DTSTART;TZID=Europe/Paris:20260121T180000", "DTEND;TZID=Europe/Paris:20260121T190000");
+        ImportGroup group = only(ics(WEEKLY_PIANO, other), PARIS);
+        assertThat(group.series().editedOccurrences()).isEmpty();
+        assertThat(group.events()).extracting(ImportedEvent::title).containsExactly("Rattrapage");
+    }
+
+    @Test
+    void anEditedOccurrenceGetsTheUsualNotes() {
+        String edited = vevent("o@test", "SUMMARY:" + "x".repeat(250), "RECURRENCE-ID;TZID=Europe/Paris:20260119T180000",
+            "DTSTART;TZID=Europe/Paris:20260119T200000", "DTEND;TZID=Europe/Paris:20260119T210000");
+        ImportReading reading = read(ics(WEEKLY_PIANO, edited));
+        assertThat(reading.notes()).extracting(note -> note.kind(), note -> note.detail())
+            .containsExactly(tuple(ImportNoteKind.TRUNCATED_TEXT, "title"));
     }
 
     static Stream<Arguments> nidoRules() {

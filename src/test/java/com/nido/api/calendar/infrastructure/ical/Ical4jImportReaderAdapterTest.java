@@ -271,4 +271,14 @@ class Ical4jImportReaderAdapterTest {
         assertThat(reading.groups()).hasSize(1);
         assertThat(reading.groups().getFirst().events()).extracting(ImportedEvent::title).containsExactly("Seul", "Ailleurs");
     }
+
+    @Test
+    void aCancelledOverrideOfTheStartOfAnEventThatDoesNotRepeatRemovesIt() {
+        ImportReading reading = read(ics(vevent("c@test", "SUMMARY:Annulé", "DTSTART;TZID=Europe/Paris:20261017T090000"),
+            vevent("c@test", "SUMMARY:Annulé", "STATUS:CANCELLED", "RECURRENCE-ID;TZID=Europe/Paris:20261017T090000",
+                "DTSTART;TZID=Europe/Paris:20261017T090000")), PARIS);
+        assertThat(reading.groups()).isEmpty();
+        assertThat(reading.ignored()).isEqualTo(1);
+        assertThat(reading.notes()).containsExactly(new ImportNote(ImportNoteKind.IGNORED, "Annulé", "CANCELLED"));
+    }
 }

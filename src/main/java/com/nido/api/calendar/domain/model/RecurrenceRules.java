@@ -32,7 +32,7 @@ public final class RecurrenceRules {
     private static final int BACK_ANCHOR_TRIES = 48;
 
     /** nido cannot sensibly say a rule repeating this rarely, and date arithmetic on it would overflow. */
-    static final int MAX_INTERVAL = 1000;
+    public static final int MAX_INTERVAL = 1000;
 
     /** A nido rule that may give an RRULE's occurrences, anchored as nido needs it. */
     public record Candidate(RecurrenceInterval intervalType, int intervalCount, Set<DayOfWeek> weekdays, DayRule dayRule,

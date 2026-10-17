@@ -55,7 +55,7 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
             // An event with no UID stands alone: a key no UID can be.
             byUid.computeIfAbsent(uid != null ? uid : "\0" + anonymous++, key -> new ArrayList<>()).add(event);
         }
-        RecurringImport recurring = new RecurringImport(zone, today, locale);
+        RecurringImport recurring = new RecurringImport(zone, today, locale, new BoundedExpansion(zone));
         List<ImportGroup> groups = new ArrayList<>();
         for (Map.Entry<String, List<VEvent>> entry : byUid.entrySet()) {
             String uid = entry.getKey().startsWith("\0") ? null : entry.getKey();
@@ -91,23 +91,40 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
             return Optional.empty();
         }
         IcalTimes times = IcalTimes.of(master, zone).orElseThrow();
-        if (recurring.tooHeavy(master, times)) {
-            // What ical4j would have to generate to read this rule is out of all proportion: nothing is imported of it.
-            ignored[0]++;
-            notes.add(new ImportNote(ImportNoteKind.IGNORED, IcalTexts.titleOrUntitled(master, locale), "TOO_HEAVY"));
-            return Optional.empty();
+        int notesMark = notes.size();
+        int ignoredMark = ignored[0];
+        try {
+            IcalTexts texts = IcalTexts.of(master, locale);
+            notesOf(texts, times, notes);
+            // An edited occurrence nido cannot hold is set aside and said so; a cancelled one is no event, only a slot to free.
+            List<VEvent> held = overrides.stream()
+                .filter(override -> cancelled(override) || usable(override, zone, locale, notes, ignored)).toList();
+            RecurringImport.Result result = recurring.translate(master, held, texts, times, notes);
+            if (result.events().isEmpty() && result.series() == null) {
+                return Optional.empty();
+            }
+            if (result.unfolded()) {
+                notes.add(new ImportNote(result.partial() ? ImportNoteKind.UNFOLDED_PARTIAL : ImportNoteKind.UNFOLDED,
+                    texts.title(), String.valueOf(result.unfoldedOccurrences())));
+            }
+            return Optional.of(new ImportGroup(uid, result.events(), result.series(), result.unfolded(), result.unfoldedOccurrences()));
+        } catch (BoundedExpansion.Refused refused) {
+            return setAside(master, locale, notes, ignored, notesMark, ignoredMark, refused.detail());
+        } catch (RuntimeException unreadable) {
+            // The one broad catch of the reader: a third-party library expands rules from an untrusted file, and what it
+            // throws on a rule it cannot handle (a date it cannot reach, a part it does not accept on a date) must cost
+            // this event, not the whole file.
+            return setAside(master, locale, notes, ignored, notesMark, ignoredMark, "BAD_RULE");
         }
-        IcalTexts texts = IcalTexts.of(master, locale);
-        notesOf(texts, times, notes);
-        // An edited occurrence nido cannot hold is set aside and said so; a cancelled one is no event, only a slot to free.
-        List<VEvent> held = overrides.stream()
-            .filter(override -> cancelled(override) || usable(override, zone, locale, notes, ignored)).toList();
-        RecurringImport.Result result = recurring.translate(master, held, texts, times);
-        if (result.unfolded()) {
-            notes.add(new ImportNote(result.partial() ? ImportNoteKind.UNFOLDED_PARTIAL : ImportNoteKind.UNFOLDED,
-                texts.title(), String.valueOf(result.unfoldedOccurrences())));
-        }
-        return Optional.of(new ImportGroup(uid, result.events(), result.series(), result.unfolded(), result.unfoldedOccurrences()));
+    }
+
+    /** A recurring event given up whole: what its reading had said is taken back, and only the reason is kept. */
+    private static Optional<ImportGroup> setAside(VEvent master, Locale locale, List<ImportNote> notes, int[] ignored,
+                                                  int notesMark, int ignoredMark, String reason) {
+        notes.subList(notesMark, notes.size()).clear();
+        ignored[0] = ignoredMark + 1;
+        notes.add(new ImportNote(ImportNoteKind.IGNORED, IcalTexts.titleOrUntitled(master, locale), reason));
+        return Optional.empty();
     }
 
     /**
@@ -179,7 +196,7 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
         return false;
     }
 
-    private static void notesOf(IcalTexts texts, IcalTimes times, List<ImportNote> notes) {
+    static void notesOf(IcalTexts texts, IcalTimes times, List<ImportNote> notes) {
         texts.cut().forEach(what -> notes.add(new ImportNote(ImportNoteKind.TRUNCATED_TEXT, texts.title(), what)));
         if (times.foreignZone() != null) {
             notes.add(new ImportNote(ImportNoteKind.CONVERTED_ZONE, texts.title(), times.foreignZone()));
