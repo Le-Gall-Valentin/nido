@@ -171,6 +171,18 @@ class IcalFeedControllerIT {
         mockMvc.perform(get(path)).andExpect(status().isNotFound());
     }
 
+    @Test
+    void a_member_removed_from_the_space_loses_their_addresses() throws Exception {
+        String path = createLink(bobId, "{\"label\":\"iPhone\",\"sources\":[\"EVENT\"]}");
+
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/members/" + bobId).cookie(tokenFor(aliceId)))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get(path)).andExpect(status().isNotFound());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_subscription_links WHERE space_id = ? AND user_id = ?",
+            Long.class, spaceId, bobId)).isZero();
+    }
+
     /** The path of the address made, as a calendar application would request it. */
     private String createLink(UUID userId, String body) throws Exception {
         String response = mockMvc.perform(post(links()).cookie(tokenFor(userId)).contentType(MediaType.APPLICATION_JSON).content(body))

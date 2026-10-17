@@ -1,6 +1,7 @@
 package com.nido.api.space.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.space.application.service.SpaceDepartures;
 import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.port.in.RemoveMemberUseCase;
 import com.nido.api.space.domain.model.RemoveMemberCommand;
@@ -18,10 +19,13 @@ public class RemoveMemberHandler implements RemoveMemberUseCase {
 
     private final SpaceMembershipPort spaceMembershipPort;
     private final SpaceNotifier spaceNotifier;
+    private final SpaceDepartures departures;
 
-    public RemoveMemberHandler(SpaceMembershipPort spaceMembershipPort, SpaceNotifier spaceNotifier) {
+    public RemoveMemberHandler(SpaceMembershipPort spaceMembershipPort, SpaceNotifier spaceNotifier,
+                               SpaceDepartures departures) {
         this.spaceMembershipPort = spaceMembershipPort;
         this.spaceNotifier = spaceNotifier;
+        this.departures = departures;
     }
 
     @Override
@@ -38,6 +42,7 @@ public class RemoveMemberHandler implements RemoveMemberUseCase {
             throw new SpaceException.OwnerMembershipProtected();
         }
         spaceMembershipPort.remove(target.id());
+        departures.departed(command.spaceId(), command.targetUserId());
         log.info("User {} removed from space {} by {}",
             command.targetUserId(), command.spaceId(), caller.userId());
         spaceNotifier.memberRemoved(command.spaceId(), caller.userId(), command.targetUserId());
