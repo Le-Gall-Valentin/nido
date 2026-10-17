@@ -148,6 +148,24 @@ class ImportCalendarHandlerTest {
     }
 
     @Test
+    void cancelledSlotsCountAmongTheRowsOfAnImport() {
+        Set<LocalDate> slots = new java.util.HashSet<>();
+        for (int i = 0; i < 10_001; i++) {
+            slots.add(LocalDate.of(2026, 1, 12).plusDays(i));
+        }
+        ImportGroup group = new ImportGroup("x@test", List.of(), new ImportedSeries("Piano", null, null, true, null, null, 0,
+            RecurrenceInterval.DAILY, 1, null, DayRule.SAME_DAY, LocalDate.of(2026, 1, 5), null, null, slots, List.of()),
+            false, 0);
+        when(reader.read("ics", PARIS, TODAY, Locale.FRENCH)).thenReturn(reading(group));
+
+        assertThatThrownBy(() -> handler.importFile("ics", member)).isInstanceOf(CalendarException.ImportTooLarge.class);
+        assertThatThrownBy(() -> handler.analyse("ics", member)).isInstanceOf(CalendarException.ImportTooLarge.class);
+        verify(events, never()).createImported(any(), any());
+        verify(series, never()).createImported(any(), any());
+        verify(exclusions, never()).exclude(any(), any());
+    }
+
+    @Test
     void aViewerCannotImport() {
         SpaceMembership viewer = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.VIEWER, Instant.now());
         assertThatThrownBy(() -> handler.analyse("ics", viewer)).isInstanceOf(SpaceException.InsufficientRole.class);

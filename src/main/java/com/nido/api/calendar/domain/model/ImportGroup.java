@@ -12,8 +12,11 @@ public record ImportGroup(String uid, List<ImportedEvent> events, ImportedSeries
         events = List.copyOf(events);
     }
 
-    /** The rows creating it writes: what the 10 000 rows of an import are counted in. */
+    /**
+     * Every row creating the group writes: its events, its series, the occurrences of the series edited on their own and
+     * the slots it cancelled. What the 10 000 rows of an import are counted in.
+     */
     public int rows() {
-        return events.size() + (series == null ? 0 : 1 + series.editedOccurrences().size());
+        return events.size() + (series == null ? 0 : 1 + series.editedOccurrences().size() + series.cancelledSlots().size());
     }
 }
