@@ -63,6 +63,12 @@ public class CalendarExceptionHandler {
                 new CalendarErrorResponse(400, "Give an http, https or webcal address.", "invalid_feed_address");
             case CalendarException.ExternalFeedNotFound ignored ->
                 new CalendarErrorResponse(404, "Followed calendar not found.");
+            case CalendarException.FeedUnavailable ex -> new CalendarErrorResponse(400,
+                "The calendar could not be read at this address (" + ex.error().code() + ").", "feed_unavailable");
+            case CalendarException.TooManyExternalFeeds ex -> new CalendarErrorResponse(409,
+                "This space already follows " + ex.maximum() + " calendars.", "too_many_feeds");
+            case CalendarException.RefreshTooSoon ignored ->
+                new CalendarErrorResponse(429, "This calendar was read less than a minute ago.", "refresh_too_soon");
             case CalendarException.ReversedWindow ignored ->
                 new CalendarErrorResponse(400, "The window starts after it ends: 'from' must be on or before 'to'.");
             case CalendarException.WindowTooLarge ex -> new CalendarErrorResponse(400,
@@ -74,6 +80,9 @@ public class CalendarExceptionHandler {
             URI.create(request.getRequestURI()));
         if (response.errorCode() != null) {
             problem.setProperty("error_code", response.errorCode());
+        }
+        if (e instanceof CalendarException.FeedUnavailable unavailable) {
+            problem.setProperty("feed_error", unavailable.error().code());
         }
         return ResponseEntity.status(response.status()).body(problem);
     }

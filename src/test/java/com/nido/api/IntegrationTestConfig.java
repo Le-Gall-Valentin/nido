@@ -22,6 +22,7 @@ import java.lang.annotation.Target;
     "nido.seed.password=Integration-Test-Seed-1",
     "nido.cors.allowed-origins=",
     "nido.encryption.secret=" + TestSpaces.ENCRYPTION_KEY,
+    "nido.calendar.feed-refresh.enabled=false",
     "spring.jpa.hibernate.ddl-auto=none"
 })
 public @interface IntegrationTestConfig {}

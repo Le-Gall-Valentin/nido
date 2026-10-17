@@ -11,7 +11,9 @@ public abstract sealed class CalendarException extends RuntimeException
             CalendarException.InvalidSources, CalendarException.TooManySubscriptionLinks,
             CalendarException.SubscriptionLinkNotFound, CalendarException.PublicUrlMissing,
             CalendarException.ImportTooLarge, CalendarException.ImportFileTooLarge,
-            CalendarException.InvalidFeedAddress, CalendarException.ExternalFeedNotFound {
+            CalendarException.InvalidFeedAddress, CalendarException.ExternalFeedNotFound,
+            CalendarException.FeedUnavailable, CalendarException.TooManyExternalFeeds,
+            CalendarException.RefreshTooSoon {
 
     private CalendarException(String message) { super(message); }
 
@@ -170,5 +172,33 @@ public abstract sealed class CalendarException extends RuntimeException
 
     public static final class ExternalFeedNotFound extends CalendarException {
         public ExternalFeedNotFound() { super("Followed calendar not found"); }
+    }
+
+    /** Thrown when a calendar to follow could not be read at its address; {@link #error()} says why. */
+    public static final class FeedUnavailable extends CalendarException {
+        private final FeedError error;
+
+        public FeedUnavailable(FeedError error) {
+            super("The calendar could not be read: " + error.code());
+            this.error = error;
+        }
+
+        public FeedError error() { return error; }
+    }
+
+    public static final class TooManyExternalFeeds extends CalendarException {
+        private final int maximum;
+
+        public TooManyExternalFeeds(int maximum) {
+            super("At most " + maximum + " followed calendars per space");
+            this.maximum = maximum;
+        }
+
+        public int maximum() { return maximum; }
+    }
+
+    /** Thrown when a calendar is asked for again within a minute of the last time. */
+    public static final class RefreshTooSoon extends CalendarException {
+        public RefreshTooSoon() { super("This calendar was read less than a minute ago"); }
     }
 }
