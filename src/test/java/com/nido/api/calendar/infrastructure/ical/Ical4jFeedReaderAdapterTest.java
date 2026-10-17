@@ -25,18 +25,19 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 class Ical4jFeedReaderAdapterTest {
 
-    private final Ical4jFeedReaderAdapter reader = new Ical4jFeedReaderAdapter();
+    private final AtomicInteger expansions = new AtomicInteger();
+    private final Ical4jFeedReaderAdapter reader = new Ical4jFeedReaderAdapter(expansions::incrementAndGet);
 
     @Test
     void aCalendarGivesTheNameItCallsItself() {
-        assertThat(reader.calendarName("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:x\r\nX-WR-CALNAME:Vacances scolaires\r\nEND:VCALENDAR\r\n"))
+        assertThat(reader.check("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:x\r\nX-WR-CALNAME:Vacances scolaires\r\nEND:VCALENDAR\r\n").name())
             .contains("Vacances scolaires");
-        assertThat(reader.calendarName("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:x\r\nEND:VCALENDAR\r\n")).isEmpty();
+        assertThat(reader.check("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:x\r\nEND:VCALENDAR\r\n").name()).isEmpty();
     }
 
     @Test
     void anythingElseIsNotACalendar() {
-        assertThatThrownBy(() -> reader.calendarName("<html>Moved</html>")).isInstanceOf(CalendarException.NotAnIcalFile.class);
+        assertThatThrownBy(() -> reader.check("<html>Moved</html>")).isInstanceOf(CalendarException.NotAnIcalFile.class);
     }
 
     private static final ZoneId PARIS = ZoneId.of("Europe/Paris");
@@ -225,23 +226,56 @@ class Ical4jFeedReaderAdapterTest {
         LocalDate to = LocalDate.of(2026, 10, 31);
 
         reader.occurrencesOf(one, () -> file, PARIS, Locale.FRENCH, from, to);
-        assertThat(reader.expansionsAttempted()).as("the rule and the plain event are tried").isEqualTo(2);
+        assertThat(expansions).as("the rule and the plain event are tried").hasValue(2);
         List<CalendarOccurrence> again = reader.occurrencesOf(one, () -> file, PARIS, Locale.FRENCH, from, to);
 
-        assertThat(reader.expansionsAttempted()).as("only the plain event is tried the second time").isEqualTo(3);
+        assertThat(expansions).as("only the plain event is tried the second time").hasValue(3);
         assertThat(again).extracting(CalendarOccurrence::title).containsExactly("Normal");
     }
 
     @Test
     void anOccurrenceThatBeganBeforeTheWindowOfARecurringEventRunsIntoIt() {
-        // 100 days long, every 200 days: the one of 1 July runs until 9 October and is in the window of 1 to 7 October.
-        String file = calendar(vevent("long", "Long", "DTSTART;VALUE=DATE:20260701\r\nDTEND;VALUE=DATE:20261009\r\n"
+        // 100 days long, every 200 days: the second one, of 20 July, runs until 28 October and is in the window of 1 to 7
+        // October. It is not DTSTART, which the expansion always gives: only the lead finds it.
+        String file = calendar(vevent("long", "Long", "DTSTART;VALUE=DATE:20260101\r\nDTEND;VALUE=DATE:20260411\r\n"
             + "RRULE:FREQ=DAILY;INTERVAL=200\r\n"));
 
         List<CalendarOccurrence> found = reader.occurrencesOf(anotherFeed(), () -> file, PARIS, Locale.FRENCH,
             LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 7));
 
-        assertThat(found).extracting(CalendarOccurrence::startDate).containsExactly(LocalDate.of(2026, 7, 1));
+        assertThat(found).extracting(CalendarOccurrence::startDate).containsExactly(LocalDate.of(2026, 7, 20));
+    }
+
+    @Test
+    void aWeekendEventIsStillShownOnTheSundayItIsOn() {
+        // Friday to Sunday, every week, since September: the one of 9 October is not DTSTART and began two days before.
+        String file = calendar(vevent("weekend", "Week-end", "DTSTART;VALUE=DATE:20260904\r\nDTEND;VALUE=DATE:20260907\r\n"
+            + "RRULE:FREQ=WEEKLY\r\n"));
+
+        assertThat(reader.occurrencesOf(anotherFeed(), () -> file, PARIS, Locale.FRENCH,
+            LocalDate.of(2026, 10, 11), LocalDate.of(2026, 10, 11)))
+            .extracting(CalendarOccurrence::startDate).containsExactly(LocalDate.of(2026, 10, 9));
+    }
+
+    @Test
+    void aWeekLongEventEveryTwoWeeksIsStillShownInItsSecondWeek() {
+        String file = calendar(vevent("stage", "Stage", "DTSTART;VALUE=DATE:20260901\r\nDTEND;VALUE=DATE:20260908\r\n"
+            + "RRULE:FREQ=WEEKLY;INTERVAL=2\r\n"));
+
+        assertThat(reader.occurrencesOf(anotherFeed(), () -> file, PARIS, Locale.FRENCH,
+            LocalDate.of(2026, 10, 3), LocalDate.of(2026, 10, 3)))
+            .extracting(CalendarOccurrence::startDate).containsExactly(LocalDate.of(2026, 9, 29));
+    }
+
+    @Test
+    void aRuleTooHeavyForALongWindowIsStillShownOnAShortOne() {
+        ExternalFeed one = anotherFeed();
+        String file = calendar(heavy("h", "Heavy"));
+
+        assertThat(reader.occurrencesOf(one, () -> file, PARIS, Locale.FRENCH,
+            LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31))).as("a year of it costs more than the budget").isEmpty();
+        assertThat(reader.occurrencesOf(one, () -> file, PARIS, Locale.FRENCH,
+            LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 1))).as("a day of it fits").isNotEmpty();
     }
 
     @Test
@@ -283,5 +317,59 @@ class Ical4jFeedReaderAdapterTest {
 
         assertThat(reader.occurrencesOf(anotherFeed(), () -> file, PARIS, Locale.FRENCH,
             LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 7))).isNotEmpty();
+    }
+
+    /** A calendar of {@code n} lines of one tiny property: little text, a great weight. */
+    private static String dense(int n) {
+        return "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:x\r\n" + "X-A:1\r\n".repeat(n)
+            + normal("n", "Normal") + "END:VCALENDAR\r\n";
+    }
+
+    @Test
+    void aCalendarDenserThanTheCeilingIsWeighedAboveIt() {
+        String content = dense(140_000);
+
+        assertThat(reader.check(content).tooHeavy()).isTrue();
+        assertThat(content.length()).as("not even a megabyte and a half of text").isLessThan(1_500_000);
+    }
+
+    @Test
+    void aCalendarAboveTheCeilingIsLoadedOnceAndNeverKept() {
+        ExternalFeed one = anotherFeed();
+        AtomicInteger loads = new AtomicInteger();
+        String content = dense(140_000);
+        Supplier<String> supplier = () -> {
+            loads.incrementAndGet();
+            return content;
+        };
+        LocalDate day = LocalDate.of(2026, 10, 14);
+
+        for (int i = 0; i < 3; i++) {
+            assertThat(reader.occurrencesOf(one, supplier, PARIS, Locale.FRENCH, day, day)).isEmpty();
+        }
+
+        assertThat(loads).hasValue(1);
+    }
+
+    @Test
+    void twoRealisticCalendarsUnderTheCeilingStayCachedTogether() {
+        ExternalFeed first = anotherFeed();
+        ExternalFeed second = anotherFeed();
+        // About 10 MB of weight each, the order of two large real calendars.
+        String content = dense(70_000);
+        assertThat(reader.check(content).tooHeavy()).isFalse();
+        AtomicInteger loads = new AtomicInteger();
+        Supplier<String> supplier = () -> {
+            loads.incrementAndGet();
+            return content;
+        };
+        LocalDate day = LocalDate.of(2026, 10, 14);
+
+        for (int i = 0; i < 2; i++) {
+            reader.occurrencesOf(first, supplier, PARIS, Locale.FRENCH, day, day);
+            reader.occurrencesOf(second, supplier, PARIS, Locale.FRENCH, day, day);
+        }
+
+        assertThat(loads).hasValue(2);
     }
 }

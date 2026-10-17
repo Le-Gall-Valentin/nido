@@ -62,15 +62,30 @@ final class BoundedExpansion {
     static final class Refused extends RuntimeException {
         private final String detail;
         private final boolean spent;
+        private final boolean ofTheRule;
 
         Refused(String detail) {
-            this(detail, false);
+            this(detail, false, false);
         }
 
-        private Refused(String detail, boolean spent) {
+        private Refused(String detail, boolean spent, boolean ofTheRule) {
             super(detail, null, false, false);
             this.detail = detail;
             this.spent = spent;
+            this.ofTheRule = ofTheRule;
+        }
+
+        /** A rule that no window makes affordable: nido cannot hold it, or ical4j cannot be kept to it. */
+        private static Refused always(String detail) {
+            return new Refused(detail, false, true);
+        }
+
+        /**
+         * True when the rule is refused whatever the window is. The others depend on it — a bill grows with the window —
+         * so a reader that remembers refusals must try them again on the next one.
+         */
+        boolean ofTheRule() {
+            return ofTheRule;
         }
 
         String detail() {
@@ -165,14 +180,14 @@ final class BoundedExpansion {
         // result is then shorter than the cap, never wrong.)
         int wanted = (int) Math.min(Integer.MAX_VALUE, (long) cap + excluded.size());
         Set<LocalDateTime> found = expand(event.<RRule<Temporal>>getProperties(Property.RRULE).stream().map(RRule::getRecur).toList(),
-            event, times, from, to, wanted);
+            event, times, from, to, wanted, overlapping);
         if (withDates) {
             found.addAll(rdates(event));
             found.add(times.start());
         }
         // EXRULE, which RFC 5545 deprecates: expanded under the same budget, then taken out.
         excluded.addAll(expand(event.<ExRule<Temporal>>getProperties(Property.EXRULE).stream().map(ExRule::getRecur).toList(),
-            event, times, from, to, wanted));
+            event, times, from, to, wanted, overlapping));
         LocalDateTime low = overlapping ? from.toLocalDateTime().minus(Duration.between(times.start(), times.end()))
             : from.toLocalDateTime();
         LocalDateTime high = to.toLocalDateTime();
@@ -181,7 +196,7 @@ final class BoundedExpansion {
     }
 
     private Set<LocalDateTime> expand(List<Recur<Temporal>> rules, VEvent event, IcalTimes times, ZonedDateTime from,
-                                      ZonedDateTime to, int wanted) {
+                                      ZonedDateTime to, int wanted, boolean overlapping) {
         Set<LocalDateTime> found = new TreeSet<>();
         if (rules.isEmpty()) {
             return found;
@@ -190,11 +205,15 @@ final class BoundedExpansion {
         Temporal seed = dtStart.orElseThrow().getDate();
         // An occurrence that started before the window may still run into it, and a date is read at the start of its
         // day: ical4j is asked from a little before, and what starts before the window is dropped by the caller.
-        TemporalAmount lead = seed instanceof LocalDate ? java.time.Period.ofDays(1) : Duration.between(times.start(), times.end());
+        // A reader that wants what runs into the window asks as far back as the event lasts, a date included.
+        Duration lasting = Duration.between(times.start(), times.end());
+        boolean dateSeed = seed instanceof LocalDate;
+        boolean longDate = dateSeed && overlapping && lasting.compareTo(Duration.ofDays(1)) > 0;
+        TemporalAmount lead = dateSeed && !longDate ? java.time.Period.ofDays(1) : lasting;
+        long leadSeconds = dateSeed && !longDate ? 86_400 : Math.max(0, lasting.toSeconds());
         Temporal asked = from.minus(lead);
         for (Recur<Temporal> recur : rules) {
-            charge(recur, seed instanceof LocalDate, times.start(), from.toLocalDateTime(), to.toLocalDateTime(),
-                seed instanceof LocalDate ? 86_400 : Math.max(0, Duration.between(times.start(), times.end()).toSeconds()));
+            charge(recur, dateSeed, times.start(), from.toLocalDateTime(), to.toLocalDateTime(), leadSeconds);
             recur.getDatesAsStream(seed, asked, to, wanted).forEach(date -> found.add(IcalSupport.toLocal(date, zone)));
         }
         return found;
@@ -207,16 +226,16 @@ final class BoundedExpansion {
         if (frequency == null || recur.getInterval() > RecurrenceRules.MAX_INTERVAL || !distinctAndShort(recur)
             || dateStart && (frequency == Frequency.HOURLY || !recur.getHourList().isEmpty()
                 || !recur.getMinuteList().isEmpty() || !recur.getSecondList().isEmpty())) {
-            throw new Refused("BAD_RULE");
+            throw Refused.always("BAD_RULE");
         }
         if (frequency == Frequency.SECONDLY || frequency == Frequency.MINUTELY) {
-            throw new Refused("TOO_HEAVY");
+            throw Refused.always("TOO_HEAVY");
         }
         long step = stepSeconds(frequency) * Math.max(1, recur.getInterval());
         long lead = leadSeconds / step + 1;
         long fromSeed = Math.max(0, ChronoUnit.SECONDS.between(seed, to)) / step + 2;
         if (fromSeed >= OVERFLOWING_STEPS) {
-            throw new Refused("TOO_HEAVY");
+            throw Refused.always("TOO_HEAVY");
         }
         long walked;
         if (recur.getCount() > 0) {
@@ -229,13 +248,13 @@ final class BoundedExpansion {
         }
         long perStep = perStep(recur);
         if (perStep >= CAP) {
-            throw new Refused("TOO_HEAVY");
+            throw Refused.always("TOO_HEAVY");
         }
         try {
             bill(Math.multiplyExact(Math.addExact(walked, lead), perStep));
         } catch (ArithmeticException overflow) {
             // A bill that wraps around would pass the budget, and lift it for every rule after.
-            throw new Refused("TOO_HEAVY");
+            throw Refused.always("TOO_HEAVY");
         }
     }
 
@@ -245,7 +264,7 @@ final class BoundedExpansion {
             throw new Refused("TOO_HEAVY");
         }
         if (units > budget - spent) {
-            throw new Refused("TOO_HEAVY", true);
+            throw new Refused("TOO_HEAVY", true, false);
         }
         spent += units;
     }

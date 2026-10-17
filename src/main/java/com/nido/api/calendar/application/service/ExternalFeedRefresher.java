@@ -41,8 +41,12 @@ public class ExternalFeedRefresher {
         switch (downloader.download(feed.url(), feed.etag(), feed.lastModified())) {
             case FeedDownload.Downloaded downloaded -> {
                 try {
-                    checker.calendarName(downloaded.content());
-                    feeds.recordSuccess(feed.id(), downloaded.content(), downloaded.etag(), downloaded.lastModified(), now);
+                    if (checker.check(downloaded.content()).tooHeavy()) {
+                        // Too much to keep in memory: the last good one stays.
+                        feeds.recordFailure(feed.id(), FeedError.of(FeedErrorKind.TOO_LARGE), now);
+                    } else {
+                        feeds.recordSuccess(feed.id(), downloaded.content(), downloaded.etag(), downloaded.lastModified(), now);
+                    }
                 } catch (CalendarException.NotAnIcalFile notACalendar) {
                     feeds.recordFailure(feed.id(), FeedError.of(FeedErrorKind.NOT_ICS), now);
                 }

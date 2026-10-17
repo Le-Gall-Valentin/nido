@@ -5,6 +5,7 @@ import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.ExternalFeed;
 import com.nido.api.calendar.domain.model.FeedAddress;
 import com.nido.api.calendar.domain.model.FeedDownload;
+import com.nido.api.calendar.domain.model.FeedCheck;
 import com.nido.api.calendar.domain.model.FeedError;
 import com.nido.api.calendar.domain.model.FeedErrorKind;
 import com.nido.api.calendar.domain.model.FollowExternalFeedCommand;
@@ -54,7 +55,11 @@ public class FollowExternalFeedHandler implements FollowExternalFeedUseCase {
         }
         String ownName;
         try {
-            ownName = checker.calendarName(downloaded.content()).map(String::strip).filter(n -> !n.isEmpty()).orElse(null);
+            FeedCheck check = checker.check(downloaded.content());
+            if (check.tooHeavy()) {
+                throw new CalendarException.FeedUnavailable(FeedError.of(FeedErrorKind.TOO_LARGE));
+            }
+            ownName = check.name().map(String::strip).filter(n -> !n.isEmpty()).orElse(null);
         } catch (CalendarException.NotAnIcalFile notACalendar) {
             throw new CalendarException.FeedUnavailable(FeedError.of(FeedErrorKind.NOT_ICS));
         }

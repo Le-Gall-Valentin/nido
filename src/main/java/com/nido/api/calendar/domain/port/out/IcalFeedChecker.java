@@ -1,9 +1,9 @@
 package com.nido.api.calendar.domain.port.out;
 
-import java.util.Optional;
+import com.nido.api.calendar.domain.model.FeedCheck;
 
-/** Whether a downloaded file is a calendar nido can read, and the name it gives itself (X-WR-CALNAME). */
+/** Whether a downloaded file is a calendar nido can read, the name it gives itself (X-WR-CALNAME), and what it weighs. */
 public interface IcalFeedChecker {
     /** @throws com.nido.api.calendar.domain.model.CalendarException.NotAnIcalFile when it is not */
-    Optional<String> calendarName(String content);
+    FeedCheck check(String content);
 }

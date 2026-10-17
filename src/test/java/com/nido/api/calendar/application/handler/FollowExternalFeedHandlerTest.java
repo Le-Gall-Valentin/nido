@@ -3,6 +3,7 @@ package com.nido.api.calendar.application.handler;
 import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.ExternalFeed;
 import com.nido.api.calendar.domain.model.FeedDownload;
+import com.nido.api.calendar.domain.model.FeedCheck;
 import com.nido.api.calendar.domain.model.FeedError;
 import com.nido.api.calendar.domain.model.FeedErrorKind;
 import com.nido.api.calendar.domain.model.FollowExternalFeedCommand;
@@ -47,7 +48,7 @@ class FollowExternalFeedHandlerTest {
     void aCalendarIsFollowedUnderTheNameItGivesItself() {
         URI url = URI.create("https://calendar.google.com/x/basic.ics");
         when(downloader.download(url, null, null)).thenReturn(new FeedDownload.Downloaded(ICS, "\"v1\"", null));
-        when(checker.calendarName(ICS)).thenReturn(Optional.of("Vacances scolaires"));
+        when(checker.check(ICS)).thenReturn(new FeedCheck(Optional.of("Vacances scolaires"), 10));
         ExternalFeed created = new ExternalFeed(UUID.randomUUID(), member.spaceId(), "Vacances scolaires", url, "event-cyan",
             member.userId(), NOW, NOW, NOW, null, "\"v1\"", null);
         when(feeds.create(any(), anyString(), any(), any(), any(), anyString(), any(), any(), any())).thenReturn(created);
@@ -60,7 +61,7 @@ class FollowExternalFeedHandlerTest {
     @Test
     void aCalendarNamingItselfNothingIsNamedAfterItsHost() {
         when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(ICS, null, null));
-        when(checker.calendarName(ICS)).thenReturn(Optional.empty());
+        when(checker.check(ICS)).thenReturn(new FeedCheck(Optional.empty(), 10));
 
         handler.follow(new FollowExternalFeedCommand("https://ecole.example/v.ics", null, null), member);
 
@@ -80,7 +81,7 @@ class FollowExternalFeedHandlerTest {
     @Test
     void aDownloadThatIsNotACalendarIsNotKeptEither() {
         when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded("<html>", null, null));
-        when(checker.calendarName("<html>")).thenThrow(new CalendarException.NotAnIcalFile());
+        when(checker.check("<html>")).thenThrow(new CalendarException.NotAnIcalFile());
 
         assertThatThrownBy(() -> handler.follow(new FollowExternalFeedCommand("https://x.example/a.ics", "x", null), member))
             .isInstanceOfSatisfying(CalendarException.FeedUnavailable.class,
@@ -98,11 +99,11 @@ class FollowExternalFeedHandlerTest {
     @Test
     void aNameTheCalendarGivesItselfIsStrippedAndABlankOneIsNoName() {
         when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(ICS, null, null));
-        when(checker.calendarName(ICS)).thenReturn(Optional.of("  Club de judo \n"));
+        when(checker.check(ICS)).thenReturn(new FeedCheck(Optional.of("  Club de judo \n"), 10));
         handler.follow(new FollowExternalFeedCommand("https://ecole.example/v.ics", null, null), member);
         verify(feeds).create(eq(member.spaceId()), eq("Club de judo"), any(), any(), any(), anyString(), any(), any(), any());
 
-        when(checker.calendarName(ICS)).thenReturn(Optional.of("   "));
+        when(checker.check(ICS)).thenReturn(new FeedCheck(Optional.of("   "), 10));
         handler.follow(new FollowExternalFeedCommand("https://ecole.example/v.ics", null, null), member);
         verify(feeds).create(eq(member.spaceId()), eq("ecole.example"), any(), any(), any(), anyString(), any(), any(), any());
     }
@@ -110,11 +111,22 @@ class FollowExternalFeedHandlerTest {
     @Test
     void aLongNameIsCutWithoutSplittingACharacter() {
         when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(ICS, null, null));
-        when(checker.calendarName(ICS)).thenReturn(Optional.empty());
+        when(checker.check(ICS)).thenReturn(new FeedCheck(Optional.empty(), 10));
         String name = "a".repeat(99) + "\uD83D\uDE00" + "b";
 
         handler.follow(new FollowExternalFeedCommand("https://ecole.example/v.ics", name, null), member);
 
         verify(feeds).create(eq(member.spaceId()), eq("a".repeat(99) + "\uD83D\uDE00"), any(), any(), any(), anyString(), any(), any(), any());
+    }
+
+    @Test
+    void aCalendarTooHeavyToKeepInMemoryIsRefusedAsTooLarge() {
+        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(ICS, null, null));
+        when(checker.check(ICS)).thenReturn(new FeedCheck(Optional.empty(), FeedCheck.MAX_WEIGHT + 1));
+
+        assertThatThrownBy(() -> handler.follow(new FollowExternalFeedCommand("https://x.example/a.ics", "x", null), member))
+            .isInstanceOfSatisfying(CalendarException.FeedUnavailable.class,
+                e -> assertThat(e.error()).isEqualTo(FeedError.of(FeedErrorKind.TOO_LARGE)));
+        verify(feeds, never()).create(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 }

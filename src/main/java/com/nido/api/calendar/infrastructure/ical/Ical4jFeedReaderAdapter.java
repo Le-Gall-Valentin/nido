@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.nido.api.calendar.domain.model.CalendarOccurrence;
 import com.nido.api.calendar.domain.model.CalendarSourceType;
 import com.nido.api.calendar.domain.model.ExternalFeed;
+import com.nido.api.calendar.domain.model.FeedCheck;
 import com.nido.api.calendar.domain.port.out.IcalFeedChecker;
 import net.fortuna.ical4j.model.Calendar;
 import net.fortuna.ical4j.model.Component;
@@ -31,11 +32,9 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -70,19 +69,28 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
      */
     static final int PROPERTY_WEIGHT = 128;
 
+    /**
+     * The heaviest calendar kept, and the weight all of them share: an entry above the bound of the cache is evicted as
+     * soon as it is put, and read again from the database at every view. So a calendar above the ceiling is refused when it
+     * is downloaded, and the bound is four times the ceiling: the heaviest feeds accepted fit together.
+     */
+    static final int ENTRY_CEILING = FeedCheck.MAX_WEIGHT;
+    static final long CACHE_WEIGHT = 4L * ENTRY_CEILING;
+
     /** How long an unreadable calendar is remembered as such: long enough to spare every view, short enough for a database that had a bad moment. */
     private static final Duration FAILURE_MEMORY = Duration.ofMinutes(10);
 
+    /** A UID's events, with the digest that names them in the ids of their occurrences. */
+    private record Group(String digest, List<VEvent> events) {}
+
     /** What is kept in memory: a calendar read once, its events grouped, and the events found too heavy to expand. */
     private static final class Parsed {
-        final Calendar calendar;
-        final Map<String, List<VEvent>> groups;
+        final List<Group> groups;
         final int weight;
         /** Read and written only while holding the entry: by identity, an event's equality is its whole content. */
         final Set<VEvent> refused = Collections.newSetFromMap(new IdentityHashMap<>());
 
-        Parsed(Calendar calendar, Map<String, List<VEvent>> groups, int weight) {
-            this.calendar = calendar;
+        Parsed(List<Group> groups, int weight) {
             this.groups = groups;
             this.weight = weight;
         }
@@ -92,7 +100,7 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
 
     // Keyed by the download as well as the calendar: a calendar downloaded again is a new key, and the old one ages out.
     private final Cache<Key, Parsed> parsed = Caffeine.newBuilder()
-        .maximumWeight(32L * 1024 * 1024)
+        .maximumWeight(CACHE_WEIGHT)
         .weigher((Key key, Parsed value) -> value.weight)
         .build();
 
@@ -101,17 +109,22 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
         .expireAfterWrite(FAILURE_MEMORY)
         .build();
 
-    /** How many events were handed to the expansion since the start: lets a test see what is not tried again. */
-    private final AtomicLong expansions = new AtomicLong();
+    /** Told each time an event is handed to the expansion: lets a test see what is not tried again. */
+    private final Runnable onExpansion;
 
-    @Override
-    public Optional<String> calendarName(String content) {
-        Calendar calendar = IcalSupport.parse(content);
-        return calendar.getProperty("X-WR-CALNAME").map(Property::getValue).map(String::strip).filter(name -> !name.isEmpty());
+    public Ical4jFeedReaderAdapter() {
+        this(() -> {});
     }
 
-    long expansionsAttempted() {
-        return expansions.get();
+    Ical4jFeedReaderAdapter(Runnable onExpansion) {
+        this.onExpansion = onExpansion;
+    }
+
+    @Override
+    public FeedCheck check(String content) {
+        Calendar calendar = IcalSupport.parse(content);
+        return new FeedCheck(calendar.getProperty("X-WR-CALNAME").map(Property::getValue).map(String::strip)
+            .filter(name -> !name.isEmpty()), weightOf(content, calendar));
     }
 
     static int weightOf(String text, Calendar calendar) {
@@ -179,8 +192,14 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
         try {
             String text = content.apply(feed);
             Calendar calendar = IcalSupport.parse(text);
-            Parsed loaded = new Parsed(calendar, IcalGroups.byUid(calendar.<VEvent>getComponents(Component.VEVENT)),
-                weightOf(text, calendar));
+            int weight = weightOf(text, calendar);
+            if (weight > ENTRY_CEILING) {
+                // Stored before the ceiling, or past it all the same: never kept, so never parsed again at every view.
+                unreadable.put(key, Boolean.TRUE);
+                log.warn("Followed calendar {} skipped: too heavy to keep in memory", feed.id());
+                return null;
+            }
+            Parsed loaded = new Parsed(groupsOf(calendar), weight);
             Parsed already = parsed.asMap().putIfAbsent(key, loaded);
             return already != null ? already : loaded;
         } catch (RuntimeException failed) {
@@ -192,12 +211,20 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
         }
     }
 
+    private static List<Group> groupsOf(Calendar calendar) {
+        List<Group> groups = new ArrayList<>();
+        // A short stable digest, never the UID: it is untrusted, as long as the file, and would be repeated in every id.
+        IcalGroups.byUid(calendar.<VEvent>getComponents(Component.VEVENT)).forEach((uid, events) ->
+            groups.add(new Group(UUID.nameUUIDFromBytes(uid.getBytes(StandardCharsets.UTF_8)).toString(), events)));
+        return groups;
+    }
+
     private List<CalendarOccurrence> expand(ExternalFeed feed, Parsed entry, BoundedExpansion expansion, ZoneId zone,
                                             Locale locale, LocalDate from, LocalDate to) {
         ZonedDateTime windowStart = from.atStartOfDay(zone);
         ZonedDateTime windowEnd = to.plusDays(1).atStartOfDay(zone);
         List<CalendarOccurrence> found = new ArrayList<>();
-        for (Map.Entry<String, List<VEvent>> group : entry.groups.entrySet()) {
+        for (Group group : entry.groups) {
             if (found.size() >= MAX_OCCURRENCES) {
                 break;
             }
@@ -208,16 +235,15 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
                 log.debug("Followed calendar {}: a group of events left out ({})", feed.id(), unreadable.getClass().getSimpleName());
             }
         }
-        return found.size() > MAX_OCCURRENCES ? List.copyOf(found.subList(0, MAX_OCCURRENCES)) : found;
+        return found;
     }
 
-    private void readGroup(ExternalFeed feed, Parsed entry, Map.Entry<String, List<VEvent>> group, BoundedExpansion expansion,
+    private void readGroup(ExternalFeed feed, Parsed entry, Group group, BoundedExpansion expansion,
                            ZoneId zone, Locale locale, ZonedDateTime windowStart, ZonedDateTime windowEnd, LocalDate from,
                            LocalDate to, List<CalendarOccurrence> found) {
-        List<VEvent> masters = IcalGroups.masters(group.getValue());
-        List<VEvent> overrides = IcalGroups.overrides(group.getValue());
-        // A short stable digest, never the UID: it is untrusted, as long as the file, and would be repeated in every id.
-        String digest = UUID.nameUUIDFromBytes(group.getKey().getBytes(StandardCharsets.UTF_8)).toString();
+        List<VEvent> masters = IcalGroups.masters(group.events());
+        List<VEvent> overrides = IcalGroups.overrides(group.events());
+        String digest = group.digest();
         Set<LocalDateTime> replaced = new HashSet<>();
         for (VEvent override : overrides) {
             override.<RecurrenceId<Temporal>>getProperty(Property.RECURRENCE_ID)
@@ -230,14 +256,12 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
                 try {
                     readMaster(feed, digest, master, replaced, expansion, zone, locale, windowStart, windowEnd, from, to, found);
                 } catch (BoundedExpansion.Refused refused) {
-                    if (refused.budgetSpent()) {
-                        log.debug("Followed calendar {}: an event left out, the budget of this read is spent", feed.id());
-                    } else {
+                    // Remembered only when no window would have it: a bill grows with the window, and the next read may be shorter.
+                    if (refused.ofTheRule()) {
                         entry.refused.add(master);
-                        log.debug("Followed calendar {}: an event left out ({})", feed.id(), refused.detail());
                     }
+                    log.debug("Followed calendar {}: an event left out ({})", feed.id(), refused.detail());
                 } catch (RuntimeException unreadable) {
-                    entry.refused.add(master);
                     log.debug("Followed calendar {}: an event left out ({})", feed.id(), unreadable.getClass().getSimpleName());
                 }
             }
@@ -268,7 +292,7 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
             return;
         }
         IcalTimes times = read.get();
-        expansions.incrementAndGet();
+        onExpansion.run();
         List<IcalTimes> shown = new ArrayList<>();
         for (LocalDateTime start : expansion.occurrencesOverlapping(master, times, windowStart, windowEnd, MAX_OCCURRENCES - found.size())) {
             IcalTimes occurrence = times.at(start);

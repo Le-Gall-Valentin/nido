@@ -3,6 +3,7 @@ package com.nido.api.calendar.application.service;
 import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.ExternalFeed;
 import com.nido.api.calendar.domain.model.FeedDownload;
+import com.nido.api.calendar.domain.model.FeedCheck;
 import com.nido.api.calendar.domain.model.FeedError;
 import com.nido.api.calendar.domain.model.FeedErrorKind;
 import com.nido.api.calendar.domain.port.out.ExternalFeedDownloader;
@@ -47,7 +48,7 @@ class ExternalFeedRefresherTest {
     @Test
     void theAttemptIsRecordedBeforeTheAddressIsAsked() {
         when(downloader.download(url, "\"v1\"", "yesterday")).thenReturn(new FeedDownload.Downloaded(ICS, "\"v2\"", null));
-        when(checker.calendarName(ICS)).thenReturn(Optional.empty());
+        when(checker.check(ICS)).thenReturn(new FeedCheck(Optional.empty(), 10));
 
         refresher.refresh(feed);
 
@@ -71,7 +72,7 @@ class ExternalFeedRefresherTest {
     @Test
     void aFileThatIsNoLongerACalendarKeepsTheOldOneAndRecordsWhy() {
         when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded("<html>", null, null));
-        when(checker.calendarName("<html>")).thenThrow(new CalendarException.NotAnIcalFile());
+        when(checker.check("<html>")).thenThrow(new CalendarException.NotAnIcalFile());
 
         refresher.refresh(feed);
 
@@ -86,6 +87,17 @@ class ExternalFeedRefresherTest {
         refresher.refresh(feed);
 
         verify(feeds).recordFailure(feed.id(), FeedError.http(500), NOW);
+        verify(feeds, never()).recordSuccess(any(), anyString(), any(), any(), any());
+    }
+
+    @Test
+    void aCalendarTooHeavyToKeepInMemoryKeepsTheOldOneAndRecordsWhy() {
+        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(ICS, null, null));
+        when(checker.check(ICS)).thenReturn(new FeedCheck(Optional.empty(), FeedCheck.MAX_WEIGHT + 1));
+
+        refresher.refresh(feed);
+
+        verify(feeds).recordFailure(feed.id(), FeedError.of(FeedErrorKind.TOO_LARGE), NOW);
         verify(feeds, never()).recordSuccess(any(), anyString(), any(), any(), any());
     }
 }
