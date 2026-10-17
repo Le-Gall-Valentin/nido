@@ -228,5 +228,8 @@ databaseChangeLog:
       file: db/changelog/changes/076-add-calendar-series-day-rules.yaml
       relativeToChangelogFile: false
   - include:
+      file: db/changelog/changes/077-add-calendar-import-uid-hash.yaml
+      relativeToChangelogFile: false
+  - include:
       file: db/changelog/changes/078-create-calendar-subscription-links.yaml
       relativeToChangelogFile: false

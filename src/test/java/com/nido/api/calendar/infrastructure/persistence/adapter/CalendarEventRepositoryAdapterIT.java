@@ -2,6 +2,7 @@ package com.nido.api.calendar.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.TestSpaces;
+import com.nido.api.calendar.domain.model.CalendarDigests;
 import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CreateEventCommand;
 import com.nido.api.calendar.domain.model.CreateRecurringEventSeriesCommand;
@@ -11,6 +12,7 @@ import com.nido.api.calendar.domain.model.UpdateEventCommand;
 import com.nido.api.calendar.domain.model.UpdateRecurringEventSeriesCommand;
 import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
 import com.nido.api.calendar.domain.port.out.EventExclusionRepository;
+import com.nido.api.calendar.domain.port.out.ImportedUidRepository;
 import com.nido.api.calendar.domain.port.out.RecurringEventSeriesRepository;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarEventEntity;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarRecurringEventSeriesEntity;
@@ -53,6 +55,7 @@ class CalendarEventRepositoryAdapterIT {
     @Autowired CalendarEventRepository events;
     @Autowired RecurringEventSeriesRepository series;
     @Autowired EventExclusionRepository exclusions;
+    @Autowired ImportedUidRepository importedUids;
     @Autowired SpaceJpaRepository spaces;
     @Autowired UserIdentityJpaRepository users;
     @Autowired SpaceSealers sealers;
@@ -318,6 +321,45 @@ class CalendarEventRepositoryAdapterIT {
             dentist.id(), piano.id());
 
         assertThatThrownBy(() -> events.findById(piano.id())).isInstanceOf(SealedValueRejected.class);
+    }
+
+    @Test
+    void an_imported_uid_is_known_in_its_space_until_its_rows_are_deleted() {
+        String hash = CalendarDigests.sha256Hex("abc@google.com");
+        CalendarEvent event = events.createImported(new CreateEventCommand(spaceId, "Match", null, null, true,
+            LocalDate.of(2026, 10, 14), null, LocalDate.of(2026, 10, 14), null, null, List.of(), null, null, aliceId), hash);
+        RecurringEventSeries weekly = series.createImported(new CreateRecurringEventSeriesCommand(spaceId, "Entraînement",
+            null, null, true, null, null, 0, null, RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 10, 12), null,
+            List.of(), aliceId), CalendarDigests.sha256Hex("def@google.com"));
+
+        assertThat(importedUids.knownHashes(spaceId, List.of(hash, CalendarDigests.sha256Hex("def@google.com"), "other")))
+            .containsExactlyInAnyOrder(hash, CalendarDigests.sha256Hex("def@google.com"));
+        assertThat(importedUids.knownHashes(UUID.randomUUID(), List.of(hash))).as("another space").isEmpty();
+
+        events.delete(event.id());
+        series.delete(weekly.id());
+        assertThat(importedUids.knownHashes(spaceId, List.of(hash))).isEmpty();
+    }
+
+    @Test
+    void the_ids_of_a_nido_export_are_recognised_in_their_space_only() {
+        CalendarEvent event = events.create(new CreateEventCommand(spaceId, "Concert", null, null, true,
+            LocalDate.of(2026, 9, 23), null, LocalDate.of(2026, 9, 23), null, null, List.of(), null, null, aliceId));
+        UUID unknown = UUID.randomUUID();
+
+        assertThat(importedUids.existingIds(spaceId, List.of(event.id(), unknown))).containsExactly(event.id());
+        assertThat(importedUids.existingIds(UUID.randomUUID(), List.of(event.id()))).isEmpty();
+    }
+
+    @Test
+    void a_copy_of_an_imported_event_is_not_imported_itself() {
+        String hash = CalendarDigests.sha256Hex("abc@google.com");
+        CalendarEvent event = events.createImported(new CreateEventCommand(spaceId, "Match", null, null, true,
+            LocalDate.of(2026, 10, 14), null, LocalDate.of(2026, 10, 14), null, null, List.of(), null, null, aliceId), hash);
+        events.create(new CreateEventCommand(spaceId, event.title(), null, null, true, event.startDate(), null,
+            event.endDate(), null, null, List.of(), null, null, aliceId));
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_events WHERE import_uid_hash = ?", Long.class, hash)).isOne();
     }
 
     private CreateEventCommand plainEvent(String title, LocalDate date) {

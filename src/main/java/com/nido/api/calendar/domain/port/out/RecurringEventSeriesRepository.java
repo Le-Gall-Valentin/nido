@@ -17,6 +17,9 @@ public interface RecurringEventSeriesRepository {
 
     RecurringEventSeries create(CreateRecurringEventSeriesCommand command);
 
+    /** As {@link #create}, remembering the UID of the file it comes from. */
+    RecurringEventSeries createImported(CreateRecurringEventSeriesCommand command, String importUidHash);
+
     RecurringEventSeries update(UpdateRecurringEventSeriesCommand command);
 
     /** Stops the series after {@code lastDay}: it keeps everything up to it and shows nothing after. */

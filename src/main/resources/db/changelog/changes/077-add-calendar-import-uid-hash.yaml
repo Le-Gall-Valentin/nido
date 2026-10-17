@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: 077-add-calendar-import-uid-hash
+      author: nido
+      comment: >
+        An event or a series imported from an iCalendar file keeps the SHA-256 of the UID it had there, so a file
+        imported again creates nothing it already created. A digest, not the UID: nido never shows it, only compares it.
+        On the rows themselves, so deleting a failed import frees its UIDs.
+      changes:
+        - sql:
+            sql: ALTER TABLE calendar_events ADD COLUMN import_uid_hash VARCHAR(64)
+        - sql:
+            sql: >-
+              CREATE INDEX idx_calendar_events_space_import_uid ON calendar_events (space_id, import_uid_hash)
+              WHERE import_uid_hash IS NOT NULL
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series ADD COLUMN import_uid_hash VARCHAR(64)
+        - sql:
+            sql: >-
+              CREATE INDEX idx_calendar_recurring_event_series_space_import_uid
+              ON calendar_recurring_event_series (space_id, import_uid_hash) WHERE import_uid_hash IS NOT NULL
+      rollback:
+        - sql:
+            sql: DROP INDEX idx_calendar_recurring_event_series_space_import_uid
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series DROP COLUMN import_uid_hash
+        - sql:
+            sql: DROP INDEX idx_calendar_events_space_import_uid
+        - sql:
+            sql: ALTER TABLE calendar_events DROP COLUMN import_uid_hash

@@ -83,6 +83,16 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
     @Override
     @Transactional
     public CalendarEvent create(CreateEventCommand command) {
+        return insert(command, null);
+    }
+
+    @Override
+    @Transactional
+    public CalendarEvent createImported(CreateEventCommand command, String importUidHash) {
+        return insert(command, importUidHash);
+    }
+
+    private CalendarEvent insert(CreateEventCommand command, String importUidHash) {
         SpaceSealer sealer = sealers.forSpace(command.spaceId());
         CalendarEventEntity entity = new CalendarEventEntity();
         entity.setSpaceId(command.spaceId());
@@ -98,6 +108,7 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
         entity.setRecurringSeriesId(command.recurringSeriesId());
         entity.setRecurringOriginalDate(command.recurringOriginalDate());
         entity.setCreatedBy(command.createdBy());
+        entity.setImportUidHash(importUidHash);
         CalendarEventEntity saved = events.saveAndFlush(entity);
         replaceParticipants(saved.getId(), command.participantIds());
         return toDomain(saved, List.copyOf(command.participantIds()));

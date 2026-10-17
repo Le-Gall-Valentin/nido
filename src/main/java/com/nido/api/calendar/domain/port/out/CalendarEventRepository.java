@@ -46,6 +46,9 @@ public interface CalendarEventRepository {
 
     CalendarEvent create(CreateEventCommand command);
 
+    /** As {@link #create}, remembering the UID of the file it comes from. */
+    CalendarEvent createImported(CreateEventCommand command, String importUidHash);
+
     CalendarEvent update(UpdateEventCommand command);
 
     void delete(UUID eventId);

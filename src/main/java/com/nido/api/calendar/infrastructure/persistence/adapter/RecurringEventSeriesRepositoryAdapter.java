@@ -67,6 +67,16 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
     @Override
     @Transactional
     public RecurringEventSeries create(CreateRecurringEventSeriesCommand command) {
+        return insert(command, null);
+    }
+
+    @Override
+    @Transactional
+    public RecurringEventSeries createImported(CreateRecurringEventSeriesCommand command, String importUidHash) {
+        return insert(command, importUidHash);
+    }
+
+    private RecurringEventSeries insert(CreateRecurringEventSeriesCommand command, String importUidHash) {
         SpaceSealer sealer = sealers.forSpace(command.spaceId());
         CalendarRecurringEventSeriesEntity entity = new CalendarRecurringEventSeriesEntity();
         entity.setSpaceId(command.spaceId());
@@ -78,6 +88,7 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
             command.anchorDate(), command.endDate());
         entity.setStartsOn(command.startsOn());
         entity.setCreatedBy(command.createdBy());
+        entity.setImportUidHash(importUidHash);
         CalendarRecurringEventSeriesEntity saved = series.saveAndFlush(entity);
         replaceParticipants(saved.getId(), command.participantIds());
         return toDomain(saved, List.copyOf(command.participantIds()));
