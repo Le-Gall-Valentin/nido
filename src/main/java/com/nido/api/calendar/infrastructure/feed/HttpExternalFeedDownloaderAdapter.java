@@ -34,8 +34,8 @@ import java.time.Duration;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -60,16 +60,16 @@ public final class HttpExternalFeedDownloaderAdapter implements ExternalFeedDown
     private final GuardedDnsResolver resolver;
     private final Limits limits;
     private final CloseableHttpClient client;
-    private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(task -> {
+    private final ScheduledThreadPoolExecutor timer = new ScheduledThreadPoolExecutor(1, task -> {
         Thread thread = new Thread(task, "feed-download-deadline");
         thread.setDaemon(true);
         return thread;
     });
 
     public HttpExternalFeedDownloaderAdapter(AddressPolicy policy, DnsResolver dns, Limits limits) {
-        this.resolver = new GuardedDnsResolver(dns, policy,
-            (int) Math.max(1, limits.total().toMillis() / Math.max(1, limits.connect().toMillis())));
+        this.resolver = new GuardedDnsResolver(dns, policy, limits.connect(), limits.total());
         this.limits = limits;
+        this.timer.setRemoveOnCancelPolicy(true);
         this.client = HttpClients.custom()
             .setConnectionManager(PoolingHttpClientConnectionManagerBuilder.create()
                 .setDnsResolver(resolver)
@@ -112,10 +112,16 @@ public final class HttpExternalFeedDownloaderAdapter implements ExternalFeedDown
             HttpGet get = new HttpGet(current);
             AtomicBoolean expired = new AtomicBoolean();
             // One hard deadline for the whole download: the request is cancelled, whatever it is blocked on.
-            ScheduledFuture<?> alarm = timer.schedule(() -> {
-                expired.set(true);
-                get.cancel();
-            }, remaining, TimeUnit.NANOSECONDS);
+            ScheduledFuture<?> alarm;
+            try {
+                alarm = timer.schedule(() -> {
+                    expired.set(true);
+                    get.cancel();
+                }, remaining, TimeUnit.NANOSECONDS);
+            } catch (RejectedExecutionException closed) {
+                return failed(current, FeedErrorKind.UNREACHABLE, closed);
+            }
+            resolver.deadline(deadline);
             try {
                 // A literal address never reaches a resolver inside the client: checked here, as every name is again
                 // at the connection.
@@ -133,6 +139,9 @@ public final class HttpExternalFeedDownloaderAdapter implements ExternalFeedDown
                     Step step = answer(response);
                     switch (step) {
                         case Done done -> {
+                            if (done.result() instanceof FeedDownload.Failed refused) {
+                                note(current, refused.error().code(), null);
+                            }
                             return done.result();
                         }
                         case Redirect redirect -> current = current.resolve(redirect.location());
@@ -143,11 +152,12 @@ public final class HttpExternalFeedDownloaderAdapter implements ExternalFeedDown
             } catch (GuardedDnsResolver.BlockedAddressException e) {
                 return failed(current, FeedErrorKind.BLOCKED_ADDRESS, e);
             } catch (IOException | RuntimeException e) {
-                if (expired.get() || e instanceof InterruptedIOException) {
+                if (expired.get() || System.nanoTime() >= deadline || e instanceof InterruptedIOException) {
                     return failed(current, FeedErrorKind.TIMEOUT, e);
                 }
                 return failed(current, e instanceof TooLarge ? FeedErrorKind.TOO_LARGE : FeedErrorKind.UNREACHABLE, e);
             } finally {
+                resolver.deadline(null);
                 alarm.cancel(false);
             }
         }
@@ -193,6 +203,10 @@ public final class HttpExternalFeedDownloaderAdapter implements ExternalFeedDown
         return out.toByteArray();
     }
 
+    private static void note(URI url, String code, Exception cause) {
+        log.info("Followed calendar on {} not read: {} ({})", url.getHost(), code, cause == null ? "-" : cause.getClass().getSimpleName());
+    }
+
     private static void abort(ClassicHttpResponse response) {
         try {
             if (response instanceof ModalCloseable modal) {
@@ -219,7 +233,7 @@ public final class HttpExternalFeedDownloaderAdapter implements ExternalFeedDown
 
     /** Logged with the host and the code only: the address of a calendar can carry a secret token. */
     private static FeedDownload failed(URI url, FeedErrorKind kind, Exception cause) {
-        log.info("Followed calendar on {} not read: {} ({})", url.getHost(), kind, cause == null ? "-" : cause.getClass().getSimpleName());
+        note(url, kind.name(), cause);
         return new FeedDownload.Failed(FeedError.of(kind));
     }
 }

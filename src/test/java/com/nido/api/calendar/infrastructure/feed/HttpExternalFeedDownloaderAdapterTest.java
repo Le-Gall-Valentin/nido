@@ -29,6 +29,8 @@ class HttpExternalFeedDownloaderAdapterTest {
 
     private static final String ICS = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n";
 
+    private final java.util.List<HttpExternalFeedDownloaderAdapter> adapters = new java.util.ArrayList<>();
+    private final java.util.List<AutoCloseable> held = new java.util.ArrayList<>();
     private final AtomicLong written = new AtomicLong();
     private final AtomicInteger requests = new AtomicInteger();
     private final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newCachedThreadPool();
@@ -60,7 +62,7 @@ class HttpExternalFeedDownloaderAdapterTest {
     private final AddressPolicy loopbackOnly = address ->
         address.isLoopbackAddress() || AddressPolicy.standard(() -> false).allows(address);
 
-    private final HttpExternalFeedDownloaderAdapter downloader = new HttpExternalFeedDownloaderAdapter(loopbackOnly, names,
+    private final HttpExternalFeedDownloaderAdapter downloader = adapter(loopbackOnly, names,
         new HttpExternalFeedDownloaderAdapter.Limits(Duration.ofSeconds(2), Duration.ofSeconds(2), 1024, 3));
 
     @BeforeEach
@@ -144,8 +146,55 @@ class HttpExternalFeedDownloaderAdapterTest {
         port = server.getAddress().getPort();
     }
 
+    private HttpExternalFeedDownloaderAdapter adapter(AddressPolicy policy, DnsResolver dns,
+                                                      HttpExternalFeedDownloaderAdapter.Limits limits) {
+        HttpExternalFeedDownloaderAdapter created = new HttpExternalFeedDownloaderAdapter(policy, dns, limits);
+        adapters.add(created);
+        return created;
+    }
+
+    /** A listener whose queue of waiting connections is full: any further connection to its port hangs. */
+    private int deadPort() throws IOException {
+        java.net.ServerSocket full = new java.net.ServerSocket(0, 1);
+        held.add(full);
+        for (int i = 0; i < 6; i++) {
+            java.net.Socket filler = new java.net.Socket();
+            held.add(filler);
+            try {
+                filler.connect(new InetSocketAddress("127.0.0.1", full.getLocalPort()), 300);
+            } catch (java.net.SocketTimeoutException hangs) {
+                break;
+            }
+        }
+        return full.getLocalPort();
+    }
+
+    private static DnsResolver deadNames() {
+        return new DnsResolver() {
+            @Override
+            public InetAddress[] resolve(String host) throws UnknownHostException {
+                if (host.equals("feed.test")) {
+                    return new InetAddress[] {InetAddress.getByName("127.0.0.1")};
+                }
+                return new InetAddress[] {InetAddress.getByName("127.0.0.2"), InetAddress.getByName("127.0.0.3"),
+                    InetAddress.getByName("127.0.0.4")};
+            }
+
+            @Override
+            public String resolveCanonicalHostname(String host) {
+                return host;
+            }
+        };
+    }
+
     @AfterEach
-    void stop() throws IOException {
+    void stop() throws Exception {
+        for (HttpExternalFeedDownloaderAdapter created : adapters) {
+            created.close();
+        }
+        for (AutoCloseable open : held) {
+            open.close();
+        }
         server.stop(0);
         executor.shutdownNow();
         drip.close();
@@ -189,7 +238,7 @@ class HttpExternalFeedDownloaderAdapterTest {
 
     @Test
     void aNameGivingABlockedAddressIsRefusedBeforeAnyConnection() {
-        HttpExternalFeedDownloaderAdapter strict = new HttpExternalFeedDownloaderAdapter(AddressPolicy.standard(() -> false),
+        HttpExternalFeedDownloaderAdapter strict = adapter(AddressPolicy.standard(() -> false),
             names, HttpExternalFeedDownloaderAdapter.Limits.standard());
         assertThat(strict.download(url("rebind.test", "/feed.ics"), null, null))
             .isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.BLOCKED_ADDRESS)));
@@ -235,27 +284,41 @@ class HttpExternalFeedDownloaderAdapterTest {
     }
 
     @Test
-    void addressesThatNeverConnectAreGivenUpOnAtTheDeadline() {
-        DnsResolver unroutable = new DnsResolver() {
-            @Override
-            public InetAddress[] resolve(String host) throws UnknownHostException {
-                return new InetAddress[] {InetAddress.getByName("203.0.113.1"), InetAddress.getByName("203.0.113.2"),
-                    InetAddress.getByName("203.0.113.3"), InetAddress.getByName("203.0.113.4")};
-            }
-
-            @Override
-            public String resolveCanonicalHostname(String host) {
-                return host;
-            }
-        };
-        HttpExternalFeedDownloaderAdapter blackhole = new HttpExternalFeedDownloaderAdapter(address -> true, unroutable,
+    void addressesThatNeverConnectAreGivenUpOnAtTheDeadline() throws IOException {
+        int dead = deadPort();
+        HttpExternalFeedDownloaderAdapter blackhole = adapter(address -> true, deadNames(),
             new HttpExternalFeedDownloaderAdapter.Limits(Duration.ofSeconds(1), Duration.ofSeconds(2), 1024, 3));
         long start = System.nanoTime();
-        FeedDownload result = blackhole.download(URI.create("http://blackhole.test/feed.ics"), null, null);
+        FeedDownload result = blackhole.download(URI.create("http://dead.test:" + dead + "/feed.ics"), null, null);
         long millis = (System.nanoTime() - start) / 1_000_000;
+        System.out.println("ELAPSED dead addresses " + millis + " ms");
+        assertThat(result).isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.TIMEOUT)));
         assertThat(millis).as("elapsed").isLessThan(3_000);
-        // A network without a route fails at once (unreachable): only a timeout is held to the deadline.
-        assertThat(result).isInstanceOf(FeedDownload.Failed.class);
+    }
+
+    @Test
+    void aHopStartingLateDoesNotTryMoreAddressesThanTheTimeLeft() throws IOException {
+        int dead = deadPort();
+        server.createContext("/late-then-dead.ics", exchange -> {
+            pause(2_500);
+            redirect(exchange, "http://dead.test:" + dead + "/x.ics");
+        });
+        HttpExternalFeedDownloaderAdapter late = adapter(address -> true, deadNames(),
+            new HttpExternalFeedDownloaderAdapter.Limits(Duration.ofSeconds(1), Duration.ofSeconds(3), 1024, 3));
+        long start = System.nanoTime();
+        FeedDownload result = late.download(url("feed.test", "/late-then-dead.ics"), null, null);
+        long millis = (System.nanoTime() - start) / 1_000_000;
+        System.out.println("ELAPSED late hop to dead addresses " + millis + " ms");
+        assertThat(result).isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.TIMEOUT)));
+        assertThat(millis).as("elapsed").isLessThan(3_800);
+    }
+
+    @Test
+    void aClosedDownloaderAnswersFailedInsteadOfThrowing() throws Exception {
+        HttpExternalFeedDownloaderAdapter closed = adapter(loopbackOnly, names,
+            new HttpExternalFeedDownloaderAdapter.Limits(Duration.ofSeconds(2), Duration.ofSeconds(2), 1024, 3));
+        closed.close();
+        assertThat(closed.download(url("feed.test", "/feed.ics"), null, null)).isInstanceOf(FeedDownload.Failed.class);
     }
 
     @Test
@@ -298,7 +361,7 @@ class HttpExternalFeedDownloaderAdapterTest {
             }
         };
         requests.set(0);
-        HttpExternalFeedDownloaderAdapter victim = new HttpExternalFeedDownloaderAdapter(AddressPolicy.standard(() -> false),
+        HttpExternalFeedDownloaderAdapter victim = adapter(AddressPolicy.standard(() -> false),
             rebinding, HttpExternalFeedDownloaderAdapter.Limits.standard());
         assertThat(victim.download(url("rebind.test", "/feed.ics"), null, null))
             .isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.BLOCKED_ADDRESS)));
