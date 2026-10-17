@@ -35,6 +35,12 @@ public interface ExternalFeedRepository {
     /** Asked, failed: the calendar kept stays shown. */
     void recordFailure(UUID feedId, FeedError error, Instant at);
 
-    /** Every calendar last asked for before {@code before}, of every space: what the refresh walks. */
-    List<ExternalFeed> findAttemptedBefore(Instant before);
+    /**
+     * The ids of the calendars last asked for before {@code before}, of every space, the longest unasked first, at most
+     * {@code limit}: only ids, so that one row that cannot be read back does not stop the others.
+     */
+    List<UUID> findDueIds(Instant before, int limit);
+
+    /** Says the calendar is being asked for now, before it is: a second asking within the minute is then refused. */
+    void markAttempt(UUID feedId, Instant at);
 }

@@ -1,7 +1,10 @@
 package com.nido.api.calendar.infrastructure.persistence.repository;
 
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarExternalFeedEntity;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.List;
@@ -12,5 +15,6 @@ public interface CalendarExternalFeedJpaRepository extends JpaRepository<Calenda
 
     long countBySpaceId(UUID spaceId);
 
-    List<CalendarExternalFeedEntity> findByLastAttemptAtBefore(Instant before);
+    @Query("select f.id from CalendarExternalFeedEntity f where f.lastAttemptAt < :before order by f.lastAttemptAt asc")
+    List<UUID> findIdsAttemptedBefore(@Param("before") Instant before, Pageable pageable);
 }

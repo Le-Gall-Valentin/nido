@@ -10,6 +10,7 @@ import com.nido.api.calendar.infrastructure.persistence.repository.CalendarExter
 import com.nido.api.calendar.infrastructure.persistence.repository.CalendarExternalFeedJpaRepository;
 import com.nido.api.infrastructure.sealing.SpaceSealer;
 import com.nido.api.infrastructure.sealing.SpaceSealers;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -129,8 +130,16 @@ public class ExternalFeedRepositoryAdapter implements ExternalFeedRepository {
     }
 
     @Override
-    public List<ExternalFeed> findAttemptedBefore(Instant before) {
-        return feeds.findByLastAttemptAtBefore(before).stream().map(this::toDomain).toList();
+    public List<UUID> findDueIds(Instant before, int limit) {
+        return feeds.findIdsAttemptedBefore(before, PageRequest.of(0, limit));
+    }
+
+    @Override
+    @Transactional
+    public void markAttempt(UUID feedId, Instant at) {
+        CalendarExternalFeedEntity feed = feeds.findById(feedId).orElseThrow(CalendarException.ExternalFeedNotFound::new);
+        feed.setLastAttemptAt(at);
+        feeds.saveAndFlush(feed);
     }
 
     private ExternalFeed toDomain(CalendarExternalFeedEntity e) {

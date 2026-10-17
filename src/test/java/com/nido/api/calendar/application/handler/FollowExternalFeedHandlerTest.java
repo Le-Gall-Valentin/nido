@@ -94,4 +94,27 @@ class FollowExternalFeedHandlerTest {
             .isInstanceOf(CalendarException.TooManyExternalFeeds.class);
         verify(downloader, never()).download(any(), any(), any());
     }
+
+    @Test
+    void aNameTheCalendarGivesItselfIsStrippedAndABlankOneIsNoName() {
+        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(ICS, null, null));
+        when(checker.calendarName(ICS)).thenReturn(Optional.of("  Club de judo \n"));
+        handler.follow(new FollowExternalFeedCommand("https://ecole.example/v.ics", null, null), member);
+        verify(feeds).create(eq(member.spaceId()), eq("Club de judo"), any(), any(), any(), anyString(), any(), any(), any());
+
+        when(checker.calendarName(ICS)).thenReturn(Optional.of("   "));
+        handler.follow(new FollowExternalFeedCommand("https://ecole.example/v.ics", null, null), member);
+        verify(feeds).create(eq(member.spaceId()), eq("ecole.example"), any(), any(), any(), anyString(), any(), any(), any());
+    }
+
+    @Test
+    void aLongNameIsCutWithoutSplittingACharacter() {
+        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(ICS, null, null));
+        when(checker.calendarName(ICS)).thenReturn(Optional.empty());
+        String name = "a".repeat(99) + "\uD83D\uDE00" + "b";
+
+        handler.follow(new FollowExternalFeedCommand("https://ecole.example/v.ics", name, null), member);
+
+        verify(feeds).create(eq(member.spaceId()), eq("a".repeat(99) + "\uD83D\uDE00"), any(), any(), any(), anyString(), any(), any(), any());
+    }
 }

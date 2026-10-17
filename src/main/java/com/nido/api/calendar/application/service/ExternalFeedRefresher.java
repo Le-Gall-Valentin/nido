@@ -36,6 +36,8 @@ public class ExternalFeedRefresher {
 
     public ExternalFeed refresh(ExternalFeed feed) {
         Instant now = clock.instant();
+        // Before asking, so that a second asking within the minute finds it spent and is refused.
+        feeds.markAttempt(feed.id(), now);
         switch (downloader.download(feed.url(), feed.etag(), feed.lastModified())) {
             case FeedDownload.Downloaded downloaded -> {
                 try {

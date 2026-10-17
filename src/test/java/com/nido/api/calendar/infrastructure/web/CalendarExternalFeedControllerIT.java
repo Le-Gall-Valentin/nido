@@ -40,6 +40,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -61,6 +63,7 @@ class CalendarExternalFeedControllerIT {
     @Autowired SpaceMemberJpaRepository members;
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired JdbcTemplate jdbc;
+    @Autowired com.nido.api.calendar.domain.port.out.ExternalFeedRepository externalFeeds;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -122,6 +125,7 @@ class CalendarExternalFeedControllerIT {
         mockMvc.perform(post(feeds()).cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"url\":\"https://ecole.example/v.ics\"}"))
             .andExpect(status().isForbidden());
+        verify(downloader, never()).download(any(), any(), any());
     }
 
     @Test
@@ -185,7 +189,61 @@ class CalendarExternalFeedControllerIT {
             .andExpect(jsonPath("$[0].name").value("Vacances scolaires"));
         assertThat(jdbc.queryForObject("SELECT last_attempt_at FROM calendar_external_feeds WHERE id = ?",
             java.sql.Timestamp.class, UUID.fromString(id)).toInstant()).isEqualTo(attemptBefore);
-        org.mockito.Mockito.verify(downloader, org.mockito.Mockito.times(1)).download(any(), any(), any());
+        verify(downloader, org.mockito.Mockito.times(1)).download(any(), any(), any());
+    }
+
+    @Test
+    void the_eleventh_calendar_of_a_space_is_refused() throws Exception {
+        // Made directly: ten follows in a minute would meet the route's rate limit first.
+        for (int i = 0; i < 10; i++) {
+            externalFeeds.create(spaceId, "Calendrier " + i, java.net.URI.create("https://ecole.example/v" + i + ".ics"), null,
+                aliceId, SCHOOL, null, null, Instant.parse("2026-10-13T12:00:00Z"));
+        }
+        mockMvc.perform(post(feeds()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"url\":\"https://ecole.example/v10.ics\"}"))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.error_code").value("too_many_feeds"));
+    }
+
+    @Test
+    void an_address_that_is_no_address_is_refused_without_being_asked() throws Exception {
+        mockMvc.perform(post(feeds()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"url\":\"ftp://ecole.example/v.ics\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("invalid_feed_address"));
+        verify(downloader, never()).download(any(), any(), any());
+    }
+
+    @Test
+    void a_manual_refresh_keeps_what_the_address_now_answers() throws Exception {
+        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(SCHOOL, "\"v1\"", null));
+        String id = objectMapper.readTree(mockMvc.perform(post(feeds()).cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"url\":\"https://ecole.example/v.ics\"}"))
+            .andReturn().getResponse().getContentAsString()).get("id").asText();
+        jdbc.update("UPDATE calendar_external_feeds SET last_attempt_at = now() - interval '2 minutes' WHERE space_id = ?", spaceId);
+        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.NotModified());
+
+        mockMvc.perform(post(feeds() + "/" + id + "/refresh").cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.lastError").doesNotExist());
+        // The attempt is spent: asked again at once, it is refused.
+        mockMvc.perform(post(feeds() + "/" + id + "/refresh").cookie(tokenFor(aliceId)))
+            .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
+    void the_list_shows_only_the_calendars_of_its_own_space() throws Exception {
+        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(SCHOOL, null, null));
+        mockMvc.perform(post(feeds()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"url\":\"https://ecole.example/v.ics\",\"name\":\"Chez Valentin\"}"))
+            .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/spaces/" + bobsSpaceId + "/calendar/external-feeds").cookie(tokenFor(bobId))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"url\":\"https://autre.example/v.ics\",\"name\":\"Chez Bob\"}"))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get(feeds()).cookie(tokenFor(aliceId)))
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].name").value("Chez Valentin"));
     }
 
     private String feeds() {

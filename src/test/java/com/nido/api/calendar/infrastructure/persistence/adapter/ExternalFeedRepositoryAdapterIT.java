@@ -99,11 +99,30 @@ class ExternalFeedRepositoryAdapterIT {
     }
 
     @Test
-    void the_calendars_not_tried_for_a_while_are_found() {
-        Instant old = Instant.parse("2026-10-13T00:00:00Z");
-        feeds.create(spaceId, "Ancien", URI.create("https://a.example/a.ics"), null, aliceId, "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", null, null, old);
-        feeds.create(spaceId, "Récent", URI.create("https://b.example/b.ics"), null, aliceId, "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", null, null, old.plusSeconds(6 * 3600));
+    void the_calendars_not_tried_for_a_while_are_found_the_longest_unasked_first_and_no_more_than_the_limit() {
+        String ics = "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n";
+        Instant old = Instant.parse("2020-01-01T00:00:00Z");
+        UUID third = feeds.create(spaceId, "Troisième", URI.create("https://c.example/c.ics"), null, aliceId, ics, null, null, old.plusSeconds(30)).id();
+        UUID first = feeds.create(spaceId, "Premier", URI.create("https://a.example/a.ics"), null, aliceId, ics, null, null, old).id();
+        UUID second = feeds.create(spaceId, "Deuxième", URI.create("https://b.example/b.ics"), null, aliceId, ics, null, null, old.plusSeconds(10)).id();
+        feeds.create(spaceId, "Récent", URI.create("https://d.example/d.ics"), null, aliceId, ics, null, null, old.plusSeconds(6 * 3600));
+        Instant before = old.plusSeconds(3600);
 
-        assertThat(feeds.findAttemptedBefore(old.plusSeconds(3600))).extracting(ExternalFeed::name).containsExactly("Ancien");
+        assertThat(feeds.findDueIds(before, 10)).containsExactly(first, second, third);
+        assertThat(feeds.findDueIds(before, 2)).containsExactly(first, second);
+    }
+
+    @Test
+    void an_attempt_is_marked_without_touching_what_was_fetched() {
+        Instant fetched = Instant.parse("2026-10-13T00:00:00Z");
+        ExternalFeed feed = feeds.create(spaceId, "Club", URI.create("https://a.example/a.ics"), null, aliceId,
+            "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", null, null, fetched);
+
+        feeds.markAttempt(feed.id(), fetched.plusSeconds(60));
+
+        ExternalFeed after = feeds.findById(feed.id()).orElseThrow();
+        assertThat(after.lastAttemptAt()).isEqualTo(fetched.plusSeconds(60));
+        assertThat(after.contentFetchedAt()).isEqualTo(fetched);
+        assertThat(after.lastError()).isNull();
     }
 }

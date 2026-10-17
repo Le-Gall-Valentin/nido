@@ -54,14 +54,20 @@ public class FollowExternalFeedHandler implements FollowExternalFeedUseCase {
         }
         String ownName;
         try {
-            ownName = checker.calendarName(downloaded.content()).orElse(null);
+            ownName = checker.calendarName(downloaded.content()).map(String::strip).filter(n -> !n.isEmpty()).orElse(null);
         } catch (CalendarException.NotAnIcalFile notACalendar) {
             throw new CalendarException.FeedUnavailable(FeedError.of(FeedErrorKind.NOT_ICS));
         }
         String name = command.name() != null && !command.name().isBlank() ? command.name().strip()
             : ownName != null ? ownName : url.getHost();
-        return feeds.create(caller.spaceId(), name.length() > MAX_NAME ? name.substring(0, MAX_NAME) : name, url,
+        return feeds.create(caller.spaceId(), truncated(name), url,
             command.color(), caller.userId(), downloaded.content(), downloaded.etag(), downloaded.lastModified(),
             clock.instant());
+    }
+
+    /** At most {@link #MAX_NAME} characters, never cutting a character in two. */
+    private static String truncated(String name) {
+        return name.codePointCount(0, name.length()) <= MAX_NAME ? name
+            : name.substring(0, name.offsetByCodePoints(0, MAX_NAME));
     }
 }
