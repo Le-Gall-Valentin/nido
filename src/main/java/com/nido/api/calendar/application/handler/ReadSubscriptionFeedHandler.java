@@ -6,6 +6,7 @@ import com.nido.api.calendar.domain.model.CalendarDigests;
 import com.nido.api.calendar.domain.model.SubscriptionLink;
 import com.nido.api.calendar.domain.model.SubscriptionTokens;
 import com.nido.api.calendar.domain.port.out.AccountLanguage;
+import com.nido.api.calendar.domain.port.out.ActiveAccounts;
 import com.nido.api.calendar.domain.port.out.IcalWriter;
 import com.nido.api.calendar.domain.port.out.SubscriptionLinkRepository;
 import com.nido.api.shared.annotation.ApplicationService;
@@ -20,7 +21,7 @@ import java.util.Optional;
 
 /**
  * What a calendar application reads at a secret address. It reads as the address' owner reads today — their current
- * membership, not the one they had when they made it: an owner gone from the space reads nothing, whatever the reason.
+ * membership, not the one they had when they made it: an owner gone from the space, or whose account is deactivated, reads nothing, whatever the reason.
  * The time of the last read is written at most once an hour, so a phone polling every few minutes costs no write.
  */
 @ApplicationService
@@ -33,16 +34,18 @@ public class ReadSubscriptionFeedHandler implements ReadSubscriptionFeedUseCase 
     private final CalendarFeedAssembler assembler;
     private final IcalWriter writer;
     private final AccountLanguage language;
+    private final ActiveAccounts accounts;
     private final Clock clock;
 
     public ReadSubscriptionFeedHandler(SubscriptionLinkRepository links, SpaceMembershipPort memberships,
                                        CalendarFeedAssembler assembler, IcalWriter writer, AccountLanguage language,
-                                       Clock clock) {
+                                       ActiveAccounts accounts, Clock clock) {
         this.links = links;
         this.memberships = memberships;
         this.assembler = assembler;
         this.writer = writer;
         this.language = language;
+        this.accounts = accounts;
         this.clock = clock;
     }
 
@@ -57,6 +60,9 @@ public class ReadSubscriptionFeedHandler implements ReadSubscriptionFeedUseCase 
             return Optional.empty();
         }
         SubscriptionLink link = found.get();
+        if (!accounts.isActive(link.userId())) {
+            return Optional.empty();
+        }
         Optional<SpaceMembership> reader = memberships.find(link.spaceId(), link.userId());
         if (reader.isEmpty()) {
             return Optional.empty();

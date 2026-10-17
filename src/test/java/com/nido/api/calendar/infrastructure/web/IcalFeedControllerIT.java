@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -34,7 +35,9 @@ import org.springframework.web.context.WebApplicationContext;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,6 +45,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -66,7 +70,6 @@ class IcalFeedControllerIT {
     private UUID aliceId;
     private UUID bobId;
     private UUID spaceId;
-    private UUID bobsSpaceId;
 
     @BeforeEach
     void setUp() {
@@ -83,8 +86,6 @@ class IcalFeedControllerIT {
         spaceId = saveSharedSpace("Chez Valentin");
         saveMembership(spaceId, aliceId, SpaceRole.OWNER);
         saveMembership(spaceId, bobId, SpaceRole.VIEWER);
-        bobsSpaceId = saveSharedSpace("Chez Bob");
-        saveMembership(bobsSpaceId, bobId, SpaceRole.OWNER);
         settingsStore.save(Map.of(SettingKey.PUBLIC_URL, Optional.of("https://nido.test")), null, Instant.now());
     }
 
@@ -92,6 +93,7 @@ class IcalFeedControllerIT {
     void noPublicAddress() {
         InstanceSettingsTestSupport.clear(settingsStore);
         jdbc.update("DELETE FROM calendar_subscription_links");
+        jdbc.update("UPDATE users SET is_active = true");
     }
 
     @Test
@@ -102,6 +104,7 @@ class IcalFeedControllerIT {
         mockMvc.perform(get(path))
             .andExpect(status().isOk())
             .andExpect(header().string("Content-Type", "text/calendar;charset=UTF-8"))
+            .andExpect(header().string("Cache-Control", "max-age=0, private"))
             .andExpect(header().string("X-Robots-Tag", "noindex"))
             .andExpect(header().string("Referrer-Policy", "no-referrer"))
             .andExpect(content().string(org.hamcrest.Matchers.containsString("SUMMARY:Concert")));
@@ -109,15 +112,54 @@ class IcalFeedControllerIT {
     }
 
     @Test
-    void unknown_revoked_and_orphaned_addresses_all_answer_the_same_404() throws Exception {
+    void a_head_request_is_answered_like_the_get() throws Exception {
         String path = createLink(bobId, "{\"label\":\"iPhone\",\"sources\":[\"EVENT\"]}");
-        String unknown = "/ical/" + SubscriptionTokens.newToken() + ".ics";
-        mockMvc.perform(get(unknown)).andExpect(status().isNotFound());
-        mockMvc.perform(get("/ical/not-a-token.ics")).andExpect(status().isNotFound());
+
+        mockMvc.perform(head(path))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Type", "text/calendar;charset=UTF-8"));
+    }
+
+    @Test
+    void an_invalid_session_cookie_changes_nothing() throws Exception {
+        createEvent("Concert", "2026-09-23");
+        String path = createLink(bobId, "{\"label\":\"iPhone\",\"sources\":[\"EVENT\"]}");
+        String plain = mockMvc.perform(get(path)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        String withCookie = mockMvc.perform(get(path).cookie(new Cookie("access_token", "not.a.jwt")))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        // Each rendering carries its own time stamp: everything else is the same.
+        assertThat(withCookie.replaceAll("DTSTAMP:\\S+", "")).contains("SUMMARY:Concert")
+            .isEqualTo(plain.replaceAll("DTSTAMP:\\S+", ""));
+    }
+
+    @Test
+    void unknown_revoked_orphaned_and_deactivated_addresses_all_answer_the_same_404() throws Exception {
+        String path = createLink(bobId, "{\"label\":\"iPhone\",\"sources\":[\"EVENT\"]}");
+        String alicesPath = createLink(aliceId, "{\"label\":\"Mac\",\"sources\":[\"EVENT\"]}");
+
+        List<MockHttpServletResponse> answers = new ArrayList<>();
+        answers.add(mockMvc.perform(get("/ical/not-a-token.ics")).andReturn().getResponse());
+        answers.add(mockMvc.perform(get("/ical/" + SubscriptionTokens.newToken() + ".ics")).andReturn().getResponse());
 
         // Bob leaves the space behind the application's back: his address reads nothing any more.
         jdbc.update("DELETE FROM space_members WHERE user_id = ?", bobId);
-        mockMvc.perform(get(path)).andExpect(status().isNotFound());
+        answers.add(mockMvc.perform(get(path)).andReturn().getResponse());
+
+        // Alice is deactivated: her address reads nothing either, until she is back.
+        jdbc.update("UPDATE users SET is_active = false WHERE id = ?", aliceId);
+        answers.add(mockMvc.perform(get(alicesPath)).andReturn().getResponse());
+        jdbc.update("UPDATE users SET is_active = true WHERE id = ?", aliceId);
+        mockMvc.perform(get(alicesPath)).andExpect(status().isOk());
+
+        MockHttpServletResponse first = answers.get(0);
+        assertThat(first.getStatus()).isEqualTo(404);
+        for (MockHttpServletResponse answer : answers) {
+            assertThat(answer.getStatus()).isEqualTo(first.getStatus());
+            assertThat(answer.getContentAsString(StandardCharsets.UTF_8)).isEqualTo(first.getContentAsString(StandardCharsets.UTF_8));
+            assertThat(answer.getContentType()).isEqualTo(first.getContentType());
+        }
     }
 
     @Test

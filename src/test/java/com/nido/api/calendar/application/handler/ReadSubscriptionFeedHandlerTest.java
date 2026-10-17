@@ -7,6 +7,7 @@ import com.nido.api.calendar.domain.model.CalendarSourceType;
 import com.nido.api.calendar.domain.model.SubscriptionLink;
 import com.nido.api.calendar.domain.model.SubscriptionTokens;
 import com.nido.api.calendar.domain.port.out.AccountLanguage;
+import com.nido.api.calendar.domain.port.out.ActiveAccounts;
 import com.nido.api.calendar.domain.port.out.IcalWriter;
 import com.nido.api.calendar.domain.port.out.SubscriptionLinkRepository;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -43,12 +44,17 @@ class ReadSubscriptionFeedHandlerTest {
     private final CalendarFeedAssembler assembler = mock(CalendarFeedAssembler.class);
     private final IcalWriter writer = mock(IcalWriter.class);
     private final AccountLanguage language = mock(AccountLanguage.class);
+    private final ActiveAccounts accounts = mock(ActiveAccounts.class);
     private final ReadSubscriptionFeedHandler handler = new ReadSubscriptionFeedHandler(links, memberships, assembler,
-        writer, language, Clock.fixed(NOW, ZoneOffset.UTC));
+        writer, language, accounts, Clock.fixed(NOW, ZoneOffset.UTC));
 
     private final String token = SubscriptionTokens.newToken();
     private final UUID spaceId = UUID.randomUUID();
     private final UUID userId = UUID.randomUUID();
+
+    {
+        when(accounts.isActive(userId)).thenReturn(true);
+    }
 
     @Test
     void aMemberStillInTheSpaceIsReadAsTheyRead() {
@@ -85,6 +91,39 @@ class ReadSubscriptionFeedHandlerTest {
 
         assertThat(handler.read(token)).isEmpty();
         verify(assembler, never()).assemble(any(), any(), anyBoolean());
+    }
+
+    @Test
+    void anAddressWhoseOwnerIsDeactivatedReadsNothing() {
+        when(links.findByTokenHash(anyString())).thenReturn(Optional.of(link(null)));
+        when(accounts.isActive(userId)).thenReturn(false);
+
+        assertThat(handler.read(token)).isEmpty();
+        verify(memberships, never()).find(any(), any());
+        verify(assembler, never()).assemble(any(), any(), anyBoolean());
+        verify(links, never()).markRead(any(), any());
+    }
+
+    @Test
+    void anUnknownTokenReadsNothingAndLooksNoMembershipUp() {
+        when(links.findByTokenHash(anyString())).thenReturn(Optional.empty());
+
+        assertThat(handler.read(token)).isEmpty();
+        verify(memberships, never()).find(any(), any());
+        verify(assembler, never()).assemble(any(), any(), anyBoolean());
+    }
+
+    @Test
+    void aReadMoreThanAnHourAfterTheLastIsMarkedAgain() {
+        SubscriptionLink link = link(NOW.minus(Duration.ofMinutes(61)));
+        when(links.findByTokenHash(anyString())).thenReturn(Optional.of(link));
+        when(memberships.find(spaceId, userId)).thenReturn(Optional.of(
+            new SpaceMembership(UUID.randomUUID(), spaceId, userId, SpaceRole.VIEWER, NOW)));
+        when(writer.write(any(), any())).thenReturn("BEGIN:VCALENDAR");
+
+        handler.read(token);
+
+        verify(links).markRead(link.id(), NOW);
     }
 
     @Test

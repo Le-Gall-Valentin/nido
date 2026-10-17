@@ -24,7 +24,7 @@ public class IcalFeedController {
         this.readUseCase = readUseCase;
     }
 
-    // Counted per address: a calendar application signs in as nobody. Google and Apple poll far below this.
+    // Counted per IP address, across every link: a calendar application signs in as nobody. Google and Apple poll far below this.
     @GetMapping("/ical/{token}.ics")
     @RateLimiting(mode = RateLimitMode.IP, max = 60)
     public ResponseEntity<String> read(@PathVariable String token) {
