@@ -25,8 +25,11 @@ final class GuardedDnsResolver implements DnsResolver {
 
     private final DnsResolver delegate;
     private final AddressPolicy policy;
+    /** Connecting cannot be cancelled mid-attempt: as many addresses are tried as the total time holds connect timeouts. */
+    private final int maxAttempts;
 
-    GuardedDnsResolver(DnsResolver delegate, AddressPolicy policy) {
+    GuardedDnsResolver(DnsResolver delegate, AddressPolicy policy, int maxAttempts) {
+        this.maxAttempts = maxAttempts;
         this.delegate = delegate;
         this.policy = policy;
     }
@@ -61,7 +64,7 @@ final class GuardedDnsResolver implements DnsResolver {
 
     @Override
     public List<InetSocketAddress> resolve(String host, int port) throws UnknownHostException {
-        return Arrays.stream(resolve(host)).map(address -> new InetSocketAddress(address, port)).toList();
+        return Arrays.stream(resolve(host)).limit(maxAttempts).map(address -> new InetSocketAddress(address, port)).toList();
     }
 
     @Override

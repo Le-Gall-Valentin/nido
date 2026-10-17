@@ -19,6 +19,8 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.GZIPOutputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,6 +29,10 @@ class HttpExternalFeedDownloaderAdapterTest {
 
     private static final String ICS = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n";
 
+    private final AtomicLong written = new AtomicLong();
+    private final AtomicInteger requests = new AtomicInteger();
+    private final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newCachedThreadPool();
+    private java.net.ServerSocket drip;
     private HttpServer server;
     private int port;
 
@@ -66,6 +72,7 @@ class HttpExternalFeedDownloaderAdapterTest {
                 exchange.close();
                 return;
             }
+            requests.incrementAndGet();
             exchange.getResponseHeaders().add("ETag", "\"v1\"");
             exchange.getResponseHeaders().add("Content-Type", "text/calendar; charset=utf-8");
             send(exchange, 200, ICS.getBytes(StandardCharsets.UTF_8));
@@ -85,20 +92,63 @@ class HttpExternalFeedDownloaderAdapterTest {
             send(exchange, 200, zipped.toByteArray());
         });
         server.createContext("/slow.ics", exchange -> {
-            try {
-                Thread.sleep(4_000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            send(exchange, 200, ICS.getBytes(StandardCharsets.UTF_8));
+            pause(6_000);
+            exchange.close();
         });
+        server.createContext("/late1.ics", exchange -> {
+            pause(1_500);
+            redirect(exchange, "/late2.ics");
+        });
+        server.createContext("/late2.ics", exchange -> {
+            pause(1_500);
+            redirect(exchange, "/late3.ics");
+        });
+        server.createContext("/late3.ics", exchange -> {
+            pause(1_500);
+            redirect(exchange, "/late1.ics");
+        });
+        server.createContext("/bad-location.ics", exchange -> redirect(exchange, "http://[bad"));
+        server.createContext("/lie200.ics", exchange -> lie(exchange, 200));
+        server.createContext("/lie404.ics", exchange -> lie(exchange, 404));
+        server.createContext("/endless.ics", exchange -> {
+            exchange.sendResponseHeaders(200, 0);
+            byte[] chunk = new byte[8192];
+            try (OutputStream out = exchange.getResponseBody()) {
+                for (int i = 0; i < 1_000_000; i++) {
+                    out.write(chunk);
+                    written.addAndGet(chunk.length);
+                }
+            } catch (IOException clientGone) {
+                // the client aborted, as it should
+            }
+        });
+        server.createContext("/endless-deflate.ics", exchange -> {
+            exchange.getResponseHeaders().add("Content-Encoding", "gzip");
+            exchange.sendResponseHeaders(200, 0);
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write(new byte[] {0x1f, (byte) 0x8b, 8, 0, 0, 0, 0, 0, 0, 0});
+                out.flush();
+                for (int i = 0; i < 40; i++) {
+                    out.write(new byte[] {0, 0, 0, (byte) 0xff, (byte) 0xff}); // empty stored blocks: no byte ever comes out
+                    out.flush();
+                    pause(200);
+                }
+            } catch (IOException clientGone) {
+                // aborted
+            }
+        });
+        server.setExecutor(executor);
         server.start();
+        drip = new java.net.ServerSocket(0, 5, InetAddress.getByName("127.0.0.1"));
+        Thread.ofPlatform().daemon().start(this::dripHeaders);
         port = server.getAddress().getPort();
     }
 
     @AfterEach
-    void stop() {
+    void stop() throws IOException {
         server.stop(0);
+        executor.shutdownNow();
+        drip.close();
     }
 
     @Test
@@ -161,8 +211,108 @@ class HttpExternalFeedDownloaderAdapterTest {
 
     @Test
     void aServerTooSlowIsGivenUpOn() {
-        assertThat(downloader.download(url("feed.test", "/slow.ics"), null, null))
-            .isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.TIMEOUT)));
+        assertTimeoutWithin("/slow.ics");
+    }
+
+    @Test
+    void aServerDrippingItsHeadersIsGivenUpOnAtTheDeadline() {
+        long start = System.nanoTime();
+        FeedDownload result = downloader.download(URI.create("http://feed.test:" + drip.getLocalPort() + "/drip.ics"), null, null);
+        long millis = (System.nanoTime() - start) / 1_000_000;
+        System.out.println("ELAPSED drip " + millis + " ms");
+        assertThat(result).isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.TIMEOUT)));
+        assertThat(millis).as("elapsed").isLessThan(3_000);
+    }
+
+    @Test
+    void redirectsEachAnsweringLateAreGivenUpOnAtTheDeadline() {
+        assertTimeoutWithin("/late1.ics");
+    }
+
+    @Test
+    void endlessEmptyDeflateBlocksAreGivenUpOnAtTheDeadline() {
+        assertTimeoutWithin("/endless-deflate.ics");
+    }
+
+    @Test
+    void addressesThatNeverConnectAreGivenUpOnAtTheDeadline() {
+        DnsResolver unroutable = new DnsResolver() {
+            @Override
+            public InetAddress[] resolve(String host) throws UnknownHostException {
+                return new InetAddress[] {InetAddress.getByName("203.0.113.1"), InetAddress.getByName("203.0.113.2"),
+                    InetAddress.getByName("203.0.113.3"), InetAddress.getByName("203.0.113.4")};
+            }
+
+            @Override
+            public String resolveCanonicalHostname(String host) {
+                return host;
+            }
+        };
+        HttpExternalFeedDownloaderAdapter blackhole = new HttpExternalFeedDownloaderAdapter(address -> true, unroutable,
+            new HttpExternalFeedDownloaderAdapter.Limits(Duration.ofSeconds(1), Duration.ofSeconds(2), 1024, 3));
+        long start = System.nanoTime();
+        FeedDownload result = blackhole.download(URI.create("http://blackhole.test/feed.ics"), null, null);
+        long millis = (System.nanoTime() - start) / 1_000_000;
+        assertThat(millis).as("elapsed").isLessThan(3_000);
+        // A network without a route fails at once (unreachable): only a timeout is held to the deadline.
+        assertThat(result).isInstanceOf(FeedDownload.Failed.class);
+    }
+
+    @Test
+    void aLyingContentLengthIsNotReadToItsEnd() {
+        assertThat(downloader.download(url("feed.test", "/lie200.ics"), null, null))
+            .isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.TOO_LARGE)));
+        assertThat(downloader.download(url("feed.test", "/lie404.ics"), null, null))
+            .isEqualTo(new FeedDownload.Failed(FeedError.http(404)));
+        assertThat(written.get()).as("bytes the server managed to write").isLessThan(10_000_000L);
+    }
+
+    @Test
+    void anEndlessChunkedBodyIsNotReadToItsEnd() {
+        long start = System.nanoTime();
+        assertThat(downloader.download(url("feed.test", "/endless.ics"), null, null))
+            .isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.TOO_LARGE)));
+        assertThat((System.nanoTime() - start) / 1_000_000).isLessThan(3_000);
+        assertThat(written.get()).isLessThan(10_000_000L);
+    }
+
+    @Test
+    void aMalformedLocationIsAnHttpError() {
+        assertThat(downloader.download(url("feed.test", "/bad-location.ics"), null, null))
+            .isEqualTo(new FeedDownload.Failed(FeedError.http(302)));
+    }
+
+    @Test
+    void theNameIsCheckedAgainAtTheConnection() {
+        // The first resolution (the adapter's own check) is allowed, the second (the connection's) is not.
+        AtomicInteger calls = new AtomicInteger();
+        DnsResolver rebinding = new DnsResolver() {
+            @Override
+            public InetAddress[] resolve(String host) throws UnknownHostException {
+                return new InetAddress[] {InetAddress.getByName(calls.getAndIncrement() == 0 ? "8.8.8.8" : "10.0.0.1")};
+            }
+
+            @Override
+            public String resolveCanonicalHostname(String host) {
+                return host;
+            }
+        };
+        requests.set(0);
+        HttpExternalFeedDownloaderAdapter victim = new HttpExternalFeedDownloaderAdapter(AddressPolicy.standard(() -> false),
+            rebinding, HttpExternalFeedDownloaderAdapter.Limits.standard());
+        assertThat(victim.download(url("rebind.test", "/feed.ics"), null, null))
+            .isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.BLOCKED_ADDRESS)));
+        assertThat(calls.get()).as("resolutions").isGreaterThanOrEqualTo(2);
+        assertThat(requests.get()).as("requests reaching the server").isZero();
+    }
+
+    private void assertTimeoutWithin(String path) {
+        long start = System.nanoTime();
+        FeedDownload result = downloader.download(url("feed.test", path), null, null);
+        long millis = (System.nanoTime() - start) / 1_000_000;
+        System.out.println("ELAPSED " + path + " " + millis + " ms");
+        assertThat(result).isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.TIMEOUT)));
+        assertThat(millis).as("elapsed").isLessThan(3_000);
     }
 
     @Test
@@ -173,6 +323,52 @@ class HttpExternalFeedDownloaderAdapterTest {
 
     private URI url(String host, String path) {
         return URI.create("http://" + host + ":" + port + path);
+    }
+
+    /** Answers one byte of its status line every half second: no read ever times out, the answer never ends. */
+    private void dripHeaders() {
+        while (!drip.isClosed()) {
+            try {
+                java.net.Socket socket = drip.accept();
+                Thread.ofPlatform().daemon().start(() -> {
+                    try (socket) {
+                        socket.getInputStream().read(new byte[4096]);
+                        OutputStream out = socket.getOutputStream();
+                        for (byte b : "HTTP/1.1 200 OK\r\nX-Slow: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".getBytes(StandardCharsets.US_ASCII)) {
+                            out.write(b);
+                            out.flush();
+                            pause(500);
+                        }
+                    } catch (IOException clientGone) {
+                        // gave up, as it should
+                    }
+                });
+            } catch (IOException closed) {
+                return;
+            }
+        }
+    }
+
+    private static void pause(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /** Announces two gigabytes and writes them for as long as the client reads. */
+    private void lie(com.sun.net.httpserver.HttpExchange exchange, int status) throws IOException {
+        exchange.sendResponseHeaders(status, 2_000_000_000L);
+        byte[] chunk = new byte[8192];
+        try (OutputStream out = exchange.getResponseBody()) {
+            for (int i = 0; i < 250_000; i++) {
+                out.write(chunk);
+                written.addAndGet(chunk.length);
+            }
+        } catch (IOException clientGone) {
+            // the client aborted, as it should
+        }
     }
 
     private static void redirect(com.sun.net.httpserver.HttpExchange exchange, String location) throws IOException {
