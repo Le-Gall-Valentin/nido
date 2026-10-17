@@ -122,4 +122,44 @@ class BoundedExpansionTest {
         assertThat(reading.ignored()).isZero();
         assertThat(reading.groups()).hasSize(1_000).allSatisfy(group -> assertThat(group.series()).isNotNull());
     }
+
+    @Test
+    void aBillThatWouldWrapAroundIsRefusedAndFreesNothingForTheRulesAfter() {
+        String everything = "RRULE:FREQ=HOURLY;COUNT=1000000000;BYMONTH=" + list(1, 12) + ";BYMONTHDAY=" + list(1, 31)
+            + ";BYYEARDAY=" + list(1, 366) + ";BYWEEKNO=" + list(1, 53) + ";BYDAY=MO,TU,WE,TH,FR,SA,SU;BYHOUR=" + list(0, 23)
+            + ";BYMINUTE=" + list(0, 59) + ";BYSECOND=" + list(0, 59);
+        String heavy = "RRULE:FREQ=YEARLY;BYYEARDAY=" + list(1, 366) + ";BYHOUR=" + list(0, 9) + ";COUNT=100000";
+        java.util.List<String> events = new java.util.ArrayList<>();
+        events.add(vevent("o@test", "SUMMARY:Tout", "DTSTART:10000101T000000", everything));
+        IntStream.range(0, 10).forEach(i -> events.add(vevent("h" + i + "@test", "SUMMARY:Lourd " + i, "DTSTART:15000101T000000", heavy)));
+        events.add(vevent("k@test", "SUMMARY:Court", "DTSTART;VALUE=DATE:20260105", "RRULE:FREQ=DAILY;COUNT=5"));
+        ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(2),
+            () -> reader.read(ics(events.toArray(String[]::new)), PARIS, TODAY, Locale.FRENCH));
+        // The wrapped one, and all but one or two of the heavy ones, are refused: a negative bill would have freed the budget.
+        assertThat(reading.ignored()).isGreaterThanOrEqualTo(9);
+        assertThat(reading.notes()).filteredOn(note -> note.kind() == ImportNoteKind.IGNORED)
+            .extracting(ImportNote::detail).containsOnly("TOO_HEAVY");
+    }
+
+    @Test
+    void aSumOfBerlinSeriesUntilTheEndOfTimeIsReadWithoutWalkingEightThousandYearsEach() {
+        String[] events = IntStream.range(0, 1_000).mapToObj(i -> vevent("u" + i + "@test", "SUMMARY:Berlin " + i,
+            "DTSTART;TZID=Europe/Berlin:20230105T100000", "DTEND;TZID=Europe/Berlin:20230105T110000",
+            "RRULE:FREQ=WEEKLY;BYDAY=TH;UNTIL=99991231T000000Z")).toArray(String[]::new);
+        ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(2),
+            () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH));
+        assertThat(reading.groups()).hasSize(1_000).allSatisfy(group -> assertThat(group.series()).isNotNull());
+    }
+
+    @Test
+    void aThousandEndlessCountsAreBilledForTheirEndSearchAndTheLaterOnesRefused() {
+        String[] events = IntStream.range(0, 1_000).mapToObj(i -> vevent("e" + i + "@test", "SUMMARY:Sans fin " + i,
+            "DTSTART;VALUE=DATE:20260105", "RRULE:FREQ=DAILY;COUNT=2000000000")).toArray(String[]::new);
+        ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(2),
+            () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH));
+        assertThat(reading.ignored()).isPositive();
+        assertThat(reading.notes()).filteredOn(note -> note.kind() == ImportNoteKind.IGNORED)
+            .extracting(ImportNote::detail).containsOnly("TOO_HEAVY");
+        assertThat(reading.groups().size() + reading.ignored()).isEqualTo(1_000);
+    }
 }

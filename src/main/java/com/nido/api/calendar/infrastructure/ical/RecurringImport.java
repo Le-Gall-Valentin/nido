@@ -85,7 +85,9 @@ final class RecurringImport {
                 return new Result(null, first, false, 0, false);
             }
             if (!expanded.isEmpty()) {
-                LocalDateTime first = expanded.getFirst();
+                // Where the rule itself begins: RFC 5545 counts an excluded occurrence, and so does a COUNT.
+                LocalDateTime first = excluded.isEmpty() ? expanded.getFirst()
+                    : expansion.ofRulesWithoutExdates(master, times, from, to, 1).getFirst();
                 Optional<RecurringEventSeries> series = asSeries(master, texts, times, first)
                     .filter(candidate -> expanded.size() < VERIFIED_CAP
                         && projected(candidate, from, to, excluded).equals(expanded)
@@ -147,6 +149,7 @@ final class RecurringImport {
             List<LocalDate> slots = List.of();
             for (int years = 1; ; years = Math.min(COUNT_HORIZON_YEARS, years * 2)) {
                 slots = EventRecurrenceProjector.slotsBetween(open, first, first.plusYears(years));
+                expansion.bill(slots.size());
                 if (slots.size() >= recur.getCount() || years == COUNT_HORIZON_YEARS) {
                     break;
                 }
@@ -180,6 +183,18 @@ final class RecurringImport {
         Instant first = IcalSupport.toLocal(start, zone).atZone(zone).toInstant();
         Instant last = (series.endDate() == null ? first.atZone(zone).plusYears(OFFSET_YEARS)
             : series.endDate().plusDays(1).atStartOfDay(zone)).toInstant();
+        // Past the last transition either zone lists, the zones' rules repeat every year: one more year says it for good.
+        Instant explicitEnd = first;
+        for (ZoneId id : List.of(zone, source)) {
+            List<ZoneOffsetTransition> listed = id.getRules().getTransitions();
+            if (!listed.isEmpty() && listed.getLast().getInstant().isAfter(explicitEnd)) {
+                explicitEnd = listed.getLast().getInstant();
+            }
+        }
+        Instant stop = explicitEnd.atZone(ZoneOffset.UTC).plusYears(1).toInstant();
+        if (stop.isBefore(last)) {
+            last = stop;
+        }
         int gap = gap(source, first);
         Instant at = first;
         while (true) {
@@ -190,6 +205,7 @@ final class RecurringImport {
             if (next == null || next.isAfter(last)) {
                 return true;
             }
+            expansion.bill(1);
             if (gap(source, next) != gap) {
                 return false;
             }

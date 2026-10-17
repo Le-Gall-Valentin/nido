@@ -45,7 +45,7 @@ final class BoundedExpansion {
      * What one reading may ask of ical4j, in candidates generated (an upper bound, see {@code perStep}). Measured on the
      * development machine: a file of 300 rules each charging 2 million is read in about 0.3 s, one expanded and the
      * others refused. The worst shape that fits, {@code DAILY;BYHOUR=0..23;COUNT=10000000} from 1600 (billed 3.8 million),
-     * took about 1.6 s and 540 MB: a budget spent in full costs about 2 s and some hundreds of MB, once per import or
+     * took about 1.6 s and 540 MB, and the sparse HOURLY shapes about 3 s: a budget spent in full costs about 2 to 3 s and some hundreds of MB, once per import or
      * refresh, which the rate limits of imports and the spacing of refreshes make acceptable.
      */
     static final long BUDGET = 5_000_000;
@@ -55,7 +55,8 @@ final class BoundedExpansion {
      * then never ends. A rule needing this many steps from DTSTART is refused well before.
      */
     private static final long OVERFLOWING_STEPS = 1L << 29;
-    private static final long CAP = 1L << 40;
+    /** No count of candidates is taken past the budget: a larger one is refused, and no product of them can overflow. */
+    private static final long CAP = BUDGET;
 
     /** A rule that cannot be expanded: {@code detail} is the reason the report gives (TOO_HEAVY or BAD_RULE). */
     static final class Refused extends RuntimeException {
@@ -115,17 +116,22 @@ final class BoundedExpansion {
      * nothing of the RDATEs nor of DTSTART itself, which RFC 5545 counts but a rule may not fit.
      */
     List<LocalDateTime> ofRules(VEvent event, IcalTimes times, ZonedDateTime from, ZonedDateTime to, int cap) {
-        return starts(event, times, from, to, cap, false);
+        return starts(event, times, from, to, cap, false, true);
+    }
+
+    /** The same with the EXDATEs ignored: where the rule itself begins (RFC 5545 counts an excluded occurrence in a COUNT). */
+    List<LocalDateTime> ofRulesWithoutExdates(VEvent event, IcalTimes times, ZonedDateTime from, ZonedDateTime to, int cap) {
+        return starts(event, times, from, to, cap, false, false);
     }
 
     /** The first {@code cap} occurrences of the event in {@code [from, to)}: what {@link #ofRules} gives, its RDATEs, and its DTSTART. */
     List<LocalDateTime> occurrences(VEvent event, IcalTimes times, ZonedDateTime from, ZonedDateTime to, int cap) {
-        return starts(event, times, from, to, cap, true);
+        return starts(event, times, from, to, cap, true, true);
     }
 
     private List<LocalDateTime> starts(VEvent event, IcalTimes times, ZonedDateTime from, ZonedDateTime to, int cap,
-                                       boolean withDates) {
-        Set<LocalDateTime> excluded = excluded(event);
+                                       boolean withDates, boolean applyExdates) {
+        Set<LocalDateTime> excluded = applyExdates ? excluded(event) : new HashSet<>();
         // The rules are asked for what the EXDATEs may take out besides what is kept. (An EXRULE may take out more: the
         // result is then shorter than the cap, never wrong.)
         int wanted = (int) Math.min(Integer.MAX_VALUE, (long) cap + excluded.size());
@@ -191,11 +197,24 @@ final class BoundedExpansion {
         } else {
             walked = Math.max(0, ChronoUnit.SECONDS.between(from, to)) / step + 2;
         }
-        long work = (walked + lead) * perStep(recur);
-        if (work > BUDGET - spent) {
+        long perStep = perStep(recur);
+        if (perStep >= CAP) {
             throw new Refused("TOO_HEAVY");
         }
-        spent += work;
+        try {
+            bill(Math.multiplyExact(Math.addExact(walked, lead), perStep));
+        } catch (ArithmeticException overflow) {
+            // A bill that wraps around would pass the budget, and lift it for every rule after.
+            throw new Refused("TOO_HEAVY");
+        }
+    }
+
+    /** Spends {@code units} of the budget, or refuses when they are not left. The budget only ever shrinks. */
+    void bill(long units) {
+        if (units < 0 || units > BUDGET - spent) {
+            throw new Refused("TOO_HEAVY");
+        }
+        spent += units;
     }
 
     /**

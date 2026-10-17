@@ -308,6 +308,22 @@ class RecurringImportTest {
             .containsExactly(tuple(ImportNoteKind.UNFOLDED_PARTIAL, "0"));
     }
 
+    @Test
+    void aCountCountsAnExcludedFirstOccurrenceAndKeepsItsSlotCancelled() {
+        ImportedSeries series = only(ics(vevent("b3@test", "SUMMARY:Cours", "DTSTART;VALUE=DATE:20260105",
+            "RRULE:FREQ=WEEKLY;COUNT=200", "EXDATE;VALUE=DATE:20260105")), PARIS).series();
+        assertThat(series.endDate()).isEqualTo(LocalDate.of(2029, 10, 29));
+        assertThat(series.cancelledSlots()).containsExactly(LocalDate.of(2026, 1, 5));
+    }
+
+    @Test
+    void aCountWhoseFirstTwoOccurrencesAreExcludedEndsOnTheSameDay() {
+        ImportedSeries series = only(ics(vevent("b3b@test", "SUMMARY:Cours", "DTSTART;VALUE=DATE:20260105",
+            "RRULE:FREQ=WEEKLY;COUNT=200", "EXDATE;VALUE=DATE:20260105,20260112")), PARIS).series();
+        assertThat(series.endDate()).isEqualTo(LocalDate.of(2029, 10, 29));
+        assertThat(series.cancelledSlots()).containsExactlyInAnyOrder(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 12));
+    }
+
     private static final String WEEKLY_PIANO = vevent("o@test", "SUMMARY:Piano", "DTSTART;TZID=Europe/Paris:20260105T180000",
         "DTEND;TZID=Europe/Paris:20260105T190000", "RRULE:FREQ=WEEKLY;BYDAY=MO");
 
