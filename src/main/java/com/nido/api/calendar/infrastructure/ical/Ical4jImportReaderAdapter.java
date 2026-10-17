@@ -17,7 +17,6 @@ import net.fortuna.ical4j.model.component.VEvent;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -48,17 +47,11 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
                 notes.add(new ImportNote(ImportNoteKind.IGNORED, IcalTexts.titleOf(other), name));
             }
         }
-        Map<String, List<VEvent>> byUid = new LinkedHashMap<>();
-        int anonymous = 0;
-        for (VEvent event : vevents) {
-            String uid = event.getProperty(Property.UID).map(Property::getValue).map(String::strip).filter(s -> !s.isEmpty()).orElse(null);
-            // An event with no UID stands alone: a key no UID can be.
-            byUid.computeIfAbsent(uid != null ? uid : "\0" + anonymous++, key -> new ArrayList<>()).add(event);
-        }
+        Map<String, List<VEvent>> byUid = IcalGroups.byUid(vevents);
         RecurringImport recurring = new RecurringImport(zone, today, locale, new BoundedExpansion(zone));
         List<ImportGroup> groups = new ArrayList<>();
         for (Map.Entry<String, List<VEvent>> entry : byUid.entrySet()) {
-            String uid = entry.getKey().startsWith("\0") ? null : entry.getKey();
+            String uid = IcalGroups.uidOf(entry.getKey());
             group(uid, entry.getValue(), zone, locale, recurring, notes, ignored).ifPresent(groups::add);
         }
         return new ImportReading(groups, ignored[0], notes);
@@ -67,8 +60,8 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
     /** What one UID becomes; counts in {@code ignored} and notes in {@code notes} what it sets aside. */
     private static Optional<ImportGroup> group(String uid, List<VEvent> events, ZoneId zone, Locale locale,
                                                RecurringImport recurring, List<ImportNote> notes, int[] ignored) {
-        List<VEvent> masters = events.stream().filter(e -> e.getProperty(Property.RECURRENCE_ID).isEmpty()).toList();
-        List<VEvent> overrides = events.stream().filter(e -> e.getProperty(Property.RECURRENCE_ID).isPresent()).toList();
+        List<VEvent> masters = IcalGroups.masters(events);
+        List<VEvent> overrides = IcalGroups.overrides(events);
         if (masters.isEmpty()) {
             // Edited occurrences of a series the file does not hold: each is an event of its own.
             List<ImportedEvent> orphans = new ArrayList<>();

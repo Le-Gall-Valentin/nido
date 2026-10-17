@@ -61,22 +61,43 @@ final class BoundedExpansion {
     /** A rule that cannot be expanded: {@code detail} is the reason the report gives (TOO_HEAVY or BAD_RULE). */
     static final class Refused extends RuntimeException {
         private final String detail;
+        private final boolean spent;
 
         Refused(String detail) {
+            this(detail, false);
+        }
+
+        private Refused(String detail, boolean spent) {
             super(detail, null, false, false);
             this.detail = detail;
+            this.spent = spent;
         }
 
         String detail() {
             return detail;
         }
+
+        /**
+         * True when the rule would have fitted a whole budget and only what earlier work spent kept it out: it is not
+         * heavy in itself, so a reader sharing one budget between several calendars must not remember it as such.
+         */
+        boolean budgetSpent() {
+            return spent;
+        }
     }
 
     private final ZoneId zone;
+    private final long budget;
     private long spent;
 
     BoundedExpansion(ZoneId zone) {
+        this(zone, BUDGET);
+    }
+
+    /** A reading with its own budget: a smaller one for what is read at every view rather than once per import. */
+    BoundedExpansion(ZoneId zone, long budget) {
         this.zone = zone;
+        this.budget = budget;
     }
 
     /** Whether a rule might be said by a nido series at all: no work is spent on the others to check it. */
@@ -116,21 +137,29 @@ final class BoundedExpansion {
      * nothing of the RDATEs nor of DTSTART itself, which RFC 5545 counts but a rule may not fit.
      */
     List<LocalDateTime> ofRules(VEvent event, IcalTimes times, ZonedDateTime from, ZonedDateTime to, int cap) {
-        return starts(event, times, from, to, cap, false, true);
+        return starts(event, times, from, to, cap, false, true, false);
     }
 
     /** The same with the EXDATEs ignored: where the rule itself begins (RFC 5545 counts an excluded occurrence in a COUNT). */
     List<LocalDateTime> ofRulesWithoutExdates(VEvent event, IcalTimes times, ZonedDateTime from, ZonedDateTime to, int cap) {
-        return starts(event, times, from, to, cap, false, false);
+        return starts(event, times, from, to, cap, false, false, false);
     }
 
     /** The first {@code cap} occurrences of the event in {@code [from, to)}: what {@link #ofRules} gives, its RDATEs, and its DTSTART. */
     List<LocalDateTime> occurrences(VEvent event, IcalTimes times, ZonedDateTime from, ZonedDateTime to, int cap) {
-        return starts(event, times, from, to, cap, true, true);
+        return starts(event, times, from, to, cap, true, true, false);
+    }
+
+    /**
+     * The same, but also those that began before {@code from} and run into the window (by the event's duration): the lead
+     * is applied once, here, and not again by the caller.
+     */
+    List<LocalDateTime> occurrencesOverlapping(VEvent event, IcalTimes times, ZonedDateTime from, ZonedDateTime to, int cap) {
+        return starts(event, times, from, to, cap, true, true, true);
     }
 
     private List<LocalDateTime> starts(VEvent event, IcalTimes times, ZonedDateTime from, ZonedDateTime to, int cap,
-                                       boolean withDates, boolean applyExdates) {
+                                       boolean withDates, boolean applyExdates, boolean overlapping) {
         Set<LocalDateTime> excluded = applyExdates ? excluded(event) : new HashSet<>();
         // The rules are asked for what the EXDATEs may take out besides what is kept. (An EXRULE may take out more: the
         // result is then shorter than the cap, never wrong.)
@@ -144,7 +173,8 @@ final class BoundedExpansion {
         // EXRULE, which RFC 5545 deprecates: expanded under the same budget, then taken out.
         excluded.addAll(expand(event.<ExRule<Temporal>>getProperties(Property.EXRULE).stream().map(ExRule::getRecur).toList(),
             event, times, from, to, wanted));
-        LocalDateTime low = from.toLocalDateTime();
+        LocalDateTime low = overlapping ? from.toLocalDateTime().minus(Duration.between(times.start(), times.end()))
+            : from.toLocalDateTime();
         LocalDateTime high = to.toLocalDateTime();
         return found.stream().filter(start -> !start.isBefore(low) && start.isBefore(high))
             .filter(start -> !excluded.contains(start)).limit(cap).toList();
@@ -211,8 +241,11 @@ final class BoundedExpansion {
 
     /** Spends {@code units} of the budget, or refuses when they are not left. The budget only ever shrinks. */
     void bill(long units) {
-        if (units < 0 || units > BUDGET - spent) {
+        if (units < 0 || units > budget) {
             throw new Refused("TOO_HEAVY");
+        }
+        if (units > budget - spent) {
+            throw new Refused("TOO_HEAVY", true);
         }
         spent += units;
     }

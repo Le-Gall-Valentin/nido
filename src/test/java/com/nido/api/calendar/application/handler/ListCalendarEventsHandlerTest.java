@@ -63,6 +63,24 @@ class ListCalendarEventsHandlerTest {
     }
 
     @Test
+    void the_followed_calendars_give_the_agenda_at_most_two_hundred_entries() {
+        CalendarOccurrence[] many = new CalendarOccurrence[500];
+        for (int i = 0; i < many.length; i++) {
+            LocalDate day = LocalDate.of(2026, 9, 26);
+            many[i] = new CalendarOccurrence(CalendarSourceType.EXTERNAL, "e" + i, null, null, true, "Externe " + i, null,
+                null, true, day, null, day, null, null, List.of());
+        }
+        var handler = new ListCalendarEventsHandler(List.of(
+            source(CalendarSourceType.EXTERNAL, many),
+            source(CalendarSourceType.EVENT, allDay("Anniversaire de Léa", LocalDate.of(2026, 9, 26)))));
+
+        List<CalendarOccurrence> listed = handler.list(caller, LocalDate.of(2026, 9, 26), LocalDate.of(2026, 9, 26));
+
+        assertThat(listed).filteredOn(o -> o.source() == CalendarSourceType.EXTERNAL).hasSize(200);
+        assertThat(listed).extracting(CalendarOccurrence::title).contains("Anniversaire de Léa");
+    }
+
+    @Test
     void refuses_a_window_whose_start_is_after_its_end() {
         var handler = new ListCalendarEventsHandler(List.of());
 

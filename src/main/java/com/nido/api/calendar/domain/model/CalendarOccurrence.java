@@ -39,7 +39,6 @@ public record CalendarOccurrence(
             startDate, startTime, endDate, endTime, color, participantIds, null);
     }
 
-
     public static String projectedId(UUID seriesId, LocalDate slot) {
         return seriesId + ":" + slot;
     }

@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -136,6 +137,151 @@ class Ical4jFeedReaderAdapterTest {
         String content = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:x\r\n" + zones + "END:VCALENDAR\r\n";
 
         assertThat(Ical4jFeedReaderAdapter.weightOf(content, IcalSupport.parse(content)))
-            .isEqualTo(content.length() + 3 * Ical4jFeedReaderAdapter.ZONE_WEIGHT);
+            .isBetween(content.length() + 3 * Ical4jFeedReaderAdapter.ZONE_WEIGHT,
+                content.length() + 3 * Ical4jFeedReaderAdapter.ZONE_WEIGHT + 20 * Ical4jFeedReaderAdapter.PROPERTY_WEIGHT);
+    }
+
+    @Test
+    void aCalendarOfManyTinyPropertiesWeighsManyTimesItsText() {
+        // Measured on 5 MB of file: 39 MB of heap for a realistic calendar, 142 MB for lines of "X-A:1" — not 5 MB.
+        String content = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:x\r\n" + "X-A:1\r\n".repeat(10_000) + "END:VCALENDAR\r\n";
+
+        assertThat(Ical4jFeedReaderAdapter.weightOf(content, IcalSupport.parse(content)))
+            .isGreaterThan(10 * content.length());
+    }
+
+    private static String vevent(String uid, String summary, String extra) {
+        return "BEGIN:VEVENT\r\nUID:" + uid + "\r\nDTSTAMP:20260901T000000Z\r\nSUMMARY:" + summary + "\r\n" + extra + "END:VEVENT\r\n";
+    }
+
+    private static String calendar(String... events) {
+        return "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:x\r\n" + String.join("", events) + "END:VCALENDAR\r\n";
+    }
+
+    private ExternalFeed anotherFeed() {
+        return new ExternalFeed(UUID.randomUUID(), UUID.randomUUID(), "Autre", URI.create("https://autre.example/v.ics"),
+            "event-cyan", UUID.randomUUID(), Instant.EPOCH, Instant.parse("2026-10-13T00:00:00Z"),
+            Instant.parse("2026-10-13T00:00:00Z"), null, null, null);
+    }
+
+    @Test
+    void anOccurrenceIdNeverCarriesTheUid() {
+        String huge = calendar(vevent("U".repeat(100_000), "Long UID",
+            "DTSTART:20261001T000000Z\r\nDTEND:20261001T003000Z\r\nRRULE:FREQ=HOURLY\r\n"));
+
+        long started = System.nanoTime();
+        List<CalendarOccurrence> found = reader.occurrencesOf(anotherFeed(), () -> huge, PARIS, Locale.FRENCH,
+            LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 7));
+
+        assertThat(found).hasSizeGreaterThan(100);
+        assertThat(found).allSatisfy(o -> assertThat(o.sourceId()).hasSizeLessThan(100));
+        assertThat(found).extracting(CalendarOccurrence::sourceId).doesNotHaveDuplicates();
+        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(2));
+    }
+
+    @Test
+    void anOccurrenceIdIsTheSameFromOneReadToTheNext() {
+        ExternalFeed one = anotherFeed();
+        List<String> first = reader.occurrencesOf(one, () -> FEED, PARIS, Locale.FRENCH, LocalDate.of(2026, 10, 12),
+            LocalDate.of(2026, 11, 1)).stream().map(CalendarOccurrence::sourceId).toList();
+        List<String> second = reader.occurrencesOf(one, () -> FEED, PARIS, Locale.FRENCH, LocalDate.of(2026, 10, 12),
+            LocalDate.of(2026, 11, 1)).stream().map(CalendarOccurrence::sourceId).toList();
+
+        assertThat(first).isNotEmpty().isEqualTo(second);
+    }
+
+    /** About 540 000 of a budget of one million, in the cost model of {@code BoundedExpansion}. */
+    private static String heavy(String uid, String title) {
+        String minutes = java.util.stream.IntStream.range(0, 60).mapToObj(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+        String seconds = java.util.stream.IntStream.range(0, 12).mapToObj(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+        return vevent(uid, title, "DTSTART:20260101T000000Z\r\nDTEND:20260101T000000Z\r\nRRULE:FREQ=HOURLY;BYMINUTE="
+            + minutes + ";BYSECOND=" + seconds + "\r\n");
+    }
+
+    private static String normal(String uid, String title) {
+        return vevent(uid, title, "DTSTART;VALUE=DATE:20261014\r\n");
+    }
+
+    @Test
+    void severalCalendarsOfOneRequestShareOneBudget() {
+        ExternalFeed first = anotherFeed();
+        ExternalFeed second = anotherFeed();
+        Map<UUID, String> files = Map.of(
+            first.id(), calendar(normal("n1", "Normal 1"), heavy("h1", "Heavy 1")),
+            second.id(), calendar(normal("n2", "Normal 2"), heavy("h2", "Heavy 2")));
+
+        List<CalendarOccurrence> found = assertTimeoutPreemptively(Duration.ofSeconds(1), () -> reader.occurrencesOf(
+            List.of(first, second), feed -> files.get(feed.id()), PARIS, Locale.FRENCH,
+            LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31)));
+
+        assertThat(found).extracting(CalendarOccurrence::title).contains("Heavy 1", "Normal 1", "Normal 2").doesNotContain("Heavy 2");
+    }
+
+    @Test
+    void aRuleRefusedOnceIsNotExpandedAgain() {
+        ExternalFeed one = anotherFeed();
+        String file = calendar(vevent("s", "Seconds", "DTSTART:20260101T000000Z\r\nRRULE:FREQ=SECONDLY\r\n"), normal("n", "Normal"));
+        LocalDate from = LocalDate.of(2026, 10, 1);
+        LocalDate to = LocalDate.of(2026, 10, 31);
+
+        reader.occurrencesOf(one, () -> file, PARIS, Locale.FRENCH, from, to);
+        assertThat(reader.expansionsAttempted()).as("the rule and the plain event are tried").isEqualTo(2);
+        List<CalendarOccurrence> again = reader.occurrencesOf(one, () -> file, PARIS, Locale.FRENCH, from, to);
+
+        assertThat(reader.expansionsAttempted()).as("only the plain event is tried the second time").isEqualTo(3);
+        assertThat(again).extracting(CalendarOccurrence::title).containsExactly("Normal");
+    }
+
+    @Test
+    void anOccurrenceThatBeganBeforeTheWindowOfARecurringEventRunsIntoIt() {
+        // 100 days long, every 200 days: the one of 1 July runs until 9 October and is in the window of 1 to 7 October.
+        String file = calendar(vevent("long", "Long", "DTSTART;VALUE=DATE:20260701\r\nDTEND;VALUE=DATE:20261009\r\n"
+            + "RRULE:FREQ=DAILY;INTERVAL=200\r\n"));
+
+        List<CalendarOccurrence> found = reader.occurrencesOf(anotherFeed(), () -> file, PARIS, Locale.FRENCH,
+            LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 7));
+
+        assertThat(found).extracting(CalendarOccurrence::startDate).containsExactly(LocalDate.of(2026, 7, 1));
+    }
+
+    @Test
+    void aCalendarGivesNoMoreThanTwoThousandOccurrences() {
+        String file = calendar(vevent("daily", "Daily", "DTSTART;VALUE=DATE:20200101\r\nRRULE:FREQ=DAILY\r\n"));
+
+        assertThat(reader.occurrencesOf(anotherFeed(), () -> file, PARIS, Locale.FRENCH,
+            LocalDate.of(2020, 1, 1), LocalDate.of(2026, 12, 31))).hasSize(Ical4jFeedReaderAdapter.MAX_OCCURRENCES);
+    }
+
+    @Test
+    void anUnreadableCalendarIsLoadedOnlyOnce() {
+        ExternalFeed one = anotherFeed();
+        AtomicInteger loads = new AtomicInteger();
+        Supplier<String> broken = () -> {
+            loads.incrementAndGet();
+            return "<html>no</html>";
+        };
+        LocalDate day = LocalDate.of(2026, 10, 1);
+
+        assertThat(reader.occurrencesOf(one, broken, PARIS, Locale.FRENCH, day, day)).isEmpty();
+        assertThat(reader.occurrencesOf(one, broken, PARIS, Locale.FRENCH, day, day)).isEmpty();
+
+        assertThat(loads).hasValue(1);
+    }
+
+    @Test
+    void aSecondMasterOfOneUidIsLeftOut() {
+        String file = calendar(normal("same", "First"), normal("same", "Second"));
+
+        assertThat(reader.occurrencesOf(anotherFeed(), () -> file, PARIS, Locale.FRENCH,
+            LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31))).extracting(CalendarOccurrence::title).containsExactly("First");
+    }
+
+    @Test
+    void theLeadOfALongEventIsAppliedOnce() {
+        // Hourly, each lasting 100 days: asked 200 days early, the cap is spent before the window and nothing is shown.
+        String file = calendar(vevent("hourly", "Hourly", "DTSTART:20260101T000000Z\r\nDTEND:20260411T000000Z\r\nRRULE:FREQ=HOURLY\r\n"));
+
+        assertThat(reader.occurrencesOf(anotherFeed(), () -> file, PARIS, Locale.FRENCH,
+            LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 7))).isNotEmpty();
     }
 }
