@@ -1,6 +1,8 @@
 package com.nido.api.calendar.infrastructure.config;
 
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarEventEntity;
+import com.nido.api.calendar.infrastructure.persistence.entity.CalendarExternalFeedContentEntity;
+import com.nido.api.calendar.infrastructure.persistence.entity.CalendarExternalFeedEntity;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarRecurringEventSeriesEntity;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarSubscriptionLinkEntity;
 import com.nido.api.infrastructure.sealing.SealedColumns;
@@ -15,6 +17,7 @@ public class CalendarEncryptionConfig {
     SealedColumns calendarSealedColumns() {
         return SealedColumns.of(CalendarEventEntity.TITLE, CalendarEventEntity.DESCRIPTION, CalendarEventEntity.LOCATION,
             CalendarRecurringEventSeriesEntity.TITLE, CalendarRecurringEventSeriesEntity.DESCRIPTION,
-            CalendarRecurringEventSeriesEntity.LOCATION, CalendarSubscriptionLinkEntity.LABEL);
+            CalendarRecurringEventSeriesEntity.LOCATION, CalendarSubscriptionLinkEntity.LABEL,
+            CalendarExternalFeedEntity.NAME, CalendarExternalFeedEntity.URL, CalendarExternalFeedContentEntity.CONTENT);
     }
 }

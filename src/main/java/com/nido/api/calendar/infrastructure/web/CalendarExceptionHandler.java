@@ -61,6 +61,8 @@ public class CalendarExceptionHandler {
                 "Files up to " + ex.maximumMegabytes() + " MB can be imported.", "file_too_large");
             case CalendarException.InvalidFeedAddress ignored ->
                 new CalendarErrorResponse(400, "Give an http, https or webcal address.", "invalid_feed_address");
+            case CalendarException.ExternalFeedNotFound ignored ->
+                new CalendarErrorResponse(404, "Followed calendar not found.");
             case CalendarException.ReversedWindow ignored ->
                 new CalendarErrorResponse(400, "The window starts after it ends: 'from' must be on or before 'to'.");
             case CalendarException.WindowTooLarge ex -> new CalendarErrorResponse(400,

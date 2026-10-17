@@ -11,7 +11,7 @@ public abstract sealed class CalendarException extends RuntimeException
             CalendarException.InvalidSources, CalendarException.TooManySubscriptionLinks,
             CalendarException.SubscriptionLinkNotFound, CalendarException.PublicUrlMissing,
             CalendarException.ImportTooLarge, CalendarException.ImportFileTooLarge,
-            CalendarException.InvalidFeedAddress {
+            CalendarException.InvalidFeedAddress, CalendarException.ExternalFeedNotFound {
 
     private CalendarException(String message) { super(message); }
 
@@ -166,5 +166,9 @@ public abstract sealed class CalendarException extends RuntimeException
         }
 
         public int maximumMegabytes() { return maximumMegabytes; }
+    }
+
+    public static final class ExternalFeedNotFound extends CalendarException {
+        public ExternalFeedNotFound() { super("Followed calendar not found"); }
     }
 }

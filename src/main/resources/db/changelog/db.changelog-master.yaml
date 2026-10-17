@@ -233,3 +233,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/078-create-calendar-subscription-links.yaml
       relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/079-create-calendar-external-feeds.yaml
+      relativeToChangelogFile: false
