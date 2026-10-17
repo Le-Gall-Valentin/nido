@@ -17,6 +17,12 @@ function useCalendarInvalidation(spaceId: string) {
   return () => queryClient.invalidateQueries({ queryKey: calendarKey(spaceId) })
 }
 
+/** An address changes nothing the calendar shows: only the list of addresses is read again. */
+function useLinksInvalidation(spaceId: string) {
+  const queryClient = useQueryClient()
+  return () => queryClient.invalidateQueries({ queryKey: subscriptionLinksKey(spaceId) })
+}
+
 export function useSubscriptionLinks(spaceId: string | undefined) {
   const api = useCalendarSyncApi()
   return useQuery({
@@ -28,13 +34,13 @@ export function useSubscriptionLinks(spaceId: string | undefined) {
 
 export function useCreateSubscriptionLink(spaceId: string) {
   const api = useCalendarSyncApi()
-  const invalidate = useCalendarInvalidation(spaceId)
+  const invalidate = useLinksInvalidation(spaceId)
   return useMutation({ mutationFn: (input: SubscriptionLinkInput) => api.createSubscriptionLink(spaceId, input), onSuccess: invalidate })
 }
 
 export function useRevokeSubscriptionLink(spaceId: string) {
   const api = useCalendarSyncApi()
-  const invalidate = useCalendarInvalidation(spaceId)
+  const invalidate = useLinksInvalidation(spaceId)
   return useMutation({ mutationFn: (linkId: string) => api.revokeSubscriptionLink(spaceId, linkId), onSuccess: invalidate })
 }
 

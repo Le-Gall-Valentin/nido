@@ -29,4 +29,4 @@ export {
   useExternalFeeds, useFollowExternalFeed, useUpdateExternalFeed, useRemoveExternalFeed, useRefreshExternalFeed,
   useAnalyseImport, useImportFile, useExportCalendar,
 } from './model/useCalendarSync'
-export { CalendarSyncError, toSyncError } from './api/calendarSyncErrors'
+export { CalendarSyncError, toSyncError, SYNC_REASONS, type SyncReason } from './api/calendarSyncErrors'

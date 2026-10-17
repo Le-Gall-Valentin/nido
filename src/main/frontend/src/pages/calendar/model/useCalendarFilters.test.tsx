@@ -32,6 +32,15 @@ describe('useCalendarFilters', () => {
     expect(kept.map((o) => o.title)).toEqual(['Piano'])
   })
 
+  it('does not show a followed calendar yet', () => {
+    const { result } = renderHook(() => useCalendarFilters('s1'))
+    const kept = result.current.filter([
+      occurrence({ source: 'EXTERNAL', title: 'Ecole' }),
+      occurrence({ source: 'EVENT', title: 'Piano' }),
+    ])
+    expect(kept.map((o) => o.title)).toEqual(['Piano'])
+  })
+
   it('remembers a disabled source across remounts, per space', () => {
     const first = renderHook(() => useCalendarFilters('s1'))
     act(() => { first.result.current.toggle('FINANCE') })

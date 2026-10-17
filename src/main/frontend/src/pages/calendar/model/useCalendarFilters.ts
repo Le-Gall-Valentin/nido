@@ -53,7 +53,8 @@ export function useCalendarFilters(spaceId: string): CalendarFilters {
   const isEnabled = useCallback((source: CalendarSourceType) => !disabled.has(source), [disabled])
 
   const filter = useCallback(
-    (occurrences: CalendarOccurrence[]) => occurrences.filter((o) => !disabled.has(o.source)),
+    // EXTERNAL is hidden until Task 28 wires it everywhere (month dots, day detail, filters, detail on click).
+    (occurrences: CalendarOccurrence[]) => occurrences.filter((o) => o.source !== 'EXTERNAL' && !disabled.has(o.source)),
     [disabled])
 
   const enabled = useMemo(

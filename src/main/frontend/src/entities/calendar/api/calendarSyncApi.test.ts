@@ -89,4 +89,21 @@ describe('calendar sync api', () => {
     vi.mocked(client.post).mockRejectedValueOnce(new Error('offline'))
     await expect(calendarApi.analyseImport('s1', new Blob())).rejects.toMatchObject({ reason: 'network' })
   })
+
+  it('reads the error code of a refused export, whose body arrives as a blob', async () => {
+    vi.mocked(client.get).mockRejectedValue(failure(400, new Blob(['{"error_code":"invalid_sources"}'])))
+    await expect(calendarApi.exportCalendar('s1', [], false)).rejects.toMatchObject({ reason: 'invalid_sources' })
+
+    vi.mocked(client.get).mockRejectedValue(failure(500, new Blob(['not json'])))
+    await expect(calendarApi.exportCalendar('s1', [], false)).rejects.toMatchObject({ reason: 'server' })
+  })
+
+  it('names a rate limit, a refusal and a refresh asked too soon', async () => {
+    vi.mocked(client.post).mockRejectedValueOnce(failure(429, {}))
+    await expect(calendarApi.analyseImport('s1', new Blob())).rejects.toMatchObject({ reason: 'rate_limited' })
+    vi.mocked(client.post).mockRejectedValueOnce(failure(403, {}))
+    await expect(calendarApi.analyseImport('s1', new Blob())).rejects.toMatchObject({ reason: 'forbidden' })
+    vi.mocked(client.post).mockRejectedValueOnce(failure(429, { error_code: 'refresh_too_soon' }))
+    await expect(calendarApi.refreshExternalFeed('s1', 'f1')).rejects.toMatchObject({ reason: 'refresh_too_soon' })
+  })
 })

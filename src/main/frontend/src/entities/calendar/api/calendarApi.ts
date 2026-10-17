@@ -21,6 +21,18 @@ function handleError(error: unknown): never {
 /** A large file takes longer to read than the usual 15 s. */
 const IMPORT_TIMEOUT_MS = 120_000
 
+/** A blob response type turns an error body into a Blob too: put the JSON back so that `error_code` can be read. */
+async function readBlobBody(error: unknown): Promise<unknown> {
+  if (isAxiosError(error) && error.response?.data instanceof Blob) {
+    try {
+      error.response.data = JSON.parse(await error.response.data.text()) as unknown
+    } catch {
+      error.response.data = {}
+    }
+  }
+  return error
+}
+
 const base = (spaceId: string) => `/spaces/${spaceId}/calendar`
 
 export const calendarApi: CalendarApi = {
@@ -142,7 +154,7 @@ export const calendarApi: CalendarApi = {
       const disposition = String(res.headers['content-disposition'] ?? '')
       const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'nido.ics'
       return { blob: res.data, filename }
-    } catch (error) { throw toSyncError(error) }
+    } catch (error) { throw toSyncError(await readBlobBody(error)) }
   },
 
   async listSubscriptionLinks(spaceId) {
