@@ -1,11 +1,13 @@
 package com.nido.api.calendar.infrastructure.ical;
 
+import com.nido.api.calendar.domain.model.EventScheduleValidator;
 import net.fortuna.ical4j.model.Parameter;
 import net.fortuna.ical4j.model.Property;
 import net.fortuna.ical4j.model.component.VEvent;
 import net.fortuna.ical4j.model.property.DtEnd;
 import net.fortuna.ical4j.model.property.DtStart;
 
+import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,6 +23,8 @@ import java.util.Optional;
  */
 record IcalTimes(boolean allDay, LocalDateTime start, LocalDateTime end, String foreignZone, String unknownZone) {
 
+    private static final int MAX_YEAR = 9999;
+
     static Optional<IcalTimes> of(VEvent event, ZoneId zone) {
         Optional<DtStart<Temporal>> dtStart = event.getProperty(Property.DTSTART);
         if (dtStart.isEmpty() || dtStart.get().getDate() == null) {
@@ -28,16 +32,40 @@ record IcalTimes(boolean allDay, LocalDateTime start, LocalDateTime end, String 
         }
         Temporal start = dtStart.get().getDate();
         boolean allDay = start instanceof LocalDate;
-        LocalDateTime startLocal = IcalSupport.toLocal(start, zone);
+        LocalDateTime startLocal;
+        try {
+            startLocal = IcalSupport.toLocal(start, zone);
+        } catch (DateTimeException | ArithmeticException | IllegalArgumentException unreadable) {
+            return Optional.empty();
+        }
         LocalDateTime endLocal = endOf(event, startLocal, allDay, zone);
         Optional<String> tzid = dtStart.get().getParameter(Parameter.TZID).map(Parameter::getValue);
-        String foreign = tzid.filter(id -> start instanceof ZonedDateTime && !id.equals(zone.getId())).orElse(null);
+        // Another name of the same rules (Asia/Calcutta for Asia/Kolkata) changes no time: nothing was converted.
+        String foreign = tzid.filter(id -> start instanceof ZonedDateTime zoned
+            && !zoned.getZone().getRules().equals(zone.getRules())).orElse(null);
         String unknown = tzid.filter(id -> start instanceof LocalDateTime).orElse(null);
         return Optional.of(new IcalTimes(allDay, startLocal, endLocal.isBefore(startLocal) ? startLocal : endLocal,
             foreign, unknown));
     }
 
+    /**
+     * Where it ends. An end nido cannot compute (a duration of a billion days, a date past year 9999) is one no event
+     * of nido can reach: it is answered with a day more than an event may last, which the caller sets aside as too long.
+     */
     private static LocalDateTime endOf(VEvent event, LocalDateTime startLocal, boolean allDay, ZoneId zone) {
+        try {
+            LocalDateTime end = computeEnd(event, startLocal, allDay, zone);
+            return end.getYear() > MAX_YEAR ? tooLate(startLocal) : end;
+        } catch (DateTimeException | ArithmeticException | IllegalArgumentException incomputable) {
+            return tooLate(startLocal);
+        }
+    }
+
+    private static LocalDateTime tooLate(LocalDateTime startLocal) {
+        return startLocal.plusDays(EventScheduleValidator.MAX_EVENT_DAYS + 1L);
+    }
+
+    private static LocalDateTime computeEnd(VEvent event, LocalDateTime startLocal, boolean allDay, ZoneId zone) {
         Optional<DtEnd<Temporal>> dtEnd = event.getProperty(Property.DTEND);
         if (dtEnd.isPresent() && dtEnd.get().getDate() != null) {
             return IcalSupport.toLocal(dtEnd.get().getDate(), zone);

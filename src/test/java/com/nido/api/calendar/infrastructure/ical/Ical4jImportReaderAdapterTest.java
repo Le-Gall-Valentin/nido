@@ -160,4 +160,95 @@ class Ical4jImportReaderAdapterTest {
         }
         assertThatThrownBy(() -> read(ics(many.toString()), PARIS)).isInstanceOf(CalendarException.ImportTooLarge.class);
     }
+
+    @Test
+    void aTextOverTheRawCapIsCutOnceAndSaidSo() {
+        ImportReading reading = read(ics(vevent("p@test", "SUMMARY:Long", "DTSTART;VALUE=DATE:20261017",
+            "DESCRIPTION:" + "d".repeat(20_000))), PARIS);
+        assertThat(onlyEvent(reading).description()).hasSize(2000);
+        assertThat(reading.notes()).extracting(ImportNote::kind, ImportNote::detail)
+            .containsExactly(org.assertj.core.groups.Tuple.tuple(ImportNoteKind.TRUNCATED_TEXT, "description"));
+    }
+
+    @Test
+    void aControlCharacterInATextIsRemoved() {
+        ImportedEvent event = onlyEvent(read(ics(vevent("q@test", "SUMMARY:A\u0000B\u0007C", "DTSTART;VALUE=DATE:20261017")), PARIS));
+        assertThat(event.title()).isEqualTo("ABC");
+    }
+
+    @Test
+    void aCutNeverSplitsASurrogatePair() {
+        ImportedEvent event = onlyEvent(read(ics(vevent("r@test", "SUMMARY:" + "x".repeat(199) + "\uD83D\uDE00",
+            "DTSTART;VALUE=DATE:20261017")), PARIS));
+        assertThat(event.title()).isEqualTo("x".repeat(199));
+    }
+
+    private static ImportReading tooLong(ImportReading reading) {
+        assertThat(reading.groups()).isEmpty();
+        assertThat(reading.ignored()).isEqualTo(1);
+        assertThat(reading.notes()).extracting(ImportNote::kind, ImportNote::detail)
+            .containsExactly(org.assertj.core.groups.Tuple.tuple(ImportNoteKind.IGNORED, "TOO_LONG"));
+        return reading;
+    }
+
+    @Test
+    void anAbsurdDurationIsAnEventTooLongToHold() {
+        tooLong(read(ics(vevent("s@test", "SUMMARY:Absurde", "DTSTART:20261017T090000", "DURATION:P999999999D")), PARIS));
+    }
+
+    @Test
+    void anEventRunningPastYear9999IsTooLongToHold() {
+        tooLong(read(ics(vevent("u@test", "SUMMARY:Fin", "DTSTART:99991231T230000", "DURATION:PT2H")), PARIS));
+    }
+
+    @Test
+    void aNegativeDurationEndsWhereTheEventStarts() {
+        ImportedEvent event = onlyEvent(read(ics(vevent("v@test", "SUMMARY:Retour", "DTSTART:20261017T090000", "DURATION:-PT1H")), PARIS));
+        assertThat(event.startTime()).isEqualTo(LocalTime.of(9, 0));
+        assertThat(event.endTime()).isEqualTo(LocalTime.of(9, 0));
+    }
+
+    @Test
+    void startsInYear0AndYear9999AreReadWithoutThrowing() {
+        for (String start : new String[] {"00000101T100000", "99991231T100000", "99991231T235959Z"}) {
+            // ical4j refuses year 0 outright: the file is then not an iCalendar one, which is an answer, not a crash.
+            try {
+                ImportReading reading = read(ics(vevent("w" + start, "SUMMARY:Limite", "DTSTART:" + start)), PARIS);
+                assertThat(reading.groups().size() + reading.ignored()).isEqualTo(1);
+            } catch (CalendarException.NotAnIcalFile refused) {
+                assertThat(start).startsWith("0000");
+            }
+        }
+    }
+
+    @Test
+    void aSecondMasterWithTheSameUidIsSetAsideAndSaidSo() {
+        ImportReading reading = read(ics(vevent("x@test", "SUMMARY:Premier", "DTSTART;VALUE=DATE:20261017"),
+            vevent("x@test", "SUMMARY:Second", "DTSTART;VALUE=DATE:20261018")), PARIS);
+        assertThat(reading.groups()).hasSize(1);
+        assertThat(reading.ignored()).isEqualTo(1);
+        assertThat(reading.notes()).containsExactly(new ImportNote(ImportNoteKind.IGNORED, "Second", "DUPLICATE_UID"));
+    }
+
+    @Test
+    void anEditedOccurrenceWithoutItsSeriesIsReadLikeAnyEventAndSaidWhenSetAside() {
+        ImportReading reading = read(ics(
+            vevent("y@test", "SUMMARY:Orpheline", "RECURRENCE-ID;TZID=Europe/Paris:20261014T100000",
+                "DTSTART;TZID=Europe/Paris:20261014T110000", "DTEND;TZID=Europe/Paris:20261014T120000"),
+            vevent("z@test", "SUMMARY:Annulée", "RECURRENCE-ID;VALUE=DATE:20261014", "STATUS:CANCELLED",
+                "DTSTART;VALUE=DATE:20261014")), TORONTO);
+        assertThat(reading.groups()).extracting(ImportGroup::uid).containsExactly("y@test");
+        assertThat(reading.ignored()).isEqualTo(1);
+        assertThat(reading.notes()).containsExactlyInAnyOrder(
+            new ImportNote(ImportNoteKind.CONVERTED_ZONE, "Orpheline", "Europe/Paris"),
+            new ImportNote(ImportNoteKind.IGNORED, "Annulée", "CANCELLED"));
+    }
+
+    @Test
+    void aZoneKnownUnderAnotherNameOfTheSpacesIsNotAConversion() {
+        ImportReading reading = read(ics(vevent("aa@test", "SUMMARY:Alias", "DTSTART;TZID=Asia/Calcutta:20261017T090000",
+            "DTEND;TZID=Asia/Calcutta:20261017T100000")), ZoneId.of("Asia/Kolkata"));
+        assertThat(onlyEvent(reading).startTime()).isEqualTo(LocalTime.of(9, 0));
+        assertThat(reading.notes()).isEmpty();
+    }
 }

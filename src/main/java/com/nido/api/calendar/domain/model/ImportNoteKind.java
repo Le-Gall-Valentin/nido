@@ -12,6 +12,6 @@ public enum ImportNoteKind {
     CONVERTED_ZONE,
     /** A zone nobody knows, its times taken as the space's; detail: the zone. */
     UNKNOWN_ZONE,
-    /** Not imported; detail: VTODO, VJOURNAL, VFREEBUSY, NO_START, CANCELLED, TOO_LONG. */
+    /** Not imported; detail: VTODO, VJOURNAL, VFREEBUSY, NO_START, CANCELLED, TOO_LONG, DUPLICATE_UID. */
     IGNORED
 }

@@ -41,10 +41,10 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
             throw new CalendarException.ImportTooLarge("more than " + MAX_EVENTS + " events");
         }
         List<ImportNote> notes = new ArrayList<>();
-        int ignored = 0;
+        int[] ignored = {0};
         for (String name : SET_ASIDE) {
             for (CalendarComponent other : calendar.<CalendarComponent>getComponents(name)) {
-                ignored++;
+                ignored[0]++;
                 notes.add(new ImportNote(ImportNoteKind.IGNORED, IcalTexts.titleOf(other), name));
             }
         }
@@ -59,58 +59,88 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
         List<ImportGroup> groups = new ArrayList<>();
         for (Map.Entry<String, List<VEvent>> entry : byUid.entrySet()) {
             String uid = entry.getKey().startsWith("\0") ? null : entry.getKey();
-            Optional<ImportGroup> group = group(uid, entry.getValue(), zone, locale, recurring, notes);
-            if (group.isPresent()) {
-                groups.add(group.get());
-            } else {
-                ignored++;
-            }
+            group(uid, entry.getValue(), zone, locale, recurring, notes, ignored).ifPresent(groups::add);
         }
-        return new ImportReading(groups, ignored, notes);
+        return new ImportReading(groups, ignored[0], notes);
     }
 
+    /** What one UID becomes; counts in {@code ignored} and notes in {@code notes} what it sets aside. */
     private static Optional<ImportGroup> group(String uid, List<VEvent> events, ZoneId zone, Locale locale,
-                                               RecurringImport recurring, List<ImportNote> notes) {
-        VEvent master = events.stream().filter(e -> e.getProperty(Property.RECURRENCE_ID).isEmpty()).findFirst().orElse(null);
+                                               RecurringImport recurring, List<ImportNote> notes, int[] ignored) {
+        List<VEvent> masters = events.stream().filter(e -> e.getProperty(Property.RECURRENCE_ID).isEmpty()).toList();
         List<VEvent> overrides = events.stream().filter(e -> e.getProperty(Property.RECURRENCE_ID).isPresent()).toList();
-        if (master == null) {
+        if (masters.isEmpty()) {
             // Edited occurrences of a series the file does not hold: each is an event of its own.
-            List<ImportedEvent> orphans = overrides.stream().filter(e -> !cancelled(e))
-                .flatMap(e -> IcalTimes.of(e, zone).map(t -> event(IcalTexts.of(e, locale), t)).stream())
-                .filter(Ical4jImportReaderAdapter::fits).toList();
+            List<ImportedEvent> orphans = new ArrayList<>();
+            for (VEvent override : overrides) {
+                standalone(override, zone, locale, notes, ignored).ifPresent(orphans::add);
+            }
             return orphans.isEmpty() ? Optional.empty() : Optional.of(new ImportGroup(uid, orphans, null, false, 0));
         }
+        VEvent master = masters.getFirst();
+        // A second master of one UID is not something nido can say: only the first stands.
+        masters.stream().skip(1).forEach(extra -> {
+            ignored[0]++;
+            notes.add(new ImportNote(ImportNoteKind.IGNORED, IcalTexts.titleOrUntitled(extra, locale), "DUPLICATE_UID"));
+        });
+        if (!usable(master, zone, locale, notes, ignored)) {
+            return Optional.empty();
+        }
+        IcalTimes times = IcalTimes.of(master, zone).orElseThrow();
         IcalTexts texts = IcalTexts.of(master, locale);
-        if (cancelled(master)) {
-            notes.add(new ImportNote(ImportNoteKind.IGNORED, texts.title(), "CANCELLED"));
-            return Optional.empty();
-        }
-        Optional<IcalTimes> times = IcalTimes.of(master, zone);
-        if (times.isEmpty()) {
-            notes.add(new ImportNote(ImportNoteKind.IGNORED, texts.title(), "NO_START"));
-            return Optional.empty();
-        }
-        if (!fits(event(texts, times.get()))) {
-            notes.add(new ImportNote(ImportNoteKind.IGNORED, texts.title(), "TOO_LONG"));
-            return Optional.empty();
-        }
-        texts.cut().forEach(what -> notes.add(new ImportNote(ImportNoteKind.TRUNCATED_TEXT, texts.title(), what)));
-        if (times.get().foreignZone() != null) {
-            notes.add(new ImportNote(ImportNoteKind.CONVERTED_ZONE, texts.title(), times.get().foreignZone()));
-        }
-        if (times.get().unknownZone() != null) {
-            notes.add(new ImportNote(ImportNoteKind.UNKNOWN_ZONE, texts.title(), times.get().unknownZone()));
-        }
+        notesOf(texts, times, notes);
         boolean repeats = master.getProperty(Property.RRULE).isPresent() || master.getProperty(Property.RDATE).isPresent();
         if (!repeats) {
-            return Optional.of(new ImportGroup(uid, List.of(event(texts, times.get())), null, false, 0));
+            return Optional.of(new ImportGroup(uid, List.of(event(texts, times)), null, false, 0));
         }
-        RecurringImport.Result result = recurring.translate(master, overrides, texts, times.get());
+        RecurringImport.Result result = recurring.translate(master, overrides, texts, times);
         if (result.unfolded()) {
             notes.add(new ImportNote(result.partial() ? ImportNoteKind.UNFOLDED_PARTIAL : ImportNoteKind.UNFOLDED,
                 texts.title(), String.valueOf(result.unfoldedOccurrences())));
         }
         return Optional.of(new ImportGroup(uid, result.events(), result.series(), result.unfolded(), result.unfoldedOccurrences()));
+    }
+
+    /** An event taken on its own; set aside, counted and noted when it cannot be held. */
+    private static Optional<ImportedEvent> standalone(VEvent vevent, ZoneId zone, Locale locale, List<ImportNote> notes,
+                                                      int[] ignored) {
+        if (!usable(vevent, zone, locale, notes, ignored)) {
+            return Optional.empty();
+        }
+        IcalTimes times = IcalTimes.of(vevent, zone).orElseThrow();
+        IcalTexts texts = IcalTexts.of(vevent, locale);
+        notesOf(texts, times, notes);
+        return Optional.of(event(texts, times));
+    }
+
+    /**
+     * Whether an event can be imported, decided before its texts are worked on: an event about to be set aside costs no
+     * more than its title. When it cannot, says why in the report and counts it.
+     */
+    private static boolean usable(VEvent vevent, ZoneId zone, Locale locale, List<ImportNote> notes, int[] ignored) {
+        String reason;
+        if (cancelled(vevent)) {
+            reason = "CANCELLED";
+        } else {
+            Optional<IcalTimes> times = IcalTimes.of(vevent, zone);
+            reason = times.isEmpty() ? "NO_START" : fits(times.get()) ? null : "TOO_LONG";
+        }
+        if (reason == null) {
+            return true;
+        }
+        ignored[0]++;
+        notes.add(new ImportNote(ImportNoteKind.IGNORED, IcalTexts.titleOrUntitled(vevent, locale), reason));
+        return false;
+    }
+
+    private static void notesOf(IcalTexts texts, IcalTimes times, List<ImportNote> notes) {
+        texts.cut().forEach(what -> notes.add(new ImportNote(ImportNoteKind.TRUNCATED_TEXT, texts.title(), what)));
+        if (times.foreignZone() != null) {
+            notes.add(new ImportNote(ImportNoteKind.CONVERTED_ZONE, texts.title(), times.foreignZone()));
+        }
+        if (times.unknownZone() != null) {
+            notes.add(new ImportNote(ImportNoteKind.UNKNOWN_ZONE, texts.title(), times.unknownZone()));
+        }
     }
 
     static ImportedEvent event(IcalTexts texts, IcalTimes times) {
@@ -123,9 +153,9 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
     }
 
     /** Whether nido can hold it as it is: no event covers more than a calendar read shows. */
-    private static boolean fits(ImportedEvent event) {
+    private static boolean fits(IcalTimes times) {
         try {
-            EventScheduleValidator.validateEvent(event.allDay(), event.startDate(), event.startTime(), event.endDate(), event.endTime());
+            EventScheduleValidator.validateEvent(times.allDay(), times.startDate(), times.startTime(), times.endDate(), times.endTime());
             return true;
         } catch (CalendarException refused) {
             return false;
