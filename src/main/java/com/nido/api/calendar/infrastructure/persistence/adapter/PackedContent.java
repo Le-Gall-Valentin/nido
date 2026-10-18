@@ -30,8 +30,8 @@ final class PackedContent {
     static String unpack(String packed) {
         try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(Base64.getDecoder().decode(packed)))) {
             return new String(gzip.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        } catch (IOException | IllegalArgumentException e) {
+            throw new IllegalStateException("The stored content of a followed calendar is not a packed calendar", e);
         }
     }
 }

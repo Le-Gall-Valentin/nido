@@ -11,6 +11,15 @@ import java.util.UUID;
 public record ExternalFeed(UUID id, UUID spaceId, String name, URI url, String color, UUID createdBy, Instant createdAt,
                            Instant contentFetchedAt, Instant lastAttemptAt, FeedError lastError, String etag,
                            String lastModified) {
+
+    /** What a calendar wears when none was chosen: the graphite the calendar gives every external source. */
+    public static final String DEFAULT_COLOR = "event-graphite";
+
+    /** The colour chosen, or the default: the calendar and the dashboard then always agree on it. */
+    public static String colorOrDefault(String color) {
+        return color == null ? DEFAULT_COLOR : color;
+    }
+
     public String host() {
         return url.getHost();
     }

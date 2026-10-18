@@ -359,12 +359,15 @@ class Ical4jFeedReaderAdapterTest {
             return content;
         };
         LocalDate day = LocalDate.of(2026, 10, 14);
+        // The same calendar, light enough to keep, shows its event that day: an empty answer below means skipped.
+        assertThat(reader.occurrencesOf(anotherFeed(), () -> dense(10), PARIS, Locale.FRENCH, day, day))
+            .extracting(CalendarOccurrence::title).containsExactly("Normal");
 
         for (int i = 0; i < 3; i++) {
             assertThat(reader.occurrencesOf(one, supplier, PARIS, Locale.FRENCH, day, day)).isEmpty();
         }
 
-        assertThat(loads).hasValue(1);
+        assertThat(loads).as("skipped once, and remembered as such").hasValue(1);
     }
 
     @Test

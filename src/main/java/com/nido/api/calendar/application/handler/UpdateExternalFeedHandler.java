@@ -26,7 +26,7 @@ public class UpdateExternalFeedHandler implements UpdateExternalFeedUseCase {
     public ExternalFeed update(UUID feedId, String name, String color, SpaceMembership caller) {
         caller.ensureCanWrite();
         ExternalFeed feed = lookup.ofSpace(feedId, caller);
-        feeds.update(feed.id(), name.strip(), color);
+        feeds.update(feed.id(), name.strip(), ExternalFeed.colorOrDefault(color));
         return lookup.ofSpace(feedId, caller);
     }
 }

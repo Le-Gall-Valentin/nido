@@ -50,13 +50,13 @@ final class GuardedDnsResolver implements DnsResolver {
 
     /**
      * Connecting cannot be cancelled mid-attempt: only as many addresses are handed over as the time left in this download
-     * holds connect timeouts — and never more than the whole download would. Alternating the families, so that the cut
-     * cannot drop the only family that answers.
+     * holds connect timeouts, counting one the deadline will cut — and never more than the whole download would. Alternating
+     * the families, so that the cut cannot drop the only family that answers.
      */
     private int attempts() {
         int most = (int) Math.max(1, totalNanos / connectNanos);
         Long end = deadline.get();
-        return end == null ? most : (int) Math.min(most, Math.max(1, (end - System.nanoTime()) / connectNanos));
+        return end == null ? most : (int) Math.min(most, Math.max(1, Math.ceilDiv(end - System.nanoTime(), connectNanos)));
     }
 
     private static List<InetAddress> interleaved(InetAddress[] addresses) {

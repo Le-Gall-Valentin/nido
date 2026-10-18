@@ -17,4 +17,12 @@ class FeedErrorTest {
         assertThat(FeedError.of(FeedErrorKind.TIMEOUT).code()).isEqualTo("TIMEOUT");
         assertThat(FeedError.parse("BLOCKED_ADDRESS")).isEqualTo(FeedError.of(FeedErrorKind.BLOCKED_ADDRESS));
     }
+
+    @Test
+    void aCodeThisVersionDoesNotKnowIsReadAsUnreachable() {
+        // Written by a later version, or altered: one feed's last error must not fail the list of the space.
+        assertThat(FeedError.parse("SOMETHING_NEW")).isEqualTo(FeedError.of(FeedErrorKind.UNREACHABLE));
+        assertThat(FeedError.parse("HTTP_abc")).isEqualTo(FeedError.of(FeedErrorKind.UNREACHABLE));
+        assertThat(FeedError.parse("")).isEqualTo(FeedError.of(FeedErrorKind.UNREACHABLE));
+    }
 }

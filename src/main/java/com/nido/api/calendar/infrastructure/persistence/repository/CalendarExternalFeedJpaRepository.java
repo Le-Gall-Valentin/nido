@@ -15,6 +15,6 @@ public interface CalendarExternalFeedJpaRepository extends JpaRepository<Calenda
 
     long countBySpaceId(UUID spaceId);
 
-    @Query("select f.id from CalendarExternalFeedEntity f where f.lastAttemptAt < :before order by f.lastAttemptAt asc")
+    @Query("select f.id from CalendarExternalFeedEntity f where f.lastAttemptAt < :before order by f.lastAttemptAt asc, f.id asc")
     List<UUID> findIdsAttemptedBefore(@Param("before") Instant before, Pageable pageable);
 }

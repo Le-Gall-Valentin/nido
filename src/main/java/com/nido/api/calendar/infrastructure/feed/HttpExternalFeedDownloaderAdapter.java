@@ -48,6 +48,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class HttpExternalFeedDownloaderAdapter implements ExternalFeedDownloader, AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(HttpExternalFeedDownloaderAdapter.class);
+    /** The columns of 079 that keep them: an HTTP-date is 29 characters, an ETag a quoted digest. */
+    private static final int MAX_ETAG = 200;
+    private static final int MAX_LAST_MODIFIED = 100;
 
     public record Limits(Duration connect, Duration total, int maxBytes, int maxRedirects) {
         public static Limits standard() {
@@ -152,7 +155,7 @@ public final class HttpExternalFeedDownloaderAdapter implements ExternalFeedDown
             } catch (GuardedDnsResolver.BlockedAddressException e) {
                 return failed(current, FeedErrorKind.BLOCKED_ADDRESS, e);
             } catch (IOException | RuntimeException e) {
-                if (expired.get() || System.nanoTime() >= deadline || e instanceof InterruptedIOException) {
+                if (expired.get() || deadline - System.nanoTime() <= 0 || e instanceof InterruptedIOException) {
                     return failed(current, FeedErrorKind.TIMEOUT, e);
                 }
                 return failed(current, e instanceof TooLarge ? FeedErrorKind.TOO_LARGE : FeedErrorKind.UNREACHABLE, e);
@@ -186,8 +189,8 @@ public final class HttpExternalFeedDownloaderAdapter implements ExternalFeedDown
         byte[] body = entity == null ? new byte[0] : readCapped(entity.getContent());
         Charset charset = Optional.ofNullable(entity == null ? null : ContentType.parseLenient(entity.getContentType()))
             .map(ContentType::getCharset).orElse(StandardCharsets.UTF_8);
-        return new Done(new FeedDownload.Downloaded(new String(body, charset), header(response, HttpHeaders.ETAG),
-            header(response, HttpHeaders.LAST_MODIFIED)));
+        return new Done(new FeedDownload.Downloaded(new String(body, charset), header(response, HttpHeaders.ETAG, MAX_ETAG),
+            header(response, HttpHeaders.LAST_MODIFIED, MAX_LAST_MODIFIED)));
     }
 
     private byte[] readCapped(InputStream in) throws IOException {
@@ -225,10 +228,10 @@ public final class HttpExternalFeedDownloaderAdapter implements ExternalFeedDown
         client.close();
     }
 
-    /** A header worth keeping for next time — not one longer than its column. */
-    private static String header(ClassicHttpResponse response, String name) {
+    /** A header worth keeping for next time — not one longer than its column ({@code max}). */
+    private static String header(ClassicHttpResponse response, String name, int max) {
         Header header = response.getFirstHeader(name);
-        return header == null || header.getValue().length() > 200 ? null : header.getValue();
+        return header == null || header.getValue().length() > max ? null : header.getValue();
     }
 
     /** Logged with the host and the code only: the address of a calendar can carry a secret token. */

@@ -1,5 +1,8 @@
 package com.nido.api.calendar.infrastructure.feed;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.nido.api.calendar.domain.model.FeedDownload;
 import com.nido.api.calendar.domain.model.FeedError;
 import com.nido.api.calendar.domain.model.FeedErrorKind;
@@ -8,6 +11,7 @@ import org.apache.hc.client5.http.DnsResolver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -207,6 +211,19 @@ class HttpExternalFeedDownloaderAdapterTest {
     }
 
     @Test
+    void aHeaderLongerThanItsColumnIsNotKept() {
+        String etag = "\"" + "e".repeat(150) + "\"";
+        server.createContext("/long-headers.ics", exchange -> {
+            exchange.getResponseHeaders().add("ETag", etag);
+            exchange.getResponseHeaders().add("Last-Modified", "Wed, 14 Oct 2026 07:28:00 GMT" + " ".repeat(71) + "x");
+            send(exchange, 200, ICS.getBytes(StandardCharsets.UTF_8));
+        });
+        // The ETag fits its 200 characters; a Last-Modified of 101 does not fit its 100.
+        assertThat(downloader.download(url("feed.test", "/long-headers.ics"), null, null))
+            .isEqualTo(new FeedDownload.Downloaded(ICS, etag, null));
+    }
+
+    @Test
     void anUnchangedCalendarIsNotDownloadedAgain() {
         assertThat(downloader.download(url("feed.test", "/feed.ics"), "\"v1\"", null)).isEqualTo(new FeedDownload.NotModified());
     }
@@ -284,7 +301,22 @@ class HttpExternalFeedDownloaderAdapterTest {
     }
 
     @Test
-    void addressesThatNeverConnectAreGivenUpOnAtTheDeadline() throws IOException {
+    void aFailureIsLoggedWithItsHostAndCodeAndNeverItsAddress() {
+        Logger logger = (Logger) LoggerFactory.getLogger(HttpExternalFeedDownloaderAdapter.class);
+        ListAppender<ILoggingEvent> logged = new ListAppender<>();
+        logged.start();
+        logger.addAppender(logged);
+        try {
+            downloader.download(url("feed.test", "/missing.ics?token=s3cr3t-of-the-address"), null, null);
+        } finally {
+            logger.detachAppender(logged);
+        }
+        assertThat(logged.list).extracting(ILoggingEvent::getFormattedMessage).singleElement().asString()
+            .contains("feed.test", "HTTP_404").doesNotContain("s3cr3t", "missing.ics");
+    }
+
+    @Test
+    void addressesThatNeverConnectAreTriedUntilTheDeadlineAndNoLonger() throws IOException {
         int dead = deadPort();
         HttpExternalFeedDownloaderAdapter blackhole = adapter(address -> true, deadNames(),
             new HttpExternalFeedDownloaderAdapter.Limits(Duration.ofSeconds(1), Duration.ofSeconds(2), 1024, 3));
@@ -293,7 +325,8 @@ class HttpExternalFeedDownloaderAdapterTest {
         long millis = (System.nanoTime() - start) / 1_000_000;
         System.out.println("ELAPSED dead addresses " + millis + " ms");
         assertThat(result).isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.TIMEOUT)));
-        assertThat(millis).as("elapsed").isLessThan(3_000);
+        // A second address is tried, cut by the deadline: the download does not give up a second early.
+        assertThat(millis).as("elapsed").isBetween(1_500L, 3_000L);
     }
 
     @Test

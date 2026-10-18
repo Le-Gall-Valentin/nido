@@ -12,12 +12,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -53,7 +55,7 @@ class RefreshDueExternalFeedsHandlerTest {
 
     @Test
     void theRepositoryIsAskedForAtMostAHandfulOfTheOldestAttempts() {
-        when(feeds.findDueIds(any(), org.mockito.ArgumentMatchers.anyInt())).thenReturn(List.of());
+        when(feeds.findDueIds(any(), anyInt())).thenReturn(List.of());
 
         handler.refreshDue();
 
@@ -76,13 +78,38 @@ class RefreshDueExternalFeedsHandlerTest {
     void aCalendarThatCannotBeReadBackDoesNotStopTheOthers() {
         ExternalFeed unreadable = feed(1, NOW.minus(Duration.ofHours(9)));
         ExternalFeed fine = feed(2, NOW.minus(Duration.ofHours(9)));
-        when(feeds.findDueIds(any(), org.mockito.ArgumentMatchers.anyInt())).thenReturn(List.of(unreadable.id(), fine.id()));
+        when(feeds.findDueIds(any(), anyInt())).thenReturn(List.of(unreadable.id(), fine.id()));
         when(feeds.findById(unreadable.id())).thenThrow(new IllegalArgumentException("Illegal character in URI"));
         when(feeds.findById(fine.id())).thenReturn(Optional.of(fine));
 
         handler.refreshDue();
 
         verify(refresher, never()).refresh(unreadable);
+        verify(refresher).refresh(fine);
+    }
+
+    @Test
+    void aCalendarThatCannotBeReadBackIsMarkedTriedSoThatTheNextTicksAskTheOthersFirst() {
+        ExternalFeed unreadable = feed(1, NOW.minus(Duration.ofHours(9)));
+        when(feeds.findDueIds(any(), anyInt())).thenReturn(List.of(unreadable.id()));
+        when(feeds.findById(unreadable.id())).thenThrow(new IllegalArgumentException("Illegal character in URI"));
+
+        handler.refreshDue();
+
+        verify(feeds).markAttempt(unreadable.id(), NOW);
+    }
+
+    @Test
+    void aCalendarThatCannotBeMarkedEitherDoesNotStopTheOthers() {
+        ExternalFeed unreadable = feed(1, NOW.minus(Duration.ofHours(9)));
+        ExternalFeed fine = feed(2, NOW.minus(Duration.ofHours(9)));
+        when(feeds.findDueIds(any(), anyInt())).thenReturn(List.of(unreadable.id(), fine.id()));
+        when(feeds.findById(unreadable.id())).thenThrow(new IllegalArgumentException("Illegal character in URI"));
+        when(feeds.findById(fine.id())).thenReturn(Optional.of(fine));
+        doThrow(new IllegalStateException("database gone")).when(feeds).markAttempt(unreadable.id(), NOW);
+
+        handler.refreshDue();
+
         verify(refresher).refresh(fine);
     }
 
@@ -125,8 +152,8 @@ class RefreshDueExternalFeedsHandlerTest {
     }
 
     private void stub(ExternalFeed... due) {
-        when(feeds.findDueIds(any(), org.mockito.ArgumentMatchers.anyInt()))
-            .thenReturn(java.util.Arrays.stream(due).map(ExternalFeed::id).toList());
+        when(feeds.findDueIds(any(), anyInt()))
+            .thenReturn(Arrays.stream(due).map(ExternalFeed::id).toList());
         for (ExternalFeed feed : due) {
             when(feeds.findById(feed.id())).thenReturn(Optional.of(feed));
         }

@@ -15,7 +15,12 @@ public record FeedError(FeedErrorKind kind, Integer httpStatus) {
         return kind == FeedErrorKind.HTTP_STATUS ? "HTTP_" + httpStatus : kind.name();
     }
 
+    /** A stored code read back; one this version does not know — written by a later one, or altered — reads UNREACHABLE. */
     public static FeedError parse(String code) {
-        return code.startsWith("HTTP_") ? http(Integer.parseInt(code.substring(5))) : of(FeedErrorKind.valueOf(code));
+        try {
+            return code.startsWith("HTTP_") ? http(Integer.parseInt(code.substring(5))) : of(FeedErrorKind.valueOf(code));
+        } catch (IllegalArgumentException unknown) {
+            return of(FeedErrorKind.UNREACHABLE);
+        }
     }
 }

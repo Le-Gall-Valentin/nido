@@ -35,10 +35,14 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -248,14 +252,69 @@ class CalendarExternalFeedControllerIT {
 
     @Test
     void the_calendar_and_the_dashboard_show_a_followed_calendar() throws Exception {
-        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(SCHOOL, null, null));
+        // Around today whatever the zone of the space: the dashboard reads today and tomorrow.
+        LocalDate from = LocalDate.now(ZoneOffset.UTC).minusDays(1);
+        String around = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:x\r\n"
+            + "BEGIN:VEVENT\r\nUID:pedago@ecole\r\nDTSTAMP:20260901T000000Z\r\nSUMMARY:Journée pédagogique\r\n"
+            + "DTSTART;VALUE=DATE:" + from.format(DateTimeFormatter.BASIC_ISO_DATE) + "\r\n"
+            + "DTEND;VALUE=DATE:" + from.plusDays(4).format(DateTimeFormatter.BASIC_ISO_DATE) + "\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(around, null, null));
         mockMvc.perform(post(feeds()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
             .content("{\"url\":\"https://ecole.example/v.ics\",\"color\":\"event-cyan\"}")).andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/spaces/" + spaceId + "/calendar/occurrences?from=2026-10-12&to=2026-10-25").cookie(tokenFor(bobId)))
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/calendar/occurrences?from=" + from + "&to=" + from.plusDays(3))
+                .cookie(tokenFor(bobId)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[?(@.source == 'EXTERNAL')].title").value("Vacances de la Toussaint"))
+            .andExpect(jsonPath("$[?(@.source == 'EXTERNAL')].title").value("Journée pédagogique"))
             .andExpect(jsonPath("$[?(@.source == 'EXTERNAL')].externalFeedId").isNotEmpty());
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/dashboard").cookie(tokenFor(bobId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.cards.agenda.data.allDay[?(@.title == 'Journée pédagogique')].color").value("event-cyan"));
+    }
+
+    @Test
+    void a_refresh_bringing_new_content_shows_it_at_the_next_read() throws Exception {
+        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(SCHOOL, "\"v1\"", null));
+        String id = objectMapper.readTree(mockMvc.perform(post(feeds()).cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"url\":\"https://ecole.example/v.ics\"}"))
+            .andReturn().getResponse().getContentAsString()).get("id").asText();
+        String october = "/api/spaces/" + spaceId + "/calendar/occurrences?from=2026-10-12&to=2026-10-25";
+        mockMvc.perform(get(october).cookie(tokenFor(aliceId)))
+            .andExpect(jsonPath("$[?(@.source == 'EXTERNAL')].title").value("Vacances de la Toussaint"));
+
+        jdbc.update("UPDATE calendar_external_feeds SET last_attempt_at = now() - interval '2 minutes' WHERE space_id = ?", spaceId);
+        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(
+            SCHOOL.replace("Vacances de la Toussaint", "Vacances d'automne"), "\"v2\"", null));
+        mockMvc.perform(post(feeds() + "/" + id + "/refresh").cookie(tokenFor(aliceId))).andExpect(status().isOk());
+
+        mockMvc.perform(get(october).cookie(tokenFor(aliceId)))
+            .andExpect(jsonPath("$[?(@.source == 'EXTERNAL')]", hasSize(1)))
+            .andExpect(jsonPath("$[?(@.source == 'EXTERNAL')].title").value("Vacances d'automne"));
+    }
+
+    @Test
+    void a_calendar_wears_a_colour_of_the_palette_and_the_graphite_of_external_sources_when_none_is_chosen() throws Exception {
+        when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(SCHOOL, null, null));
+        mockMvc.perform(post(feeds()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"url\":\"https://ecole.example/v.ics\",\"color\":\"rouge\"}"))
+            .andExpect(status().isBadRequest());
+        String id = objectMapper.readTree(mockMvc.perform(post(feeds()).cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"url\":\"https://ecole.example/v.ics\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.color").value("event-graphite"))
+            .andReturn().getResponse().getContentAsString()).get("id").asText();
+
+        mockMvc.perform(patch(feeds() + "/" + id).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"École\",\"color\":\"#ff0000\"}"))
+            .andExpect(status().isBadRequest());
+        mockMvc.perform(patch(feeds() + "/" + id).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"École\",\"color\":\"event-brique\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.color").value("event-brique"));
+        mockMvc.perform(patch(feeds() + "/" + id).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"École\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.color").value("event-graphite"));
     }
 
     private String feeds() {

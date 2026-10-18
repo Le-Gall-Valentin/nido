@@ -38,6 +38,12 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+  # Two scheduler threads, not Spring's one: the refresh of followed calendars may hold its thread for minutes while it
+  # downloads, and the mail safety-net sweep (every 30 s) and the purges must not wait behind it.
+  task:
+    scheduling:
+      pool:
+        size: 2
 
 # Exists so the container can answer "is this process still serving?" and nothing else.
 #

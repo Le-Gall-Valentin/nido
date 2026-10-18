@@ -65,9 +65,8 @@ public class FollowExternalFeedHandler implements FollowExternalFeedUseCase {
         }
         String name = command.name() != null && !command.name().isBlank() ? command.name().strip()
             : ownName != null ? ownName : url.getHost();
-        return feeds.create(caller.spaceId(), truncated(name), url,
-            command.color(), caller.userId(), downloaded.content(), downloaded.etag(), downloaded.lastModified(),
-            clock.instant());
+        return feeds.create(caller.spaceId(), truncated(name), url, ExternalFeed.colorOrDefault(command.color()),
+            caller.userId(), downloaded.content(), downloaded.etag(), downloaded.lastModified(), clock.instant());
     }
 
     /** At most {@link #MAX_NAME} characters, never cutting a character in two. */

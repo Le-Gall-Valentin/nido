@@ -58,7 +58,20 @@ public class RefreshDueExternalFeedsHandler implements RefreshDueExternalFeedsUs
                 log.debug("Followed calendar {} was removed meanwhile", id);
             } catch (RuntimeException e) {
                 log.warn("Followed calendar {} could not be refreshed ({})", id, e.getClass().getSimpleName());
+                markTried(id, start);
             }
+        }
+    }
+
+    /**
+     * A calendar that cannot be read back keeps its place at the head of the queue unless it is marked tried: it would take
+     * a slot of every tick. Marking it touches no sealed value.
+     */
+    private void markTried(UUID id, Instant at) {
+        try {
+            feeds.markAttempt(id, at);
+        } catch (RuntimeException e) {
+            log.warn("Followed calendar {} could not be marked tried ({})", id, e.getClass().getSimpleName());
         }
     }
 
