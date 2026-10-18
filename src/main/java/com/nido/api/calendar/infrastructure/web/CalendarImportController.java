@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.UUID;
 
@@ -40,7 +41,8 @@ public class CalendarImportController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ImportReportResponse> analyse(
             @PathVariable UUID spaceId, InputStream body,
-            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership)
+            throws IOException {
         return ResponseEntity.ok(ImportReportResponse.from(importUseCase.analyse(IcalUpload.read(body), membership)));
     }
 
@@ -49,7 +51,8 @@ public class CalendarImportController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ImportReportResponse> importFile(
             @PathVariable UUID spaceId, InputStream body,
-            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
+            @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership)
+            throws IOException {
         return ResponseEntity.ok(ImportReportResponse.from(importUseCase.importFile(IcalUpload.read(body), membership)));
     }
 }

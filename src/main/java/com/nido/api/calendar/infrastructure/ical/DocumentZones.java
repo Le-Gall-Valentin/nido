@@ -8,8 +8,10 @@ import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.zone.ZoneRules;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The zones of one document being read. A name the JDK knows is read with the JDK's rules, because ical4j 4.3.0 builds a
@@ -27,7 +29,7 @@ final class DocumentZones implements TimeZoneRegistry {
     private static final Map<String, ZoneRules> NON_EMPTY = Map.of("nido", ZoneOffset.UTC.getRules());
 
     private final TimeZoneRegistry inner = TimeZoneRegistryFactory.getInstance().createRegistry();
-    private int ownZones;
+    private final Set<String> ownZones = new HashSet<>();
 
     static Optional<ZoneId> jdkZone(String tzId) {
         if (tzId == null || tzId.startsWith("ical4j")) {
@@ -50,7 +52,11 @@ final class DocumentZones implements TimeZoneRegistry {
         if (jdkZone(timezone.getID()).isPresent()) {
             return; // the JDK reads that name
         }
-        if (++ownZones > MAX_ZONES) {
+        // A zone given again keeps its first definition: ical4j would draw another id of its pool for each repetition.
+        if (!ownZones.add(timezone.getID())) {
+            return;
+        }
+        if (ownZones.size() > MAX_ZONES) {
             throw new IllegalStateException("Too many time zones in one document");
         }
         inner.register(timezone, update);

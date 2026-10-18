@@ -12,6 +12,11 @@ public enum ImportNoteKind {
     CONVERTED_ZONE,
     /** A zone nobody knows, its times taken as the space's; detail: the zone. */
     UNKNOWN_ZONE,
-    /** Not imported; detail: VTODO, VJOURNAL, VFREEBUSY, NO_START, CANCELLED, TOO_LONG, DUPLICATE_UID, TOO_HEAVY (a rule too costly to expand: seconds, minutes, or beyond the budget of the file), BAD_RULE (a rule nido cannot read). */
+    /**
+     * Not imported; detail: VTODO, VJOURNAL, VFREEBUSY, NO_START, CANCELLED, TOO_LONG, DUPLICATE_UID (a second event of a
+     * UID, or a second version of one of its edited occurrences), TOO_HEAVY (a rule too costly to expand: seconds,
+     * minutes, or beyond the budget of the file), BAD_RULE (a rule nido cannot read), NIDO_SOURCE (a task, a meal, finance
+     * or savings written by a nido export: another part of nido shows it, and it is never imported, in any space).
+     */
     IGNORED
 }

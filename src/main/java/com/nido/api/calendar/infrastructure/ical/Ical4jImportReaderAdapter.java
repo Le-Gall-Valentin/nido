@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * Reads an iCalendar file into what a space can hold — tolerantly (see IcalSupport), placing every time in the space's
@@ -31,6 +32,8 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
 
     static final int MAX_EVENTS = 5_000;
     private static final List<String> SET_ASIDE = List.of(Component.VTODO, Component.VJOURNAL, Component.VFREEBUSY);
+    /** The UID a nido export gives an item of another part of nido: a task, a meal, a debit or a goal (see the writer). */
+    private static final Pattern NIDO_SOURCE = Pattern.compile("(?s)^(TASK|MEAL|FINANCE|SAVINGS)-.+@nido$");
 
     @Override
     public ImportReading read(String content, ZoneId zone, LocalDate today, Locale locale) {
@@ -52,6 +55,13 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
         List<ImportGroup> groups = new ArrayList<>();
         for (Map.Entry<String, List<VEvent>> entry : byUid.entrySet()) {
             String uid = IcalGroups.uidOf(entry.getKey());
+            if (uid != null && NIDO_SOURCE.matcher(uid).matches()) {
+                // Another part of nido shows it, kept up to date: a frozen copy in a calendar is never what an import is for.
+                ignored[0]++;
+                notes.add(new ImportNote(ImportNoteKind.IGNORED, IcalTexts.titleOrUntitled(entry.getValue().getFirst(), locale),
+                    "NIDO_SOURCE"));
+                continue;
+            }
             group(uid, entry.getValue(), zone, locale, recurring, notes, ignored).ifPresent(groups::add);
         }
         return new ImportReading(groups, ignored[0], notes);
@@ -61,7 +71,11 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
     private static Optional<ImportGroup> group(String uid, List<VEvent> events, ZoneId zone, Locale locale,
                                                RecurringImport recurring, List<ImportNote> notes, int[] ignored) {
         List<VEvent> masters = IcalGroups.masters(events);
-        List<VEvent> overrides = IcalGroups.overrides(events);
+        // A slot edited twice is one too many for nido: only one version of it stands.
+        List<VEvent> overrides = IcalGroups.onePerSlot(IcalGroups.overrides(events), zone, extra -> {
+            ignored[0]++;
+            notes.add(new ImportNote(ImportNoteKind.IGNORED, IcalTexts.titleOrUntitled(extra, locale), "DUPLICATE_UID"));
+        });
         if (masters.isEmpty()) {
             // Edited occurrences of a series the file does not hold: each is an event of its own.
             List<ImportedEvent> orphans = new ArrayList<>();

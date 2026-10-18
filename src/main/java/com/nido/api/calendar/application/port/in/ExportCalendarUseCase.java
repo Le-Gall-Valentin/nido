@@ -4,8 +4,8 @@ import com.nido.api.calendar.domain.model.CalendarSourceType;
 import com.nido.api.calendar.domain.model.IcalDocument;
 import com.nido.api.space.domain.model.SpaceMembership;
 
-import java.util.Set;
+import java.util.Collection;
 
 public interface ExportCalendarUseCase {
-    IcalDocument export(Set<CalendarSourceType> sources, boolean onlyMine, SpaceMembership caller);
+    IcalDocument export(Collection<CalendarSourceType> sources, boolean onlyMine, SpaceMembership caller);
 }

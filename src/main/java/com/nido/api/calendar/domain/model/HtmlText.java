@@ -19,10 +19,11 @@ public final class HtmlText {
     /** The whole opening tag, possessive: it ends at the next {@code <} or {@code >}, and never backtracks. */
     private static final Pattern LINK_OPEN = Pattern.compile("(?i)<a(?=\\s)[^<>]*+>");
     /**
-     * The first quoted href of a tag's text. A value stops at the next quote of either kind, so an attempt scans only up
-     * to the next quote, and attempts start right after a quote: the stretches they scan never overlap.
+     * The first quoted href of a tag's text. A value runs to the next quote of its own kind — "l'atelier" keeps its
+     * apostrophe. An attempt that finds that quote ends the search; one that does not scans to the end, and only the last
+     * opening quote of each kind can: the search stays linear.
      */
-    private static final Pattern HREF = Pattern.compile("(?i)\\bhref\\s*=\\s*(?:\"([^\"']*)\"|'([^\"']*)')");
+    private static final Pattern HREF = Pattern.compile("(?i)\\bhref\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)')");
     private static final Pattern LINK_CLOSE = Pattern.compile("(?i)</a\\s*>");
     private static final Pattern BLOCK_OPEN = Pattern.compile("(?i)<!--|<(script|style)(?:\\s[^<>]*)?>");
     private static final Pattern SCRIPT_CLOSE = Pattern.compile("(?i)</script\\s*>");

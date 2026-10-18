@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,12 +38,11 @@ public class CalendarExportController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> export(
             @PathVariable UUID spaceId,
-            @RequestParam(required = false) List<CalendarSourceType> sources,
+            // Names rather than the enum: an unknown one is then answered invalid_sources, as an unexportable one is.
+            @RequestParam(required = false) List<String> sources,
             @RequestParam(defaultValue = "false") boolean onlyMine,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
-        IcalDocument document = exportUseCase.export(
-            sources == null || sources.isEmpty() ? EnumSet.noneOf(CalendarSourceType.class) : EnumSet.copyOf(sources),
-            onlyMine, membership);
+        IcalDocument document = exportUseCase.export(CalendarSourceType.named(sources), onlyMine, membership);
         return ResponseEntity.ok()
             .contentType(IcalFiles.TEXT_CALENDAR)
             .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()

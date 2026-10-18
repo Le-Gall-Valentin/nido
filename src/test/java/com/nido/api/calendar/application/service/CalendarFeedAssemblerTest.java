@@ -141,6 +141,65 @@ class CalendarFeedAssemblerTest {
         assertThat(assembler.assemble(reader, Set.of(CalendarSourceType.TASK), true).others()).containsExactly(mine, nobodys);
     }
 
+    @Test
+    void theSlotsASeriesCancelledAndThoseMadeSomeoneElsesAreWrittenTogether() {
+        RecurringEventSeries piano = series(List.of(me));
+        CalendarEvent givenAway = event(List.of(someoneElse), piano.id(), LocalDate.of(2026, 1, 12));
+        when(events.findBySpaceId(spaceId)).thenReturn(List.of(givenAway));
+        when(series.findBySpaceId(spaceId)).thenReturn(List.of(piano));
+        when(exclusions.findAllSlotsOfEach(List.of(piano.id()))).thenReturn(Map.of(piano.id(), Set.of(LocalDate.of(2026, 1, 19))));
+
+        CalendarFeed feed = assembler.assemble(reader, Set.of(CalendarSourceType.EVENT), true);
+
+        assertThat(feed.series()).singleElement().satisfies(s ->
+            assertThat(s.cancelledSlots()).containsExactlyInAnyOrder(LocalDate.of(2026, 1, 12), LocalDate.of(2026, 1, 19)));
+    }
+
+    @Test
+    void everyoneElsesSeriesAndTheirEditedOccurrencesAreWrittenWhenNotOnlyMine() {
+        RecurringEventSeries football = series(List.of(someoneElse));
+        CalendarEvent moved = event(List.of(someoneElse), football.id(), LocalDate.of(2026, 1, 12));
+        when(events.findBySpaceId(spaceId)).thenReturn(List.of(moved));
+        when(series.findBySpaceId(spaceId)).thenReturn(List.of(football));
+
+        CalendarFeed feed = assembler.assemble(reader, Set.of(CalendarSourceType.EVENT), false);
+
+        assertThat(feed.events()).isEmpty();
+        assertThat(feed.series()).singleElement().satisfies(s -> {
+            assertThat(s.series()).isEqualTo(football);
+            assertThat(s.cancelledSlots()).isEmpty();
+            assertThat(s.editedOccurrences()).containsExactly(moved);
+        });
+    }
+
+    @Test
+    void anOccurrenceOverlappingTwoWindowsIsWrittenOnceFromTheWindowItStartsIn() {
+        // From 10 to 20 July 2027: read by the window ending on 13 July and by the one starting on the 14th.
+        CalendarOccurrence camp = new CalendarOccurrence(CalendarSourceType.TASK, "camp", null, null, true, "Camp", null,
+            null, true, LocalDate.of(2027, 7, 10), null, LocalDate.of(2027, 7, 20), null, null, List.of());
+        when(tasks.occurrencesBetween(eq(reader), any(), any())).thenReturn(List.of(camp));
+
+        assertThat(assembler.assemble(reader, Set.of(CalendarSourceType.TASK), false).others()).containsExactly(camp);
+    }
+
+    @Test
+    void neitherTheEventsNorTheFollowedCalendarsAreReadAsOtherSources() {
+        CalendarSource eventSource = mock(CalendarSource.class);
+        CalendarSource followed = mock(CalendarSource.class);
+        when(eventSource.type()).thenReturn(CalendarSourceType.EVENT);
+        when(followed.type()).thenReturn(CalendarSourceType.EXTERNAL);
+        when(events.findBySpaceId(spaceId)).thenReturn(List.of());
+        when(series.findBySpaceId(spaceId)).thenReturn(List.of());
+        CalendarFeedAssembler withAll = new CalendarFeedAssembler(events, series, exclusions,
+            List.of(eventSource, followed, tasks), spaces, today);
+
+        withAll.assemble(reader, Set.of(CalendarSourceType.EVENT, CalendarSourceType.EXTERNAL), false);
+
+        verify(eventSource, never()).occurrencesBetween(any(), any(), any());
+        verify(followed, never()).occurrencesBetween(any(), any(), any());
+        verify(tasks, never()).occurrencesBetween(any(), any(), any());
+    }
+
     private CalendarEvent event(List<UUID> participants, UUID seriesId, LocalDate slot) {
         return new CalendarEvent(UUID.randomUUID(), spaceId, "Concert", null, null, true,
             slot == null ? LocalDate.of(2026, 9, 23) : slot, null, slot == null ? LocalDate.of(2026, 9, 23) : slot, null,

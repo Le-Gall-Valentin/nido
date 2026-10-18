@@ -27,6 +27,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.UUID;
 
@@ -98,12 +100,45 @@ class CalendarExportControllerIT {
     }
 
     @Test
-    void a_followed_calendar_or_no_source_at_all_is_a_400() throws Exception {
+    void a_followed_calendar_an_unknown_source_or_no_source_at_all_is_a_400() throws Exception {
         mockMvc.perform(get(export() + "?sources=EXTERNAL").cookie(tokenFor(aliceId)))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error_code").value("invalid_sources"));
+        mockMvc.perform(get(export() + "?sources=EVENT,BOGUS").cookie(tokenFor(aliceId)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("invalid_sources"));
         mockMvc.perform(get(export()).cookie(tokenFor(aliceId)))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("invalid_sources"));
+    }
+
+    @Test
+    void only_the_sources_asked_for_are_written() throws Exception {
+        createEvent("Concert", "2026-09-23");
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/tasks").cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Arroser les plantes\",\"priority\":\"MED\",\"dueDate\":\""
+                    + LocalDate.now(ZoneId.of("Europe/Paris")).plusDays(7) + "\"}"))
+            .andExpect(status().isCreated());
+
+        String events = mockMvc.perform(get(export() + "?sources=EVENT").cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        String both = mockMvc.perform(get(export() + "?sources=EVENT,TASK").cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        String tasks = mockMvc.perform(get(export() + "?sources=TASK").cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(events).contains("SUMMARY:Concert").doesNotContain("Arroser les plantes");
+        assertThat(both).contains("SUMMARY:Concert", "Arroser les plantes", "UID:TASK-");
+        assertThat(tasks).contains("Arroser les plantes").doesNotContain("SUMMARY:Concert");
+    }
+
+    @Test
+    void the_file_name_is_also_given_in_utf_8() throws Exception {
+        mockMvc.perform(get(export() + "?sources=EVENT").cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Disposition",
+                org.hamcrest.Matchers.containsString("filename*=UTF-8''nido-chez-valentin-")));
     }
 
     @Test

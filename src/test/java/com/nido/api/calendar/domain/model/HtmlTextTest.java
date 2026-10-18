@@ -89,4 +89,28 @@ class HtmlTextTest {
     void aLinkMayUseSingleQuotes() {
         assertThat(HtmlText.toPlain("<a href='https://x.example/p'>plan</a>")).isEqualTo("plan (https://x.example/p)");
     }
+
+    @Test
+    void aLinkKeepsAQuoteOfTheOtherKindInItsAddress() {
+        assertThat(HtmlText.toPlain("<a href=\"https://x.example/l'atelier\">plan</a>")).isEqualTo("plan (https://x.example/l'atelier)");
+        assertThat(HtmlText.toPlain("<a href='https://x.example/\"q\"'>plan</a>")).isEqualTo("plan (https://x.example/\"q\")");
+    }
+
+    @Test
+    void aLinkIsReadWhateverItsCaseAndItsOtherAttributes() {
+        assertThat(HtmlText.toPlain("<A HREF=\"https://x.example/p\">plan</A>")).isEqualTo("plan (https://x.example/p)");
+        assertThat(HtmlText.toPlain("<a target=\"_blank\" href = \"https://x.example/p\" rel=\"noopener\">plan</a>"))
+            .isEqualTo("plan (https://x.example/p)");
+    }
+
+    @Test
+    void aLinkWithoutAnAddressIsOnlyItsLabel() {
+        assertThat(HtmlText.toPlain("<a name=\"haut\">ancre</a> suite")).isEqualTo("ancre suite");
+    }
+
+    @Test
+    void quotesOfBothKindsNeverClosedAreReadInLinearTime() {
+        linear("<a " + "href=\"x' ".repeat(20_000));
+        linear("<a " + "href='x\" ".repeat(20_000));
+    }
 }

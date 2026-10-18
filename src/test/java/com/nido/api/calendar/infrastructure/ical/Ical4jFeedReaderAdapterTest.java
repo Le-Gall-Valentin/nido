@@ -78,6 +78,22 @@ class Ical4jFeedReaderAdapterTest {
     }
 
     @Test
+    void anEditedOccurrenceGivenTwiceIsShownOnceInItsLatestVersion() {
+        String twice = FEED.replace("END:VCALENDAR\r\n", "")
+            + "BEGIN:VEVENT\r\nUID:club\r\nDTSTAMP:20260901T000000Z\r\nSUMMARY:Club (gymnase C)\r\nSEQUENCE:3\r\n"
+            + "RECURRENCE-ID;TZID=Europe/Paris:20261026T180000\r\n"
+            + "DTSTART;TZID=Europe/Paris:20261028T180000\r\nDTEND;TZID=Europe/Paris:20261028T190000\r\nEND:VEVENT\r\n"
+            + "END:VCALENDAR\r\n";
+
+        List<CalendarOccurrence> found = reader.occurrencesOf(feed, () -> twice, PARIS, Locale.FRENCH,
+            LocalDate.of(2026, 10, 26), LocalDate.of(2026, 11, 1));
+
+        assertThat(found).extracting(CalendarOccurrence::title, CalendarOccurrence::startDate).containsExactlyInAnyOrder(
+            tuple("Vacances de la Toussaint", LocalDate.of(2026, 10, 17)),
+            tuple("Club (gymnase C)", LocalDate.of(2026, 10, 28)));
+    }
+
+    @Test
     void aCalendarIsParsedOnceForAsLongAsItIsTheSame() {
         AtomicInteger loads = new AtomicInteger();
         Supplier<String> content = () -> {

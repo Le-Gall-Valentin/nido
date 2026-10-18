@@ -41,8 +41,10 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -161,8 +163,152 @@ class CalendarImportControllerIT {
 
     @Test
     void a_viewer_cannot_import() throws Exception {
+        // Refused by the space before the calendar is asked: the space's 403 names the role, with no error_code of its own.
         mockMvc.perform(post(imports() + "/analysis").cookie(tokenFor(bobId)).contentType("text/calendar").content(GOOGLE))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.title").value("InsufficientRole"));
+        mockMvc.perform(post(imports()).cookie(tokenFor(bobId)).contentType("text/calendar").content(GOOGLE))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.title").value("InsufficientRole"));
+    }
+
+    @Test
+    void a_slot_edited_twice_in_the_file_is_imported_once_in_its_latest_version() throws Exception {
+        String twice = """
+            BEGIN:VCALENDAR\r
+            VERSION:2.0\r
+            PRODID:-//test//EN\r
+            BEGIN:VEVENT\r
+            UID:dup@test\r
+            DTSTAMP:20261013T120000Z\r
+            SUMMARY:Piano\r
+            DTSTART;VALUE=DATE:20260105\r
+            RRULE:FREQ=WEEKLY;BYDAY=MO\r
+            END:VEVENT\r
+            BEGIN:VEVENT\r
+            UID:dup@test\r
+            DTSTAMP:20261013T120000Z\r
+            SEQUENCE:2\r
+            SUMMARY:Piano (salle 3)\r
+            RECURRENCE-ID;VALUE=DATE:20260112\r
+            DTSTART;VALUE=DATE:20260114\r
+            END:VEVENT\r
+            BEGIN:VEVENT\r
+            UID:dup@test\r
+            DTSTAMP:20261013T120000Z\r
+            SEQUENCE:1\r
+            SUMMARY:Piano (salle 2)\r
+            RECURRENCE-ID;VALUE=DATE:20260112\r
+            DTSTART;VALUE=DATE:20260113\r
+            END:VEVENT\r
+            END:VCALENDAR\r
+            """;
+
+        mockMvc.perform(post(imports()).cookie(tokenFor(aliceId)).contentType("text/calendar").content(twice))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.written").value(true))
+            .andExpect(jsonPath("$.seriesCreated").value(1))
+            .andExpect(jsonPath("$.ignored").value(1))
+            .andExpect(jsonPath("$.notes[0].title").value("Piano (salle 2)"))
+            .andExpect(jsonPath("$.notes[0].detail").value("DUPLICATE_UID"));
+
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/calendar/occurrences?from=2026-01-12&to=2026-01-18").cookie(tokenFor(aliceId)))
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].title").value("Piano (salle 3)"))
+            .andExpect(jsonPath("$[0].startDate").value("2026-01-14"));
+    }
+
+    @Test
+    void the_notes_of_the_reading_reach_the_answer() throws Exception {
+        String noted = """
+            BEGIN:VCALENDAR\r
+            VERSION:2.0\r
+            PRODID:-//test//EN\r
+            BEGIN:VTODO\r
+            UID:todo@test\r
+            DTSTAMP:20261013T120000Z\r
+            SUMMARY:Acheter du pain\r
+            END:VTODO\r
+            BEGIN:VEVENT\r
+            UID:task@nido\r
+            DTSTAMP:20261013T120000Z\r
+            SUMMARY:Ordinaire\r
+            DTSTART;VALUE=DATE:20261017\r
+            END:VEVENT\r
+            BEGIN:VEVENT\r
+            UID:TASK-5d0f6a0e-8f7c-4b8e-9a51-2f0c2b8a1d11@nido\r
+            DTSTAMP:20261013T120000Z\r
+            SUMMARY:Tâche · Poubelles\r
+            DTSTART;VALUE=DATE:20261017\r
+            END:VEVENT\r
+            END:VCALENDAR\r
+            """;
+
+        mockMvc.perform(post(imports()).cookie(tokenFor(aliceId)).contentType("text/calendar").content(noted))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.eventsCreated").value(1))
+            .andExpect(jsonPath("$.ignored").value(2))
+            .andExpect(jsonPath("$.notes", hasSize(2)))
+            .andExpect(jsonPath("$.notes[0].kind").value("IGNORED"))
+            .andExpect(jsonPath("$.notes[0].title").value("Acheter du pain"))
+            .andExpect(jsonPath("$.notes[0].detail").value("VTODO"))
+            .andExpect(jsonPath("$.notes[1].title").value("Tâche · Poubelles"))
+            .andExpect(jsonPath("$.notes[1].detail").value("NIDO_SOURCE"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_events WHERE space_id = ?", Long.class, spaceId)).isEqualTo(1);
+    }
+
+    @Test
+    void more_events_than_an_import_takes_is_refused_and_writes_nothing() throws Exception {
+        StringBuilder many = new StringBuilder("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//test//EN\r\n");
+        for (int i = 0; i <= 5_000; i++) {
+            many.append("BEGIN:VEVENT\r\nUID:e").append(i).append("@test\r\nDTSTAMP:20261013T120000Z\r\n")
+                .append("DTSTART;VALUE=DATE:20261017\r\nEND:VEVENT\r\n");
+        }
+        many.append("END:VCALENDAR\r\n");
+
+        mockMvc.perform(post(imports()).cookie(tokenFor(aliceId)).contentType("text/calendar").content(many.toString()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("import_too_large"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_events WHERE space_id = ?", Long.class, spaceId)).isZero();
+    }
+
+    @Test
+    void a_nido_export_of_a_series_comes_back_whole_in_another_space_and_as_nothing_in_its_own() throws Exception {
+        String created = mockMvc.perform(post("/api/spaces/" + spaceId + "/calendar/recurring-event-series")
+                .cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Marché","allDay":true,"intervalType":"WEEKLY","intervalCount":1,
+                     "weekdays":["SATURDAY"],"anchorDate":"2026-01-03","endDate":"2026-03-28"}"""))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String seriesPath = "/api/spaces/" + spaceId + "/calendar/recurring-event-series/" + objectMapper.readTree(created).get("id").asText();
+        mockMvc.perform(delete(seriesPath + "/occurrences/2026-01-10")
+                .cookie(tokenFor(aliceId)))
+            .andExpect(status().isNoContent());
+        mockMvc.perform(put(seriesPath + "/occurrences/2026-01-17")
+                .cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Marché (place)\",\"allDay\":true,\"startDate\":\"2026-01-18\",\"endDate\":\"2026-01-18\"}"))
+            .andExpect(status().isOk());
+        String export = mockMvc.perform(get("/api/spaces/" + spaceId + "/calendar/export.ics?sources=EVENT").cookie(tokenFor(aliceId)))
+            .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        mockMvc.perform(post(imports()).cookie(tokenFor(aliceId)).contentType("text/calendar").content(export))
+            .andExpect(jsonPath("$.seriesCreated").value(0))
+            .andExpect(jsonPath("$.eventsCreated").value(0))
+            .andExpect(jsonPath("$.duplicates").value(1));
+        mockMvc.perform(post("/api/spaces/" + bobsSpaceId + "/calendar/import").cookie(tokenFor(bobId))
+                .contentType("text/calendar").content(export))
+            .andExpect(jsonPath("$.seriesCreated").value(1))
+            .andExpect(jsonPath("$.seriesUnfolded").value(0));
+
+        String shown = mockMvc.perform(get("/api/spaces/" + bobsSpaceId + "/calendar/occurrences?from=2026-01-01&to=2026-01-31")
+                .cookie(tokenFor(bobId)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        List<String> days = new ArrayList<>();
+        for (JsonNode occurrence : objectMapper.readTree(shown)) {
+            days.add(occurrence.get("startDate").asText() + " " + occurrence.get("title").asText()
+                + (occurrence.get("allDay").asBoolean() ? "" : " timed"));
+        }
+        assertThat(days).containsExactly("2026-01-03 Marché", "2026-01-18 Marché (place)", "2026-01-24 Marché", "2026-01-31 Marché");
     }
 
     @Test

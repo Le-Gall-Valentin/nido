@@ -7,6 +7,8 @@ import com.nido.api.calendar.domain.model.CreateEventCommand;
 import com.nido.api.calendar.domain.model.CreateRecurringEventSeriesCommand;
 import com.nido.api.calendar.domain.model.DayRule;
 import com.nido.api.calendar.domain.model.ImportGroup;
+import com.nido.api.calendar.domain.model.ImportNote;
+import com.nido.api.calendar.domain.model.ImportNoteKind;
 import com.nido.api.calendar.domain.model.ImportReading;
 import com.nido.api.calendar.domain.model.ImportReport;
 import com.nido.api.calendar.domain.model.ImportedEvent;
@@ -29,22 +31,28 @@ import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -112,7 +120,7 @@ class ImportCalendarHandlerTest {
         verify(series).createImported(any(CreateRecurringEventSeriesCommand.class), eq(CalendarDigests.sha256Hex("b@test")));
         verify(exclusions).exclude(any(), eq(LocalDate.of(2026, 1, 12)));
         // The edited occurrence: a detached event of the new series, imported with the same UID.
-        verify(events, times(1)).createImported(org.mockito.ArgumentMatchers.argThat(c -> c.recurringSeriesId() != null),
+        verify(events, times(1)).createImported(argThat(c -> c.recurringSeriesId() != null),
             eq(CalendarDigests.sha256Hex("b@test")));
     }
 
@@ -149,7 +157,7 @@ class ImportCalendarHandlerTest {
 
     @Test
     void cancelledSlotsCountAmongTheRowsOfAnImport() {
-        Set<LocalDate> slots = new java.util.HashSet<>();
+        Set<LocalDate> slots = new HashSet<>();
         for (int i = 0; i < 10_001; i++) {
             slots.add(LocalDate.of(2026, 1, 12).plusDays(i));
         }
@@ -166,9 +174,92 @@ class ImportCalendarHandlerTest {
     }
 
     @Test
-    void aViewerCannotImport() {
+    void aViewerCannotImportAndTheFileIsNeverRead() {
         SpaceMembership viewer = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.VIEWER, Instant.now());
         assertThatThrownBy(() -> handler.analyse("ics", viewer)).isInstanceOf(SpaceException.InsufficientRole.class);
+        assertThatThrownBy(() -> handler.importFile("ics", viewer)).isInstanceOf(SpaceException.InsufficientRole.class);
+        verify(reader, never()).read(any(), any(), any(), any());
+    }
+
+    @Test
+    void anEventWithoutUidIsWrittenWithoutDigestAndNeverTakenForADuplicate() {
+        when(reader.read("ics", PARIS, TODAY, Locale.FRENCH)).thenReturn(reading(event(null), event(null)));
+
+        ImportReport report = handler.importFile("ics", member);
+
+        assertThat(report.eventsCreated()).isEqualTo(2);
+        assertThat(report.duplicates()).isZero();
+        verify(events, times(2)).createImported(any(CreateEventCommand.class), isNull());
+    }
+
+    @Test
+    void unfoldedSeriesAndTheirOccurrencesAreCounted() {
+        ImportGroup unfolded = new ImportGroup("u@test", List.of(imported(), imported(), imported()), null, true, 3);
+        ImportGroup other = new ImportGroup("v@test", List.of(imported()), null, true, 1);
+        when(reader.read("ics", PARIS, TODAY, Locale.FRENCH)).thenReturn(reading(unfolded, other, event("a@test")));
+
+        ImportReport report = handler.analyse("ics", member);
+
+        assertThat(report.seriesUnfolded()).isEqualTo(2);
+        assertThat(report.occurrencesUnfolded()).isEqualTo(4);
+        assertThat(report.eventsCreated()).isEqualTo(5);
+    }
+
+    @Test
+    void theReadersNotesAndItsCountOfIgnoredReachTheReport() {
+        List<ImportNote> notes = List.of(new ImportNote(ImportNoteKind.IGNORED, "Copie", "DUPLICATE_UID"),
+            new ImportNote(ImportNoteKind.IGNORED, "Boucle", "TOO_HEAVY"),
+            new ImportNote(ImportNoteKind.IGNORED, "Illisible", "BAD_RULE"),
+            new ImportNote(ImportNoteKind.IGNORED, "Tâche · Poubelles", "NIDO_SOURCE"));
+        when(reader.read("ics", PARIS, TODAY, Locale.FRENCH)).thenReturn(new ImportReading(List.of(event("a@test")), 4, notes));
+
+        ImportReport report = handler.analyse("ics", member);
+
+        assertThat(report.ignored()).isEqualTo(4);
+        assertThat(report.notes()).isEqualTo(notes);
+    }
+
+    @Test
+    void aReportHoldsTheFirstTwoHundredNotes() {
+        List<ImportNote> notes = IntStream.range(0, 250)
+            .mapToObj(i -> new ImportNote(ImportNoteKind.TRUNCATED_TEXT, "Note " + i, "title")).toList();
+        when(reader.read("ics", PARIS, TODAY, Locale.FRENCH)).thenReturn(new ImportReading(List.of(), 0, notes));
+
+        assertThat(handler.analyse("ics", member).notes()).isEqualTo(notes.subList(0, 200));
+    }
+
+    @Test
+    void aSeriesIsWrittenBeforeWhatHangsOnIt() {
+        UUID createdId = UUID.randomUUID();
+        when(reader.read("ics", PARIS, TODAY, Locale.FRENCH)).thenReturn(reading(seriesGroup("b@test")));
+        when(series.createImported(any(), any())).thenAnswer(call -> {
+            CreateRecurringEventSeriesCommand command = call.getArgument(0);
+            return new RecurringEventSeries(createdId, spaceId, command.title(), null, null, true, null, null, 0,
+                null, command.intervalType(), command.intervalCount(), command.weekdays(), command.dayRule(),
+                command.anchorDate(), command.endDate(), command.startsOn(), List.of(), member.userId(), Instant.now());
+        });
+
+        handler.importFile("ics", member);
+
+        InOrder order = inOrder(series, exclusions, events);
+        order.verify(series).createImported(any(), eq(CalendarDigests.sha256Hex("b@test")));
+        order.verify(exclusions).exclude(createdId, LocalDate.of(2026, 1, 12));
+        order.verify(events).createImported(argThat(c -> createdId.equals(c.recurringSeriesId())
+            && LocalDate.of(2026, 1, 19).equals(c.recurringOriginalDate())), eq(CalendarDigests.sha256Hex("b@test")));
+    }
+
+    @Test
+    void aSeriesTheSpaceHoldsAlreadyWritesNothingOfItsOwn() {
+        when(reader.read("ics", PARIS, TODAY, Locale.FRENCH)).thenReturn(reading(seriesGroup("b@test")));
+        when(importedUids.knownHashes(eq(spaceId), anyCollection())).thenReturn(Set.of(CalendarDigests.sha256Hex("b@test")));
+
+        ImportReport report = handler.importFile("ics", member);
+
+        assertThat(report.duplicates()).isEqualTo(1);
+        assertThat(report.seriesCreated()).isZero();
+        verify(series, never()).createImported(any(), any());
+        verify(exclusions, never()).exclude(any(), any());
+        verify(events, never()).createImported(any(), any());
     }
 
     private static ImportReading reading(ImportGroup... groups) {

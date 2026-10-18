@@ -10,6 +10,7 @@ import com.nido.api.calendar.domain.model.RecurrenceInterval;
 import com.nido.api.calendar.domain.model.RecurringEventSeries;
 import com.nido.api.calendar.domain.model.UpdateEventCommand;
 import com.nido.api.calendar.domain.model.UpdateRecurringEventSeriesCommand;
+import com.nido.api.calendar.domain.port.out.AccountLanguage;
 import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
 import com.nido.api.calendar.domain.port.out.EventExclusionRepository;
 import com.nido.api.calendar.domain.port.out.ImportedUidRepository;
@@ -35,6 +36,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -48,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 @IntegrationTestConfig
 class CalendarEventRepositoryAdapterIT {
@@ -56,6 +59,7 @@ class CalendarEventRepositoryAdapterIT {
     @Autowired RecurringEventSeriesRepository series;
     @Autowired EventExclusionRepository exclusions;
     @Autowired ImportedUidRepository importedUids;
+    @Autowired AccountLanguage language;
     @Autowired SpaceJpaRepository spaces;
     @Autowired UserIdentityJpaRepository users;
     @Autowired SpaceSealers sealers;
@@ -359,7 +363,61 @@ class CalendarEventRepositoryAdapterIT {
         events.create(new CreateEventCommand(spaceId, event.title(), null, null, true, event.startDate(), null,
             event.endDate(), null, null, List.of(), null, null, aliceId));
 
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_events WHERE import_uid_hash = ?", Long.class, hash)).isOne();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_events WHERE space_id = ? AND import_uid_hash = ?",
+            Long.class, spaceId, hash)).isOne();
+    }
+
+    @Test
+    void every_event_of_a_space_is_found_with_its_edited_occurrences_and_nothing_of_another_space() {
+        UUID weekly = weeklySeries();
+        CalendarEvent concert = events.create(plainEvent("Concert", LocalDate.of(2026, 9, 23)));
+        CalendarEvent edited = events.create(new CreateEventCommand(spaceId, "Piano (décalé)", null, null, false,
+            LocalDate.of(2026, 2, 11), LocalTime.of(19, 0), LocalDate.of(2026, 2, 11), LocalTime.of(20, 0), null, List.of(),
+            weekly, LocalDate.of(2026, 2, 10), aliceId));
+        UUID elsewhere = newSpace();
+        events.create(new CreateEventCommand(elsewhere, "Ailleurs", null, null, true, LocalDate.of(2026, 9, 23), null,
+            LocalDate.of(2026, 9, 23), null, null, List.of(), null, null, aliceId));
+
+        assertThat(events.findBySpaceId(spaceId)).extracting(CalendarEvent::id, CalendarEvent::title)
+            .containsExactlyInAnyOrder(tuple(concert.id(), "Concert"), tuple(edited.id(), "Piano (décalé)"));
+    }
+
+    @Test
+    void the_cancelled_slots_of_several_series_are_read_at_once_and_a_series_without_any_is_absent() {
+        UUID first = weeklySeries();
+        UUID second = weeklySeries();
+        UUID untouched = weeklySeries();
+        exclusions.exclude(first, LocalDate.of(2026, 2, 10));
+        exclusions.exclude(first, LocalDate.of(2026, 2, 17));
+        exclusions.exclude(second, LocalDate.of(2026, 2, 24));
+
+        assertThat(exclusions.findAllSlotsOfEach(List.of(first, second, untouched))).isEqualTo(Map.of(
+            first, Set.of(LocalDate.of(2026, 2, 10), LocalDate.of(2026, 2, 17)),
+            second, Set.of(LocalDate.of(2026, 2, 24))));
+        assertThat(exclusions.findAllSlotsOfEach(List.of())).isEmpty();
+    }
+
+    @Test
+    void an_export_speaks_the_language_of_its_account_and_english_when_it_has_none() {
+        UserIdentityEntity french = new UserIdentityEntity();
+        french.setUsername("francoise-" + UUID.randomUUID());
+        french.setEmail(UUID.randomUUID() + "@test.com");
+        french.setRole(Role.USER);
+        french.setLanguage("fr");
+        UUID frenchId = users.saveAndFlush(french).getId();
+
+        assertThat(language.of(frenchId)).isEqualTo(Locale.FRENCH);
+        assertThat(language.of(aliceId)).as("no language recorded, outside any request").isEqualTo(Locale.ENGLISH);
+        assertThat(language.of(UUID.randomUUID())).isEqualTo(Locale.ENGLISH);
+    }
+
+    private UUID newSpace() {
+        SpaceEntity space = new SpaceEntity();
+        space.setType(SpaceType.SHARED);
+        TestSpaces.name(space, "Ailleurs");
+        space.setAccent("#c17a5c");
+        space.setGlyph("🏡");
+        return spaces.saveAndFlush(space).getId();
     }
 
     private CreateEventCommand plainEvent(String title, LocalDate date) {

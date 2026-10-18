@@ -281,4 +281,34 @@ class Ical4jImportReaderAdapterTest {
         assertThat(reading.ignored()).isEqualTo(1);
         assertThat(reading.notes()).containsExactly(new ImportNote(ImportNoteKind.IGNORED, "Annulé", "CANCELLED"));
     }
+
+    @Test
+    void anItemOfAnotherPartOfNidoIsNeverImportedAndSaidSo() {
+        // What a nido export writes for a task, a meal, a debit and a goal: a copy frozen in the calendar is never wanted.
+        ImportReading reading = read(ics(
+            vevent("TASK-5d0f6a0e-8f7c-4b8e-9a51-2f0c2b8a1d11@nido", "SUMMARY:Tâche · Poubelles", "DTSTART;VALUE=DATE:20261017"),
+            vevent("MEAL-7b1e2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d:2026-10-17@nido", "SUMMARY:Repas · Lasagnes", "DTSTART;VALUE=DATE:20261017"),
+            vevent("FINANCE-1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d:2026-10-17@nido", "SUMMARY:Finance · Loyer", "DTSTART;VALUE=DATE:20261017"),
+            vevent("SAVINGS-9f8e7d6c-5b4a-4321-8fed-cba987654321@nido", "SUMMARY:Épargne · Vélo", "DTSTART;VALUE=DATE:20261017"),
+            vevent("TASK-42@example.com", "SUMMARY:Ailleurs", "DTSTART;VALUE=DATE:20261017")), PARIS);
+        assertThat(reading.groups()).extracting(ImportGroup::uid).containsExactly("TASK-42@example.com");
+        assertThat(reading.ignored()).isEqualTo(4);
+        assertThat(reading.notes()).containsExactly(
+            new ImportNote(ImportNoteKind.IGNORED, "Tâche · Poubelles", "NIDO_SOURCE"),
+            new ImportNote(ImportNoteKind.IGNORED, "Repas · Lasagnes", "NIDO_SOURCE"),
+            new ImportNote(ImportNoteKind.IGNORED, "Finance · Loyer", "NIDO_SOURCE"),
+            new ImportNote(ImportNoteKind.IGNORED, "Épargne · Vélo", "NIDO_SOURCE"));
+    }
+
+    @Test
+    void anOverrideRepeatedForTheStartOfAnEventThatDoesNotRepeatIsReadOnce() {
+        ImportReading reading = read(ics(vevent("r@test", "SUMMARY:Avant", "DTSTART;TZID=Europe/Paris:20261017T090000"),
+            vevent("r@test", "SUMMARY:Après", "RECURRENCE-ID;TZID=Europe/Paris:20261017T090000",
+                "DTSTART;TZID=Europe/Paris:20261017T110000"),
+            vevent("r@test", "SUMMARY:Après (copie)", "RECURRENCE-ID;TZID=Europe/Paris:20261017T090000",
+                "DTSTART;TZID=Europe/Paris:20261017T110000")), PARIS);
+        assertThat(onlyEvent(reading).title()).isEqualTo("Après");
+        assertThat(reading.ignored()).isEqualTo(1);
+        assertThat(reading.notes()).containsExactly(new ImportNote(ImportNoteKind.IGNORED, "Après (copie)", "DUPLICATE_UID"));
+    }
 }

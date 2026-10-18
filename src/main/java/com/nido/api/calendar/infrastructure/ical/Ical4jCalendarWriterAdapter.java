@@ -68,7 +68,7 @@ public class Ical4jCalendarWriterAdapter implements IcalWriter {
     public String write(CalendarFeed feed, Locale locale) {
         ZoneId zone = feed.zone();
         Calendar calendar = new Calendar()
-            .withProdId("-//nido//nido " + NidoVersion.current() + "//EN")
+            .withProdId("-//nido//nido " + NidoVersion.current() + "//FR")
             .withDefaults()
             .withProperty(new XProperty("X-WR-CALNAME", feed.name()))
             .withProperty(new XProperty("X-WR-TIMEZONE", zone.getId()))

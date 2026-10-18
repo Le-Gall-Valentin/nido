@@ -7,6 +7,7 @@ import com.nido.api.calendar.domain.model.CalendarSourceType;
 import com.nido.api.calendar.domain.model.FeedSeries;
 import com.nido.api.calendar.domain.model.RecurrenceInterval;
 import com.nido.api.calendar.domain.model.RecurringEventSeries;
+import com.nido.api.infrastructure.NidoVersion;
 import org.junit.jupiter.api.Test;
 
 import java.time.DayOfWeek;
@@ -32,6 +33,12 @@ class Ical4jCalendarWriterAdapterTest {
         String ics = writer.write(new CalendarFeed("Chez nous", PARIS, List.of(), List.of(), List.of()), Locale.FRENCH);
         assertThat(ics).contains("X-WR-CALNAME:Chez nous", "X-WR-TIMEZONE:Europe/Paris", "METHOD:PUBLISH",
             "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "BEGIN:VTIMEZONE", "TZID:Europe/Paris");
+    }
+
+    @Test
+    void theProductIsNamedWithItsVersionAsTheSpecSaysIt() {
+        String ics = writer.write(new CalendarFeed("Chez nous", PARIS, List.of(), List.of(), List.of()), Locale.ENGLISH);
+        assertThat(ics).contains("PRODID:-//nido//nido " + NidoVersion.current() + "//FR\r\n");
     }
 
     @Test

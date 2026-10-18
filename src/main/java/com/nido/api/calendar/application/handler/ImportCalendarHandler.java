@@ -25,7 +25,10 @@ import com.nido.api.space.application.port.in.GetSpaceUseCase;
 import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -37,13 +40,15 @@ import java.util.regex.Pattern;
  * again and writes it in one transaction — all of it, or nothing.
  *
  * <p>A UID already in the space — imported before, or the id of a row a nido export of this very space names — is
- * passed: what was changed here since is never overwritten. The calendar sends no notification, so a large import
+ * passed: what was changed here since is never overwritten. A task, a meal, finance or savings a nido export wrote is
+ * never imported, in any space: the reader sets them aside. The calendar sends no notification, so a large import
  * disturbs nobody.
  */
 @ApplicationService
 public class ImportCalendarHandler implements ImportCalendarUseCase {
 
     static final int MAX_ROWS = 10_000;
+    /** The notes a report holds at most. The frontend says so from 200 on: keep MAX_IMPORT_NOTES (entities/calendar) equal. */
     static final int MAX_NOTES = 200;
     private static final Pattern NIDO_UID = Pattern.compile("^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})@nido$");
 
@@ -89,15 +94,19 @@ public class ImportCalendarHandler implements ImportCalendarUseCase {
         ImportReading reading = reader.read(content, spaces.get(caller.spaceId(), caller).timezone(),
             spaceToday.today(caller.spaceId()), language.of(caller.userId()));
 
-        List<String> hashes = reading.groups().stream().map(ImportGroup::uid).filter(uid -> uid != null)
-            .map(CalendarDigests::sha256Hex).toList();
-        Set<String> known = importedUids.knownHashes(caller.spaceId(), hashes);
-        List<UUID> nidoIds = reading.groups().stream().map(group -> nidoId(group.uid())).flatMap(Optional::stream).toList();
-        Set<UUID> existing = importedUids.existingIds(caller.spaceId(), nidoIds);
+        // One group per UID of the file: its digest, and the row it names when a nido export wrote it.
+        Map<String, String> hashes = new HashMap<>();
+        Map<String, UUID> nidoIds = new HashMap<>();
+        for (ImportGroup group : reading.groups()) {
+            if (group.uid() != null) {
+                hashes.put(group.uid(), CalendarDigests.sha256Hex(group.uid()));
+                nidoId(group.uid()).ifPresent(id -> nidoIds.put(group.uid(), id));
+            }
+        }
+        Set<String> known = importedUids.knownHashes(caller.spaceId(), List.copyOf(hashes.values()));
+        Set<UUID> existing = importedUids.existingIds(caller.spaceId(), List.copyOf(nidoIds.values()));
         List<ImportGroup> fresh = reading.groups().stream()
-            .filter(group -> group.uid() == null
-                || !known.contains(CalendarDigests.sha256Hex(group.uid()))
-                    && nidoId(group.uid()).filter(existing::contains).isEmpty())
+            .filter(group -> group.uid() == null || !alreadyHere(group.uid(), hashes, known, nidoIds, existing))
             .toList();
         if (fresh.stream().mapToInt(ImportGroup::rows).sum() > MAX_ROWS) {
             throw new CalendarException.ImportTooLarge("more than " + MAX_ROWS + " rows to write");
@@ -105,7 +114,7 @@ public class ImportCalendarHandler implements ImportCalendarUseCase {
 
         if (write) {
             List<UUID> participants = members.participantsFor(caller, List.of());
-            fresh.forEach(group -> write(group, caller, participants));
+            fresh.forEach(group -> write(group, hashes.get(group.uid()), caller, participants));
         }
         return new ImportReport(
             fresh.stream().mapToInt(group -> group.events().size()).sum(),
@@ -118,8 +127,14 @@ public class ImportCalendarHandler implements ImportCalendarUseCase {
             write);
     }
 
-    private void write(ImportGroup group, SpaceMembership caller, List<UUID> participants) {
-        String hash = group.uid() == null ? null : CalendarDigests.sha256Hex(group.uid());
+    /** Whether the space holds a UID already: imported before, or the id of one of its rows a nido export named. */
+    private static boolean alreadyHere(String uid, Map<String, String> hashes, Set<String> known,
+                                       Map<String, UUID> nidoIds, Set<UUID> existing) {
+        UUID nidoId = nidoIds.get(uid);
+        return known.contains(hashes.get(uid)) || (nidoId != null && existing.contains(nidoId));
+    }
+
+    private void write(ImportGroup group, String hash, SpaceMembership caller, List<UUID> participants) {
         for (ImportedEvent event : group.events()) {
             events.createImported(eventCommand(event, caller, participants, null, null), hash);
         }
@@ -139,7 +154,7 @@ public class ImportCalendarHandler implements ImportCalendarUseCase {
     }
 
     private static CreateEventCommand eventCommand(ImportedEvent event, SpaceMembership caller, List<UUID> participants,
-                                                   UUID seriesId, java.time.LocalDate slot) {
+                                                   UUID seriesId, LocalDate slot) {
         return new CreateEventCommand(caller.spaceId(), event.title(), event.description(), event.location(),
             event.allDay(), event.startDate(), event.startTime(), event.endDate(), event.endTime(), null, participants,
             seriesId, slot, caller.userId());

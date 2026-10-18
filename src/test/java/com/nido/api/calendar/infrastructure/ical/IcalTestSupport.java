@@ -8,7 +8,6 @@ import net.fortuna.ical4j.model.component.VEvent;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.temporal.Temporal;
 import java.util.List;
 import java.util.Set;
@@ -36,9 +35,5 @@ final class IcalTestSupport {
         // ical4j's period end is inclusive: an all-day occurrence starting exactly at it is outside the days asked for.
         return set.stream().map(p -> IcalSupport.toLocal(p.getStart(), zone))
             .filter(start -> start.isBefore(end)).sorted().toList();
-    }
-
-    static ZonedDateTime at(LocalDate day, ZoneId zone) {
-        return day.atStartOfDay(zone);
     }
 }

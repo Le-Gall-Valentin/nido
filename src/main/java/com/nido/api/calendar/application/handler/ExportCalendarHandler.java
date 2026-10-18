@@ -12,7 +12,7 @@ import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
+import java.util.Collection;
 
 /** A one-off copy of the calendar, as the caller reads it; a viewer may take one, having seen it all already. */
 @ApplicationService
@@ -33,7 +33,7 @@ public class ExportCalendarHandler implements ExportCalendarUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public IcalDocument export(Set<CalendarSourceType> sources, boolean onlyMine, SpaceMembership caller) {
+    public IcalDocument export(Collection<CalendarSourceType> sources, boolean onlyMine, SpaceMembership caller) {
         CalendarFeed feed = assembler.assemble(caller, CalendarSourceType.checkExportable(sources), onlyMine);
         return new IcalDocument(feed.name(), spaceToday.today(caller.spaceId()),
             writer.write(feed, language.of(caller.userId())));

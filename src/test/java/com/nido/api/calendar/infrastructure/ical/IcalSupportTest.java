@@ -1,17 +1,19 @@
 package com.nido.api.calendar.infrastructure.ical;
 
 import com.nido.api.calendar.domain.model.CalendarException;
+import net.fortuna.ical4j.model.Calendar;
 import net.fortuna.ical4j.model.Component;
 import net.fortuna.ical4j.model.Period;
 import net.fortuna.ical4j.model.Property;
+import net.fortuna.ical4j.model.ZoneRulesProviderImpl;
 import net.fortuna.ical4j.model.component.VEvent;
+import net.fortuna.ical4j.model.property.DtStart;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.Temporal;
-import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,14 +56,14 @@ class IcalSupportTest {
     @Test
     void aZoneTheJdkKnowsIsReadWithTheJdksRulesWhateverTheDocumentSays() {
         VEvent e = event(document(NEW_YORK, "DTSTART;TZID=America/New_York:20270310T090000\n"));
-        assertThat(IcalSupport.toLocal(e.<net.fortuna.ical4j.model.property.DtStart<Temporal>>getProperty(Property.DTSTART).orElseThrow().getDate(), PARIS))
+        assertThat(IcalSupport.toLocal(e.<DtStart<Temporal>>getProperty(Property.DTSTART).orElseThrow().getDate(), PARIS))
             .isEqualTo(LocalDateTime.of(2027, 3, 10, 15, 0));
     }
 
     @Test
     void aZoneTheJdkKnowsNeedsNoDefinitionInTheDocument() {
         VEvent e = event(document("", "DTSTART;TZID=America/New_York:20270310T090000\n"));
-        assertThat(IcalSupport.toLocal(e.<net.fortuna.ical4j.model.property.DtStart<Temporal>>getProperty(Property.DTSTART).orElseThrow().getDate(), PARIS))
+        assertThat(IcalSupport.toLocal(e.<DtStart<Temporal>>getProperty(Property.DTSTART).orElseThrow().getDate(), PARIS))
             .isEqualTo(LocalDateTime.of(2027, 3, 10, 15, 0));
     }
 
@@ -82,7 +84,7 @@ class IcalSupportTest {
         event(document(office, "DTSTART;TZID=Office:20270310T090000\n"));
 
         VEvent other = event(document("", "DTSTART;TZID=Office:20270310T090000\n"));
-        assertThat(other.<net.fortuna.ical4j.model.property.DtStart<Temporal>>getProperty(Property.DTSTART).orElseThrow().getDate())
+        assertThat(other.<DtStart<Temporal>>getProperty(Property.DTSTART).orElseThrow().getDate())
             .isEqualTo(LocalDateTime.of(2027, 3, 10, 9, 0));
     }
 
@@ -91,6 +93,17 @@ class IcalSupportTest {
         assertThat(IcalSupport.parse(document(zones(50), "DTSTART;TZID=Zone1:20270310T090000\n"))).isNotNull();
         assertThatThrownBy(() -> IcalSupport.parse(document(zones(51), "DTSTART;TZID=Zone1:20270310T090000\n")))
             .isInstanceOf(CalendarException.NotAnIcalFile.class);
+    }
+
+    @Test
+    void aZoneRepeatedInADocumentCountsOnceAndDrawsOneIdOfIcal4jsPool() {
+        // ical4j draws an id of its global pool of 1500 for every zone registered, even one it already has.
+        String repeated = zones(1).repeat(200);
+        int before = ZoneRulesProviderImpl.INSTANCE.getZoneIdPool().availableZoneIds();
+        Calendar parsed = IcalSupport.parse(document(repeated, "DTSTART;TZID=Zone1:20270310T090000\n"));
+        int after = ZoneRulesProviderImpl.INSTANCE.getZoneIdPool().availableZoneIds();
+        assertThat(parsed).isNotNull();
+        assertThat(before - after).isLessThanOrEqualTo(1);
     }
 
     private static String zones(int count) {

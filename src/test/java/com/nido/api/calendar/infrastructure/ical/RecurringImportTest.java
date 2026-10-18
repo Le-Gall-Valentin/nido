@@ -1,5 +1,6 @@
 package com.nido.api.calendar.infrastructure.ical;
 
+import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CalendarFeed;
 import com.nido.api.calendar.domain.model.DayRule;
 import com.nido.api.calendar.domain.model.FeedSeries;
@@ -258,6 +259,25 @@ class RecurringImportTest {
     }
 
     @Test
+    void aZoneWhoseRulesLeaveTheSpacesOnlySomeYearsAfterItsLastListedChangeIsUnfolded() {
+        // A zone of the file's own, as Paris but for its summer time: from the Sunday on or after 24 March rather than
+        // the last Sunday of March. The two agree every year but those whose 24 March is a Sunday — 2030 is the first
+        // after the changes ical4j lists for it —, when the Mondays of late March come an hour early in Paris.
+        String own = "BEGIN:VTIMEZONE\r\nTZID:Bureau\r\n"
+            + "BEGIN:DAYLIGHT\r\nTZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\nDTSTART:19960324T020000\r\n"
+            + "RRULE:FREQ=YEARLY;BYMONTH=3;BYMONTHDAY=24;BYDAY=SU\r\nEND:DAYLIGHT\r\n"
+            + "BEGIN:STANDARD\r\nTZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\nDTSTART:19961027T030000\r\n"
+            + "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\n";
+        String content = ics(own + vevent("own@test", "SUMMARY:Point", "DTSTART;TZID=Bureau:20261102T100000",
+            "DTEND;TZID=Bureau:20261102T110000", "RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20341231T000000Z"));
+
+        ImportGroup group = only(content, PARIS);
+
+        assertThat(group.series()).isNull();
+        assertThat(group.unfolded()).isTrue();
+    }
+
+    @Test
     void anExdateOfAnotherTimeOfTheDayCancelsNothing() {
         ImportedSeries series = only(ics(vevent("x1@test", "SUMMARY:Piano", "DTSTART;TZID=Europe/Paris:20260105T180000",
             "DTEND;TZID=Europe/Paris:20260105T190000", "RRULE:FREQ=WEEKLY;BYDAY=MO",
@@ -362,6 +382,37 @@ class RecurringImportTest {
     }
 
     @Test
+    void anEditedOccurrenceGivenTwiceKeepsItsLatestVersionAndSaysTheOther() {
+        // Two versions of the 19 January occurrence, the newer one second and its RECURRENCE-ID written in UTC.
+        String older = vevent("o@test", "SUMMARY:Piano (salle 2)", "SEQUENCE:1", "RECURRENCE-ID;TZID=Europe/Paris:20260119T180000",
+            "DTSTART;TZID=Europe/Paris:20260119T190000", "DTEND;TZID=Europe/Paris:20260119T200000");
+        String newer = vevent("o@test", "SUMMARY:Piano (salle 3)", "SEQUENCE:2", "RECURRENCE-ID:20260119T170000Z",
+            "DTSTART;TZID=Europe/Paris:20260119T200000", "DTEND;TZID=Europe/Paris:20260119T210000");
+        ImportReading reading = read(ics(WEEKLY_PIANO, newer, older));
+        ImportedSeries series = reading.groups().getFirst().series();
+        assertThat(series.editedOccurrences()).singleElement().satisfies(edited -> {
+            assertThat(edited.slot()).isEqualTo(LocalDate.of(2026, 1, 19));
+            assertThat(edited.event().title()).isEqualTo("Piano (salle 3)");
+        });
+        assertThat(reading.ignored()).isEqualTo(1);
+        assertThat(reading.notes()).extracting(note -> note.kind(), note -> note.title(), note -> note.detail())
+            .containsExactly(tuple(ImportNoteKind.IGNORED, "Piano (salle 2)", "DUPLICATE_UID"));
+    }
+
+    @Test
+    void anEditedOccurrenceRepeatedAsItIsKeepsTheFirst() {
+        String first = vevent("o@test", "SUMMARY:Piano (salle 2)", "RECURRENCE-ID;TZID=Europe/Paris:20260119T180000",
+            "DTSTART;TZID=Europe/Paris:20260119T190000", "DTEND;TZID=Europe/Paris:20260119T200000");
+        String again = vevent("o@test", "SUMMARY:Piano (copie)", "RECURRENCE-ID;TZID=Europe/Paris:20260119T180000",
+            "DTSTART;TZID=Europe/Paris:20260119T190000", "DTEND;TZID=Europe/Paris:20260119T200000");
+        ImportReading reading = read(ics(WEEKLY_PIANO, first, again));
+        assertThat(reading.groups().getFirst().series().editedOccurrences())
+            .extracting(edited -> edited.event().title()).containsExactly("Piano (salle 2)");
+        assertThat(reading.notes()).extracting(note -> note.title(), note -> note.detail())
+            .containsExactly(tuple("Piano (copie)", "DUPLICATE_UID"));
+    }
+
+    @Test
     void anEditedOccurrenceGetsTheUsualNotes() {
         String edited = vevent("o@test", "SUMMARY:" + "x".repeat(250), "RECURRENCE-ID;TZID=Europe/Paris:20260119T180000",
             "DTSTART;TZID=Europe/Paris:20260119T200000", "DTEND;TZID=Europe/Paris:20260119T210000");
@@ -404,5 +455,36 @@ class RecurringImportTest {
         assertThat(read.dayRule()).isEqualTo(written.dayRule());
         assertThat(read.anchorDate()).isEqualTo(written.anchorDate());
         assertThat(read.endDate()).isEqualTo(written.endDate());
+    }
+
+    @Test
+    void aNidoExportOfAnAllDaySeriesComesBackWithItsCancelledAndEditedOccurrences() {
+        UUID seriesId = UUID.randomUUID();
+        UUID spaceId = UUID.randomUUID();
+        RecurringEventSeries written = new RecurringEventSeries(seriesId, spaceId, "Marché", null, null,
+            true, null, null, 0, null, RecurrenceInterval.WEEKLY, 1, Set.of(DayOfWeek.SATURDAY), null,
+            LocalDate.of(2026, 1, 3), LocalDate.of(2026, 3, 28), null, List.of(), UUID.randomUUID(), Instant.now());
+        CalendarEvent moved = new CalendarEvent(UUID.randomUUID(), spaceId, "Marché (place)", null, null, true,
+            LocalDate.of(2026, 1, 18), null, LocalDate.of(2026, 1, 18), null, null, List.of(), seriesId,
+            LocalDate.of(2026, 1, 17), UUID.randomUUID(), Instant.now());
+        String ics = new Ical4jCalendarWriterAdapter().write(new CalendarFeed("x", PARIS, List.of(),
+            List.of(new FeedSeries(written, Set.of(LocalDate.of(2026, 1, 10)), List.of(moved))), List.of()), Locale.FRENCH);
+
+        ImportGroup group = only(ics, PARIS);
+
+        assertThat(group.events()).isEmpty();
+        ImportedSeries read = group.series();
+        assertThat(read.allDay()).isTrue();
+        assertThat(read.weekdays()).containsExactly(DayOfWeek.SATURDAY);
+        assertThat(read.anchorDate()).isEqualTo(LocalDate.of(2026, 1, 3));
+        assertThat(read.endDate()).isEqualTo(LocalDate.of(2026, 3, 28));
+        assertThat(read.cancelledSlots()).containsExactly(LocalDate.of(2026, 1, 10));
+        assertThat(read.editedOccurrences()).singleElement().satisfies(edited -> {
+            assertThat(edited.slot()).isEqualTo(LocalDate.of(2026, 1, 17));
+            assertThat(edited.event().title()).isEqualTo("Marché (place)");
+            assertThat(edited.event().allDay()).isTrue();
+            assertThat(edited.event().startDate()).isEqualTo(LocalDate.of(2026, 1, 18));
+            assertThat(edited.event().endDate()).isEqualTo(LocalDate.of(2026, 1, 18));
+        });
     }
 }

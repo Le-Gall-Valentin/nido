@@ -54,6 +54,8 @@ final class RecurringImport {
     private static final int COUNT_HORIZON_YEARS = 100;
     /** How long an open-ended series is checked to keep its hours when its zone is not the space's. */
     private static final int OFFSET_YEARS = 10;
+    /** Every kind of year — the weekday of its first day, leap or not — comes round within 28 years (within a century). */
+    private static final int RULE_CYCLE_YEARS = 28;
     /** How many occurrences are asked of ical4j to check a series: far more than any rule nido can say gives in two years. */
     private static final int VERIFIED_CAP = 1_000;
 
@@ -183,7 +185,9 @@ final class RecurringImport {
         Instant first = IcalSupport.toLocal(start, zone).atZone(zone).toInstant();
         Instant last = (series.endDate() == null ? first.atZone(zone).plusYears(OFFSET_YEARS)
             : series.endDate().plusDays(1).atStartOfDay(zone)).toInstant();
-        // Past the last transition either zone lists, the zones' rules repeat every year: one more year says it for good.
+        // Past the last transition either zone lists, each zone's rules repeat yearly, but two rules may agree some years
+        // and not others ("the Sunday on or after the 24th" against "the last Sunday"). Every kind of year comes round
+        // within 28 years: walking that far says it for good, whatever the rules.
         Instant explicitEnd = first;
         for (ZoneId id : List.of(zone, source)) {
             List<ZoneOffsetTransition> listed = id.getRules().getTransitions();
@@ -191,7 +195,7 @@ final class RecurringImport {
                 explicitEnd = listed.getLast().getInstant();
             }
         }
-        Instant stop = explicitEnd.atZone(ZoneOffset.UTC).plusYears(1).toInstant();
+        Instant stop = explicitEnd.atZone(ZoneOffset.UTC).plusYears(RULE_CYCLE_YEARS).toInstant();
         if (stop.isBefore(last)) {
             last = stop;
         }

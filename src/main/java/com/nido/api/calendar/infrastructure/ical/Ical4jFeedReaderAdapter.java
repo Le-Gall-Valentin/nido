@@ -242,7 +242,8 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
                            ZoneId zone, Locale locale, ZonedDateTime windowStart, ZonedDateTime windowEnd, LocalDate from,
                            LocalDate to, List<CalendarOccurrence> found) {
         List<VEvent> masters = IcalGroups.masters(group.events());
-        List<VEvent> overrides = IcalGroups.overrides(group.events());
+        // One version of a slot edited twice, as the import keeps: an occurrence is never shown twice.
+        List<VEvent> overrides = IcalGroups.onePerSlot(IcalGroups.overrides(group.events()), zone, dropped -> { });
         String digest = group.digest();
         Set<LocalDateTime> replaced = new HashSet<>();
         for (VEvent override : overrides) {

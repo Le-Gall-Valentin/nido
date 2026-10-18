@@ -18,6 +18,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.util.DisconnectedClientHelper;
 
 import java.net.URI;
 
@@ -107,9 +108,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleUnexpected(Exception e, HttpServletRequest request) {
-        // The only place in the codebase that logs an error nobody anticipated, with the request
-        // that caused it. Tomcat also logs the stack trace on its own, but without this context.
-        log.error("Unhandled exception on {} {}", request.getMethod(), LoggedPath.of(request), e);
+        if (DisconnectedClientHelper.isClientDisconnectedException(e)) {
+            // The client went away mid-request — an upload cancelled while its body was read: nothing failed on our
+            // side, and nobody reads this answer.
+            log.debug("Client gone on {} {}", request.getMethod(), LoggedPath.of(request));
+        } else {
+            // The only place in the codebase that logs an error nobody anticipated, with the request
+            // that caused it. Tomcat also logs the stack trace on its own, but without this context.
+            log.error("Unhandled exception on {} {}", request.getMethod(), LoggedPath.of(request), e);
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ProblemDetailFactory.of(
             HttpStatus.INTERNAL_SERVER_ERROR, "InternalError",
             "Something went wrong on our side. The incident has been logged.",
