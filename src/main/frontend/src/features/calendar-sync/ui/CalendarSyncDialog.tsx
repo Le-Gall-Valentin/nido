@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog } from '@/shared/ui'
 import { ExportTab } from './ExportTab'
@@ -22,12 +22,29 @@ export function CalendarSyncDialog({ spaceId, canWrite, isPersonal, onClose }: C
   const { t } = useTranslation('calendarSync')
   const tabs: Tab[] = canWrite ? ['export', 'subscribe', 'import', 'feeds'] : ['export', 'subscribe', 'feeds']
   const [tab, setTab] = useState<Tab>('export')
+  const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({})
+
+  // The ARIA tab pattern: one tab stop, the arrows move between the tabs that are shown.
+  const onTabKeyDown = (event: KeyboardEvent) => {
+    const at = tabs.indexOf(tab)
+    const target = event.key === 'ArrowRight' ? (at + 1) % tabs.length
+      : event.key === 'ArrowLeft' ? (at - 1 + tabs.length) % tabs.length
+      : event.key === 'Home' ? 0
+      : event.key === 'End' ? tabs.length - 1
+      : -1
+    const next = tabs[target]
+    if (!next) return
+    event.preventDefault()
+    setTab(next)
+    tabRefs.current[next]?.focus()
+  }
 
   return (
     <Dialog open onClose={onClose} title={t('title')} showCloseButton maxWidth="max-w-lg">
       <div role="tablist" aria-label={t('title')} className="-mx-1 mb-4 flex gap-1 overflow-x-auto border-b border-border px-1">
         {tabs.map((id) => (
-          <button key={id} type="button" role="tab" id={`calendar-sync-tab-${id}`} aria-selected={tab === id}
+          <button key={id} ref={(el) => { tabRefs.current[id] = el }} type="button" role="tab"
+            tabIndex={tab === id ? 0 : -1} onKeyDown={onTabKeyDown} id={`calendar-sync-tab-${id}`} aria-selected={tab === id}
             aria-controls={`calendar-sync-panel-${id}`} onClick={() => setTab(id)}
             className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold
               ${tab === id ? 'border-accent text-fg-0' : 'border-transparent text-fg-2 hover:text-fg-1'}`}>

@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ExportableSource } from '@/entities/calendar'
 
@@ -24,12 +25,13 @@ export function SourceChecklist({ selected, onChange }: { selected: ExportableSo
 
 export function OnlyMineToggle({ checked, onChange }: { checked: boolean; onChange: (next: boolean) => void }) {
   const { t } = useTranslation('calendarSync')
+  const hintId = useId()
   return (
     <label className="flex items-start gap-2 text-sm text-fg-1">
-      <input type="checkbox" className="mt-0.5" aria-label={t('only_mine')} checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <input type="checkbox" className="mt-0.5" aria-label={t('only_mine')} aria-describedby={hintId} checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span>
         {t('only_mine')}
-        <span className="block text-xs text-fg-3">{t('only_mine_hint')}</span>
+        <span id={hintId} className="block text-xs text-fg-3">{t('only_mine_hint')}</span>
       </span>
     </label>
   )
