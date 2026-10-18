@@ -7,8 +7,8 @@ export type {
 export { MAX_IMPORT_NOTES } from './model/types'
 export { toEventInput } from './lib/toEventInput'
 export {
-  EVENT_COLORS, DEFAULT_EVENT_COLOR, EVENT_DOT_CLASS, EVENT_TINT_CLASS, isEventColor, eventDotClass, eventTintClass,
-  type EventColor,
+  EVENT_COLORS, DEFAULT_EVENT_COLOR, FEED_FALLBACK_COLOR, EVENT_DOT_CLASS, EVENT_TINT_CLASS, isEventColor, feedColor,
+  eventDotClass, eventTintClass, type EventColor,
 } from './lib/eventPalette'
 export type { ICalendarApi } from './model/ICalendarApi'
 export type { IRecurringEventSeriesApi } from './model/IRecurringEventSeriesApi'

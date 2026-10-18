@@ -16,6 +16,17 @@ export type EventColor = (typeof EVENT_COLORS)[number]
 export const DEFAULT_EVENT_COLOR: EventColor = EVENT_COLORS[0]
 
 /**
+ * What a followed calendar wears when none of the palette was chosen for it: the graphite of every external source,
+ * never the violet of the space's own events, for which it would pass. The server stores the same default.
+ */
+export const FEED_FALLBACK_COLOR: EventColor = 'event-graphite'
+
+/** The colour of a followed calendar: its own when it is one of the palette, the graphite of external sources otherwise. */
+export function feedColor(color: string | null | undefined): EventColor {
+  return isEventColor(color) ? color : FEED_FALLBACK_COLOR
+}
+
+/**
  * Full class names, spelled out literally: Tailwind only keeps a class it can read in the source, so an
  * interpolated `bg-${token}` would be purged from the build and the event would render colourless.
  */

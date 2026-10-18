@@ -84,8 +84,11 @@ describe('calendar sync api', () => {
   it('names every other failure', async () => {
     vi.mocked(client.post).mockRejectedValueOnce(failure(400, { error_code: 'not_ics' }))
     await expect(calendarApi.analyseImport('s1', new Blob())).rejects.toBeInstanceOf(CalendarSyncError)
-    vi.mocked(client.post).mockRejectedValueOnce(failure(413, {}))
+    vi.mocked(client.post).mockRejectedValueOnce(failure(413, { error_code: 'file_too_large' }))
     await expect(calendarApi.analyseImport('s1', new Blob())).rejects.toMatchObject({ reason: 'file_too_large' })
+    // Refused before it reached nido — a reverse proxy's own limit, often 1 MB: not the 5 MB nido sets.
+    vi.mocked(client.post).mockRejectedValueOnce(failure(413, '<html>413 Request Entity Too Large</html>'))
+    await expect(calendarApi.analyseImport('s1', new Blob())).rejects.toMatchObject({ reason: 'upload_too_large' })
     vi.mocked(client.post).mockRejectedValueOnce(new Error('offline'))
     await expect(calendarApi.analyseImport('s1', new Blob())).rejects.toMatchObject({ reason: 'network' })
   })

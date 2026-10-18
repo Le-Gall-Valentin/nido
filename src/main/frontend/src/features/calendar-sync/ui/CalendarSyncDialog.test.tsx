@@ -40,4 +40,9 @@ describe('CalendarSyncDialog', () => {
     expect(tabs()[0].getAttribute('aria-selected')).toBe('true')
     expect(document.activeElement).toBe(tabs()[0])
   })
+
+  it('lets the keyboard reach the panel itself, whose first content is text', () => {
+    render(<CalendarSyncDialog spaceId="s1" canWrite isPersonal={false} onClose={vi.fn()} />)
+    expect(screen.getByRole('tabpanel').getAttribute('tabindex')).toBe('0')
+  })
 })

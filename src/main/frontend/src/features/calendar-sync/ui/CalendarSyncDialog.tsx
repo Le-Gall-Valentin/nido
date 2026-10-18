@@ -52,7 +52,8 @@ export function CalendarSyncDialog({ spaceId, canWrite, isPersonal, onClose }: C
           </button>
         ))}
       </div>
-      <div role="tabpanel" id={`calendar-sync-panel-${tab}`} aria-labelledby={`calendar-sync-tab-${tab}`}>
+      {/* Focusable: each panel opens on a sentence, not a control (WAI-ARIA tabs pattern). */}
+      <div role="tabpanel" tabIndex={0} id={`calendar-sync-panel-${tab}`} aria-labelledby={`calendar-sync-tab-${tab}`}>
         {tab === 'export' && <ExportTab spaceId={spaceId} isPersonal={isPersonal} />}
         {tab === 'subscribe' && <SubscriptionsTab spaceId={spaceId} isPersonal={isPersonal} />}
         {tab === 'import' && <ImportTab spaceId={spaceId} />}

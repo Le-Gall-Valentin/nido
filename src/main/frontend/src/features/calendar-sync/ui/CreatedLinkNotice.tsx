@@ -15,7 +15,9 @@ function AddressField({ title, value }: { title: string; value: string }) {
           className="w-full rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3 py-2 font-mono text-xs text-fg-0" />
       </label>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" aria-label={`${t('subscribe.copy')} — ${title}`} onClick={() => void copy(value)}>
+        {/* The name follows what the button shows: "Copied" is heard, not only seen. */}
+        <Button type="button" aria-label={`${copied ? t('subscribe.copied') : t('subscribe.copy')} — ${title}`}
+          onClick={() => void copy(value)}>
           {copied ? t('subscribe.copied') : t('subscribe.copy')}
         </Button>
       </div>

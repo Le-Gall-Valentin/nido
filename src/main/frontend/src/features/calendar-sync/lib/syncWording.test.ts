@@ -36,11 +36,22 @@ describe('syncWording', () => {
     expect(ignoredReasonText(t, 'DUPLICATE_UID')).toBe('import.ignored_reason.DUPLICATE_UID')
     expect(ignoredReasonText(t, 'TOO_HEAVY')).toBe('import.ignored_reason.TOO_HEAVY')
     expect(ignoredReasonText(t, 'BAD_RULE')).toBe('import.ignored_reason.BAD_RULE')
+    expect(ignoredReasonText(t, 'NIDO_SOURCE')).toBe('import.ignored_reason.NIDO_SOURCE')
     expect(ignoredReasonText(t, 'SOMETHING_NEW')).toBe('import.ignored_unknown')
     for (const locale of [fr, en]) {
       expect(Object.keys(locale.import.ignored_reason)).toEqual(
-        expect.arrayContaining(['DUPLICATE_UID', 'TOO_HEAVY', 'BAD_RULE']))
+        expect.arrayContaining(['DUPLICATE_UID', 'TOO_HEAVY', 'BAD_RULE', 'NIDO_SOURCE']))
     }
+  })
+
+  it('says an item of another part of Nido is never imported, in the words agreed', () => {
+    expect(fr.import.ignored_reason.NIDO_SOURCE).toBe("c'est un élément d'une autre partie de Nido (tâche, repas, finance ou épargne)")
+    expect(en.import.ignored_reason.NIDO_SOURCE).toBe('it is an item of another part of Nido (a task, a meal, finance or savings)')
+  })
+
+  it('does not blame the 5 MB limit for a file refused before it reached Nido', () => {
+    expect(fr.errors.upload_too_large).not.toContain('5 Mo')
+    expect(en.errors.upload_too_large).not.toContain('5 MB')
   })
 
   it('does not blame a size limit the followed calendar is not held to', () => {

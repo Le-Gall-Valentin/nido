@@ -43,7 +43,7 @@
     "never_read": "Not read by a calendar app yet",
     "revoke": "Revoke",
     "revoke_confirm": "Revoke \"{{label}}\"? The calendar app using it will receive nothing more.",
-    "revoke_for": "Revoke “{{label}}”",
+    "revoke_for": "Revoke \"{{label}}\"",
     "webcal_title": "Webcal address",
     "created_at": "created {{when}}",
     "revoke_yes": "Revoke"
@@ -89,7 +89,8 @@
       "TOO_LONG": "it lasts more than 366 days",
       "DUPLICATE_UID": "another event in the file has the same identifier",
       "TOO_HEAVY": "its repetition rule takes too much work",
-      "BAD_RULE": "its repetition rule cannot be read"
+      "BAD_RULE": "its repetition rule cannot be read",
+      "NIDO_SOURCE": "it is an item of another part of Nido (a task, a meal, finance or savings)"
     },
     "text_field": {
       "title": "title",
@@ -124,6 +125,7 @@
     "color_for": "{{color}} colour for \"{{name}}\"",
     "followed": "\"{{name}}\" is now followed.",
     "refreshed": "\"{{name}}\" is up to date.",
+    "refresh_failed": "\"{{name}}\" could not be read: {{reason}}.",
     "saved": "\"{{name}}\" is saved.",
     "removed": "\"{{name}}\" is no longer followed."
   },
@@ -142,6 +144,7 @@
     "forbidden": "You may not do that in this space.",
     "not_ics": "This file is not an .ics calendar.",
     "file_too_large": "The file is larger than 5 MB.",
+    "upload_too_large": "The server refused a file this large, before Nido could read it.",
     "import_too_large": "This file holds too many events for one import.",
     "too_many_links": "You already have 10 addresses for this space. Revoke one first.",
     "public_url_missing": "Nido's public address is not set: an administrator must set it in the settings.",

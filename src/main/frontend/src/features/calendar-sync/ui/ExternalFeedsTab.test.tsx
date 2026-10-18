@@ -71,11 +71,28 @@ describe('ExternalFeedsTab', () => {
   })
 
   it('refreshes a calendar, naming it on the button, and announces it', async () => {
-    const refreshExternalFeed = vi.fn().mockResolvedValue(SCHOOL)
+    const refreshExternalFeed = vi.fn().mockResolvedValue({ ...SCHOOL, lastError: null })
     renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([SCHOOL, CLUB]), refreshExternalFeed })
     fireEvent.click(await screen.findByRole('button', { name: /feeds\.refresh_for.*Vacances scolaires/ }))
     await waitFor(() => expect(refreshExternalFeed).toHaveBeenCalledWith('s1', 'f1'))
     await waitFor(() => expect(screen.getByRole('status').textContent).toContain('feeds.refreshed'))
+  })
+
+  it('announces a refresh that could not read the calendar as such, with why', async () => {
+    // The server answers 200 with the failure recorded: the calendar is not up to date.
+    const refreshExternalFeed = vi.fn().mockResolvedValue({ ...SCHOOL, lastError: 'HTTP_404' })
+    renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([SCHOOL, CLUB]), refreshExternalFeed })
+    fireEvent.click(await screen.findByRole('button', { name: /feeds\.refresh_for.*Vacances scolaires/ }))
+    await waitFor(() => expect(screen.getByRole('status').textContent)
+      .toBe('feeds.refresh_failed{"name":"Vacances scolaires","reason":"feed_error.HTTP{\\"status\\":\\"404\\"}"}'))
+  })
+
+  it('follows a calendar in the graphite of external sources when no colour is picked', async () => {
+    const followExternalFeed = vi.fn().mockResolvedValue(SCHOOL)
+    await openForm({ followExternalFeed })
+    expect(screen.getByRole('button', { name: 'colors.event-graphite' }).getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: 'feeds.save' }))
+    await waitFor(() => expect(followExternalFeed).toHaveBeenCalledWith('s1', { url: 'https://x/a.ics', name: null, color: 'event-graphite' }))
   })
 
   it('says a refresh failed on the row it was asked on only', async () => {

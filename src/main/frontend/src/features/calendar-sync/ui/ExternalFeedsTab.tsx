@@ -3,15 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { Button, CTA_BUTTON_STYLE, Input, Spinner } from '@/shared/ui'
 import { formatRelativeTime } from '@/shared/lib'
 import {
-  DEFAULT_EVENT_COLOR, EVENT_DOT_CLASS, isEventColor, useExternalFeeds, useFollowExternalFeed, useRefreshExternalFeed,
+  EVENT_DOT_CLASS, FEED_FALLBACK_COLOR, feedColor, useExternalFeeds, useFollowExternalFeed, useRefreshExternalFeed,
   useRemoveExternalFeed, useUpdateExternalFeed, type EventColor, type ExternalFeed,
 } from '@/entities/calendar'
 import { FeedColorPicker } from './FeedColorPicker'
 import { FeedEditor } from './FeedEditor'
 import { feedErrorText, syncErrorMessage } from '../lib/syncWording'
-
-/** What a feed wears when its colour is not one of ours — the graphite the calendar gives every external source. */
-const FALLBACK_COLOR: EventColor = 'event-graphite'
 
 type FocusTarget = 'new' | 'url' | 'rename' | 'confirm' | { edit: string } | { remove: string }
 
@@ -29,7 +26,8 @@ export function ExternalFeedsTab({ spaceId, canWrite }: { spaceId: string; canWr
   const [adding, setAdding] = useState(false)
   const [url, setUrl] = useState('')
   const [name, setName] = useState('')
-  const [color, setColor] = useState<EventColor>(DEFAULT_EVENT_COLOR)
+  // The graphite of external sources until another is picked: a calendar followed in violet would pass for the space's own.
+  const [color, setColor] = useState<EventColor>(FEED_FALLBACK_COLOR)
   const [editing, setEditing] = useState<string | null>(null)
   const [removing, setRemoving] = useState<string | null>(null)
   const [message, setMessage] = useState('')
@@ -128,7 +126,7 @@ export function ExternalFeedsTab({ spaceId, canWrite }: { spaceId: string; canWr
               ) : (
                 <li key={feed.id} className="flex flex-col gap-1 rounded-lg bg-bg-2 px-3 py-2">
                   <div className="flex items-start gap-2">
-                    <span aria-hidden className={`mt-1.5 size-2 shrink-0 rounded-full ${EVENT_DOT_CLASS[isEventColor(feed.color) ? feed.color : FALLBACK_COLOR]}`} />
+                    <span aria-hidden className={`mt-1.5 size-2 shrink-0 rounded-full ${EVENT_DOT_CLASS[feedColor(feed.color)]}`} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-fg-1">{feed.name}</p>
                       <p className="text-[11px] text-fg-3">{feed.host} · {status(feed)}</p>
@@ -141,7 +139,12 @@ export function ExternalFeedsTab({ spaceId, canWrite }: { spaceId: string; canWr
                         onClick={() => {
                           if (refresh.isPending) return
                           resetAll()
-                          refresh.mutate(feed.id, { onSuccess: () => setMessage(t('feeds.refreshed', { name: feed.name })) })
+                          // A download that failed is recorded and answered 200: the row's error says it, and so does this.
+                          refresh.mutate(feed.id, {
+                            onSuccess: (updated) => setMessage(updated.lastError
+                              ? t('feeds.refresh_failed', { name: feed.name, reason: feedErrorText(t, updated.lastError) })
+                              : t('feeds.refreshed', { name: feed.name })),
+                          })
                         }}>
                         {t('feeds.refresh')}
                       </Button>

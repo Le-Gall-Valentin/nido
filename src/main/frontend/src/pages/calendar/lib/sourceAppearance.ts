@@ -1,5 +1,5 @@
 import {
-  DEFAULT_EVENT_COLOR, EVENT_DOT_CLASS, EVENT_TINT_CLASS, isEventColor,
+  DEFAULT_EVENT_COLOR, EVENT_DOT_CLASS, EVENT_TINT_CLASS, FEED_FALLBACK_COLOR, isEventColor,
   type CalendarOccurrence, type CalendarSourceType, type EventColor,
 } from '@/entities/calendar'
 
@@ -14,7 +14,7 @@ export const SOURCE_TOKEN = {
   FINANCE: 'status-orange',
   MEAL: 'status-green',
   SAVINGS: 'status-red',
-  EXTERNAL: 'event-graphite',
+  EXTERNAL: FEED_FALLBACK_COLOR,
 } as const satisfies Record<CalendarSourceType, string>
 
 type Token = (typeof SOURCE_TOKEN)[CalendarSourceType] | EventColor

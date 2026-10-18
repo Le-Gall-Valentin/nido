@@ -149,7 +149,7 @@ describe('ImportTab', () => {
     expect(screen.queryByRole('button', { name: 'import.again' })).toBeNull()
   })
 
-  it.each(['file_too_large', 'import_too_large', 'network'] as const)('says %s', async (reason) => {
+  it.each(['file_too_large', 'upload_too_large', 'import_too_large', 'network'] as const)('says %s', async (reason) => {
     renderTab({ analyseImport: vi.fn().mockRejectedValue(new CalendarSyncError(reason)) })
     fireEvent.change(screen.getByLabelText('import.choose'), { target: { files: [ics()] } })
     expect((await screen.findByRole('alert')).textContent).toBe(`errors.${reason}`)

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { EVENT_DOT_CLASS, isEventColor, type CalendarSourceType, type ExternalFeed } from '@/entities/calendar'
+import { EVENT_DOT_CLASS, feedColor, type CalendarSourceType, type ExternalFeed } from '@/entities/calendar'
 import { SOURCE_ORDER, dotClassForSource } from '../lib/sourceAppearance'
 
 interface SourceFiltersProps {
@@ -12,8 +12,8 @@ interface SourceFiltersProps {
 }
 
 /**
- * Five toggles, one per source, then one per followed calendar. Real buttons with aria-pressed rather than styled divs, so the
- * on/off state is announced rather than only coloured — the colour is the whole affordance here.
+ * Five toggles, one per source, then one per followed calendar. Real buttons with aria-pressed rather than styled divs,
+ * so the on/off state is announced rather than only coloured — the colour is the whole affordance here.
  */
 export function SourceFilters({ isEnabled, onToggle, feeds, isFeedEnabled, onToggleFeed }: SourceFiltersProps) {
   const { t } = useTranslation('calendar')
@@ -46,7 +46,7 @@ export function SourceFilters({ isEnabled, onToggle, feeds, isFeedEnabled, onTog
             className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold
               ${on ? 'border-border-2 bg-bg-1 text-fg-1' : 'border-border bg-transparent text-fg-4'}`}
           >
-            <span aria-hidden className={`size-1.5 rounded-full ${on ? EVENT_DOT_CLASS[isEventColor(feed.color) ? feed.color : 'event-graphite'] : 'bg-fg-4'}`} />
+            <span aria-hidden className={`size-1.5 rounded-full ${on ? EVENT_DOT_CLASS[feedColor(feed.color)] : 'bg-fg-4'}`} />
             {feed.name}
           </button>
         )

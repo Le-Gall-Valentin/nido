@@ -74,6 +74,8 @@ describe('SubscriptionsTab', () => {
     fireEvent.click(screen.getByRole('button', { name: /subscribe\.copy.*subscribe\.created_title/ }))
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('https://nido.test/ical/abc.ics'))
     expect(await screen.findByText('subscribe.copied')).toBeTruthy()
+    // The name says it too: a screen reader on the button hears the address was copied.
+    expect(screen.getByRole('button', { name: /^subscribe\.copied.*subscribe\.created_title/ })).toBeTruthy()
   })
 
   it('says so when the address cannot be copied', async () => {
@@ -156,6 +158,8 @@ describe('SubscriptionsTab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'subscribe.revoke_yes' }))
     await waitFor(() => expect(revokeSubscriptionLink).toHaveBeenCalledWith('s1', 'l1'))
     await waitFor(() => expect(screen.queryByRole('button', { name: 'subscribe.revoke_yes' })).toBeNull())
+    // The confirmation gone with its address, focus lands on the way to make another, never on <body>.
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'subscribe.new' })))
   })
 
   it('moves focus into the confirmation, and back to the button when it is cancelled', async () => {

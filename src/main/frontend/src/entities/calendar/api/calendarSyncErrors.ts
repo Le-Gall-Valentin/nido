@@ -2,7 +2,7 @@ import { isAxiosError } from 'axios'
 
 /** Every reason a sync call can fail for, so that a dialog's wording of them is checked to be complete. */
 export const SYNC_REASONS = [
-  'invalid_sources', 'not_ics', 'import_too_large', 'file_too_large', 'too_many_links', 'public_url_missing',
+  'invalid_sources', 'not_ics', 'import_too_large', 'file_too_large', 'upload_too_large', 'too_many_links', 'public_url_missing',
   'too_many_feeds', 'refresh_too_soon', 'invalid_feed_address', 'feed_unavailable',
   'rate_limited', 'forbidden', 'server', 'network',
 ] as const
@@ -29,7 +29,8 @@ export function toSyncError(error: unknown): CalendarSyncError {
       const known = (SYNC_REASONS as readonly string[]).includes(data.error_code)
       return new CalendarSyncError(known ? data.error_code as SyncReason : 'server', data.feed_error)
     }
-    if (status === 413) return new CalendarSyncError('file_too_large')
+    // A 413 without nido's code was answered before nido: a reverse proxy's own limit, lower than nido's 5 MB.
+    if (status === 413) return new CalendarSyncError('upload_too_large')
     if (status === 429) return new CalendarSyncError('rate_limited')
     if (status === 403) return new CalendarSyncError('forbidden')
     return new CalendarSyncError('server')

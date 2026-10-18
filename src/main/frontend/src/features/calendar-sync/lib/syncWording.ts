@@ -5,6 +5,7 @@ type Translate = (key: string, options?: Record<string, unknown>) => string
 /** The details the server gives for an event it does not import, each worded under `import.ignored_reason`. */
 const IGNORED_DETAILS = [
   'VTODO', 'VJOURNAL', 'VFREEBUSY', 'NO_START', 'CANCELLED', 'TOO_LONG', 'DUPLICATE_UID', 'TOO_HEAVY', 'BAD_RULE',
+  'NIDO_SOURCE',
 ]
 
 /** Why a followed calendar could not be read: "délai dépassé", "le serveur a répondu 404". */
