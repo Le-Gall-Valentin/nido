@@ -67,7 +67,7 @@
     "done": "Import done.",
     "again": "Import another file",
     "notes_title": "Worth a look",
-    "notes_capped": "{{shown}} notes shown of {{total}}",
+    "notes_capped": "Only the first {{count}} notes are shown.",
     "note": {
       "UNFOLDED": "\"{{title}}\" repeats in a way Nido cannot say: {{detail}} separate events.",
       "UNFOLDED_PARTIAL": "\"{{title}}\" repeats in a way Nido cannot say: {{detail}} separate events, from a year ago to two years ahead.",

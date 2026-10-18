@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { ImportNote, ImportReport } from '@/entities/calendar'
+import { MAX_IMPORT_NOTES, type ImportNote, type ImportReport } from '@/entities/calendar'
 import { ignoredReasonText } from '../lib/syncWording'
 
 /** The fields whose text can be shortened, each worded under `import.text_field`. */
@@ -23,7 +23,6 @@ export function ImportReportView({ report }: { report: ImportReport }) {
         : raw
     return t(`import.note.${noteKey(note, raw)}`, { title, detail })
   }
-  const ignoredNotes = report.notes.filter((note) => note.kind === 'IGNORED').length
   return (
     <div className="flex flex-col gap-2">
       <ul className="flex flex-col gap-0.5 text-sm text-fg-1">
@@ -39,9 +38,9 @@ export function ImportReportView({ report }: { report: ImportReport }) {
           <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto text-xs text-fg-2">
             {report.notes.map((note, index) => <li key={index}>{noteText(note)}</li>)}
           </ul>
-          {report.ignored > ignoredNotes && (
+          {report.notes.length >= MAX_IMPORT_NOTES && (
             <p className="mt-1 text-xs text-fg-3">
-              {t('import.notes_capped', { shown: report.notes.length, total: report.ignored })}
+              {t('import.notes_capped', { count: MAX_IMPORT_NOTES })}
             </p>
           )}
         </div>

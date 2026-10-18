@@ -67,7 +67,7 @@
     "done": "Import terminé.",
     "again": "Importer un autre fichier",
     "notes_title": "À regarder",
-    "notes_capped": "{{shown}} remarques affichées sur {{total}}",
+    "notes_capped": "Seules les {{count}} premières remarques sont affichées.",
     "note": {
       "UNFOLDED": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : {{detail}} événements séparés.",
       "UNFOLDED_PARTIAL": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : {{detail}} événements séparés, d'il y a un an à dans deux ans.",

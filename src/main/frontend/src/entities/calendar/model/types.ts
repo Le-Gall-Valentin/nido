@@ -156,6 +156,9 @@ export interface ImportNote {
   detail: string | null
 }
 
+/** The most notes the server puts in one report: past it, the others are left out. */
+export const MAX_IMPORT_NOTES = 200
+
 /** What an import did — or, `written` false, what it would do. */
 export interface ImportReport {
   eventsCreated: number

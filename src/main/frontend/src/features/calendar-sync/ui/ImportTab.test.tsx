@@ -109,16 +109,34 @@ describe('ImportTab', () => {
     await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('import.choose')))
   })
 
-  it('shows the unfolded line, the cap on the notes, and words zone notes with no zone', async () => {
-    renderTab({ analyseImport: vi.fn().mockResolvedValue({
-      ...ANALYSIS, ignored: 450,
-      notes: [{ kind: 'IGNORED', title: 'a', detail: 'VTODO' }, { kind: 'UNKNOWN_ZONE', title: 'b', detail: null },
-        { kind: 'UNFOLDED_PARTIAL', title: 'c', detail: '0' }],
-    }) })
+  const analysedWith = async (patch: Partial<ImportReport>) => {
+    renderTab({ analyseImport: vi.fn().mockResolvedValue({ ...ANALYSIS, ...patch }) })
     fireEvent.change(screen.getByLabelText('import.choose'), { target: { files: [ics()] } })
-    expect(await screen.findByText('import.summary.unfolded{"count":2}')).toBeTruthy()
-    expect(screen.getByText('import.notes_capped{"shown":3,"total":450}')).toBeTruthy()
+    await screen.findByText('import.summary.events{"count":3}')
+  }
+
+  it('shows the unfolded line when occurrences were unfolded', async () => {
+    await analysedWith({})
+    expect(screen.getByText('import.summary.unfolded{"count":2}')).toBeTruthy()
+  })
+
+  it('says the notes are cut when the server sent the most it sends', async () => {
+    await analysedWith({ notes: Array.from({ length: 200 }, (_, i) => ({ kind: 'IGNORED' as const, title: `n${i}`, detail: 'VTODO' })) })
+    expect(screen.getByText('import.notes_capped{"count":200}')).toBeTruthy()
+  })
+
+  it('does not say the notes are cut when many events are ignored but the notes are short', async () => {
+    await analysedWith({ ignored: 450 })
+    expect(screen.queryByText(/import\.notes_capped/)).toBeNull()
+  })
+
+  it('words a zone note that names no zone', async () => {
+    await analysedWith({ notes: [{ kind: 'UNKNOWN_ZONE', title: 'b', detail: null }] })
     expect(screen.getByText('import.note.UNKNOWN_ZONE_unnamed{"title":"b","detail":""}')).toBeTruthy()
+  })
+
+  it('words a partial unfolding with nothing in the window', async () => {
+    await analysedWith({ notes: [{ kind: 'UNFOLDED_PARTIAL', title: 'c', detail: '0' }] })
     expect(screen.getByText('import.note.UNFOLDED_PARTIAL_zero{"title":"c","detail":"0"}')).toBeTruthy()
   })
 
