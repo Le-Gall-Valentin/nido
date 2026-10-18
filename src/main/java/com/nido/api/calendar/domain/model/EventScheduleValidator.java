@@ -71,8 +71,7 @@ public final class EventScheduleValidator {
         // An occurrence never runs into the next one, as in any diary. It is also what bounds a read:
         // every occurrence overlapping a window then starts at most one interval before it.
         long shortest = shortestIntervalDays(intervalType, intervalCount,
-            intervalType == RecurrenceInterval.WEEKLY && (weekdays == null || weekdays.isEmpty())
-                ? Weekdays.of(anchorDate.getDayOfWeek()) : weekdays,
+            intervalType == RecurrenceInterval.WEEKLY ? Weekdays.forWeekly(weekdays, anchorDate) : weekdays,
             dayRule == null ? DayRule.SAME_DAY : dayRule);
         if (allDay
             ? durationDays + 1L > shortest

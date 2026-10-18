@@ -88,6 +88,18 @@ class RecurringEventSeriesTest {
             .doesNotThrowAnyException();
     }
 
+    @Test
+    void aWeekdayOfTheMonthStopsAtTheFourth() {
+        // The 29th to the 31st is a fifth weekday, which not every month has: it is said "last" instead.
+        assertThatCode(() -> rule(RecurrenceInterval.MONTHLY, null, DayRule.WEEKDAY_OF_MONTH, LocalDate.of(2026, 1, 28)))
+            .doesNotThrowAnyException();
+        for (int day = 29; day <= 31; day++) {
+            LocalDate anchor = LocalDate.of(2026, 1, day);
+            assertThatThrownBy(() -> rule(RecurrenceInterval.MONTHLY, null, DayRule.WEEKDAY_OF_MONTH, anchor))
+                .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
     private RecurringEventSeries rule(RecurrenceInterval interval, Set<DayOfWeek> weekdays, DayRule dayRule, LocalDate anchor) {
         return new RecurringEventSeries(
             UUID.randomUUID(), UUID.randomUUID(), "Piano", null, null,

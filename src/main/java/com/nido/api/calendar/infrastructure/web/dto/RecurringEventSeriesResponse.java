@@ -5,8 +5,8 @@ import com.nido.api.calendar.domain.model.EventRecurrenceProjector;
 import com.nido.api.calendar.domain.model.RecurrenceInterval;
 import com.nido.api.calendar.domain.model.RecurringEventSeries;
 
-import java.time.Instant;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;

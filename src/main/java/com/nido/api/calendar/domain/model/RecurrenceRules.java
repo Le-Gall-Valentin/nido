@@ -28,7 +28,10 @@ public final class RecurrenceRules {
 
     private static final DateTimeFormatter UTC_DATE_TIME = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'");
 
-    /** How many steps of the series' rhythm (months or years) a capped day looks back through for a period that has it. */
+    /**
+     * How many steps of the series' rhythm a capped day looks back through for a period that has it: 48 periods of its
+     * interval — 48 months for a monthly series, 48 × 3 for one every third month, 48 years for a yearly one.
+     */
     private static final int BACK_ANCHOR_TRIES = 48;
 
     /** nido cannot sensibly say a rule repeating this rarely, and date arithmetic on it would overflow. */

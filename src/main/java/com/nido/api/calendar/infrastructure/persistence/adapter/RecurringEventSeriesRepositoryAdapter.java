@@ -140,8 +140,7 @@ public class RecurringEventSeriesRepositoryAdapter implements RecurringEventSeri
         entity.setIntervalType(intervalType);
         entity.setIntervalCount(intervalCount);
         entity.setWeekdays(Weekdays.toCodes(intervalType == RecurrenceInterval.WEEKLY
-            ? (weekdays == null || weekdays.isEmpty() ? Weekdays.of(anchorDate.getDayOfWeek()) : weekdays)
-            : null));
+            ? Weekdays.forWeekly(weekdays, anchorDate) : null));
         entity.setDayRule(dayRule == null ? DayRule.SAME_DAY : dayRule);
         entity.setAnchorDate(anchorDate);
         entity.setEndDate(endDate);

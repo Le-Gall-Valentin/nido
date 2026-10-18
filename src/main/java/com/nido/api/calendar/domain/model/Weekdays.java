@@ -1,6 +1,7 @@
 package com.nido.api.calendar.domain.model;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -25,6 +26,11 @@ public final class Weekdays {
 
     public static Set<DayOfWeek> copyOf(Collection<DayOfWeek> days) {
         return Collections.unmodifiableSet(EnumSet.copyOf(days));
+    }
+
+    /** The days a weekly series repeats on: those given, or its anchor's own day when none are. */
+    public static Set<DayOfWeek> forWeekly(Collection<DayOfWeek> days, LocalDate anchor) {
+        return days == null || days.isEmpty() ? of(anchor.getDayOfWeek()) : copyOf(days);
     }
 
     public static String code(DayOfWeek day) {

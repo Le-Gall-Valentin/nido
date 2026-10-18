@@ -68,6 +68,23 @@ class RecurrenceRulesTest {
     }
 
     @Test
+    void theLastDayOfATimedSeriesInSummerTimeIsWrittenWithTheSummerOffset() {
+        // 1 July 2026, 23:59:59 in Toronto (UTC-4 in summer) is 2 July, 03:59:59 UTC.
+        assertThat(RecurrenceRules.toRrule(series(RecurrenceInterval.DAILY, 1, null, null, LocalDate.of(2026, 1, 5),
+            LocalDate.of(2026, 7, 1), false), TORONTO)).isEqualTo("FREQ=DAILY;UNTIL=20260702T035959Z");
+    }
+
+    @Test
+    void anIntervalIsWrittenForEveryFrequency() {
+        assertThat(RecurrenceRules.toRrule(series(RecurrenceInterval.DAILY, 3, null, null, LocalDate.of(2026, 1, 5), null, true), TORONTO))
+            .isEqualTo("FREQ=DAILY;INTERVAL=3");
+        assertThat(RecurrenceRules.toRrule(series(RecurrenceInterval.MONTHLY, 2, null, DayRule.WEEKDAY_OF_MONTH,
+            LocalDate.of(2026, 10, 13), null, true), TORONTO)).isEqualTo("FREQ=MONTHLY;INTERVAL=2;BYDAY=2TU");
+        assertThat(RecurrenceRules.toRrule(series(RecurrenceInterval.YEARLY, 4, null, null, LocalDate.of(2026, 10, 14), null, true), TORONTO))
+            .isEqualTo("FREQ=YEARLY;INTERVAL=4;BYMONTH=10;BYMONTHDAY=14");
+    }
+
+    @Test
     void severalWeekdaysMakeAWeeklyCandidate() {
         assertThat(RecurrenceRules.candidateFor(recurrence("WEEKLY", 1, List.of(day(0, DayOfWeek.MONDAY), day(0, DayOfWeek.THURSDAY)),
             List.of(), List.of(), List.of()), LocalDate.of(2026, 1, 5)))
@@ -102,6 +119,22 @@ class RecurrenceRulesTest {
     }
 
     @Test
+    void aCappedDayLooksBackInTheRhythmOfItsInterval() {
+        // Every other month from 28 February 2027: December 2026 is two months before and has a 30th; January is off-rhythm.
+        assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 2, List.of(), List.of(28, 29, 30), List.of(), List.of(-1)),
+            LocalDate.of(2027, 2, 28)))
+            .contains(new RecurrenceRules.Candidate(RecurrenceInterval.MONTHLY, 2, null, DayRule.SAME_DAY,
+                LocalDate.of(2026, 12, 30), LocalDate.of(2027, 2, 28)));
+        // Every other year from 28 February 2027: 2025 and 2023 have no leap day, 2021 neither, 2019... none in that rhythm.
+        assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", 2, List.of(), List.of(28, 29), List.of(2), List.of(-1)),
+            LocalDate.of(2027, 2, 28))).isEmpty();
+        assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", 3, List.of(), List.of(28, 29), List.of(2), List.of(-1)),
+            LocalDate.of(2027, 2, 28)))
+            .contains(new RecurrenceRules.Candidate(RecurrenceInterval.YEARLY, 3, null, DayRule.SAME_DAY,
+                LocalDate.of(2024, 2, 29), LocalDate.of(2027, 2, 28)));
+    }
+
+    @Test
     void theLastDayOfTheMonthIsReadAsSuch() {
         assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 1, List.of(), List.of(-1), List.of(), List.of()),
             LocalDate.of(2026, 4, 30)).map(RecurrenceRules.Candidate::dayRule)).contains(DayRule.LAST_DAY_OF_MONTH);
@@ -131,6 +164,27 @@ class RecurrenceRulesTest {
             LocalDate.of(2026, 1, 5))).isEmpty();
         assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 1, List.of(), List.of(1, 15), List.of(), List.of()),
             LocalDate.of(2026, 1, 1))).isEmpty();
+    }
+
+    @Test
+    void partsAFrequencyCannotTakeHaveNoCandidate() {
+        LocalDate monday = LocalDate.of(2026, 1, 5);
+        assertThat(RecurrenceRules.candidateFor(recurrence("DAILY", 1, List.of(), List.of(5), List.of(), List.of()), monday)).isEmpty();
+        assertThat(RecurrenceRules.candidateFor(recurrence("DAILY", 2, List.of(day(0, DayOfWeek.MONDAY)), List.of(), List.of(), List.of()),
+            monday)).isEmpty();
+        assertThat(RecurrenceRules.candidateFor(recurrence("WEEKLY", 1, List.of(day(1, DayOfWeek.MONDAY)), List.of(), List.of(), List.of()),
+            monday)).isEmpty();
+        assertThat(RecurrenceRules.candidateFor(recurrence("WEEKLY", 1, List.of(day(0, DayOfWeek.TUESDAY)), List.of(), List.of(), List.of()),
+            monday)).isEmpty();
+        assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 1, List.of(), List.of(), List.of(1), List.of()), monday)).isEmpty();
+        assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", 1, List.of(), List.of(), List.of(1, 7), List.of()), monday)).isEmpty();
+        assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", 1, List.of(), List.of(), List.of(7), List.of()), monday)).isEmpty();
+    }
+
+    @Test
+    void aRuleWithoutAFrequencyHasNoCandidate() {
+        assertThat(RecurrenceRules.candidateFor(new IcalRecurrence(null, 1, List.of(), List.of(), List.of(), List.of(), false),
+            LocalDate.of(2026, 1, 5))).isEmpty();
     }
 
     @Test

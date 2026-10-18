@@ -131,6 +131,16 @@ class RecurringEventSeriesControllerIT {
     }
 
     @Test
+    void a_missing_weekday_in_the_list_is_a_400() throws Exception {
+        mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title": "x", "allDay": true, "intervalType": "WEEKLY", "intervalCount": 1,
+                     "weekdays": ["MONDAY", null], "anchorDate": "2026-01-05"}
+                    """))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void an_existing_weekly_series_keeps_its_day_after_the_migration() throws Exception {
         // The backfill of 076, on the days it meets: ISODOW runs from 1 (Monday) to 7 (Sunday), as the codes do.
         String backfill = "SELECT (ARRAY['MO','TU','WE','TH','FR','SA','SU'])[EXTRACT(ISODOW FROM ?::date)::int]";

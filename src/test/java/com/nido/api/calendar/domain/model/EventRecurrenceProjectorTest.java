@@ -6,6 +6,7 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -284,6 +285,18 @@ class EventRecurrenceProjectorTest {
             null, LocalDate.of(1900, 1, 1));
         assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 10, 12), LocalDate.of(2026, 10, 18)))
             .containsExactly(LocalDate.of(2026, 10, 12), LocalDate.of(2026, 10, 16));
+    }
+
+    @Test
+    void theDaysOfAWeekComeInTheirOrderWhateverTheOrderGiven() {
+        // Sunday before Monday as given: a week runs from Monday, so the Monday of a period comes first.
+        RecurringEventSeries series = ruled(RecurrenceInterval.WEEKLY, 1,
+            new LinkedHashSet<>(List.of(DayOfWeek.SUNDAY, DayOfWeek.MONDAY)), null, LocalDate.of(2026, 10, 12));
+        assertThat(EventRecurrenceProjector.datesOfPeriod(series, 0))
+            .containsExactly(LocalDate.of(2026, 10, 12), LocalDate.of(2026, 10, 18));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 10, 12), LocalDate.of(2026, 10, 26)))
+            .isSorted().containsExactly(LocalDate.of(2026, 10, 12), LocalDate.of(2026, 10, 18), LocalDate.of(2026, 10, 19),
+                LocalDate.of(2026, 10, 25), LocalDate.of(2026, 10, 26));
     }
 
     private RecurringEventSeries ruled(RecurrenceInterval interval, int count, Set<DayOfWeek> weekdays, DayRule dayRule,

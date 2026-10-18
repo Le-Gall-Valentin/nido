@@ -33,8 +33,8 @@ public record RecurringEventSeriesRequest(
     @NotNull @Min(1) Integer intervalCount,
     @NotNull LocalDate anchorDate,
     LocalDate endDate,
-    // At most the seven days of a week; the series' own day is one of them (checked by the domain).
-    @Size(max = 7) List<DayOfWeek> weekdays,
+    // At most the seven days of a week, none missing; the series' own day is one of them (checked by the domain).
+    @Size(max = 7) List<@NotNull DayOfWeek> weekdays,
     DayRule dayRule,
     // No household holds a hundred members; each id is looked up, so the list is bounded before that.
     @Size(max = 100) List<UUID> participantIds

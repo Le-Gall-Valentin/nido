@@ -84,7 +84,7 @@ public record RecurringEventSeries(
             throw new IllegalArgumentException("endDate is before anchorDate");
         }
         if (intervalType == RecurrenceInterval.WEEKLY) {
-            weekdays = weekdays == null || weekdays.isEmpty() ? Weekdays.of(anchorDate.getDayOfWeek()) : Weekdays.copyOf(weekdays);
+            weekdays = Weekdays.forWeekly(weekdays, anchorDate);
             if (!weekdays.contains(anchorDate.getDayOfWeek())) {
                 throw new IllegalArgumentException("the anchor's weekday is not among the weekdays");
             }
