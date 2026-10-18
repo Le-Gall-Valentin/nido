@@ -35,7 +35,10 @@ export function useSubscriptionLinks(spaceId: string | undefined) {
 export function useCreateSubscriptionLink(spaceId: string) {
   const api = useCalendarSyncApi()
   const invalidate = useLinksInvalidation(spaceId)
-  return useMutation({ mutationFn: (input: SubscriptionLinkInput) => api.createSubscriptionLink(spaceId, input), onSuccess: invalidate })
+  return useMutation({ mutationFn: (input: SubscriptionLinkInput) => api.createSubscriptionLink(spaceId, input), onSuccess: invalidate,
+    // The result holds the secret address: drop the mutation as soon as no observer holds it.
+    gcTime: 0,
+  })
 }
 
 export function useRevokeSubscriptionLink(spaceId: string) {

@@ -43,6 +43,9 @@
     "never_read": "Not read by a calendar app yet",
     "revoke": "Revoke",
     "revoke_confirm": "Revoke \"{{label}}\"? The calendar app using it will receive nothing more.",
+    "revoke_for": "Revoke “{{label}}”",
+    "webcal_title": "Webcal address",
+    "created_at": "created {{when}}",
     "revoke_yes": "Revoke"
   },
   "import": {

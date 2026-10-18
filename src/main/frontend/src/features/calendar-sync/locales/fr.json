@@ -43,6 +43,9 @@
     "never_read": "Pas encore lue par un agenda",
     "revoke": "Révoquer",
     "revoke_confirm": "Révoquer « {{label}} » ? L'agenda qui l'utilise ne recevra plus rien.",
+    "revoke_for": "Révoquer « {{label}} »",
+    "webcal_title": "Adresse webcal",
+    "created_at": "créée {{when}}",
     "revoke_yes": "Révoquer"
   },
   "import": {

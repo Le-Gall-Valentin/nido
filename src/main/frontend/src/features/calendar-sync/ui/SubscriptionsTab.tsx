@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, CTA_BUTTON_STYLE, Input, Spinner } from '@/shared/ui'
 import { formatRelativeTime } from '@/shared/lib'
@@ -26,9 +26,31 @@ export function SubscriptionsTab({ spaceId, isPersonal }: { spaceId: string; isP
   const [label, setLabel] = useState('')
   const [sources, setSources] = useState<ExportableSource[]>(['EVENT'])
   const [onlyMine, setOnlyMine] = useState(false)
+  // Where focus goes after the next render: a button unmounts when its panel changes, and focus would fall to <body>.
+  const pendingFocus = useRef<'confirm' | 'new' | { revoke: string } | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const target = pendingFocus.current
+    if (!target) return
+    pendingFocus.current = null
+    const root = rootRef.current
+    if (!root) return
+    const element = target === 'confirm' ? root.querySelector<HTMLElement>('[data-confirm]')
+      : target === 'new' ? root.querySelector<HTMLElement>('[data-new-link]')
+      : [...root.querySelectorAll<HTMLElement>('[data-revoke-link]')].find((el) => el.dataset.revokeLink === target.revoke)
+    element?.focus()
+  })
 
   if (created) {
-    return <CreatedLinkNotice created={created} onDone={() => setCreated(null)} />
+    return (
+      <div ref={rootRef}>
+        <CreatedLinkNotice created={created} onDone={() => {
+          pendingFocus.current = 'new'
+          setCreated(null)
+        }} />
+      </div>
+    )
   }
 
   if (creating) {
@@ -42,6 +64,7 @@ export function SubscriptionsTab({ spaceId, isPersonal }: { spaceId: string; isP
     })
     const cancel = () => {
       create.reset()
+      pendingFocus.current = 'new'
       setCreating(false)
     }
     return (
@@ -63,7 +86,7 @@ export function SubscriptionsTab({ spaceId, isPersonal }: { spaceId: string; isP
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div ref={rootRef} className="flex flex-col gap-3">
       <p className="text-sm text-fg-2">{t('subscribe.intro')}</p>
       {isPending ? (
         <div className="flex justify-center py-4"><Spinner /></div>
@@ -79,21 +102,40 @@ export function SubscriptionsTab({ spaceId, isPersonal }: { spaceId: string; isP
                   <p className="text-[11px] text-fg-3">
                     {link.sources.map((source) => t(`sources.${source}`)).join(' · ')}
                     {' — '}
+                    {t('subscribe.created_at', { when: formatRelativeTime(link.createdAt, i18n.language) })}
+                    {' — '}
                     {link.lastReadAt
                       ? t('subscribe.last_read', { when: formatRelativeTime(link.lastReadAt, i18n.language) })
                       : t('subscribe.never_read')}
                   </p>
                 </div>
                 {revoking !== link.id && (
-                  <Button type="button" onClick={() => setRevoking(link.id)}>{t('subscribe.revoke')}</Button>
+                  <Button type="button" aria-label={t('subscribe.revoke_for', { label: link.label })}
+                    data-revoke-link={link.id}
+                    onClick={() => {
+                      revoke.reset()
+                      pendingFocus.current = 'confirm'
+                      setRevoking(link.id)
+                    }}>
+                    {t('subscribe.revoke')}
+                  </Button>
                 )}
               </div>
               {revoking === link.id && (
-                <div className="flex flex-wrap items-center justify-end gap-2">
+                <div data-confirm tabIndex={-1} className="flex flex-wrap items-center justify-end gap-2 outline-none">
                   <p className="flex-1 text-xs text-fg-2">{t('subscribe.revoke_confirm', { label: link.label })}</p>
-                  <Button type="button" onClick={() => setRevoking(null)}>{t('subscribe.cancel')}</Button>
+                  <Button type="button" onClick={() => {
+                    revoke.reset()
+                    pendingFocus.current = { revoke: link.id }
+                    setRevoking(null)
+                  }}>{t('subscribe.cancel')}</Button>
                   <Button type="button" style={CTA_BUTTON_STYLE} disabled={revoke.isPending}
-                    onClick={() => revoke.mutate(link.id, { onSuccess: () => setRevoking(null) })}>
+                    onClick={() => revoke.mutate(link.id, {
+                      onSuccess: () => {
+                        pendingFocus.current = 'new'
+                        setRevoking(null)
+                      },
+                    })}>
                     {t('subscribe.revoke_yes')}
                   </Button>
                 </div>
@@ -106,7 +148,7 @@ export function SubscriptionsTab({ spaceId, isPersonal }: { spaceId: string; isP
         </ul>
       )}
       <div className="flex justify-end">
-        <Button type="button" style={CTA_BUTTON_STYLE} onClick={() => setCreating(true)}>{t('subscribe.new')}</Button>
+        <Button type="button" style={CTA_BUTTON_STYLE} data-new-link onClick={() => setCreating(true)}>{t('subscribe.new')}</Button>
       </div>
     </div>
   )
