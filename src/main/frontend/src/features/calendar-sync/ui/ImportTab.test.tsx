@@ -88,4 +88,52 @@ describe('ImportTab', () => {
     expect(screen.queryByRole('button', { name: /import\.confirm/ })).toBeNull()
     expect(analyseImport).toHaveBeenLastCalledWith('s1', second)
   })
+
+  it('keeps one status region holding the totals after an analysis and the result after an import', async () => {
+    renderTab({ analyseImport: vi.fn().mockResolvedValue(ANALYSIS), importFile: vi.fn().mockResolvedValue({ ...ANALYSIS, written: true }) })
+    fireEvent.change(screen.getByLabelText('import.choose'), { target: { files: [ics()] } })
+    const region = await screen.findByRole('status')
+    expect(region.textContent).toContain('import.summary.events{"count":3}')
+    expect(region.querySelector('[role="status"]')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'import.confirm{"count":4}' }))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('import.done'))
+    expect(screen.getByRole('status')).toBe(region)
+  })
+
+  it('moves focus to the status region when work starts, and back to the picker on starting over', async () => {
+    renderTab({ analyseImport: vi.fn().mockResolvedValue(ANALYSIS) })
+    fireEvent.change(screen.getByLabelText('import.choose'), { target: { files: [ics()] } })
+    await screen.findByText('import.summary.events{"count":3}')
+    expect(document.activeElement).toBe(screen.getByRole('status'))
+    fireEvent.click(screen.getByRole('button', { name: 'import.again' }))
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('import.choose')))
+  })
+
+  it('shows the unfolded line, the cap on the notes, and words zone notes with no zone', async () => {
+    renderTab({ analyseImport: vi.fn().mockResolvedValue({
+      ...ANALYSIS, ignored: 450,
+      notes: [{ kind: 'IGNORED', title: 'a', detail: 'VTODO' }, { kind: 'UNKNOWN_ZONE', title: 'b', detail: null },
+        { kind: 'UNFOLDED_PARTIAL', title: 'c', detail: '0' }],
+    }) })
+    fireEvent.change(screen.getByLabelText('import.choose'), { target: { files: [ics()] } })
+    expect(await screen.findByText('import.summary.unfolded{"count":2}')).toBeTruthy()
+    expect(screen.getByText('import.notes_capped{"shown":3,"total":450}')).toBeTruthy()
+    expect(screen.getByText('import.note.UNKNOWN_ZONE_unnamed{"title":"b","detail":""}')).toBeTruthy()
+    expect(screen.getByText('import.note.UNFOLDED_PARTIAL_zero{"title":"c","detail":"0"}')).toBeTruthy()
+  })
+
+  it('disables the import button while the import runs', async () => {
+    renderTab({ analyseImport: vi.fn().mockResolvedValue(ANALYSIS), importFile: vi.fn().mockReturnValue(new Promise(() => {})) })
+    fireEvent.change(screen.getByLabelText('import.choose'), { target: { files: [ics()] } })
+    fireEvent.click(await screen.findByRole('button', { name: 'import.confirm{"count":4}' }))
+    await waitFor(() => expect((screen.getByRole('button', { name: 'import.confirm{"count":4}' }) as HTMLButtonElement).disabled).toBe(true))
+    expect(screen.getByText('import.importing')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'import.again' })).toBeNull()
+  })
+
+  it.each(['file_too_large', 'import_too_large', 'network'] as const)('says %s', async (reason) => {
+    renderTab({ analyseImport: vi.fn().mockRejectedValue(new CalendarSyncError(reason)) })
+    fireEvent.change(screen.getByLabelText('import.choose'), { target: { files: [ics()] } })
+    expect((await screen.findByRole('alert')).textContent).toBe(`errors.${reason}`)
+  })
 })

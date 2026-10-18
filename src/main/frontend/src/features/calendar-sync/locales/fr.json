@@ -67,13 +67,17 @@
     "done": "Import terminé.",
     "again": "Importer un autre fichier",
     "notes_title": "À regarder",
+    "notes_capped": "{{shown}} remarques affichées sur {{total}}",
     "note": {
       "UNFOLDED": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : {{detail}} événements séparés.",
       "UNFOLDED_PARTIAL": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : {{detail}} événements séparés, d'il y a un an à dans deux ans.",
       "TRUNCATED_TEXT": "« {{title}} » : {{detail}} raccourci.",
+      "UNFOLDED_PARTIAL_zero": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : aucune de ses occurrences ne tombe entre il y a un an et dans deux ans.",
       "CONVERTED_ZONE": "« {{title}} » : heures converties depuis le fuseau {{detail}}.",
       "UNKNOWN_ZONE": "« {{title}} » : fuseau {{detail}} inconnu, heures prises telles quelles.",
-      "IGNORED": "« {{title}} » n'est pas importé : {{detail}}."
+      "IGNORED": "« {{title}} » n'est pas importé : {{detail}}.",
+      "CONVERTED_ZONE_unnamed": "« {{title}} » : heures converties depuis un autre fuseau.",
+      "UNKNOWN_ZONE_unnamed": "« {{title}} » : fuseau inconnu, heures prises telles quelles."
     },
     "untitled": "(sans titre)",
     "ignored_reason": {

@@ -67,13 +67,17 @@
     "done": "Import done.",
     "again": "Import another file",
     "notes_title": "Worth a look",
+    "notes_capped": "{{shown}} notes shown of {{total}}",
     "note": {
       "UNFOLDED": "\"{{title}}\" repeats in a way Nido cannot say: {{detail}} separate events.",
       "UNFOLDED_PARTIAL": "\"{{title}}\" repeats in a way Nido cannot say: {{detail}} separate events, from a year ago to two years ahead.",
       "TRUNCATED_TEXT": "\"{{title}}\": {{detail}} shortened.",
+      "UNFOLDED_PARTIAL_zero": "\"{{title}}\" repeats in a way Nido cannot say: none of its occurrences falls between a year ago and two years ahead.",
       "CONVERTED_ZONE": "\"{{title}}\": times converted from the {{detail}} time zone.",
       "UNKNOWN_ZONE": "\"{{title}}\": unknown time zone {{detail}}, times taken as they are.",
-      "IGNORED": "\"{{title}}\" is not imported: {{detail}}."
+      "IGNORED": "\"{{title}}\" is not imported: {{detail}}.",
+      "CONVERTED_ZONE_unnamed": "\"{{title}}\": times converted from another time zone.",
+      "UNKNOWN_ZONE_unnamed": "\"{{title}}\": unknown time zone, times taken as they are."
     },
     "untitled": "(untitled)",
     "ignored_reason": {

@@ -5,6 +5,13 @@ import { ignoredReasonText } from '../lib/syncWording'
 /** The fields whose text can be shortened, each worded under `import.text_field`. */
 const TEXT_FIELDS = ['title', 'description', 'location']
 
+/** The wording of a note: a zone note with no zone, or a partial unfolding with nothing in the window, say so. */
+function noteKey(note: ImportNote, detail: string): string {
+  if ((note.kind === 'CONVERTED_ZONE' || note.kind === 'UNKNOWN_ZONE') && !detail) return `${note.kind}_unnamed`
+  if (note.kind === 'UNFOLDED_PARTIAL' && Number(detail) === 0) return 'UNFOLDED_PARTIAL_zero'
+  return note.kind
+}
+
 /** What an import did or would do, and what deserves a look. The totals come from the report, not from its notes. */
 export function ImportReportView({ report }: { report: ImportReport }) {
   const { t } = useTranslation('calendarSync')
@@ -14,8 +21,9 @@ export function ImportReportView({ report }: { report: ImportReport }) {
     const detail = note.kind === 'IGNORED' ? ignoredReasonText(t, raw)
       : note.kind === 'TRUNCATED_TEXT' && TEXT_FIELDS.includes(raw) ? t(`import.text_field.${raw}`)
         : raw
-    return t(`import.note.${note.kind}`, { title, detail })
+    return t(`import.note.${noteKey(note, raw)}`, { title, detail })
   }
+  const ignoredNotes = report.notes.filter((note) => note.kind === 'IGNORED').length
   return (
     <div className="flex flex-col gap-2">
       <ul className="flex flex-col gap-0.5 text-sm text-fg-1">
@@ -31,6 +39,11 @@ export function ImportReportView({ report }: { report: ImportReport }) {
           <ul className="flex max-h-48 flex-col gap-0.5 overflow-y-auto text-xs text-fg-2">
             {report.notes.map((note, index) => <li key={index}>{noteText(note)}</li>)}
           </ul>
+          {report.ignored > ignoredNotes && (
+            <p className="mt-1 text-xs text-fg-3">
+              {t('import.notes_capped', { shown: report.notes.length, total: report.ignored })}
+            </p>
+          )}
         </div>
       )}
     </div>
