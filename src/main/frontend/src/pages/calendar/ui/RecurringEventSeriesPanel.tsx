@@ -29,6 +29,7 @@ export function RecurringEventSeriesPanel({
 }: RecurringEventSeriesPanelProps) {
   const { t } = useTranslation('calendar')
   const { data: series, isPending } = useRecurringEventSeries(spaceId)
+  const locale = resolveLocale(i18next.language)
 
   const [editing, setEditing] = useState<RecurringEventSeries | null>(null)
   const [deleting, setDeleting] = useState<RecurringEventSeries | null>(null)
@@ -58,7 +59,8 @@ export function RecurringEventSeriesPanel({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-fg-1">{candidate.title}</p>
                 <p className="text-[11px] text-fg-3">
-                  {describeRecurrence(t, { ...candidate, weekdays: candidate.weekdays ?? [] }, resolveLocale(i18next.language))} · {t('series.from', { date: candidate.firstDate ?? candidate.anchorDate })}
+                  {describeRecurrence(t, { ...candidate, weekdays: candidate.weekdays ?? [] }, locale)}
+                  {' · '}{t('series.from', { date: candidate.firstDate ?? candidate.anchorDate })}
                   {candidate.endDate && <> · {t('series.until_date', { date: candidate.endDate })}</>}
                 </p>
               </div>

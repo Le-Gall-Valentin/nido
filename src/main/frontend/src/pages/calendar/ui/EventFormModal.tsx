@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
 import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
@@ -35,6 +35,10 @@ export interface EventFormModalProps {
 }
 
 const INTERVALS: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
+/** A select dressed as the Input component dresses its field, and its label as Input's own. */
+const FIELD_LABEL = 'text-[13px] font-semibold text-fg-1'
+const SELECT = 'rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none '
+  + 'focus:border-accent'
 const noRecurrenceYet = (startDate: string): Recurrence =>
   ({ intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: [weekdayOf(startDate)], dayRule: 'SAME_DAY' })
 
@@ -51,6 +55,8 @@ export function EventFormModal({
   const [recurrence, setRecurrence] = useState<Recurrence>(initialRecurrence ?? noRecurrenceYet(initial.startDate))
   const locale = resolveLocale(i18next.language)
   const [error, setError] = useState<string | null>(null)
+  const intervalTypeId = useId()
+  const dayRuleId = useId()
 
   const patch = (changes: Partial<EventInput>) => setForm((current) => ({ ...current, ...changes }))
 
@@ -62,13 +68,19 @@ export function EventFormModal({
       : { allDay, startTime: form.startTime ?? '09:00', endTime: form.endTime ?? '10:00' })
   }
 
-  /** The start day is always one of a weekly series' days, and a day rule it cannot give falls back to the same day. */
+  /**
+   * The start day is always one of a weekly series' days: a series on the start day alone moves with it, as in Google,
+   * and one on several days gains the new one. A day rule the new start cannot give falls back to the same day.
+   */
   const changeStart = (startDate: string) => {
     patch({ startDate, endDate: form.endDate || startDate })
     if (!startDate) return
+    const previous = form.startDate ? weekdayOf(form.startDate) : null
+    const next = weekdayOf(startDate)
     setRecurrence((current) => ({
       ...current,
-      weekdays: current.weekdays.includes(weekdayOf(startDate)) ? current.weekdays : [...current.weekdays, weekdayOf(startDate)],
+      weekdays: current.weekdays.length === 1 && current.weekdays[0] === previous ? [next]
+        : current.weekdays.includes(next) ? current.weekdays : [...current.weekdays, next],
       dayRule: possibleDayRules(startDate).includes(current.dayRule) ? current.dayRule : 'SAME_DAY',
     }))
   }
@@ -150,16 +162,15 @@ export function EventFormModal({
               <Input label={t('series.interval_count')} type="number" min={1} value={String(recurrence.intervalCount)}
                 onChange={(e) => setRecurrence({ ...recurrence, intervalCount: Number(e.target.value) })} />
               {/* Set like the Input beside it, so the two fields sit on one line. */}
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[13px] font-semibold text-fg-1">{t('series.interval_type')}</span>
-                <select aria-label={t('series.interval_type')} value={recurrence.intervalType}
-                  onChange={(e) => setRecurrence({ ...recurrence, intervalType: e.target.value as RecurrenceInterval })}
-                  className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor={intervalTypeId} className={FIELD_LABEL}>{t('series.interval_type')}</label>
+                <select id={intervalTypeId} value={recurrence.intervalType} className={SELECT}
+                  onChange={(e) => setRecurrence({ ...recurrence, intervalType: e.target.value as RecurrenceInterval })}>
                   {INTERVALS.map((interval) => (
                     <option key={interval} value={interval}>{t(`series.interval.${interval}`)}</option>
                   ))}
                 </select>
-              </label>
+              </div>
             </div>
             {recurrence.intervalType === 'WEEKLY' && (
               <div role="group" aria-label={t('series.weekdays')} className="flex flex-wrap gap-1.5">
@@ -180,18 +191,17 @@ export function EventFormModal({
               </div>
             )}
             {(recurrence.intervalType === 'MONTHLY' || recurrence.intervalType === 'YEARLY') && (
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[13px] font-semibold text-fg-1">{t('series.day_rule')}</span>
-                <select aria-label={t('series.day_rule')} value={recurrence.dayRule}
-                  onChange={(e) => setRecurrence({ ...recurrence, dayRule: e.target.value as DayRule })}
-                  className="rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none focus:border-accent">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor={dayRuleId} className={FIELD_LABEL}>{t('series.day_rule')}</label>
+                <select id={dayRuleId} value={recurrence.dayRule} className={SELECT}
+                  onChange={(e) => setRecurrence({ ...recurrence, dayRule: e.target.value as DayRule })}>
                   {possibleDayRules(form.startDate).map((rule) => (
                     <option key={rule} value={rule}>
                       {capitalize(dayRulePhrase(t, rule, recurrence.intervalType, form.startDate, locale))}
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
             )}
             <Input label={t('series.until')} type="date" value={recurrence.until ?? ''}
               onChange={(e) => setRecurrence({ ...recurrence, until: e.target.value || null })} />

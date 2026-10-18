@@ -188,7 +188,7 @@ describe('OccurrenceRouter', () => {
 
     it('opens it read-only, naming its calendar', async () => {
       route(toussaint)
-      expect(await screen.findByText('Vacances de la Toussaint')).toBeTruthy()
+      expect(await screen.findByRole('heading', { level: 3, name: 'Vacances de la Toussaint' })).toBeTruthy()
       expect(screen.getByText('Zone C')).toBeTruthy()
       expect(screen.getByText('Partout')).toBeTruthy()
       expect(await screen.findByText('detail.followed_calendar')).toBeTruthy()

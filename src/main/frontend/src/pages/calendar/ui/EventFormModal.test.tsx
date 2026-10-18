@@ -182,6 +182,44 @@ describe('EventFormModal — days of a series', () => {
     expect((screen.getByLabelText('series.day_rule') as HTMLSelectElement).value).toBe('SAME_DAY')
   })
 
+  it('moves the only day of a weekly series with its start, rather than adding the new one', () => {
+    // Opened on Friday 2 October, moved to Wednesday 7 October before ticking "repeat": Wednesdays only.
+    const { onSubmit } = renderForm()
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-10-07' } })
+    fireEvent.change(field('form.end_date'), { target: { value: '2026-10-07' } })
+    recurring()
+    expect(screen.getByRole('button', { name: /^(vendredi|friday)$/i }).getAttribute('aria-pressed')).toBe('false')
+    save()
+    expect(onSubmit).toHaveBeenCalledWith(expect.anything(),
+      { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['WEDNESDAY'], dayRule: 'SAME_DAY' })
+  })
+
+  it('moves the one day of a series being edited with its start', () => {
+    const { onSubmit } = renderForm({
+      mode: 'edit-series',
+      initial: { ...initial, startDate: '2026-10-05', endDate: '2026-10-05' },
+      initialRecurrence: { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['MONDAY'], dayRule: 'SAME_DAY' },
+    })
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-10-07' } })
+    fireEvent.change(field('form.end_date'), { target: { value: '2026-10-07' } })
+    save()
+    expect(onSubmit).toHaveBeenCalledWith(expect.anything(),
+      { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['WEDNESDAY'], dayRule: 'SAME_DAY' })
+  })
+
+  it('keeps the days chosen and adds the new start day when a series repeats on several', () => {
+    const { onSubmit } = renderForm({
+      mode: 'edit-series',
+      initial: { ...initial, startDate: '2026-10-05', endDate: '2026-10-05' },
+      initialRecurrence: { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['MONDAY', 'THURSDAY'], dayRule: 'SAME_DAY' },
+    })
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-10-06' } })
+    fireEvent.change(field('form.end_date'), { target: { value: '2026-10-06' } })
+    save()
+    expect(onSubmit).toHaveBeenCalledWith(expect.anything(),
+      { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['MONDAY', 'TUESDAY', 'THURSDAY'], dayRule: 'SAME_DAY' })
+  })
+
   it('refuses an occurrence running into the next day chosen', () => {
     const { onSubmit } = renderForm({ initial: { ...initial, allDay: true, startTime: null, endTime: null, endDate: '2026-10-05' } })
     recurring()

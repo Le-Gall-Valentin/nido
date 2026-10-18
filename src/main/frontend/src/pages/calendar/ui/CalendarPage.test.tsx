@@ -79,7 +79,9 @@ describe('CalendarPage', () => {
     expect(screen.queryByRole('button', { name: /new_event/ })).toBeNull()
   })
 
-  it('shows the entries of a followed calendar and filters each calendar on its own', async () => {
+  it.each(['day', 'week', 'month'] as const)('shows the entries of a followed calendar and filters each calendar on its own, in the %s view', async (view) => {
+    // The filters are remembered per space in this browser: each view starts from all shown.
+    localStorage.clear()
     const feeds = [
       { id: 'f1', name: 'Vacances scolaires', host: 'a.example', color: 'event-cyan', contentFetchedAt: '2026-10-13T00:00:00Z', lastAttemptAt: '2026-10-13T00:00:00Z', lastError: null },
       { id: 'f2', name: 'Matchs du club', host: 'b.example', color: null, contentFetchedAt: '2026-10-13T00:00:00Z', lastAttemptAt: '2026-10-13T00:00:00Z', lastError: null },
@@ -87,17 +89,18 @@ describe('CalendarPage', () => {
     renderPage([
       occurrence({ title: 'Toussaint', source: 'EXTERNAL', sourceId: 'ext-a', externalFeedId: 'f1' }),
       occurrence({ title: 'Finale', source: 'EXTERNAL', sourceId: 'ext-b', externalFeedId: 'f2' }),
-    ], { view: 'day', calendar: { listExternalFeeds: vi.fn().mockResolvedValue(feeds) } })
+    ], { view, calendar: { listExternalFeeds: vi.fn().mockResolvedValue(feeds) } })
 
-    expect(await screen.findByText('Toussaint')).toBeTruthy()
-    expect(screen.getByText('Finale')).toBeTruthy()
+    // The week view lists a day's entries twice: in its phone list and in its desktop band.
+    expect((await screen.findAllByText('Toussaint')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Finale').length).toBeGreaterThan(0)
 
     const filter = await screen.findByRole('button', { name: 'Vacances scolaires' })
     expect(filter.getAttribute('aria-pressed')).toBe('true')
     fireEvent.click(filter)
 
-    expect(screen.queryByText('Toussaint')).toBeNull()
-    expect(screen.getByText('Finale')).toBeTruthy()
+    expect(screen.queryAllByText('Toussaint')).toHaveLength(0)
+    expect(screen.getAllByText('Finale').length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: 'Vacances scolaires' }).getAttribute('aria-pressed')).toBe('false')
   })
 
@@ -392,6 +395,22 @@ describe('CalendarPage — recurring events in the event form', () => {
     })))
   })
 
+  it('says how the series of an opened occurrence repeats', async () => {
+    renderPage([PIANO_OCCURRENCE], { calendar: { listRecurringEventSeries: vi.fn().mockResolvedValue([PIANO_SERIES]) } })
+    fireEvent.click(await screen.findByText('Piano'))
+
+    expect(await screen.findByText('rule.every.MONTHLY:{"count":1} rule.day:{"day":2}')).toBeTruthy()
+  })
+
+  it('loads no series to open an event that belongs to none', async () => {
+    const listRecurringEventSeries = vi.fn().mockResolvedValue([PIANO_SERIES])
+    renderPage([occurrence({ title: 'Concert' })], { calendar: { listRecurringEventSeries } })
+    fireEvent.click(await screen.findByText('Concert'))
+
+    expect(await screen.findByRole('button', { name: 'detail.edit' })).toBeTruthy()
+    expect(listRecurringEventSeries).not.toHaveBeenCalled()
+  })
+
   it('deletes the whole series from one of its occurrences without a detour through the list', async () => {
     const deleteRecurringEventSeries = vi.fn().mockResolvedValue(undefined)
     renderPage([PIANO_OCCURRENCE], { calendar: {
@@ -414,8 +433,10 @@ describe('CalendarPage — recurring events in the event form', () => {
     const edit = await screen.findByRole('button', { name: 'series.edit:{"name":"Piano"}' })
     // Series are created from the new-event button now, never from here.
     expect(screen.queryByRole('button', { name: /series\.new/ })).toBeNull()
-    // Each says from when it shows, and until when for one that ends.
+    // Each says how it repeats, from when it shows, and until when for one that ends.
     expect(screen.getByText(/series\.from:\{"date":"2026-01-07"\}/).textContent).toContain('series.until_date:{"date":"2026-09-01"}')
+    expect(screen.getByText(/series\.from:\{"date":"2026-09-02"\}/).textContent)
+      .toContain('rule.every.MONTHLY:{"count":1} rule.day:{"day":2} · series.from')
     fireEvent.click(edit)
 
     expect(await screen.findByText('series.edit_title')).toBeTruthy()

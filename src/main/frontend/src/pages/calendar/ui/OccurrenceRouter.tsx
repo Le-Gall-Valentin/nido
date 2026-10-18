@@ -52,7 +52,9 @@ export function OccurrenceRouter({
 }
 
 /** An entry of a calendar the space follows: changed at its source only, so read here and nothing more. */
-function FollowedOccurrence({ spaceId, occurrence, onClose }: { spaceId: string; occurrence: CalendarOccurrence; onClose: () => void }) {
+function FollowedOccurrence({ spaceId, occurrence, onClose }: {
+  spaceId: string; occurrence: CalendarOccurrence; onClose: () => void
+}) {
   const { t } = useTranslation('calendar')
   const { data: feeds } = useExternalFeeds(spaceId)
   const feed = feeds?.find((candidate) => candidate.id === occurrence.externalFeedId)
@@ -60,7 +62,8 @@ function FollowedOccurrence({ spaceId, occurrence, onClose }: { spaceId: string;
     <Dialog open onClose={onClose} title={t('detail.title')} showCloseButton maxWidth="max-w-lg">
       <div className="flex flex-col gap-3">
         <div>
-          <p className="pr-8 text-base font-semibold text-fg-0">{occurrence.title}</p>
+          {/* Under the dialog's own heading (h2): the entry's title is what a screen reader jumps to. */}
+          <h3 className="pr-8 text-base font-semibold text-fg-0">{occurrence.title}</h3>
           <p className="text-sm text-fg-2">{formatWhen(occurrence, t('all_day_short'), resolveLocale(i18next.language))}</p>
         </div>
         {occurrence.location && <p className="text-sm text-fg-1">{occurrence.location}</p>}

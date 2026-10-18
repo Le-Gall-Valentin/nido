@@ -48,9 +48,10 @@ export function CalendarDialogs({
   const currentUserId = useAuth((state) => state.user?.id) ?? ''
   const joinEvent = useJoinEvent(spaceId)
   const leaveEvent = useLeaveEvent(spaceId)
-  // Loaded once a series is acted on, or an occurrence is opened: the feed carries the series' id, not its rule.
-  const { data: seriesList } = useRecurringEventSeries(
-    open?.kind === 'series' || open?.kind === 'occurrence' ? spaceId : undefined)
+  // Loaded once a series is acted on, or an occurrence of one is opened: the feed carries the series' id, not its rule.
+  const opened = open?.kind === 'occurrence' ? occurrences.find((candidate) => candidate.sourceId === open.sourceId) : undefined
+  const openedSeries = opened?.source === 'EVENT' && opened.seriesId != null
+  const { data: seriesList } = useRecurringEventSeries(open?.kind === 'series' || openedSeries ? spaceId : undefined)
 
   const showOccurrence = (occurrence: CalendarOccurrence) => show({ kind: 'occurrence', sourceId: occurrence.sourceId })
 
@@ -66,7 +67,7 @@ export function CalendarDialogs({
       )
 
     case 'occurrence': {
-      const occurrence = occurrences.find((candidate) => candidate.sourceId === open.sourceId)
+      const occurrence = opened
       if (!occurrence) return null
       if (occurrence.source !== 'EVENT') {
         return (
