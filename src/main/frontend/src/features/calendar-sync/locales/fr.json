@@ -117,7 +117,15 @@
     "edit": "Modifier",
     "remove": "Retirer",
     "remove_confirm": "Ne plus suivre « {{name}} » ? Ses événements disparaissent de cet espace.",
-    "remove_yes": "Ne plus suivre"
+    "remove_yes": "Ne plus suivre",
+    "refresh_for": "Actualiser « {{name}} »",
+    "edit_for": "Modifier « {{name}} »",
+    "remove_for": "Retirer « {{name}} »",
+    "color_for": "Couleur {{color}} pour « {{name}} »",
+    "followed": "« {{name}} » est suivi.",
+    "refreshed": "« {{name}} » est à jour.",
+    "saved": "« {{name}} » est enregistré.",
+    "removed": "« {{name}} » n'est plus suivi."
   },
   "colors": {
     "event-violet": "Violet",

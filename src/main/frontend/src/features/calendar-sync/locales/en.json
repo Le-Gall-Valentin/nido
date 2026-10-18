@@ -117,7 +117,15 @@
     "edit": "Edit",
     "remove": "Remove",
     "remove_confirm": "Stop following \"{{name}}\"? Its events leave this space.",
-    "remove_yes": "Stop following"
+    "remove_yes": "Stop following",
+    "refresh_for": "Refresh \"{{name}}\"",
+    "edit_for": "Edit \"{{name}}\"",
+    "remove_for": "Remove \"{{name}}\"",
+    "color_for": "{{color}} colour for \"{{name}}\"",
+    "followed": "\"{{name}}\" is now followed.",
+    "refreshed": "\"{{name}}\" is up to date.",
+    "saved": "\"{{name}}\" is saved.",
+    "removed": "\"{{name}}\" is no longer followed."
   },
   "colors": {
     "event-violet": "Violet",
