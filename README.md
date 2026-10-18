@@ -66,6 +66,8 @@ location / {
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    # A calendar import sends a file of up to 5 MB; nginx refuses anything over 1 MB unless told otherwise.
+    client_max_body_size 6m;
 }
 ```
 
@@ -92,13 +94,17 @@ update. If 0.16 ran on the database of 0.17 instead, run `DELETE FROM finance_to
 0.16 does not keep the monthly totals up to date, and the statement makes every space rebuild them at its next read.
 
 Updating to 0.18.0: the calendar exports `.ics` files, gives calendar apps secret addresses to subscribe to, imports
-`.ics` files and follows calendars published at an address. Subscription addresses begin with Nido's public address
+`.ics` files and follows calendars published at an address. Recurring events repeat in more ways: on several days of
+the week ("Mondays and Thursdays"), on a weekday of the month ("the 2nd Tuesday", "the last Friday") or on the last day
+of the month; series made before keep their day. Subscription addresses begin with Nido's public address
 (**Administration → Instance settings**): set it before giving any out. Followed calendars are downloaded by the
 server, which needs to reach the internet; it refuses addresses of its own network unless
-`NIDO_CALENDAR_ALLOW_PRIVATE_NETWORK` (or the matching setting) allows them — a Nextcloud at home, for instance. Google
-Calendar reads a subscription at its own pace, every 8 to 24 hours. A subscription address is all a calendar app needs
-to read the space: Nido never logs it, but the access log of a reverse proxy in front of it does — keep that log as
-private as the addresses, or leave `/ical/` out of it.
+`NIDO_CALENDAR_ALLOW_PRIVATE_NETWORK` (or the matching setting) allows them — a Nextcloud at home, for instance. A very
+large calendar (beyond about 3 MB) may be refused as too large to follow. Google Calendar reads a subscription at its
+own pace, every 8 to 24 hours. A subscription address is all a calendar app needs to read the space: Nido never logs
+it, but the access log of a reverse proxy in front of it does — keep that log as private as the addresses, or leave
+`/ical/` out of it. Behind nginx, add `client_max_body_size 6m;` to Nido's `location` (see the reverse proxy above)
+before updating: without it, nginx refuses the import of any file over 1 MB.
 
 ## Backups
 
