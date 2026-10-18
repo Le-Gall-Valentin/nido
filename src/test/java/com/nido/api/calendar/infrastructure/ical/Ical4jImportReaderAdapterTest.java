@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -310,5 +311,41 @@ class Ical4jImportReaderAdapterTest {
         assertThat(onlyEvent(reading).title()).isEqualTo("Après");
         assertThat(reading.ignored()).isEqualTo(1);
         assertThat(reading.notes()).containsExactly(new ImportNote(ImportNoteKind.IGNORED, "Après (copie)", "DUPLICATE_UID"));
+    }
+
+    @Test
+    void aPropertyNidoNeverReadsThatDoesNotParseCostsNothing() {
+        // Google writes CREATED:00001231T000000Z on some events; the others are as malformed as files get.
+        for (String odd : List.of("CREATED:00001231T000000Z", "SEQUENCE:abc", "LAST-MODIFIED:2026", "GEO:abc", "DTSTAMP:hier")) {
+            ImportReading reading = read(ics(vevent("g@google.com", "SUMMARY:Anniversaire", "DTSTART;VALUE=DATE:20261017", odd)), PARIS);
+            assertThat(onlyEvent(reading).title()).as(odd).isEqualTo("Anniversaire");
+            assertThat(reading.ignored()).as(odd).isZero();
+        }
+    }
+
+    @Test
+    void aPropertyNidoReadsThatDoesNotParseStillRefusesTheFile() {
+        // What an event is, when and how it repeats, is never guessed.
+        assertThatThrownBy(() -> read(ics(vevent("d@test", "SUMMARY:x", "DTSTART:notadate")), PARIS))
+            .isInstanceOf(CalendarException.NotAnIcalFile.class);
+        assertThatThrownBy(() -> read(ics(vevent("r@test", "SUMMARY:x", "DTSTART;VALUE=DATE:20261017", "RRULE:FREQ=WEEKLY;COUNT=x")), PARIS))
+            .isInstanceOf(CalendarException.NotAnIcalFile.class);
+    }
+
+    @Test
+    void anOverrideWhoseSequenceIsNoNumberCountsAsTheFirstVersion() {
+        String master = vevent("s@test", "SUMMARY:Piano", "DTSTART;TZID=Europe/Paris:20261005T180000",
+            "DTEND;TZID=Europe/Paris:20261005T190000", "RRULE:FREQ=WEEKLY;BYDAY=MO");
+        String numbered = vevent("s@test", "SUMMARY:Piano (salle 3)", "SEQUENCE:1", "RECURRENCE-ID;TZID=Europe/Paris:20261012T180000",
+            "DTSTART;TZID=Europe/Paris:20261012T190000", "DTEND;TZID=Europe/Paris:20261012T200000");
+        String unreadable = vevent("s@test", "SUMMARY:Piano (salle 2)", "SEQUENCE:abc", "RECURRENCE-ID;TZID=Europe/Paris:20261012T180000",
+            "DTSTART;TZID=Europe/Paris:20261012T190000", "DTEND;TZID=Europe/Paris:20261012T200000");
+
+        for (String content : List.of(ics(master, unreadable, numbered), ics(master, numbered, unreadable))) {
+            ImportReading reading = read(content, PARIS);
+            assertThat(reading.groups().getFirst().series().editedOccurrences())
+                .extracting(edited -> edited.event().title()).containsExactly("Piano (salle 3)");
+            assertThat(reading.notes()).containsExactly(new ImportNote(ImportNoteKind.IGNORED, "Piano (salle 2)", "DUPLICATE_UID"));
+        }
     }
 }

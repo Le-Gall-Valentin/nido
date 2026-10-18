@@ -94,6 +94,18 @@ class Ical4jFeedReaderAdapterTest {
     }
 
     @Test
+    void aGoogleCalendarWithAYearZeroCreationDateIsFollowed() {
+        String google = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Google Inc//Google Calendar 70.9054//EN\r\n"
+            + "X-WR-CALNAME:Anniversaires\r\nBEGIN:VEVENT\r\nUID:a1@google.com\r\nDTSTAMP:20261013T120000Z\r\n"
+            + "CREATED:00001231T000000Z\r\nLAST-MODIFIED:20261001T080000Z\r\nSEQUENCE:0\r\nSUMMARY:Léa\r\n"
+            + "DTSTART;VALUE=DATE:20261017\r\nDTEND;VALUE=DATE:20261018\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+
+        assertThat(reader.check(google).name()).contains("Anniversaires");
+        assertThat(reader.occurrencesOf(feed, () -> google, PARIS, Locale.FRENCH, LocalDate.of(2026, 10, 12), LocalDate.of(2026, 10, 25)))
+            .extracting(CalendarOccurrence::title).containsExactly("Léa");
+    }
+
+    @Test
     void aCalendarIsParsedOnceForAsLongAsItIsTheSame() {
         AtomicInteger loads = new AtomicInteger();
         Supplier<String> content = () -> {

@@ -106,6 +106,13 @@ class IcalSupportTest {
         assertThat(before - after).isLessThanOrEqualTo(1);
     }
 
+    @Test
+    void anUnreadableValueOfAPropertyNidoNeverReadsIsKeptAsWritten() {
+        VEvent google = event(document("", "DTSTART;VALUE=DATE:20261017\nCREATED:00001231T000000Z\n"));
+        assertThat(google.getProperty(Property.CREATED)).map(Property::getValue).contains("00001231T000000Z");
+        assertThat(google.getProperty(Property.DTSTART)).isPresent();
+    }
+
     private static String zones(int count) {
         StringBuilder out = new StringBuilder();
         for (int i = 1; i <= count; i++) {

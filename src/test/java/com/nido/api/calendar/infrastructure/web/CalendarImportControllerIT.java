@@ -87,6 +87,7 @@ class CalendarImportControllerIT {
         saveMembership(bobsSpaceId, bobId, SpaceRole.OWNER);
     }
 
+    // As Google writes it, year-0 CREATED included: a value nido never reads must not refuse the file.
     private static final String GOOGLE = """
         BEGIN:VCALENDAR\r
         PRODID:-//Google Inc//Google Calendar 70.9054//EN\r
@@ -97,6 +98,9 @@ class CalendarImportControllerIT {
         DTEND:20261014T170000Z\r
         DTSTAMP:20261013T120000Z\r
         UID:7kukuqrfedlm2f9t7vr5a2g0ok@google.com\r
+        CREATED:00001231T000000Z\r
+        LAST-MODIFIED:20261001T080000Z\r
+        SEQUENCE:0\r
         SUMMARY:Entraînement\r
         DESCRIPTION:<b>Apporter</b> les maillots\r
         END:VEVENT\r
