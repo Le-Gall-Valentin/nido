@@ -17,6 +17,15 @@ describe('CalendarSyncDialog', () => {
     expect(screen.getByRole('tab', { name: 'tabs.feeds' }).getAttribute('aria-selected')).toBe('true')
   })
 
+  it('keeps the tab strip free of a vertical scrollbar and clear of the close button', () => {
+    render(<CalendarSyncDialog spaceId="s1" canWrite isPersonal={false} onClose={vi.fn()} />)
+    const strip = screen.getByRole('tablist')
+    // The tabs' -mb-px overflows the strip by 1 px; the rendering itself cannot be checked in jsdom.
+    expect(strip.className).toContain('overflow-x-auto')
+    expect(strip.className).toContain('overflow-y-hidden')
+    expect(strip.className).toContain('pr-10')
+  })
+
   it('offers no import to a viewer', () => {
     render(<CalendarSyncDialog spaceId="s1" canWrite={false} isPersonal={false} onClose={vi.fn()} />)
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['tabs.export', 'tabs.subscribe', 'tabs.feeds'])

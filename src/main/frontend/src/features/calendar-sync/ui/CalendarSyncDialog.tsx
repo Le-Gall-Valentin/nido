@@ -41,7 +41,7 @@ export function CalendarSyncDialog({ spaceId, canWrite, isPersonal, onClose }: C
 
   return (
     <Dialog open onClose={onClose} title={t('title')} showCloseButton maxWidth="max-w-lg">
-      <div role="tablist" aria-label={t('title')} className="-mx-1 mb-4 flex gap-1 overflow-x-auto border-b border-border px-1">
+      <div role="tablist" aria-label={t('title')} className="-mx-1 mb-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border pl-1 pr-10">
         {tabs.map((id) => (
           <button key={id} ref={(el) => { tabRefs.current[id] = el }} type="button" role="tab"
             tabIndex={tab === id ? 0 : -1} onKeyDown={onTabKeyDown} id={`calendar-sync-tab-${id}`} aria-selected={tab === id}

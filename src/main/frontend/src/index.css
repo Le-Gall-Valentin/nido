@@ -80,6 +80,7 @@
 /* System: active when OS is dark AND user hasn't forced light */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --color-bg-0: #1c1b18;
     --color-bg-1: #262420;
     --color-bg-2: #201f1b;
@@ -120,6 +121,7 @@
 
 /* Forced dark — same values, unconditional */
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --color-bg-0: #1c1b18;
   --color-bg-1: #262420;
   --color-bg-2: #201f1b;
