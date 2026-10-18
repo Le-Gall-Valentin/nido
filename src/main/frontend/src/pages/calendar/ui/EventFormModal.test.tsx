@@ -207,12 +207,42 @@ describe('EventFormModal — days of a series', () => {
       { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['WEDNESDAY'], dayRule: 'SAME_DAY' })
   })
 
-  it('keeps the days chosen and adds the new start day when a series repeats on several', () => {
+  it('keeps the days chosen, the new start day sent among them, when a series repeats on several', () => {
     const { onSubmit } = renderForm({
       mode: 'edit-series',
       initial: { ...initial, startDate: '2026-10-05', endDate: '2026-10-05' },
       initialRecurrence: { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['MONDAY', 'THURSDAY'], dayRule: 'SAME_DAY' },
     })
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-10-06' } })
+    fireEvent.change(field('form.end_date'), { target: { value: '2026-10-06' } })
+    save()
+    expect(onSubmit).toHaveBeenCalledWith(expect.anything(),
+      { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['MONDAY', 'TUESDAY', 'THURSDAY'], dayRule: 'SAME_DAY' })
+  })
+
+  it('moves the one day of a series with its start even when the date was cleared on the way', () => {
+    // Backspace on a segment, or the field's clear button: the date passes through '' before the new one.
+    const { onSubmit } = renderForm({
+      mode: 'edit-series',
+      initial: { ...initial, startDate: '2026-10-05', endDate: '2026-10-05' },
+      initialRecurrence: { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['MONDAY'], dayRule: 'SAME_DAY' },
+    })
+    fireEvent.change(field('form.start_date'), { target: { value: '' } })
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-10-07' } })
+    fireEvent.change(field('form.end_date'), { target: { value: '2026-10-07' } })
+    save()
+    expect(onSubmit).toHaveBeenCalledWith(expect.anything(),
+      { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['WEDNESDAY'], dayRule: 'SAME_DAY' })
+  })
+
+  it('keeps no day a date typed through on its way to the one wanted', () => {
+    // Mondays and Thursdays from 5 October; typing the day passes through Friday 2 October before Tuesday 6 October.
+    const { onSubmit } = renderForm({
+      mode: 'edit-series',
+      initial: { ...initial, startDate: '2026-10-05', endDate: '2026-10-05' },
+      initialRecurrence: { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['MONDAY', 'THURSDAY'], dayRule: 'SAME_DAY' },
+    })
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-10-02' } })
     fireEvent.change(field('form.start_date'), { target: { value: '2026-10-06' } })
     fireEvent.change(field('form.end_date'), { target: { value: '2026-10-06' } })
     save()

@@ -69,18 +69,17 @@ export function EventFormModal({
   }
 
   /**
-   * The start day is always one of a weekly series' days: a series on the start day alone moves with it, as in Google,
-   * and one on several days gains the new one. A day rule the new start cannot give falls back to the same day.
+   * A series on one day moves that day with its start, as in Google: the one day is always the start's, whose pill is
+   * locked on. A series on several days keeps them as chosen — the start's own is added when sent (see sent()) — so no
+   * date the field passes through while being typed or cleared leaves a day behind. A day rule the new start cannot give
+   * falls back to the same day.
    */
   const changeStart = (startDate: string) => {
     patch({ startDate, endDate: form.endDate || startDate })
     if (!startDate) return
-    const previous = form.startDate ? weekdayOf(form.startDate) : null
-    const next = weekdayOf(startDate)
     setRecurrence((current) => ({
       ...current,
-      weekdays: current.weekdays.length === 1 && current.weekdays[0] === previous ? [next]
-        : current.weekdays.includes(next) ? current.weekdays : [...current.weekdays, next],
+      weekdays: current.weekdays.length === 1 ? [weekdayOf(startDate)] : current.weekdays,
       dayRule: possibleDayRules(startDate).includes(current.dayRule) ? current.dayRule : 'SAME_DAY',
     }))
   }
