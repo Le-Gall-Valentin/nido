@@ -12,7 +12,7 @@ const concert: CalendarOccurrence = {
   source: 'EVENT', sourceId: 'e1', seriesId: null, originalDate: null, materialized: true,
   title: 'Concert', description: 'Apporter les billets.\nRendez-vous à l\'entrée nord.',
   location: 'Salle Pleyel', allDay: false, startDate: '2026-09-23', startTime: '20:00:00',
-  endDate: '2026-09-23', endTime: '22:30:00', color: null, participantIds: [],
+  endDate: '2026-09-23', endTime: '22:30:00', color: null, participantIds: [], externalFeedId: null,
 }
 
 function renderDetail(occurrence: CalendarOccurrence, isPersonal = false) {

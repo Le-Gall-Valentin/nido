@@ -51,7 +51,7 @@ describe('horizontalZone', () => {
 describe('dragZone', () => {
   const occurrence = { source: 'EVENT', sourceId: 'e1', seriesId: null, originalDate: null, materialized: true,
     title: 'x', description: null, location: null, allDay: false, startDate: '2026-09-23', startTime: '14:00',
-    endDate: '2026-09-23', endTime: '15:00', color: null, participantIds: [] } as CalendarOccurrence
+    endDate: '2026-09-23', endTime: '15:00', color: null, participantIds: [], externalFeedId: null } as CalendarOccurrence
   const wide = { wide: true, container: { left: 100, right: 900 }, scroller: null }
   const pastRight = { x: 950, y: 400 }
 

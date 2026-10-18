@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { EVENT_COLORS, type CalendarOccurrence } from '@/entities/calendar'
-import { DOT_CLASS, SOURCE_TOKEN, TINT_CLASS, tokenFor } from './sourceAppearance'
+import { DISPLAY_ORDER, DOT_CLASS, SOURCE_ORDER, SOURCE_TOKEN, TINT_CLASS, tokenFor } from './sourceAppearance'
 
 function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence {
   return {
     source: 'EVENT', sourceId: 'x', seriesId: null, originalDate: null, materialized: true,
     title: 'x', description: null, location: null, allDay: true, startDate: '2026-01-01', startTime: null,
-    endDate: '2026-01-01', endTime: null, color: null, participantIds: [], ...overrides,
+    endDate: '2026-01-01', endTime: null, color: null, participantIds: [], externalFeedId: null, ...overrides,
   }
 }
 
@@ -22,6 +22,19 @@ describe('source colours', () => {
     expect(tokenFor(occurrence({ source: 'EVENT' }))).toBe('event-violet')
     expect(tokenFor(occurrence({ source: 'MEAL' }))).toBe('status-green')
     expect(tokenFor(occurrence({ source: 'TASK' }))).toBe('status-blue')
+  })
+})
+
+describe('display order', () => {
+  it('shows the followed calendars after every source of the space, without a filter of their own kind', () => {
+    expect(DISPLAY_ORDER).toEqual(['EVENT', 'TASK', 'FINANCE', 'MEAL', 'SAVINGS', 'EXTERNAL'])
+    expect(SOURCE_ORDER).not.toContain('EXTERNAL')
+  })
+
+  it('paints a followed calendar in its own colour, or in graphite when that is no event colour', () => {
+    expect(tokenFor(occurrence({ source: 'EXTERNAL', color: 'event-cyan' }))).toBe('event-cyan')
+    expect(tokenFor(occurrence({ source: 'EXTERNAL', color: '#ff0000' }))).toBe('event-graphite')
+    expect(tokenFor(occurrence({ source: 'EXTERNAL', color: null }))).toBe('event-graphite')
   })
 })
 

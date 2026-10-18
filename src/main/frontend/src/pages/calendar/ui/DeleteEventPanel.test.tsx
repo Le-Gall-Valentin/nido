@@ -12,7 +12,7 @@ const dentist: CalendarOccurrence = {
   source: 'EVENT', sourceId: 'e1', seriesId: null, originalDate: null, materialized: true,
   title: 'Dentiste', description: null, location: null, allDay: false,
   startDate: '2026-10-06', startTime: '09:00:00', endDate: '2026-10-06', endTime: '10:00:00',
-  color: null, participantIds: [],
+  color: null, participantIds: [], externalFeedId: null,
 }
 const piano: CalendarOccurrence = {
   ...dentist, sourceId: 'series-1:2026-10-13', seriesId: 'series-1', originalDate: '2026-10-13',

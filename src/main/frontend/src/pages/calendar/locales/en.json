@@ -1,6 +1,7 @@
 {
   "title": "Calendar",
   "new_event": "New event",
+  "sync": "Sync",
   "loading": "Loading…",
   "error": "Could not load the calendar.",
   "today": "Today",
@@ -30,7 +31,8 @@
     "TASK": "Tasks",
     "FINANCE": "Finance",
     "MEAL": "Meals",
-    "SAVINGS": "Savings"
+    "SAVINGS": "Savings",
+    "EXTERNAL": "Followed calendars"
   },
   "filters": {
     "label": "Filter by source"
@@ -57,12 +59,15 @@
     "leave": "Leave",
     "missing": "This item no longer exists.",
     "projected_hint": "Upcoming occurrence: it does not exist yet, only its series can be changed.",
+    "followed_calendar": "Followed calendar: {{name}} — it is changed at its source.",
+    "followed_calendar_unknown": "Followed calendar — it is changed at its source.",
     "open_in": {
       "EVENT": "Open",
       "TASK": "Open in Tasks",
       "FINANCE": "Open in Finance",
       "MEAL": "Plan this meal",
-      "SAVINGS": "Open in Savings"
+      "SAVINGS": "Open in Savings",
+      "EXTERNAL": "Open"
     }
   },
   "form": {

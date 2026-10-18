@@ -6,7 +6,7 @@ import { resolveLocale } from '@/shared/lib'
 import { useMemberName, type SpaceMember } from '@/entities/space'
 import { UserAvatar } from '@/entities/user'
 import type { CalendarOccurrence } from '@/entities/calendar'
-import { formatPeriodLabel, formatSpan } from '../lib/periodLabel'
+import { formatWhen } from '../lib/occurrenceWhen'
 
 interface EventDetailModalProps {
   occurrence: CalendarOccurrence
@@ -27,15 +27,6 @@ interface EventDetailModalProps {
   onJoin: () => void
   onLeave: () => void
   onClose: () => void
-}
-
-/** The same wording as the calendar's own headings: a day in full, a span shortened only as it can be. */
-function formatWhen(occurrence: CalendarOccurrence, allDayLabel: string, locale: string): string {
-  const days = occurrence.startDate === occurrence.endDate
-    ? formatPeriodLabel('day', occurrence.startDate, locale)
-    : formatSpan(occurrence.startDate, occurrence.endDate, locale)
-  if (occurrence.allDay) return `${days} · ${allDayLabel}`
-  return `${days} · ${occurrence.startTime?.slice(0, 5)} – ${occurrence.endTime?.slice(0, 5)}`
 }
 
 /**

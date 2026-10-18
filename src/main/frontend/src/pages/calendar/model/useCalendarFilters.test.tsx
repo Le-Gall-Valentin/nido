@@ -7,7 +7,7 @@ function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence 
   return {
     source: 'EVENT', sourceId: 'x', seriesId: null, originalDate: null, materialized: true,
     title: 'x', description: null, location: null, allDay: true, startDate: '2026-01-01', startTime: null, endDate: '2026-01-01',
-    endTime: null, color: null, participantIds: [], ...overrides,
+    endTime: null, color: null, participantIds: [], externalFeedId: null, ...overrides,
   }
 }
 
@@ -32,13 +32,40 @@ describe('useCalendarFilters', () => {
     expect(kept.map((o) => o.title)).toEqual(['Piano'])
   })
 
-  it('does not show a followed calendar yet', () => {
+  it('shows the entries of a followed calendar, whichever sources are hidden', () => {
     const { result } = renderHook(() => useCalendarFilters('s1'))
+    act(() => { result.current.toggle('EVENT') })
     const kept = result.current.filter([
-      occurrence({ source: 'EXTERNAL', title: 'Ecole' }),
+      occurrence({ source: 'EXTERNAL', title: 'Ecole', externalFeedId: 'f1' }),
       occurrence({ source: 'EVENT', title: 'Piano' }),
     ])
-    expect(kept.map((o) => o.title)).toEqual(['Piano'])
+    expect(kept.map((o) => o.title)).toEqual(['Ecole'])
+  })
+
+  it('hides one followed calendar without hiding the others, and remembers it', () => {
+    const { result } = renderHook(() => useCalendarFilters('s1'))
+    act(() => result.current.toggleFeed('f1'))
+
+    expect(result.current.isFeedEnabled('f1')).toBe(false)
+    expect(result.current.isFeedEnabled('f2')).toBe(true)
+    expect(result.current.filter([
+      occurrence({ source: 'EXTERNAL', externalFeedId: 'f1' }),
+      occurrence({ source: 'EXTERNAL', externalFeedId: 'f2' }),
+      occurrence({ source: 'EVENT' }),
+    ]).map((o) => o.externalFeedId)).toEqual(['f2', null])
+    expect(renderHook(() => useCalendarFilters('s1')).result.current.isFeedEnabled('f1')).toBe(false)
+    expect(renderHook(() => useCalendarFilters('s2')).result.current.isFeedEnabled('f1')).toBe(true)
+  })
+
+  it('shows a followed calendar again once toggled back, and ignores a stored value that is no list of ids', () => {
+    localStorage.setItem('nido.calendar.feeds.s1', JSON.stringify(['f1', 7, null]))
+    const { result } = renderHook(() => useCalendarFilters('s1'))
+    expect(result.current.isFeedEnabled('f1')).toBe(false)
+    act(() => result.current.toggleFeed('f1'))
+    expect(result.current.isFeedEnabled('f1')).toBe(true)
+
+    localStorage.setItem('nido.calendar.feeds.s3', '"broken"')
+    expect(renderHook(() => useCalendarFilters('s3')).result.current.isFeedEnabled('f1')).toBe(true)
   })
 
   it('remembers a disabled source across remounts, per space', () => {

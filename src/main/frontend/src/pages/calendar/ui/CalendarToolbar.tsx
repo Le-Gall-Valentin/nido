@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
-import type { CalendarSourceType } from '@/entities/calendar'
+import type { CalendarSourceType, ExternalFeed } from '@/entities/calendar'
 import type { CalendarView } from '../lib/calendarWindow'
 import { SourceFilters } from './SourceFilters'
 
@@ -16,13 +16,19 @@ interface CalendarToolbarProps {
   onView: (view: CalendarView) => void
   isEnabled: (source: CalendarSourceType) => boolean
   onToggle: (source: CalendarSourceType) => void
+  /** The calendars the space follows, each filtered on its own. */
+  feeds: ExternalFeed[]
+  isFeedEnabled: (feedId: string) => boolean
+  onToggleFeed: (feedId: string) => void
+  onSync: () => void
   onManageSeries: () => void
   onNewEvent: () => void
 }
 
 /** The calendar's title and what sits above the grid: adding, paging, the view, the sources shown. */
 export function CalendarToolbar({
-  canWrite, view, periodLabel, onShift, onToday, onView, isEnabled, onToggle, onManageSeries, onNewEvent,
+  canWrite, view, periodLabel, onShift, onToday, onView, isEnabled, onToggle, feeds, isFeedEnabled, onToggleFeed, onSync,
+  onManageSeries, onNewEvent,
 }: CalendarToolbarProps) {
   const { t } = useTranslation('calendar')
 
@@ -30,18 +36,24 @@ export function CalendarToolbar({
     <>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-fg-0">{t('title')}</h1>
-        {canWrite && (
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-            <button type="button" onClick={onManageSeries}
-              className="text-center text-sm font-semibold text-accent sm:text-left">
-              {t('recurring_series.manage')}
-            </button>
-            <button type="button" onClick={onNewEvent}
-              className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-accent px-4 py-2.5 text-sm font-semibold text-white sm:w-auto">
-              <Plus className="size-4" /> {t('new_event')}
-            </button>
-          </div>
-        )}
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+          {/* Everyone may export and subscribe: a viewer sees the whole calendar already. */}
+          <button type="button" onClick={onSync} className="text-center text-sm font-semibold text-accent sm:text-left">
+            {t('sync')}
+          </button>
+          {canWrite && (
+            <>
+              <button type="button" onClick={onManageSeries}
+                className="text-center text-sm font-semibold text-accent sm:text-left">
+                {t('recurring_series.manage')}
+              </button>
+              <button type="button" onClick={onNewEvent}
+                className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-accent px-4 py-2.5 text-sm font-semibold text-white sm:w-auto">
+                <Plus className="size-4" /> {t('new_event')}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -82,7 +94,8 @@ export function CalendarToolbar({
         </div>
 
         <div className="w-full sm:ml-auto sm:w-auto">
-          <SourceFilters isEnabled={isEnabled} onToggle={onToggle} />
+          <SourceFilters isEnabled={isEnabled} onToggle={onToggle} feeds={feeds} isFeedEnabled={isFeedEnabled}
+            onToggleFeed={onToggleFeed} />
         </div>
       </div>
     </>

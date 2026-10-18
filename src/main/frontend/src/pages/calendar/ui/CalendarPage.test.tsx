@@ -31,7 +31,7 @@ function occurrence(overrides: Partial<CalendarOccurrence> & { title: string }):
   return {
     source: 'EVENT', sourceId: overrides.title, seriesId: null, originalDate: null, materialized: true,
     description: null, location: null, allDay: true, startDate: '2026-09-23', startTime: null,
-    endDate: '2026-09-23', endTime: null, color: null, participantIds: [], ...overrides,
+    endDate: '2026-09-23', endTime: null, color: null, participantIds: [], externalFeedId: null, ...overrides,
   }
 }
 
@@ -45,7 +45,7 @@ function renderPage(feed: CalendarOccurrence[], apis: {
   members?: SpaceMember[]
   search?: string
 } = {}) {
-  const calendar = { listOccurrences: vi.fn().mockResolvedValue(feed), listRecurringEventSeries: vi.fn().mockResolvedValue([]), ...apis.calendar } as unknown as CalendarApi
+  const calendar = { listOccurrences: vi.fn().mockResolvedValue(feed), listRecurringEventSeries: vi.fn().mockResolvedValue([]), listExternalFeeds: vi.fn().mockResolvedValue([]), ...apis.calendar } as unknown as CalendarApi
   const finance = { listSavingsGoals: vi.fn().mockResolvedValue([]), listRecurringSeries: vi.fn().mockResolvedValue([]), listCategories: vi.fn().mockResolvedValue([]), ...apis.finance } as unknown as IFinanceApi
   const kitchen = { listRecipes: vi.fn().mockResolvedValue([]), listMenuEntries: vi.fn().mockResolvedValue([]), ...apis.kitchen } as unknown as IKitchenApi
   const spaces: ISpacesApi = { listMySpaces: vi.fn().mockResolvedValue([{ ...SPACE, myRole: apis.role ?? 'MEMBER' }]), getSpace: vi.fn() }
@@ -72,6 +72,35 @@ function renderPage(feed: CalendarOccurrence[], apis: {
 }
 
 describe('CalendarPage', () => {
+  it('lets a viewer open the sync dialog, though not create an event', async () => {
+    renderPage([], { role: 'VIEWER' })
+    fireEvent.click(await screen.findByRole('button', { name: 'sync' }))
+    expect(await screen.findByRole('tablist')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /new_event/ })).toBeNull()
+  })
+
+  it('shows the entries of a followed calendar and filters each calendar on its own', async () => {
+    const feeds = [
+      { id: 'f1', name: 'Vacances scolaires', host: 'a.example', color: 'event-cyan', contentFetchedAt: '2026-10-13T00:00:00Z', lastAttemptAt: '2026-10-13T00:00:00Z', lastError: null },
+      { id: 'f2', name: 'Matchs du club', host: 'b.example', color: null, contentFetchedAt: '2026-10-13T00:00:00Z', lastAttemptAt: '2026-10-13T00:00:00Z', lastError: null },
+    ]
+    renderPage([
+      occurrence({ title: 'Toussaint', source: 'EXTERNAL', sourceId: 'ext-a', externalFeedId: 'f1' }),
+      occurrence({ title: 'Finale', source: 'EXTERNAL', sourceId: 'ext-b', externalFeedId: 'f2' }),
+    ], { view: 'day', calendar: { listExternalFeeds: vi.fn().mockResolvedValue(feeds) } })
+
+    expect(await screen.findByText('Toussaint')).toBeTruthy()
+    expect(screen.getByText('Finale')).toBeTruthy()
+
+    const filter = await screen.findByRole('button', { name: 'Vacances scolaires' })
+    expect(filter.getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(filter)
+
+    expect(screen.queryByText('Toussaint')).toBeNull()
+    expect(screen.getByText('Finale')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Vacances scolaires' }).getAttribute('aria-pressed')).toBe('false')
+  })
+
   it('opens a savings deadline instead of crashing', async () => {
     const { finance } = renderPage([occurrence({ title: 'Vacances', source: 'SAVINGS', sourceId: 'goal-1' })], {
       finance: { listSavingsGoals: vi.fn().mockResolvedValue([

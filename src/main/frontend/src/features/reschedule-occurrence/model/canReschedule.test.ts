@@ -6,7 +6,7 @@ function occ(source: CalendarSourceType, materialized: boolean, series?: { serie
   return {
     source, sourceId: 'x', seriesId: series?.seriesId ?? null, originalDate: series?.originalDate ?? null,
     materialized, title: 'x', description: null, location: null, allDay: true,
-    startDate: '2026-01-01', startTime: null, endDate: '2026-01-01', endTime: null, color: null, participantIds: [],
+    startDate: '2026-01-01', startTime: null, endDate: '2026-01-01', endTime: null, color: null, participantIds: [], externalFeedId: null,
   }
 }
 
@@ -28,5 +28,9 @@ describe('canReschedule', () => {
   it('never moves finance or savings', () => {
     expect(canReschedule(occ('FINANCE', true))).toBe(false)
     expect(canReschedule(occ('SAVINGS', true))).toBe(false)
+  })
+
+  it('never moves an entry of a followed calendar: it is changed at its source', () => {
+    expect(canReschedule({ ...occ('EXTERNAL', true), externalFeedId: 'f1' })).toBe(false)
   })
 })

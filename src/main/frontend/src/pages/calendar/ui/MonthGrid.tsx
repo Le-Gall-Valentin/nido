@@ -8,7 +8,7 @@ import { canReschedule } from '@/features/reschedule-occurrence'
 import type { DragData, DropData } from '../lib/dragTypes'
 import { covers } from '../lib/segments'
 import { fadeClassFor, useDragPreview } from '../model/dragPreview'
-import { SOURCE_ORDER, dotClassFor, dotClassForSource } from '../lib/sourceAppearance'
+import { DISPLAY_ORDER, dotClassFor, dotClassForSource } from '../lib/sourceAppearance'
 import { formatDay, formatDayAndMonth } from '../lib/periodLabel'
 
 interface MonthGridProps {
@@ -75,7 +75,7 @@ export function MonthGrid({
           const dayOccurrences = byDay.get(day) ?? []
           const isToday = day === today
           const isOutside = day.slice(0, 7) !== shownMonth
-          const sourcesPresent = SOURCE_ORDER.filter(
+          const sourcesPresent = DISPLAY_ORDER.filter(
             (source) => dayOccurrences.some((o) => o.source === source))
           const open = () => (isOutside ? onSelectMonth(day) : onSelectDay(day))
           const faded = isOutside ? 'opacity-50' : ''

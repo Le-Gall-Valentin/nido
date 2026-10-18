@@ -5,6 +5,7 @@ import { ROUTES } from '@/shared/config'
 import { resolveLocale } from '@/shared/lib'
 import { useSpaceMembers } from '@/entities/space'
 import { useAuth } from '@/features/auth'
+import { CalendarSyncDialog } from '@/features/calendar-sync'
 import {
   useJoinEvent, useLeaveEvent, useRecurringEventSeries, type CalendarOccurrence,
 } from '@/entities/calendar'
@@ -128,6 +129,9 @@ export function CalendarDialogs({
 
     case 'meal':
       return <MealEntryModal spaceId={spaceId} date={open.date} onClose={close} />
+
+    case 'sync':
+      return <CalendarSyncDialog spaceId={spaceId} canWrite={canWrite} isPersonal={isPersonal} onClose={close} />
 
     case 'manage-series':
       return (

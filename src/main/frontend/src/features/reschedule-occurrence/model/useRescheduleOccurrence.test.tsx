@@ -15,7 +15,7 @@ function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence 
     source: 'EVENT', sourceId: 'e1', seriesId: null, originalDate: null, materialized: true,
     title: 'Concert', description: 'Billets', location: 'Salle', allDay: false,
     startDate: '2026-09-23', startTime: '20:00', endDate: '2026-09-23', endTime: '21:00',
-    color: null, participantIds: [], ...overrides,
+    color: null, participantIds: [], externalFeedId: null, ...overrides,
   }
 }
 

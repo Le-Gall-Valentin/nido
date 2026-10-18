@@ -23,6 +23,12 @@ type Token = (typeof SOURCE_TOKEN)[CalendarSourceType] | EventColor
 export const SOURCE_ORDER: CalendarSourceType[] = ['EVENT', 'TASK', 'FINANCE', 'MEAL', 'SAVINGS']
 
 /**
+ * The order entries show in, the followed calendars last. They have no filter of their kind: each followed calendar is
+ * filtered on its own, by name — see SourceFilters.
+ */
+export const DISPLAY_ORDER: CalendarSourceType[] = [...SOURCE_ORDER, 'EXTERNAL']
+
+/**
  * The token an occurrence paints with: its own event colour when it has a valid one, its source's
  * otherwise. Anything else is ignored rather than trusted — `color` is stored text, and a stale or
  * hand-written value must not produce an unstyled element, nor a source's colour an event in disguise.

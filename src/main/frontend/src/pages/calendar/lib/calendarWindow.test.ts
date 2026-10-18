@@ -8,7 +8,7 @@ function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence 
   return {
     source: 'EVENT', sourceId: 'x', seriesId: null, originalDate: null, materialized: true,
     title: 'x', description: null, location: null, allDay: true, startDate: '2026-01-01', startTime: null, endDate: '2026-01-01',
-    endTime: null, color: null, participantIds: [], ...overrides,
+    endTime: null, color: null, participantIds: [], externalFeedId: null, ...overrides,
   }
 }
 

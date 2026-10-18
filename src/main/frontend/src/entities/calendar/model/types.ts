@@ -35,6 +35,8 @@ export interface CalendarOccurrence {
   endTime: string | null
   color: string | null
   participantIds: string[]
+  /** The followed calendar an EXTERNAL entry comes from; null for every other source. */
+  externalFeedId: string | null
 }
 
 export interface CalendarEvent {
