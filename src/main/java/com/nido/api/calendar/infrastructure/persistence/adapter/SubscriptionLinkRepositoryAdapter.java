@@ -50,11 +50,6 @@ public class SubscriptionLinkRepositoryAdapter implements SubscriptionLinkReposi
     }
 
     @Override
-    public Optional<SubscriptionLink> findById(UUID linkId) {
-        return links.findById(linkId).map(this::toDomain);
-    }
-
-    @Override
     public Optional<SubscriptionLink> findByTokenHash(String tokenHash) {
         return links.findByTokenHash(tokenHash).map(this::toDomain);
     }
@@ -66,8 +61,8 @@ public class SubscriptionLinkRepositoryAdapter implements SubscriptionLinkReposi
 
     @Override
     @Transactional
-    public void delete(UUID linkId) {
-        links.deleteById(linkId);
+    public boolean deleteOwned(UUID linkId, UUID spaceId, UUID userId) {
+        return links.deleteOwned(linkId, spaceId, userId) > 0;
     }
 
     @Override

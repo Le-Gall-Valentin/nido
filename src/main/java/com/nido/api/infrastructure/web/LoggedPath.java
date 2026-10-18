@@ -9,11 +9,12 @@ import java.util.regex.Pattern;
 /**
  * A request's path as it may be logged: the token of a subscription address is its whole credential, and never is.
  * The decision is made on the path the router reads (decoded, without path parameters), not on the raw text, so no
- * spelling of the address escapes it; a subscription address is never logged with any part of its raw form.
+ * spelling of the address escapes it — a decoded line break neither —; a subscription address is never logged with any
+ * part of its raw form.
  */
 public final class LoggedPath {
 
-    private static final Pattern SUBSCRIPTION = Pattern.compile("^/ical/[^/]+.*");
+    private static final Pattern SUBSCRIPTION = Pattern.compile("(?s)^/ical/[^/]+.*");
     private static final Pattern PATH_PARAMETERS = Pattern.compile(";[^/]*");
     private static final Pattern SLASHES = Pattern.compile("/{2,}");
     private static final String MASKED = "/ical/***.ics";

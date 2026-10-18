@@ -1,7 +1,7 @@
 package com.nido.api.space.application.handler;
 
-import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.service.SpaceDepartures;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceAppearance;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -108,6 +108,8 @@ class HandleUserDeletionHandlerTest {
         InOrder order = inOrder(spaceNotifier, spaceCommandPort);
         order.verify(spaceNotifier).spaceDeletedWithoutHeir(sharedSpaceId, userId, "alice");
         order.verify(spaceCommandPort).delete(sharedSpaceId);
+        // the cascade takes the addresses with the space
+        verify(departures, never()).departed(any(), any());
     }
 
     @Test

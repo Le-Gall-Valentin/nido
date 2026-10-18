@@ -63,12 +63,18 @@ class WebAuthorizationConventionsTest {
      * Its sibling {@code #move} is absent from this list on purpose: moving deletes from the source
      * as well, so it declares a MEMBER floor like every other write. Copying one occurrence of a
      * series is that same copy, and its {@code #moveOccurrence} sibling is absent for the same reason.
+     *
+     * <p>A subscription address writes nothing of the space: it is its member's own way to read the calendar from
+     * another application, reading no more than its member sees — all of it, for a VIEWER. Each member creates and
+     * revokes only their own ({@code RevokeSubscriptionLinkHandler} deletes on the member's id), as with an export.
      */
     private static final Set<String> VIEWER_MAY_WRITE = Set.of(
         "SpaceController#leave",
         "RecipeController#copy",
         "CalendarEventController#copy",
-        "RecurringEventSeriesController#copyOccurrence");
+        "RecurringEventSeriesController#copyOccurrence",
+        "CalendarSubscriptionLinkController#create",
+        "CalendarSubscriptionLinkController#revoke");
 
     private record Route(String name, SpaceRole floor) {}
 

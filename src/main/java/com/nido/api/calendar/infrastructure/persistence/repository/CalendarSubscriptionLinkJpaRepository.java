@@ -20,6 +20,10 @@ public interface CalendarSubscriptionLinkJpaRepository extends JpaRepository<Cal
     long countBySpaceIdAndUserId(UUID spaceId, UUID userId);
 
     @Modifying
+    @Query("DELETE FROM CalendarSubscriptionLinkEntity l WHERE l.id = :id AND l.spaceId = :spaceId AND l.userId = :userId")
+    int deleteOwned(@Param("id") UUID id, @Param("spaceId") UUID spaceId, @Param("userId") UUID userId);
+
+    @Modifying
     @Query("DELETE FROM CalendarSubscriptionLinkEntity l WHERE l.spaceId = :spaceId AND l.userId = :userId")
     void deleteBySpaceAndUser(@Param("spaceId") UUID spaceId, @Param("userId") UUID userId);
 

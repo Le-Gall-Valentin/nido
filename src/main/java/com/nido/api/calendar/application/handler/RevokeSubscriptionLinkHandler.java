@@ -21,9 +21,9 @@ public class RevokeSubscriptionLinkHandler implements RevokeSubscriptionLinkUseC
     @Override
     @Transactional
     public void revoke(UUID linkId, SpaceMembership caller) {
-        links.findById(linkId)
-            .filter(link -> link.spaceId().equals(caller.spaceId()) && link.userId().equals(caller.userId()))
-            .orElseThrow(CalendarException.SubscriptionLinkNotFound::new);
-        links.delete(linkId);
+        // One statement, matched on ids alone: someone else's address, or one of another space, is simply not found.
+        if (!links.deleteOwned(linkId, caller.spaceId(), caller.userId())) {
+            throw new CalendarException.SubscriptionLinkNotFound();
+        }
     }
 }

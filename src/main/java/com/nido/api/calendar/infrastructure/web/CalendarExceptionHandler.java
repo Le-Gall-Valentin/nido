@@ -1,6 +1,7 @@
 package com.nido.api.calendar.infrastructure.web;
 
 import com.nido.api.calendar.domain.model.CalendarException;
+import com.nido.api.infrastructure.web.LoggedPath;
 import com.nido.api.shared.infrastructure.web.ProblemDetailFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
@@ -77,7 +78,7 @@ public class CalendarExceptionHandler {
         };
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), e.getClass().getSimpleName(), response.detail(),
-            URI.create(request.getRequestURI()));
+            URI.create(LoggedPath.of(request)));
         if (response.errorCode() != null) {
             problem.setProperty("error_code", response.errorCode());
         }

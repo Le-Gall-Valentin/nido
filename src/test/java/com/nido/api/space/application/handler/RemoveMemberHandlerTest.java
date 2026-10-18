@@ -1,7 +1,7 @@
 package com.nido.api.space.application.handler;
 
-import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.service.SpaceDepartures;
+import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.RemoveMemberCommand;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;

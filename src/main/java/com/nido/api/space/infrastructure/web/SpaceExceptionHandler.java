@@ -2,6 +2,7 @@ package com.nido.api.space.infrastructure.web;
 
 import com.nido.api.shared.infrastructure.web.ProblemDetailFactory;
 import com.nido.api.space.domain.model.SpaceException;
+import com.nido.api.infrastructure.web.LoggedPath;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +66,7 @@ public class SpaceExceptionHandler {
                 "No account matches this username or email address. Ask an administrator to create one.");
 
             case SpaceException.DataIntegrityError ex -> {
-                log.error("Data integrity violation on {}", request.getRequestURI(), ex);
+                log.error("Data integrity violation on {}", LoggedPath.of(request), ex);
                 yield response(500, ex, "An unexpected error occurred. Please try again later.");
             }
         };

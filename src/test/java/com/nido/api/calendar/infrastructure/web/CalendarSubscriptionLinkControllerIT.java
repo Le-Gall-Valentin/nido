@@ -34,6 +34,7 @@ import org.springframework.web.context.WebApplicationContext;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -134,6 +135,21 @@ class CalendarSubscriptionLinkControllerIT {
         mockMvc.perform(delete(links() + "/" + id).cookie(tokenFor(aliceId))).andExpect(status().isNotFound());
         mockMvc.perform(delete(links() + "/" + id).cookie(tokenFor(bobId))).andExpect(status().isNoContent());
         mockMvc.perform(get(links()).cookie(tokenFor(bobId))).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void an_address_is_revoked_without_its_label_being_opened() throws Exception {
+        create(bobId, "iPhone");
+        create(bobId, "Tablette");
+        List<String> ids = jdbc.queryForList("SELECT id::text FROM calendar_subscription_links WHERE space_id = ? ORDER BY created_at",
+            String.class, spaceId);
+        // The first address now holds the label sealed for the second: opening it would be refused.
+        jdbc.update("UPDATE calendar_subscription_links SET label_encrypted = (SELECT label_encrypted FROM calendar_subscription_links "
+            + "WHERE id = ?::uuid) WHERE id = ?::uuid", ids.get(1), ids.get(0));
+
+        mockMvc.perform(delete(links() + "/" + ids.get(0)).cookie(tokenFor(bobId))).andExpect(status().isNoContent());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_subscription_links WHERE id = ?::uuid", Long.class, ids.get(0)))
+            .isZero();
     }
 
     @Test

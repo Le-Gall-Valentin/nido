@@ -44,4 +44,13 @@ class RateLimitExceptionHandlerTest {
         assertThat(response.getHeaders().getFirst("X-RateLimit-Reset")).isEqualTo(String.valueOf(resetEpoch));
         assertThat(response.getHeaders().getFirst("Retry-After")).isEqualTo("30");
     }
+
+    @Test
+    void handle_neverPutsTheTokenOfASubscriptionAddressInTheBody() {
+        request.setRequestURI("/ical/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde.ics");
+
+        var response = handler.handle(exceptionWith(60L, 9999999999L, 30L), request);
+
+        assertThat(response.getBody().getInstance().toString()).isEqualTo("/ical/***.ics");
+    }
 }

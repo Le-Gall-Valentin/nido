@@ -11,6 +11,7 @@ import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntit
 import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
 import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.shared.model.Role;
+import com.nido.api.space.application.port.in.HandleUserDeletionUseCase;
 import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
@@ -63,6 +64,7 @@ class IcalFeedControllerIT {
     @Autowired RedisRateLimitBucketStore rateLimitBucketStore;
     @Autowired JdbcTemplate jdbc;
     @Autowired SettingsStorePort settingsStore;
+    @Autowired HandleUserDeletionUseCase userDeletion;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -181,6 +183,28 @@ class IcalFeedControllerIT {
         mockMvc.perform(get(path)).andExpect(status().isNotFound());
         assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_subscription_links WHERE space_id = ? AND user_id = ?",
             Long.class, spaceId, bobId)).isZero();
+    }
+
+    @Test
+    void a_member_who_leaves_the_space_loses_their_addresses() throws Exception {
+        String path = createLink(bobId, "{\"label\":\"iPhone\",\"sources\":[\"EVENT\"]}");
+
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/membership").cookie(tokenFor(bobId)))
+            .andExpect(status().isNoContent());
+
+        mockMvc.perform(get(path)).andExpect(status().isNotFound());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_subscription_links WHERE space_id = ? AND user_id = ?",
+            Long.class, spaceId, bobId)).isZero();
+    }
+
+    @Test
+    void a_deleted_account_loses_its_addresses_in_every_space_it_left() throws Exception {
+        createLink(bobId, "{\"label\":\"iPhone\",\"sources\":[\"EVENT\"]}");
+
+        userDeletion.handleUserDeletion(bobId, "bob");
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_subscription_links WHERE user_id = ?", Long.class, bobId))
+            .isZero();
     }
 
     /** The path of the address made, as a calendar application would request it. */

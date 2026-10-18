@@ -45,6 +45,12 @@ class LoggedPathTest {
     }
 
     @Test
+    void aDecodedLineBreakAfterTheTokenDoesNotCarryItOut() {
+        assertThat(path("/ical/" + TOKEN + ".ics/%0Asuite")).isEqualTo("/ical/***.ics");
+        assertThat(path("/ical/" + TOKEN + "%0D%0A.ics")).isEqualTo("/ical/***.ics");
+    }
+
+    @Test
     void aPathThatCannotBeDecodedIsNotLoggedAtAll() {
         assertThat(path("/ical/%zz" + TOKEN + ".ics")).isEqualTo("/***");
     }

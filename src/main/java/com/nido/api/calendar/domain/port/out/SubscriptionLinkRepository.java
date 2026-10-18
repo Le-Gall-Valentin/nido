@@ -16,13 +16,12 @@ public interface SubscriptionLinkRepository {
 
     List<SubscriptionLink> findBySpaceAndUser(UUID spaceId, UUID userId);
 
-    Optional<SubscriptionLink> findById(UUID linkId);
-
     Optional<SubscriptionLink> findByTokenHash(String tokenHash);
 
     long countBySpaceAndUser(UUID spaceId, UUID userId);
 
-    void delete(UUID linkId);
+    /** Deletes the address if {@code userId} gave it for {@code spaceId}, and says whether it did; its label is never opened. */
+    boolean deleteOwned(UUID linkId, UUID spaceId, UUID userId);
 
     /** Every address a member gave for a space: what their leaving it takes away. */
     void deleteBySpaceAndUser(UUID spaceId, UUID userId);
