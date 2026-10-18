@@ -1,0 +1,149 @@
+{
+  "title": "Synchroniser le calendrier",
+  "tabs": {
+    "export": "Exporter",
+    "subscribe": "S'abonner",
+    "import": "Importer",
+    "feeds": "Calendriers suivis"
+  },
+  "sources": {
+    "label": "Sources",
+    "EVENT": "Événements",
+    "TASK": "Tâches",
+    "FINANCE": "Finances",
+    "MEAL": "Repas",
+    "SAVINGS": "Épargne"
+  },
+  "only_mine": "Seulement ce qui me concerne",
+  "only_mine_hint": "Les événements où vous participez ou sans participant, les tâches qui vous sont assignées ou à personne.",
+  "export": {
+    "intro": "Un fichier .ics à ouvrir dans Google Agenda, Outlook ou Apple Calendrier. C'est une copie : ce qui change ensuite dans Nido n'y arrive pas.",
+    "download": "Télécharger",
+    "failed": "Le fichier n'a pas pu être préparé. Réessayez."
+  },
+  "subscribe": {
+    "intro": "Une adresse secrète à donner à votre agenda : ce calendrier y apparaît et se met à jour tout seul. Une adresse par appareil, pour pouvoir en révoquer une seule.",
+    "empty": "Aucune adresse pour l'instant.",
+    "new": "Nouvelle adresse",
+    "label": "Nom de l'appareil",
+    "label_placeholder": "iPhone, agenda du travail…",
+    "create": "Créer l'adresse",
+    "cancel": "Annuler",
+    "created_title": "Votre adresse",
+    "created_warning": "Cette adresse ne sera plus affichée. Quiconque la connaît voit ce calendrier : ne la partagez pas.",
+    "copy": "Copier",
+    "copied": "Copiée",
+    "copy_failed": "La copie a échoué : sélectionnez l'adresse et copiez-la à la main.",
+    "open": "Ouvrir dans l'agenda",
+    "help_google": "Google Agenda : sur ordinateur, « Autres agendas » → « + » → « À partir de l'URL ». Google relit l'adresse à son rythme, toutes les 8 à 24 heures environ.",
+    "help_apple": "Apple : touchez « Ouvrir dans l'agenda » sur l'iPhone ou le Mac.",
+    "help_outlook": "Outlook : « Ajouter un calendrier » → « S'abonner à partir du web ».",
+    "done": "J'ai copié l'adresse",
+    "last_read": "Lue par l'agenda {{when}}",
+    "never_read": "Pas encore lue par un agenda",
+    "revoke": "Révoquer",
+    "revoke_confirm": "Révoquer « {{label}} » ? L'agenda qui l'utilise ne recevra plus rien.",
+    "revoke_yes": "Révoquer"
+  },
+  "import": {
+    "intro": "Un fichier .ics exporté de Google, Outlook ou Apple : ses événements deviennent des événements de cet espace. Un fichier déjà importé n'est pas importé deux fois.",
+    "choose": "Choisir un fichier .ics",
+    "drop": "ou déposez-le ici",
+    "analysing": "Analyse du fichier…",
+    "importing": "Import en cours…",
+    "summary": {
+      "events": "Événements : {{count}}",
+      "series": "Événements récurrents : {{count}}",
+      "unfolded": "Dont répétitions dépliées : {{count}}",
+      "duplicates": "Déjà importés : {{count}}",
+      "ignored": "Ignorés : {{count}}"
+    },
+    "confirm_one": "Importer {{count}} élément",
+    "confirm_other": "Importer {{count}} éléments",
+    "nothing": "Rien de nouveau à importer.",
+    "done": "Import terminé.",
+    "again": "Importer un autre fichier",
+    "notes_title": "À regarder",
+    "note": {
+      "UNFOLDED": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : {{detail}} événements séparés.",
+      "UNFOLDED_PARTIAL": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : {{detail}} événements séparés, d'il y a un an à dans deux ans.",
+      "TRUNCATED_TEXT": "« {{title}} » : {{detail}} raccourci.",
+      "CONVERTED_ZONE": "« {{title}} » : heures converties depuis le fuseau {{detail}}.",
+      "UNKNOWN_ZONE": "« {{title}} » : fuseau {{detail}} inconnu, heures prises telles quelles.",
+      "IGNORED": "« {{title}} » n'est pas importé : {{detail}}."
+    },
+    "untitled": "(sans titre)",
+    "ignored_reason": {
+      "VTODO": "c'est une tâche",
+      "VJOURNAL": "c'est une note",
+      "VFREEBUSY": "ce sont des disponibilités",
+      "NO_START": "il n'a pas de date",
+      "CANCELLED": "il est annulé",
+      "TOO_LONG": "il dure plus de 366 jours",
+      "DUPLICATE_UID": "un autre événement du fichier porte le même identifiant",
+      "TOO_HEAVY": "sa règle de répétition demande trop de calcul",
+      "BAD_RULE": "sa règle de répétition est illisible"
+    },
+    "text_field": {
+      "title": "titre",
+      "description": "description",
+      "location": "lieu"
+    },
+    "ignored_unknown": "il ne peut pas être importé"
+  },
+  "feeds": {
+    "intro": "Un calendrier publié à une adresse (vacances scolaires, club, agenda du travail) : Nido le relit toutes les six heures et l'affiche dans cet espace, en lecture seule.",
+    "empty": "Aucun calendrier suivi.",
+    "follow": "Suivre un calendrier",
+    "url": "Adresse du calendrier",
+    "url_placeholder": "https://… ou webcal://…",
+    "name": "Nom (facultatif)",
+    "rename": "Nom",
+    "color": "Couleur",
+    "save": "Suivre",
+    "saving": "Lecture du calendrier…",
+    "update": "Enregistrer",
+    "cancel": "Annuler",
+    "updated": "Mis à jour {{when}}",
+    "failed_since": "Mis à jour {{when}} · dernier essai : {{reason}}",
+    "refresh": "Actualiser",
+    "edit": "Modifier",
+    "remove": "Retirer",
+    "remove_confirm": "Ne plus suivre « {{name}} » ? Ses événements disparaissent de cet espace.",
+    "remove_yes": "Ne plus suivre"
+  },
+  "colors": {
+    "event-violet": "Violet",
+    "event-magenta": "Magenta",
+    "event-cyan": "Cyan",
+    "event-graphite": "Graphite",
+    "event-indigo": "Indigo",
+    "event-brique": "Brique"
+  },
+  "errors": {
+    "network": "Nido ne répond pas. Vérifiez votre connexion.",
+    "server": "Une erreur est survenue. Réessayez.",
+    "rate_limited": "Trop d'essais. Attendez une minute.",
+    "forbidden": "Vous n'avez pas le droit de faire cela dans cet espace.",
+    "not_ics": "Ce fichier n'est pas un calendrier .ics.",
+    "file_too_large": "Le fichier dépasse 5 Mo.",
+    "import_too_large": "Ce fichier contient trop d'événements pour un seul import.",
+    "too_many_links": "Vous avez déjà 10 adresses pour cet espace. Révoquez-en une d'abord.",
+    "public_url_missing": "L'adresse publique de Nido n'est pas réglée : un administrateur doit la définir dans les réglages.",
+    "invalid_sources": "Choisissez au moins une source.",
+    "invalid_feed_address": "Donnez une adresse qui commence par https://, http:// ou webcal://.",
+    "too_many_feeds": "Cet espace suit déjà 10 calendriers.",
+    "refresh_too_soon": "Ce calendrier vient d'être relu. Réessayez dans une minute.",
+    "feed_unavailable": "Le calendrier n'a pas pu être lu : {{reason}}."
+  },
+  "feed_error": {
+    "INVALID_URL": "adresse invalide",
+    "BLOCKED_ADDRESS": "adresse du réseau local refusée",
+    "UNREACHABLE": "adresse injoignable",
+    "TIMEOUT": "délai dépassé",
+    "TOO_MANY_REDIRECTS": "trop de redirections",
+    "TOO_LARGE": "le calendrier est trop volumineux",
+    "NOT_ICS": "ce n'est pas un calendrier",
+    "HTTP": "le serveur a répondu {{status}}"
+  }
+}

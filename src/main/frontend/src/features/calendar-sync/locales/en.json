@@ -1,0 +1,149 @@
+{
+  "title": "Sync the calendar",
+  "tabs": {
+    "export": "Export",
+    "subscribe": "Subscribe",
+    "import": "Import",
+    "feeds": "Followed calendars"
+  },
+  "sources": {
+    "label": "Sources",
+    "EVENT": "Events",
+    "TASK": "Tasks",
+    "FINANCE": "Money",
+    "MEAL": "Meals",
+    "SAVINGS": "Savings"
+  },
+  "only_mine": "Only what concerns me",
+  "only_mine_hint": "Events you take part in or that have no participant, tasks assigned to you or to nobody.",
+  "export": {
+    "intro": "An .ics file to open in Google Calendar, Outlook or Apple Calendar. It is a copy: what changes in Nido afterwards does not reach it.",
+    "download": "Download",
+    "failed": "The file could not be prepared. Try again."
+  },
+  "subscribe": {
+    "intro": "A secret address to give your calendar app: this calendar shows there and keeps itself up to date. One address per device, so you can revoke just one.",
+    "empty": "No address yet.",
+    "new": "New address",
+    "label": "Device name",
+    "label_placeholder": "iPhone, work calendar…",
+    "create": "Create the address",
+    "cancel": "Cancel",
+    "created_title": "Your address",
+    "created_warning": "This address will not be shown again. Anyone who has it sees this calendar: do not share it.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copy_failed": "Copying failed: select the address and copy it by hand.",
+    "open": "Open in my calendar",
+    "help_google": "Google Calendar: on a computer, \"Other calendars\" → \"+\" → \"From URL\". Google reads the address at its own pace, every 8 to 24 hours or so.",
+    "help_apple": "Apple: tap \"Open in my calendar\" on the iPhone or Mac.",
+    "help_outlook": "Outlook: \"Add calendar\" → \"Subscribe from web\".",
+    "done": "I copied the address",
+    "last_read": "Read by the calendar app {{when}}",
+    "never_read": "Not read by a calendar app yet",
+    "revoke": "Revoke",
+    "revoke_confirm": "Revoke \"{{label}}\"? The calendar app using it will receive nothing more.",
+    "revoke_yes": "Revoke"
+  },
+  "import": {
+    "intro": "An .ics file exported from Google, Outlook or Apple: its events become events of this space. A file already imported is not imported twice.",
+    "choose": "Choose an .ics file",
+    "drop": "or drop it here",
+    "analysing": "Reading the file…",
+    "importing": "Importing…",
+    "summary": {
+      "events": "Events: {{count}}",
+      "series": "Recurring events: {{count}}",
+      "unfolded": "Of which unfolded repetitions: {{count}}",
+      "duplicates": "Already imported: {{count}}",
+      "ignored": "Ignored: {{count}}"
+    },
+    "confirm_one": "Import {{count}} item",
+    "confirm_other": "Import {{count}} items",
+    "nothing": "Nothing new to import.",
+    "done": "Import done.",
+    "again": "Import another file",
+    "notes_title": "Worth a look",
+    "note": {
+      "UNFOLDED": "\"{{title}}\" repeats in a way Nido cannot say: {{detail}} separate events.",
+      "UNFOLDED_PARTIAL": "\"{{title}}\" repeats in a way Nido cannot say: {{detail}} separate events, from a year ago to two years ahead.",
+      "TRUNCATED_TEXT": "\"{{title}}\": {{detail}} shortened.",
+      "CONVERTED_ZONE": "\"{{title}}\": times converted from the {{detail}} time zone.",
+      "UNKNOWN_ZONE": "\"{{title}}\": unknown time zone {{detail}}, times taken as they are.",
+      "IGNORED": "\"{{title}}\" is not imported: {{detail}}."
+    },
+    "untitled": "(untitled)",
+    "ignored_reason": {
+      "VTODO": "it is a task",
+      "VJOURNAL": "it is a note",
+      "VFREEBUSY": "it is free/busy information",
+      "NO_START": "it has no date",
+      "CANCELLED": "it is cancelled",
+      "TOO_LONG": "it lasts more than 366 days",
+      "DUPLICATE_UID": "another event in the file has the same identifier",
+      "TOO_HEAVY": "its repetition rule takes too much work",
+      "BAD_RULE": "its repetition rule cannot be read"
+    },
+    "text_field": {
+      "title": "title",
+      "description": "description",
+      "location": "location"
+    },
+    "ignored_unknown": "it cannot be imported"
+  },
+  "feeds": {
+    "intro": "A calendar published at an address (school holidays, a club, a work calendar): Nido reads it again every six hours and shows it in this space, read-only.",
+    "empty": "No followed calendar.",
+    "follow": "Follow a calendar",
+    "url": "Calendar address",
+    "url_placeholder": "https://… or webcal://…",
+    "name": "Name (optional)",
+    "rename": "Name",
+    "color": "Colour",
+    "save": "Follow",
+    "saving": "Reading the calendar…",
+    "update": "Save",
+    "cancel": "Cancel",
+    "updated": "Updated {{when}}",
+    "failed_since": "Updated {{when}} · last attempt: {{reason}}",
+    "refresh": "Refresh",
+    "edit": "Edit",
+    "remove": "Remove",
+    "remove_confirm": "Stop following \"{{name}}\"? Its events leave this space.",
+    "remove_yes": "Stop following"
+  },
+  "colors": {
+    "event-violet": "Violet",
+    "event-magenta": "Magenta",
+    "event-cyan": "Cyan",
+    "event-graphite": "Graphite",
+    "event-indigo": "Indigo",
+    "event-brique": "Brick"
+  },
+  "errors": {
+    "network": "Nido is not answering. Check your connection.",
+    "server": "Something went wrong. Try again.",
+    "rate_limited": "Too many attempts. Wait a minute.",
+    "forbidden": "You may not do that in this space.",
+    "not_ics": "This file is not an .ics calendar.",
+    "file_too_large": "The file is larger than 5 MB.",
+    "import_too_large": "This file holds too many events for one import.",
+    "too_many_links": "You already have 10 addresses for this space. Revoke one first.",
+    "public_url_missing": "Nido's public address is not set: an administrator must set it in the settings.",
+    "invalid_sources": "Choose at least one source.",
+    "invalid_feed_address": "Give an address starting with https://, http:// or webcal://.",
+    "too_many_feeds": "This space already follows 10 calendars.",
+    "refresh_too_soon": "This calendar was just read. Try again in a minute.",
+    "feed_unavailable": "The calendar could not be read: {{reason}}."
+  },
+  "feed_error": {
+    "INVALID_URL": "invalid address",
+    "BLOCKED_ADDRESS": "local network address refused",
+    "UNREACHABLE": "address unreachable",
+    "TIMEOUT": "timed out",
+    "TOO_MANY_REDIRECTS": "too many redirects",
+    "TOO_LARGE": "the calendar is too large",
+    "NOT_ICS": "not a calendar",
+    "HTTP": "the server answered {{status}}"
+  }
+}
