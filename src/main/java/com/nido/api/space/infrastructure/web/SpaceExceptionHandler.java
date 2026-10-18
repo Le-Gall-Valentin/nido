@@ -1,8 +1,8 @@
 package com.nido.api.space.infrastructure.web;
 
+import com.nido.api.infrastructure.web.LoggedPath;
 import com.nido.api.shared.infrastructure.web.ProblemDetailFactory;
 import com.nido.api.space.domain.model.SpaceException;
-import com.nido.api.infrastructure.web.LoggedPath;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

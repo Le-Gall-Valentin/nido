@@ -51,7 +51,8 @@ final class GuardedDnsResolver implements DnsResolver {
     /**
      * Connecting cannot be cancelled mid-attempt: only as many addresses are handed over as the time left in this download
      * holds connect timeouts, counting one the deadline will cut — and never more than the whole download would. Alternating
-     * the families, so that the cut cannot drop the only family that answers.
+     * the families, so that the cut cannot drop the only family that answers. That last attempt may run past the deadline
+     * by less than one connect timeout: a download's 15 s may so become about 20 s at worst.
      */
     private int attempts() {
         int most = (int) Math.max(1, totalNanos / connectNanos);

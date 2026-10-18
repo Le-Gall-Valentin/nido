@@ -1,8 +1,8 @@
 package com.nido.api.authentication.infrastructure.web;
 
 import com.nido.api.authentication.domain.model.AuthenticationException;
-import com.nido.api.shared.infrastructure.web.ProblemDetailFactory;
 import com.nido.api.infrastructure.web.LoggedPath;
+import com.nido.api.shared.infrastructure.web.ProblemDetailFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

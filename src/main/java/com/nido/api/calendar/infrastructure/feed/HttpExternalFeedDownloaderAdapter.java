@@ -44,6 +44,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Downloads a followed calendar: http(s) only, every address checked through {@link GuardedDnsResolver} — redirects
  * followed by hand, each one checked again —, 5 s to connect and 15 s in all, 5 MB at most counted as it arrives and
  * once unpacked, no cookie, no credential. An error is a code, never a word of what the server answered.
+ *
+ * <p>15 s is not a hard bound: a connect in progress cannot be cancelled, and the last address tried may be given the
+ * whole of its connect timeout past the deadline. A download may so take up to about 20 s (see GuardedDnsResolver).
  */
 public final class HttpExternalFeedDownloaderAdapter implements ExternalFeedDownloader, AutoCloseable {
 

@@ -20,6 +20,6 @@ class NidoApiApplicationTests {
     @Test
     void a_refresh_of_followed_calendars_never_holds_back_the_mail_sweep_and_the_purges() {
         // The refresh may take its thread for minutes, downloading: the others need one of their own.
-        assertThat(taskScheduler.getPoolSize()).isEqualTo(2);
+        assertThat(taskScheduler.getScheduledThreadPoolExecutor().getCorePoolSize()).isEqualTo(2);
     }
 }
