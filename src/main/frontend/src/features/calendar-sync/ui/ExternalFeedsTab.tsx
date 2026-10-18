@@ -3,12 +3,15 @@ import { useTranslation } from 'react-i18next'
 import { Button, CTA_BUTTON_STYLE, Input, Spinner } from '@/shared/ui'
 import { formatRelativeTime } from '@/shared/lib'
 import {
-  DEFAULT_EVENT_COLOR, eventDotClass, useExternalFeeds, useFollowExternalFeed, useRefreshExternalFeed,
+  DEFAULT_EVENT_COLOR, EVENT_DOT_CLASS, isEventColor, useExternalFeeds, useFollowExternalFeed, useRefreshExternalFeed,
   useRemoveExternalFeed, useUpdateExternalFeed, type EventColor, type ExternalFeed,
 } from '@/entities/calendar'
 import { FeedColorPicker } from './FeedColorPicker'
 import { FeedEditor } from './FeedEditor'
 import { feedErrorText, syncErrorMessage } from '../lib/syncWording'
+
+/** What a feed wears when its colour is not one of ours — the graphite the calendar gives every external source. */
+const FALLBACK_COLOR: EventColor = 'event-graphite'
 
 type FocusTarget = 'new' | 'url' | 'rename' | 'confirm' | { edit: string } | { remove: string }
 
@@ -83,124 +86,124 @@ export function ExternalFeedsTab({ spaceId, canWrite }: { spaceId: string; canWr
 
   const statusRegion = (
     <p role="status" tabIndex={-1} aria-busy={follow.isPending}
-      className={`min-h-5 text-sm text-fg-2 outline-none ${follow.isPending ? 'animate-pulse' : ''}`}>
+      className={`min-h-5 text-sm text-fg-2 outline-none ${follow.isPending ? 'motion-safe:animate-pulse' : ''}`}>
       {follow.isPending ? t('feeds.saving') : message}
     </p>
   )
 
-  if (adding) {
-    return (
-      <div ref={rootRef} className="flex flex-col gap-3">
-        <Input label={t('feeds.url')} placeholder={t('feeds.url_placeholder')} value={url} inputMode="url" data-feed-url
-          onChange={(e) => setUrl(e.target.value)} />
-        <Input label={t('feeds.name')} value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
-        <FeedColorPicker value={color} onChange={setColor} />
-        {statusRegion}
-        {follow.isError && <p role="alert" className="text-sm text-status-red">{syncErrorMessage(t, follow.error)}</p>}
+  return (
+    <div ref={rootRef} className="flex flex-col gap-3">
+      {adding ? (
+        <>
+          <Input label={t('feeds.url')} placeholder={t('feeds.url_placeholder')} value={url} inputMode="url" data-feed-url
+            onChange={(e) => setUrl(e.target.value)} />
+          <Input label={t('feeds.name')} value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
+          <FeedColorPicker value={color} onChange={setColor} />
+          {follow.isError && <p role="alert" className="text-sm text-status-red">{syncErrorMessage(t, follow.error)}</p>}
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-fg-2">{t('feeds.intro')}</p>
+          {isPending ? (
+            <div className="flex justify-center py-4"><Spinner /></div>
+          ) : (feeds ?? []).length === 0 ? (
+            <p className="text-sm text-fg-3">{t('feeds.empty')}</p>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {(feeds ?? []).map((feed) => editing === feed.id ? (
+                <FeedEditor key={feed.id} feed={feed} pending={update.isPending}
+                  error={update.isError ? syncErrorMessage(t, update.error) : null}
+                  onCancel={() => {
+                    update.reset()
+                    pendingFocus.current = { edit: feed.id }
+                    setEditing(null)
+                  }}
+                  onSave={(newName, newColor) => update.mutate({ feedId: feed.id, name: newName, color: newColor }, {
+                    onSuccess: () => {
+                      pendingFocus.current = { edit: feed.id }
+                      setEditing(null)
+                      setMessage(t('feeds.saved', { name: newName }))
+                    },
+                  })} />
+              ) : (
+                <li key={feed.id} className="flex flex-col gap-1 rounded-lg bg-bg-2 px-3 py-2">
+                  <div className="flex items-start gap-2">
+                    <span aria-hidden className={`mt-1.5 size-2 shrink-0 rounded-full ${EVENT_DOT_CLASS[isEventColor(feed.color) ? feed.color : FALLBACK_COLOR]}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-fg-1">{feed.name}</p>
+                      <p className="text-[11px] text-fg-3">{feed.host} · {status(feed)}</p>
+                    </div>
+                  </div>
+                  {canWrite && removing !== feed.id && (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button type="button" aria-label={t('feeds.refresh_for', { name: feed.name })}
+                        aria-disabled={refresh.isPending}
+                        onClick={() => {
+                          if (refresh.isPending) return
+                          resetAll()
+                          refresh.mutate(feed.id, { onSuccess: () => setMessage(t('feeds.refreshed', { name: feed.name })) })
+                        }}>
+                        {t('feeds.refresh')}
+                      </Button>
+                      <Button type="button" data-edit-feed={feed.id} aria-label={t('feeds.edit_for', { name: feed.name })}
+                        onClick={() => {
+                          resetAll()
+                          pendingFocus.current = 'rename'
+                          setEditing(feed.id)
+                        }}>
+                        {t('feeds.edit')}
+                      </Button>
+                      <Button type="button" data-remove-feed={feed.id} aria-label={t('feeds.remove_for', { name: feed.name })}
+                        onClick={() => {
+                          resetAll()
+                          pendingFocus.current = 'confirm'
+                          setRemoving(feed.id)
+                        }}>
+                        {t('feeds.remove')}
+                      </Button>
+                    </div>
+                  )}
+                  {removing === feed.id && (
+                    <div data-confirm tabIndex={-1} className="flex flex-wrap items-center justify-end gap-2 outline-none">
+                      <p className="flex-1 text-xs text-fg-2">{t('feeds.remove_confirm', { name: feed.name })}</p>
+                      <Button type="button" onClick={() => {
+                        remove.reset()
+                        pendingFocus.current = { remove: feed.id }
+                        setRemoving(null)
+                      }}>{t('feeds.cancel')}</Button>
+                      <Button type="button" style={CTA_BUTTON_STYLE} disabled={remove.isPending}
+                        onClick={() => remove.mutate(feed.id, {
+                          onSuccess: () => {
+                            pendingFocus.current = 'new'
+                            setRemoving(null)
+                            setMessage(t('feeds.removed', { name: feed.name }))
+                          },
+                        })}>
+                        {t('feeds.remove_yes')}
+                      </Button>
+                    </div>
+                  )}
+                  {removing === feed.id && remove.isError && (
+                    <p role="alert" className="text-sm text-status-red">{syncErrorMessage(t, remove.error)}</p>
+                  )}
+                  {refresh.isError && refresh.variables === feed.id && (
+                    <p role="alert" className="text-sm text-status-red">{syncErrorMessage(t, refresh.error)}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+      {statusRegion}
+      {adding ? (
         <div className="flex justify-end gap-2">
-          <Button type="button" onClick={leaveForm}>{t('feeds.cancel')}</Button>
+          <Button type="button" disabled={follow.isPending} onClick={leaveForm}>{t('feeds.cancel')}</Button>
           <Button type="button" style={CTA_BUTTON_STYLE} disabled={!url.trim() || follow.isPending} onClick={submit}>
             {t('feeds.save')}
           </Button>
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <div ref={rootRef} className="flex flex-col gap-3">
-      <p className="text-sm text-fg-2">{t('feeds.intro')}</p>
-      {isPending ? (
-        <div className="flex justify-center py-4"><Spinner /></div>
-      ) : (feeds ?? []).length === 0 ? (
-        <p className="text-sm text-fg-3">{t('feeds.empty')}</p>
-      ) : (
-        <ul className="flex flex-col gap-1">
-          {(feeds ?? []).map((feed) => editing === feed.id ? (
-            <FeedEditor key={feed.id} feed={feed} pending={update.isPending}
-              error={update.isError ? syncErrorMessage(t, update.error) : null}
-              onCancel={() => {
-                update.reset()
-                pendingFocus.current = { edit: feed.id }
-                setEditing(null)
-              }}
-              onSave={(newName, newColor) => update.mutate({ feedId: feed.id, name: newName, color: newColor }, {
-                onSuccess: () => {
-                  pendingFocus.current = { edit: feed.id }
-                  setEditing(null)
-                  setMessage(t('feeds.saved', { name: newName }))
-                },
-              })} />
-          ) : (
-            <li key={feed.id} className="flex flex-col gap-1 rounded-lg bg-bg-2 px-3 py-2">
-              <div className="flex items-start gap-2">
-                <span className={`mt-1.5 size-2 shrink-0 rounded-full ${eventDotClass(feed.color)}`} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-fg-1">{feed.name}</p>
-                  <p className="text-[11px] text-fg-3">{feed.host} · {status(feed)}</p>
-                </div>
-              </div>
-              {canWrite && removing !== feed.id && (
-                <div className="flex flex-wrap justify-end gap-2">
-                  <Button type="button" aria-label={t('feeds.refresh_for', { name: feed.name })}
-                    aria-disabled={refresh.isPending && refresh.variables === feed.id}
-                    onClick={() => {
-                      if (refresh.isPending) return
-                      resetAll()
-                      refresh.mutate(feed.id, { onSuccess: () => setMessage(t('feeds.refreshed', { name: feed.name })) })
-                    }}>
-                    {t('feeds.refresh')}
-                  </Button>
-                  <Button type="button" data-edit-feed={feed.id} aria-label={t('feeds.edit_for', { name: feed.name })}
-                    onClick={() => {
-                      resetAll()
-                      pendingFocus.current = 'rename'
-                      setEditing(feed.id)
-                    }}>
-                    {t('feeds.edit')}
-                  </Button>
-                  <Button type="button" data-remove-feed={feed.id} aria-label={t('feeds.remove_for', { name: feed.name })}
-                    onClick={() => {
-                      resetAll()
-                      pendingFocus.current = 'confirm'
-                      setRemoving(feed.id)
-                    }}>
-                    {t('feeds.remove')}
-                  </Button>
-                </div>
-              )}
-              {removing === feed.id && (
-                <div data-confirm tabIndex={-1} className="flex flex-wrap items-center justify-end gap-2 outline-none">
-                  <p className="flex-1 text-xs text-fg-2">{t('feeds.remove_confirm', { name: feed.name })}</p>
-                  <Button type="button" onClick={() => {
-                    remove.reset()
-                    pendingFocus.current = { remove: feed.id }
-                    setRemoving(null)
-                  }}>{t('feeds.cancel')}</Button>
-                  <Button type="button" style={CTA_BUTTON_STYLE} disabled={remove.isPending}
-                    onClick={() => remove.mutate(feed.id, {
-                      onSuccess: () => {
-                        pendingFocus.current = 'new'
-                        setRemoving(null)
-                        setMessage(t('feeds.removed', { name: feed.name }))
-                      },
-                    })}>
-                    {t('feeds.remove_yes')}
-                  </Button>
-                </div>
-              )}
-              {removing === feed.id && remove.isError && (
-                <p role="alert" className="text-sm text-status-red">{syncErrorMessage(t, remove.error)}</p>
-              )}
-              {refresh.isError && refresh.variables === feed.id && (
-                <p role="alert" className="text-sm text-status-red">{syncErrorMessage(t, refresh.error)}</p>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-      {statusRegion}
-      {canWrite && (
+      ) : canWrite && (
         <div className="flex justify-end">
           <Button type="button" style={CTA_BUTTON_STYLE} data-new-feed onClick={() => {
             resetAll()

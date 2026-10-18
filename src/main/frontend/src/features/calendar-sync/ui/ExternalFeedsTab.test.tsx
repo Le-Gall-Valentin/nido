@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { CalendarApiProvider, CalendarSyncError, type CalendarApi, type ExternalFeed } from '@/entities/calendar'
+import { CalendarApiProvider, CalendarSyncError, EVENT_DOT_CLASS, type CalendarApi, type ExternalFeed } from '@/entities/calendar'
 import { ExternalFeedsTab } from './ExternalFeedsTab'
 
 vi.mock('react-i18next', () => ({
@@ -53,7 +53,7 @@ describe('ExternalFeedsTab', () => {
   it('says why an address could not be followed, and forgets it on cancel', async () => {
     await openForm({ followExternalFeed: vi.fn().mockRejectedValue(new CalendarSyncError('feed_unavailable', 'HTTP_404')) })
     fireEvent.click(screen.getByRole('button', { name: 'feeds.save' }))
-    expect((await screen.findByRole('alert')).textContent).toContain('feed_error.HTTP')
+    expect((await screen.findByRole('alert')).textContent).toContain('errors.feed_unavailable{"reason":"feed_error.HTTP{\\"status\\":\\"404\\"}"}')
 
     fireEvent.click(screen.getByRole('button', { name: 'feeds.cancel' }))
     fireEvent.click(screen.getByRole('button', { name: 'feeds.follow' }))
@@ -122,6 +122,45 @@ describe('ExternalFeedsTab', () => {
     await waitFor(() => expect(removeExternalFeed).toHaveBeenCalledWith('s1', 'f1'))
     await waitFor(() => expect(screen.getByRole('status').textContent).toContain('feeds.removed'))
     expect(document.activeElement).not.toBe(document.body)
+  })
+
+  it('keeps one status region across the form and the list, so the follow is announced', async () => {
+    await openForm({ followExternalFeed: vi.fn().mockResolvedValue(SCHOOL) })
+    const region = screen.getByRole('status')
+    fireEvent.click(screen.getByRole('button', { name: 'feeds.save' }))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('feeds.followed'))
+    expect(screen.getByRole('status')).toBe(region)
+  })
+
+  it('cannot cancel a follow while the calendar downloads', async () => {
+    await openForm({ followExternalFeed: vi.fn().mockReturnValue(new Promise(() => {})) })
+    fireEvent.click(screen.getByRole('button', { name: 'feeds.save' }))
+    await screen.findByText('feeds.saving')
+    expect((screen.getByRole('button', { name: 'feeds.cancel' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('blocks a second refresh while one runs', async () => {
+    const refreshExternalFeed = vi.fn().mockReturnValue(new Promise(() => {}))
+    renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([SCHOOL, CLUB]), refreshExternalFeed })
+    fireEvent.click(await screen.findByRole('button', { name: /feeds\.refresh_for.*Vacances/ }))
+    const other = screen.getByRole('button', { name: /feeds\.refresh_for.*Club/ })
+    await waitFor(() => expect(other.getAttribute('aria-disabled')).toBe('true'))
+    fireEvent.click(other)
+    expect(refreshExternalFeed).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([['too_many_feeds'], ['invalid_feed_address']] as const)('says %s when the follow is refused', async (reason) => {
+    await openForm({ followExternalFeed: vi.fn().mockRejectedValue(new CalendarSyncError(reason)) })
+    fireEvent.click(screen.getByRole('button', { name: 'feeds.save' }))
+    expect((await screen.findByRole('alert')).textContent).toBe(`errors.${reason}`)
+  })
+
+  it('shows a calendar of an unknown colour in graphite, in the list and in its editor', async () => {
+    renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([{ ...SCHOOL, color: 'mauve' }]) })
+    const dot = (await screen.findByText('Vacances scolaires')).closest('li')?.querySelector('span[aria-hidden]')
+    expect(dot?.className).toContain(EVENT_DOT_CLASS['event-graphite'])
+    fireEvent.click(screen.getByRole('button', { name: /feeds\.edit_for/ }))
+    expect(screen.getByRole('button', { name: /feeds\.color_for.*colors\.event-graphite/ }).getAttribute('aria-pressed')).toBe('true')
   })
 
   it('shows a viewer the calendars, and nothing to change them', async () => {
