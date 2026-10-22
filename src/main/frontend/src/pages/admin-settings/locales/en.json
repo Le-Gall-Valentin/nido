@@ -22,7 +22,7 @@
     },
     "calendar": {
       "title": "Calendar",
-      "description": "Followed calendars are downloaded by the server. By default it refuses addresses on the local network (a Nextcloud at home, for instance): opening them also lets a member make Nido call the other services of that network."
+      "description": "Followed calendars are downloaded by the server, which refuses addresses on the local network by default. Opening them (for a Nextcloud at home, for instance) lets every member of every space make Nido fetch addresses on that network. Even then, this machine, Nido's database and Redis stay closed: a Nextcloud on the same machine is given by its network address."
     }
   },
   "source": {

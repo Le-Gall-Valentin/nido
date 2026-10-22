@@ -4,6 +4,8 @@ import { MailTestFailedError, SettingsInvalidError } from '@/entities/instance-s
 import { renderWithQuery } from '@/shared/test'
 import type { ISettingsApi } from '../model/ISettingsApi'
 import type { InstanceSettings } from '@/entities/instance-settings'
+import fr from '../locales/fr.json'
+import en from '../locales/en.json'
 import { AdminSettingsPage } from './AdminSettingsPage'
 
 vi.mock('react-i18next', () => ({
@@ -133,6 +135,11 @@ describe('AdminSettingsPage', () => {
     fireEvent.click(card('calendar').getByRole('button', { name: 'action.save' }))
 
     await waitFor(() => expect(api.update).toHaveBeenCalledWith('calendar', { 'calendar.allow-private-network': 'true' }))
+  })
+
+  it('says, before the local network is opened, that every member may then reach it and what stays closed', () => {
+    expect(fr.group.calendar.description).toBe("Les calendriers suivis sont téléchargés par le serveur, qui refuse par défaut les adresses du réseau local. Les ouvrir (pour un Nextcloud chez vous, par exemple) laisse chaque membre de chaque espace faire télécharger par Nido les adresses de ce réseau. Même alors, cette machine, la base de données de Nido et Redis restent fermés : un Nextcloud installé sur la même machine se donne par son adresse sur le réseau.")
+    expect(en.group.calendar.description).toBe("Followed calendars are downloaded by the server, which refuses addresses on the local network by default. Opening them (for a Nextcloud at home, for instance) lets every member of every space make Nido fetch addresses on that network. Even then, this machine, Nido's database and Redis stay closed: a Nextcloud on the same machine is given by its network address.")
   })
 
   it('shows the problem under its field', async () => {
