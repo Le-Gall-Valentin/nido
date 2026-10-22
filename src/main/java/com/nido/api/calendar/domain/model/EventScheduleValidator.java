@@ -6,6 +6,8 @@ import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 /**
  * Validates a command's schedule <em>before</em> it reaches the database.
@@ -112,25 +114,30 @@ public final class EventScheduleValidator {
                                      Set<DayOfWeek> weekdays, DayRule dayRule) {
         return switch (intervalType) {
             case DAILY -> intervalCount;
-            case WEEKLY -> shortestWeeklyGap(weekdays, intervalCount);
+            case WEEKLY -> weeklyGaps(weekdays, intervalCount).min().orElseThrow();
             case MONTHLY -> 28L * intervalCount;
             case YEARLY -> (dayRule == DayRule.WEEKDAY_OF_MONTH || dayRule == DayRule.LAST_WEEKDAY_OF_MONTH ? 364L : 365L)
                 * intervalCount;
         };
     }
 
-    /** The shortest time between two occurrences of {@code series}, in days. */
-    static long shortestIntervalDays(RecurringEventSeries series) {
-        return shortestIntervalDays(series.intervalType(), series.intervalCount(), series.weekdays(), series.dayRule());
+    /**
+     * The longest time between two occurrences in a row of {@code series}, in days, as far as a weekly series' days go:
+     * between the two weekdays chosen furthest apart, across the end of a period too. A month or a year is still reckoned
+     * at its shortest: no day between two of its occurrences lies that far from both.
+     */
+    static long longestIntervalDays(RecurringEventSeries series) {
+        return series.intervalType() == RecurrenceInterval.WEEKLY
+            ? weeklyGaps(series.weekdays(), series.intervalCount()).max().orElseThrow()
+            : shortestIntervalDays(series.intervalType(), series.intervalCount(), series.weekdays(), series.dayRule());
     }
 
-    private static long shortestWeeklyGap(Set<DayOfWeek> weekdays, int intervalCount) {
+    /** The days between each weekday chosen and the next, the last of a period to the first of the next one included. */
+    private static LongStream weeklyGaps(Set<DayOfWeek> weekdays, int intervalCount) {
         List<Integer> days = weekdays.stream().map(DayOfWeek::getValue).sorted().toList();
-        long shortest = 7L * intervalCount - (days.getLast() - days.getFirst());
-        for (int i = 1; i < days.size(); i++) {
-            shortest = Math.min(shortest, days.get(i) - days.get(i - 1));
-        }
-        return shortest;
+        return LongStream.concat(
+            IntStream.range(1, days.size()).mapToLong(i -> days.get(i) - days.get(i - 1)),
+            LongStream.of(7L * intervalCount - (days.getLast() - days.getFirst())));
     }
 
     private static long minutesOf(LocalTime time) {

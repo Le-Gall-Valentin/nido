@@ -71,10 +71,11 @@ public final class EventRecurrenceProjector {
 
     /**
      * The occurrence of {@code series} nearest to {@code date} — the later of two at the same distance —
-     * among those less than one interval away; none if the series has no occurrence that close.
+     * among those less than one interval away; none if the series has no occurrence that close. On several
+     * weekdays, one interval is the widest gap between two of them: a day between two occurrences always has one.
      */
     public static Optional<LocalDate> nearestSlot(RecurringEventSeries series, LocalDate date) {
-        long within = EventScheduleValidator.shortestIntervalDays(series) - 1;
+        long within = EventScheduleValidator.longestIntervalDays(series) - 1;
         LocalDate from = date.minusDays(within);
         return slotsBetween(series, from, date.plusDays(within)).stream()
             .filter(slot -> !slot.isBefore(from))

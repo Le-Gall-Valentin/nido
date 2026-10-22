@@ -527,6 +527,32 @@ class RecurringEventSeriesControllerIT {
             "2026-01-06 Piano (renommé)", "2026-01-13 Piano (renommé)", "2026-01-20 Piano (renommé)");
     }
 
+    @Test
+    void a_series_moved_to_several_weekdays_keeps_what_was_chosen_on_its_own() throws Exception {
+        // Not begun yet, so it changes whole: Wednesdays, one cancelled and one edited, moved to Mondays and Tuesdays.
+        LocalDate monday = LocalDate.now(HOUSEHOLD).with(TemporalAdjusters.next(DayOfWeek.MONDAY)).plusWeeks(1);
+        String seriesId = createSeries("Piano", monday.plusDays(2));
+        mockMvc.perform(delete(series() + "/" + seriesId + "/occurrences/" + monday.plusWeeks(1).plusDays(2)).cookie(tokenFor(aliceId)))
+            .andExpect(status().isNoContent());
+        detach(seriesId, monday.plusWeeks(2).plusDays(2), "Piano (modifié)");
+
+        mockMvc.perform(patch(series() + "/" + seriesId).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Piano","allDay":false,"startTime":"10:00","endTime":"11:00","durationDays":0,
+                     "intervalType":"WEEKLY","intervalCount":1,"weekdays":["MONDAY","TUESDAY"],"anchorDate":"%s"}"""
+                    .formatted(monday)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.weekdays.length()").value(2))
+            .andExpect(jsonPath("$.weekdays[0]").value("MONDAY"))
+            .andExpect(jsonPath("$.weekdays[1]").value("TUESDAY"));
+
+        // The week cancelled keeps one lesson fewer; the week edited, the lesson edited in place of its Tuesday.
+        assertThat(shownBetween(monday, monday.plusWeeks(3).minusDays(1))).containsExactly(
+            monday + " Piano", monday.plusDays(1) + " Piano",
+            monday.plusWeeks(1) + " Piano",
+            monday.plusWeeks(2) + " Piano", monday.plusWeeks(2).plusDays(2) + " Piano (modifié)");
+    }
+
     private static final ZoneId HOUSEHOLD = ZoneId.of("Europe/Paris");
 
     private String createSeries(String title, LocalDate anchor) throws Exception {
