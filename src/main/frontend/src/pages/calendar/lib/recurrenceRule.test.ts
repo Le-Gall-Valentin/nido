@@ -2,8 +2,9 @@ import { createInstance } from 'i18next'
 import { describe, it, expect } from 'vitest'
 import en from '../locales/en.json'
 import fr from '../locales/fr.json'
+import type { RecurringEventSeries } from '@/entities/calendar'
 import {
-  capitalize, dayRulePhrase, describeRecurrence, possibleDayRules, shortestIntervalDays, weekdayOf,
+  capitalize, dayRulePhrase, describeRecurrence, describeSeries, possibleDayRules, shortestIntervalDays, weekdayOf,
 } from './recurrenceRule'
 
 /** A `t` that shows what it was asked: the key, and the values it was given. */
@@ -39,6 +40,9 @@ describe('a field that holds no date', () => {
     expect(describeRecurrence(t, {
       intervalType: 'YEARLY', intervalCount: 1, weekdays: [], dayRule: 'SAME_DAY', anchorDate: '',
     }, 'fr')).toBe('rule.every.YEARLY{"count":1}')
+    expect(describeRecurrence(t, {
+      intervalType: 'WEEKLY', intervalCount: 1, weekdays: [], dayRule: 'SAME_DAY', anchorDate: '',
+    }, 'fr')).toBe('rule.every.WEEKLY{"count":1}')
   })
 })
 
@@ -131,6 +135,30 @@ async function realT(language: 'en' | 'fr') {
   })
   return instance.getFixedT(null, 'calendar') as unknown as (key: string, options?: Record<string, unknown>) => string
 }
+
+describe('describeSeries', () => {
+  const series: RecurringEventSeries = {
+    id: 's-1', title: 'Piano', description: null, location: null, allDay: true, startTime: null, endTime: null,
+    durationDays: 0, color: null, intervalType: 'WEEKLY', intervalCount: 1, weekdays: ['THURSDAY', 'MONDAY'], dayRule: 'SAME_DAY',
+    anchorDate: '2026-01-05', endDate: null, startsOn: null, firstDate: '2026-01-05',
+    participantIds: [], createdBy: 'u-1', createdAt: '2026-01-01T00:00:00Z',
+  }
+
+  it('names the days a weekly series repeats on', () => {
+    expect(describeSeries(t, series, 'fr'))
+      .toBe('rule.every.WEEKLY{"count":1} rule.on_days{"days":"rule.weekday_item{\\"weekday\\":\\"lundi\\"} et rule.weekday_item{\\"weekday\\":\\"jeudi\\"}"}')
+  })
+
+  it('names its anchor\'s day for a weekly series that names none, as the server reads it', () => {
+    expect(describeSeries(t, { ...series, weekdays: null }, 'fr'))
+      .toBe('rule.every.WEEKLY{"count":1} rule.on_days{"days":"rule.weekday_item{\\"weekday\\":\\"lundi\\"}"}')
+  })
+
+  it('says a monthly series\' day from its anchor', () => {
+    expect(describeSeries(t, { ...series, intervalType: 'MONTHLY', weekdays: null, anchorDate: '2026-01-31', firstDate: '2026-04-30' }, 'fr'))
+      .toBe('rule.every.MONTHLY{"count":1} rule.day{"day":31}')
+  })
+})
 
 describe('the sentences a reader sees', () => {
   it('reads in French', async () => {

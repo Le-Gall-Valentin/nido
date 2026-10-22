@@ -10,7 +10,7 @@ import {
   useJoinEvent, useLeaveEvent, useRecurringEventSeries, type CalendarOccurrence,
 } from '@/entities/calendar'
 import type { CalendarDialogState } from '../model/useCalendarDialog'
-import { describeRecurrence } from '../lib/recurrenceRule'
+import { describeSeries } from '../lib/recurrenceRule'
 import { DayDetailModal } from './DayDetailModal'
 import { OccurrenceRouter } from './OccurrenceRouter'
 import { EventDetailModal } from './EventDetailModal'
@@ -82,9 +82,7 @@ export function CalendarDialogs({
         )
       }
       const series = occurrence.seriesId ? seriesList?.find((candidate) => candidate.id === occurrence.seriesId) : undefined
-      const recurrence = series
-        ? describeRecurrence(t, { ...series, weekdays: series.weekdays ?? [] }, resolveLocale(i18next.language))
-        : null
+      const recurrence = series ? describeSeries(t, series, resolveLocale(i18next.language)) : null
       return (
         <EventDetailModal occurrence={occurrence} members={knownMembers} currentUserId={currentUserId}
           canWrite={canWrite} isPersonal={isPersonal} recurrence={recurrence}

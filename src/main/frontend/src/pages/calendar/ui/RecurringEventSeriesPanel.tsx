@@ -6,7 +6,7 @@ import { Dialog, Spinner } from '@/shared/ui'
 import { resolveLocale } from '@/shared/lib'
 import { useRecurringEventSeries, type RecurringEventSeries } from '@/entities/calendar'
 import type { SpaceMember } from '@/entities/space'
-import { describeRecurrence } from '../lib/recurrenceRule'
+import { describeSeries } from '../lib/recurrenceRule'
 import { EventFormPanel } from './EventFormPanel'
 import { DeleteSeriesPanel } from './DeleteSeriesPanel'
 
@@ -59,7 +59,7 @@ export function RecurringEventSeriesPanel({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm text-fg-1">{candidate.title}</p>
                 <p className="text-[11px] text-fg-3">
-                  {describeRecurrence(t, { ...candidate, weekdays: candidate.weekdays ?? [] }, locale)}
+                  {describeSeries(t, candidate, locale)}
                   {' · '}{t('series.from', { date: candidate.firstDate ?? candidate.anchorDate })}
                   {candidate.endDate && <> · {t('series.until_date', { date: candidate.endDate })}</>}
                 </p>

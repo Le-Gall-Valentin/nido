@@ -1,4 +1,4 @@
-import type { DayRule, RecurrenceInterval, Weekday } from '@/entities/calendar'
+import type { DayRule, RecurrenceInterval, RecurringEventSeries, Weekday } from '@/entities/calendar'
 import { isValidIso } from './calendarWindow'
 
 type Translate = (key: string, options?: Record<string, unknown>) => string
@@ -130,6 +130,7 @@ export function describeRecurrence(t: Translate, rule: DescribedRule, locale: st
     case 'WEEKLY': {
       const days = WEEKDAYS.filter((day) => rule.weekdays.includes(day))
         .map((day) => t('rule.weekday_item', { weekday: weekdayName(day, locale) }))
+      if (days.length === 0) return every
       const list = new Intl.ListFormat(locale, { type: 'conjunction' }).format(days)
       return `${every} ${t('rule.on_days', { days: list })}`
     }
@@ -139,6 +140,12 @@ export function describeRecurrence(t: Translate, rule: DescribedRule, locale: st
       return phrase ? `${every} ${phrase}` : every
     }
   }
+}
+
+/** How a stored series repeats, in one sentence. A weekly series that names no days repeats on its anchor's, as the server reads it. */
+export function describeSeries(t: Translate, series: RecurringEventSeries, locale: string): string {
+  const anchorDay = weekdayOf(series.anchorDate)
+  return describeRecurrence(t, { ...series, weekdays: series.weekdays ?? (anchorDay ? [anchorDay] : []) }, locale)
 }
 
 export function capitalize(text: string): string {
