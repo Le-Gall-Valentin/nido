@@ -8,6 +8,7 @@ import com.nido.api.calendar.domain.model.ImportReading;
 import com.nido.api.calendar.domain.model.ImportedEvent;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -16,6 +17,7 @@ import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 class Ical4jImportReaderAdapterTest {
 
@@ -85,6 +87,16 @@ class Ical4jImportReaderAdapterTest {
                 "DTEND;TZID=Romance Standard Time:20260706T110000")
             + "END:VCALENDAR\r\n";
         assertThat(onlyEvent(read(outlook, TORONTO)).startTime()).isEqualTo(LocalTime.of(4, 0));
+    }
+
+    @Test
+    void aFileWhoseOwnZoneWouldChangeEveryHourIsRefusedAtOnce() {
+        String hourly = "BEGIN:VTIMEZONE\r\nTZID:Bureau\r\nBEGIN:STANDARD\r\nDTSTART:16010101T000000\r\nTZOFFSETFROM:+0100\r\n"
+            + "TZOFFSETTO:+0000\r\nRRULE:FREQ=HOURLY\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\n";
+        String content = ics(hourly, vevent("b1", "SUMMARY:x", "DTSTART;TZID=Bureau:20261017T090000"));
+
+        assertThatThrownBy(() -> assertTimeoutPreemptively(Duration.ofSeconds(10), () -> read(content, PARIS)))
+            .isInstanceOf(CalendarException.NotAnIcalFile.class);
     }
 
     @Test

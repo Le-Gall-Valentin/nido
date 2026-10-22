@@ -331,6 +331,29 @@ class Ical4jFeedReaderAdapterTest {
     }
 
     @Test
+    void aCalendarWhoseOwnZoneWouldChangeEveryMinuteIsNoCalendarAndIsReadOnlyOnce() {
+        // What following and every refresh check, and what a view reads of a download kept before: refused at once.
+        String bomb = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:x\r\nBEGIN:VTIMEZONE\r\nTZID:Bureau\r\nBEGIN:STANDARD\r\n"
+            + "DTSTART:16010101T000000\r\nTZOFFSETFROM:+0100\r\nTZOFFSETTO:+0000\r\nRRULE:FREQ=MINUTELY\r\nEND:STANDARD\r\n"
+            + "END:VTIMEZONE\r\nEND:VCALENDAR\r\n";
+        AtomicInteger loads = new AtomicInteger();
+        Supplier<String> stored = () -> {
+            loads.incrementAndGet();
+            return bomb;
+        };
+        LocalDate day = LocalDate.of(2026, 10, 1);
+
+        assertThatThrownBy(() -> assertTimeoutPreemptively(Duration.ofSeconds(10), () -> reader.check(bomb)))
+            .isInstanceOf(CalendarException.NotAnIcalFile.class);
+        ExternalFeed one = anotherFeed();
+        assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+            assertThat(reader.occurrencesOf(one, stored, PARIS, Locale.FRENCH, day, day)).isEmpty();
+            assertThat(reader.occurrencesOf(one, stored, PARIS, Locale.FRENCH, day, day)).isEmpty();
+        });
+        assertThat(loads).hasValue(1);
+    }
+
+    @Test
     void aSecondMasterOfOneUidIsLeftOut() {
         String file = calendar(normal("same", "First"), normal("same", "Second"));
 

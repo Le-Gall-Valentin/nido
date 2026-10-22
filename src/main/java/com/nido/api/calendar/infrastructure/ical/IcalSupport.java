@@ -7,6 +7,7 @@ import net.fortuna.ical4j.data.ContentHandlerContext;
 import net.fortuna.ical4j.data.DefaultPropertyFactorySupplier;
 import net.fortuna.ical4j.data.ParserException;
 import net.fortuna.ical4j.model.Calendar;
+import net.fortuna.ical4j.model.ComponentFactory;
 import net.fortuna.ical4j.model.ParameterList;
 import net.fortuna.ical4j.model.Property;
 import net.fortuna.ical4j.model.PropertyFactory;
@@ -17,6 +18,7 @@ import net.fortuna.ical4j.util.CompatibilityHints;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -54,6 +56,9 @@ public final class IcalSupport {
     /** ical4j's own factories, those of the properties not in {@link #READ_TYPED} made tolerant. Stateless: shared. */
     private static final List<PropertyFactory<?>> FACTORIES;
 
+    /** ical4j builds a zone's rules from the machine's clock: what nido weighs and compares of a zone is reckoned from it too. */
+    private static final Clock MACHINE_CLOCK = Clock.systemUTC();
+
     static {
         CompatibilityHints.setHintEnabled(CompatibilityHints.KEY_RELAXED_UNFOLDING, true);
         CompatibilityHints.setHintEnabled(CompatibilityHints.KEY_RELAXED_PARSING, true);
@@ -67,11 +72,15 @@ public final class IcalSupport {
     private IcalSupport() {}
 
     public static Calendar parse(String content) {
+        Instant now = MACHINE_CLOCK.instant();
+        List<ComponentFactory<?>> components = new BoundedZones(now).factories();
         try {
-            return new CalendarBuilder(CalendarParserFactory.getInstance().get(),
-                new ContentHandlerContext().withPropertyFactorySupplier(() -> FACTORIES), new DocumentZones())
-                .build(new StringReader(content));
-        } catch (ParserException | IOException | RuntimeException e) {
+            return new CalendarBuilder(CalendarParserFactory.getInstance().get(), new ContentHandlerContext()
+                .withPropertyFactorySupplier(() -> FACTORIES).withComponentFactorySupplier(() -> components),
+                new DocumentZones()).build(new StringReader(content));
+        } catch (ParserException | IOException | RuntimeException | StackOverflowError | OutOfMemoryError e) {
+            // What reading one document exhausts, past every bound nido sets, costs that document and not the thread
+            // reading it: a followed calendar is then remembered as unreadable, not read again at every view.
             throw new CalendarException.NotAnIcalFile();
         }
     }

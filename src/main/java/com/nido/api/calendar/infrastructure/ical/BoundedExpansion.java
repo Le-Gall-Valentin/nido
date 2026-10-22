@@ -273,7 +273,7 @@ final class BoundedExpansion {
      * ical4j keeps duplicate entries of a BY list and expands each one again, so the cost of a list is its length, not
      * its distinct values: a list repeating an entry, or longer than the values it can hold, is no rule to expand.
      */
-    private static boolean distinctAndShort(Recur<Temporal> recur) {
+    static boolean distinctAndShort(Recur<Temporal> recur) {
         return distinct(recur.getSecondList(), 61) && distinct(recur.getMinuteList(), 60) && distinct(recur.getHourList(), 24)
             && distinct(recur.getDayList(), 7 * 106) && distinct(recur.getMonthDayList(), 62)
             && distinct(recur.getYearDayList(), 732) && distinct(recur.getWeekNoList(), 106)
@@ -297,7 +297,7 @@ final class BoundedExpansion {
     }
 
     /** An upper bound of the candidates one period of the rule produces (its lists hold distinct entries: see {@code distinctAndShort}). */
-    private static long perStep(Recur<Temporal> recur) {
+    static long perStep(Recur<Temporal> recur) {
         Frequency frequency = recur.getFrequency();
         boolean byMonth = !recur.getMonthList().isEmpty();
         boolean byWeekNo = !recur.getWeekNoList().isEmpty();
