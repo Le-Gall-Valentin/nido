@@ -2,7 +2,7 @@ export type {
   CalendarOccurrence, CalendarSourceType, CalendarEvent, RecurringEventSeries,
   RecurrenceInterval, Weekday, DayRule, EventInput, RecurringEventSeriesInput, ScheduleChange,
   ExportableSource, SubscriptionLink, SubscriptionLinkInput, CreatedSubscriptionLink,
-  ImportNoteKind, ImportNote, ImportReport, ExternalFeed, ExternalFeedInput,
+  ImportNoteKind, ImportNote, ImportReport, ExternalFeed, ExternalFeedInput, ExternalFeedUpdate,
 } from './model/types'
 export { MAX_IMPORT_NOTES } from './model/types'
 export { toEventInput } from './lib/toEventInput'

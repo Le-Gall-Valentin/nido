@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCalendarSyncApi } from './calendarApiContext'
 import { calendarKey } from './useCalendarQueries'
-import type { ExportableSource, ExternalFeedInput, SubscriptionLinkInput } from './types'
+import type { ExportableSource, ExternalFeedInput, ExternalFeedUpdate, SubscriptionLinkInput } from './types'
 
 export function subscriptionLinksKey(spaceId: string) {
   return ['calendar', spaceId, 'subscription-links'] as const
@@ -66,7 +66,7 @@ export function useUpdateExternalFeed(spaceId: string) {
   const api = useCalendarSyncApi()
   const invalidate = useCalendarInvalidation(spaceId)
   return useMutation({
-    mutationFn: ({ feedId, name, color }: { feedId: string; name: string; color: string | null }) =>
+    mutationFn: ({ feedId, name, color }: ExternalFeedUpdate & { feedId: string }) =>
       api.updateExternalFeed(spaceId, feedId, { name, color }),
     onSuccess: invalidate,
   })

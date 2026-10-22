@@ -1,3 +1,5 @@
+import type { EventColor } from '../lib/eventPalette'
+
 export type CalendarSourceType = 'EVENT' | 'TASK' | 'FINANCE' | 'MEAL' | 'SAVINGS' | 'EXTERNAL'
 
 export type RecurrenceInterval = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
@@ -185,8 +187,15 @@ export interface ExternalFeed {
   lastError: string | null
 }
 
+/** A calendar to follow. A colour is one of the palette, or none for the graphite of external sources. */
 export interface ExternalFeedInput {
   url: string
   name: string | null
-  color: string | null
+  color: EventColor | null
+}
+
+/** What changes of a followed calendar: its name and its colour, never its address. */
+export interface ExternalFeedUpdate {
+  name: string
+  color: EventColor | null
 }

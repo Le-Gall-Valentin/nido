@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, expectTypeOf, vi, beforeEach } from 'vitest'
 import { AxiosError, AxiosHeaders } from 'axios'
 import { client } from '@/shared/api'
 import { calendarSyncApi } from './calendarSyncApi'
 import { CalendarSyncError } from './calendarSyncErrors'
+import type { EventColor } from '../lib/eventPalette'
+import type { ExternalFeedInput, ExternalFeedUpdate } from '../model/types'
 
 vi.mock('@/shared/api', () => ({
   client: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn(), delete: vi.fn() },
@@ -91,6 +93,11 @@ describe('calendar sync api', () => {
     expect(client.patch).toHaveBeenCalledWith(`${base}/external-feeds/f1`, { name: 'École', color: null })
     expect(client.post).toHaveBeenCalledWith(`${base}/external-feeds/f1/refresh`)
     expect(client.delete).toHaveBeenCalledWith(`${base}/external-feeds/f1`)
+  })
+
+  it('sends only a colour of the palette, or none: the server refuses any other', () => {
+    expectTypeOf<ExternalFeedInput['color']>().toEqualTypeOf<EventColor | null>()
+    expectTypeOf<ExternalFeedUpdate['color']>().toEqualTypeOf<EventColor | null>()
   })
 
   it('says why a calendar could not be followed', async () => {
