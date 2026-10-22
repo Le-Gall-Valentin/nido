@@ -62,7 +62,7 @@ export function EventFormPanel({
   // Editing one occurrence of a series starts from what that occurrence looks like today, but is
   // written through the slot's endpoint — so the form is pre-filled even though no event row exists.
   const initial = occurrence ? toEventInput(occurrence) : null
-  const editedSeries = series ? fromSeries(series) : null
+  const seriesForm = series ? fromSeries(series) : null
 
   const handleSubmit = (input: EventInput, recurrence: Recurrence | null) => {
     setError(null)
@@ -94,9 +94,9 @@ export function EventFormPanel({
 
   return (
     <EventFormModal
-      initial={editedSeries?.event ?? initial ?? blank}
+      initial={seriesForm?.event ?? initial ?? blank}
       mode={series ? 'edit-series' : occurrence ? 'edit' : 'create'}
-      initialRecurrence={editedSeries?.recurrence ?? null}
+      initialRecurrence={seriesForm?.recurrence ?? null}
       editedSeries={series}
       notice={series && runsAcross(series, today) ? t('series.split_notice') : null}
       members={members}
