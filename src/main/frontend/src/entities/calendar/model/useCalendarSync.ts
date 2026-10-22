@@ -3,11 +3,11 @@ import { useCalendarSyncApi } from './calendarApiContext'
 import { calendarKey } from './useCalendarQueries'
 import type { ExportableSource, ExternalFeedInput, ExternalFeedUpdate, SubscriptionLinkInput } from './types'
 
-export function subscriptionLinksKey(spaceId: string) {
+function subscriptionLinksKey(spaceId: string) {
   return ['calendar', spaceId, 'subscription-links'] as const
 }
 
-export function externalFeedsKey(spaceId: string) {
+function externalFeedsKey(spaceId: string) {
   return ['calendar', spaceId, 'external-feeds'] as const
 }
 

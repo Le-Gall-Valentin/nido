@@ -26,9 +26,9 @@ export {
 } from './model/useCalendarMutations'
 export { calendarApi } from './api/calendarApi'
 export {
-  subscriptionLinksKey, externalFeedsKey, useSubscriptionLinks, useCreateSubscriptionLink, useRevokeSubscriptionLink,
+  useSubscriptionLinks, useCreateSubscriptionLink, useRevokeSubscriptionLink,
   useExternalFeeds, useFollowExternalFeed, useUpdateExternalFeed, useRemoveExternalFeed, useRefreshExternalFeed,
   useAnalyseImport, useImportFile, useExportCalendar,
 } from './model/useCalendarSync'
-export { CalendarSyncError, toSyncError, SYNC_REASONS, type SyncReason } from './api/calendarSyncErrors'
+export { CalendarSyncError, SYNC_REASONS, type SyncReason } from './api/calendarSyncErrors'
 export { IntervalTooLargeError } from './api/seriesErrors'
