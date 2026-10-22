@@ -1,6 +1,12 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { TFunction } from 'i18next'
+import { saveBlob } from '@/shared/lib'
 import { downloadKeyFile, keyFileText } from './keyFile'
+
+vi.mock('@/shared/lib', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/shared/lib')>()),
+  saveBlob: vi.fn(),
+}))
 
 const t = ((key: string, options?: Record<string, string>) => (options ? `${key} ${Object.values(options).join(' ')}` : key)) as unknown as TFunction
 
@@ -15,27 +21,12 @@ describe('keyFileText', () => {
 })
 
 describe('downloadKeyFile', () => {
-  afterEach(() => {
-    vi.useRealTimers()
-    vi.restoreAllMocks()
-  })
-
-  it('keeps the file alive until the browser has fetched it, from a link in the page', () => {
-    vi.useFakeTimers()
-    const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:the-key')
-    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
-    let attached = false
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
-      attached = document.body.contains(this)
-    })
-
+  it('saves the text as a plain text file named for the key', async () => {
     downloadKeyFile('the key file')
 
-    expect(create).toHaveBeenCalled()
-    expect(attached).toBe(true)
-    expect(revoke).not.toHaveBeenCalled()
-    vi.runAllTimers()
-    expect(revoke).toHaveBeenCalledWith('blob:the-key')
-    expect(document.querySelector('a[download]')).toBeNull()
+    const [blob, filename] = vi.mocked(saveBlob).mock.calls[0] ?? []
+    expect(filename).toBe('nido-encryption-key.txt')
+    expect(blob?.type).toBe('text/plain;charset=utf-8')
+    expect(await blob?.text()).toBe('the key file')
   })
 })
