@@ -49,6 +49,10 @@ describe('eventFormProblem', () => {
     expect(key(event, { ...weekly, intervalCount: Number('') })).toBe('series.interval_invalid')
   })
 
+  it('wants an interval that is a whole number, which the server would otherwise round', () => {
+    expect(key(event, { ...weekly, intervalCount: 1.5 })).toBe('series.interval_not_whole')
+  })
+
   it('refuses an interval over the server\'s limit, and says it', () => {
     expect(key(event, { ...weekly, intervalCount: 1000 })).toBeNull()
     expect(eventFormProblem(event, { ...weekly, intervalCount: 1001 }))

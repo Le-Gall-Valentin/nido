@@ -30,6 +30,8 @@ export function eventFormProblem(event: EventInput, recurrence: Recurrence | nul
   if (coversTooManyDays(event)) return { key: 'form.too_long', values: { days: MAX_EVENT_DAYS } }
   if (!recurrence) return null
   if (!(recurrence.intervalCount >= 1)) return { key: 'series.interval_invalid' }
+  // The server reads an interval as a whole number: 1.5 would be saved as 1, after the checks below ran on 1.5.
+  if (!Number.isInteger(recurrence.intervalCount)) return { key: 'series.interval_not_whole' }
   if (recurrence.intervalCount > MAX_INTERVAL_COUNT) return intervalTooLarge
   if (occurrenceOutlastsInterval(event, recurrence)) return { key: 'series.occurrence_too_long' }
   if (recurrence.until && recurrence.until < event.startDate) return { key: 'series.until_before_start' }

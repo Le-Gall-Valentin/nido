@@ -164,6 +164,7 @@
     "from": "from {{date}}",
     "until_date": "until {{date}}",
     "interval_invalid": "The frequency must be at least 1.",
+    "interval_not_whole": "The frequency must be a whole number.",
     "interval_too_large": "The frequency must be at most {{maximum}}.",
     "occurrence_too_long": "An occurrence cannot last longer than the time between two occurrences.",
     "until_before_start": "The repetition cannot stop before the start date."

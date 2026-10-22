@@ -113,6 +113,18 @@ describe('EventFormModal — recurrence', () => {
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
+  it('refuses to repeat at an interval that is not a whole number, which the field steps over too', () => {
+    const { onSubmit } = renderForm()
+    fireEvent.click(field('form.recurring'))
+    expect(field('series.interval_count').step).toBe('1')
+    fireEvent.change(field('series.interval_count'), { target: { value: '1.5' } })
+
+    save()
+
+    expect(screen.getByRole('alert').textContent).toBe('series.interval_not_whole')
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
   it('refuses to repeat at an interval over the server\'s limit, which the field says too', () => {
     const { onSubmit } = renderForm()
     fireEvent.click(field('form.recurring'))
