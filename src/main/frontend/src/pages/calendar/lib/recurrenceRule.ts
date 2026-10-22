@@ -97,11 +97,13 @@ export function dayRulePhrase(t: Translate, rule: DayRule, intervalType: Recurre
   const yearly = intervalType === 'YEARLY'
   const weekday = weekdayName(anchorDay, locale)
   const { day } = parts(anchor)
+  // French writes the first of a month "le 1ᵉʳ"; a language with no such key falls back to the plain one.
+  const context = day === 1 ? 'first' : undefined
   switch (rule) {
     case 'SAME_DAY':
       return yearly
-        ? t('rule.day_of_month', { day, month: monthName(anchor, locale) })
-        : t('rule.day', { day })
+        ? t('rule.day_of_month', { day, month: monthName(anchor, locale), context })
+        : t('rule.day', { day, context })
     case 'WEEKDAY_OF_MONTH':
       return yearly
         ? t('rule.weekday_of_month_in', { rank: t(`rule.rank.${rankOf(anchor)}`), weekday, ofMonth: ofMonth(t, anchor, locale) })

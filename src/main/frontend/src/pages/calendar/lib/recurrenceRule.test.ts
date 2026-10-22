@@ -149,6 +149,19 @@ describe('the sentences a reader sees', () => {
     }, 'fr')).toBe('Tous les jours')
   })
 
+  it('says the first of a month « le 1ᵉʳ » in French', async () => {
+    const fr = await realT('fr')
+    expect(describeRecurrence(fr, {
+      intervalType: 'MONTHLY', intervalCount: 1, weekdays: [], dayRule: 'SAME_DAY', anchorDate: '2026-10-01',
+    }, 'fr')).toBe('Tous les mois le 1ᵉʳ')
+    expect(describeRecurrence(fr, {
+      intervalType: 'YEARLY', intervalCount: 1, weekdays: [], dayRule: 'SAME_DAY', anchorDate: '2026-10-01',
+    }, 'fr')).toBe('Tous les ans le 1ᵉʳ octobre')
+    expect(describeRecurrence(fr, {
+      intervalType: 'MONTHLY', intervalCount: 1, weekdays: [], dayRule: 'SAME_DAY', anchorDate: '2026-10-02',
+    }, 'fr')).toBe('Tous les mois le 2')
+  })
+
   it('reads in English', async () => {
     const en = await realT('en')
     expect(describeRecurrence(en, {
@@ -162,4 +175,13 @@ describe('the sentences a reader sees', () => {
     }, 'en')).toBe('Every 3 months on day 14')
   })
 
+  it('says the first of a month as any other day in English', async () => {
+    const en = await realT('en')
+    expect(describeRecurrence(en, {
+      intervalType: 'MONTHLY', intervalCount: 1, weekdays: [], dayRule: 'SAME_DAY', anchorDate: '2026-10-01',
+    }, 'en')).toBe('Every month on day 1')
+    expect(describeRecurrence(en, {
+      intervalType: 'YEARLY', intervalCount: 1, weekdays: [], dayRule: 'SAME_DAY', anchorDate: '2026-10-01',
+    }, 'en')).toBe('Every year on October 1')
+  })
 })
