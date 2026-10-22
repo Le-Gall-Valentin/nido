@@ -30,6 +30,9 @@ const SETTINGS: InstanceSettings = {
     { group: 'api', fields: [
       { key: 'api.swagger', value: 'false', source: 'DEFAULT', variable: 'SWAGGER_ENABLED', secret: false, required: false, set: true },
     ] },
+    { group: 'calendar', fields: [
+      { key: 'calendar.allow-private-network', value: 'false', source: 'DEFAULT', variable: 'NIDO_CALENDAR_ALLOW_PRIVATE_NETWORK', secret: false, required: false, set: true },
+    ] },
   ],
 }
 
@@ -120,6 +123,16 @@ describe('AdminSettingsPage', () => {
 
     await waitFor(() => expect(api.update).toHaveBeenCalledWith('mail', expect.objectContaining({ 'mail.security': 'tls' })))
     await waitFor(() => expect(api.update).toHaveBeenCalledWith('api', { 'api.swagger': 'true' }))
+  })
+
+  it('opens the local network to followed calendars with a switch named for it', async () => {
+    const api = open()
+    await screen.findByRole('region', { name: 'group.calendar.title' })
+
+    fireEvent.click(card('calendar').getByRole('switch', { name: 'field.calendar.allow-private-network' }))
+    fireEvent.click(card('calendar').getByRole('button', { name: 'action.save' }))
+
+    await waitFor(() => expect(api.update).toHaveBeenCalledWith('calendar', { 'calendar.allow-private-network': 'true' }))
   })
 
   it('shows the problem under its field', async () => {
