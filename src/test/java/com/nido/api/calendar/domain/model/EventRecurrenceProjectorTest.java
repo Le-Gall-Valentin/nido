@@ -299,6 +299,35 @@ class EventRecurrenceProjectorTest {
                 LocalDate.of(2026, 10, 25), LocalDate.of(2026, 10, 26));
     }
 
+    @Test
+    void aSeriesStoredWithAnIntervalPastTheLastDateACalendarHoldsShowsWhatComesBefore() {
+        // Saved before the interval was bounded: its next year, a billion years on, is no date at all.
+        RecurringEventSeries everyBillionYears = ruled(RecurrenceInterval.YEARLY, 1_000_000_000, null, null,
+            LocalDate.of(2026, 1, 6));
+        assertThat(EventRecurrenceProjector.slotsBetween(everyBillionYears, LocalDate.of(2026, 1, 1), LocalDate.of(2027, 1, 31)))
+            .containsExactly(LocalDate.of(2026, 1, 6));
+        assertThat(EventRecurrenceProjector.slotsBetween(everyBillionYears, LocalDate.of(2027, 1, 1), LocalDate.of(2027, 1, 31)))
+            .isEmpty();
+
+        RecurringEventSeries carriedOn = new RecurringEventSeries(SERIES_ID, UUID.randomUUID(), "Piano", null, null,
+            true, null, null, 0, null, RecurrenceInterval.YEARLY, Integer.MAX_VALUE, null, null, LocalDate.of(2026, 1, 6),
+            null, LocalDate.of(2026, 6, 1), List.of(), UUID.randomUUID(), Instant.now());
+        assertThat(EventRecurrenceProjector.firstOccurrence(carriedOn)).isEmpty();
+        assertThat(EventRecurrenceProjector.slotsBetween(carriedOn, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30))).isEmpty();
+        assertThat(EventRecurrenceProjector.runsAcross(carriedOn, LocalDate.of(2026, 7, 1))).isFalse();
+    }
+
+    @Test
+    void aSeriesIsNeverLookedForBeforeTheDayItIsShownFrom() {
+        // A duration stored before occurrences were bounded reached back past the first date the database holds.
+        RecurringEventSeries longAgo = new RecurringEventSeries(SERIES_ID, UUID.randomUUID(), "Piano", null, null,
+            true, null, null, 3_650_000, null, RecurrenceInterval.YEARLY, 10_000, LocalDate.of(2026, 1, 6), null,
+            List.of(), UUID.randomUUID(), Instant.now());
+        assertThat(EventRecurrenceProjector.scanFrom(longAgo, LocalDate.of(2026, 10, 1))).isEqualTo(LocalDate.of(2026, 1, 6));
+        assertThat(EventRecurrenceProjector.scanFrom(weekly(LocalDate.of(2026, 1, 6), null, 3), LocalDate.of(2026, 10, 1)))
+            .isEqualTo(LocalDate.of(2026, 9, 28));
+    }
+
     private RecurringEventSeries ruled(RecurrenceInterval interval, int count, Set<DayOfWeek> weekdays, DayRule dayRule,
                                        LocalDate anchor) {
         return new RecurringEventSeries(SERIES_ID, UUID.randomUUID(), "Piano", null, null,

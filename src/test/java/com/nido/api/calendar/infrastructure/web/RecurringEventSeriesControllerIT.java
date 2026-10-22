@@ -357,6 +357,42 @@ class RecurringEventSeriesControllerIT {
             .andExpect(jsonPath("$.title").value("EventTooLong"));
     }
 
+    // A series saved before its interval and its occurrences were bounded is still read, whatever it holds.
+
+    @Test
+    void a_series_stored_every_billion_years_leaves_every_read_of_its_space_working() throws Exception {
+        String seriesId = createYearlySeries();
+        // Carried on from June: its first occurrence shown, a billion years after its anchor, is past every date.
+        jdbc.update("UPDATE calendar_recurring_event_series SET interval_count = 1000000000, starts_on = '2026-06-01'"
+            + " WHERE id = ?::uuid", seriesId);
+
+        assertThat(shownBetween(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30))).isEmpty();
+        mockMvc.perform(get(series()).cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].firstDate").doesNotExist());
+        mockMvc.perform(get("/api/spaces/" + spaceId + "/calendar/export.ics?sources=EVENT").cookie(tokenFor(aliceId)))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void a_series_stored_with_occurrences_lasting_millennia_leaves_every_read_of_its_space_working() throws Exception {
+        String seriesId = createYearlySeries();
+        // Ten thousand years each, every ten thousand years: they never ran into each other, and nothing else bounded them.
+        jdbc.update("UPDATE calendar_recurring_event_series SET interval_count = 10000, duration_days = 3650000"
+            + " WHERE id = ?::uuid", seriesId);
+
+        assertThat(shownBetween(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31))).containsExactly("2026-01-06 Fête");
+    }
+
+    /** Yearly, all day, from 2026-01-06. */
+    private String createYearlySeries() throws Exception {
+        String created = mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Fête","allDay":true,"intervalType":"YEARLY","intervalCount":1,"anchorDate":"2026-01-06"}"""))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(created).get("id").asText();
+    }
+
     @Test
     void a_participant_who_left_the_space_does_not_block_editing_the_series() throws Exception {
         UUID carolId = saveUser("carol");
