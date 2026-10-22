@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { NOTHING_ELSE_TO_REFRESH } from '@/shared/lib'
 import { useCalendarSyncApi } from './calendarApiContext'
 import { calendarKey } from './useCalendarQueries'
 import { CalendarSyncError } from '../api/calendarSyncErrors'
@@ -18,7 +19,10 @@ function useCalendarInvalidation(spaceId: string) {
   return () => queryClient.invalidateQueries({ queryKey: calendarKey(spaceId) })
 }
 
-/** An address changes nothing the calendar shows: only the list of addresses is read again. */
+/**
+ * An address changes nothing the calendar shows: only the list of addresses is read again, and its mutation says so to
+ * the page that reads the calendar again after any other write (NOTHING_ELSE_TO_REFRESH).
+ */
 function useLinksInvalidation(spaceId: string) {
   const queryClient = useQueryClient()
   return () => queryClient.invalidateQueries({ queryKey: subscriptionLinksKey(spaceId) })
@@ -46,6 +50,7 @@ export function useCreateSubscriptionLink(spaceId: string) {
   return useMutation({ mutationFn: (input: SubscriptionLinkInput) => api.createSubscriptionLink(spaceId, input), onSuccess: invalidate,
     // The result holds the secret address: drop the mutation as soon as no observer holds it.
     gcTime: 0,
+    meta: NOTHING_ELSE_TO_REFRESH,
   })
 }
 
@@ -54,6 +59,7 @@ export function useRevokeSubscriptionLink(spaceId: string) {
   const invalidate = useLinksInvalidation(spaceId)
   return useMutation({
     mutationFn: (linkId: string) => api.revokeSubscriptionLink(spaceId, linkId), onSuccess: invalidate, onError: refreshWhenGone(invalidate),
+    meta: NOTHING_ELSE_TO_REFRESH,
   })
 }
 
@@ -105,7 +111,7 @@ export function useRefreshExternalFeed(spaceId: string) {
 /** Reads a file as an import would, writing nothing: nothing to refresh. */
 export function useAnalyseImport(spaceId: string) {
   const api = useCalendarSyncApi()
-  return useMutation({ mutationFn: (file: Blob) => api.analyseImport(spaceId, file) })
+  return useMutation({ mutationFn: (file: Blob) => api.analyseImport(spaceId, file), meta: NOTHING_ELSE_TO_REFRESH })
 }
 
 export function useImportFile(spaceId: string) {
@@ -114,10 +120,12 @@ export function useImportFile(spaceId: string) {
   return useMutation({ mutationFn: (file: Blob) => api.importFile(spaceId, file), onSuccess: invalidate })
 }
 
+/** Downloads the calendar, writing nothing: nothing to refresh. */
 export function useExportCalendar(spaceId: string) {
   const api = useCalendarSyncApi()
   return useMutation({
     mutationFn: ({ sources, onlyMine }: { sources: ExportableSource[]; onlyMine: boolean }) =>
       api.exportCalendar(spaceId, sources, onlyMine),
+    meta: NOTHING_ELSE_TO_REFRESH,
   })
 }

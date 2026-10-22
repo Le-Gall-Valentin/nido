@@ -2,15 +2,17 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { useInvalidateOnAnyWrite } from '@/shared/lib'
 import { CalendarApiProvider } from './CalendarApiProvider'
 import type { CalendarApi } from './calendarApiContext'
 import { CalendarSyncError } from '../api/calendarSyncErrors'
+import { calendarKey } from './useCalendarQueries'
 import {
-  useCreateSubscriptionLink, useFollowExternalFeed, useImportFile, useRefreshExternalFeed,
+  useAnalyseImport, useCreateSubscriptionLink, useExportCalendar, useFollowExternalFeed, useImportFile, useRefreshExternalFeed,
   useRemoveExternalFeed, useRevokeSubscriptionLink, useUpdateExternalFeed,
 } from './useCalendarSync'
 
-type Mutation = () => { mutateAsync: (a: unknown) => Promise<unknown> }
+type Mutation = () => { mutateAsync: (a: unknown) => Promise<unknown>; isSuccess: boolean }
 
 function setup(failing: Partial<Record<keyof CalendarApi, CalendarSyncError>> = {}) {
   const api = {
@@ -18,6 +20,7 @@ function setup(failing: Partial<Record<keyof CalendarApi, CalendarSyncError>> = 
     followExternalFeed: vi.fn().mockResolvedValue({}), refreshExternalFeed: vi.fn().mockResolvedValue({}),
     updateExternalFeed: vi.fn().mockResolvedValue({}),
     removeExternalFeed: vi.fn().mockResolvedValue(undefined), importFile: vi.fn().mockResolvedValue({}),
+    analyseImport: vi.fn().mockResolvedValue({}), exportCalendar: vi.fn().mockResolvedValue({ blob: new Blob(), filename: 'x.ics' }),
     ...Object.fromEntries(Object.entries(failing).map(([method, error]) => [method, vi.fn().mockRejectedValue(error)])),
   } as unknown as CalendarApi
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -30,6 +33,11 @@ function setup(failing: Partial<Record<keyof CalendarApi, CalendarSyncError>> = 
     <QueryClientProvider client={client}><CalendarApiProvider api={api}>{children}</CalendarApiProvider></QueryClientProvider>
   )
   return { wrapper, occurrences, links }
+}
+
+/** Listens as the calendar page does, reading the calendar again after any write that does not say otherwise. */
+function listenAsTheCalendarPage(wrapper: ({ children }: { children: ReactNode }) => ReactNode) {
+  renderHook(() => useInvalidateOnAnyWrite(calendarKey('s1')), { wrapper })
 }
 
 describe('calendar sync hooks', () => {
@@ -51,14 +59,34 @@ describe('calendar sync hooks', () => {
   it.each([
     ['create', () => useCreateSubscriptionLink('s1'), { label: 'x', sources: [], onlyMine: false }],
     ['revoke', () => useRevokeSubscriptionLink('s1'), 'l1'],
-  ] as const)('reads only the addresses again after %s', async (_name, hook, arg) => {
+  ] as const)('reads only the addresses again after %s, on the calendar page too', async (_name, hook, arg) => {
     const { wrapper, occurrences, links } = setup()
+    listenAsTheCalendarPage(wrapper)
     await waitFor(() => expect(links).toHaveBeenCalledTimes(1))
     const { result } = renderHook(hook as Mutation, { wrapper })
 
     await result.current.mutateAsync(arg)
 
-    await waitFor(() => expect(links).toHaveBeenCalledTimes(2))
+    // Told in the same round as every listener to the cache: the page's own has had its say by then.
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(links).toHaveBeenCalledTimes(2)
+    expect(occurrences).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['export', () => useExportCalendar('s1'), { sources: ['EVENT'], onlyMine: false }],
+    ['analysis', () => useAnalyseImport('s1'), new Blob()],
+  ] as const)('reads nothing again after an %s, which writes nothing, on the calendar page too', async (_name, hook, arg) => {
+    const { wrapper, occurrences, links } = setup()
+    listenAsTheCalendarPage(wrapper)
+    await waitFor(() => expect(links).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(occurrences).toHaveBeenCalledTimes(1))
+    const { result } = renderHook(hook as Mutation, { wrapper })
+
+    await result.current.mutateAsync(arg)
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(links).toHaveBeenCalledTimes(1)
     expect(occurrences).toHaveBeenCalledTimes(1)
   })
 

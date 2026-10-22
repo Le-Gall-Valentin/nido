@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { QueryClientProvider, useMutation } from '@tanstack/react-query'
 import { createTestQueryClient } from '@/shared/test'
-import { useInvalidateOnAnyWrite } from './useInvalidateOnAnyWrite'
+import { NOTHING_ELSE_TO_REFRESH, useInvalidateOnAnyWrite } from './useInvalidateOnAnyWrite'
 
 function setup() {
   const client = createTestQueryClient()
@@ -31,6 +31,17 @@ describe('useInvalidateOnAnyWrite', () => {
     act(() => writer.result.current.mutate())
 
     await waitFor(() => expect(writer.result.current.isError).toBe(true))
+    expect(invalidate).not.toHaveBeenCalled()
+  })
+
+  it('leaves it alone after a write that says there is nothing else to refresh', async () => {
+    const { invalidate, wrapper } = setup()
+    renderHook(() => useInvalidateOnAnyWrite(['calendar', 'space-1']), { wrapper })
+    const writer = renderHook(() => useMutation({ mutationFn: () => Promise.resolve('ok'), meta: NOTHING_ELSE_TO_REFRESH }), { wrapper })
+
+    act(() => writer.result.current.mutate())
+
+    await waitFor(() => expect(writer.result.current.isSuccess).toBe(true))
     expect(invalidate).not.toHaveBeenCalled()
   })
 
