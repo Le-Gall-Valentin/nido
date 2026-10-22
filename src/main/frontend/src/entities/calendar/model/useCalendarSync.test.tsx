@@ -43,6 +43,8 @@ function listenAsTheCalendarPage(wrapper: ({ children }: { children: ReactNode }
 describe('calendar sync hooks', () => {
   it.each([
     ['follow', () => useFollowExternalFeed('s1'), { url: 'u', name: null, color: null }],
+    // A calendar's name and colour show in the grid and in the filters.
+    ['update', () => useUpdateExternalFeed('s1'), { feedId: 'f1', name: 'École', color: 'event-cyan' }],
     ['refresh', () => useRefreshExternalFeed('s1'), 'f1'],
     ['remove', () => useRemoveExternalFeed('s1'), 'f1'],
     ['import', () => useImportFile('s1'), new Blob()],
