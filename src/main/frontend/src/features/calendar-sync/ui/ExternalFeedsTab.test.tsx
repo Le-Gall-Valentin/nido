@@ -60,6 +60,11 @@ describe('ExternalFeedsTab', () => {
     expect(screen.queryByRole('alert')).toBeNull()
   })
 
+  it('takes an address no longer than the server does', async () => {
+    await openForm({})
+    expect(screen.getByLabelText('feeds.url').getAttribute('maxlength')).toBe('2000')
+  })
+
   it('shows a busy state and disables the button while the calendar downloads', async () => {
     let finish: (feed: ExternalFeed) => void = () => {}
     await openForm({ followExternalFeed: vi.fn().mockReturnValue(new Promise<ExternalFeed>((resolve) => { finish = resolve })) })

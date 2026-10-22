@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Button, CTA_BUTTON_STYLE, Input, Spinner } from '@/shared/ui'
 import { formatRelativeTime } from '@/shared/lib'
 import {
-  EVENT_DOT_CLASS, FEED_FALLBACK_COLOR, feedColor, useExternalFeeds, useFollowExternalFeed, useRefreshExternalFeed,
-  useRemoveExternalFeed, useUpdateExternalFeed, type EventColor, type ExternalFeed,
+  EVENT_DOT_CLASS, FEED_FALLBACK_COLOR, MAX_FEED_ADDRESS_LENGTH, feedColor, useExternalFeeds, useFollowExternalFeed,
+  useRefreshExternalFeed, useRemoveExternalFeed, useUpdateExternalFeed, type EventColor, type ExternalFeed,
 } from '@/entities/calendar'
 import { FeedColorPicker } from './FeedColorPicker'
 import { FeedEditor } from './FeedEditor'
@@ -94,7 +94,7 @@ export function ExternalFeedsTab({ spaceId, canWrite }: { spaceId: string; canWr
       {adding ? (
         <>
           <Input label={t('feeds.url')} placeholder={t('feeds.url_placeholder')} value={url} inputMode="url" data-feed-url
-            onChange={(e) => setUrl(e.target.value)} />
+            maxLength={MAX_FEED_ADDRESS_LENGTH} onChange={(e) => setUrl(e.target.value)} />
           <Input label={t('feeds.name')} value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
           <FeedColorPicker value={color} onChange={setColor} />
           {follow.isError && <p role="alert" className="text-sm text-status-red">{syncErrorMessage(t, follow.error)}</p>}

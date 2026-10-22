@@ -187,6 +187,9 @@ export interface ExternalFeed {
   lastError: string | null
 }
 
+/** The longest address of a calendar to follow the server takes (ExternalFeedRequest). */
+export const MAX_FEED_ADDRESS_LENGTH = 2000
+
 /** A calendar to follow. A colour is one of the palette, or none for the graphite of external sources. */
 export interface ExternalFeedInput {
   url: string
