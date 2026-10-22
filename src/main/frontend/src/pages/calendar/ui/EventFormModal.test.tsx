@@ -207,7 +207,8 @@ describe('EventFormModal — days of a series', () => {
       { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['WEDNESDAY'], dayRule: 'SAME_DAY' })
   })
 
-  it('keeps the days chosen, the new start day sent among them, when a series repeats on several', () => {
+  it('keeps the days chosen beyond the start when a series on several moves, and not the day the start left', () => {
+    // Mondays and Thursdays from Monday 5 October, moved to Tuesday 6: Monday was the start's, never chosen.
     const { onSubmit } = renderForm({
       mode: 'edit-series',
       initial: { ...initial, startDate: '2026-10-05', endDate: '2026-10-05' },
@@ -217,7 +218,7 @@ describe('EventFormModal — days of a series', () => {
     fireEvent.change(field('form.end_date'), { target: { value: '2026-10-06' } })
     save()
     expect(onSubmit).toHaveBeenCalledWith(expect.anything(),
-      { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['MONDAY', 'TUESDAY', 'THURSDAY'], dayRule: 'SAME_DAY' })
+      { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['TUESDAY', 'THURSDAY'], dayRule: 'SAME_DAY' })
   })
 
   it('moves the one day of a series with its start even when the date was cleared on the way', () => {
@@ -247,7 +248,61 @@ describe('EventFormModal — days of a series', () => {
     fireEvent.change(field('form.end_date'), { target: { value: '2026-10-06' } })
     save()
     expect(onSubmit).toHaveBeenCalledWith(expect.anything(),
-      { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['MONDAY', 'TUESDAY', 'THURSDAY'], dayRule: 'SAME_DAY' })
+      { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['TUESDAY', 'THURSDAY'], dayRule: 'SAME_DAY' })
+  })
+
+  describe('whatever the order of the clicks', () => {
+    // From Monday 19 October, weekly. Thursday is chosen; the start then moves on to Wednesday 21 and Friday 23.
+    const start = (value: string) => {
+      fireEvent.change(field('form.start_date'), { target: { value } })
+      fireEvent.change(field('form.end_date'), { target: { value } })
+    }
+    const thursday = () => fireEvent.click(screen.getByRole('button', { name: /^(jeudi|thursday)$/i }))
+    const pressed = () => screen.getAllByRole('button', { pressed: true })
+      .filter((button) => button.closest('[role="group"]')).map((button) => button.getAttribute('aria-label'))
+    const sentDays = (onSubmit: ReturnType<typeof vi.fn>) => {
+      save()
+      return (onSubmit.mock.calls[0]?.[1] as { weekdays: string[] }).weekdays
+    }
+    const monday19 = { ...initial, startDate: '2026-10-19', endDate: '2026-10-19' }
+
+    it('keeps a day chosen while the start moves twice', () => {
+      const { onSubmit } = renderForm({ initial: monday19 })
+      recurring()
+      thursday()
+      start('2026-10-21')
+      expect(pressed()).toHaveLength(2)
+      start('2026-10-23')
+      expect(sentDays(onSubmit)).toEqual(['THURSDAY', 'FRIDAY'])
+    })
+
+    it('ends on the same days when the day is chosen after the start moved', () => {
+      const { onSubmit } = renderForm({ initial: monday19 })
+      recurring()
+      start('2026-10-21')
+      start('2026-10-23')
+      thursday()
+      expect(sentDays(onSubmit)).toEqual(['THURSDAY', 'FRIDAY'])
+    })
+
+    it('never makes a day the start left one of the days chosen', () => {
+      const { onSubmit } = renderForm({ initial: monday19 })
+      recurring()
+      thursday()
+      start('2026-10-21')
+      expect(sentDays(onSubmit)).toEqual(['WEDNESDAY', 'THURSDAY'])
+    })
+
+    it('keeps a day chosen that the start passed over', () => {
+      // Thursday chosen, the start moved onto Thursday then on to Friday: Thursday stays, as chosen.
+      const { onSubmit } = renderForm({ initial: monday19 })
+      recurring()
+      thursday()
+      start('2026-10-22')
+      expect((screen.getByRole('button', { name: /^(jeudi|thursday)$/i }) as HTMLButtonElement).disabled).toBe(true)
+      start('2026-10-23')
+      expect(sentDays(onSubmit)).toEqual(['THURSDAY', 'FRIDAY'])
+    })
   })
 
   it('refuses an occurrence running into the next day chosen', () => {
