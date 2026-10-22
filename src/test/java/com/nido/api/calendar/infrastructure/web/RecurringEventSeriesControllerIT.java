@@ -553,6 +553,51 @@ class RecurringEventSeriesControllerIT {
             monday.plusWeeks(2) + " Piano", monday.plusWeeks(2).plusDays(2) + " Piano (modifié)");
     }
 
+    @Test
+    void a_monthly_series_moved_to_the_last_weekday_of_the_month() throws Exception {
+        // Over, so it changes whole: Friday 31 January 2025 is the last Friday of its month and the last day too.
+        String body = """
+            {"title":"Apéro","allDay":true,"intervalType":"MONTHLY","intervalCount":1,%s"anchorDate":"2025-01-31",
+             "endDate":"2025-06-30"}""";
+        String created = mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content(body.formatted("")))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+
+        mockMvc.perform(patch(series() + "/" + objectMapper.readTree(created).get("id").asText()).cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON).content(body.formatted("\"dayRule\":\"LAST_WEEKDAY_OF_MONTH\",")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.dayRule").value("LAST_WEEKDAY_OF_MONTH"));
+
+        // March 2025 ends on a Monday: its last Friday is the 28th, not the 31st.
+        assertThat(shownBetween(LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 31))).containsExactly("2025-03-28 Apéro");
+    }
+
+    @Test
+    void a_rule_that_does_not_fit_its_series_is_refused_on_creation_and_on_edition() throws Exception {
+        String seriesId = createSeries("Piano", LocalDate.of(2026, 1, 6));
+        List<String> refused = List.of(
+            // Weekdays on a monthly series; a day rule on a weekly one; weekdays without the anchor's, a Tuesday.
+            """
+                {"title":"x","allDay":true,"intervalType":"MONTHLY","intervalCount":1,"weekdays":["TUESDAY"],
+                 "anchorDate":"2026-01-06"}""",
+            """
+                {"title":"x","allDay":true,"intervalType":"WEEKLY","intervalCount":1,"dayRule":"LAST_WEEKDAY_OF_MONTH",
+                 "anchorDate":"2026-01-27"}""",
+            """
+                {"title":"x","allDay":true,"intervalType":"WEEKLY","intervalCount":1,"weekdays":["MONDAY","THURSDAY"],
+                 "anchorDate":"2026-01-06"}""");
+        for (String body : refused) {
+            mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value("invalid_recurrence_rule"));
+            mockMvc.perform(patch(series() + "/" + seriesId).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error_code").value("invalid_recurrence_rule"));
+        }
+        assertThat(listSeries()).hasSize(1);
+    }
+
     private static final ZoneId HOUSEHOLD = ZoneId.of("Europe/Paris");
 
     private String createSeries(String title, LocalDate anchor) throws Exception {
