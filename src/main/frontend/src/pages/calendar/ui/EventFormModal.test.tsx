@@ -465,4 +465,19 @@ describe('EventFormModal — the day rule said', () => {
     fireEvent.change(field('form.start_date'), { target: { value: '2026-05-12' } })
     expect(labels()[0]).toBe('Rule.day:{"day":12}')
   })
+
+  it('says the day of a series made yearly from the start shown, which saving anchors it on', () => {
+    const series: RecurringEventSeries = {
+      id: 's-1', title: 'Loyer', description: null, location: null, allDay: true, startTime: null, endTime: null,
+      durationDays: 0, color: null, intervalType: 'MONTHLY', intervalCount: 1, weekdays: null, dayRule: 'SAME_DAY',
+      anchorDate: '2026-01-31', endDate: null, startsOn: '2026-04-20', firstDate: '2026-04-30',
+      participantIds: [], createdBy: 'u-1', createdAt: '2026-01-01T00:00:00Z',
+    }
+    const { event, recurrence } = fromSeries(series)
+    renderForm({ mode: 'edit-series', initial: event, initialRecurrence: recurrence, editedSeries: series })
+
+    fireEvent.change(screen.getByLabelText('series.interval_type'), { target: { value: 'YEARLY' } })
+
+    expect(labels()[0]).toMatch(/^Rule\.day_of_month:\{"day":30,"month":"(April|avril)"\}$/)
+  })
 })

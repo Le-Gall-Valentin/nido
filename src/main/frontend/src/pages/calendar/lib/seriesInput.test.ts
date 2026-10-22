@@ -91,6 +91,22 @@ describe('a series carrying on an edit', () => {
       .toBe('2026-09-29')
   })
 
+  it('anchors on the start shown once the interval changes, so the occurrence shown is still one of them', () => {
+    // From Monday Sept 7 every 2 weeks, Monday Sept 28 would be skipped.
+    const { event, recurrence } = fromSeries(carriedOn)
+    expect(toSeriesInput(event, { ...recurrence, intervalCount: 2 }, carriedOn).anchorDate).toBe('2026-09-28')
+  })
+
+  it('anchors on the start shown once the frequency changes, so the occurrence shown is still one of them', () => {
+    // Monthly on the 31st, shown from 30 April: made yearly from 31 January, it would never fall on 30 April.
+    const monthly: RecurringEventSeries = {
+      ...carriedOn, intervalType: 'MONTHLY', weekdays: null, anchorDate: '2026-01-31', startsOn: '2026-04-20', firstDate: '2026-04-30',
+    }
+    const { event, recurrence } = fromSeries(monthly)
+    expect(toSeriesInput(event, recurrence, monthly).anchorDate).toBe('2026-01-31')
+    expect(toSeriesInput(event, { ...recurrence, intervalType: 'YEARLY' }, monthly).anchorDate).toBe('2026-04-30')
+  })
+
   it('anchors on the start shown once the days change, so the new days hold the anchor\'s', () => {
     const { event, recurrence } = fromSeries(carriedOn)
     // Shown from Monday Sept 28; now on Tuesdays and Thursdays: Monday Sept 7 is no longer one of them.

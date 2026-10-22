@@ -128,6 +128,13 @@ describe('dayRuleChoices', () => {
       ])
     })
 
+    it('says every rule from the start shown once the frequency or the interval changes, as saving anchors it there', () => {
+      expect(dayRuleChoices({ ...monthly, intervalType: 'YEARLY' }, '2026-04-30', series).map(({ wordedFrom }) => wordedFrom))
+        .toEqual(['2026-04-30', '2026-04-30', '2026-04-30'])
+      expect(dayRuleChoices({ ...monthly, intervalCount: 2 }, '2026-04-30', series).map(({ wordedFrom }) => wordedFrom))
+        .toEqual(['2026-04-30', '2026-04-30', '2026-04-30'])
+    })
+
     it('says every rule from a start that moved', () => {
       expect(dayRuleChoices(monthly, '2026-05-12', series).map(({ wordedFrom }) => wordedFrom))
         .toEqual(['2026-05-12', '2026-05-12'])

@@ -32,13 +32,17 @@ function rhythmOf(recurrence: Recurrence): { weekdays: Weekday[] | null; dayRule
  * The anchor a series starting on `startDate` is written with. `edited` is the series being edited, if any. Its start
  * shown is its first occurrence, which is not its anchor once it carries on an edit.
  *
- * The anchor sets the rhythm and the days are read off it: it is kept only while the start and the days are left
- * alone. Otherwise the series is anchored on the start shown — one of its occurrences, in a week of its rhythm.
+ * The anchor sets the rhythm and the days are read off it: it is kept only while the start, the frequency, the
+ * interval and the days are left alone, which keeps the start shown one of the occurrences saved. Otherwise the series
+ * is anchored on the start shown — a monthly series on the 31st shown from 30 April and made yearly repeats on 30
+ * April, not on 31 January.
  */
 export function anchorFor(startDate: string, recurrence: Recurrence, edited?: RecurringEventSeries | null): string {
   const { weekdays, dayRule } = rhythmOf(recurrence)
-  const keepsItsDays = !!edited && sameDays(edited.weekdays ?? null, weekdays) && (edited.dayRule ?? 'SAME_DAY') === dayRule
-  return edited && keepsItsDays && startDate === shownStart(edited) ? edited.anchorDate : startDate
+  const keepsItsRhythm = !!edited && edited.intervalType === recurrence.intervalType
+    && edited.intervalCount === recurrence.intervalCount
+    && sameDays(edited.weekdays ?? null, weekdays) && (edited.dayRule ?? 'SAME_DAY') === dayRule
+  return edited && keepsItsRhythm && startDate === shownStart(edited) ? edited.anchorDate : startDate
 }
 
 /**
