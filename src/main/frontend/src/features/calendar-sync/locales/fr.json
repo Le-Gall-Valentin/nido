@@ -152,7 +152,9 @@
     "invalid_feed_address": "Donnez une adresse qui commence par https://, http:// ou webcal://.",
     "too_many_feeds": "Cet espace suit déjà 10 calendriers.",
     "refresh_too_soon": "Ce calendrier vient d'être relu. Réessayez dans une minute.",
-    "feed_unavailable": "Le calendrier n'a pas pu être lu : {{reason}}."
+    "feed_unavailable": "Le calendrier n'a pas pu être lu : {{reason}}.",
+    "subscription_link_not_found": "Cette adresse n'existe plus : elle a été révoquée entre-temps.",
+    "external_feed_not_found": "Ce calendrier suivi n'existe plus : il a été retiré entre-temps."
   },
   "feed_error": {
     "INVALID_URL": "adresse invalide",

@@ -4,16 +4,21 @@ import { QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react
 import type { ReactNode } from 'react'
 import { CalendarApiProvider } from './CalendarApiProvider'
 import type { CalendarApi } from './calendarApiContext'
+import { CalendarSyncError } from '../api/calendarSyncErrors'
 import {
   useCreateSubscriptionLink, useFollowExternalFeed, useImportFile, useRefreshExternalFeed,
-  useRemoveExternalFeed, useRevokeSubscriptionLink,
+  useRemoveExternalFeed, useRevokeSubscriptionLink, useUpdateExternalFeed,
 } from './useCalendarSync'
 
-function setup() {
+type Mutation = () => { mutateAsync: (a: unknown) => Promise<unknown> }
+
+function setup(failing: Partial<Record<keyof CalendarApi, CalendarSyncError>> = {}) {
   const api = {
     createSubscriptionLink: vi.fn().mockResolvedValue({}), revokeSubscriptionLink: vi.fn().mockResolvedValue(undefined),
     followExternalFeed: vi.fn().mockResolvedValue({}), refreshExternalFeed: vi.fn().mockResolvedValue({}),
+    updateExternalFeed: vi.fn().mockResolvedValue({}),
     removeExternalFeed: vi.fn().mockResolvedValue(undefined), importFile: vi.fn().mockResolvedValue({}),
+    ...Object.fromEntries(Object.entries(failing).map(([method, error]) => [method, vi.fn().mockRejectedValue(error)])),
   } as unknown as CalendarApi
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const occurrences = vi.fn().mockResolvedValue([])
@@ -36,7 +41,7 @@ describe('calendar sync hooks', () => {
   ] as const)('reads the occurrences again after %s', async (_name, hook, arg) => {
     const { wrapper, occurrences } = setup()
     await waitFor(() => expect(occurrences).toHaveBeenCalledTimes(1))
-    const { result } = renderHook(hook as () => { mutateAsync: (a: unknown) => Promise<unknown> }, { wrapper })
+    const { result } = renderHook(hook as Mutation, { wrapper })
 
     await result.current.mutateAsync(arg)
 
@@ -49,11 +54,51 @@ describe('calendar sync hooks', () => {
   ] as const)('reads only the addresses again after %s', async (_name, hook, arg) => {
     const { wrapper, occurrences, links } = setup()
     await waitFor(() => expect(links).toHaveBeenCalledTimes(1))
-    const { result } = renderHook(hook as () => { mutateAsync: (a: unknown) => Promise<unknown> }, { wrapper })
+    const { result } = renderHook(hook as Mutation, { wrapper })
 
     await result.current.mutateAsync(arg)
 
     await waitFor(() => expect(links).toHaveBeenCalledTimes(2))
+    expect(occurrences).toHaveBeenCalledTimes(1)
+  })
+
+  it('reads the addresses again when the one revoked was already gone', async () => {
+    const { wrapper, occurrences, links } = setup({ revokeSubscriptionLink: new CalendarSyncError('subscription_link_not_found') })
+    await waitFor(() => expect(links).toHaveBeenCalledTimes(1))
+    const { result } = renderHook(() => useRevokeSubscriptionLink('s1'), { wrapper })
+
+    await expect(result.current.mutateAsync('l1')).rejects.toMatchObject({ reason: 'subscription_link_not_found' })
+
+    await waitFor(() => expect(links).toHaveBeenCalledTimes(2))
+    expect(occurrences).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['update', () => useUpdateExternalFeed('s1'), 'updateExternalFeed', { feedId: 'f1', name: 'École', color: null }],
+    ['remove', () => useRemoveExternalFeed('s1'), 'removeExternalFeed', 'f1'],
+    ['refresh', () => useRefreshExternalFeed('s1'), 'refreshExternalFeed', 'f1'],
+  ] as const)('reads the calendar again when the calendar to %s was already gone', async (_name, hook, method, arg) => {
+    const { wrapper, occurrences } = setup({ [method]: new CalendarSyncError('external_feed_not_found') })
+    await waitFor(() => expect(occurrences).toHaveBeenCalledTimes(1))
+    const { result } = renderHook(hook as Mutation, { wrapper })
+
+    await expect(result.current.mutateAsync(arg)).rejects.toMatchObject({ reason: 'external_feed_not_found' })
+
+    await waitFor(() => expect(occurrences).toHaveBeenCalledTimes(2))
+  })
+
+  it('reads nothing again after a failure for any other reason', async () => {
+    const { wrapper, occurrences, links } = setup({
+      revokeSubscriptionLink: new CalendarSyncError('rate_limited'), removeExternalFeed: new CalendarSyncError('server'),
+    })
+    await waitFor(() => expect(links).toHaveBeenCalledTimes(1))
+    const revoke = renderHook(() => useRevokeSubscriptionLink('s1'), { wrapper })
+    const remove = renderHook(() => useRemoveExternalFeed('s1'), { wrapper })
+
+    await expect(revoke.result.current.mutateAsync('l1')).rejects.toBeInstanceOf(CalendarSyncError)
+    await expect(remove.result.current.mutateAsync('f1')).rejects.toBeInstanceOf(CalendarSyncError)
+
+    expect(links).toHaveBeenCalledTimes(1)
     expect(occurrences).toHaveBeenCalledTimes(1)
   })
 })

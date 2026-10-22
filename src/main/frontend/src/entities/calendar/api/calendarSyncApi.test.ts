@@ -149,4 +149,15 @@ describe('calendar sync api', () => {
     everyVerbRejects(failure(500, { error_code: 'data_integrity' }))
     await expect(call()).rejects.toMatchObject({ reason: 'server' })
   })
+
+  it('says an address or a calendar removed meanwhile is gone, and nothing else', async () => {
+    vi.mocked(client.delete).mockRejectedValueOnce(failure(404, { error_code: 'subscription_link_not_found' }))
+    await expect(calendarSyncApi.revokeSubscriptionLink('s1', 'l1'))
+      .rejects.toMatchObject({ reason: 'subscription_link_not_found', gone: true })
+    vi.mocked(client.patch).mockRejectedValueOnce(failure(404, { error_code: 'external_feed_not_found' }))
+    await expect(calendarSyncApi.updateExternalFeed('s1', 'f1', { name: 'École', color: null }))
+      .rejects.toMatchObject({ reason: 'external_feed_not_found', gone: true })
+    vi.mocked(client.post).mockRejectedValueOnce(failure(429, { error_code: 'refresh_too_soon' }))
+    await expect(calendarSyncApi.refreshExternalFeed('s1', 'f1')).rejects.toMatchObject({ gone: false })
+  })
 })

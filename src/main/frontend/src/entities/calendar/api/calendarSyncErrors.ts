@@ -4,10 +4,14 @@ import { isAxiosError } from 'axios'
 export const SYNC_REASONS = [
   'invalid_sources', 'not_ics', 'import_too_large', 'file_too_large', 'upload_too_large', 'too_many_links', 'public_url_missing',
   'too_many_feeds', 'refresh_too_soon', 'invalid_feed_address', 'feed_unavailable',
+  'subscription_link_not_found', 'external_feed_not_found',
   'rate_limited', 'forbidden', 'server', 'network',
 ] as const
 
 export type SyncReason = (typeof SYNC_REASONS)[number]
+
+/** An address or a followed calendar removed meanwhile — on another device, by another member. */
+const GONE_REASONS: readonly SyncReason[] = ['subscription_link_not_found', 'external_feed_not_found']
 
 /**
  * Why a sync call failed, as the server named it (`error_code`) or as the call ended: what the dialog words for the
@@ -17,6 +21,11 @@ export class CalendarSyncError extends Error {
   constructor(readonly reason: SyncReason, readonly feedError?: string) {
     super(reason)
     this.name = 'CalendarSyncError'
+  }
+
+  /** What the call acted on no longer exists: a list still showing it is out of date. */
+  get gone(): boolean {
+    return GONE_REASONS.includes(this.reason)
   }
 }
 

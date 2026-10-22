@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCalendarSyncApi } from './calendarApiContext'
 import { calendarKey } from './useCalendarQueries'
+import { CalendarSyncError } from '../api/calendarSyncErrors'
 import type { ExportableSource, ExternalFeedInput, ExternalFeedUpdate, SubscriptionLinkInput } from './types'
 
 function subscriptionLinksKey(spaceId: string) {
@@ -21,6 +22,13 @@ function useCalendarInvalidation(spaceId: string) {
 function useLinksInvalidation(spaceId: string) {
   const queryClient = useQueryClient()
   return () => queryClient.invalidateQueries({ queryKey: subscriptionLinksKey(spaceId) })
+}
+
+/** A call on what was removed meanwhile reads again the list that still showed it, so that its row goes. */
+function refreshWhenGone(refresh: () => Promise<void>) {
+  return (error: Error) => {
+    if (error instanceof CalendarSyncError && error.gone) void refresh()
+  }
 }
 
 export function useSubscriptionLinks(spaceId: string | undefined) {
@@ -44,7 +52,9 @@ export function useCreateSubscriptionLink(spaceId: string) {
 export function useRevokeSubscriptionLink(spaceId: string) {
   const api = useCalendarSyncApi()
   const invalidate = useLinksInvalidation(spaceId)
-  return useMutation({ mutationFn: (linkId: string) => api.revokeSubscriptionLink(spaceId, linkId), onSuccess: invalidate })
+  return useMutation({
+    mutationFn: (linkId: string) => api.revokeSubscriptionLink(spaceId, linkId), onSuccess: invalidate, onError: refreshWhenGone(invalidate),
+  })
 }
 
 export function useExternalFeeds(spaceId: string | undefined) {
@@ -69,19 +79,24 @@ export function useUpdateExternalFeed(spaceId: string) {
     mutationFn: ({ feedId, name, color }: ExternalFeedUpdate & { feedId: string }) =>
       api.updateExternalFeed(spaceId, feedId, { name, color }),
     onSuccess: invalidate,
+    onError: refreshWhenGone(invalidate),
   })
 }
 
 export function useRemoveExternalFeed(spaceId: string) {
   const api = useCalendarSyncApi()
   const invalidate = useCalendarInvalidation(spaceId)
-  return useMutation({ mutationFn: (feedId: string) => api.removeExternalFeed(spaceId, feedId), onSuccess: invalidate })
+  return useMutation({
+    mutationFn: (feedId: string) => api.removeExternalFeed(spaceId, feedId), onSuccess: invalidate, onError: refreshWhenGone(invalidate),
+  })
 }
 
 export function useRefreshExternalFeed(spaceId: string) {
   const api = useCalendarSyncApi()
   const invalidate = useCalendarInvalidation(spaceId)
-  return useMutation({ mutationFn: (feedId: string) => api.refreshExternalFeed(spaceId, feedId), onSuccess: invalidate })
+  return useMutation({
+    mutationFn: (feedId: string) => api.refreshExternalFeed(spaceId, feedId), onSuccess: invalidate, onError: refreshWhenGone(invalidate),
+  })
 }
 
 /** Reads a file as an import would, writing nothing: nothing to refresh. */
