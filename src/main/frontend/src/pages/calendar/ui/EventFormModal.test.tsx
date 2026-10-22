@@ -3,8 +3,9 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import type { EventInput } from '@/entities/calendar'
 import { EventFormModal, type EventFormModalProps } from './EventFormModal'
 
+/** A `t` that shows what it was asked: the key, and the values it was given if any. */
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string, options?: Record<string, unknown>) => (options ? `${key}:${JSON.stringify(options)}` : key) }),
 }))
 
 const initial: EventInput = {
@@ -49,7 +50,7 @@ describe('EventFormModal — length', () => {
 
     save()
 
-    expect(screen.getByRole('alert').textContent).toBe('form.too_long')
+    expect(screen.getByRole('alert').textContent).toBe('form.too_long:{"days":366}')
     expect(onSubmit).not.toHaveBeenCalled()
   })
 })
@@ -109,6 +110,29 @@ describe('EventFormModal — recurrence', () => {
 
     expect(screen.getByRole('alert').textContent).toBe('series.interval_invalid')
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('refuses to repeat at an interval over the server\'s limit, which the field says too', () => {
+    const { onSubmit } = renderForm()
+    fireEvent.click(field('form.recurring'))
+    expect(field('series.interval_count').max).toBe('1000')
+    fireEvent.change(field('series.interval_count'), { target: { value: '1001' } })
+
+    save()
+
+    expect(screen.getByRole('alert').textContent).toBe('series.interval_too_large:{"maximum":1000}')
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('repeats at the largest interval the server takes', () => {
+    const { onSubmit } = renderForm()
+    fireEvent.click(field('form.recurring'))
+    fireEvent.change(field('series.interval_type'), { target: { value: 'MONTHLY' } })
+    fireEvent.change(field('series.interval_count'), { target: { value: '1000' } })
+
+    save()
+
+    expect(onSubmit).toHaveBeenCalledWith(initial, expect.objectContaining({ intervalCount: 1000 }))
   })
 
   it('refuses an occurrence lasting longer than the time between two of them', () => {

@@ -6,7 +6,7 @@ import { createTestQueryClient } from '@/shared/test'
 import { todayIso } from '@/shared/lib'
 import { SpacesApiProvider, type ISpacesApi } from '@/features/space-switcher'
 import { SpaceMembersApiProvider, type ISpaceMembersApi, type SpaceMember, type SpaceSummary } from '@/entities/space'
-import type { CalendarApi, CalendarOccurrence, RecurringEventSeries } from '@/entities/calendar'
+import { IntervalTooLargeError, type CalendarApi, type CalendarOccurrence, type RecurringEventSeries } from '@/entities/calendar'
 import type { IFinanceApi } from '@/entities/finance'
 import type { IKitchenApi } from '@/entities/kitchen'
 import { TasksApiProvider, type TasksApi } from '@/entities/tasks'
@@ -347,6 +347,17 @@ describe('CalendarPage — recurring events in the event form', () => {
       intervalType: 'WEEKLY', intervalCount: 1, endDate: null,
     })))
     expect(createEvent).not.toHaveBeenCalled()
+  })
+
+  it('says the server\'s refusal of an interval over its limit as the form says it', async () => {
+    const createRecurringEventSeries = vi.fn().mockRejectedValue(new IntervalTooLargeError())
+    renderPage([], { calendar: { createRecurringEventSeries } })
+    fireEvent.click(await screen.findByRole('button', { name: 'new_event' }))
+    fireEvent.change(screen.getByLabelText('form.title'), { target: { value: 'Piano' } })
+    fireEvent.click(screen.getByLabelText('form.recurring'))
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }))
+
+    expect((await screen.findByRole('alert')).textContent).toBe('series.interval_too_large:{"maximum":1000}')
   })
 
   it('turns a time picked out in the week grid into a series at that time', async () => {

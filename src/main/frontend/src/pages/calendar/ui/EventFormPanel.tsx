@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next'
 import type { SpaceMember } from '@/entities/space'
 import {
   toEventInput, useCreateEvent, useUpdateEvent, useDetachOccurrence, useCreateRecurringEventSeries,
-  useUpdateRecurringEventSeries, type CalendarOccurrence, type EventInput, type RecurringEventSeries, type ScheduleChange,
+  useUpdateRecurringEventSeries, IntervalTooLargeError, type CalendarOccurrence, type EventInput, type RecurringEventSeries,
+  type ScheduleChange,
 } from '@/entities/calendar'
 import { fromSeries, runsAcross, toSeriesInput, type Recurrence } from '../lib/seriesInput'
+import { intervalTooLarge } from '../lib/eventFormProblem'
 import { EventFormModal } from './EventFormModal'
 
 interface EventFormPanelProps {
@@ -64,7 +66,9 @@ export function EventFormPanel({
 
   const handleSubmit = (input: EventInput, recurrence: Recurrence | null) => {
     setError(null)
-    const onError = () => setError(t('form.save_failed'))
+    // An interval over the server's limit is said as the form says it; any other failure, as a failed save.
+    const onError = (failure: Error) => setError(failure instanceof IntervalTooLargeError
+      ? t(intervalTooLarge.key, intervalTooLarge.values) : t('form.save_failed'))
     const onSuccess = () => onClose()
 
     if (series && recurrence) {

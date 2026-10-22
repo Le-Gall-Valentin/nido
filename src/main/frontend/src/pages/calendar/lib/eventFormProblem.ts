@@ -1,6 +1,6 @@
 import type { EventInput } from '@/entities/calendar'
 import { isValidIso } from './calendarWindow'
-import { MAX_EVENT_DAYS, coversTooManyDays, occurrenceOutlastsInterval } from './scheduleLimits'
+import { MAX_EVENT_DAYS, MAX_INTERVAL_COUNT, coversTooManyDays, occurrenceOutlastsInterval } from './scheduleLimits'
 import type { Recurrence } from './seriesInput'
 
 /** Why the event form cannot be saved: the message's key, and the values it says. */
@@ -8,6 +8,9 @@ export interface EventFormProblem {
   key: string
   values?: Record<string, unknown>
 }
+
+/** An interval over the server's limit: what the form says, whether it saw it first or the server refused it. */
+export const intervalTooLarge: EventFormProblem = { key: 'series.interval_too_large', values: { maximum: MAX_INTERVAL_COUNT } }
 
 /**
  * The first reason, in the order the form reads, why an event cannot be saved — a series when `recurrence` is given,
@@ -27,6 +30,7 @@ export function eventFormProblem(event: EventInput, recurrence: Recurrence | nul
   if (coversTooManyDays(event)) return { key: 'form.too_long', values: { days: MAX_EVENT_DAYS } }
   if (!recurrence) return null
   if (!(recurrence.intervalCount >= 1)) return { key: 'series.interval_invalid' }
+  if (recurrence.intervalCount > MAX_INTERVAL_COUNT) return intervalTooLarge
   if (occurrenceOutlastsInterval(event, recurrence)) return { key: 'series.occurrence_too_long' }
   if (recurrence.until && recurrence.until < event.startDate) return { key: 'series.until_before_start' }
   return null

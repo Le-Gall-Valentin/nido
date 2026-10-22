@@ -49,6 +49,12 @@ describe('eventFormProblem', () => {
     expect(key(event, { ...weekly, intervalCount: Number('') })).toBe('series.interval_invalid')
   })
 
+  it('refuses an interval over the server\'s limit, and says it', () => {
+    expect(key(event, { ...weekly, intervalCount: 1000 })).toBeNull()
+    expect(eventFormProblem(event, { ...weekly, intervalCount: 1001 }))
+      .toEqual({ key: 'series.interval_too_large', values: { maximum: 1000 } })
+  })
+
   it('refuses an occurrence running into the next one', () => {
     expect(key({ ...event, endDate: '2026-10-10' }, weekly)).toBe('series.occurrence_too_long')
   })

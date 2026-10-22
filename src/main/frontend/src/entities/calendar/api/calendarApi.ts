@@ -6,6 +6,7 @@ import type {
   CalendarEvent, CalendarOccurrence, CreatedSubscriptionLink, ExternalFeed, ImportReport, RecurringEventSeries, SubscriptionLink,
 } from '../model/types'
 import { toSyncError } from './calendarSyncErrors'
+import { IntervalTooLargeError } from './seriesErrors'
 
 function handleError(error: unknown): never {
   if (isAxiosError(error)) {
@@ -16,6 +17,15 @@ function handleError(error: unknown): never {
     if (status !== undefined) throw new ServerError()
   }
   throw new NetworkError()
+}
+
+/** A series' own refusal, which the event form words, before what any other call fails with. */
+function handleSeriesError(error: unknown): never {
+  if (isAxiosError(error) && error.response?.status === 400
+      && (error.response.data as { error_code?: string } | undefined)?.error_code === 'interval_too_large') {
+    throw new IntervalTooLargeError()
+  }
+  handleError(error)
 }
 
 /** A large file takes longer to read than the usual 15 s. */
@@ -100,14 +110,14 @@ export const calendarApi: CalendarApi = {
     try {
       const res = await client.post<RecurringEventSeries>(`${base(spaceId)}/recurring-event-series`, input)
       return res.data
-    } catch (error) { handleError(error) }
+    } catch (error) { handleSeriesError(error) }
   },
 
   async updateRecurringEventSeries(spaceId, seriesId, input) {
     try {
       const res = await client.patch<RecurringEventSeries>(`${base(spaceId)}/recurring-event-series/${seriesId}`, input)
       return res.data
-    } catch (error) { handleError(error) }
+    } catch (error) { handleSeriesError(error) }
   },
 
   async deleteRecurringEventSeries(spaceId, seriesId) {

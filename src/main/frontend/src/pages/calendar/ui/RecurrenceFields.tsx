@@ -6,6 +6,7 @@ import { resolveLocale } from '@/shared/lib'
 import type { DayRule, RecurrenceInterval } from '@/entities/calendar'
 import { WEEKDAYS, weekdayOf, weekdayName, possibleDayRules, dayRulePhrase, capitalize } from '../lib/recurrenceRule'
 import { shownDays } from '../lib/recurrenceDraft'
+import { MAX_INTERVAL_COUNT } from '../lib/scheduleLimits'
 import type { RecurrenceDraftState } from '../model/useRecurrenceDraft'
 
 interface RecurrenceFieldsProps {
@@ -38,8 +39,8 @@ export function RecurrenceFields({ recurrence, startDate, notice }: RecurrenceFi
   return (
     <div className="flex flex-col gap-3 rounded-lg bg-bg-2 p-3">
       <div className="grid grid-cols-2 gap-3">
-        <Input label={t('series.interval_count')} type="number" min={1} value={String(draft.intervalCount)}
-          onChange={(e) => recurrence.setIntervalCount(Number(e.target.value))} />
+        <Input label={t('series.interval_count')} type="number" min={1} max={MAX_INTERVAL_COUNT}
+          value={String(draft.intervalCount)} onChange={(e) => recurrence.setIntervalCount(Number(e.target.value))} />
         {/* Set like the Input beside it, so the two fields sit on one line. */}
         <div className="flex flex-col gap-1.5">
           <label htmlFor={intervalTypeId} className={FIELD_LABEL}>{t('series.interval_type')}</label>

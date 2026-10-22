@@ -31,3 +31,4 @@ export {
   useAnalyseImport, useImportFile, useExportCalendar,
 } from './model/useCalendarSync'
 export { CalendarSyncError, toSyncError, SYNC_REASONS, type SyncReason } from './api/calendarSyncErrors'
+export { IntervalTooLargeError } from './api/seriesErrors'

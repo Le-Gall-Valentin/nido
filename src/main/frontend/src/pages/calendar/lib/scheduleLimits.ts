@@ -10,6 +10,9 @@ import { DAY_MINUTES, timeToMinutes } from './timeMath'
  */
 export const MAX_EVENT_DAYS = 366
 
+/** The longest interval a series may repeat at, whatever its frequency — the server's own limit. */
+export const MAX_INTERVAL_COUNT = 1000
+
 export function coversTooManyDays(event: EventInput): boolean {
   return daysBetween(event.startDate, event.endDate) + 1 > MAX_EVENT_DAYS
 }
