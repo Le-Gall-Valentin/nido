@@ -17,6 +17,31 @@ describe('weekdayOf', () => {
   })
 })
 
+describe('a field that holds no date', () => {
+  // A date input says '' while one of its parts is cleared; nothing read from it may throw while it is rendered.
+  it('has no day', () => {
+    expect(weekdayOf('')).toBeNull()
+    expect(weekdayOf('2026-02-30')).toBeNull()
+  })
+
+  it('gives the same day alone', () => {
+    expect(possibleDayRules('')).toEqual(['SAME_DAY'])
+  })
+
+  it('says no day rule, for a yearly series as for a monthly one', () => {
+    for (const rule of ['SAME_DAY', 'WEEKDAY_OF_MONTH', 'LAST_WEEKDAY_OF_MONTH', 'LAST_DAY_OF_MONTH'] as const) {
+      expect(dayRulePhrase(t, rule, 'YEARLY', '', 'fr')).toBe('')
+      expect(dayRulePhrase(t, rule, 'MONTHLY', '', 'fr')).toBe('')
+    }
+  })
+
+  it('leaves the frequency alone in a sentence, with nothing trailing', () => {
+    expect(describeRecurrence(t, {
+      intervalType: 'YEARLY', intervalCount: 1, weekdays: [], dayRule: 'SAME_DAY', anchorDate: '',
+    }, 'fr')).toBe('rule.every.YEARLY{"count":1}')
+  })
+})
+
 describe('possibleDayRules', () => {
   it('offers the rank only up to the fourth', () => {
     expect(possibleDayRules('2026-10-28')).toEqual(['SAME_DAY', 'WEEKDAY_OF_MONTH', 'LAST_WEEKDAY_OF_MONTH'])
@@ -136,4 +161,5 @@ describe('the sentences a reader sees', () => {
       intervalType: 'MONTHLY', intervalCount: 3, weekdays: [], dayRule: 'SAME_DAY', anchorDate: '2026-10-14',
     }, 'en')).toBe('Every 3 months on day 14')
   })
+
 })

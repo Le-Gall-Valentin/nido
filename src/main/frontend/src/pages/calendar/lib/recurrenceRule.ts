@@ -1,4 +1,5 @@
 import type { DayRule, RecurrenceInterval, Weekday } from '@/entities/calendar'
+import { isValidIso } from './calendarWindow'
 
 type Translate = (key: string, options?: Record<string, unknown>) => string
 
@@ -14,8 +15,12 @@ function lengthOfMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate()
 }
 
-/** The day of a calendar date, read in UTC: a date has no zone, and the browser's must not move it. */
-export function weekdayOf(date: string): Weekday {
+/**
+ * The day of a calendar date, read in UTC: a date has no zone, and the browser's must not move it. Null for a field
+ * that holds no date: a date input says '' while one of its parts is cleared.
+ */
+export function weekdayOf(date: string): Weekday | null {
+  if (!isValidIso(date)) return null
   const { year, month, day } = parts(date)
   return WEEKDAYS[(new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7] as Weekday
 }
@@ -24,8 +29,12 @@ function rankOf(date: string): number {
   return Math.floor((parts(date).day - 1) / 7) + 1
 }
 
-/** The day rules a series starting on `date` can have — the server's DayRule.fits, in its order. */
+/**
+ * The day rules a series starting on `date` can have — the server's DayRule.fits, in its order. Only the same day
+ * while there is no date to read the others from.
+ */
 export function possibleDayRules(date: string): DayRule[] {
+  if (!isValidIso(date)) return ['SAME_DAY']
   const { year, month, day } = parts(date)
   const length = lengthOfMonth(year, month)
   const rules: DayRule[] = ['SAME_DAY']
@@ -78,15 +87,21 @@ function ofMonth(t: Translate, date: string, locale: string): string {
   return t(/^[aeiouâàéèêîôûh]/i.test(month) ? 'rule.of_month_elided' : 'rule.of_month', { month })
 }
 
-/** How a monthly or yearly series picks its day, as a phrase to follow its frequency: "le 2ᵉ mardi". */
+/**
+ * How a monthly or yearly series picks its day, as a phrase to follow its frequency: "le 2ᵉ mardi". Nothing while
+ * there is no date to read the day from.
+ */
 export function dayRulePhrase(t: Translate, rule: DayRule, intervalType: RecurrenceInterval, anchor: string, locale: string): string {
+  const anchorDay = weekdayOf(anchor)
+  if (!anchorDay) return ''
   const yearly = intervalType === 'YEARLY'
-  const weekday = weekdayName(weekdayOf(anchor), locale)
+  const weekday = weekdayName(anchorDay, locale)
+  const { day } = parts(anchor)
   switch (rule) {
     case 'SAME_DAY':
       return yearly
-        ? t('rule.day_of_month', { day: parts(anchor).day, month: monthName(anchor, locale) })
-        : t('rule.day', { day: parts(anchor).day })
+        ? t('rule.day_of_month', { day, month: monthName(anchor, locale) })
+        : t('rule.day', { day })
     case 'WEEKDAY_OF_MONTH':
       return yearly
         ? t('rule.weekday_of_month_in', { rank: t(`rule.rank.${rankOf(anchor)}`), weekday, ofMonth: ofMonth(t, anchor, locale) })
@@ -104,7 +119,7 @@ export interface DescribedRule extends Rhythm {
   anchorDate: string
 }
 
-/** The whole rule in one sentence: "Toutes les 2 semaines le lundi et le jeudi". */
+/** The whole rule in one sentence: "Toutes les 2 semaines le lundi et le jeudi" — the frequency alone when no day can be said. */
 export function describeRecurrence(t: Translate, rule: DescribedRule, locale: string): string {
   const every = t(`rule.every.${rule.intervalType}`, { count: rule.intervalCount })
   switch (rule.intervalType) {
@@ -117,8 +132,10 @@ export function describeRecurrence(t: Translate, rule: DescribedRule, locale: st
       return `${every} ${t('rule.on_days', { days: list })}`
     }
     case 'MONTHLY':
-    case 'YEARLY':
-      return `${every} ${dayRulePhrase(t, rule.dayRule, rule.intervalType, rule.anchorDate, locale)}`
+    case 'YEARLY': {
+      const phrase = dayRulePhrase(t, rule.dayRule, rule.intervalType, rule.anchorDate, locale)
+      return phrase ? `${every} ${phrase}` : every
+    }
   }
 }
 

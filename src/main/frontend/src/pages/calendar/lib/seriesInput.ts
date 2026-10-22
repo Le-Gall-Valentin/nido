@@ -1,6 +1,5 @@
 import type { DayRule, EventInput, RecurrenceInterval, RecurringEventSeries, RecurringEventSeriesInput, Weekday } from '@/entities/calendar'
 import { addDays, daysBetween } from './calendarWindow'
-import { weekdayOf } from './recurrenceRule'
 
 /** How an event repeats: what the form's recurrence box adds to an event. */
 export interface Recurrence {
@@ -68,7 +67,10 @@ export function runsAcross(series: RecurringEventSeries, today: string): boolean
   return series.firstDate !== null && series.firstDate < today && (series.endDate === null || series.endDate >= today)
 }
 
-/** A series as the event form shows it: its first occurrence shown, and how it repeats. */
+/**
+ * A series as the event form shows it: its first occurrence shown, and how it repeats. A series that names no days
+ * repeats on its start's alone, which the form always adds.
+ */
 export function fromSeries(series: RecurringEventSeries): { event: EventInput; recurrence: Recurrence } {
   const startDate = shownStart(series)
   return {
@@ -88,7 +90,7 @@ export function fromSeries(series: RecurringEventSeries): { event: EventInput; r
       intervalType: series.intervalType,
       intervalCount: series.intervalCount,
       until: series.endDate,
-      weekdays: series.weekdays ?? [weekdayOf(startDate)],
+      weekdays: series.weekdays ?? [],
       dayRule: series.dayRule ?? 'SAME_DAY',
     },
   }

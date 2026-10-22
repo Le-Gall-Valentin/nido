@@ -57,6 +57,10 @@ describe('fromSeries', () => {
     })
   })
 
+  it('names no days for a series that names none, the form adding its start\'s', () => {
+    expect(fromSeries({ ...series, intervalType: 'MONTHLY', weekdays: null }).recurrence.weekdays).toEqual([])
+  })
+
   it('gives back the same series once written again', () => {
     const { event: read, recurrence } = fromSeries(series)
     // Laid over the series, the written fields change nothing — and add nothing it does not have.

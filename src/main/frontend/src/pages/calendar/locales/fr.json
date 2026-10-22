@@ -141,6 +141,7 @@
   "series": {
     "weekdays": "Jours",
     "day_rule": "Jour",
+    "day_rule_needs_start": "Indiquez d'abord la date de début",
     "edit_title": "Modifier la série",
     "empty": "Aucun événement récurrent.",
     "edit": "Modifier {{name}}",

@@ -259,3 +259,62 @@ describe('EventFormModal — days of a series', () => {
     expect(screen.getByRole('alert').textContent).toBe('series.occurrence_too_long')
   })
 })
+
+describe('EventFormModal — a start date cleared', () => {
+  // Backspace on a segment, the field's clear button or a phone picker's "Effacer": the field says '' for a while.
+  const recurring = () => fireEvent.click(screen.getByLabelText('form.recurring'))
+  const intervalType = (value: string) =>
+    fireEvent.change(screen.getByLabelText('series.interval_type'), { target: { value } })
+  const startDate = (value: string) => fireEvent.change(field('form.start_date'), { target: { value } })
+  const dayRule = () => screen.getByLabelText('series.day_rule') as HTMLSelectElement
+
+  it('keeps a yearly series on screen, offering no day rule until there is a date to read it from', () => {
+    renderForm({ initial: { ...initial, startDate: '2026-10-30', endDate: '2026-10-30' } })
+    recurring()
+    intervalType('YEARLY')
+
+    startDate('')
+
+    expect(dayRule().disabled).toBe(true)
+    expect([...dayRule().options].map((option) => option.textContent)).toEqual(['series.day_rule_needs_start'])
+    startDate('2026-10-30')
+    expect(dayRule().disabled).toBe(false)
+    expect([...dayRule().options].map((option) => option.value)).toEqual(['SAME_DAY', 'LAST_WEEKDAY_OF_MONTH'])
+  })
+
+  it('says no day of a monthly series while its start is cleared', () => {
+    renderForm()
+    recurring()
+    intervalType('MONTHLY')
+
+    startDate('')
+
+    expect([...dayRule().options].map((option) => option.textContent)).toEqual(['series.day_rule_needs_start'])
+  })
+
+  it('keeps the day rule chosen through a cleared start that comes back on a date able to give it', () => {
+    const { onSubmit } = renderForm({ initial: { ...initial, startDate: '2026-10-30', endDate: '2026-10-30' } })
+    recurring()
+    intervalType('MONTHLY')
+    fireEvent.change(dayRule(), { target: { value: 'LAST_WEEKDAY_OF_MONTH' } })
+
+    startDate('')
+    startDate('2026-11-27')
+    fireEvent.change(field('form.end_date'), { target: { value: '2026-11-27' } })
+    save()
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ dayRule: 'LAST_WEEKDAY_OF_MONTH' }))
+  })
+
+  it('refuses to save while the start is cleared', () => {
+    const { onSubmit } = renderForm()
+    recurring()
+    intervalType('YEARLY')
+    startDate('')
+
+    save()
+
+    expect(screen.getByRole('alert').textContent).toBe('form.dates_required')
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+})

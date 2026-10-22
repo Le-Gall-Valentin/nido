@@ -38,9 +38,9 @@ const INTERVALS: RecurrenceInterval[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']
 /** A select dressed as the Input component dresses its field, and its label as Input's own. */
 const FIELD_LABEL = 'text-[13px] font-semibold text-fg-1'
 const SELECT = 'rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[11px] text-[14.5px] text-fg-0 outline-none '
-  + 'focus:border-accent'
+  + 'focus:border-accent disabled:text-fg-2'
 const noRecurrenceYet = (startDate: string): Recurrence =>
-  ({ intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: [weekdayOf(startDate)], dayRule: 'SAME_DAY' })
+  ({ intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: WEEKDAYS.filter((day) => day === weekdayOf(startDate)), dayRule: 'SAME_DAY' })
 
 /**
  * Pure presentation: it validates what it can see and hands a well-formed input upward. The
@@ -76,10 +76,11 @@ export function EventFormModal({
    */
   const changeStart = (startDate: string) => {
     patch({ startDate, endDate: form.endDate || startDate })
-    if (!startDate) return
+    const startDay = weekdayOf(startDate)
+    if (!startDay) return
     setRecurrence((current) => ({
       ...current,
-      weekdays: current.weekdays.length === 1 ? [weekdayOf(startDate)] : current.weekdays,
+      weekdays: current.weekdays.length === 1 ? [startDay] : current.weekdays,
       dayRule: possibleDayRules(startDate).includes(current.dayRule) ? current.dayRule : 'SAME_DAY',
     }))
   }
@@ -97,6 +98,9 @@ export function EventFormModal({
       : [],
     dayRule: recurrence.intervalType === 'MONTHLY' || recurrence.intervalType === 'YEARLY' ? recurrence.dayRule : 'SAME_DAY',
   })
+
+  // No start date, no day to read a rule from.
+  const dayRules = weekdayOf(form.startDate) ? possibleDayRules(form.startDate) : []
 
   const submit = () => {
     if (!form.title.trim()) return setError(t('form.title_required'))
@@ -192,13 +196,16 @@ export function EventFormModal({
             {(recurrence.intervalType === 'MONTHLY' || recurrence.intervalType === 'YEARLY') && (
               <div className="flex flex-col gap-1.5">
                 <label htmlFor={dayRuleId} className={FIELD_LABEL}>{t('series.day_rule')}</label>
-                <select id={dayRuleId} value={recurrence.dayRule} className={SELECT}
+                {/* With no start date there is no day to read a rule from: the list waits for one, and says so. */}
+                <select id={dayRuleId} value={recurrence.dayRule} className={SELECT} disabled={dayRules.length === 0}
                   onChange={(e) => setRecurrence({ ...recurrence, dayRule: e.target.value as DayRule })}>
-                  {possibleDayRules(form.startDate).map((rule) => (
-                    <option key={rule} value={rule}>
-                      {capitalize(dayRulePhrase(t, rule, recurrence.intervalType, form.startDate, locale))}
-                    </option>
-                  ))}
+                  {dayRules.length === 0
+                    ? <option value={recurrence.dayRule}>{t('series.day_rule_needs_start')}</option>
+                    : dayRules.map((rule) => (
+                      <option key={rule} value={rule}>
+                        {capitalize(dayRulePhrase(t, rule, recurrence.intervalType, form.startDate, locale))}
+                      </option>
+                    ))}
                 </select>
               </div>
             )}
