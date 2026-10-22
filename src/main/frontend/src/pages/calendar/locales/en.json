@@ -142,6 +142,7 @@
     "weekdays": "Days",
     "day_rule": "Day",
     "day_rule_needs_start": "Enter the start date first",
+    "day_rule_fell_back": "Day set back to “{{rule}}”: the new start date does not allow the one chosen.",
     "edit_title": "Edit series",
     "empty": "No recurring events.",
     "edit": "Edit {{name}}",

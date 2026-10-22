@@ -85,6 +85,10 @@ export function RecurrenceFields({ recurrence, startDate, editedSeries, notice }
               ? <option value={draft.dayRule}>{t('series.day_rule_needs_start')}</option>
               : choices.map(({ rule }) => <option key={rule} value={rule}>{ruleLabel(rule)}</option>)}
           </select>
+          {/* The list changes under the start field when the rule falls back: said for whoever cannot see it. */}
+          <p role="status" className="sr-only">
+            {recurrence.ruleFellBack ? t('series.day_rule_fell_back', { rule: ruleLabel(draft.dayRule) }) : ''}
+          </p>
         </div>
       )}
       <Input label={t('series.until')} type="date" value={draft.until ?? ''}

@@ -142,6 +142,7 @@
     "weekdays": "Jours",
     "day_rule": "Jour",
     "day_rule_needs_start": "Indiquez d'abord la date de début",
+    "day_rule_fell_back": "Jour remis sur « {{rule}} » : la nouvelle date de début ne permet pas celui choisi.",
     "edit_title": "Modifier la série",
     "empty": "Aucun événement récurrent.",
     "edit": "Modifier {{name}}",

@@ -403,6 +403,21 @@ describe('EventFormModal — the day rule said', () => {
   const dayRule = () => screen.getByLabelText('series.day_rule') as HTMLSelectElement
   const labels = () => [...dayRule().options].map((option) => option.textContent)
 
+  it('tells a reader who cannot see the list that it fell back to the same day when the start moved', () => {
+    renderForm({ initial: { ...initial, startDate: '2026-10-30', endDate: '2026-10-30' } })
+    fireEvent.click(screen.getByLabelText('form.recurring'))
+    fireEvent.change(screen.getByLabelText('series.interval_type'), { target: { value: 'MONTHLY' } })
+    fireEvent.change(dayRule(), { target: { value: 'LAST_WEEKDAY_OF_MONTH' } })
+    const status = screen.getByRole('status')
+    expect(status.textContent).toBe('')
+
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-10-13' } })
+
+    expect(status.textContent).toBe('series.day_rule_fell_back:{"rule":"Rule.day:{\\"day\\":13}"}')
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-10-14' } })
+    expect(status.textContent).toBe('')
+  })
+
   it('says the day of a series being edited from the anchor it keeps, not from the start shown', () => {
     // Monthly on the 31st, carrying on an edit: first shown on 30 April, where a month of 30 days puts it.
     const series: RecurringEventSeries = {
