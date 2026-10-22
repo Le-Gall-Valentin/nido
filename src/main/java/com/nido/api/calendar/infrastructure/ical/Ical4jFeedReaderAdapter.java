@@ -55,8 +55,8 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
     static final long FEED_READ_BUDGET = 1_000_000;
 
     /**
-     * What a VTIMEZONE costs in the weight of a cached calendar. Each one whose TZID the JDK does not know holds an id of
-     * ical4j's global pool (1 500 in all, for every document) for as long as its calendar is cached, and a document may
+     * What a VTIMEZONE costs in the weight of a cached calendar. Each one not read as a JDK zone (see DocumentZones) holds an
+     * id of ical4j's global pool (1 500 in all, for every document) for as long as its calendar is cached, and a document may
      * declare 50 of them. Weighed by file size alone, a few hostile calendars of a few lines each could exhaust the pool
      * for everyone; at this weight the whole cache holds about a thousand zones at most.
      */

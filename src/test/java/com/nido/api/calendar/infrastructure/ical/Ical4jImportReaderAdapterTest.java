@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 class Ical4jImportReaderAdapterTest {
@@ -75,17 +77,24 @@ class Ical4jImportReaderAdapterTest {
         assertThat(reading.notes()).containsExactly(new ImportNote(ImportNoteKind.CONVERTED_ZONE, "Réunion", "Europe/Paris"));
     }
 
+    /** How Outlook writes the zone of Paris. */
+    static final String OUTLOOK_ROMANCE = "BEGIN:VTIMEZONE\r\nTZID:Romance Standard Time\r\n"
+        + "BEGIN:STANDARD\r\nDTSTART:16010101T030000\r\nTZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\n"
+        + "RRULE:FREQ=YEARLY;INTERVAL=1;BYDAY=-1SU;BYMONTH=10\r\nEND:STANDARD\r\n"
+        + "BEGIN:DAYLIGHT\r\nDTSTART:16010101T020000\r\nTZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\n"
+        + "RRULE:FREQ=YEARLY;INTERVAL=1;BYDAY=-1SU;BYMONTH=3\r\nEND:DAYLIGHT\r\nEND:VTIMEZONE\r\n";
+
+    /** How Outlook writes the zone of New York: summer time from the second Sunday of March. */
+    static final String OUTLOOK_EASTERN = "BEGIN:VTIMEZONE\r\nTZID:Eastern Standard Time\r\n"
+        + "BEGIN:STANDARD\r\nDTSTART:16010101T020000\r\nTZOFFSETFROM:-0400\r\nTZOFFSETTO:-0500\r\n"
+        + "RRULE:FREQ=YEARLY;INTERVAL=1;BYDAY=1SU;BYMONTH=11\r\nEND:STANDARD\r\n"
+        + "BEGIN:DAYLIGHT\r\nDTSTART:16010101T020000\r\nTZOFFSETFROM:-0500\r\nTZOFFSETTO:-0400\r\n"
+        + "RRULE:FREQ=YEARLY;INTERVAL=1;BYDAY=2SU;BYMONTH=3\r\nEND:DAYLIGHT\r\nEND:VTIMEZONE\r\n";
+
     @Test
     void anOutlookWindowsZoneDefinedInTheFileIsHonoured() {
-        String outlook = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:Microsoft Exchange Server 2010\r\n"
-            + "BEGIN:VTIMEZONE\r\nTZID:Romance Standard Time\r\n"
-            + "BEGIN:STANDARD\r\nDTSTART:16010101T030000\r\nTZOFFSETFROM:+0200\r\nTZOFFSETTO:+0100\r\n"
-            + "RRULE:FREQ=YEARLY;INTERVAL=1;BYDAY=-1SU;BYMONTH=10\r\nEND:STANDARD\r\n"
-            + "BEGIN:DAYLIGHT\r\nDTSTART:16010101T020000\r\nTZOFFSETFROM:+0100\r\nTZOFFSETTO:+0200\r\n"
-            + "RRULE:FREQ=YEARLY;INTERVAL=1;BYDAY=-1SU;BYMONTH=3\r\nEND:DAYLIGHT\r\nEND:VTIMEZONE\r\n"
-            + vevent("o1", "SUMMARY:Point d'équipe", "DTSTART;TZID=Romance Standard Time:20260706T100000",
-                "DTEND;TZID=Romance Standard Time:20260706T110000")
-            + "END:VCALENDAR\r\n";
+        String outlook = ics(OUTLOOK_ROMANCE, vevent("o1", "SUMMARY:Point d'équipe",
+            "DTSTART;TZID=Romance Standard Time:20260706T100000", "DTEND;TZID=Romance Standard Time:20260706T110000"));
         assertThat(onlyEvent(read(outlook, TORONTO)).startTime()).isEqualTo(LocalTime.of(4, 0));
     }
 
@@ -97,6 +106,63 @@ class Ical4jImportReaderAdapterTest {
 
         assertThatThrownBy(() -> assertTimeoutPreemptively(Duration.ofSeconds(10), () -> read(content, PARIS)))
             .isInstanceOf(CalendarException.NotAnIcalFile.class);
+    }
+
+    @Test
+    void anOutlookZoneThatIsTheSpacesIsNoConversion() {
+        ImportReading reading = read(ics(OUTLOOK_ROMANCE, vevent("o1", "SUMMARY:Point d'équipe",
+            "DTSTART;TZID=Romance Standard Time:20270310T100000", "DTEND;TZID=Romance Standard Time:20270310T110000")), PARIS);
+        assertThat(onlyEvent(reading).startTime()).isEqualTo(LocalTime.of(10, 0));
+        assertThat(reading.notes()).isEmpty();
+    }
+
+    @Test
+    void anOutlookUsZoneMovesToSummerTimeOnTheSecondSundayOfMarch() {
+        // New York moves on 14 March 2027 and Paris on the 28th: 9:00 there is 15:00 here on the 10th, 14:00 on the 17th.
+        ImportReading reading = read(ics(OUTLOOK_EASTERN,
+            vevent("o1", "SUMMARY:Avant", "DTSTART;TZID=Eastern Standard Time:20270310T090000", "DURATION:PT1H"),
+            vevent("o2", "SUMMARY:Après", "DTSTART;TZID=Eastern Standard Time:20270317T090000", "DURATION:PT1H")), PARIS);
+        assertThat(reading.groups()).extracting(group -> group.events().getFirst())
+            .extracting(ImportedEvent::title, ImportedEvent::startTime)
+            .containsExactlyInAnyOrder(tuple("Avant", LocalTime.of(15, 0)), tuple("Après", LocalTime.of(14, 0)));
+    }
+
+    @Test
+    void aWeeklyOutlookSeriesInAUsZoneFollowsItsSummerTime() {
+        ImportReading reading = read(ics(OUTLOOK_EASTERN, vevent("o3", "SUMMARY:Point US",
+            "DTSTART;TZID=Eastern Standard Time:20270303T090000", "DTEND;TZID=Eastern Standard Time:20270303T100000",
+            "RRULE:FREQ=WEEKLY;COUNT=3")), PARIS);
+        assertThat(reading.groups().getFirst().events()).extracting(event -> LocalDateTime.of(event.startDate(), event.startTime()))
+            .containsExactly(LocalDateTime.of(2027, 3, 3, 15, 0), LocalDateTime.of(2027, 3, 10, 15, 0),
+                LocalDateTime.of(2027, 3, 17, 14, 0));
+    }
+
+    @Test
+    void aWindowsNameIcal4jTakesForAnotherZoneKeepsTheFilesOwnDefinition() {
+        // ical4j's table says "Samoa Standard Time" is Pago Pago (UTC-11); Outlook means Apia (UTC+13), a day away.
+        String samoa = "BEGIN:VTIMEZONE\r\nTZID:Samoa Standard Time\r\nBEGIN:STANDARD\r\nDTSTART:16010101T000000\r\n"
+            + "TZOFFSETFROM:+1300\r\nTZOFFSETTO:+1300\r\nEND:STANDARD\r\nEND:VTIMEZONE\r\n";
+        ImportedEvent event = onlyEvent(read(ics(samoa, vevent("s1", "SUMMARY:Apia",
+            "DTSTART;TZID=Samoa Standard Time:20270115T090000", "DURATION:PT1H")), PARIS));
+        assertThat(LocalDateTime.of(event.startDate(), event.startTime())).isEqualTo(LocalDateTime.of(2027, 1, 14, 21, 0));
+    }
+
+    @Test
+    void aWindowsNameWithoutItsDefinitionIsReadAsTheZoneItStandsFor() {
+        ImportReading reading = read(ics(vevent("w1", "SUMMARY:Point",
+            "DTSTART;TZID=Romance Standard Time:20270310T100000", "DURATION:PT1H")), PARIS);
+        assertThat(onlyEvent(reading).startTime()).isEqualTo(LocalTime.of(10, 0));
+        assertThat(reading.notes()).isEmpty();
+    }
+
+    @Test
+    void aZoneNamedUnderAGlobalPrefixIsReadByTheNameAfterIt() {
+        // Lightning named its zones /mozilla.org/<version>/<zone>, and files written then still carry those names.
+        String lightning = "/mozilla.org/20070129_1/America/New_York";
+        ImportReading reading = read(ics(vevent("l1", "SUMMARY:Réunion", "DTSTART;TZID=" + lightning + ":20270310T090000",
+            "DURATION:PT1H")), PARIS);
+        assertThat(onlyEvent(reading).startTime()).isEqualTo(LocalTime.of(15, 0));
+        assertThat(reading.notes()).containsExactly(new ImportNote(ImportNoteKind.CONVERTED_ZONE, "Réunion", lightning));
     }
 
     @Test

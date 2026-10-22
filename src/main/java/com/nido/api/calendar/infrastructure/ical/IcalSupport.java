@@ -77,7 +77,7 @@ public final class IcalSupport {
         try {
             return new CalendarBuilder(CalendarParserFactory.getInstance().get(), new ContentHandlerContext()
                 .withPropertyFactorySupplier(() -> FACTORIES).withComponentFactorySupplier(() -> components),
-                new DocumentZones()).build(new StringReader(content));
+                new DocumentZones(now)).build(new StringReader(content));
         } catch (ParserException | IOException | RuntimeException | StackOverflowError | OutOfMemoryError e) {
             // What reading one document exhausts, past every bound nido sets, costs that document and not the thread
             // reading it: a followed calendar is then remembered as unreadable, not read again at every view.

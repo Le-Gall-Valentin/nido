@@ -72,6 +72,18 @@ class IcalSupportTest {
     }
 
     @Test
+    void aZoneNamedUnderAGlobalPrefixIsTheZoneTheJdkKnowsAfterIt() {
+        for (String tzId : List.of("/America/New_York", "/softwarestudio.org/Olson_20011030_5/America/New_York")) {
+            VEvent e = event(document("", "DTSTART;TZID=" + tzId + ":20270310T090000\n"));
+            assertThat(IcalSupport.toLocal(e.<DtStart<Temporal>>getProperty(Property.DTSTART).orElseThrow().getDate(), PARIS))
+                .as(tzId).isEqualTo(LocalDateTime.of(2027, 3, 10, 15, 0));
+        }
+        VEvent buenosAires = event(document("", "DTSTART;TZID=/mozilla.org/20050126_1/America/Argentina/Buenos_Aires:20270310T090000\n"));
+        assertThat(IcalSupport.toLocal(buenosAires.<DtStart<Temporal>>getProperty(Property.DTSTART).orElseThrow().getDate(), PARIS))
+            .isEqualTo(LocalDateTime.of(2027, 3, 10, 13, 0));
+    }
+
+    @Test
     void aWeeklySeriesKeepsItsWallClockAcrossBothChanges() {
         VEvent e = event(document("", "DTSTART;TZID=America/New_York:20270224T090000\nRRULE:FREQ=WEEKLY;COUNT=4\n"));
         Set<Period<Temporal>> set = e.calculateRecurrenceSet(new Period<>(
