@@ -97,6 +97,7 @@ export function EventFormPanel({
       initial={editedSeries?.event ?? initial ?? blank}
       mode={series ? 'edit-series' : occurrence ? 'edit' : 'create'}
       initialRecurrence={editedSeries?.recurrence ?? null}
+      editedSeries={series}
       notice={series && runsAcross(series, today) ? t('series.split_notice') : null}
       members={members}
       isPersonal={isPersonal}

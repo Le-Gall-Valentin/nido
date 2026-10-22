@@ -1,6 +1,6 @@
-import type { DayRule, RecurrenceInterval, Weekday } from '@/entities/calendar'
+import type { DayRule, RecurrenceInterval, RecurringEventSeries, Weekday } from '@/entities/calendar'
 import { WEEKDAYS, possibleDayRules, weekdayOf } from './recurrenceRule'
-import type { Recurrence } from './seriesInput'
+import { anchorFor, type Recurrence } from './seriesInput'
 
 /**
  * How an event repeats, as the form holds it while it is filled in. A weekly series always repeats on its start's day,
@@ -57,4 +57,21 @@ export function toRecurrence(draft: RecurrenceDraft, startDate: string): Recurre
     weekdays: draft.intervalType === 'WEEKLY' ? shownDays(draft, startDate) : [],
     dayRule: draft.intervalType === 'MONTHLY' || draft.intervalType === 'YEARLY' ? draft.dayRule : 'SAME_DAY',
   }
+}
+
+export interface DayRuleChoice {
+  rule: DayRule
+  /** The date the rule is said from: the anchor the series would be written with. */
+  wordedFrom: string
+}
+
+/**
+ * The day rules the start shown can give, none while it holds no date. Each is said from the anchor saving it would
+ * write (anchorFor): a "le 31" series being edited, first shown on 30 April, reads "Le 31" — the day it keeps.
+ */
+export function dayRuleChoices(draft: RecurrenceDraft, startDate: string, edited?: RecurringEventSeries | null): DayRuleChoice[] {
+  if (!weekdayOf(startDate)) return []
+  return possibleDayRules(startDate).map((rule) => ({
+    rule, wordedFrom: anchorFor(startDate, toRecurrence({ ...draft, dayRule: rule }, startDate), edited),
+  }))
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import type { EventInput } from '@/entities/calendar'
+import type { EventInput, RecurringEventSeries } from '@/entities/calendar'
+import { fromSeries } from '../lib/seriesInput'
 import { EventFormModal, type EventFormModalProps } from './EventFormModal'
 
 /** A `t` that shows what it was asked: the key, and the values it was given if any. */
@@ -395,5 +396,28 @@ describe('EventFormModal — a start date cleared', () => {
 
     expect(screen.getByRole('alert').textContent).toBe('form.dates_required')
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+})
+
+describe('EventFormModal — the day rule said', () => {
+  const dayRule = () => screen.getByLabelText('series.day_rule') as HTMLSelectElement
+  const labels = () => [...dayRule().options].map((option) => option.textContent)
+
+  it('says the day of a series being edited from the anchor it keeps, not from the start shown', () => {
+    // Monthly on the 31st, carrying on an edit: first shown on 30 April, where a month of 30 days puts it.
+    const series: RecurringEventSeries = {
+      id: 's-1', title: 'Loyer', description: null, location: null, allDay: true, startTime: null, endTime: null,
+      durationDays: 0, color: null, intervalType: 'MONTHLY', intervalCount: 1, weekdays: null, dayRule: 'SAME_DAY',
+      anchorDate: '2026-01-31', endDate: null, startsOn: '2026-04-20', firstDate: '2026-04-30',
+      participantIds: [], createdBy: 'u-1', createdAt: '2026-01-01T00:00:00Z',
+    }
+    const { event, recurrence } = fromSeries(series)
+    renderForm({ mode: 'edit-series', initial: event, initialRecurrence: recurrence, editedSeries: series })
+
+    expect(labels()[0]).toBe('Rule.day:{"day":31}')
+    // Another rule anchors the series on the start shown, and is said from it.
+    expect(labels()[2]).toBe('Rule.last_day')
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-05-12' } })
+    expect(labels()[0]).toBe('Rule.day:{"day":12}')
   })
 })

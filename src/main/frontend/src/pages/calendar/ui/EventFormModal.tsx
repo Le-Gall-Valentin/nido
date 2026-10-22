@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { SpaceMember } from '@/entities/space'
-import { EVENT_COLORS, EVENT_DOT_CLASS, type EventInput } from '@/entities/calendar'
+import { EVENT_COLORS, EVENT_DOT_CLASS, type EventInput, type RecurringEventSeries } from '@/entities/calendar'
 import type { Recurrence } from '../lib/seriesInput'
 import { toRecurrence } from '../lib/recurrenceDraft'
 import { eventFormProblem } from '../lib/eventFormProblem'
@@ -20,6 +20,8 @@ export interface EventFormModalProps {
   mode: 'create' | 'edit' | 'edit-series'
   /** How the series being edited repeats. */
   initialRecurrence?: Recurrence | null
+  /** The series being edited: its day rule is said from the anchor saving keeps, which its start shown may not be. */
+  editedSeries?: RecurringEventSeries | null
   /** Said under how the event repeats — what an edit to a series will leave as it was. */
   notice?: string | null
   members: SpaceMember[]
@@ -37,7 +39,8 @@ export interface EventFormModalProps {
  * mutations live in EventFormPanel, which is what lets this be tested without a query client.
  */
 export function EventFormModal({
-  initial, mode, initialRecurrence = null, notice = null, members, isPersonal, submitError, isPending, onSubmit, onCancel,
+  initial, mode, initialRecurrence = null, editedSeries = null, notice = null, members, isPersonal, submitError, isPending,
+  onSubmit, onCancel,
 }: EventFormModalProps) {
   const { t } = useTranslation('calendar')
   const [form, setForm] = useState<EventInput>(initial)
@@ -107,7 +110,7 @@ export function EventFormModal({
           </label>
         )}
         {recurring && (
-          <RecurrenceFields recurrence={recurrence} startDate={form.startDate} notice={notice} />
+          <RecurrenceFields recurrence={recurrence} startDate={form.startDate} editedSeries={editedSeries} notice={notice} />
         )}
 
         <div>

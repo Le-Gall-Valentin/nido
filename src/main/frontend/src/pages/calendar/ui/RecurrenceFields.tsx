@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
 import { Input } from '@/shared/ui'
 import { resolveLocale } from '@/shared/lib'
-import type { DayRule, RecurrenceInterval } from '@/entities/calendar'
-import { WEEKDAYS, weekdayOf, weekdayName, possibleDayRules, dayRulePhrase, capitalize } from '../lib/recurrenceRule'
-import { shownDays } from '../lib/recurrenceDraft'
+import type { DayRule, RecurrenceInterval, RecurringEventSeries } from '@/entities/calendar'
+import { WEEKDAYS, weekdayOf, weekdayName, dayRulePhrase, capitalize } from '../lib/recurrenceRule'
+import { dayRuleChoices, shownDays } from '../lib/recurrenceDraft'
 import { MAX_INTERVAL_COUNT } from '../lib/scheduleLimits'
 import type { RecurrenceDraftState } from '../model/useRecurrenceDraft'
 
@@ -13,6 +13,8 @@ interface RecurrenceFieldsProps {
   recurrence: RecurrenceDraftState
   /** The start date as its field holds it: '' while one of its parts is cleared. */
   startDate: string
+  /** The series being edited, whose day rule is said from the anchor saving keeps — not always the start shown. */
+  editedSeries: RecurringEventSeries | null
   /** Said under how the event repeats — what an edit to a series will leave as it was. */
   notice: string | null
 }
@@ -24,7 +26,7 @@ const SELECT = 'rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3.5 py-[1
   + 'focus:border-accent disabled:text-fg-2'
 
 /** How an event repeats: the event above is the first occurrence, and this says when the next ones come. */
-export function RecurrenceFields({ recurrence, startDate, notice }: RecurrenceFieldsProps) {
+export function RecurrenceFields({ recurrence, startDate, editedSeries, notice }: RecurrenceFieldsProps) {
   const { t } = useTranslation('calendar')
   const locale = resolveLocale(i18next.language)
   const intervalTypeId = useId()
@@ -33,8 +35,11 @@ export function RecurrenceFields({ recurrence, startDate, notice }: RecurrenceFi
 
   const startDay = weekdayOf(startDate)
   const days = shownDays(draft, startDate)
-  // No date, no day to read a rule from.
-  const dayRules = startDay ? possibleDayRules(startDate) : []
+  const choices = dayRuleChoices(draft, startDate, editedSeries)
+  const ruleLabel = (rule: DayRule) => {
+    const choice = choices.find((candidate) => candidate.rule === rule)
+    return choice ? capitalize(dayRulePhrase(t, rule, draft.intervalType, choice.wordedFrom, locale)) : ''
+  }
 
   return (
     <div className="flex flex-col gap-3 rounded-lg bg-bg-2 p-3">
@@ -74,13 +79,11 @@ export function RecurrenceFields({ recurrence, startDate, notice }: RecurrenceFi
         <div className="flex flex-col gap-1.5">
           <label htmlFor={dayRuleId} className={FIELD_LABEL}>{t('series.day_rule')}</label>
           {/* With no start date there is no day to read a rule from: the list waits for one, and says so. */}
-          <select id={dayRuleId} value={draft.dayRule} className={SELECT} disabled={dayRules.length === 0}
+          <select id={dayRuleId} value={draft.dayRule} className={SELECT} disabled={choices.length === 0}
             onChange={(e) => recurrence.setDayRule(e.target.value as DayRule)}>
-            {dayRules.length === 0
+            {choices.length === 0
               ? <option value={draft.dayRule}>{t('series.day_rule_needs_start')}</option>
-              : dayRules.map((rule) => (
-                <option key={rule} value={rule}>{capitalize(dayRulePhrase(t, rule, draft.intervalType, startDate, locale))}</option>
-              ))}
+              : choices.map(({ rule }) => <option key={rule} value={rule}>{ruleLabel(rule)}</option>)}
           </select>
         </div>
       )}

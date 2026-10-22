@@ -20,21 +20,36 @@ function sameDays(a: readonly Weekday[] | null, b: readonly Weekday[] | null): b
   return a.length === b.length && a.every((day) => b.includes(day))
 }
 
+/** The days and the day rule a series is written with: each only for the frequencies it applies to. */
+function rhythmOf(recurrence: Recurrence): { weekdays: Weekday[] | null; dayRule: DayRule } {
+  return {
+    weekdays: recurrence.intervalType === 'WEEKLY' ? recurrence.weekdays : null,
+    dayRule: monthlyOrYearly(recurrence.intervalType) ? recurrence.dayRule : 'SAME_DAY',
+  }
+}
+
+/**
+ * The anchor a series starting on `startDate` is written with. `edited` is the series being edited, if any. Its start
+ * shown is its first occurrence, which is not its anchor once it carries on an edit.
+ *
+ * The anchor sets the rhythm and the days are read off it: it is kept only while the start and the days are left
+ * alone. Otherwise the series is anchored on the start shown — one of its occurrences, in a week of its rhythm.
+ */
+export function anchorFor(startDate: string, recurrence: Recurrence, edited?: RecurringEventSeries | null): string {
+  const { weekdays, dayRule } = rhythmOf(recurrence)
+  const keepsItsDays = !!edited && sameDays(edited.weekdays ?? null, weekdays) && (edited.dayRule ?? 'SAME_DAY') === dayRule
+  return edited && keepsItsDays && startDate === shownStart(edited) ? edited.anchorDate : startDate
+}
+
 /**
  * A series is an event that repeats: its first occurrence is the event, and every other one lasts
  * as long. The event's end is kept as the number of days past its start, which is how a series
  * says that each of its occurrences runs from a Friday evening into the Saturday.
  *
- * `edited` is the series being edited, if any. Its start shown is its first occurrence, which is not
- * its anchor once it carries on an edit: left alone, that start keeps the series' own rhythm.
+ * `edited` is the series being edited, if any: left alone, its start keeps the series' own rhythm (see anchorFor).
  */
 export function toSeriesInput(event: EventInput, recurrence: Recurrence, edited?: RecurringEventSeries | null): RecurringEventSeriesInput {
-  const weekdays = recurrence.intervalType === 'WEEKLY' ? recurrence.weekdays : null
-  const dayRule: DayRule = monthlyOrYearly(recurrence.intervalType) ? recurrence.dayRule : 'SAME_DAY'
-  // The anchor sets the rhythm and the days are read off it: it is kept only while the start and the days are left
-  // alone. Otherwise the series is anchored on the start shown — one of its occurrences, in a week of its rhythm.
-  const keepsItsDays = !!edited && sameDays(edited.weekdays ?? null, weekdays) && (edited.dayRule ?? 'SAME_DAY') === dayRule
-  const anchorDate = edited && keepsItsDays && event.startDate === shownStart(edited) ? edited.anchorDate : event.startDate
+  const { weekdays, dayRule } = rhythmOf(recurrence)
   return {
     title: event.title,
     description: event.description,
@@ -48,7 +63,7 @@ export function toSeriesInput(event: EventInput, recurrence: Recurrence, edited?
     intervalCount: recurrence.intervalCount,
     weekdays,
     dayRule,
-    anchorDate,
+    anchorDate: anchorFor(event.startDate, recurrence, edited),
     endDate: recurrence.until,
     participantIds: event.participantIds,
   }

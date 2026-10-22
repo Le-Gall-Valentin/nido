@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { draftOf, followStart, shownDays, toRecurrence, toggleDay, type RecurrenceDraft } from './recurrenceDraft'
+import type { RecurringEventSeries } from '@/entities/calendar'
+import { dayRuleChoices, draftOf, followStart, shownDays, toRecurrence, toggleDay, type RecurrenceDraft } from './recurrenceDraft'
 import type { Recurrence } from './seriesInput'
 
 /** Weekly from Monday 19 October 2026, on Mondays only. */
@@ -87,5 +88,43 @@ describe('toRecurrence', () => {
   it('sends neither for a daily series', () => {
     expect(toRecurrence({ ...weekly, intervalType: 'DAILY', dayRule: 'LAST_DAY_OF_MONTH' }, monday))
       .toEqual({ intervalType: 'DAILY', intervalCount: 1, until: null, weekdays: [], dayRule: 'SAME_DAY' })
+  })
+})
+
+describe('dayRuleChoices', () => {
+  const monthly: RecurrenceDraft = { ...weekly, intervalType: 'MONTHLY' }
+
+  it('offers the rules the start can give, each said from the start of a new series', () => {
+    expect(dayRuleChoices(monthly, '2026-10-30')).toEqual([
+      { rule: 'SAME_DAY', wordedFrom: '2026-10-30' },
+      { rule: 'LAST_WEEKDAY_OF_MONTH', wordedFrom: '2026-10-30' },
+    ])
+  })
+
+  it('offers none while the start holds no date', () => {
+    expect(dayRuleChoices(monthly, '')).toEqual([])
+  })
+
+  describe('of a series being edited', () => {
+    // Monthly on the 31st, carrying on an edit: first shown on 30 April, where a month of 30 days puts it.
+    const series: RecurringEventSeries = {
+      id: 's-1', title: 'Loyer', description: null, location: null, allDay: true, startTime: null, endTime: null,
+      durationDays: 0, color: null, intervalType: 'MONTHLY', intervalCount: 1, weekdays: null, dayRule: 'SAME_DAY',
+      anchorDate: '2026-01-31', endDate: null, startsOn: '2026-04-20', firstDate: '2026-04-30',
+      participantIds: [], createdBy: 'u-1', createdAt: '2026-01-01T00:00:00Z',
+    }
+
+    it('says its own rule from the anchor it keeps, and another from the start shown, which it would anchor on', () => {
+      expect(dayRuleChoices(monthly, '2026-04-30', series)).toEqual([
+        { rule: 'SAME_DAY', wordedFrom: '2026-01-31' },
+        { rule: 'LAST_WEEKDAY_OF_MONTH', wordedFrom: '2026-04-30' },
+        { rule: 'LAST_DAY_OF_MONTH', wordedFrom: '2026-04-30' },
+      ])
+    })
+
+    it('says every rule from a start that moved', () => {
+      expect(dayRuleChoices(monthly, '2026-05-12', series).map(({ wordedFrom }) => wordedFrom))
+        .toEqual(['2026-05-12', '2026-05-12'])
+    })
   })
 })
