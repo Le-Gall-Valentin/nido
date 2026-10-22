@@ -99,9 +99,9 @@ class IcalSupportTest {
     void aZoneRepeatedInADocumentCountsOnceAndDrawsOneIdOfIcal4jsPool() {
         // ical4j draws an id of its global pool of 1500 for every zone registered, even one it already has.
         String repeated = zones(1).repeat(200);
-        int before = ZoneRulesProviderImpl.INSTANCE.getZoneIdPool().availableZoneIds();
+        int before = ZoneRulesProviderImpl.getInstance().orElseThrow().getZoneIdPool().availableZoneIds();
         Calendar parsed = IcalSupport.parse(document(repeated, "DTSTART;TZID=Zone1:20270310T090000\n"));
-        int after = ZoneRulesProviderImpl.INSTANCE.getZoneIdPool().availableZoneIds();
+        int after = ZoneRulesProviderImpl.getInstance().orElseThrow().getZoneIdPool().availableZoneIds();
         assertThat(parsed).isNotNull();
         assertThat(before - after).isLessThanOrEqualTo(1);
     }

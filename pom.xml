@@ -103,7 +103,7 @@
         <dependency>
             <groupId>org.mnode.ical4j</groupId>
             <artifactId>ical4j</artifactId>
-            <version>4.3.0</version>
+            <version>4.4.0</version>
         </dependency>
         <!-- Downloads followed calendars through a DNS resolver of our own, which refuses local addresses. No
              <version>: the Boot BOM manages it. -->
