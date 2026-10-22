@@ -210,6 +210,20 @@ describe('EventFormModal — days of a series', () => {
       { intervalType: 'MONTHLY', intervalCount: 1, until: null, weekdays: [], dayRule: 'LAST_WEEKDAY_OF_MONTH' })
   })
 
+  it('keeps the day rule chosen through a date typed on its way to one that can give it', () => {
+    // Typing "29" over Friday 30 October passes through the 2nd, which has no last weekday, on its way to the 29th.
+    const { onSubmit } = renderForm({ initial: { ...initial, startDate: '2026-10-30', endDate: '2026-10-30' } })
+    recurring()
+    intervalType('MONTHLY')
+    fireEvent.change(screen.getByLabelText('series.day_rule'), { target: { value: 'LAST_WEEKDAY_OF_MONTH' } })
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-10-02' } })
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-10-29' } })
+    fireEvent.change(field('form.end_date'), { target: { value: '2026-10-29' } })
+    save()
+    expect(onSubmit).toHaveBeenCalledWith(expect.anything(),
+      { intervalType: 'MONTHLY', intervalCount: 1, until: null, weekdays: [], dayRule: 'LAST_WEEKDAY_OF_MONTH' })
+  })
+
   it('falls back to the same day when the start moves to a date the rule cannot fit', () => {
     renderForm({ initial: { ...initial, startDate: '2026-10-30', endDate: '2026-10-30' } })
     recurring()
@@ -426,8 +440,12 @@ describe('EventFormModal — the day rule said', () => {
     fireEvent.change(field('form.start_date'), { target: { value: '2026-10-13' } })
 
     expect(status.textContent).toBe('series.day_rule_fell_back:{"rule":"Rule.day:{\\"day\\":13}"}')
+    // Said for as long as the start cannot give the rule chosen, and no more once it can again.
     fireEvent.change(field('form.start_date'), { target: { value: '2026-10-14' } })
+    expect(status.textContent).toBe('series.day_rule_fell_back:{"rule":"Rule.day:{\\"day\\":14}"}')
+    fireEvent.change(field('form.start_date'), { target: { value: '2026-10-28' } })
     expect(status.textContent).toBe('')
+    expect(dayRule().value).toBe('LAST_WEEKDAY_OF_MONTH')
   })
 
   it('says the day of a series being edited from the anchor it keeps, not from the start shown', () => {

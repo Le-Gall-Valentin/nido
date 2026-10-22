@@ -5,7 +5,7 @@ import { Input } from '@/shared/ui'
 import { resolveLocale } from '@/shared/lib'
 import type { DayRule, RecurrenceInterval, RecurringEventSeries } from '@/entities/calendar'
 import { WEEKDAYS, weekdayOf, weekdayName, dayRulePhrase, capitalize } from '../lib/recurrenceRule'
-import { dayRuleChoices, shownDays } from '../lib/recurrenceDraft'
+import { dayRuleChoices, ruleInEffect, shownDays } from '../lib/recurrenceDraft'
 import { MAX_INTERVAL_COUNT } from '../lib/scheduleLimits'
 import type { RecurrenceDraftState } from '../model/useRecurrenceDraft'
 
@@ -36,6 +36,8 @@ export function RecurrenceFields({ recurrence, startDate, editedSeries, notice }
   const startDay = weekdayOf(startDate)
   const days = shownDays(draft, startDate)
   const choices = dayRuleChoices(draft, startDate, editedSeries)
+  // The rule chosen, or the same day while the start cannot give it: what the list shows, as toRecurrence sends it.
+  const effectiveRule = ruleInEffect(draft, startDate)
   const ruleLabel = (rule: DayRule) => {
     const choice = choices.find((candidate) => candidate.rule === rule)
     return choice ? capitalize(dayRulePhrase(t, rule, draft.intervalType, choice.wordedFrom, locale)) : ''
@@ -79,15 +81,15 @@ export function RecurrenceFields({ recurrence, startDate, editedSeries, notice }
         <div className="flex flex-col gap-1.5">
           <label htmlFor={dayRuleId} className={FIELD_LABEL}>{t('series.day_rule')}</label>
           {/* With no start date there is no day to read a rule from: the list waits for one, and says so. */}
-          <select id={dayRuleId} value={draft.dayRule} className={SELECT} disabled={choices.length === 0}
+          <select id={dayRuleId} value={effectiveRule} className={SELECT} disabled={choices.length === 0}
             onChange={(e) => recurrence.setDayRule(e.target.value as DayRule)}>
             {choices.length === 0
               ? <option value={draft.dayRule}>{t('series.day_rule_needs_start')}</option>
               : choices.map(({ rule }) => <option key={rule} value={rule}>{ruleLabel(rule)}</option>)}
           </select>
-          {/* The list changes under the start field when the rule falls back: said for whoever cannot see it. */}
+          {/* The list changes under the start field while the rule falls back: said for whoever cannot see it. */}
           <p role="status" className="sr-only">
-            {recurrence.ruleFellBack ? t('series.day_rule_fell_back', { rule: ruleLabel(draft.dayRule) }) : ''}
+            {effectiveRule !== draft.dayRule ? t('series.day_rule_fell_back', { rule: ruleLabel(effectiveRule) }) : ''}
           </p>
         </div>
       )}

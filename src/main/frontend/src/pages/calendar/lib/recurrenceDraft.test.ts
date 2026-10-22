@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { RecurringEventSeries } from '@/entities/calendar'
-import { dayRuleChoices, draftOf, followStart, shownDays, toRecurrence, toggleDay, type RecurrenceDraft } from './recurrenceDraft'
+import { dayRuleChoices, draftOf, ruleInEffect, shownDays, toRecurrence, toggleDay, type RecurrenceDraft } from './recurrenceDraft'
 import type { Recurrence } from './seriesInput'
 
 /** Weekly from Monday 19 October 2026, on Mondays only. */
@@ -38,11 +38,6 @@ describe('the days of a weekly series', () => {
     expect(shownDays(chosen, friday)).toEqual(['THURSDAY', 'FRIDAY'])
   })
 
-  it('are the same whether a day is chosen before the start moves or after', () => {
-    expect(shownDays(toggleDay(followStart(weekly, friday), 'THURSDAY'), friday))
-      .toEqual(shownDays(followStart(toggleDay(weekly, 'THURSDAY'), friday), friday))
-  })
-
   it('keep a day chosen that the start passed over', () => {
     const chosen = toggleDay(weekly, 'THURSDAY')
     expect(shownDays(chosen, thursday)).toEqual(['THURSDAY'])
@@ -58,19 +53,26 @@ describe('the days of a weekly series', () => {
   })
 })
 
-describe('followStart', () => {
+describe('ruleInEffect', () => {
+  // The last Friday, chosen from Friday 30 October.
   const monthly: RecurrenceDraft = { ...weekly, intervalType: 'MONTHLY', dayRule: 'LAST_WEEKDAY_OF_MONTH' }
 
-  it('keeps a day rule the new start can give', () => {
-    expect(followStart(monthly, '2026-11-27')).toBe(monthly)
+  it('is the rule chosen while the start can give it', () => {
+    expect(ruleInEffect(monthly, '2026-11-27')).toBe('LAST_WEEKDAY_OF_MONTH')
   })
 
-  it('falls back to the same day when the new start cannot give the rule', () => {
-    expect(followStart(monthly, '2026-10-13').dayRule).toBe('SAME_DAY')
+  it('is the same day while the start cannot give the rule chosen', () => {
+    expect(ruleInEffect(monthly, '2026-10-02')).toBe('SAME_DAY')
   })
 
-  it('changes nothing while the start holds no date', () => {
-    expect(followStart(monthly, '')).toBe(monthly)
+  it('is the rule chosen again once a date typed through reaches one that can give it', () => {
+    // Typing "29" over the 30th passes through the 2nd: the rule is the draft's still, read off the start each time.
+    expect(ruleInEffect(monthly, '2026-10-02')).toBe('SAME_DAY')
+    expect(ruleInEffect(monthly, '2026-10-29')).toBe('LAST_WEEKDAY_OF_MONTH')
+  })
+
+  it('is the rule chosen while the start holds no date', () => {
+    expect(ruleInEffect(monthly, '')).toBe('LAST_WEEKDAY_OF_MONTH')
   })
 })
 
@@ -83,6 +85,10 @@ describe('toRecurrence', () => {
   it('sends the day rule of a monthly or yearly series, and no days', () => {
     expect(toRecurrence({ ...toggleDay(weekly, 'THURSDAY'), intervalType: 'YEARLY', dayRule: 'LAST_WEEKDAY_OF_MONTH' }, '2026-10-30'))
       .toEqual({ intervalType: 'YEARLY', intervalCount: 1, until: null, weekdays: [], dayRule: 'LAST_WEEKDAY_OF_MONTH' })
+  })
+
+  it('sends the rule in effect, the same day while the start cannot give the one chosen', () => {
+    expect(toRecurrence({ ...weekly, intervalType: 'MONTHLY', dayRule: 'LAST_WEEKDAY_OF_MONTH' }, '2026-10-02').dayRule).toBe('SAME_DAY')
   })
 
   it('sends neither for a daily series', () => {

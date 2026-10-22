@@ -58,10 +58,7 @@ export function EventFormModal({
       : { allDay, startTime: form.startTime ?? '09:00', endTime: form.endTime ?? '10:00' })
   }
 
-  const changeStart = (startDate: string) => {
-    patch({ startDate, endDate: form.endDate || startDate })
-    recurrence.followStart(startDate)
-  }
+  const changeStart = (startDate: string) => patch({ startDate, endDate: form.endDate || startDate })
 
   const submit = () => {
     const sent = recurring ? toRecurrence(recurrence.draft, form.startDate) : null

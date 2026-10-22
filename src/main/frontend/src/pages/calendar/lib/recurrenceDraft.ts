@@ -8,6 +8,9 @@ import { anchorFor, type Recurrence } from './seriesInput'
  * it. Moving the start then never edits the days chosen: a one-day series follows its start — through a cleared date
  * and through the dates a typed one passes on its way too —, a day the start left was never chosen and is not kept,
  * and a day that was chosen is never dropped, whatever the order of the clicks.
+ *
+ * The day rule likewise is the one chosen, never edited by the start: the rule in effect is read off the start each
+ * time (ruleInEffect), so a date typed through on its way does not lose it.
  */
 export interface RecurrenceDraft {
   intervalType: RecurrenceInterval
@@ -15,6 +18,7 @@ export interface RecurrenceDraft {
   until: string | null
   /** The days a weekly series repeats on besides its start's. */
   extraDays: Weekday[]
+  /** The day rule chosen for a monthly or yearly series, which the start shown may not be able to give. */
   dayRule: DayRule
 }
 
@@ -40,12 +44,11 @@ export function toggleDay(draft: RecurrenceDraft, day: Weekday): RecurrenceDraft
 }
 
 /**
- * The draft once its start moved: a day rule the new start cannot give falls back to the same day. A field holding no
- * date changes nothing — the date is on its way.
+ * The day rule in effect: the one chosen, or the same day while the start cannot give it — the one chosen comes back
+ * with a start that can. A field holding no date changes nothing: the date is on its way.
  */
-export function followStart(draft: RecurrenceDraft, startDate: string): RecurrenceDraft {
-  if (!weekdayOf(startDate) || possibleDayRules(startDate).includes(draft.dayRule)) return draft
-  return { ...draft, dayRule: 'SAME_DAY' }
+export function ruleInEffect(draft: RecurrenceDraft, startDate: string): DayRule {
+  return !weekdayOf(startDate) || possibleDayRules(startDate).includes(draft.dayRule) ? draft.dayRule : 'SAME_DAY'
 }
 
 /** What is sent: days for a weekly series only — its start's always among them —, a day rule for a monthly or yearly one only. */
@@ -55,7 +58,7 @@ export function toRecurrence(draft: RecurrenceDraft, startDate: string): Recurre
     intervalCount: draft.intervalCount,
     until: draft.until,
     weekdays: draft.intervalType === 'WEEKLY' ? shownDays(draft, startDate) : [],
-    dayRule: draft.intervalType === 'MONTHLY' || draft.intervalType === 'YEARLY' ? draft.dayRule : 'SAME_DAY',
+    dayRule: draft.intervalType === 'MONTHLY' || draft.intervalType === 'YEARLY' ? ruleInEffect(draft, startDate) : 'SAME_DAY',
   }
 }
 
