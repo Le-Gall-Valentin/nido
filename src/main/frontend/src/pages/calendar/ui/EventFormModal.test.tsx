@@ -447,11 +447,11 @@ describe('EventFormModal — the day rule said', () => {
     fireEvent.change(field('form.start_date'), { target: { value: '2026-10-13' } })
 
     expect(status.textContent).toBe('series.day_rule_fell_back:{"rule":"Rule.day:{\\"day\\":13}"}')
-    // Said for as long as the start cannot give the rule chosen, and no more once it can again.
+    // Said for as long as the start cannot give the rule chosen, and said again once it can.
     fireEvent.change(field('form.start_date'), { target: { value: '2026-10-14' } })
     expect(status.textContent).toBe('series.day_rule_fell_back:{"rule":"Rule.day:{\\"day\\":14}"}')
     fireEvent.change(field('form.start_date'), { target: { value: '2026-10-28' } })
-    expect(status.textContent).toBe('')
+    expect(status.textContent).toMatch(/^series\.day_rule_restored:/)
     expect(dayRule().value).toBe('LAST_WEEKDAY_OF_MONTH')
   })
 

@@ -62,12 +62,13 @@ function FollowedOccurrence({ spaceId, occurrence, onClose }: {
     <Dialog open onClose={onClose} title={t('detail.title')} showCloseButton maxWidth="max-w-lg">
       <div className="flex flex-col gap-3">
         <div>
-          {/* Under the dialog's own heading (h2): the entry's title is what a screen reader jumps to. */}
-          <h3 className="pr-8 text-base font-semibold text-fg-0">{occurrence.title}</h3>
+          {/* Under the dialog's own heading (h2): the entry's title is what a screen reader jumps to, in every detail. */}
+          <h3 className="pr-8 text-base font-semibold text-fg-0 break-words">{occurrence.title}</h3>
           <p className="text-sm text-fg-2">{formatWhen(occurrence, t('all_day_short'), resolveLocale(i18next.language))}</p>
         </div>
-        {occurrence.location && <p className="text-sm text-fg-1">{occurrence.location}</p>}
-        {occurrence.description && <p className="whitespace-pre-line text-sm text-fg-1">{occurrence.description}</p>}
+        {/* A followed calendar's text often holds a long meeting address: it wraps rather than widen the dialog. */}
+        {occurrence.location && <p className="break-words text-sm text-fg-1">{occurrence.location}</p>}
+        {occurrence.description && <p className="whitespace-pre-line break-words text-sm text-fg-1">{occurrence.description}</p>}
         <p className="text-xs text-fg-3">
           {feed ? t('detail.followed_calendar', { name: feed.name }) : t('detail.followed_calendar_unknown')}
         </p>
@@ -122,7 +123,7 @@ function ExternalOccurrence({
     <Dialog open onClose={onClose} title={t('detail.title')} showCloseButton>
       <div className="flex flex-col gap-3">
         <div>
-          <p className="pr-8 text-base font-semibold text-fg-0">{occurrence.title}</p>
+          <h3 className="pr-8 text-base font-semibold text-fg-0 break-words">{occurrence.title}</h3>
           <p className="text-sm text-fg-2">
             {occurrence.startDate} · {t(`source.${occurrence.source}`)}
           </p>
@@ -147,7 +148,7 @@ function ProjectedNotice({
   return (
     <Dialog open onClose={onClose} title={t('detail.title')} showCloseButton>
       <div className="flex flex-col gap-3">
-        <p className="pr-8 text-base font-semibold text-fg-0">{occurrence.title}</p>
+        <h3 className="pr-8 text-base font-semibold text-fg-0 break-words">{occurrence.title}</h3>
         <p className="text-sm text-fg-2">{occurrence.startDate}</p>
         <p className="text-sm text-fg-3">{t('detail.projected_hint')}</p>
         <div className="flex justify-end">

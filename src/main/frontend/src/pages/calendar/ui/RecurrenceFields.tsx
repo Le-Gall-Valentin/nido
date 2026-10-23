@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
 import { Input } from '@/shared/ui'
@@ -42,6 +42,11 @@ export function RecurrenceFields({ recurrence, startDate, editedSeries, notice }
     const choice = choices.find((candidate) => candidate.rule === rule)
     return choice ? capitalize(dayRulePhrase(t, rule, draft.intervalType, choice.wordedFrom, locale)) : ''
   }
+  // The list changes under the start field, both when the rule falls back and when it comes back: each change is said.
+  const fallingBack = effectiveRule !== draft.dayRule
+  const [said, setSaid] = useState<'nothing' | 'fell_back' | 'restored'>('nothing')
+  const toSay = fallingBack ? 'fell_back' : said === 'fell_back' ? 'restored' : said
+  if (toSay !== said) setSaid(toSay)
 
   return (
     <div className="flex flex-col gap-3 rounded-lg bg-bg-2 p-3">
@@ -87,9 +92,10 @@ export function RecurrenceFields({ recurrence, startDate, editedSeries, notice }
               ? <option value={draft.dayRule}>{t('series.day_rule_needs_start')}</option>
               : choices.map(({ rule }) => <option key={rule} value={rule}>{ruleLabel(rule)}</option>)}
           </select>
-          {/* The list changes under the start field while the rule falls back: said for whoever cannot see it. */}
+          {/* Said for whoever cannot see the list change. */}
           <p role="status" className="sr-only">
-            {effectiveRule !== draft.dayRule ? t('series.day_rule_fell_back', { rule: ruleLabel(effectiveRule) }) : ''}
+            {toSay === 'fell_back' ? t('series.day_rule_fell_back', { rule: ruleLabel(effectiveRule) })
+              : toSay === 'restored' ? t('series.day_rule_restored', { rule: ruleLabel(effectiveRule) }) : ''}
           </p>
         </div>
       )}

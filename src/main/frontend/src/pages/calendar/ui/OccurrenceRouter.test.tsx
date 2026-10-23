@@ -192,7 +192,10 @@ describe('OccurrenceRouter', () => {
       expect(screen.getByText('Zone C')).toBeTruthy()
       expect(screen.getByText('Partout')).toBeTruthy()
       expect(await screen.findByText('detail.followed_calendar')).toBeTruthy()
-      expect(screen.queryByRole('button', { name: 'detail.edit' })).toBeNull()
+      for (const action of ['detail.edit', 'detail.delete', 'detail.move', 'detail.copy', 'detail.join', 'detail.leave']) {
+        expect(screen.queryByRole('button', { name: action })).toBeNull()
+      }
+      expect(screen.getByText(/all_day_short/)).toBeTruthy()
     })
 
     it('is a labelled dialog that closes', async () => {

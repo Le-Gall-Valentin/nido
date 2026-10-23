@@ -78,7 +78,7 @@ export function DayDetailModal({
                           {occurrence.description && (
                             // Clamped: this is an overview of the day. The full text is one tap away.
                             <span data-testid="occurrence-description"
-                              className="line-clamp-3 whitespace-pre-line text-xs text-fg-3">
+                              className="line-clamp-3 whitespace-pre-line break-words text-xs text-fg-3">
                               {occurrence.description}
                             </span>
                           )}

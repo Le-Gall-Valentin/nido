@@ -299,6 +299,13 @@ describe('WeekGrid', () => {
     }
   })
 
+  it('neither drags nor resizes an entry of a followed calendar: nido does not write to it', () => {
+    renderWeek([{ ...timed('Réunion', '09:00', '10:00'), source: 'EXTERNAL', color: 'event-cyan', externalFeedId: 'f1' }])
+    expect(document.querySelectorAll('[data-draggable]')).toHaveLength(0)
+    expect(screen.queryByTestId('resize-start')).toBeNull()
+    expect(screen.queryByTestId('resize-end')).toBeNull()
+  })
+
   it('never makes finance or savings draggable', () => {
     renderWeek([allDayFrom('Loyer', 'FINANCE'), allDayFrom('Vacances', 'SAVINGS')])
     expect(document.querySelectorAll('[data-draggable]')).toHaveLength(0)

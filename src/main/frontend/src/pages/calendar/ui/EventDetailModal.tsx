@@ -49,10 +49,11 @@ export function EventDetailModal({
     <Dialog open onClose={onClose} title={t('detail.title')} showCloseButton maxWidth="max-w-lg">
       <div className="flex flex-col gap-3">
         <div>
-          <p className="flex items-center gap-1.5 pr-8 text-base font-semibold text-fg-0">
+          {/* Under the dialog's own heading (h2): the entry's title is what a screen reader jumps to, in every detail. */}
+          <h3 className="flex items-center gap-1.5 pr-8 text-base font-semibold text-fg-0 break-words">
             {occurrence.title}
             {belongsToSeries && <Repeat aria-label={t('detail.recurring')} className="size-3.5 shrink-0 text-fg-3" />}
-          </p>
+          </h3>
           <p className="text-sm text-fg-2">
             {formatWhen(occurrence, t('all_day_short'), resolveLocale(i18next.language))}
           </p>
@@ -73,7 +74,7 @@ export function EventDetailModal({
 
         {occurrence.description && (
           // In full here, unlike the day overview: this is where the reader came to read it.
-          <p data-testid="event-description" className="whitespace-pre-line text-sm text-fg-1">
+          <p data-testid="event-description" className="whitespace-pre-line break-words text-sm text-fg-1">
             {occurrence.description}
           </p>
         )}
