@@ -12,6 +12,8 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.zone.ZoneOffsetTransition;
 import java.time.zone.ZoneRules;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -34,6 +36,11 @@ final class DocumentZones implements TimeZoneRegistry {
     /** More own zones than a real document has: a calendar application writes one or two. */
     static final int MAX_ZONES = 50;
 
+    /** Longer than any zone's name, prefixed or not (the JDK's longest is 32 characters). */
+    static final int MAX_NAME_LENGTH = 256;
+    /** The JDK's names hold at most three parts: America/Argentina/Buenos_Aires. */
+    private static final int MAX_NAME_PARTS = 3;
+
     /** Never empty: ical4j's TzId only asks this registry when it has rules, else it goes to its own zones. */
     private static final Map<String, ZoneRules> NON_EMPTY = Map.of("nido", ZoneOffset.UTC.getRules());
 
@@ -48,19 +55,32 @@ final class DocumentZones implements TimeZoneRegistry {
         this.now = now;
     }
 
-    /** The JDK zone of a name it knows, itself or after a global prefix ({@code /vendor/version/Area/City}). */
+    /**
+     * The JDK zone of a name it knows, itself or after a global prefix ({@code /vendor/version/Area/City}). ical4j asks
+     * it at every reading of a date, so a name longer than any zone's is nobody's, and only the last parts of a prefixed
+     * one are tried: a file cannot make each reading cost the square of its length.
+     */
     static Optional<ZoneId> jdkZone(String tzId) {
-        if (tzId == null) {
+        if (tzId == null || tzId.length() > MAX_NAME_LENGTH) {
             return Optional.empty();
         }
         Optional<ZoneId> named = known(tzId);
         if (named.isPresent() || !tzId.startsWith(TzId.PREFIX)) {
             return named;
         }
-        for (int slash = 0; slash >= 0 && named.isEmpty(); slash = tzId.indexOf('/', slash + 1)) {
-            named = known(tzId.substring(slash + 1));
+        // The starts of its last parts, the longest name first.
+        Deque<Integer> starts = new ArrayDeque<>();
+        for (int slash = tzId.lastIndexOf('/'); slash >= 0 && starts.size() < MAX_NAME_PARTS;
+             slash = tzId.lastIndexOf('/', slash - 1)) {
+            starts.push(slash + 1);
         }
-        return named;
+        for (int start : starts) {
+            named = known(tzId.substring(start));
+            if (named.isPresent()) {
+                return named;
+            }
+        }
+        return Optional.empty();
     }
 
     private static Optional<ZoneId> known(String id) {

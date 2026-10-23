@@ -84,6 +84,34 @@ class IcalSupportTest {
     }
 
     @Test
+    void aZoneNameAsLongAsTheFileIsNoZoneAndCostsNoMoreThanItsLength() {
+        // ical4j looks the name up at every reading of a date: tried part by part, 200 KB of it took seconds each time.
+        String tzId = "/a".repeat(100_000);
+        String ics = document("", "DTSTART;TZID=" + tzId + ":20270310T090000\nRRULE:FREQ=DAILY;COUNT=3\n");
+
+        assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+            try {
+                VEvent e = event(ics);
+                for (int i = 0; i < 20; i++) {
+                    e.<DtStart<Temporal>>getProperty(Property.DTSTART).orElseThrow().getDate();
+                }
+            } catch (RuntimeException unreadable) {
+                // Refusing the name is as good as reading it as floating: only the time it takes is at stake.
+            }
+        });
+        assertThat(DocumentZones.jdkZone(tzId)).isEmpty();
+        assertThat(DocumentZones.jdkZone("/" + "x".repeat(DocumentZones.MAX_NAME_LENGTH) + "/Europe/Paris")).isEmpty();
+    }
+
+    @Test
+    void onlyTheLastPartsOfAPrefixedNameAreTried() {
+        assertThat(DocumentZones.jdkZone("/a/b/c/d/e/f/America/Argentina/Buenos_Aires"))
+            .contains(ZoneId.of("America/Argentina/Buenos_Aires"));
+        assertThat(DocumentZones.jdkZone("/vendor/Japan")).contains(ZoneId.of("Japan"));
+        assertThat(DocumentZones.jdkZone("/vendor/1.0/Nowhere/Atlantis")).isEmpty();
+    }
+
+    @Test
     void aWeeklySeriesKeepsItsWallClockAcrossBothChanges() {
         VEvent e = event(document("", "DTSTART;TZID=America/New_York:20270224T090000\nRRULE:FREQ=WEEKLY;COUNT=4\n"));
         Set<Period<Temporal>> set = e.calculateRecurrenceSet(new Period<>(
