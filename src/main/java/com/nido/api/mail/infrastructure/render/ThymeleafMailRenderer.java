@@ -19,7 +19,8 @@ import java.util.Set;
  *
  * <p>A Thymeleaf engine of its own, never shared with anything web: plain {@link TemplateEngine} with
  * the Spring dialect, so expressions are SpEL and read a record's accessors as properties. The record
- * is the template's {@code mail}; the layout also gets {@code appUrl} and {@code logoCid}.
+ * is the template's {@code mail}; the layout also gets {@code appUrl} and {@code logoCid}, and every template
+ * {@code format} ({@link MailFormat}), for the amounts and dates a record carries raw.
  *
  * <p>Strict on purpose: a missing message, a missing value or a missing {@code <title>} throws. The
  * caller's transaction then fails with it, which is where a broken template should surface — in a
@@ -57,6 +58,7 @@ public class ThymeleafMailRenderer {
     public RenderedMail render(MailContent content, Locale locale) {
         Context context = new Context(supported(locale));
         context.setVariable("mail", content);
+        context.setVariable("format", new MailFormat(context.getLocale()));
         context.setVariable("appUrl", appUrl);
         context.setVariable("logoCid", MailBranding.LOGO_CID);
 

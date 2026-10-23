@@ -1,11 +1,14 @@
 package com.nido.api.mail.infrastructure.render;
 
+import com.nido.api.mail.FactsSampleMail;
 import com.nido.api.mail.KitSampleMail;
 import com.nido.api.mail.NamedTemplateMail;
 import com.nido.api.mail.domain.model.AppPath;
 import com.nido.api.mail.domain.model.RenderedMail;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -98,5 +101,18 @@ class ThymeleafMailRendererTest {
         assertThatThrownBy(() -> renderer.render(new NamedTemplateMail("test/no-title"), Locale.FRENCH))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("test/no-title");
+    }
+
+    @Test
+    void facts_read_as_label_and_value_in_both_parts() {
+        FactsSampleMail facts = new FactsSampleMail(new BigDecimal("86.40"), LocalDate.of(2026, 10, 21));
+
+        RenderedMail french = renderer.render(facts, Locale.FRENCH);
+        RenderedMail english = renderer.render(facts, Locale.ENGLISH);
+
+        // The plain-text part turns a no-break space into a space, as it turns any run of blanks into one.
+        assertThat(french.text()).contains("Montant : 86,40 €", "Date : 21 octobre 2026");
+        assertThat(french.html()).contains("<strong", "86,40\u00a0€</strong>");
+        assertThat(english.text()).contains("Amount: €86.40", "Date: 21 October 2026");
     }
 }

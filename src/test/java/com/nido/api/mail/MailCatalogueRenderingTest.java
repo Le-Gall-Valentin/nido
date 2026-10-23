@@ -17,9 +17,13 @@ import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.RecordComponent;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -102,19 +106,33 @@ class MailCatalogueRenderingTest {
     }
 
     private static MailContent sample(Class<?> type) throws Exception {
-        RecordComponent[] components = type.getRecordComponents();
-        Class<?>[] types = Arrays.stream(components).map(RecordComponent::getType).toArray(Class[]::new);
-        Object[] values = Arrays.stream(components).map(c -> sampleValue(c.getType(), c.getName())).toArray();
-        return (MailContent) type.getDeclaredConstructor(types).newInstance(values);
+        return (MailContent) instantiate(type);
     }
 
-    private static Object sampleValue(Class<?> type, String name) {
+    /** A record built from sample values, a record inside it included: the facts a finance mail carries are records. */
+    private static Object instantiate(Class<?> type) throws Exception {
+        RecordComponent[] components = type.getRecordComponents();
+        Class<?>[] types = Arrays.stream(components).map(RecordComponent::getType).toArray(Class[]::new);
+        Object[] values = new Object[components.length];
+        for (int i = 0; i < components.length; i++) {
+            values[i] = sampleValue(components[i].getType(), components[i].getName());
+        }
+        return type.getDeclaredConstructor(types).newInstance(values);
+    }
+
+    private static Object sampleValue(Class<?> type, String name) throws Exception {
         if (type == String.class) return "sample-" + name;
         if (type == AppPath.class) return new AppPath("/sample/" + name);
         if (type == long.class || type == Long.class) return 30L;
         if (type == int.class || type == Integer.class) return 30;
         if (type == boolean.class) return false;
         if (type.isEnum()) return type.getEnumConstants()[0];
+        if (type == BigDecimal.class) return new BigDecimal("1234.56");
+        if (type == LocalDate.class) return LocalDate.of(2026, 10, 21);
+        if (type == YearMonth.class) return YearMonth.of(2026, 10);
+        if (type == UUID.class) return UUID.fromString("00000000-0000-0000-0000-000000000001");
+        if (type == List.class) return List.of();
+        if (type.isRecord()) return instantiate(type);
         throw new IllegalStateException("Teach MailCatalogueRenderingTest a sample for " + type.getName() + " (" + name + ")");
     }
 
