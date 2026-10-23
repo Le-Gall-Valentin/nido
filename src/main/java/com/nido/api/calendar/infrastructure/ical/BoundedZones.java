@@ -117,14 +117,14 @@ final class BoundedZones implements ComponentFactory<VTimeZone> {
         }
         for (RRule<Temporal> rrule : observance.<RRule<Temporal>>getProperties(Property.RRULE)) {
             Recur<Temporal> recur = rrule.getRecur();
-            if (recur.getFrequency() != Frequency.YEARLY || !BoundedExpansion.distinctAndShort(recur)) {
+            if (recur.getFrequency() != Frequency.YEARLY || !RuleCost.distinctAndShort(recur)) {
                 throw new IllegalStateException("A zone that does not change on days of the year");
             }
             int last = Math.max(thisYear + YEARS_AHEAD, start + YEARS_AFTER_A_LATER_START);
             if (recur.getUntil() != null) {
                 last = Math.min(last, yearOf(recur.getUntil()));
             }
-            bill(BoundedExpansion.perStep(recur) * Math.max(0, last - start + 1));
+            bill(RuleCost.perStep(recur) * Math.max(0, last - start + 1));
         }
     }
 
