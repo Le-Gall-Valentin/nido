@@ -46,8 +46,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * once unpacked, no cookie, no credential. An error is a code, never a word of what the server answered.
  *
  * <p>15 s is not a hard bound: a connect in progress cannot be cancelled, and the last address tried may be given the
- * whole of its connect timeout past the deadline. A download may so take up to about 20 s (see GuardedDnsResolver). A
- * name service that does not answer is waited for only as long as the deadline leaves.
+ * whole of its connect timeout past the deadline, and a lookup of a name whose service does not answer cannot be cut
+ * either. A download may so take up to about 20 s, and longer by the system resolver's own timeout (see GuardedDnsResolver).
  */
 public final class HttpExternalFeedDownloaderAdapter implements ExternalFeedDownloader, AutoCloseable {
 

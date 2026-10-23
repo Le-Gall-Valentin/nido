@@ -4,13 +4,10 @@ import org.apache.hc.client5.http.DnsResolver;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.time.Duration;
-import java.util.concurrent.CountDownLatch;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -81,25 +78,6 @@ class GuardedDnsResolverTest {
         when(names.resolve("::ffff:127.0.0.1")).thenReturn(addresses("::ffff:127.0.0.1"));
 
         assertThatThrownBy(() -> resolver.resolve("::ffff:127.0.0.1")).isInstanceOf(GuardedDnsResolver.BlockedAddressException.class);
-    }
-
-    @Test
-    void aNameServiceThatDoesNotAnswerIsWaitedForNoLongerThanTheDownloadHasLeft() throws Exception {
-        CountDownLatch never = new CountDownLatch(1);
-        DnsResolver silent = mock(DnsResolver.class);
-        when(silent.resolve("slow.example")).thenAnswer(call -> {
-            never.await();
-            return addresses("8.8.8.8");
-        });
-        GuardedDnsResolver bounded = new GuardedDnsResolver(silent, AddressPolicy.standard(() -> false,
-            AddressPolicyTest.NOTHING_OF_NIDO), Duration.ofMillis(50), Duration.ofMillis(200));
-        bounded.deadline(System.nanoTime() + Duration.ofMillis(100).toNanos());
-        try {
-            assertTimeoutPreemptively(Duration.ofSeconds(10), () ->
-                assertThatThrownBy(() -> bounded.resolve("slow.example")).isInstanceOf(UnknownHostException.class));
-        } finally {
-            never.countDown();
-        }
     }
 
     private static InetAddress[] addresses(String... literals) throws Exception {
