@@ -7,7 +7,6 @@ import com.nido.api.calendar.domain.model.CalendarSourceType;
 import com.nido.api.calendar.domain.model.FeedToShow;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -408,10 +407,10 @@ class Ical4jFeedReaderAdapterTest {
         };
         LocalDate day = LocalDate.of(2026, 10, 1);
 
-        assertThatThrownBy(() -> assertTimeoutPreemptively(Duration.ofSeconds(10), () -> reader.check(bomb)))
+        assertThatThrownBy(() -> assertTimeoutPreemptively(BoundedExpansionTest.HANG_GUARD, () -> reader.check(bomb)))
             .isInstanceOf(CalendarException.NotAnIcalFile.class);
         FeedToShow one = anotherFeed();
-        assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+        assertTimeoutPreemptively(BoundedExpansionTest.HANG_GUARD, () -> {
             assertThat(occurrencesOf(one, stored, PARIS, Locale.FRENCH, day, day)).isEmpty();
             assertThat(occurrencesOf(one, stored, PARIS, Locale.FRENCH, day, day)).isEmpty();
         });

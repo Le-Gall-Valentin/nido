@@ -5,6 +5,7 @@ import com.nido.api.calendar.domain.model.CalendarFeed;
 import com.nido.api.calendar.domain.model.CalendarOccurrence;
 import com.nido.api.calendar.domain.model.CalendarSourceType;
 import com.nido.api.calendar.domain.model.FeedSeries;
+import com.nido.api.calendar.domain.model.ImportedEvent;
 import com.nido.api.calendar.domain.model.RecurrenceInterval;
 import com.nido.api.calendar.domain.model.RecurringEventSeries;
 import com.nido.api.infrastructure.NidoVersion;
@@ -22,6 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class Ical4jCalendarWriterAdapterTest {
 
@@ -73,6 +75,43 @@ class Ical4jCalendarWriterAdapterTest {
         assertThat(IcalTestSupport.starts(IcalTestSupport.master(ics, piano.id() + "@nido"), PARIS,
             LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)))
             .containsExactly(LocalDateTime.of(2026, 1, 5, 18, 0), LocalDateTime.of(2026, 1, 12, 18, 0), LocalDateTime.of(2026, 1, 15, 18, 0));
+    }
+
+    @Test
+    void aSeriesWithNoOccurrenceLeftIsNotWritten() {
+        // Carried on from mid-March, a monthly series on the 15th that ends on 10 April has no occurrence left to show.
+        RecurringEventSeries over = new RecurringEventSeries(UUID.randomUUID(), UUID.randomUUID(), "Club", null, null,
+            true, null, null, 0, null, RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 15), LocalDate.of(2026, 4, 10),
+            LocalDate.of(2026, 3, 16), List.of(), UUID.randomUUID(), Instant.now());
+        String ics = writer.write(feed(List.of(), List.of(new FeedSeries(over, Set.of(), List.of())), List.of()), Locale.FRENCH);
+
+        assertThat(IcalTestSupport.events(ics)).isEmpty();
+    }
+
+    @Test
+    void aColourNidoDoesNotKnowIsLeftOutAndTheEventIsWrittenAllTheSame() {
+        CalendarEvent concert = new CalendarEvent(UUID.randomUUID(), UUID.randomUUID(), "Concert", null, null, true,
+            LocalDate.of(2026, 9, 23), null, LocalDate.of(2026, 9, 23), null, "mauve", List.of(), null, null,
+            UUID.randomUUID(), Instant.now());
+        String ics = writer.write(feed(List.of(concert), List.of(), List.of()), Locale.FRENCH);
+
+        assertThat(ics).contains("SUMMARY:Concert").doesNotContain("COLOR:");
+    }
+
+    @Test
+    void aSpaceInAZoneIcal4jDoesNotShipKeepsItsTimesUnderTheZonesNameForAReaderThatKnowsIt() {
+        ZoneId unshipped = ZoneId.getAvailableZoneIds().stream().sorted()
+            .filter(id -> IcalSupport.registry().getTimeZone(id) == null).map(ZoneId::of).findFirst().orElse(null);
+        assumeTrue(unshipped != null, "ical4j ships every zone this JDK knows");
+        CalendarEvent concert = event(false, LocalDate.of(2026, 9, 23), LocalTime.of(20, 0), LocalDate.of(2026, 9, 23), LocalTime.of(22, 30));
+        String ics = writer.write(new CalendarFeed("Chez nous", unshipped, List.of(concert), List.of(), List.of()), Locale.FRENCH);
+
+        assertThat(ics).doesNotContain("BEGIN:VTIMEZONE")
+            .contains("X-WR-TIMEZONE:" + unshipped.getId(), "DTSTART;TZID=" + unshipped.getId() + ":20260923T200000");
+        ImportedEvent back = Ical4jImportReaderAdapterTest.onlyEvent(new Ical4jImportReaderAdapter()
+            .read(ics, PARIS, Ical4jImportReaderAdapterTest.TODAY, Locale.FRENCH, Ical4jImportReaderAdapterTest.NOTHING_KNOWN));
+        assertThat(LocalDateTime.of(back.startDate(), back.startTime()))
+            .isEqualTo(LocalDateTime.of(2026, 9, 23, 20, 0).atZone(unshipped).withZoneSameInstant(PARIS).toLocalDateTime());
     }
 
     @Test

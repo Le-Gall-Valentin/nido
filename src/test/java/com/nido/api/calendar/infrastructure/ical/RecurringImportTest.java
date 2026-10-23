@@ -26,6 +26,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -177,6 +178,30 @@ class RecurringImportTest {
 
         ImportGroup inNewYork = only(content, NEW_YORK);
         assertThat(inNewYork.series()).as("in its own zone, the same rule is a series").isNotNull();
+    }
+
+    @Test
+    void aFloatingSeriesIsKeptAsASeriesWhateverTheMachinesZone() {
+        // A floating time is the space's own: compared in the machine's zone, a series far from it lost its first day,
+        // then was unfolded.
+        TimeZone machine = TimeZone.getDefault();
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+            for (String zone : List.of("Europe/Paris", "America/Los_Angeles", "Asia/Tokyo")) {
+                for (LocalTime at : List.of(LocalTime.of(23, 0), LocalTime.of(6, 0))) {
+                    ImportGroup group = only(ics(vevent("f@test", "SUMMARY:Chorale",
+                        "DTSTART:20261102T" + at.toString().replace(":", "") + "00", "DURATION:PT1H",
+                        "RRULE:FREQ=WEEKLY;COUNT=10")), ZoneId.of(zone));
+
+                    assertThat(group.unfolded()).as(zone + " " + at).isFalse();
+                    assertThat(group.series().anchorDate()).as(zone + " " + at).isEqualTo(LocalDate.of(2026, 11, 2));
+                    assertThat(group.series().startTime()).as(zone + " " + at).isEqualTo(at);
+                    assertThat(group.series().endDate()).as(zone + " " + at).isEqualTo(LocalDate.of(2027, 1, 4));
+                }
+            }
+        } finally {
+            TimeZone.setDefault(machine);
+        }
     }
 
     @Test
