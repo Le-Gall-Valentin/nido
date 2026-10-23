@@ -195,4 +195,30 @@ class SavingsMailsTest {
         assertThat(en.text()).contains("alice deleted the savings goal “Vacances” of the space “Our place”. "
             + "The deposits recorded on it were deleted with it.", "Saved in total: €0.00");
     }
+
+    @Test
+    void a_deposit_by_a_member_who_can_no_longer_be_named() {
+        SavingsDeposit unnamed = new SavingsDeposit(HOLIDAYS, BOB, null, new BigDecimal("100.00"), LocalDate.of(2026, 10, 21),
+            new BigDecimal("1000.00"), List.of(new MemberShare(BOB, null, new BigDecimal("1000.00"))));
+
+        RenderedMail fr = RENDERER.render(new SavingsContributionNotification("carol", "alice", "Chez nous",
+            ContributorSide.OTHER_MEMBER, unnamed, FINANCE), Locale.FRENCH);
+        RenderedMail en = RENDERER.render(new SavingsContributionNotification("carol", "alice", "Our place",
+            ContributorSide.OTHER_MEMBER, unnamed, FINANCE), Locale.ENGLISH);
+        RenderedMail reached = RENDERER.render(new SavingsGoalReachedNotification("carol", "alice", "Chez nous",
+            ContributorSide.OTHER_MEMBER, unnamed, FINANCE), Locale.FRENCH);
+        RenderedMail reachedEn = RENDERER.render(new SavingsGoalReachedNotification("carol", "alice", "Our place",
+            ContributorSide.OTHER_MEMBER, unnamed, FINANCE), Locale.ENGLISH);
+
+        assertThat(fr.subject()).isEqualTo("alice a enregistré 100,00 € au nom d’un ancien membre sur « Vacances »");
+        assertThat(fr.text()).contains(
+            "alice a enregistré un versement de 100,00 € au nom d’un ancien membre sur l’objectif « Vacances » de l’espace « Chez nous ».");
+        assertThat(en.subject()).isEqualTo("alice recorded €100.00 from a former member into “Vacances”");
+        assertThat(en.text()).contains(
+            "alice recorded a deposit of €100.00 from a former member into the goal “Vacances” of the space “Our place”.");
+        assertThat(reached.text()).contains("Avec le versement de 100,00 € d’un ancien membre, l’objectif « Vacances » de l’espace "
+            + "« Chez nous » est atteint : 1\u202f000,00 € épargnés.", "un ancien membre : 1\u202f000,00 €");
+        assertThat(reachedEn.text()).contains("With a former member’s deposit of €100.00, the goal “Vacances” of the space "
+            + "“Our place” is reached: €1,000.00 saved.");
+    }
 }

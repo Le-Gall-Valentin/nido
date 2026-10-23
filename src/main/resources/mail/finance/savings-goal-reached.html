@@ -9,7 +9,7 @@
     <p th:replace="~{components :: paragraph(#{body.yours(${format.amount(mail.deposit.amount)}, ${mail.deposit.goal.name}, ${mail.spaceName}, ${format.amount(mail.deposit.goal.target)})})}"></p>
   </th:block>
   <th:block th:unless="${mail.side.name() == 'READER'}">
-    <p th:replace="~{components :: paragraph(#{body(${mail.deposit.contributorName} ?: #{former-member}, ${format.amount(mail.deposit.amount)}, ${mail.deposit.goal.name}, ${mail.spaceName}, ${format.amount(mail.deposit.goal.target)})})}"></p>
+    <p th:replace="~{components :: paragraph(#{${mail.deposit.contributorName == null ? 'body.former' : 'body'}(${mail.deposit.contributorName}, ${format.amount(mail.deposit.amount)}, ${mail.deposit.goal.name}, ${mail.spaceName}, ${format.amount(mail.deposit.goal.target)})})}"></p>
   </th:block>
   <th:block th:replace="~{finance/parts :: savedByMember(${mail.deposit.saved}, ${mail.deposit.savedByMember})}"></th:block>
   <table th:replace="~{components :: button(${appUrl + mail.financePath.value}, #{action})}"></table>
