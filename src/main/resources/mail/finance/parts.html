@@ -107,5 +107,42 @@
   </th:block>
 </th:block>
 
+<th:block th:fragment="goal(g)">
+  <p th:replace="~{components :: fact(#{fact.target}, ${format.amount(g.target)})}"></p>
+  <th:block th:if="${g.targetDate != null}">
+    <p th:replace="~{components :: fact(#{fact.target-date}, ${format.date(g.targetDate)})}"></p>
+  </th:block>
+</th:block>
+
+<th:block th:fragment="goalChange(before, after)"
+          th:with="dateBefore=${before.targetDate == null} ? #{no-date} : ${format.date(before.targetDate)},
+                   dateAfter=${after.targetDate == null} ? #{no-date} : ${format.date(after.targetDate)}">
+  <th:block th:if="${before.name != after.name}">
+    <p th:replace="~{components :: fact(#{fact.name}, ${format.change(before.name, after.name)})}"></p>
+  </th:block>
+  <p th:replace="~{components :: fact(#{fact.target}, ${format.change(format.amount(before.target), format.amount(after.target))})}"></p>
+  <th:block th:if="${before.targetDate != null or after.targetDate != null}">
+    <p th:replace="~{components :: fact(#{fact.target-date}, ${format.change(dateBefore, dateAfter)})}"></p>
+  </th:block>
+</th:block>
+
+<th:block th:fragment="deposit(d)"
+          th:with="progress=#{progress(${format.amount(d.saved)}, ${format.amount(d.goal.target)}, ${d.percent()})}">
+  <p th:replace="~{components :: fact(#{fact.deposit}, ${format.amount(d.amount)})}"></p>
+  <p th:replace="~{components :: fact(#{fact.date}, ${format.date(d.date)})}"></p>
+  <p th:replace="~{components :: fact(#{fact.progress}, ${progress})}"></p>
+  <th:block th:if="${d.goal.targetDate != null}">
+    <p th:replace="~{components :: fact(#{fact.target-date}, ${format.date(d.goal.targetDate)})}"></p>
+  </th:block>
+</th:block>
+
+<!-- What a goal held, then one line per member: "alice : 600,00 €". -->
+<th:block th:fragment="savedByMember(saved, shares)">
+  <p th:replace="~{components :: fact(#{fact.saved}, ${format.amount(saved)})}"></p>
+  <th:block th:each="share : ${shares}">
+    <p th:replace="~{components :: fact(${share.memberName} ?: #{former-member}, ${format.amount(share.amount)})}"></p>
+  </th:block>
+</th:block>
+
 </body>
 </html>

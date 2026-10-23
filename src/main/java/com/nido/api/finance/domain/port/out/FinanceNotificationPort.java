@@ -1,11 +1,15 @@
 package com.nido.api.finance.domain.port.out;
 
 import com.nido.api.finance.domain.model.Gesture;
+import com.nido.api.finance.domain.model.GoalFacts;
 import com.nido.api.finance.domain.model.Involved;
+import com.nido.api.finance.domain.model.MemberShare;
 import com.nido.api.finance.domain.model.OperationFacts;
+import com.nido.api.finance.domain.model.SavingsDeposit;
 import com.nido.api.finance.domain.model.SeriesFacts;
 import com.nido.api.space.domain.model.Addressee;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -25,4 +29,15 @@ public interface FinanceNotificationPort {
     void recurringUpdated(Gesture gesture, SeriesFacts before, SeriesFacts after, List<Involved> readers);
 
     void recurringStopped(Gesture gesture, SeriesFacts series, List<Addressee> readers);
+
+    /** A deposit on a goal; one that brings the goal to its target says so, and falls back on the plain deposit. */
+    void savingsDeposited(Gesture gesture, SavingsDeposit deposit, List<Addressee> readers);
+
+    void savingsGoalCreated(Gesture gesture, GoalFacts goal, List<Addressee> readers);
+
+    void savingsGoalUpdated(Gesture gesture, GoalFacts before, GoalFacts after, List<Addressee> readers);
+
+    /** @param savedByMember what each member had put in — gone with the goal */
+    void savingsGoalDeleted(Gesture gesture, GoalFacts goal, BigDecimal saved, List<MemberShare> savedByMember,
+                            List<Addressee> readers);
 }

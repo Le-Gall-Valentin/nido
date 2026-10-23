@@ -1,11 +1,14 @@
 package com.nido.api.finance.infrastructure.notification;
 
+import com.nido.api.finance.domain.model.ContributorSide;
 import com.nido.api.finance.domain.model.Gesture;
+import com.nido.api.finance.domain.model.GoalFacts;
 import com.nido.api.finance.domain.model.Involved;
 import com.nido.api.finance.domain.model.Involvement;
 import com.nido.api.finance.domain.model.MemberShare;
 import com.nido.api.finance.domain.model.OperationFacts;
 import com.nido.api.finance.domain.model.RecurrenceInterval;
+import com.nido.api.finance.domain.model.SavingsDeposit;
 import com.nido.api.finance.domain.model.SeriesFacts;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.mail.domain.model.AppPath;
@@ -93,5 +96,68 @@ class FinanceNotificationAdapterTest {
             new RecurringCreatedNotification("bob", bob.userId(), "alice", "Chez nous", rent, finance),
             new RecurringUpdatedNotification("bob", bob.userId(), "alice", "Chez nous", Involvement.CHANGED, rent, rent, finance),
             new RecurringStoppedNotification("bob", bob.userId(), "alice", "Chez nous", rent, finance));
+    }
+
+    private final GoalFacts holidays = new GoalFacts("Vacances", new BigDecimal("1000.00"), null);
+
+    private SavingsDeposit depositFrom(UUID contributor, String saved) {
+        return new SavingsDeposit(holidays, contributor, "bob", new BigDecimal("100.00"), LocalDate.of(2026, 10, 21),
+            new BigDecimal(saved), List.of());
+    }
+
+    @Test
+    void each_reader_reads_the_side_of_the_deposit_they_stand_on() {
+        SavingsDeposit forBob = depositFrom(bob.userId(), "700.00");
+
+        adapter().savingsDeposited(gesture, forBob, List.of(bob, carol));
+
+        assertThat(sent(2)).extracting(NotificationRequest::notification).containsExactly(
+            new SavingsContributionNotification("bob", "alice", "Chez nous", ContributorSide.READER, forBob, finance),
+            new SavingsContributionNotification("carol", "alice", "Chez nous", ContributorSide.OTHER_MEMBER, forBob, finance));
+    }
+
+    @Test
+    void a_deposit_by_its_author_reads_as_theirs() {
+        SavingsDeposit own = depositFrom(aliceId, "700.00");
+
+        adapter().savingsDeposited(gesture, own, List.of(carol));
+
+        assertThat(sent(1).getFirst().notification()).isEqualTo(
+            new SavingsContributionNotification("carol", "alice", "Chez nous", ContributorSide.AUTHOR, own, finance));
+    }
+
+    @Test
+    void a_deposit_that_reaches_the_goal_falls_back_on_the_plain_deposit() {
+        SavingsDeposit last = depositFrom(aliceId, "1000.00");
+
+        adapter().savingsDeposited(gesture, last, List.of(carol));
+
+        NotificationRequest request = sent(1).getFirst();
+        assertThat(request.recipientId()).isEqualTo(carol.userId());
+        assertThat(request.notification()).isEqualTo(
+            new SavingsGoalReachedNotification("carol", "alice", "Chez nous", ContributorSide.AUTHOR, last, finance));
+        assertThat(request.fallback()).isEqualTo(
+            new SavingsContributionNotification("carol", "alice", "Chez nous", ContributorSide.AUTHOR, last, finance));
+    }
+
+    @Test
+    void a_deposit_short_of_the_goal_has_no_fallback() {
+        adapter().savingsDeposited(gesture, depositFrom(aliceId, "999.99"), List.of(carol));
+
+        assertThat(sent(1).getFirst().fallback()).isNull();
+    }
+
+    @Test
+    void the_goal_events_reach_their_readers() {
+        GoalFacts after = new GoalFacts("Vacances", new BigDecimal("1200.00"), null);
+
+        adapter().savingsGoalCreated(gesture, holidays, List.of(bob));
+        adapter().savingsGoalUpdated(gesture, holidays, after, List.of(bob));
+        adapter().savingsGoalDeleted(gesture, holidays, new BigDecimal("300.00"), List.of(), List.of(bob));
+
+        assertThat(sent(3)).extracting(NotificationRequest::notification).containsExactly(
+            new SavingsGoalCreatedNotification("bob", "alice", "Chez nous", holidays, finance),
+            new SavingsGoalUpdatedNotification("bob", "alice", "Chez nous", holidays, after, finance),
+            new SavingsGoalDeletedNotification("bob", "alice", "Chez nous", holidays, new BigDecimal("300.00"), List.of(), finance));
     }
 }

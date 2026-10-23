@@ -1,8 +1,12 @@
 package com.nido.api.finance.infrastructure.notification;
 
+import com.nido.api.finance.domain.model.ContributorSide;
 import com.nido.api.finance.domain.model.Gesture;
+import com.nido.api.finance.domain.model.GoalFacts;
 import com.nido.api.finance.domain.model.Involved;
+import com.nido.api.finance.domain.model.MemberShare;
 import com.nido.api.finance.domain.model.OperationFacts;
+import com.nido.api.finance.domain.model.SavingsDeposit;
 import com.nido.api.finance.domain.model.SeriesFacts;
 import com.nido.api.finance.domain.port.out.FinanceNotificationPort;
 import com.nido.api.mail.domain.model.AppPath;
@@ -12,6 +16,7 @@ import com.nido.api.notifications.domain.model.NotificationRequest;
 import com.nido.api.space.domain.model.Addressee;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -64,6 +69,49 @@ public class FinanceNotificationAdapter implements FinanceNotificationPort {
     public void recurringStopped(Gesture gesture, SeriesFacts series, List<Addressee> readers) {
         readers.forEach(reader -> tell(reader, new RecurringStoppedNotification(reader.username(), reader.userId(),
             gesture.actorName(), gesture.spaceName(), series, finance(gesture.spaceId()))));
+    }
+
+    @Override
+    public void savingsDeposited(Gesture gesture, SavingsDeposit deposit, List<Addressee> readers) {
+        readers.forEach(reader -> {
+            ContributorSide side = sideOf(deposit, gesture, reader);
+            SavingsContributionNotification plain = new SavingsContributionNotification(reader.username(),
+                gesture.actorName(), gesture.spaceName(), side, deposit, finance(gesture.spaceId()));
+            if (deposit.reachesGoal()) {
+                // Whoever switched "goal reached" off still hears of the deposit, as they would have of any other.
+                notify.notify(new NotificationRequest(reader.userId(), new SavingsGoalReachedNotification(reader.username(),
+                    gesture.actorName(), gesture.spaceName(), side, deposit, finance(gesture.spaceId())), null, plain));
+            } else {
+                tell(reader, plain);
+            }
+        });
+    }
+
+    @Override
+    public void savingsGoalCreated(Gesture gesture, GoalFacts goal, List<Addressee> readers) {
+        readers.forEach(reader -> tell(reader, new SavingsGoalCreatedNotification(reader.username(), gesture.actorName(),
+            gesture.spaceName(), goal, finance(gesture.spaceId()))));
+    }
+
+    @Override
+    public void savingsGoalUpdated(Gesture gesture, GoalFacts before, GoalFacts after, List<Addressee> readers) {
+        readers.forEach(reader -> tell(reader, new SavingsGoalUpdatedNotification(reader.username(), gesture.actorName(),
+            gesture.spaceName(), before, after, finance(gesture.spaceId()))));
+    }
+
+    @Override
+    public void savingsGoalDeleted(Gesture gesture, GoalFacts goal, BigDecimal saved, List<MemberShare> savedByMember,
+                                   List<Addressee> readers) {
+        readers.forEach(reader -> tell(reader, new SavingsGoalDeletedNotification(reader.username(), gesture.actorName(),
+            gesture.spaceName(), goal, saved, savedByMember, finance(gesture.spaceId()))));
+    }
+
+    /** Whose deposit it is to this reader: the author's own, the reader's, or another member's. */
+    private static ContributorSide sideOf(SavingsDeposit deposit, Gesture gesture, Addressee reader) {
+        if (deposit.contributorId().equals(gesture.actorId())) {
+            return ContributorSide.AUTHOR;
+        }
+        return deposit.contributorId().equals(reader.userId()) ? ContributorSide.READER : ContributorSide.OTHER_MEMBER;
     }
 
     private void tell(Addressee reader, Notification notification) {
