@@ -14,4 +14,11 @@ public record SavingsGoal(UUID id, UUID spaceId, String name, BigDecimal targetA
         Objects.requireNonNull(color, "color");
         Objects.requireNonNull(glyph, "glyph");
     }
+
+    /** Whether its members see it differently than {@code other}: its name, target or date — not its colour or icon. */
+    public boolean differsForMembersFrom(SavingsGoal other) {
+        return !name.equals(other.name)
+            || targetAmount.compareTo(other.targetAmount) != 0
+            || !Objects.equals(targetDate, other.targetDate);
+    }
 }
