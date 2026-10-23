@@ -3,7 +3,7 @@ package com.nido.api.calendar.infrastructure.web;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.TestSpaces;
-import com.nido.api.calendar.domain.model.SubscriptionTokens;
+import com.nido.api.calendar.infrastructure.security.NidoSubscriptionTokenGenerator;
 import com.nido.api.instance.InstanceSettingsTestSupport;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.instance.domain.port.out.SettingsStorePort;
@@ -143,7 +143,7 @@ class IcalFeedControllerIT {
 
         List<MockHttpServletResponse> answers = new ArrayList<>();
         answers.add(mockMvc.perform(get("/ical/not-a-token.ics")).andReturn().getResponse());
-        answers.add(mockMvc.perform(get("/ical/" + SubscriptionTokens.newToken() + ".ics")).andReturn().getResponse());
+        answers.add(mockMvc.perform(get("/ical/" + new NidoSubscriptionTokenGenerator().generate() + ".ics")).andReturn().getResponse());
 
         // Bob leaves the space behind the application's back: his address reads nothing any more.
         jdbc.update("DELETE FROM space_members WHERE user_id = ?", bobId);
