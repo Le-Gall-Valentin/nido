@@ -35,6 +35,7 @@ import static com.nido.api.calendar.infrastructure.ical.Ical4jImportReaderAdapte
 import static com.nido.api.calendar.infrastructure.ical.Ical4jImportReaderAdapterTest.TODAY;
 import static com.nido.api.calendar.infrastructure.ical.Ical4jImportReaderAdapterTest.ics;
 import static com.nido.api.calendar.infrastructure.ical.Ical4jImportReaderAdapterTest.vevent;
+import static com.nido.api.calendar.infrastructure.ical.Ical4jImportReaderAdapterTest.NOTHING_KNOWN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
@@ -45,7 +46,7 @@ class RecurringImportTest {
     private final Ical4jImportReaderAdapter reader = new Ical4jImportReaderAdapter();
 
     private ImportGroup only(String content, ZoneId zone) {
-        ImportReading reading = reader.read(content, zone, TODAY, Locale.FRENCH);
+        ImportReading reading = reader.read(content, zone, TODAY, Locale.FRENCH, NOTHING_KNOWN);
         assertThat(reading.groups()).hasSize(1);
         return reading.groups().getFirst();
     }
@@ -156,7 +157,7 @@ class RecurringImportTest {
     @Test
     void anHourlyRuleIsUnfoldedOnItsWindowAndSaidPartial() {
         ImportReading reading = reader.read(ics(vevent("h@test", "SUMMARY:Pilule", "DTSTART:20261013T080000",
-            "DTEND:20261013T081500", "RRULE:FREQ=HOURLY;INTERVAL=2")), PARIS, TODAY, Locale.FRENCH);
+            "DTEND:20261013T081500", "RRULE:FREQ=HOURLY;INTERVAL=2")), PARIS, TODAY, Locale.FRENCH, NOTHING_KNOWN);
         ImportGroup group = reading.groups().getFirst();
         assertThat(group.events()).hasSize(500);
         assertThat(reading.notes()).extracting(note -> note.kind()).containsExactly(ImportNoteKind.UNFOLDED_PARTIAL);
@@ -189,7 +190,7 @@ class RecurringImportTest {
     void aRuleOfSecondsOrMinutesIsSetAsideAndSaidSo() {
         for (String rule : new String[] {"FREQ=SECONDLY", "FREQ=MINUTELY;INTERVAL=3", "FREQ=SECONDLY;BYMONTH=2"}) {
             ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(2), () -> reader.read(ics(vevent("s@test",
-                "SUMMARY:Tic", "DTSTART:20261013T080000", "RRULE:" + rule)), PARIS, TODAY, Locale.FRENCH), rule);
+                "SUMMARY:Tic", "DTSTART:20261013T080000", "RRULE:" + rule)), PARIS, TODAY, Locale.FRENCH, NOTHING_KNOWN), rule);
             assertThat(reading.groups()).as(rule).isEmpty();
             assertThat(reading.ignored()).as(rule).isEqualTo(1);
             assertThat(reading.notes()).extracting(note -> note.kind(), note -> note.detail()).as(rule)
@@ -200,7 +201,7 @@ class RecurringImportTest {
     @Test
     void aCountToFollowFromFarBackAtASecondRhythmIsSetAsideAndSaidSo() {
         ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(10), () -> reader.read(ics(vevent("k@test",
-            "SUMMARY:Pouls", "DTSTART:20000101T000000", "RRULE:FREQ=SECONDLY;COUNT=2000000000")), PARIS, TODAY, Locale.FRENCH));
+            "SUMMARY:Pouls", "DTSTART:20000101T000000", "RRULE:FREQ=SECONDLY;COUNT=2000000000")), PARIS, TODAY, Locale.FRENCH, NOTHING_KNOWN));
         assertThat(reading.groups()).isEmpty();
         assertThat(reading.ignored()).isEqualTo(1);
         assertThat(reading.notes()).extracting(note -> note.kind(), note -> note.detail())
@@ -215,7 +216,7 @@ class RecurringImportTest {
         ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(10), () -> reader.read(ics(vevent("y@test",
             "SUMMARY:Tout", "DTSTART:20261013T080000",
             "RRULE:FREQ=YEARLY;BYYEARDAY=" + days + ";BYHOUR=" + hours + ";BYMINUTE=" + minutes + ";BYSECOND=" + minutes)),
-            PARIS, TODAY, Locale.FRENCH));
+            PARIS, TODAY, Locale.FRENCH, NOTHING_KNOWN));
         assertThat(reading.groups()).isEmpty();
         assertThat(reading.notes()).extracting(note -> note.detail()).containsExactly("TOO_HEAVY");
     }
@@ -230,7 +231,7 @@ class RecurringImportTest {
     }
 
     private ImportReading read(String content) {
-        return assertTimeoutPreemptively(Duration.ofSeconds(5), () -> reader.read(content, PARIS, TODAY, Locale.FRENCH));
+        return assertTimeoutPreemptively(Duration.ofSeconds(5), () -> reader.read(content, PARIS, TODAY, Locale.FRENCH, NOTHING_KNOWN));
     }
 
     @Test
@@ -344,7 +345,7 @@ class RecurringImportTest {
     @Test
     void anUnfoldedRuleWhoseOccurrencesAllLieOutsideTheWindowIsStillSaid() {
         ImportReading reading = reader.read(ics(vevent("p@test", "SUMMARY:Réunion", "DTSTART;VALUE=DATE:20150331",
-            "RRULE:FREQ=MONTHLY;BYDAY=5TU;COUNT=3")), PARIS, TODAY, Locale.FRENCH);
+            "RRULE:FREQ=MONTHLY;BYDAY=5TU;COUNT=3")), PARIS, TODAY, Locale.FRENCH, NOTHING_KNOWN);
         assertThat(reading.notes()).extracting(note -> note.kind(), note -> note.detail())
             .containsExactly(tuple(ImportNoteKind.UNFOLDED_PARTIAL, "0"));
     }

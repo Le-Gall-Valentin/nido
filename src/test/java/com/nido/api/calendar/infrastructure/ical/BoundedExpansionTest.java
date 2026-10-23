@@ -14,6 +14,7 @@ import static com.nido.api.calendar.infrastructure.ical.Ical4jImportReaderAdapte
 import static com.nido.api.calendar.infrastructure.ical.Ical4jImportReaderAdapterTest.TODAY;
 import static com.nido.api.calendar.infrastructure.ical.Ical4jImportReaderAdapterTest.ics;
 import static com.nido.api.calendar.infrastructure.ical.Ical4jImportReaderAdapterTest.vevent;
+import static com.nido.api.calendar.infrastructure.ical.Ical4jImportReaderAdapterTest.NOTHING_KNOWN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
@@ -29,7 +30,7 @@ class BoundedExpansionTest {
     private final Ical4jImportReaderAdapter reader = new Ical4jImportReaderAdapter();
 
     private ImportReading read(String... events) {
-        return assertTimeoutPreemptively(HANG_GUARD, () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH));
+        return assertTimeoutPreemptively(HANG_GUARD, () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH, NOTHING_KNOWN));
     }
 
     private static void setAside(ImportReading reading, String detail) {
@@ -90,7 +91,7 @@ class BoundedExpansionTest {
         String[] copies = IntStream.range(0, 300).mapToObj(i -> vevent("b" + i + "@test", "SUMMARY:Copie " + i,
             "DTSTART:15000101T000000", rule)).toArray(String[]::new);
         ImportReading reading = assertTimeoutPreemptively(HANG_GUARD,
-            () -> reader.read(ics(copies), PARIS, TODAY, Locale.FRENCH));
+            () -> reader.read(ics(copies), PARIS, TODAY, Locale.FRENCH, NOTHING_KNOWN));
         assertThat(reading.ignored()).isGreaterThanOrEqualTo(298);
         assertThat(reading.notes()).filteredOn(note -> note.kind() == ImportNoteKind.IGNORED)
             .extracting(ImportNote::detail).containsOnly("TOO_HEAVY");
@@ -121,7 +122,7 @@ class BoundedExpansionTest {
             : vevent("n" + i + "@test", "SUMMARY:Hebdo " + i, "DTSTART;VALUE=DATE:20150105", "RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=10"))
             .toArray(String[]::new);
         ImportReading reading = assertTimeoutPreemptively(HANG_GUARD,
-            () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH));
+            () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH, NOTHING_KNOWN));
         assertThat(reading.ignored()).isZero();
         assertThat(reading.groups()).hasSize(1_000).allSatisfy(group -> assertThat(group.series()).isNotNull());
     }
@@ -137,7 +138,7 @@ class BoundedExpansionTest {
         IntStream.range(0, 10).forEach(i -> events.add(vevent("h" + i + "@test", "SUMMARY:Lourd " + i, "DTSTART:15000101T000000", heavy)));
         events.add(vevent("k@test", "SUMMARY:Court", "DTSTART;VALUE=DATE:20260105", "RRULE:FREQ=DAILY;COUNT=5"));
         ImportReading reading = assertTimeoutPreemptively(HANG_GUARD,
-            () -> reader.read(ics(events.toArray(String[]::new)), PARIS, TODAY, Locale.FRENCH));
+            () -> reader.read(ics(events.toArray(String[]::new)), PARIS, TODAY, Locale.FRENCH, NOTHING_KNOWN));
         // The wrapped one, and all but one or two of the heavy ones, are refused: a negative bill would have freed the budget.
         assertThat(reading.ignored()).isGreaterThanOrEqualTo(9);
         assertThat(reading.notes()).filteredOn(note -> note.kind() == ImportNoteKind.IGNORED)
@@ -150,7 +151,7 @@ class BoundedExpansionTest {
             "DTSTART;TZID=Europe/Berlin:20230105T100000", "DTEND;TZID=Europe/Berlin:20230105T110000",
             "RRULE:FREQ=WEEKLY;BYDAY=TH;UNTIL=99991231T000000Z")).toArray(String[]::new);
         ImportReading reading = assertTimeoutPreemptively(HANG_GUARD,
-            () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH));
+            () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH, NOTHING_KNOWN));
         assertThat(reading.groups()).hasSize(1_000).allSatisfy(group -> assertThat(group.series()).isNotNull());
     }
 
@@ -159,7 +160,7 @@ class BoundedExpansionTest {
         String[] events = IntStream.range(0, 1_000).mapToObj(i -> vevent("e" + i + "@test", "SUMMARY:Sans fin " + i,
             "DTSTART;VALUE=DATE:20260105", "RRULE:FREQ=DAILY;COUNT=2000000000")).toArray(String[]::new);
         ImportReading reading = assertTimeoutPreemptively(HANG_GUARD,
-            () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH));
+            () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH, NOTHING_KNOWN));
         assertThat(reading.ignored()).isPositive();
         assertThat(reading.notes()).filteredOn(note -> note.kind() == ImportNoteKind.IGNORED)
             .extracting(ImportNote::detail).containsOnly("TOO_HEAVY");

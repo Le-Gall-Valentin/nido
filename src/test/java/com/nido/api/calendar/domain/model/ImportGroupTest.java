@@ -19,7 +19,11 @@ class ImportGroupTest {
             Set.of(LocalDate.of(2026, 1, 6), LocalDate.of(2026, 1, 7), LocalDate.of(2026, 1, 8)),
             List.of(new ImportedOccurrence(LocalDate.of(2026, 1, 9), event), new ImportedOccurrence(LocalDate.of(2026, 1, 10), event)));
 
+        ImportGroup group = new ImportGroup("a@test", List.of(event), series, false, 0);
+
         // 1 event + 1 series + 2 edited occurrences + 3 cancelled slots
-        assertThat(new ImportGroup("a@test", List.of(event), series, false, 0).rows()).isEqualTo(7);
+        assertThat(group.rows(0)).isEqualTo(7);
+        // The same, and the one taking part in each of the four entries: a personal space's owner.
+        assertThat(group.rows(1)).isEqualTo(11);
     }
 }

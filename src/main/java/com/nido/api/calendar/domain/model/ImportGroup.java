@@ -13,10 +13,13 @@ public record ImportGroup(String uid, List<ImportedEvent> events, ImportedSeries
     }
 
     /**
-     * Every row creating the group writes: its events, its series, the occurrences of the series edited on their own and
-     * the slots it cancelled. What the 10 000 rows of an import are counted in.
+     * Every row creating the group writes: its events, its series and the occurrences of the series edited on their own,
+     * each with a row for each of the {@code participantsPerEntry} taking part, and the slots it cancelled. What the
+     * 10 000 rows of an import are counted in.
      */
-    public int rows() {
-        return events.size() + (series == null ? 0 : 1 + series.editedOccurrences().size() + series.cancelledSlots().size());
+    public int rows(int participantsPerEntry) {
+        int entries = events.size() + (series == null ? 0 : 1 + series.editedOccurrences().size());
+        int cancelled = series == null ? 0 : series.cancelledSlots().size();
+        return entries * (1 + participantsPerEntry) + cancelled;
     }
 }

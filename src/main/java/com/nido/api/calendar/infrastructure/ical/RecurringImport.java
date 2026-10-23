@@ -4,7 +4,6 @@ import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.EventRecurrenceProjector;
 import com.nido.api.calendar.domain.model.EventScheduleValidator;
 import com.nido.api.calendar.domain.model.IcalRecurrence;
-import com.nido.api.calendar.domain.model.ImportNote;
 import com.nido.api.calendar.domain.model.ImportedEvent;
 import com.nido.api.calendar.domain.model.ImportedOccurrence;
 import com.nido.api.calendar.domain.model.ImportedSeries;
@@ -14,19 +13,15 @@ import com.nido.api.calendar.domain.model.Weekdays;
 import net.fortuna.ical4j.model.Property;
 import net.fortuna.ical4j.model.Recur;
 import net.fortuna.ical4j.model.component.VEvent;
-import net.fortuna.ical4j.model.property.DtStart;
 import net.fortuna.ical4j.model.property.RRule;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
-import java.time.zone.ZoneOffsetTransition;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -50,8 +45,6 @@ final class RecurringImport {
     static final int MAX_UNFOLDED = 500;
     /** How far a COUNT is followed to find its last day. */
     private static final int COUNT_HORIZON_YEARS = 100;
-    /** How long an open-ended series is checked to keep its hours when its zone is not the space's. */
-    private static final int OFFSET_YEARS = 10;
     /** Every kind of year — the weekday of its first day, leap or not — comes round within 28 years (within a century). */
     static final int RULE_CYCLE_YEARS = 28;
     /** How many occurrences are asked of ical4j to check a series: far more than any rule nido can say gives in two years. */
@@ -70,7 +63,7 @@ final class RecurringImport {
     }
 
     /** May throw {@link BoundedExpansion.Refused}, or whatever ical4j throws on a rule it cannot expand: the caller isolates the group. */
-    Result translate(VEvent master, List<VEvent> overrides, IcalTexts texts, IcalTimes times, List<ImportNote> notes) {
+    Result translate(VEvent master, List<VEvent> overrides, IcalTexts texts, IcalTimes times, ReadingReport report) {
         List<RRule<Temporal>> rules = master.getProperties(Property.RRULE);
         boolean oneRule = rules.size() == 1 && master.getProperties(Property.EXRULE).isEmpty();
         if (oneRule && BoundedExpansion.mayBeSeries(rules.getFirst().getRecur())) {
@@ -85,7 +78,7 @@ final class RecurringImport {
                 ownStart(texts, times, excluded, overrides).ifPresent(events::add);
                 for (VEvent override : overrides) {
                     if (!IcalGroups.cancelled(override)) {
-                        eventOf(override, notes, true).ifPresent(events::add);
+                        eventOf(override, report, true).ifPresent(events::add);
                     }
                 }
                 return new Result(null, events, false, 0, false);
@@ -98,13 +91,13 @@ final class RecurringImport {
                     .filter(candidate -> expanded.size() < VERIFIED_CAP
                         && projected(candidate, from, to, excluded).equals(expanded)
                         && expansion.rdates(master).stream().allMatch(at -> excluded.contains(at) || isSlotStart(candidate, at))
-                        && offsetsStay(master, candidate));
+                        && new ZoneShifts(zone, expansion).keepTheHoursOf(master, candidate));
                 if (series.isPresent()) {
-                    return asResult(series.get(), overrides, texts, times, first, excluded, notes);
+                    return asResult(series.get(), overrides, texts, times, first, excluded, report);
                 }
             }
         }
-        return unfold(master, overrides, texts, times, notes);
+        return unfold(master, overrides, texts, times, report);
     }
 
     private Optional<RecurringEventSeries> asSeries(VEvent master, IcalTexts texts, IcalTimes times, LocalDateTime first) {
@@ -170,61 +163,6 @@ final class RecurringImport {
         return null;
     }
 
-    /**
-     * A timed event written in another zone keeps its hours in the space's only while the two zones' offsets keep the same
-     * gap — the weeks when the United States and Europe disagree on summer time break it, and no check window of two years
-     * is sure to meet them. Walked on both zones' transitions from DTSTART to the series' end, or ten years on.
-     */
-    private boolean offsetsStay(VEvent master, RecurringEventSeries series) {
-        Temporal start = master.<DtStart<Temporal>>getProperty(Property.DTSTART).orElseThrow().getDate();
-        ZoneId source = switch (start) {
-            case ZonedDateTime zoned -> zoned.getZone();
-            case OffsetDateTime offset -> offset.getOffset();
-            case Instant instant -> ZoneOffset.UTC;
-            default -> null;
-        };
-        if (series.allDay() || source == null || source.getRules().equals(zone.getRules())) {
-            return true;
-        }
-        Instant first = IcalSupport.toLocal(start, zone).atZone(zone).toInstant();
-        Instant last = (series.endDate() == null ? first.atZone(zone).plusYears(OFFSET_YEARS)
-            : series.endDate().plusDays(1).atStartOfDay(zone)).toInstant();
-        // Past the last transition either zone lists, each zone's rules repeat yearly, but two rules may agree some years
-        // and not others ("the Sunday on or after the 24th" against "the last Sunday"). Every kind of year comes round
-        // within 28 years: walking that far says it for good, whatever the rules.
-        Instant explicitEnd = first;
-        for (ZoneId id : List.of(zone, source)) {
-            List<ZoneOffsetTransition> listed = id.getRules().getTransitions();
-            if (!listed.isEmpty() && listed.getLast().getInstant().isAfter(explicitEnd)) {
-                explicitEnd = listed.getLast().getInstant();
-            }
-        }
-        Instant stop = explicitEnd.atZone(ZoneOffset.UTC).plusYears(RULE_CYCLE_YEARS).toInstant();
-        if (stop.isBefore(last)) {
-            last = stop;
-        }
-        int gap = gap(source, first);
-        Instant at = first;
-        while (true) {
-            ZoneOffsetTransition mine = zone.getRules().nextTransition(at);
-            ZoneOffsetTransition theirs = source.getRules().nextTransition(at);
-            Instant next = mine == null ? (theirs == null ? null : theirs.getInstant())
-                : theirs == null || mine.getInstant().isBefore(theirs.getInstant()) ? mine.getInstant() : theirs.getInstant();
-            if (next == null || next.isAfter(last)) {
-                return true;
-            }
-            expansion.bill(1);
-            if (gap(source, next) != gap) {
-                return false;
-            }
-            at = next;
-        }
-    }
-
-    private int gap(ZoneId source, Instant at) {
-        return source.getRules().getOffset(at).getTotalSeconds() - zone.getRules().getOffset(at).getTotalSeconds();
-    }
-
     private List<LocalDateTime> projected(RecurringEventSeries series, ZonedDateTime from, ZonedDateTime to,
                                           Set<LocalDateTime> excluded) {
         LocalDateTime start = from.toLocalDateTime();
@@ -254,7 +192,7 @@ final class RecurringImport {
     }
 
     private Result asResult(RecurringEventSeries series, List<VEvent> overrides, IcalTexts texts, IcalTimes times,
-                            LocalDateTime first, Set<LocalDateTime> excluded, List<ImportNote> notes) {
+                            LocalDateTime first, Set<LocalDateTime> excluded, ReadingReport report) {
         List<ImportedEvent> ownEvents = new ArrayList<>();
         if (!first.equals(times.start())) {
             ownStart(texts, times, excluded, overrides).ifPresent(ownEvents::add);
@@ -270,7 +208,7 @@ final class RecurringImport {
             }
             LocalDate slot = replaced.get().toLocalDate();
             boolean isCancelled = IcalGroups.cancelled(override);
-            Optional<ImportedEvent> event = eventOf(override, notes, !isCancelled);
+            Optional<ImportedEvent> event = eventOf(override, report, !isCancelled);
             if (isSlotStart(series, replaced.get())) {
                 if (isCancelled) {
                     cancelled.add(slot);
@@ -299,17 +237,17 @@ final class RecurringImport {
     }
 
     /** The event an override says, with the usual notes of its texts and times when {@code noted}. */
-    private Optional<ImportedEvent> eventOf(VEvent override, List<ImportNote> notes, boolean noted) {
+    private Optional<ImportedEvent> eventOf(VEvent override, ReadingReport report, boolean noted) {
         return IcalTimes.of(override, zone).map(t -> {
             IcalTexts texts = IcalTexts.of(override, locale);
             if (noted) {
-                Ical4jImportReaderAdapter.notesOf(texts, t, notes);
+                Ical4jImportReaderAdapter.notesOf(texts, t, report);
             }
             return Ical4jImportReaderAdapter.event(texts, t);
         });
     }
 
-    private Result unfold(VEvent master, List<VEvent> overrides, IcalTexts texts, IcalTimes times, List<ImportNote> notes) {
+    private Result unfold(VEvent master, List<VEvent> overrides, IcalTexts texts, IcalTimes times, ReadingReport report) {
         ZonedDateTime from = today.minusYears(1).atStartOfDay(zone);
         ZonedDateTime to = today.plusYears(VERIFIED_YEARS).plusDays(1).atStartOfDay(zone);
         Set<LocalDateTime> replaced = IcalGroups.slotsTaken(overrides, zone);
@@ -324,7 +262,7 @@ final class RecurringImport {
             if (!IcalGroups.cancelled(override)) {
                 IcalTimes.of(override, zone)
                     .filter(t -> !t.start().isBefore(from.toLocalDateTime()) && t.start().isBefore(to.toLocalDateTime()))
-                    .flatMap(t -> eventOf(override, notes, true))
+                    .flatMap(t -> eventOf(override, report, true))
                     .ifPresent(events::add);
             }
         }

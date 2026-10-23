@@ -185,7 +185,21 @@ public abstract sealed class CalendarException extends RuntimeException
 
     /** Thrown when a file holds more than an import takes at once: 5 000 events, or 10 000 rows to write. */
     public static final class ImportTooLarge extends CalendarException {
-        public ImportTooLarge(String what) { super("This file is too large to import: " + what); }
+        /** Which limit the file passes. */
+        public enum Limit { EVENTS, ROWS }
+
+        private final Limit limit;
+        private final int maximum;
+
+        public ImportTooLarge(Limit limit, int maximum) {
+            super("This file is too large to import: more than " + maximum + " " + limit.name().toLowerCase());
+            this.limit = limit;
+            this.maximum = maximum;
+        }
+
+        public Limit limit() { return limit; }
+
+        public int maximum() { return maximum; }
     }
 
     /** Thrown when the address of a calendar to follow is not an http(s) address of a host, without credentials. */

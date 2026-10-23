@@ -58,8 +58,11 @@ public class CalendarExceptionHandler {
             case CalendarException.PublicUrlMissing ignored -> new CalendarErrorResponse(409,
                 "The public address of this installation is not set: an administrator sets it in the settings.",
                 "public_url_missing");
-            case CalendarException.ImportTooLarge ex ->
-                new CalendarErrorResponse(400, ex.getMessage() + ".", "import_too_large");
+            case CalendarException.ImportTooLarge ex -> new CalendarErrorResponse(400, switch (ex.limit()) {
+                case EVENTS -> "A file imported holds at most " + ex.maximum() + " events.";
+                case ROWS -> "An import writes at most " + ex.maximum()
+                    + " rows: its events and series, their occurrences edited or cancelled, and who takes part.";
+            }, "import_too_large");
             case CalendarException.ImportFileTooLarge ex -> new CalendarErrorResponse(413,
                 "Files up to " + ex.maximumMegabytes() + " MB can be imported.", "file_too_large");
             case CalendarException.InvalidFeedAddress ignored ->

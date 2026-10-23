@@ -5,6 +5,7 @@ import com.nido.api.calendar.domain.model.ImportGroup;
 import com.nido.api.calendar.domain.model.ImportNote;
 import com.nido.api.calendar.domain.model.ImportNoteKind;
 import com.nido.api.calendar.domain.model.ImportReading;
+import com.nido.api.calendar.domain.model.ImportTarget;
 import com.nido.api.calendar.domain.model.ImportedEvent;
 import org.junit.jupiter.api.Test;
 
@@ -15,6 +16,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,6 +29,9 @@ class Ical4jImportReaderAdapterTest {
     static final ZoneId TORONTO = ZoneId.of("America/Toronto");
     static final LocalDate TODAY = LocalDate.of(2026, 10, 13);
 
+    /** A space holding none of the file, and an import of a shared space's size. */
+    static final ImportTarget NOTHING_KNOWN = new ImportTarget(uids -> Set.of(), 10_000, 0);
+
     final Ical4jImportReaderAdapter reader = new Ical4jImportReaderAdapter();
 
     static String ics(String... events) {
@@ -38,7 +43,7 @@ class Ical4jImportReaderAdapterTest {
     }
 
     ImportReading read(String content, ZoneId zone) {
-        return reader.read(content, zone, TODAY, Locale.FRENCH);
+        return reader.read(content, zone, TODAY, Locale.FRENCH, NOTHING_KNOWN);
     }
 
     static ImportedEvent onlyEvent(ImportReading reading) {
@@ -395,6 +400,47 @@ class Ical4jImportReaderAdapterTest {
             assertThat(onlyEvent(reading).title()).as(odd).isEqualTo("Anniversaire");
             assertThat(reading.ignored()).as(odd).isZero();
         }
+    }
+
+    @Test
+    void whatTheSpaceHoldsAlreadyIsSkippedBeforeAnythingOfItIsReadOrSaid() {
+        // Two masters of one UID would be noted DUPLICATE_UID: skipped as known, the event says nothing at all.
+        String content = ics(vevent("a@test", "SUMMARY:Déjà là", "DTSTART:20261017T090000"),
+            vevent("a@test", "SUMMARY:Déjà là", "DTSTART:20261018T090000"),
+            vevent("n@test", "SUMMARY:Nouveau", "DTSTART:20261019T090000"));
+
+        ImportReading reading = reader.read(content, PARIS, TODAY, Locale.FRENCH,
+            new ImportTarget(uids -> uids.contains("a@test") ? Set.of("a@test") : Set.of(), 10_000, 0));
+
+        assertThat(onlyEvent(reading).title()).isEqualTo("Nouveau");
+        assertThat(reading.alreadyImported()).isEqualTo(1);
+        assertThat(reading.ignored()).isZero();
+        assertThat(reading.notes()).isEmpty();
+    }
+
+    @Test
+    void aFileIsRefusedAsSoonAsWhatItWouldWritePassesTheRowsAndWhoTakesPartCounts() {
+        String five = ics(java.util.stream.IntStream.range(0, 5)
+            .mapToObj(i -> vevent("e" + i + "@test", "SUMMARY:E" + i, "DTSTART:2026101" + i + "T090000")).toArray(String[]::new));
+
+        assertThat(reader.read(five, PARIS, TODAY, Locale.FRENCH, new ImportTarget(uids -> Set.of(), 5, 0)).groups()).hasSize(5);
+        assertThat(reader.read(five, PARIS, TODAY, Locale.FRENCH, new ImportTarget(uids -> Set.of(), 10, 1)).groups()).hasSize(5);
+        assertThatThrownBy(() -> reader.read(five, PARIS, TODAY, Locale.FRENCH, new ImportTarget(uids -> Set.of(), 9, 1)))
+            .isInstanceOfSatisfying(CalendarException.ImportTooLarge.class, tooLarge -> {
+                assertThat(tooLarge.limit()).isEqualTo(CalendarException.ImportTooLarge.Limit.ROWS);
+                assertThat(tooLarge.maximum()).isEqualTo(9);
+            });
+    }
+
+    @Test
+    void aRuleUnfoldedPastTheRowsStopsTheReadingThere() {
+        // Each rule unfolds into some 500 events: the reading stops at the third, not after reading them all.
+        String content = ics(java.util.stream.IntStream.range(0, 50)
+            .mapToObj(i -> vevent("d" + i + "@test", "SUMMARY:D" + i, "DTSTART:20261013T0" + (i % 10) + "0000",
+                "RRULE:FREQ=DAILY;BYSETPOS=1")).toArray(String[]::new));
+
+        assertThatThrownBy(() -> reader.read(content, PARIS, TODAY, Locale.FRENCH, new ImportTarget(uids -> Set.of(), 1_000, 0)))
+            .isInstanceOf(CalendarException.ImportTooLarge.class);
     }
 
     @Test
