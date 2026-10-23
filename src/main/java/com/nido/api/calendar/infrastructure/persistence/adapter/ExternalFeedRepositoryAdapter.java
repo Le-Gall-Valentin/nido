@@ -3,6 +3,9 @@ package com.nido.api.calendar.infrastructure.persistence.adapter;
 import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.ExternalFeed;
 import com.nido.api.calendar.domain.model.FeedError;
+import com.nido.api.calendar.domain.model.FeedToShow;
+import com.nido.api.calendar.domain.port.out.ExternalFeedContentRepository;
+import com.nido.api.calendar.domain.port.out.ExternalFeedRefreshRepository;
 import com.nido.api.calendar.domain.port.out.ExternalFeedRepository;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarExternalFeedContentEntity;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarExternalFeedEntity;
@@ -20,24 +23,37 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * The calendars followed, their files apart (a calendar's file is read only when not in memory already). Each write
+ * changes only the columns it is about (the entity's DynamicUpdate), so that a rename and a refresh at once both stand.
+ */
 @Component
-public class ExternalFeedRepositoryAdapter implements ExternalFeedRepository {
+public class ExternalFeedRepositoryAdapter
+    implements ExternalFeedRepository, ExternalFeedRefreshRepository, ExternalFeedContentRepository {
 
     private final CalendarExternalFeedJpaRepository feeds;
     private final CalendarExternalFeedContentJpaRepository contents;
     private final SpaceSealers sealers;
+    private final CalendarAdvisoryLocks locks;
 
     public ExternalFeedRepositoryAdapter(CalendarExternalFeedJpaRepository feeds,
-                                         CalendarExternalFeedContentJpaRepository contents, SpaceSealers sealers) {
+                                         CalendarExternalFeedContentJpaRepository contents, SpaceSealers sealers,
+                                         CalendarAdvisoryLocks locks) {
         this.feeds = feeds;
         this.contents = contents;
         this.sealers = sealers;
+        this.locks = locks;
     }
 
     @Override
     @Transactional
-    public ExternalFeed create(UUID spaceId, String name, URI url, String color, UUID createdBy,
-                               String content, String etag, String lastModified, Instant fetchedAt) {
+    public Optional<ExternalFeed> createUnlessFollowing(int most, UUID spaceId, String name, URI url, String color,
+                                                        UUID createdBy, String content, String etag, String lastModified,
+                                                        Instant fetchedAt) {
+        locks.lock("external-feeds:" + spaceId);
+        if (feeds.countBySpaceId(spaceId) >= most) {
+            return Optional.empty();
+        }
         SpaceSealer sealer = sealers.forSpace(spaceId);
         CalendarExternalFeedEntity feed = new CalendarExternalFeedEntity();
         feed.setSpaceId(spaceId);
@@ -54,7 +70,7 @@ public class ExternalFeedRepositoryAdapter implements ExternalFeedRepository {
         row.setFeedId(saved.getId());
         row.setContentEncrypted(sealer.seal(CalendarExternalFeedContentEntity.CONTENT, row.getId(), PackedContent.pack(content)));
         contents.saveAndFlush(row);
-        return toDomain(saved);
+        return Optional.of(toDomain(saved));
     }
 
     @Override
@@ -85,6 +101,11 @@ public class ExternalFeedRepositoryAdapter implements ExternalFeedRepository {
     @Transactional
     public void delete(UUID feedId) {
         feeds.deleteById(feedId); // its content goes with it: ON DELETE CASCADE
+    }
+
+    @Override
+    public List<FeedToShow> findShownBySpaceId(UUID spaceId) {
+        return feeds.findShownBySpaceId(spaceId);
     }
 
     @Override
@@ -132,6 +153,12 @@ public class ExternalFeedRepositoryAdapter implements ExternalFeedRepository {
     @Override
     public List<UUID> findDueIds(Instant before, int limit) {
         return feeds.findIdsAttemptedBefore(before, PageRequest.of(0, limit));
+    }
+
+    @Override
+    @Transactional
+    public boolean claimAttempt(UUID feedId, Instant at, Instant lastBefore) {
+        return feeds.claimAttempt(feedId, at, lastBefore) == 1;
     }
 
     @Override

@@ -1,9 +1,9 @@
 package com.nido.api.calendar.infrastructure.source;
 
 import com.nido.api.calendar.domain.model.CalendarOccurrence;
-import com.nido.api.calendar.domain.model.ExternalFeed;
+import com.nido.api.calendar.domain.model.FeedToShow;
 import com.nido.api.calendar.domain.port.out.AccountLanguage;
-import com.nido.api.calendar.domain.port.out.ExternalFeedRepository;
+import com.nido.api.calendar.domain.port.out.ExternalFeedContentRepository;
 import com.nido.api.calendar.infrastructure.ical.Ical4jFeedReaderAdapter;
 import com.nido.api.space.application.port.in.GetSpaceUseCase;
 import com.nido.api.space.domain.model.SpaceDetailView;
@@ -12,7 +12,6 @@ import com.nido.api.space.domain.model.SpaceRole;
 import com.nido.api.space.domain.model.SpaceType;
 import org.junit.jupiter.api.Test;
 
-import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -32,7 +31,7 @@ class ExternalFeedCalendarSourceTest {
         + "BEGIN:VEVENT\r\nUID:a\r\nDTSTAMP:20260901T000000Z\r\nSUMMARY:Vacances\r\n"
         + "DTSTART;VALUE=DATE:20261017\r\nDTEND;VALUE=DATE:20261018\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
 
-    private final ExternalFeedRepository feeds = mock(ExternalFeedRepository.class);
+    private final ExternalFeedContentRepository feeds = mock(ExternalFeedContentRepository.class);
     private final GetSpaceUseCase spaces = mock(GetSpaceUseCase.class);
     private final AccountLanguage language = mock(AccountLanguage.class);
     private final ExternalFeedCalendarSource source =
@@ -40,10 +39,8 @@ class ExternalFeedCalendarSourceTest {
     private final SpaceMembership caller = new SpaceMembership(
         UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), SpaceRole.VIEWER, Instant.now());
 
-    private ExternalFeed feed() {
-        return new ExternalFeed(UUID.randomUUID(), caller.spaceId(), "n", URI.create("https://secret.example/t.ics"),
-            "event-cyan", UUID.randomUUID(), Instant.EPOCH, Instant.parse("2026-10-13T00:00:00Z"),
-            Instant.parse("2026-10-13T00:00:00Z"), null, null, null);
+    private FeedToShow feed() {
+        return new FeedToShow(UUID.randomUUID(), "event-cyan", Instant.parse("2026-10-13T00:00:00Z"));
     }
 
     private void spaceInParis() {
@@ -54,7 +51,7 @@ class ExternalFeedCalendarSourceTest {
 
     @Test
     void aSpaceFollowingNothingCostsNothing() {
-        when(feeds.findBySpaceId(caller.spaceId())).thenReturn(List.of());
+        when(feeds.findShownBySpaceId(caller.spaceId())).thenReturn(List.of());
 
         assertThat(source.occurrencesBetween(caller, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31))).isEmpty();
         verify(spaces, never()).get(any(), any());
@@ -62,10 +59,10 @@ class ExternalFeedCalendarSourceTest {
 
     @Test
     void aCalendarThatCannotBeReadIsSkippedAndTheOthersStillAnswer() {
-        ExternalFeed broken = feed();
-        ExternalFeed fine = feed();
+        FeedToShow broken = feed();
+        FeedToShow fine = feed();
         spaceInParis();
-        when(feeds.findBySpaceId(caller.spaceId())).thenReturn(List.of(broken, fine));
+        when(feeds.findShownBySpaceId(caller.spaceId())).thenReturn(List.of(broken, fine));
         when(feeds.loadContent(broken.id())).thenReturn("<html>not a calendar</html>");
         when(feeds.loadContent(fine.id())).thenReturn(HOLIDAY);
 
@@ -76,10 +73,10 @@ class ExternalFeedCalendarSourceTest {
 
     @Test
     void aCalendarWhoseContentCannotBeLoadedIsSkippedToo() {
-        ExternalFeed unsealable = feed();
-        ExternalFeed fine = feed();
+        FeedToShow unsealable = feed();
+        FeedToShow fine = feed();
         spaceInParis();
-        when(feeds.findBySpaceId(caller.spaceId())).thenReturn(List.of(unsealable, fine));
+        when(feeds.findShownBySpaceId(caller.spaceId())).thenReturn(List.of(unsealable, fine));
         when(feeds.loadContent(unsealable.id())).thenThrow(new IllegalStateException("cannot unseal"));
         when(feeds.loadContent(fine.id())).thenReturn(HOLIDAY);
 

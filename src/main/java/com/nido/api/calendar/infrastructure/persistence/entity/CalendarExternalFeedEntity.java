@@ -9,12 +9,15 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.UUID;
 
+// Only the columns changed are written: a rename and a refresh at once each keep what the other writes.
+@DynamicUpdate
 @Entity
 @Table(name = "calendar_external_feeds")
 @Getter

@@ -24,6 +24,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -51,11 +52,12 @@ class FollowExternalFeedHandlerTest {
         when(checker.check(ICS)).thenReturn(new FeedCheck(Optional.of("Vacances scolaires"), 10));
         ExternalFeed created = new ExternalFeed(UUID.randomUUID(), member.spaceId(), "Vacances scolaires", url, "event-cyan",
             member.userId(), NOW, NOW, NOW, null, "\"v1\"", null);
-        when(feeds.create(any(), anyString(), any(), any(), any(), anyString(), any(), any(), any())).thenReturn(created);
+        when(feeds.createUnlessFollowing(anyInt(), any(), anyString(), any(), any(), any(), anyString(), any(), any(), any()))
+            .thenReturn(Optional.of(created));
 
         handler.follow(new FollowExternalFeedCommand("webcal://calendar.google.com/x/basic.ics", " ", "event-cyan"), member);
 
-        verify(feeds).create(member.spaceId(), "Vacances scolaires", url, "event-cyan", member.userId(), ICS, "\"v1\"", null, NOW);
+        verify(feeds).createUnlessFollowing(10, member.spaceId(), "Vacances scolaires", url, "event-cyan", member.userId(), ICS, "\"v1\"", null, NOW);
     }
 
     @Test
@@ -65,7 +67,7 @@ class FollowExternalFeedHandlerTest {
 
         handler.follow(new FollowExternalFeedCommand("https://ecole.example/v.ics", null, null), member);
 
-        verify(feeds).create(eq(member.spaceId()), eq("ecole.example"), any(), any(), any(), anyString(), any(), any(), any());
+        verify(feeds).createUnlessFollowing(eq(10), eq(member.spaceId()), eq("ecole.example"), any(), any(), any(), anyString(), any(), any(), any());
     }
 
     @Test
@@ -75,7 +77,7 @@ class FollowExternalFeedHandlerTest {
         assertThatThrownBy(() -> handler.follow(new FollowExternalFeedCommand("https://slow.example/a.ics", "x", null), member))
             .isInstanceOfSatisfying(CalendarException.FeedUnavailable.class,
                 e -> assertThat(e.error()).isEqualTo(FeedError.of(FeedErrorKind.TIMEOUT)));
-        verify(feeds, never()).create(any(), any(), any(), any(), any(), any(), any(), any(), any());
+        verify(feeds, never()).createUnlessFollowing(anyInt(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -86,6 +88,24 @@ class FollowExternalFeedHandlerTest {
         assertThatThrownBy(() -> handler.follow(new FollowExternalFeedCommand("https://x.example/a.ics", "x", null), member))
             .isInstanceOfSatisfying(CalendarException.FeedUnavailable.class,
                 e -> assertThat(e.error()).isEqualTo(FeedError.of(FeedErrorKind.NOT_ICS)));
+    }
+
+    FollowExternalFeedHandlerTest() {
+        when(feeds.createUnlessFollowing(anyInt(), any(), anyString(), any(), any(), any(), anyString(), any(), any(), any()))
+            .thenAnswer(call -> Optional.of(new ExternalFeed(UUID.randomUUID(), call.getArgument(1), call.getArgument(2),
+                call.getArgument(3), call.getArgument(4), call.getArgument(5), NOW, NOW, NOW, null, null, null)));
+    }
+
+    @Test
+    void aCalendarFollowedMeanwhileUpToTheLimitIsRefusedWhenWritten() {
+        URI url = URI.create("https://x.example/a.ics");
+        when(downloader.download(url, null, null)).thenReturn(new FeedDownload.Downloaded(ICS, null, null));
+        when(checker.check(ICS)).thenReturn(new FeedCheck(Optional.empty(), 10));
+        when(feeds.createUnlessFollowing(anyInt(), any(), anyString(), any(), any(), any(), anyString(), any(), any(), any()))
+            .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> handler.follow(new FollowExternalFeedCommand("https://x.example/a.ics", "x", null), member))
+            .isInstanceOf(CalendarException.TooManyExternalFeeds.class);
     }
 
     @Test
@@ -101,11 +121,11 @@ class FollowExternalFeedHandlerTest {
         when(downloader.download(any(), any(), any())).thenReturn(new FeedDownload.Downloaded(ICS, null, null));
         when(checker.check(ICS)).thenReturn(new FeedCheck(Optional.of("  Club de judo \n"), 10));
         handler.follow(new FollowExternalFeedCommand("https://ecole.example/v.ics", null, null), member);
-        verify(feeds).create(eq(member.spaceId()), eq("Club de judo"), any(), any(), any(), anyString(), any(), any(), any());
+        verify(feeds).createUnlessFollowing(eq(10), eq(member.spaceId()), eq("Club de judo"), any(), any(), any(), anyString(), any(), any(), any());
 
         when(checker.check(ICS)).thenReturn(new FeedCheck(Optional.of("   "), 10));
         handler.follow(new FollowExternalFeedCommand("https://ecole.example/v.ics", null, null), member);
-        verify(feeds).create(eq(member.spaceId()), eq("ecole.example"), any(), any(), any(), anyString(), any(), any(), any());
+        verify(feeds).createUnlessFollowing(eq(10), eq(member.spaceId()), eq("ecole.example"), any(), any(), any(), anyString(), any(), any(), any());
     }
 
     @Test
@@ -116,7 +136,7 @@ class FollowExternalFeedHandlerTest {
 
         handler.follow(new FollowExternalFeedCommand("https://ecole.example/v.ics", name, null), member);
 
-        verify(feeds).create(eq(member.spaceId()), eq("a".repeat(99) + "\uD83D\uDE00"), any(), any(), any(), anyString(), any(), any(), any());
+        verify(feeds).createUnlessFollowing(eq(10), eq(member.spaceId()), eq("a".repeat(99) + "\uD83D\uDE00"), any(), any(), any(), anyString(), any(), any(), any());
     }
 
     @Test
@@ -127,6 +147,6 @@ class FollowExternalFeedHandlerTest {
         assertThatThrownBy(() -> handler.follow(new FollowExternalFeedCommand("https://x.example/a.ics", "x", null), member))
             .isInstanceOfSatisfying(CalendarException.FeedUnavailable.class,
                 e -> assertThat(e.error()).isEqualTo(FeedError.of(FeedErrorKind.TOO_LARGE)));
-        verify(feeds, never()).create(any(), any(), any(), any(), any(), any(), any(), any(), any());
+        verify(feeds, never()).createUnlessFollowing(anyInt(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 }

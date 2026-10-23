@@ -6,11 +6,12 @@ import com.nido.api.calendar.domain.model.FeedDownload;
 import com.nido.api.calendar.domain.model.FeedError;
 import com.nido.api.calendar.domain.model.FeedErrorKind;
 import com.nido.api.calendar.domain.port.out.ExternalFeedDownloader;
-import com.nido.api.calendar.domain.port.out.ExternalFeedRepository;
+import com.nido.api.calendar.domain.port.out.ExternalFeedRefreshRepository;
 import com.nido.api.calendar.domain.port.out.IcalFeedChecker;
 import com.nido.api.shared.annotation.ApplicationService;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 
 /**
@@ -21,12 +22,15 @@ import java.time.Instant;
 @ApplicationService
 public class ExternalFeedRefresher {
 
-    private final ExternalFeedRepository feeds;
+    /** A calendar is asked at most once a minute: what a member can ask, and what never doubles a scheduled asking. */
+    static final Duration AT_MOST_EVERY = Duration.ofMinutes(1);
+
+    private final ExternalFeedRefreshRepository feeds;
     private final ExternalFeedDownloader downloader;
     private final IcalFeedChecker checker;
     private final Clock clock;
 
-    public ExternalFeedRefresher(ExternalFeedRepository feeds, ExternalFeedDownloader downloader, IcalFeedChecker checker,
+    public ExternalFeedRefresher(ExternalFeedRefreshRepository feeds, ExternalFeedDownloader downloader, IcalFeedChecker checker,
                                  Clock clock) {
         this.feeds = feeds;
         this.downloader = downloader;
@@ -34,10 +38,13 @@ public class ExternalFeedRefresher {
         this.clock = clock;
     }
 
+    /** Refuses ({@code RefreshTooSoon}) a calendar asked less than a minute ago, by a member or on its own. */
     public ExternalFeed refresh(ExternalFeed feed) {
         Instant now = clock.instant();
-        // Before asking, so that a second asking within the minute finds it spent and is refused.
-        feeds.markAttempt(feed.id(), now);
+        // Claimed before asking, in one statement: of two askings within the minute, the second is refused.
+        if (!feeds.claimAttempt(feed.id(), now, now.minus(AT_MOST_EVERY))) {
+            throw new CalendarException.RefreshTooSoon();
+        }
         switch (downloader.download(feed.url(), feed.etag(), feed.lastModified())) {
             case FeedDownload.Downloaded downloaded -> {
                 try {

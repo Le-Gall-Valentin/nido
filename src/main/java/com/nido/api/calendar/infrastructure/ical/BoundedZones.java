@@ -128,6 +128,11 @@ final class BoundedZones implements ComponentFactory<VTimeZone> {
         }
     }
 
+    /** The changes the zones of the document list, as ical4j will hold them for as long as the document is kept. */
+    long spent() {
+        return spent;
+    }
+
     /** At most a budget and one rule's bill: no sum can overflow. */
     private void bill(long changes) {
         spent += changes;

@@ -3,7 +3,7 @@ package com.nido.api.calendar.application.handler;
 import com.nido.api.calendar.application.service.ExternalFeedRefresher;
 import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.ExternalFeed;
-import com.nido.api.calendar.domain.port.out.ExternalFeedRepository;
+import com.nido.api.calendar.domain.port.out.ExternalFeedRefreshRepository;
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
@@ -32,7 +32,7 @@ class RefreshDueExternalFeedsHandlerTest {
 
     private static final Instant NOW = Instant.parse("2026-10-13T12:00:00Z");
 
-    private final ExternalFeedRepository feeds = mock(ExternalFeedRepository.class);
+    private final ExternalFeedRefreshRepository feeds = mock(ExternalFeedRefreshRepository.class);
     private final ExternalFeedRefresher refresher = mock(ExternalFeedRefresher.class);
     private final RefreshDueExternalFeedsHandler handler = new RefreshDueExternalFeedsHandler(feeds, refresher,
         Clock.fixed(NOW, ZoneOffset.UTC));
@@ -86,6 +86,19 @@ class RefreshDueExternalFeedsHandlerTest {
 
         verify(refresher, never()).refresh(unreadable);
         verify(refresher).refresh(fine);
+    }
+
+    @Test
+    void aCalendarAMemberJustAskedForIsPassedQuietlyAndTheOthersAreAsked() {
+        ExternalFeed justAsked = feed(1, NOW.minus(Duration.ofHours(9)));
+        ExternalFeed fine = feed(2, NOW.minus(Duration.ofHours(9)));
+        stub(justAsked, fine);
+        when(refresher.refresh(justAsked)).thenThrow(new CalendarException.RefreshTooSoon());
+
+        handler.refreshDue();
+
+        verify(refresher).refresh(fine);
+        verify(feeds, never()).markAttempt(any(), any());
     }
 
     @Test

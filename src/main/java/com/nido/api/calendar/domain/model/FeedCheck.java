@@ -8,8 +8,11 @@ import java.util.Optional;
  */
 public record FeedCheck(Optional<String> name, int weight) {
 
-    /** The heaviest calendar kept: at least four of them fit the memory given to all of them together. */
-    public static final int MAX_WEIGHT = 16 * 1024 * 1024;
+    /**
+     * The heaviest calendar followed: about what 3 MB of a realistic file holds once read. Five of them fit the memory
+     * given to all of them together.
+     */
+    public static final int MAX_WEIGHT = 24 * 1024 * 1024;
 
     public boolean tooHeavy() {
         return weight > MAX_WEIGHT;

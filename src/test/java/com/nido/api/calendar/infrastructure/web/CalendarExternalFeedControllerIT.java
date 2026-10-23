@@ -200,8 +200,9 @@ class CalendarExternalFeedControllerIT {
     void the_eleventh_calendar_of_a_space_is_refused() throws Exception {
         // Made directly: ten follows in a minute would meet the route's rate limit first.
         for (int i = 0; i < 10; i++) {
-            externalFeeds.create(spaceId, "Calendrier " + i, java.net.URI.create("https://ecole.example/v" + i + ".ics"), null,
-                aliceId, SCHOOL, null, null, Instant.parse("2026-10-13T12:00:00Z"));
+            externalFeeds.createUnlessFollowing(10, spaceId, "Calendrier " + i,
+                java.net.URI.create("https://ecole.example/v" + i + ".ics"), null, aliceId, SCHOOL, null, null,
+                Instant.parse("2026-10-13T12:00:00Z"));
         }
         mockMvc.perform(post(feeds()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"url\":\"https://ecole.example/v10.ics\"}"))

@@ -45,6 +45,7 @@ public class FollowExternalFeedHandler implements FollowExternalFeedUseCase {
     public ExternalFeed follow(FollowExternalFeedCommand command, SpaceMembership caller) {
         caller.ensureCanWrite();
         URI url = FeedAddress.parse(command.url());
+        // Said before a download of up to fifteen seconds; decided when the calendar is written.
         if (feeds.countBySpaceId(caller.spaceId()) >= MAX_PER_SPACE) {
             throw new CalendarException.TooManyExternalFeeds(MAX_PER_SPACE);
         }
@@ -65,8 +66,11 @@ public class FollowExternalFeedHandler implements FollowExternalFeedUseCase {
         }
         String name = command.name() != null && !command.name().isBlank() ? command.name().strip()
             : ownName != null ? ownName : url.getHost();
-        return feeds.create(caller.spaceId(), truncated(name), url, ExternalFeed.colorOrDefault(command.color()),
-            caller.userId(), downloaded.content(), downloaded.etag(), downloaded.lastModified(), clock.instant());
+        // Counted again as it is written: another follow may have passed the limit during the download.
+        return feeds.createUnlessFollowing(MAX_PER_SPACE, caller.spaceId(), truncated(name), url,
+                ExternalFeed.colorOrDefault(command.color()), caller.userId(), downloaded.content(), downloaded.etag(),
+                downloaded.lastModified(), clock.instant())
+            .orElseThrow(() -> new CalendarException.TooManyExternalFeeds(MAX_PER_SPACE));
     }
 
     /** At most {@link #MAX_NAME} characters, never cutting a character in two. */

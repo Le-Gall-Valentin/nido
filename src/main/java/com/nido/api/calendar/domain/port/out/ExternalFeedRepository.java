@@ -1,7 +1,6 @@
 package com.nido.api.calendar.domain.port.out;
 
 import com.nido.api.calendar.domain.model.ExternalFeed;
-import com.nido.api.calendar.domain.model.FeedError;
 
 import java.net.URI;
 import java.time.Instant;
@@ -9,38 +8,25 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/** The calendars a space follows, as its members manage them. */
 public interface ExternalFeedRepository {
 
-    ExternalFeed create(UUID spaceId, String name, URI url, String color, UUID createdBy,
-                        String content, String etag, String lastModified, Instant fetchedAt);
+    /**
+     * Follows a calendar, unless its space follows {@code most} already: counted and written in one go, so that two
+     * follows at once never pass the limit together. Empty when the space follows that many.
+     */
+    Optional<ExternalFeed> createUnlessFollowing(int most, UUID spaceId, String name, URI url, String color, UUID createdBy,
+                                                 String content, String etag, String lastModified, Instant fetchedAt);
 
-    /** Without their calendars: those are read through {@link #loadContent}, only when not in memory already. */
+    /** Without their calendars: those are read through ExternalFeedContentRepository, only when not in memory already. */
     List<ExternalFeed> findBySpaceId(UUID spaceId);
 
     Optional<ExternalFeed> findById(UUID feedId);
 
     long countBySpaceId(UUID spaceId);
 
+    /** Changes its name and colour only: a refresh writing at the same time keeps what it writes. */
     void update(UUID feedId, String name, String color);
 
     void delete(UUID feedId);
-
-    String loadContent(UUID feedId);
-
-    void recordSuccess(UUID feedId, String content, String etag, String lastModified, Instant at);
-
-    /** Asked, unchanged: the calendar kept stays as it was, and is known current. */
-    void recordNotModified(UUID feedId, Instant at);
-
-    /** Asked, failed: the calendar kept stays shown. */
-    void recordFailure(UUID feedId, FeedError error, Instant at);
-
-    /**
-     * The ids of the calendars last asked for before {@code before}, of every space, the longest unasked first, at most
-     * {@code limit}: only ids, so that one row that cannot be read back does not stop the others.
-     */
-    List<UUID> findDueIds(Instant before, int limit);
-
-    /** Says the calendar is being asked for now, before it is: a second asking within the minute is then refused. */
-    void markAttempt(UUID feedId, Instant at);
 }

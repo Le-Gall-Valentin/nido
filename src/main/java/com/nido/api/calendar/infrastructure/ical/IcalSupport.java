@@ -94,13 +94,23 @@ public final class IcalSupport {
 
     private IcalSupport() {}
 
+    /** A document read, with what its own zones hold: the changes they list, and the ids of ical4j's pool they draw. */
+    record Read(Calendar calendar, long zoneChanges, int pooledZones) {}
+
     public static Calendar parse(String content) {
+        return read(content).calendar();
+    }
+
+    static Read read(String content) {
         Instant now = MACHINE_CLOCK.instant();
-        List<ComponentFactory<?>> components = new BoundedZones(now).factories();
+        BoundedZones zones = new BoundedZones(now);
+        DocumentZones registry = new DocumentZones(now);
+        List<ComponentFactory<?>> components = zones.factories();
         try {
-            return new CalendarBuilder(CalendarParserFactory.getInstance().get(), new ContentHandlerContext()
+            Calendar calendar = new CalendarBuilder(CalendarParserFactory.getInstance().get(), new ContentHandlerContext()
                 .withPropertyFactorySupplier(() -> FACTORIES).withComponentFactorySupplier(() -> components),
-                new DocumentZones(now)).build(new StringReader(content));
+                registry).build(new StringReader(content));
+            return new Read(calendar, zones.spent(), registry.pooled());
         } catch (ParserException | IOException | RuntimeException e) {
             throw new CalendarException.NotAnIcalFile();
         } catch (StackOverflowError | OutOfMemoryError exhausted) {

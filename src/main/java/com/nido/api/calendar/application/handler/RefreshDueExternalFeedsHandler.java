@@ -4,7 +4,7 @@ import com.nido.api.calendar.application.port.in.RefreshDueExternalFeedsUseCase;
 import com.nido.api.calendar.application.service.ExternalFeedRefresher;
 import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.ExternalFeed;
-import com.nido.api.calendar.domain.port.out.ExternalFeedRepository;
+import com.nido.api.calendar.domain.port.out.ExternalFeedRefreshRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,11 +31,11 @@ public class RefreshDueExternalFeedsHandler implements RefreshDueExternalFeedsUs
     /** The tick runs every ten minutes: it stops starting new downloads after eight, so two never overlap. */
     static final Duration TIME_BUDGET = Duration.ofMinutes(8);
 
-    private final ExternalFeedRepository feeds;
+    private final ExternalFeedRefreshRepository feeds;
     private final ExternalFeedRefresher refresher;
     private final Clock clock;
 
-    public RefreshDueExternalFeedsHandler(ExternalFeedRepository feeds, ExternalFeedRefresher refresher, Clock clock) {
+    public RefreshDueExternalFeedsHandler(ExternalFeedRefreshRepository feeds, ExternalFeedRefresher refresher, Clock clock) {
         this.feeds = feeds;
         this.refresher = refresher;
         this.clock = clock;
@@ -56,6 +56,8 @@ public class RefreshDueExternalFeedsHandler implements RefreshDueExternalFeedsUs
                 feeds.findById(id).ifPresent(feed -> refreshIfDue(feed, start));
             } catch (CalendarException.ExternalFeedNotFound removed) {
                 log.debug("Followed calendar {} was removed meanwhile", id);
+            } catch (CalendarException.RefreshTooSoon askedMeanwhile) {
+                log.debug("Followed calendar {} was just asked by a member", id);
             } catch (RuntimeException e) {
                 log.warn("Followed calendar {} could not be refreshed ({})", id, e.getClass().getSimpleName());
                 markTried(id, start);

@@ -150,6 +150,11 @@ final class DocumentZones implements TimeZoneRegistry {
         return theirs == null || mine.getInstant().isBefore(theirs.getInstant()) ? mine.getInstant() : theirs.getInstant();
     }
 
+    /** The zones of the document ical4j reads itself, each holding an id of its global pool while the document lives. */
+    int pooled() {
+        return ownZones.size() - agreed.size();
+    }
+
     @Override
     public void clear() {
         inner.clear();
