@@ -7,9 +7,12 @@ import com.nido.api.finance.domain.model.MemberShare;
 import com.nido.api.finance.domain.model.OperationFacts;
 import com.nido.api.finance.domain.model.SavingsDeposit;
 import com.nido.api.finance.domain.model.SeriesFacts;
+import com.nido.api.finance.domain.model.SettlementAuthor;
+import com.nido.api.finance.domain.model.Standing;
 import com.nido.api.space.domain.model.Addressee;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -40,4 +43,16 @@ public interface FinanceNotificationPort {
     /** @param savedByMember what each member had put in — gone with the goal */
     void savingsGoalDeleted(Gesture gesture, GoalFacts goal, BigDecimal saved, List<MemberShare> savedByMember,
                             List<Addressee> readers);
+
+    /**
+     * A repayment, told to the other side only.
+     *
+     * @param remaining what is still owed between the two, from the reader's side; zero when they are even
+     */
+    void settlementRecorded(Gesture gesture, SettlementAuthor author, BigDecimal amount, LocalDate date, Standing standing,
+                            BigDecimal remaining, Addressee reader);
+
+    void openingBalanceSet(Gesture gesture, BigDecimal amount, LocalDate asOf, List<Addressee> readers);
+
+    void openingBalanceCleared(Gesture gesture, List<Addressee> readers);
 }

@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.SettleDebtUseCase;
+import com.nido.api.finance.application.service.BalanceNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.BalanceCalculator;
 import com.nido.api.finance.domain.model.Balances;
@@ -15,6 +16,7 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationService
@@ -23,13 +25,15 @@ public class SettleDebtHandler implements SettleDebtUseCase {
     private final SettlementRecordRepository settlementRecordRepository;
     private final RunningTotalsRepository runningTotals;
     private final SpaceMemberValidator spaceMemberValidator;
+    private final BalanceNotifier notifier;
 
     public SettleDebtHandler(
             SettlementRecordRepository settlementRecordRepository, RunningTotalsRepository runningTotals,
-            SpaceMemberValidator spaceMemberValidator) {
+            SpaceMemberValidator spaceMemberValidator, BalanceNotifier notifier) {
         this.settlementRecordRepository = settlementRecordRepository;
         this.runningTotals = runningTotals;
         this.spaceMemberValidator = spaceMemberValidator;
+        this.notifier = notifier;
     }
 
     @Override
@@ -57,7 +61,19 @@ public class SettleDebtHandler implements SettleDebtUseCase {
         if (command.amount().compareTo(owed) > 0) {
             throw new FinanceException.SettlementExceedsDebt();
         }
-        return settlementRecordRepository.create(command);
+        SettlementRecord created = settlementRecordRepository.create(command);
+        // Read again once the repayment is in: writing it refreshed the month totals the balances are read from.
+        notifier.settlementRecorded(caller, created,
+            remainingBetween(command.spaceId(), command.fromMemberId(), command.toMemberId()));
+        return created;
+    }
+
+    /** What the balances view still suggests between these two members, whichever of them owes it. */
+    private Optional<SuggestedTransfer> remainingBetween(UUID spaceId, UUID one, UUID other) {
+        return BalanceCalculator.fromNets(runningTotals.findNetByMember(spaceId)).suggestedTransfers().stream()
+            .filter(t -> t.fromMemberId().equals(one) && t.toMemberId().equals(other)
+                || t.fromMemberId().equals(other) && t.toMemberId().equals(one))
+            .findFirst();
     }
 
     private BigDecimal realDebt(UUID spaceId, UUID fromMemberId, UUID toMemberId) {

@@ -10,6 +10,8 @@ import com.nido.api.finance.domain.model.OperationFacts;
 import com.nido.api.finance.domain.model.RecurrenceInterval;
 import com.nido.api.finance.domain.model.SavingsDeposit;
 import com.nido.api.finance.domain.model.SeriesFacts;
+import com.nido.api.finance.domain.model.SettlementAuthor;
+import com.nido.api.finance.domain.model.Standing;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.mail.domain.model.AppPath;
 import com.nido.api.notifications.application.port.in.NotifyUseCase;
@@ -159,5 +161,27 @@ class FinanceNotificationAdapterTest {
             new SavingsGoalCreatedNotification("bob", "alice", "Chez nous", holidays, finance),
             new SavingsGoalUpdatedNotification("bob", "alice", "Chez nous", holidays, after, finance),
             new SavingsGoalDeletedNotification("bob", "alice", "Chez nous", holidays, new BigDecimal("300.00"), List.of(), finance));
+    }
+
+    @Test
+    void a_repayment_reaches_the_other_party_only() {
+        adapter().settlementRecorded(gesture, SettlementAuthor.DEBTOR, new BigDecimal("50.00"), LocalDate.of(2026, 10, 21),
+            Standing.EVEN, BigDecimal.ZERO, bob);
+
+        NotificationRequest request = sent(1).getFirst();
+        assertThat(request.recipientId()).isEqualTo(bob.userId());
+        assertThat(request.notification()).isEqualTo(new SettlementRecordedNotification("bob", "alice", "Chez nous",
+            SettlementAuthor.DEBTOR, new BigDecimal("50.00"), LocalDate.of(2026, 10, 21), Standing.EVEN, BigDecimal.ZERO, finance));
+    }
+
+    @Test
+    void the_opening_balance_set_or_removed_reaches_its_readers() {
+        adapter().openingBalanceSet(gesture, new BigDecimal("1520.30"), LocalDate.of(2026, 10, 1), List.of(bob));
+        adapter().openingBalanceCleared(gesture, List.of(carol));
+
+        assertThat(sent(2)).extracting(NotificationRequest::notification).containsExactly(
+            new OpeningBalanceChangedNotification("bob", "alice", "Chez nous", false, new BigDecimal("1520.30"),
+                LocalDate.of(2026, 10, 1), finance),
+            new OpeningBalanceChangedNotification("carol", "alice", "Chez nous", true, null, null, finance));
     }
 }

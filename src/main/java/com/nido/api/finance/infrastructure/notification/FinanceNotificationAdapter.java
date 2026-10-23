@@ -8,6 +8,8 @@ import com.nido.api.finance.domain.model.MemberShare;
 import com.nido.api.finance.domain.model.OperationFacts;
 import com.nido.api.finance.domain.model.SavingsDeposit;
 import com.nido.api.finance.domain.model.SeriesFacts;
+import com.nido.api.finance.domain.model.SettlementAuthor;
+import com.nido.api.finance.domain.model.Standing;
 import com.nido.api.finance.domain.port.out.FinanceNotificationPort;
 import com.nido.api.mail.domain.model.AppPath;
 import com.nido.api.notifications.application.port.in.NotifyUseCase;
@@ -17,6 +19,7 @@ import com.nido.api.space.domain.model.Addressee;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -104,6 +107,25 @@ public class FinanceNotificationAdapter implements FinanceNotificationPort {
                                    List<Addressee> readers) {
         readers.forEach(reader -> tell(reader, new SavingsGoalDeletedNotification(reader.username(), gesture.actorName(),
             gesture.spaceName(), goal, saved, savedByMember, finance(gesture.spaceId()))));
+    }
+
+    @Override
+    public void settlementRecorded(Gesture gesture, SettlementAuthor author, BigDecimal amount, LocalDate date,
+                                   Standing standing, BigDecimal remaining, Addressee reader) {
+        tell(reader, new SettlementRecordedNotification(reader.username(), gesture.actorName(), gesture.spaceName(), author,
+            amount, date, standing, remaining, finance(gesture.spaceId())));
+    }
+
+    @Override
+    public void openingBalanceSet(Gesture gesture, BigDecimal amount, LocalDate asOf, List<Addressee> readers) {
+        readers.forEach(reader -> tell(reader, new OpeningBalanceChangedNotification(reader.username(), gesture.actorName(),
+            gesture.spaceName(), false, amount, asOf, finance(gesture.spaceId()))));
+    }
+
+    @Override
+    public void openingBalanceCleared(Gesture gesture, List<Addressee> readers) {
+        readers.forEach(reader -> tell(reader, new OpeningBalanceChangedNotification(reader.username(), gesture.actorName(),
+            gesture.spaceName(), true, null, null, finance(gesture.spaceId()))));
     }
 
     /** Whose deposit it is to this reader: the author's own, the reader's, or another member's. */
