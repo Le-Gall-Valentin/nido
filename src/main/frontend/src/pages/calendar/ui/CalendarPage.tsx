@@ -62,8 +62,9 @@ function CalendarPageContent() {
   const today = now.date
 
   const { view, date, setView, setDate, goToToday, shiftPeriod } = useCalendarUrlState(today)
-  const { isEnabled, toggle, filter, isFeedEnabled, toggleFeed } = useCalendarFilters(spaceId)
   const { data: feeds } = useExternalFeeds(spaceId)
+  const feedIds = useMemo(() => feeds?.map((feed) => feed.id), [feeds])
+  const { isEnabled, toggle, filter, isFeedEnabled, toggleFeed } = useCalendarFilters(spaceId, feedIds)
 
   const { data: mySpaces } = useMySpaces()
   const currentSpace = mySpaces?.find((space) => space.id === spaceId)

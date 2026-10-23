@@ -59,32 +59,43 @@ export interface CalendarFilters {
   filter: (occurrences: CalendarOccurrence[]) => CalendarOccurrence[]
 }
 
-export function useCalendarFilters(spaceId: string): CalendarFilters {
-  const [disabled, setDisabled] = useState<Set<CalendarSourceType>>(() => readDisabled(spaceId))
+/**
+ * What a space shows of its sources and followed calendars, kept per space in localStorage. The page stays mounted
+ * when another space is chosen: what is held belongs to one space, and is read again for the next — never carried
+ * over, nor written under the other's key. `feedIds`: the calendars the space follows, once known; a calendar no
+ * longer followed is dropped from what is kept.
+ */
+export function useCalendarFilters(spaceId: string, feedIds?: string[]): CalendarFilters {
+  const [sources, setSources] = useState(() => ({ spaceId, disabled: readDisabled(spaceId) }))
+  const [feeds, setFeeds] = useState(() => ({ spaceId, disabled: readDisabledFeeds(spaceId) }))
+  // Another space: what this one hid is read, as React would on a first render.
+  if (sources.spaceId !== spaceId) setSources({ spaceId, disabled: readDisabled(spaceId) })
+  if (feeds.spaceId !== spaceId) setFeeds({ spaceId, disabled: readDisabledFeeds(spaceId) })
+  const disabled = sources.spaceId === spaceId ? sources.disabled : readDisabled(spaceId)
+  const disabledFeeds = feeds.spaceId === spaceId ? feeds.disabled : readDisabledFeeds(spaceId)
 
   const toggle = useCallback((source: CalendarSourceType) => {
-    setDisabled((current) => {
-      const next = new Set(current)
+    setSources((current) => {
+      const next = new Set(current.spaceId === spaceId ? current.disabled : readDisabled(spaceId))
       if (next.has(source)) next.delete(source)
       else next.add(source)
       writeDisabled(spaceId, next)
-      return next
+      return { spaceId, disabled: next }
     })
   }, [spaceId])
 
   const isEnabled = useCallback((source: CalendarSourceType) => !disabled.has(source), [disabled])
 
-  const [disabledFeeds, setDisabledFeeds] = useState<Set<string>>(() => readDisabledFeeds(spaceId))
-
   const toggleFeed = useCallback((feedId: string) => {
-    setDisabledFeeds((current) => {
-      const next = new Set(current)
+    setFeeds((current) => {
+      const next = new Set(current.spaceId === spaceId ? current.disabled : readDisabledFeeds(spaceId))
       if (next.has(feedId)) next.delete(feedId)
       else next.add(feedId)
-      writeDisabledFeeds(spaceId, next)
-      return next
+      const kept = feedIds ? new Set([...next].filter((id) => feedIds.includes(id))) : next
+      writeDisabledFeeds(spaceId, kept)
+      return { spaceId, disabled: kept }
     })
-  }, [spaceId])
+  }, [spaceId, feedIds])
 
   const isFeedEnabled = useCallback((feedId: string) => !disabledFeeds.has(feedId), [disabledFeeds])
 

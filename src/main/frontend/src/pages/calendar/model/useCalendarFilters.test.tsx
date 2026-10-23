@@ -103,4 +103,31 @@ describe('useCalendarFilters', () => {
     const { result } = renderHook(() => useCalendarFilters('s1'))
     expect(result.current.enabled.size).toBe(5)
   })
+
+  it('reads the other space\'s filters when the page turns to it, and never writes one space\'s under the other', () => {
+    localStorage.setItem('nido.calendar.feeds.B', JSON.stringify(['gB']))
+    const { result, rerender } = renderHook(({ spaceId }) => useCalendarFilters(spaceId), { initialProps: { spaceId: 'A' } })
+    act(() => {
+      result.current.toggleFeed('fA')
+      result.current.toggle('TASK')
+    })
+
+    rerender({ spaceId: 'B' })
+
+    expect(result.current.isFeedEnabled('gB')).toBe(false)
+    expect(result.current.isFeedEnabled('fA')).toBe(true)
+    expect(result.current.isEnabled('TASK')).toBe(true)
+    act(() => { result.current.toggleFeed('gB2') })
+    expect(JSON.parse(localStorage.getItem('nido.calendar.feeds.B') ?? '[]')).toEqual(['gB', 'gB2'])
+    expect(JSON.parse(localStorage.getItem('nido.calendar.feeds.A') ?? '[]')).toEqual(['fA'])
+  })
+
+  it('forgets a calendar no longer followed the next time the space\'s calendars are written', () => {
+    localStorage.setItem('nido.calendar.feeds.s1', JSON.stringify(['gone', 'kept']))
+    const { result } = renderHook(() => useCalendarFilters('s1', ['kept', 'other']))
+
+    act(() => { result.current.toggleFeed('other') })
+
+    expect(JSON.parse(localStorage.getItem('nido.calendar.feeds.s1') ?? '[]')).toEqual(['kept', 'other'])
+  })
 })
