@@ -26,22 +26,29 @@ const save = () => fireEvent.click(screen.getByRole('button', { name: 'form.save
 const field = (label: string) => screen.getByLabelText(label) as HTMLInputElement
 
 describe('EventFormModal — colour', () => {
-  const swatches = () => screen.getAllByRole('button', { name: /^form\.color_name\./ })
+  const swatches = () => screen.getAllByRole('radio', { name: /^colors\./ })
 
   it('offers the six colours of events, and none of the sources\' colours', () => {
     renderForm()
     expect(swatches().map((swatch) => swatch.getAttribute('aria-label'))).toEqual([
-      'form.color_name.event-violet', 'form.color_name.event-magenta', 'form.color_name.event-cyan',
-      'form.color_name.event-graphite', 'form.color_name.event-indigo', 'form.color_name.event-brique',
+      'colors.event-violet', 'colors.event-magenta', 'colors.event-cyan',
+      'colors.event-graphite', 'colors.event-indigo', 'colors.event-brique',
     ])
     expect(swatches()[2].className).toContain('bg-event-cyan')
   })
 
   it('saves the colour picked', () => {
     const { onSubmit } = renderForm()
-    fireEvent.click(screen.getByRole('button', { name: 'form.color_name.event-cyan' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'colors.event-cyan' }))
     save()
     expect(onSubmit).toHaveBeenCalledWith({ ...initial, color: 'event-cyan' }, null)
+  })
+
+  it('takes the colour back when it is picked again: the event keeps no colour of its own', () => {
+    const { onSubmit } = renderForm({ initial: { ...initial, color: 'event-cyan' } })
+    fireEvent.click(screen.getByRole('radio', { name: 'colors.event-cyan' }))
+    save()
+    expect(onSubmit).toHaveBeenCalledWith({ ...initial, color: null }, null)
   })
 })
 

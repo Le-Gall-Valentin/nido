@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { CalendarApiProvider, CalendarSyncError, type CalendarApi, type ImportReport } from '@/entities/calendar'
+import { CalendarApiProvider, CalendarSyncError, MAX_IMPORT_BYTES, type CalendarApi, type ImportReport } from '@/entities/calendar'
 import { ImportTab } from './ImportTab'
 
 vi.mock('react-i18next', () => ({
@@ -153,5 +153,46 @@ describe('ImportTab', () => {
     renderTab({ analyseImport: vi.fn().mockRejectedValue(new CalendarSyncError(reason)) })
     fireEvent.change(screen.getByLabelText('import.choose'), { target: { files: [ics()] } })
     expect((await screen.findByRole('alert')).textContent).toBe(`errors.${reason}`)
+  })
+
+  it('analyses a file dropped on the zone', async () => {
+    const analyseImport = vi.fn().mockResolvedValue(ANALYSIS)
+    renderTab({ analyseImport })
+    const file = ics()
+
+    fireEvent.drop(screen.getByTestId('import-drop'), { dataTransfer: { files: [file] } })
+
+    await waitFor(() => expect(analyseImport).toHaveBeenCalledWith('s1', file))
+  })
+
+  it('refuses a file over the server\'s limit before sending anything', () => {
+    const analyseImport = vi.fn()
+    renderTab({ analyseImport })
+    const big = new File(['x'], 'big.ics', { type: 'text/calendar' })
+    Object.defineProperty(big, 'size', { value: MAX_IMPORT_BYTES + 1 })
+
+    fireEvent.change(screen.getByLabelText('import.choose'), { target: { files: [big] } })
+
+    expect(screen.getByRole('alert').textContent).toBe('errors.file_too_large')
+    expect(analyseImport).not.toHaveBeenCalled()
+  })
+
+  it('announces the totals and the outcome, and leaves the notes to be read at will', async () => {
+    renderTab({ analyseImport: vi.fn().mockResolvedValue(ANALYSIS) })
+    fireEvent.change(screen.getByLabelText('import.choose'), { target: { files: [ics()] } })
+
+    const region = await screen.findByRole('status')
+    await waitFor(() => expect(region.textContent).toContain('import.summary.events'))
+    expect(region.textContent).not.toContain('import.note.IGNORED')
+    expect(screen.getByText(/import\.note\.IGNORED/)).toBeTruthy()
+  })
+
+  it('says the unfolded occurrences under the events, and the series unfolded', async () => {
+    renderTab({ analyseImport: vi.fn().mockResolvedValue(ANALYSIS) })
+    fireEvent.change(screen.getByLabelText('import.choose'), { target: { files: [ics()] } })
+
+    const lines = (await screen.findAllByRole('listitem')).map((item) => item.textContent)
+    expect(lines.slice(0, 4)).toEqual(['import.summary.events{"count":3}', 'import.summary.unfolded{"count":2}',
+      'import.summary.series{"count":1}', 'import.summary.series_unfolded{"count":1}'])
   })
 })

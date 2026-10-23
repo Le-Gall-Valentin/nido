@@ -3,14 +3,21 @@ import { CalendarSyncError, SYNC_REASONS } from '@/entities/calendar'
 type Translate = (key: string, options?: Record<string, unknown>) => string
 
 /** The details the server gives for an event it does not import, each worded under `import.ignored_reason`. */
-const IGNORED_DETAILS = [
+export const IGNORED_DETAILS = [
   'VTODO', 'VJOURNAL', 'VFREEBUSY', 'NO_START', 'CANCELLED', 'TOO_LONG', 'DUPLICATE_UID', 'TOO_HEAVY', 'BAD_RULE',
-  'NIDO_SOURCE',
+  'MALFORMED', 'NIDO_SOURCE',
 ]
 
-/** Why a followed calendar could not be read: "délai dépassé", "le serveur a répondu 404". */
+/** The fields whose text can be shortened, each worded under `import.text_field`. */
+export const TEXT_FIELDS = ['title', 'description', 'location']
+
+/** Why a followed calendar could not be read, each worded under `feed_error` — HTTP_<status> aside. */
+export const FEED_ERRORS = ['INVALID_URL', 'BLOCKED_ADDRESS', 'UNREACHABLE', 'TIMEOUT', 'TOO_MANY_REDIRECTS', 'TOO_LARGE', 'NOT_ICS']
+
+/** Why a followed calendar could not be read: "délai dépassé", "le serveur a répondu 404" — never a raw key. */
 export function feedErrorText(t: Translate, code: string): string {
-  return code.startsWith('HTTP_') ? t('feed_error.HTTP', { status: code.slice(5) }) : t(`feed_error.${code}`)
+  if (/^HTTP_\d{3}$/.test(code)) return t('feed_error.HTTP', { status: code.slice(5) })
+  return t(FEED_ERRORS.includes(code) ? `feed_error.${code}` : 'feed_error.unknown')
 }
 
 /** Why an event is not imported — a generic reason for a detail this client does not know, never a raw key. */

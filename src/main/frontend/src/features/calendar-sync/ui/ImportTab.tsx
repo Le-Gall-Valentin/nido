@@ -1,8 +1,8 @@
-import { useEffect, useRef, type DragEvent } from 'react'
+import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, CTA_BUTTON_STYLE, Spinner } from '@/shared/ui'
-import { useAnalyseImport, useImportFile } from '@/entities/calendar'
-import { ImportReportView } from './ImportReportView'
+import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { MAX_IMPORT_BYTES, useAnalyseImport, useImportFile } from '@/entities/calendar'
+import { ImportNotes, ImportTotals } from './ImportReport'
 import { syncErrorMessage } from '../lib/syncWording'
 
 /**
@@ -13,6 +13,9 @@ export function ImportTab({ spaceId }: { spaceId: string }) {
   const { t } = useTranslation('calendarSync')
   const analyse = useAnalyseImport(spaceId)
   const importFile = useImportFile(spaceId)
+  // A file the server would refuse for its size is refused here, before it is sent: over a slow line, sending 50 MB
+  // to be told so takes long, and a server that closes the connection mid-upload reads as a network failure.
+  const [tooLarge, setTooLarge] = useState(false)
 
   const region = useRef<HTMLDivElement>(null)
   const restoreFocus = useRef(false)
@@ -29,7 +32,9 @@ export function ImportTab({ spaceId }: { spaceId: string }) {
   const choose = (picked: File | undefined) => {
     if (!picked) return
     importFile.reset()
-    analyse.mutate(picked)
+    analyse.reset()
+    setTooLarge(picked.size > MAX_IMPORT_BYTES)
+    if (picked.size <= MAX_IMPORT_BYTES) analyse.mutate(picked)
   }
   const onDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -37,6 +42,7 @@ export function ImportTab({ spaceId }: { spaceId: string }) {
   }
   const startOver = () => {
     restoreFocus.current = true
+    setTooLarge(false)
     analyse.reset()
     importFile.reset()
   }
@@ -44,9 +50,10 @@ export function ImportTab({ spaceId }: { spaceId: string }) {
   const analysed = analyse.data
   const report = importFile.data ?? analysed
   const toImport = analysed ? analysed.eventsCreated + analysed.seriesCreated : 0
-  const error = importFile.error ?? analyse.error
+  const error = tooLarge ? t('errors.file_too_large')
+    : (importFile.error ?? analyse.error) ? syncErrorMessage(t, importFile.error ?? analyse.error) : null
 
-  // The picker unmounts as the work starts: focus goes to the region that announces the report, and stays there when
+  // The picker unmounts as the work starts: focus goes to the region that says what is going on, and stays there when
   // the report arrives (the pending render can be skipped when the answer is quick).
   useEffect(() => {
     if (busy || report) region.current?.focus()
@@ -56,7 +63,7 @@ export function ImportTab({ spaceId }: { spaceId: string }) {
     <div className="flex flex-col gap-3">
       <p className="text-sm text-fg-2">{t('import.intro')}</p>
       {!report && !analyse.isPending && (
-        <div onDragOver={(e) => e.preventDefault()} onDrop={onDrop}
+        <div onDragOver={(e) => e.preventDefault()} onDrop={onDrop} data-testid="import-drop"
           className="flex flex-col items-center gap-1 rounded-lg border-2 border-dashed border-border px-4 py-6 text-center">
           <label className="cursor-pointer rounded-md px-2 py-1 text-sm font-semibold text-accent focus-within:shadow-[0_0_0_3px_var(--color-accent-ring)]">
             {t('import.choose')}
@@ -66,18 +73,19 @@ export function ImportTab({ spaceId }: { spaceId: string }) {
           <span className="text-xs text-fg-3">{t('import.drop')}</span>
         </div>
       )}
-      {busy && (
-        <div className="flex items-center gap-2 text-sm text-fg-2">
-          <Spinner fullscreen={false} label={t(importFile.isPending ? 'import.importing' : 'import.analysing')} />
-          {t(importFile.isPending ? 'import.importing' : 'import.analysing')}
-        </div>
-      )}
-      {error && <p role="alert" className="text-sm text-status-red">{syncErrorMessage(t, error)}</p>}
-      <div ref={region} role="status" tabIndex={-1} className="flex flex-col gap-3 outline-none">
-        {report && <ImportReportView report={report} />}
+      {error && <p role="alert" className="text-sm text-status-red">{error}</p>}
+      {/* What is announced: the work under way, the totals and the outcome — never the notes, up to 200 of them. */}
+      <div ref={region} role="status" tabIndex={-1} aria-busy={busy} className="flex flex-col gap-3 outline-none">
+        {busy && (
+          <p className="text-sm text-fg-2 motion-safe:animate-pulse">
+            {t(importFile.isPending ? 'import.importing' : 'import.analysing')}
+          </p>
+        )}
+        {report && <ImportTotals report={report} />}
         {report && !report.written && toImport === 0 && <p className="text-sm text-fg-2">{t('import.nothing')}</p>}
         {report?.written && <p className="text-sm font-semibold text-status-green">{t('import.done')}</p>}
       </div>
+      {report && <ImportNotes report={report} />}
       <div className="flex justify-end gap-2">
         {(report || error) && !importFile.isPending && <Button type="button" onClick={startOver}>{t('import.again')}</Button>}
         {report && !report.written && toImport > 0 && analyse.variables && (

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { CalendarSyncError, SYNC_REASONS } from '@/entities/calendar'
 import fr from '../locales/fr.json'
 import en from '../locales/en.json'
-import { feedErrorText, ignoredReasonText, syncErrorMessage } from './syncWording'
+import { FEED_ERRORS, IGNORED_DETAILS, TEXT_FIELDS, feedErrorText, ignoredReasonText, syncErrorMessage } from './syncWording'
 
 const t = (key: string, options?: Record<string, unknown>) => (options ? `${key}${JSON.stringify(options)}` : key)
 
@@ -38,10 +38,25 @@ describe('syncWording', () => {
     expect(ignoredReasonText(t, 'BAD_RULE')).toBe('import.ignored_reason.BAD_RULE')
     expect(ignoredReasonText(t, 'NIDO_SOURCE')).toBe('import.ignored_reason.NIDO_SOURCE')
     expect(ignoredReasonText(t, 'SOMETHING_NEW')).toBe('import.ignored_unknown')
+  })
+
+  it('words every detail, field and calendar error the server names, in both languages', () => {
     for (const locale of [fr, en]) {
-      expect(Object.keys(locale.import.ignored_reason)).toEqual(
-        expect.arrayContaining(['DUPLICATE_UID', 'TOO_HEAVY', 'BAD_RULE', 'NIDO_SOURCE']))
+      expect(Object.keys(locale.import.ignored_reason).sort()).toEqual([...IGNORED_DETAILS].sort())
+      expect(Object.keys(locale.import.text_field).sort()).toEqual([...TEXT_FIELDS].sort())
+      for (const code of FEED_ERRORS) expect(locale.feed_error).toHaveProperty(code)
+      expect(locale.feed_error).toHaveProperty('unknown')
     }
+  })
+
+  it('says an event set aside for a property it could not read', () => {
+    expect(ignoredReasonText(t, 'MALFORMED')).toBe('import.ignored_reason.MALFORMED')
+    expect(fr.import.ignored_reason.MALFORMED).toBe('une de ses propriétés est illisible')
+  })
+
+  it('never shows the raw key of a calendar error this client does not know', () => {
+    expect(feedErrorText(t, 'SOMETHING_NEW')).toBe('feed_error.unknown')
+    expect(feedErrorText(t, 'HTTP_TEAPOT')).toBe('feed_error.unknown')
   })
 
   it('says an item of another part of Nido is never imported, in the words agreed', () => {

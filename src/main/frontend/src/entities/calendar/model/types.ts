@@ -163,6 +163,9 @@ export interface ImportNote {
 /** The most notes the server puts in one report: past it, the others are left out. */
 export const MAX_IMPORT_NOTES = 200
 
+/** The largest file the server imports (IcalUpload): 5 MB of 1024 × 1024 bytes. */
+export const MAX_IMPORT_BYTES = 5 * 1024 * 1024
+
 /** What an import did — or, `written` false, what it would do. */
 export interface ImportReport {
   eventsCreated: number

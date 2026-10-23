@@ -3,23 +3,24 @@ import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { useCopy } from '@/shared/lib'
 import type { CreatedSubscriptionLink } from '@/entities/calendar'
 
-function AddressField({ title, value }: { title: string; value: string }) {
+function AddressField({ title, value, first = false }: { title: string; value: string; first?: boolean }) {
   const { t } = useTranslation('calendarSync')
   const { copy, copied, failed } = useCopy()
   return (
     <div className="flex flex-col gap-1.5">
       <label className="flex flex-col gap-1.5">
         <span className="text-[13px] font-semibold text-fg-1">{title}</span>
-        <input readOnly value={value} aria-label={title}
+        <input readOnly value={value} aria-label={title} data-created-address={first ? '' : undefined}
           onFocus={(e) => e.currentTarget.select()}
           className="w-full rounded-[10px] border-[1.5px] border-border bg-bg-1 px-3 py-2 font-mono text-xs text-fg-0" />
       </label>
       <div className="flex flex-wrap gap-2">
-        {/* The name follows what the button shows: "Copied" is heard, not only seen. */}
         <Button type="button" aria-label={`${copied ? t('subscribe.copied') : t('subscribe.copy')} — ${title}`}
           onClick={() => void copy(value)}>
           {copied ? t('subscribe.copied') : t('subscribe.copy')}
         </Button>
+        {/* Said, not only shown on the button: a label that changes under the focus is not always read again. */}
+        <span role="status" className="sr-only">{copied ? t('subscribe.copied_announce') : ''}</span>
       </div>
       {failed && <p role="alert" className="text-sm text-status-red">{t('subscribe.copy_failed')}</p>}
     </div>
@@ -31,7 +32,7 @@ export function CreatedLinkNotice({ created, onDone }: { created: CreatedSubscri
   const { t } = useTranslation('calendarSync')
   return (
     <div className="flex flex-col gap-3">
-      <AddressField title={t('subscribe.created_title')} value={created.url} />
+      <AddressField title={t('subscribe.created_title')} value={created.url} first />
       <AddressField title={t('subscribe.webcal_title')} value={created.webcalUrl} />
       <div className="flex flex-wrap gap-2">
         <a href={created.webcalUrl}

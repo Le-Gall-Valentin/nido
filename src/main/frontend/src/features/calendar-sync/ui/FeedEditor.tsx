@@ -21,7 +21,8 @@ export function FeedEditor({ feed, pending, error, onSave, onCancel }: {
       <FeedColorPicker value={color} onChange={setColor} feedName={feed.name} />
       {error && <p role="alert" className="text-sm text-status-red">{error}</p>}
       <div className="flex justify-end gap-2">
-        <Button type="button" onClick={onCancel}>{t('feeds.cancel')}</Button>
+        {/* Not while the change is saved: it would be saved all the same, thought dropped. */}
+        <Button type="button" disabled={pending} onClick={onCancel}>{t('feeds.cancel')}</Button>
         <Button type="button" style={CTA_BUTTON_STYLE} disabled={!name.trim() || pending} onClick={() => onSave(name.trim(), color)}>
           {t('feeds.update')}
         </Button>

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { CalendarApiProvider, type CalendarApi } from '@/entities/calendar'
+import { CalendarApiProvider, CalendarSyncError, type CalendarApi } from '@/entities/calendar'
 import { ExportTab } from './ExportTab'
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'fr' } }) }))
@@ -38,5 +38,21 @@ describe('ExportTab', () => {
   it('has nobody else to leave out in a personal space', () => {
     renderTab({ exportCalendar: vi.fn() }, true)
     expect(screen.queryByLabelText('only_mine')).toBeNull()
+  })
+
+  it('says why an export failed, and takes it back once the choice changes', async () => {
+    renderTab({ exportCalendar: vi.fn().mockRejectedValue(new CalendarSyncError('rate_limited')) })
+    fireEvent.click(screen.getByRole('button', { name: 'export.download' }))
+
+    expect((await screen.findByRole('alert')).textContent).toBe('errors.rate_limited')
+    fireEvent.click(screen.getByLabelText('sources.TASK'))
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('says the file is being prepared', async () => {
+    renderTab({ exportCalendar: vi.fn(() => new Promise<{ blob: Blob; filename: string }>(() => {})) })
+    fireEvent.click(screen.getByRole('button', { name: 'export.download' }))
+
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('export.preparing'))
   })
 })

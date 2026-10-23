@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
 import type { SpaceMember } from '@/entities/space'
-import { EVENT_COLORS, EVENT_DOT_CLASS, type EventInput, type RecurringEventSeries } from '@/entities/calendar'
+import { ColorSwatches, isEventColor, type EventInput, type RecurringEventSeries } from '@/entities/calendar'
 import type { Recurrence } from '../lib/seriesInput'
 import { toRecurrence } from '../lib/recurrenceDraft'
 import { eventFormProblem } from '../lib/eventFormProblem'
@@ -110,18 +110,8 @@ export function EventFormModal({
           <RecurrenceFields recurrence={recurrence} startDate={form.startDate} editedSeries={editedSeries} notice={notice} />
         )}
 
-        <div>
-          <span className="mb-1 block text-xs font-semibold text-fg-2">{t('form.color')}</span>
-          <div className="flex gap-1.5">
-            {EVENT_COLORS.map((token) => (
-              <button key={token} type="button" aria-label={t(`form.color_name.${token}`)}
-                aria-pressed={form.color === token}
-                onClick={() => patch({ color: form.color === token ? null : token })}
-                className={`size-6 rounded-full border-2 ${form.color === token ? 'border-fg-1' : 'border-transparent'}
-                  ${EVENT_DOT_CLASS[token]}`} />
-            ))}
-          </div>
-        </div>
+        <ColorSwatches label={t('form.color')} value={isEventColor(form.color) ? form.color : null}
+          onChange={(color) => patch({ color })} deselectable />
 
         {!isPersonal && members.length > 0 && (
           <ParticipantPicker members={members} selected={form.participantIds}

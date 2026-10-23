@@ -44,7 +44,7 @@ describe('ExternalFeedsTab', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'feeds.follow' }))
     fireEvent.change(screen.getByLabelText('feeds.url'), { target: { value: 'webcal://ecole.example/v.ics' } })
-    fireEvent.click(screen.getByRole('button', { name: 'colors.event-indigo' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'colors.event-indigo' }))
     fireEvent.click(screen.getByRole('button', { name: 'feeds.save' }))
 
     await waitFor(() => expect(followExternalFeed).toHaveBeenCalledWith('s1',
@@ -107,7 +107,7 @@ describe('ExternalFeedsTab', () => {
   it('follows a calendar in the graphite of external sources when no colour is picked', async () => {
     const followExternalFeed = vi.fn().mockResolvedValue(SCHOOL)
     await openForm({ followExternalFeed })
-    expect(screen.getByRole('button', { name: 'colors.event-graphite' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('radio', { name: 'colors.event-graphite' }).getAttribute('aria-checked')).toBe('true')
     fireEvent.click(screen.getByRole('button', { name: 'feeds.save' }))
     await waitFor(() => expect(followExternalFeed).toHaveBeenCalledWith('s1', { url: 'https://x/a.ics', name: null, color: 'event-graphite' }))
   })
@@ -130,7 +130,7 @@ describe('ExternalFeedsTab', () => {
     renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([SCHOOL]), updateExternalFeed })
     fireEvent.click(await screen.findByRole('button', { name: /feeds\.edit_for/ }))
     fireEvent.change(screen.getByLabelText('feeds.rename'), { target: { value: 'École' } })
-    fireEvent.click(screen.getByRole('button', { name: /colors\.event-indigo|feeds\.color_for.*event-indigo/ }))
+    fireEvent.click(screen.getByRole('radio', { name: /colors\.event-indigo|feeds\.color_for.*event-indigo/ }))
     fireEvent.click(screen.getByRole('button', { name: 'feeds.update' }))
     await waitFor(() => expect(updateExternalFeed).toHaveBeenCalledWith('s1', 'f1', { name: 'École', color: 'event-indigo' }))
     await waitFor(() => expect(screen.getByRole('status').textContent).toContain('feeds.saved'))
@@ -140,7 +140,7 @@ describe('ExternalFeedsTab', () => {
   it('names the calendar on each colour button of its editor', async () => {
     renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([SCHOOL]) })
     fireEvent.click(await screen.findByRole('button', { name: /feeds\.edit_for/ }))
-    expect(screen.getAllByRole('button', { name: /feeds\.color_for.*Vacances scolaires/ }).length).toBeGreaterThan(1)
+    expect(screen.getAllByRole('radio', { name: /feeds\.color_for.*Vacances scolaires/ }).length).toBeGreaterThan(1)
   })
 
   it('asks before it stops following, and announces it', async () => {
@@ -194,7 +194,7 @@ describe('ExternalFeedsTab', () => {
     const dot = (await screen.findByText('Vacances scolaires')).closest('li')?.querySelector('span[aria-hidden]')
     expect(dot?.className).toContain(EVENT_DOT_CLASS['event-graphite'])
     fireEvent.click(screen.getByRole('button', { name: /feeds\.edit_for/ }))
-    expect(screen.getByRole('button', { name: /feeds\.color_for.*colors\.event-graphite/ }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('radio', { name: /feeds\.color_for.*colors\.event-graphite/ }).getAttribute('aria-checked')).toBe('true')
   })
 
   it('shows a viewer the calendars, and nothing to change them', async () => {
@@ -202,5 +202,65 @@ describe('ExternalFeedsTab', () => {
     expect(await screen.findByText('Vacances scolaires')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'feeds.follow' })).toBeNull()
     expect(screen.queryByRole('button', { name: /feeds\.refresh/ })).toBeNull()
+  })
+
+  it('says a list that could not be read, and reads it again on request, rather than follow nothing', async () => {
+    const listExternalFeeds = vi.fn().mockRejectedValueOnce(new CalendarSyncError('server')).mockResolvedValue([CLUB])
+    renderTab({ listExternalFeeds })
+
+    expect((await screen.findByRole('alert')).textContent).toBe('errors.server')
+    expect(screen.queryByText('feeds.empty')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'retry' }))
+
+    expect(await screen.findByText('Club')).toBeTruthy()
+  })
+
+  it('lets no other action of a row start while one runs, and says the outcome of the one running', async () => {
+    let refreshed: (feed: ExternalFeed) => void = () => {}
+    const refreshExternalFeed = vi.fn(() => new Promise<ExternalFeed>((resolve) => { refreshed = resolve }))
+    renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([SCHOOL, CLUB]), refreshExternalFeed })
+    fireEvent.click(await screen.findByRole('button', { name: /feeds\.refresh_for.*Vacances scolaires/ }))
+    await waitFor(() => expect(refreshExternalFeed).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole('button', { name: /feeds\.edit_for.*Club/ }))
+    fireEvent.click(screen.getByRole('button', { name: /feeds\.refresh_for.*Club/ }))
+
+    expect(refreshExternalFeed).toHaveBeenCalledTimes(1)
+    expect(screen.queryByLabelText('feeds.rename')).toBeNull()
+    refreshed({ ...SCHOOL, lastError: null })
+    expect(await screen.findByText(/feeds\.refreshed.*Vacances scolaires/)).toBeTruthy()
+  })
+
+  it('says a removal that failed, and keeps the calendar', async () => {
+    renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([CLUB]),
+      removeExternalFeed: vi.fn().mockRejectedValue(new CalendarSyncError('forbidden')) })
+    fireEvent.click(await screen.findByRole('button', { name: /feeds\.remove_for.*Club/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'feeds.remove_yes' }))
+
+    expect((await screen.findByRole('alert')).textContent).toBe('errors.forbidden')
+    expect(screen.getByText('Club')).toBeTruthy()
+  })
+
+  it('says a change that failed, and keeps the form open with what was typed', async () => {
+    renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([CLUB]),
+      updateExternalFeed: vi.fn().mockRejectedValue(new CalendarSyncError('rate_limited')) })
+    fireEvent.click(await screen.findByRole('button', { name: /feeds\.edit_for.*Club/ }))
+    fireEvent.change(screen.getByLabelText('feeds.rename'), { target: { value: 'Club de foot' } })
+    fireEvent.click(screen.getByRole('button', { name: 'feeds.update' }))
+
+    expect((await screen.findByRole('alert')).textContent).toBe('errors.rate_limited')
+    expect((screen.getByLabelText('feeds.rename') as HTMLInputElement).value).toBe('Club de foot')
+  })
+
+  it('opens the next follow in the colour of external sources, whatever the last one was in', async () => {
+    const followExternalFeed = vi.fn().mockResolvedValue(CLUB)
+    await openForm({ followExternalFeed })
+    fireEvent.click(screen.getByRole('radio', { name: 'colors.event-indigo' }))
+    fireEvent.click(screen.getByRole('button', { name: 'feeds.save' }))
+    await waitFor(() => expect(followExternalFeed).toHaveBeenCalled())
+
+    fireEvent.click(await screen.findByRole('button', { name: 'feeds.follow' }))
+
+    expect(screen.getByRole('radio', { name: 'colors.event-graphite' }).getAttribute('aria-checked')).toBe('true')
   })
 })

@@ -19,7 +19,7 @@
   "export": {
     "intro": "Un fichier .ics à ouvrir dans Google Agenda, Outlook ou Apple Calendrier. C'est une copie : ce qui change ensuite dans Nido n'y arrive pas.",
     "download": "Télécharger",
-    "failed": "Le fichier n'a pas pu être préparé. Réessayez."
+    "preparing": "Préparation du fichier…"
   },
   "subscribe": {
     "intro": "Une adresse secrète à donner à votre agenda : ce calendrier y apparaît et se met à jour tout seul. Une adresse par appareil, pour pouvoir en révoquer une seule.",
@@ -33,6 +33,7 @@
     "created_warning": "Cette adresse ne sera plus affichée. Quiconque la connaît voit ce calendrier : ne la partagez pas.",
     "copy": "Copier",
     "copied": "Copiée",
+    "copied_announce": "Adresse copiée.",
     "copy_failed": "La copie a échoué : sélectionnez l'adresse et copiez-la à la main.",
     "open": "Ouvrir dans l'agenda",
     "help_google": "Google Agenda : sur ordinateur, « Autres agendas » → « + » → « À partir de l'URL ». Google relit l'adresse à son rythme, toutes les 8 à 24 heures environ.",
@@ -56,8 +57,9 @@
     "importing": "Import en cours…",
     "summary": {
       "events": "Événements : {{count}}",
-      "series": "Événements récurrents : {{count}}",
       "unfolded": "Dont répétitions dépliées : {{count}}",
+      "series": "Événements récurrents : {{count}}",
+      "series_unfolded": "Répétitions que Nido ne sait pas dire, dépliées en événements : {{count}}",
       "duplicates": "Déjà importés : {{count}}",
       "ignored": "Ignorés : {{count}}"
     },
@@ -69,9 +71,11 @@
     "notes_title": "À regarder",
     "notes_capped": "Seules les {{count}} premières remarques sont affichées.",
     "note": {
-      "UNFOLDED": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : {{detail}} événements séparés.",
-      "UNFOLDED_PARTIAL": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : {{detail}} événements séparés, d'il y a un an à dans deux ans.",
-      "TRUNCATED_TEXT": "« {{title}} » : {{detail}} raccourci.",
+      "UNFOLDED_one": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : {{count}} événement séparé.",
+      "UNFOLDED_other": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : {{count}} événements séparés.",
+      "UNFOLDED_PARTIAL_one": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : {{count}} événement séparé, d'il y a un an à dans deux ans.",
+      "UNFOLDED_PARTIAL_other": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : {{count}} événements séparés, d'il y a un an à dans deux ans.",
+      "TRUNCATED_TEXT": "« {{title}} » : texte raccourci ({{detail}}).",
       "UNFOLDED_PARTIAL_zero": "« {{title}} » se répète d'une façon que Nido ne sait pas dire : aucune de ses occurrences ne tombe entre il y a un an et dans deux ans.",
       "CONVERTED_ZONE": "« {{title}} » : heures converties depuis le fuseau {{detail}}.",
       "UNKNOWN_ZONE": "« {{title}} » : fuseau {{detail}} inconnu, heures prises telles quelles.",
@@ -79,7 +83,7 @@
       "CONVERTED_ZONE_unnamed": "« {{title}} » : heures converties depuis un autre fuseau.",
       "UNKNOWN_ZONE_unnamed": "« {{title}} » : fuseau inconnu, heures prises telles quelles."
     },
-    "untitled": "(sans titre)",
+    "untitled": "(Sans titre)",
     "ignored_reason": {
       "VTODO": "c'est une tâche",
       "VJOURNAL": "c'est une note",
@@ -90,6 +94,7 @@
       "DUPLICATE_UID": "un autre événement du fichier porte le même identifiant",
       "TOO_HEAVY": "sa règle de répétition demande trop de calcul",
       "BAD_RULE": "sa règle de répétition est illisible",
+      "MALFORMED": "une de ses propriétés est illisible",
       "NIDO_SOURCE": "c'est un élément d'une autre partie de Nido (tâche, repas, finance ou épargne)"
     },
     "text_field": {
@@ -129,14 +134,6 @@
     "saved": "« {{name}} » est enregistré.",
     "removed": "« {{name}} » n'est plus suivi."
   },
-  "colors": {
-    "event-violet": "Violet",
-    "event-magenta": "Magenta",
-    "event-cyan": "Cyan",
-    "event-graphite": "Graphite",
-    "event-indigo": "Indigo",
-    "event-brique": "Brique"
-  },
   "errors": {
     "network": "Nido ne répond pas. Vérifiez votre connexion.",
     "server": "Une erreur est survenue. Réessayez.",
@@ -164,6 +161,9 @@
     "TOO_MANY_REDIRECTS": "trop de redirections",
     "TOO_LARGE": "le calendrier est trop volumineux",
     "NOT_ICS": "ce n'est pas un calendrier",
-    "HTTP": "le serveur a répondu {{status}}"
-  }
+    "HTTP": "le serveur a répondu {{status}}",
+    "unknown": "une erreur que cette version de Nido ne connaît pas"
+  },
+  "loading": "Chargement…",
+  "retry": "Réessayer"
 }

@@ -91,15 +91,7 @@
     "times_required": "An event that is not all day has a start and an end time.",
     "end_before_start": "The end cannot precede the start.",
     "too_long": "An event lasts at most {{days}} days.",
-    "save_failed": "Saving failed.",
-    "color_name": {
-      "event-violet": "Violet",
-      "event-magenta": "Magenta",
-      "event-cyan": "Cyan",
-      "event-graphite": "Graphite",
-      "event-indigo": "Indigo",
-      "event-brique": "Brick"
-    }
+    "save_failed": "Saving failed."
   },
   "delete": {
     "failed": "Deleting failed.",

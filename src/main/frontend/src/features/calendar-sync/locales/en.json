@@ -19,7 +19,7 @@
   "export": {
     "intro": "An .ics file to open in Google Calendar, Outlook or Apple Calendar. It is a copy: what changes in Nido afterwards does not reach it.",
     "download": "Download",
-    "failed": "The file could not be prepared. Try again."
+    "preparing": "Preparing the file…"
   },
   "subscribe": {
     "intro": "A secret address to give your calendar app: this calendar shows there and keeps itself up to date. One address per device, so you can revoke just one.",
@@ -33,6 +33,7 @@
     "created_warning": "This address will not be shown again. Anyone who has it sees this calendar: do not share it.",
     "copy": "Copy",
     "copied": "Copied",
+    "copied_announce": "Address copied.",
     "copy_failed": "Copying failed: select the address and copy it by hand.",
     "open": "Open in my calendar",
     "help_google": "Google Calendar: on a computer, \"Other calendars\" → \"+\" → \"From URL\". Google reads the address at its own pace, every 8 to 24 hours or so.",
@@ -56,8 +57,9 @@
     "importing": "Importing…",
     "summary": {
       "events": "Events: {{count}}",
-      "series": "Recurring events: {{count}}",
       "unfolded": "Of which unfolded repetitions: {{count}}",
+      "series": "Recurring events: {{count}}",
+      "series_unfolded": "Repetitions Nido cannot say, unfolded into events: {{count}}",
       "duplicates": "Already imported: {{count}}",
       "ignored": "Ignored: {{count}}"
     },
@@ -69,9 +71,11 @@
     "notes_title": "Worth a look",
     "notes_capped": "Only the first {{count}} notes are shown.",
     "note": {
-      "UNFOLDED": "\"{{title}}\" repeats in a way Nido cannot say: {{detail}} separate events.",
-      "UNFOLDED_PARTIAL": "\"{{title}}\" repeats in a way Nido cannot say: {{detail}} separate events, from a year ago to two years ahead.",
-      "TRUNCATED_TEXT": "\"{{title}}\": {{detail}} shortened.",
+      "UNFOLDED_one": "\"{{title}}\" repeats in a way Nido cannot say: {{count}} separate event.",
+      "UNFOLDED_other": "\"{{title}}\" repeats in a way Nido cannot say: {{count}} separate events.",
+      "UNFOLDED_PARTIAL_one": "\"{{title}}\" repeats in a way Nido cannot say: {{count}} separate event, from a year ago to two years ahead.",
+      "UNFOLDED_PARTIAL_other": "\"{{title}}\" repeats in a way Nido cannot say: {{count}} separate events, from a year ago to two years ahead.",
+      "TRUNCATED_TEXT": "\"{{title}}\": text shortened ({{detail}}).",
       "UNFOLDED_PARTIAL_zero": "\"{{title}}\" repeats in a way Nido cannot say: none of its occurrences falls between a year ago and two years ahead.",
       "CONVERTED_ZONE": "\"{{title}}\": times converted from the {{detail}} time zone.",
       "UNKNOWN_ZONE": "\"{{title}}\": unknown time zone {{detail}}, times taken as they are.",
@@ -79,7 +83,7 @@
       "CONVERTED_ZONE_unnamed": "\"{{title}}\": times converted from another time zone.",
       "UNKNOWN_ZONE_unnamed": "\"{{title}}\": unknown time zone, times taken as they are."
     },
-    "untitled": "(untitled)",
+    "untitled": "(Untitled)",
     "ignored_reason": {
       "VTODO": "it is a task",
       "VJOURNAL": "it is a note",
@@ -90,6 +94,7 @@
       "DUPLICATE_UID": "another event in the file has the same identifier",
       "TOO_HEAVY": "its repetition rule takes too much work",
       "BAD_RULE": "its repetition rule cannot be read",
+      "MALFORMED": "one of its properties cannot be read",
       "NIDO_SOURCE": "it is an item of another part of Nido (a task, a meal, finance or savings)"
     },
     "text_field": {
@@ -129,14 +134,6 @@
     "saved": "\"{{name}}\" is saved.",
     "removed": "\"{{name}}\" is no longer followed."
   },
-  "colors": {
-    "event-violet": "Violet",
-    "event-magenta": "Magenta",
-    "event-cyan": "Cyan",
-    "event-graphite": "Graphite",
-    "event-indigo": "Indigo",
-    "event-brique": "Brick"
-  },
   "errors": {
     "network": "Nido is not answering. Check your connection.",
     "server": "Something went wrong. Try again.",
@@ -164,6 +161,9 @@
     "TOO_MANY_REDIRECTS": "too many redirects",
     "TOO_LARGE": "the calendar is too large",
     "NOT_ICS": "not a calendar",
-    "HTTP": "the server answered {{status}}"
-  }
+    "HTTP": "the server answered {{status}}",
+    "unknown": "an error this version of Nido does not know"
+  },
+  "loading": "Loading…",
+  "retry": "Try again"
 }

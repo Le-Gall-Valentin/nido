@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { CalendarApiProvider, CalendarSyncError, type CalendarApi, type SubscriptionLink } from '@/entities/calendar'
+import {
+  CalendarApiProvider, CalendarSyncError, type CalendarApi, type CreatedSubscriptionLink, type SubscriptionLink,
+} from '@/entities/calendar'
 import { SubscriptionsTab } from './SubscriptionsTab'
 
 vi.mock('react-i18next', () => ({
@@ -181,5 +183,40 @@ describe('SubscriptionsTab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'subscribe.cancel' }))
     fireEvent.click(screen.getByRole('button', { name: /subscribe\.revoke_for/ }))
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('hands focus to the label when the form opens, and to the address once it is made', async () => {
+    renderTab({ listSubscriptionLinks: vi.fn().mockResolvedValue([]),
+      createSubscriptionLink: vi.fn().mockResolvedValue(CREATED) })
+    const newLink = await screen.findByRole('button', { name: 'subscribe.new' })
+    newLink.focus()
+    fireEvent.click(newLink)
+    expect(document.activeElement).toBe(screen.getByLabelText('subscribe.label'))
+
+    fireEvent.change(screen.getByLabelText('subscribe.label'), { target: { value: 'iPad' } })
+    fireEvent.click(screen.getByRole('button', { name: 'subscribe.create' }))
+
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('subscribe.created_title')))
+  })
+
+  it('says a list that could not be read, and reads it again on request, rather than show no address', async () => {
+    const listSubscriptionLinks = vi.fn().mockRejectedValueOnce(new CalendarSyncError('network')).mockResolvedValue([IPHONE])
+    renderTab({ listSubscriptionLinks })
+
+    expect((await screen.findByRole('alert')).textContent).toBe('errors.network')
+    expect(screen.queryByText('subscribe.empty')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'retry' }))
+
+    expect(await screen.findByText('iPhone')).toBeTruthy()
+  })
+
+  it('cannot be cancelled while the address is being made, nor while it is being revoked', async () => {
+    let made: (value: CreatedSubscriptionLink) => void = () => {}
+    await openForm({ createSubscriptionLink: vi.fn(() => new Promise<CreatedSubscriptionLink>((resolve) => { made = resolve })) })
+    fireEvent.change(screen.getByLabelText('subscribe.label'), { target: { value: 'iPad' } })
+    fireEvent.click(screen.getByRole('button', { name: 'subscribe.create' }))
+
+    await waitFor(() => expect((screen.getByRole('button', { name: 'subscribe.cancel' }) as HTMLButtonElement).disabled).toBe(true))
+    made(CREATED)
   })
 })

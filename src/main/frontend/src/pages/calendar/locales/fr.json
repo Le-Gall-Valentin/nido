@@ -91,15 +91,7 @@
     "times_required": "Un événement qui n'est pas sur la journée entière a une heure de début et de fin.",
     "end_before_start": "La fin ne peut pas précéder le début.",
     "too_long": "Un événement dure au plus {{days}} jours.",
-    "save_failed": "L'enregistrement a échoué.",
-    "color_name": {
-      "event-violet": "Violet",
-      "event-magenta": "Magenta",
-      "event-cyan": "Cyan",
-      "event-graphite": "Graphite",
-      "event-indigo": "Indigo",
-      "event-brique": "Brique"
-    }
+    "save_failed": "L'enregistrement a échoué."
   },
   "delete": {
     "failed": "La suppression a échoué.",

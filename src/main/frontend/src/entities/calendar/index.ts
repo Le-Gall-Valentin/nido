@@ -1,10 +1,12 @@
+import './locales'
 export type {
   CalendarOccurrence, CalendarSourceType, CalendarEvent, RecurringEventSeries,
   RecurrenceInterval, Weekday, DayRule, EventInput, RecurringEventSeriesInput, ScheduleChange,
   ExportableSource, SubscriptionLink, SubscriptionLinkInput, CreatedSubscriptionLink,
   ImportNoteKind, ImportNote, ImportReport, ExternalFeed, ExternalFeedInput, ExternalFeedUpdate,
 } from './model/types'
-export { MAX_IMPORT_NOTES, MAX_FEED_ADDRESS_LENGTH } from './model/types'
+export { MAX_IMPORT_NOTES, MAX_IMPORT_BYTES, MAX_FEED_ADDRESS_LENGTH } from './model/types'
+export { ColorSwatches } from './ui/ColorSwatches'
 export { toEventInput } from './lib/toEventInput'
 export {
   EVENT_COLORS, DEFAULT_EVENT_COLOR, FEED_FALLBACK_COLOR, EVENT_DOT_CLASS, EVENT_TINT_CLASS, isEventColor, feedColor,
