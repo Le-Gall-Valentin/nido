@@ -1,5 +1,6 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.RecurrenceInterval;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
@@ -8,7 +9,6 @@ import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
-import com.nido.api.finance.application.service.OperationNotifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,10 +24,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DeleteRecurringSeriesHandlerTest {

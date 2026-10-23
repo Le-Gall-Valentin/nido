@@ -1,5 +1,6 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.SavingsNotifier;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SavingsContribution;
 import com.nido.api.finance.domain.model.SavingsGoal;
@@ -12,6 +13,7 @@ import com.nido.api.space.domain.model.SpaceRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -25,20 +27,23 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UpdateSavingsGoalHandlerTest {
 
     @Mock SavingsGoalRepository savingsGoalRepository;
+    @Mock SavingsNotifier notifier;
     private UpdateSavingsGoalHandler handler;
     private final UUID spaceId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        handler = new UpdateSavingsGoalHandler(savingsGoalRepository);
+        handler = new UpdateSavingsGoalHandler(savingsGoalRepository, notifier);
     }
 
     private SpaceMembership membership(SpaceRole role) {
@@ -130,5 +135,30 @@ class UpdateSavingsGoalHandlerTest {
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);
+    }
+
+    @Test
+    void an_updated_goal_tells_the_notifier_what_it_was_and_what_it_is_after_writing() {
+        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(UUID.randomUUID(), spaceId, "Nouveau nom", new BigDecimal("2500.00"), null, "#5c7a58", "🎯");
+        SavingsGoal existing = existingInSameSpace(command.goalId());
+        when(savingsGoalRepository.findById(command.goalId())).thenReturn(Optional.of(existing));
+        SavingsGoal updated = new SavingsGoal(command.goalId(), spaceId, "Nouveau nom", new BigDecimal("2500.00"), null, "#5c7a58", "🎯");
+        when(savingsGoalRepository.update(command)).thenReturn(updated);
+        when(savingsGoalRepository.findContributionsByGoalId(command.goalId())).thenReturn(List.of());
+        SpaceMembership caller = membership(SpaceRole.MEMBER);
+
+        handler.update(command, caller);
+
+        InOrder order = inOrder(savingsGoalRepository, notifier);
+        order.verify(savingsGoalRepository).update(command);
+        order.verify(notifier).goalUpdated(caller, existing, updated);
+    }
+
+    @Test
+    void a_refused_gesture_tells_nobody() {
+        UpdateSavingsGoalCommand command = new UpdateSavingsGoalCommand(UUID.randomUUID(), spaceId, "Nouveau nom", new BigDecimal("2500.00"), null, "#5c7a58", "🎯");
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.VIEWER)));
+        verifyNoInteractions(notifier);
     }
 }

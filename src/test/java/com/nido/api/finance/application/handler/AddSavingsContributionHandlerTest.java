@@ -1,5 +1,6 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.SavingsNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.AddSavingsContributionCommand;
 import com.nido.api.finance.domain.model.FinanceException;
@@ -12,6 +13,7 @@ import com.nido.api.space.domain.model.SpaceRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -26,8 +28,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,12 +39,13 @@ class AddSavingsContributionHandlerTest {
 
     @Mock SavingsGoalRepository savingsGoalRepository;
     @Mock SpaceMemberValidator spaceMemberValidator;
+    @Mock SavingsNotifier notifier;
     private AddSavingsContributionHandler handler;
     private final UUID spaceId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        handler = new AddSavingsContributionHandler(savingsGoalRepository, spaceMemberValidator);
+        handler = new AddSavingsContributionHandler(savingsGoalRepository, spaceMemberValidator, notifier);
     }
 
     private SpaceMembership membership(SpaceRole role) {
@@ -148,5 +153,31 @@ class AddSavingsContributionHandlerTest {
 
         assertThatThrownBy(() -> handler.add(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);
+    }
+
+    @Test
+    void a_deposit_tells_the_notifier_every_deposit_the_goal_now_holds_after_writing() {
+        AddSavingsContributionCommand command = new AddSavingsContributionCommand(UUID.randomUUID(), spaceId, UUID.randomUUID(), new BigDecimal("100.00"), LocalDate.of(2026, 1, 5));
+        SavingsGoal goal = new SavingsGoal(command.goalId(), spaceId, "Vacances", new BigDecimal("2000.00"), null, "#5c7a58", "🎯");
+        SavingsContribution earlier = new SavingsContribution(UUID.randomUUID(), command.goalId(), UUID.randomUUID(), new BigDecimal("400.00"), LocalDate.of(2026, 1, 1));
+        when(savingsGoalRepository.findById(command.goalId())).thenReturn(Optional.of(goal));
+        when(savingsGoalRepository.findContributionsByGoalId(command.goalId())).thenReturn(List.of(earlier));
+        SavingsContribution created = new SavingsContribution(UUID.randomUUID(), command.goalId(), command.memberId(), command.amount(), command.date());
+        when(savingsGoalRepository.addContribution(command)).thenReturn(created);
+        SpaceMembership caller = membership(SpaceRole.MEMBER);
+
+        handler.add(command, caller);
+
+        InOrder order = inOrder(savingsGoalRepository, notifier);
+        order.verify(savingsGoalRepository).addContribution(command);
+        order.verify(notifier).deposited(caller, goal, created, List.of(earlier, created));
+    }
+
+    @Test
+    void a_refused_gesture_tells_nobody() {
+        AddSavingsContributionCommand command = new AddSavingsContributionCommand(UUID.randomUUID(), spaceId, UUID.randomUUID(), new BigDecimal("100.00"), LocalDate.of(2026, 1, 5));
+
+        assertThatThrownBy(() -> handler.add(command, membership(SpaceRole.VIEWER)));
+        verifyNoInteractions(notifier);
     }
 }

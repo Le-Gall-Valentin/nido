@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.UpdateSavingsGoalUseCase;
+import com.nido.api.finance.application.service.SavingsNotifier;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SavingsContribution;
 import com.nido.api.finance.domain.model.SavingsGoal;
@@ -18,9 +19,11 @@ import java.util.List;
 public class UpdateSavingsGoalHandler implements UpdateSavingsGoalUseCase {
 
     private final SavingsGoalRepository savingsGoalRepository;
+    private final SavingsNotifier notifier;
 
-    public UpdateSavingsGoalHandler(SavingsGoalRepository savingsGoalRepository) {
+    public UpdateSavingsGoalHandler(SavingsGoalRepository savingsGoalRepository, SavingsNotifier notifier) {
         this.savingsGoalRepository = savingsGoalRepository;
+        this.notifier = notifier;
     }
 
     @Override
@@ -38,6 +41,7 @@ public class UpdateSavingsGoalHandler implements UpdateSavingsGoalUseCase {
             throw new FinanceException.TargetAmountBelowContributed();
         }
         SavingsGoal updated = savingsGoalRepository.update(command);
+        notifier.goalUpdated(caller, existing, updated);
         return new SavingsGoalDetail(updated, savingsGoalRepository.findContributionsByGoalId(updated.id()));
     }
 }
