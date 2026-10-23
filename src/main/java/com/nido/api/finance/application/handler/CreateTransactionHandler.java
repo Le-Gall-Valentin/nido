@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.CreateTransactionUseCase;
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
@@ -22,12 +23,15 @@ public class CreateTransactionHandler implements CreateTransactionUseCase {
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
     private final SpaceMemberValidator spaceMemberValidator;
+    private final OperationNotifier notifier;
 
     public CreateTransactionHandler(
-            TransactionRepository transactionRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator) {
+            TransactionRepository transactionRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator,
+            OperationNotifier notifier) {
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
         this.spaceMemberValidator = spaceMemberValidator;
+        this.notifier = notifier;
     }
 
     @Override
@@ -49,6 +53,8 @@ public class CreateTransactionHandler implements CreateTransactionUseCase {
             spaceMemberValidator.ensureMember(command.spaceId(), command.payerId());
         }
         resolved.forEach(c -> spaceMemberValidator.ensureMember(command.spaceId(), c.memberId()));
-        return transactionRepository.create(command, resolved);
+        Transaction created = transactionRepository.create(command, resolved);
+        notifier.transactionAdded(caller, created);
+        return created;
     }
 }

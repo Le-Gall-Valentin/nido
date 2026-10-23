@@ -13,9 +13,11 @@ import com.nido.api.finance.domain.port.out.TransactionRepository;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
+import com.nido.api.finance.application.service.OperationNotifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -35,6 +37,8 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class CreateTransactionHandlerTest {
@@ -42,6 +46,7 @@ class CreateTransactionHandlerTest {
     @Mock TransactionRepository transactionRepository;
     @Mock CategoryRepository categoryRepository;
     @Mock SpaceMemberValidator spaceMemberValidator;
+    @Mock OperationNotifier notifier;
     private CreateTransactionHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
@@ -50,7 +55,7 @@ class CreateTransactionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new CreateTransactionHandler(transactionRepository, categoryRepository, spaceMemberValidator);
+        handler = new CreateTransactionHandler(transactionRepository, categoryRepository, spaceMemberValidator, notifier);
         lenient().when(categoryRepository.findById(any())).thenReturn(Optional.of(category));
     }
 
@@ -186,5 +191,30 @@ class CreateTransactionHandlerTest {
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(SpaceException.NotAMember.class);
+    }
+
+    @Test
+    void a_created_transaction_tells_the_notifier_after_writing() {
+        CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("45.30"),
+            TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), null, List.of(), null);
+        Transaction created = new Transaction(UUID.randomUUID(), spaceId, "Courses", new BigDecimal("45.30"),
+            TransactionType.EXPENSE, command.categoryId(), command.date(), null, List.of(), null, Instant.now());
+        when(transactionRepository.create(command, List.of())).thenReturn(created);
+        SpaceMembership caller = membership(SpaceRole.MEMBER);
+
+        handler.create(command, caller);
+
+        InOrder order = inOrder(transactionRepository, notifier);
+        order.verify(transactionRepository).create(command, List.of());
+        order.verify(notifier).transactionAdded(caller, created);
+    }
+
+    @Test
+    void a_refused_gesture_tells_nobody() {
+        CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("45.30"),
+            TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), null, List.of(), null);
+
+        assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.VIEWER)));
+        verifyNoInteractions(notifier);
     }
 }

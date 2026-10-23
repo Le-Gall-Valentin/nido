@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.DeleteRecurringSeriesUseCase;
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
@@ -14,9 +15,11 @@ import java.util.UUID;
 public class DeleteRecurringSeriesHandler implements DeleteRecurringSeriesUseCase {
 
     private final RecurringTransactionSeriesRepository seriesRepository;
+    private final OperationNotifier notifier;
 
-    public DeleteRecurringSeriesHandler(RecurringTransactionSeriesRepository seriesRepository) {
+    public DeleteRecurringSeriesHandler(RecurringTransactionSeriesRepository seriesRepository, OperationNotifier notifier) {
         this.seriesRepository = seriesRepository;
+        this.notifier = notifier;
     }
 
     @Override
@@ -37,5 +40,6 @@ public class DeleteRecurringSeriesHandler implements DeleteRecurringSeriesUseCas
         // past occurrences stay in history as ordinary one-off transactions once the series
         // that created them is gone; only future occurrences stop.
         seriesRepository.delete(seriesId);
+        notifier.recurringStopped(caller, existing);
     }
 }

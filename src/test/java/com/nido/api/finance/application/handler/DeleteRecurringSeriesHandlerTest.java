@@ -8,9 +8,11 @@ import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
+import com.nido.api.finance.application.service.OperationNotifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -24,18 +26,21 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class DeleteRecurringSeriesHandlerTest {
 
     @Mock RecurringTransactionSeriesRepository seriesRepository;
+    @Mock OperationNotifier notifier;
     private DeleteRecurringSeriesHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID seriesId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        handler = new DeleteRecurringSeriesHandler(seriesRepository);
+        handler = new DeleteRecurringSeriesHandler(seriesRepository, notifier);
     }
 
     private SpaceMembership membership(SpaceRole role) {
@@ -77,5 +82,24 @@ class DeleteRecurringSeriesHandlerTest {
     void a_viewer_cannot_delete_a_recurring_series() {
         assertThatThrownBy(() -> handler.delete(seriesId, spaceId, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);
+    }
+
+    @Test
+    void a_stopped_series_tells_the_notifier_what_it_was_after_deleting_it() {
+        RecurringTransactionSeries existing = series(spaceId);
+        when(seriesRepository.findById(seriesId)).thenReturn(Optional.of(existing));
+        SpaceMembership caller = membership(SpaceRole.MEMBER);
+
+        handler.delete(seriesId, spaceId, caller);
+
+        InOrder order = inOrder(seriesRepository, notifier);
+        order.verify(seriesRepository).delete(seriesId);
+        order.verify(notifier).recurringStopped(caller, existing);
+    }
+
+    @Test
+    void a_refused_gesture_tells_nobody() {
+        assertThatThrownBy(() -> handler.delete(seriesId, spaceId, membership(SpaceRole.VIEWER)));
+        verifyNoInteractions(notifier);
     }
 }

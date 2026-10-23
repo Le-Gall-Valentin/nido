@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.UpdateTransactionUseCase;
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
@@ -22,12 +23,15 @@ public class UpdateTransactionHandler implements UpdateTransactionUseCase {
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
     private final SpaceMemberValidator spaceMemberValidator;
+    private final OperationNotifier notifier;
 
     public UpdateTransactionHandler(
-            TransactionRepository transactionRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator) {
+            TransactionRepository transactionRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator,
+            OperationNotifier notifier) {
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
         this.spaceMemberValidator = spaceMemberValidator;
+        this.notifier = notifier;
     }
 
     @Override
@@ -53,6 +57,8 @@ public class UpdateTransactionHandler implements UpdateTransactionUseCase {
         if (!existing.spaceId().equals(command.spaceId())) {
             throw new FinanceException.TransactionNotFound();
         }
-        return transactionRepository.update(command, resolved);
+        Transaction updated = transactionRepository.update(command, resolved);
+        notifier.transactionUpdated(caller, existing, updated);
+        return updated;
     }
 }
