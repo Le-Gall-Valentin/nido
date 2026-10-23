@@ -112,6 +112,18 @@ class IcalSupportTest {
     }
 
     @Test
+    void anObservanceWithNoStartIsWeighedFrom1970AsIcal4jReadsIt() {
+        // A name the JDK knows: ical4j only lists its changes (from 1970, with no start), and never builds it.
+        String noStart = "BEGIN:VTIMEZONE\nTZID:Europe/Paris\nBEGIN:STANDARD\nTZOFFSETFROM:+0100\nTZOFFSETTO:+0100\nTZNAME:CET\n"
+            + "END:STANDARD\nEND:VTIMEZONE\n";
+
+        VEvent e = parseInTime(document(noStart, "DTSTART;TZID=Europe/Paris:20270310T090000\n"))
+            .<VEvent>getComponents(Component.VEVENT).getFirst();
+        assertThat(IcalSupport.toLocal(e.<DtStart<Temporal>>getProperty(Property.DTSTART).orElseThrow().getDate(), PARIS))
+            .isEqualTo(LocalDateTime.of(2027, 3, 10, 9, 0));
+    }
+
+    @Test
     void aWeeklySeriesKeepsItsWallClockAcrossBothChanges() {
         VEvent e = event(document("", "DTSTART;TZID=America/New_York:20270224T090000\nRRULE:FREQ=WEEKLY;COUNT=4\n"));
         Set<Period<Temporal>> set = e.calculateRecurrenceSet(new Period<>(
@@ -255,7 +267,7 @@ class IcalSupportTest {
         assertThat(google.getProperty(Property.DTSTART)).isPresent();
     }
 
-    /** A hang guard only: ical4j listing a zone's changes without end never comes back, and cannot be interrupted. */
+    /** A hang guard only: ical4j listing a zone's changes without end would not come back on its own. */
     private static Calendar parseInTime(String ics) {
         return assertTimeoutPreemptively(Duration.ofSeconds(10), () -> IcalSupport.parse(ics));
     }

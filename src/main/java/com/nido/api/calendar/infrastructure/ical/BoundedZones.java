@@ -47,6 +47,8 @@ final class BoundedZones implements ComponentFactory<VTimeZone> {
     private static final int YEARS_AHEAD = 10;
     /** ...and those of a zone starting later, up to five years past its start (ZoneRulesBuilder). */
     private static final int YEARS_AFTER_A_LATER_START = 5;
+    /** Where ical4j starts an observance that gives no start of its own. */
+    private static final int EPOCH_YEAR = 1970;
 
     private final VTimeZone.Factory typed = new VTimeZone.Factory();
     private final Map<String, VTimeZone> given = new HashMap<>();
@@ -98,10 +100,13 @@ final class BoundedZones implements ComponentFactory<VTimeZone> {
         return zone;
     }
 
-    /** What ical4j lists of one observance: its start, its RDATEs, and every candidate of its rules up to their end. */
+    /**
+     * What ical4j lists of one observance: its start, its RDATEs, and every candidate of its rules up to their end. With
+     * no start, ical4j lists from 1970 (Observance.getLatestOnset), and so is it billed.
+     */
     private void charge(Observance observance) {
-        int start = yearOf(observance.<DtStart<Temporal>>getProperty(Property.DTSTART)
-            .orElseThrow(() -> new IllegalStateException("An observance with no start")).getDate());
+        int start = observance.<DtStart<Temporal>>getProperty(Property.DTSTART).map(DtStart::getDate)
+            .map(BoundedZones::yearOf).orElse(EPOCH_YEAR);
         bill(1);
         for (RDate<Temporal> rdate : observance.<RDate<Temporal>>getProperties(Property.RDATE)) {
             bill(rdate.getPeriods().map(Set::size).orElseGet(() -> rdate.getDates().size()));

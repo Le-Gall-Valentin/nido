@@ -15,6 +15,8 @@ import net.fortuna.ical4j.model.TimeZoneRegistry;
 import net.fortuna.ical4j.model.TimeZoneRegistryFactory;
 import net.fortuna.ical4j.model.property.XProperty;
 import net.fortuna.ical4j.util.CompatibilityHints;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -34,6 +36,8 @@ import java.util.Set;
  * space's zone. The hints are also in ical4j.properties; set here too, so no reading depends on the file being found.
  */
 public final class IcalSupport {
+
+    private static final Logger log = LoggerFactory.getLogger(IcalSupport.class);
 
     /** Only for writing (ical4j's bundled VTIMEZONE text): no document is ever read with this shared registry. */
     private static final TimeZoneRegistry REGISTRY;
@@ -78,9 +82,13 @@ public final class IcalSupport {
             return new CalendarBuilder(CalendarParserFactory.getInstance().get(), new ContentHandlerContext()
                 .withPropertyFactorySupplier(() -> FACTORIES).withComponentFactorySupplier(() -> components),
                 new DocumentZones(now)).build(new StringReader(content));
-        } catch (ParserException | IOException | RuntimeException | StackOverflowError | OutOfMemoryError e) {
+        } catch (ParserException | IOException | RuntimeException e) {
+            throw new CalendarException.NotAnIcalFile();
+        } catch (StackOverflowError | OutOfMemoryError exhausted) {
             // What reading one document exhausts, past every bound nido sets, costs that document and not the thread
-            // reading it: a followed calendar is then remembered as unreadable, not read again at every view.
+            // reading it: a followed calendar is then remembered as unreadable, not read again at every view. Said, for
+            // the memory may have run out under another thread's load rather than this document's.
+            log.warn("A calendar document was refused: reading it ran into {}", exhausted.getClass().getSimpleName());
             throw new CalendarException.NotAnIcalFile();
         }
     }
