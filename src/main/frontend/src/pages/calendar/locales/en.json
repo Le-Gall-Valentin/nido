@@ -38,7 +38,9 @@
     "label": "Filter by source"
   },
   "recurring_series": {
-    "manage": "Manage recurring events"
+    "manage": "Manage recurring events",
+    "open": "Recurring events",
+    "open_short": "Recurring"
   },
   "palette": {
     "today": "Calendar — today"

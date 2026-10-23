@@ -38,7 +38,9 @@
     "label": "Filtrer par source"
   },
   "recurring_series": {
-    "manage": "Gérer les événements récurrents"
+    "manage": "Gérer les événements récurrents",
+    "open": "Événements récurrents",
+    "open_short": "Récurrents"
   },
   "palette": {
     "today": "Calendrier — aujourd'hui"

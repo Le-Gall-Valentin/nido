@@ -77,6 +77,13 @@ describe('CalendarPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'sync' }))
     expect(await screen.findByRole('tablist')).toBeTruthy()
     expect(screen.queryByRole('button', { name: /new_event/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'recurring_series.open' })).toBeNull()
+  })
+
+  it('names the recurring events button in full, though a phone shows its short name', async () => {
+    renderPage([])
+    const manage = await screen.findByRole('button', { name: 'recurring_series.open' })
+    expect(manage.textContent).toContain('recurring_series.open_short')
   })
 
   it.each(['day', 'week', 'month'] as const)('shows the entries of a followed calendar and filters each calendar on its own, in the %s view', async (view) => {
@@ -440,7 +447,8 @@ describe('CalendarPage — recurring events in the event form', () => {
   it('lists the series to manage them, and edits one in the same form', async () => {
     const ended = { ...PIANO_SERIES, id: 's-0', title: 'Solfège', endDate: '2026-09-01', firstDate: '2026-01-07' }
     renderPage([], { calendar: { listRecurringEventSeries: vi.fn().mockResolvedValue([ended, PIANO_SERIES]) } })
-    fireEvent.click(await screen.findByRole('button', { name: 'recurring_series.manage' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'recurring_series.open' }))
+    expect(await screen.findByRole('dialog', { name: 'recurring_series.manage' })).toBeTruthy()
     const edit = await screen.findByRole('button', { name: 'series.edit:{"name":"Piano"}' })
     // Series are created from the new-event button now, never from here.
     expect(screen.queryByRole('button', { name: /series\.new/ })).toBeNull()
