@@ -26,6 +26,9 @@ class SettingRulesTest {
         "REFRESH_TOKEN_DAYS, 0, out_of_range",
         "SWAGGER, TRUE, ",
         "SWAGGER, yes, not_a_boolean",
+        "CALENDAR_ALLOW_PRIVATE_NETWORK, FALSE, ",
+        "CALENDAR_ALLOW_PRIVATE_NETWORK, true, ",
+        "CALENDAR_ALLOW_PRIVATE_NETWORK, on, not_a_boolean",
         "MAIL_FROM, anything, ",
     })
     void each_value_is_checked_on_its_own(SettingKey key, String value, String problem) {
@@ -36,6 +39,7 @@ class SettingRulesTest {
     void values_are_stored_in_one_form() {
         assertThat(SettingRules.normalize(SettingKey.MAIL_SECURITY, " TLS ")).isEqualTo("tls");
         assertThat(SettingRules.normalize(SettingKey.SWAGGER, "True")).isEqualTo("true");
+        assertThat(SettingRules.normalize(SettingKey.CALENDAR_ALLOW_PRIVATE_NETWORK, " TRUE ")).isEqualTo("true");
         assertThat(SettingRules.normalize(SettingKey.PUBLIC_URL, "https://Nido.example.com/")).isEqualTo("https://nido.example.com");
         assertThat(SettingRules.normalize(SettingKey.MAIL_HOST, " smtp.example.com ")).isEqualTo("smtp.example.com");
         assertThat(SettingRules.normalize(SettingKey.MAIL_PASSWORD, " pass word ")).isEqualTo(" pass word ");

@@ -99,7 +99,9 @@ the week ("Mondays and Thursdays"), on a weekday of the month ("the 2nd Tuesday"
 of the month; series made before keep their day. Subscription addresses begin with Nido's public address
 (**Administration → Instance settings**): set it before giving any out. Followed calendars are downloaded by the
 server, which needs to reach the internet; it refuses addresses of its own network unless
-`NIDO_CALENDAR_ALLOW_PRIVATE_NETWORK` (or the matching setting) allows them — a Nextcloud at home, for instance. A very
+`NIDO_CALENDAR_ALLOW_PRIVATE_NETWORK` (or the matching setting) allows them — a Nextcloud at home, for instance. Opening
+it lets every member of every space make Nido fetch addresses of that network; Nido itself — this machine, its database
+and its Redis — stays closed even then, so give a Nextcloud running on the same machine by its network address. A very
 large calendar (beyond about 3 MB) may be refused as too large to follow. Google Calendar reads a subscription at its
 own pace, every 8 to 24 hours. A subscription address is all a calendar app needs to read the space: Nido never logs
 it, but the access log of a reverse proxy in front of it does — keep that log as private as the addresses, or leave

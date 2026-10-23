@@ -7,21 +7,24 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 
 /**
- * Which addresses a followed calendar may be downloaded from. Never this machine, its link (169.254.169.254 is a cloud's
- * metadata), a multicast group or a reserved block; the local network only when the administrator opens it. An IPv6
- * address carrying an IPv4 one — mapped, compatible, NAT64 — is judged on the IPv4 it carries.
+ * Which addresses a followed calendar may be downloaded from. Never nido itself — this machine, any address of its own
+ * interfaces, its database and its Redis —, its link (169.254.169.254 is a cloud's metadata), a multicast group or a
+ * reserved block; the rest of the local network only when the administrator opens it. An IPv6 address carrying an IPv4
+ * one — mapped, compatible, NAT64 — is judged on the IPv4 it carries.
  */
 @FunctionalInterface
 public interface AddressPolicy {
 
     boolean allows(InetAddress address);
 
-    static AddressPolicy standard(BooleanSupplier allowPrivateNetwork) {
+    /** {@code nidoItself}: the addresses of nido and of the services it uses, closed whatever the setting says. */
+    static AddressPolicy standard(BooleanSupplier allowPrivateNetwork, Predicate<InetAddress> nidoItself) {
         return address -> {
             InetAddress target = embeddedIpv4(address).orElse(address);
-            if (alwaysBlocked(target)) {
+            if (alwaysBlocked(target) || nidoItself.test(target) || nidoItself.test(address)) {
                 return false;
             }
             return !privateNetwork(target) || allowsPrivateNetwork(allowPrivateNetwork);

@@ -12,6 +12,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * The only way the download client learns an address: every address a name gives must be allowed, or none is used.
@@ -25,6 +31,16 @@ final class GuardedDnsResolver implements DnsResolver {
             super(host + " gives an address nido does not download from");
         }
     }
+
+    /**
+     * Where names are looked up: a few threads of their own, shared by every download. More lookups at once wait their
+     * turn, within their own deadline.
+     */
+    private static final ExecutorService LOOKUPS = Executors.newFixedThreadPool(4, task -> {
+        Thread thread = new Thread(task, "feed-dns");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private final DnsResolver delegate;
     private final AddressPolicy policy;
@@ -79,7 +95,7 @@ final class GuardedDnsResolver implements DnsResolver {
     public InetAddress[] resolve(String host) throws UnknownHostException {
         InetAddress[] addresses = literal(host).orElse(null);
         if (addresses == null) {
-            addresses = delegate.resolve(host);
+            addresses = lookUp(host);
         }
         if (addresses == null || addresses.length == 0) {
             throw new UnknownHostException(host);
@@ -88,6 +104,31 @@ final class GuardedDnsResolver implements DnsResolver {
             throw new BlockedAddressException(host);
         }
         return addresses;
+    }
+
+    /**
+     * The name service, waited for no longer than the download in progress has left — or one connect timeout, as the
+     * last address tried is given (see {@link #attempts}): a lookup cannot be interrupted, and the system's resolver may
+     * wait some ten seconds on a name whose servers do not answer. The lookup goes on on its own thread, the download stops.
+     */
+    private InetAddress[] lookUp(String host) throws UnknownHostException {
+        Long end = deadline.get();
+        long wait = end == null ? totalNanos : Math.max(connectNanos, end - System.nanoTime());
+        Future<InetAddress[]> lookup = LOOKUPS.submit(() -> delegate.resolve(host));
+        try {
+            return lookup.get(wait, TimeUnit.NANOSECONDS);
+        } catch (TimeoutException late) {
+            lookup.cancel(true);
+            throw new UnknownHostException(host + " was not resolved in time");
+        } catch (ExecutionException failed) {
+            if (failed.getCause() instanceof UnknownHostException unknown) {
+                throw unknown;
+            }
+            throw new UnknownHostException(host);
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            throw new UnknownHostException(host);
+        }
     }
 
     /** An address written out needs no name service: it is judged as it is, brackets of an IPv6 one removed. */

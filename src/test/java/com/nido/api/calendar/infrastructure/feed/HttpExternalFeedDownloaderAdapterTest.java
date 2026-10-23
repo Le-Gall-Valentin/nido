@@ -64,7 +64,7 @@ class HttpExternalFeedDownloaderAdapterTest {
 
     /** Strict, but for this machine — where the test server listens. */
     private final AddressPolicy loopbackOnly = address ->
-        address.isLoopbackAddress() || AddressPolicy.standard(() -> false).allows(address);
+        address.isLoopbackAddress() || AddressPolicy.standard(() -> false, AddressPolicyTest.NOTHING_OF_NIDO).allows(address);
 
     private final HttpExternalFeedDownloaderAdapter downloader = adapter(loopbackOnly, names,
         new HttpExternalFeedDownloaderAdapter.Limits(Duration.ofSeconds(2), Duration.ofSeconds(2), 1024, 3));
@@ -255,7 +255,7 @@ class HttpExternalFeedDownloaderAdapterTest {
 
     @Test
     void aNameGivingABlockedAddressIsRefusedBeforeAnyConnection() {
-        HttpExternalFeedDownloaderAdapter strict = adapter(AddressPolicy.standard(() -> false),
+        HttpExternalFeedDownloaderAdapter strict = adapter(AddressPolicy.standard(() -> false, AddressPolicyTest.NOTHING_OF_NIDO),
             names, HttpExternalFeedDownloaderAdapter.Limits.standard());
         assertThat(strict.download(url("rebind.test", "/feed.ics"), null, null))
             .isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.BLOCKED_ADDRESS)));
@@ -285,7 +285,6 @@ class HttpExternalFeedDownloaderAdapterTest {
         long start = System.nanoTime();
         FeedDownload result = downloader.download(URI.create("http://feed.test:" + drip.getLocalPort() + "/drip.ics"), null, null);
         long millis = (System.nanoTime() - start) / 1_000_000;
-        System.out.println("ELAPSED drip " + millis + " ms");
         assertThat(result).isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.TIMEOUT)));
         assertThat(millis).as("elapsed").isLessThan(3_000);
     }
@@ -323,7 +322,6 @@ class HttpExternalFeedDownloaderAdapterTest {
         long start = System.nanoTime();
         FeedDownload result = blackhole.download(URI.create("http://dead.test:" + dead + "/feed.ics"), null, null);
         long millis = (System.nanoTime() - start) / 1_000_000;
-        System.out.println("ELAPSED dead addresses " + millis + " ms");
         assertThat(result).isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.TIMEOUT)));
         // A second address is tried, cut by the deadline: the download does not give up a second early.
         assertThat(millis).as("elapsed").isBetween(1_500L, 3_000L);
@@ -341,7 +339,6 @@ class HttpExternalFeedDownloaderAdapterTest {
         long start = System.nanoTime();
         FeedDownload result = late.download(url("feed.test", "/late-then-dead.ics"), null, null);
         long millis = (System.nanoTime() - start) / 1_000_000;
-        System.out.println("ELAPSED late hop to dead addresses " + millis + " ms");
         assertThat(result).isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.TIMEOUT)));
         assertThat(millis).as("elapsed").isLessThan(3_800);
     }
@@ -394,7 +391,7 @@ class HttpExternalFeedDownloaderAdapterTest {
             }
         };
         requests.set(0);
-        HttpExternalFeedDownloaderAdapter victim = adapter(AddressPolicy.standard(() -> false),
+        HttpExternalFeedDownloaderAdapter victim = adapter(AddressPolicy.standard(() -> false, AddressPolicyTest.NOTHING_OF_NIDO),
             rebinding, HttpExternalFeedDownloaderAdapter.Limits.standard());
         assertThat(victim.download(url("rebind.test", "/feed.ics"), null, null))
             .isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.BLOCKED_ADDRESS)));
@@ -406,7 +403,6 @@ class HttpExternalFeedDownloaderAdapterTest {
         long start = System.nanoTime();
         FeedDownload result = downloader.download(url("feed.test", path), null, null);
         long millis = (System.nanoTime() - start) / 1_000_000;
-        System.out.println("ELAPSED " + path + " " + millis + " ms");
         assertThat(result).isEqualTo(new FeedDownload.Failed(FeedError.of(FeedErrorKind.TIMEOUT)));
         assertThat(millis).as("elapsed").isLessThan(3_000);
     }
