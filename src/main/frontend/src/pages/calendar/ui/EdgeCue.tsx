@@ -13,7 +13,7 @@ export function EdgeCue({ armed, view, vertical }: { armed: Zone; view: Calendar
   return (
     // Vertical cues sit on the viewport, since the phone list is taller than the screen; horizontal
     // cues sit on the calendar's own edges.
-    <div role="status" className={`pointer-events-none z-50 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-white shadow-lg ${vertical ? 'fixed' : 'absolute'} ${place}`}>
+    <div role="status" className={`pointer-events-none z-50 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-on-accent shadow-lg ${vertical ? 'fixed' : 'absolute'} ${place}`}>
       {t(key)}
     </div>
   )

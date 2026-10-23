@@ -48,7 +48,7 @@ export function IconPickerModal({ initialIcon, initialColor, onConfirm, onCancel
           const isSelected = name === selectedIcon
           return (
             <button key={name} type="button" aria-label={name} aria-pressed={isSelected} onClick={() => setSelectedIcon(name)}
-              className={`grid aspect-square place-items-center rounded-[8px] ${isSelected ? 'bg-accent text-white' : 'text-fg-2 hover:bg-bg-1'}`}>
+              className={`grid aspect-square place-items-center rounded-[8px] ${isSelected ? 'bg-accent text-on-accent' : 'text-fg-2 hover:bg-bg-1'}`}>
               <Icon size={18} />
             </button>
           )

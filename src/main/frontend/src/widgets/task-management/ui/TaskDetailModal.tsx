@@ -104,7 +104,7 @@ export function TaskDetailModal({ task, series, members, onClose, onChangeStatus
                 <UserAvatar userId={memberId} username={memberLabel(memberId)} className="size-6 shrink-0 rounded-full text-[10px]" />
                 <span className="flex-1 truncate text-fg-1">{memberLabel(memberId)}</span>
                 {task.assigneeIds.includes(memberId) && (
-                  <span className="rounded-full bg-accent-dim px-2 py-0.5 text-[10.5px] font-semibold text-accent">
+                  <span className="rounded-full bg-accent-dim px-2 py-0.5 text-[10.5px] font-semibold text-status-green">
                     {t('detail.this_occurrence_label')}
                   </span>
                 )}

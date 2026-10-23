@@ -60,7 +60,7 @@ function KitchenRecipeDetailPageContent() {
             <ol className="flex flex-col gap-3">
               {recipe.steps.map((step, index) => (
                 <li key={index} className="flex gap-3 text-sm text-fg-2">
-                  <span className="grid size-5 shrink-0 place-items-center rounded-full bg-accent-dim text-xs font-bold text-accent">{index + 1}</span>
+                  <span className="grid size-5 shrink-0 place-items-center rounded-full bg-accent-dim text-xs font-bold text-status-green">{index + 1}</span>
                   {step}
                 </li>
               ))}

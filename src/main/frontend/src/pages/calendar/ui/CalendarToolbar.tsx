@@ -84,7 +84,7 @@ export function CalendarToolbar({
               aria-pressed={view === candidate}
               onClick={() => onView(candidate)}
               className={`flex-1 px-3 py-1.5 text-sm font-semibold first:rounded-l-lg last:rounded-r-lg sm:flex-none
-                ${view === candidate ? 'bg-accent text-white' : 'text-fg-2 hover:bg-bg-2'}`}
+                ${view === candidate ? 'bg-accent text-on-accent' : 'text-fg-2 hover:bg-bg-2'}`}
             >
               {t(`view.${candidate}`)}
             </button>

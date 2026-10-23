@@ -89,7 +89,7 @@ export function MonthGrid({
                 aria-label={t(isOutside ? 'show_month' : 'open_day', { date: formatDay(day, locale) })}
                 className={`mb-1 grid h-6 min-w-6 place-items-center rounded-full px-1 text-xs font-semibold
                   after:absolute after:inset-0 after:content-['']
-                  ${isToday ? 'bg-accent text-white' : isOutside ? 'text-fg-3' : 'text-fg-1'}`}
+                  ${isToday ? 'bg-accent text-on-accent' : isOutside ? 'text-fg-3' : 'text-fg-1'}`}
               >
                 {day.endsWith('-01') ? (
                   <>

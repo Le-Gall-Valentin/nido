@@ -103,7 +103,7 @@ function NowLine({ minutes }: { minutes: number }) {
 function PickedBlock({ range, segment }: { range: ScheduleChange; segment: Segment }) {
   return (
     <div data-testid="grid-selection" style={boxOf(segment)}
-      className="pointer-events-none absolute inset-x-0.5 z-20 overflow-clip rounded bg-accent-dim px-1 py-0.5 text-[11px] font-semibold text-accent ring-2 ring-accent">
+      className="pointer-events-none absolute inset-x-0.5 z-20 overflow-clip rounded bg-accent-dim px-1 py-0.5 text-[11px] font-semibold text-status-green ring-2 ring-accent">
       <div className="sticky top-0 tabular-nums">{formatTimeRange(range, resolveLocale(i18next.language))}</div>
     </div>
   )
