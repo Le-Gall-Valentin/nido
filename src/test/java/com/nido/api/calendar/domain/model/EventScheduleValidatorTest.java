@@ -118,6 +118,25 @@ class EventScheduleValidatorTest {
     }
 
     @Test
+    void theGapAcrossTwoPeriodsGrowsWithTheInterval() {
+        // Monday and Saturday every other week: five days to Saturday, nine back to the Monday two weeks on.
+        assertThatCode(() -> EventScheduleValidator.validateSeries(true, null, null, 4, RecurrenceInterval.WEEKLY, 2,
+            Set.of(DayOfWeek.MONDAY, DayOfWeek.SATURDAY), null, LocalDate.of(2026, 1, 5), null)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> EventScheduleValidator.validateSeries(true, null, null, 5, RecurrenceInterval.WEEKLY, 2,
+            Set.of(DayOfWeek.MONDAY, DayOfWeek.SATURDAY), null, LocalDate.of(2026, 1, 5), null))
+            .isInstanceOf(CalendarException.OccurrenceLongerThanInterval.class);
+    }
+
+    @Test
+    void aYearlyLastWeekdayComesBackAfter364DaysAtTheShortest() {
+        // The last Friday of May: 29 May 2026, then 28 May 2027.
+        assertThatCode(() -> ruledAllDay(363, RecurrenceInterval.YEARLY, null, DayRule.LAST_WEEKDAY_OF_MONTH,
+            LocalDate.of(2026, 5, 29))).doesNotThrowAnyException();
+        assertThatThrownBy(() -> ruledAllDay(364, RecurrenceInterval.YEARLY, null, DayRule.LAST_WEEKDAY_OF_MONTH,
+            LocalDate.of(2026, 5, 29))).isInstanceOf(CalendarException.OccurrenceLongerThanInterval.class);
+    }
+
+    @Test
     void aYearlyWeekdayComesBackAfter364DaysAtTheShortest() {
         assertThatCode(() -> ruledAllDay(363, RecurrenceInterval.YEARLY, null, DayRule.WEEKDAY_OF_MONTH,
             LocalDate.of(2026, 11, 26))).doesNotThrowAnyException();

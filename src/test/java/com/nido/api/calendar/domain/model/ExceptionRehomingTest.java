@@ -102,6 +102,31 @@ class ExceptionRehomingTest {
         assertThat(plan.cancellations()).containsExactly(LocalDate.of(2026, 11, 4));
     }
 
+    @Test
+    void aMonthlySeriesMovedToTheSecondTuesdayKeepsWhatWasChosenOnItsOwnThatMonth() {
+        // From the 15th of every month to its second Tuesday: 10 November, 8 December.
+        ExceptionRehoming.Plan plan = ExceptionRehoming.plan(ruled(RecurrenceInterval.MONTHLY, DayRule.WEEKDAY_OF_MONTH,
+            LocalDate.of(2026, 10, 13)), List.of(LocalDate.of(2026, 11, 15)), List.of(LocalDate.of(2026, 12, 15)));
+
+        assertThat(plan.editedOccurrences()).containsExactly(Map.entry(LocalDate.of(2026, 11, 15), LocalDate.of(2026, 11, 10)));
+        assertThat(plan.cancellations()).containsExactly(LocalDate.of(2026, 12, 8));
+    }
+
+    @Test
+    void aYearlySeriesMovedToTheFourthThursdayKeepsWhatWasChosenOnItsOwnThatYear() {
+        // From 25 November to the fourth Thursday of November: 25 November 2027, 23 November 2028.
+        ExceptionRehoming.Plan plan = ExceptionRehoming.plan(ruled(RecurrenceInterval.YEARLY, DayRule.WEEKDAY_OF_MONTH,
+            LocalDate.of(2026, 11, 26)), List.of(LocalDate.of(2027, 11, 25)), List.of(LocalDate.of(2028, 11, 25)));
+
+        assertThat(plan.editedOccurrences()).containsExactly(Map.entry(LocalDate.of(2027, 11, 25), LocalDate.of(2027, 11, 25)));
+        assertThat(plan.cancellations()).containsExactly(LocalDate.of(2028, 11, 23));
+    }
+
+    private static RecurringEventSeries ruled(RecurrenceInterval interval, DayRule dayRule, LocalDate anchor) {
+        return new RecurringEventSeries(UUID.randomUUID(), UUID.randomUUID(), "Piano", null, null, true, null, null, 0, null,
+            interval, 1, null, dayRule, anchor, null, null, List.of(), UUID.randomUUID(), Instant.now());
+    }
+
     private static RecurringEventSeries weekly(int interval, LocalDate anchor, DayOfWeek... days) {
         return new RecurringEventSeries(UUID.randomUUID(), UUID.randomUUID(), "Piano", null, null, true, null, null, 0, null,
             RecurrenceInterval.WEEKLY, interval, Set.of(days), null, anchor, null, null, List.of(), UUID.randomUUID(),

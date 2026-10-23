@@ -288,6 +288,30 @@ class EventRecurrenceProjectorTest {
     }
 
     @Test
+    void aMonthlySeriesOnTheThirtiethFallsOnTheLastDayOfFebruary() {
+        RecurringEventSeries series = ruled(RecurrenceInterval.MONTHLY, 1, null, DayRule.SAME_DAY, LocalDate.of(2027, 1, 30));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2027, 1, 1), LocalDate.of(2027, 4, 30)))
+            .containsExactly(LocalDate.of(2027, 1, 30), LocalDate.of(2027, 2, 28), LocalDate.of(2027, 3, 30), LocalDate.of(2027, 4, 30));
+    }
+
+    @Test
+    void everyOtherMonthOnTheSecondTuesdayCountsMonthsFromTheAnchor() {
+        RecurringEventSeries series = ruled(RecurrenceInterval.MONTHLY, 2, null, DayRule.WEEKDAY_OF_MONTH, LocalDate.of(2026, 10, 13));
+        assertThat(EventRecurrenceProjector.slotsBetween(series, LocalDate.of(2026, 10, 1), LocalDate.of(2027, 4, 30)))
+            .containsExactly(LocalDate.of(2026, 10, 13), LocalDate.of(2026, 12, 8), LocalDate.of(2027, 2, 9), LocalDate.of(2027, 4, 13));
+    }
+
+    @Test
+    void aDayRuleAnchoredDecadesAgoFindsItsDayInTheWindow() {
+        RecurringEventSeries lastFriday = ruled(RecurrenceInterval.MONTHLY, 1, null, DayRule.LAST_WEEKDAY_OF_MONTH, LocalDate.of(1990, 1, 26));
+        assertThat(EventRecurrenceProjector.slotsBetween(lastFriday, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 11, 30)))
+            .containsExactly(LocalDate.of(2026, 10, 30), LocalDate.of(2026, 11, 27));
+        RecurringEventSeries thanksgiving = ruled(RecurrenceInterval.YEARLY, 1, null, DayRule.WEEKDAY_OF_MONTH, LocalDate.of(1950, 11, 23));
+        assertThat(EventRecurrenceProjector.slotsBetween(thanksgiving, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31)))
+            .containsExactly(LocalDate.of(2026, 11, 26));
+    }
+
+    @Test
     void theDaysOfAWeekComeInTheirOrderWhateverTheOrderGiven() {
         // Sunday before Monday as given: a week runs from Monday, so the Monday of a period comes first.
         RecurringEventSeries series = ruled(RecurrenceInterval.WEEKLY, 1,
