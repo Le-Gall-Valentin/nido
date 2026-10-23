@@ -1,6 +1,7 @@
 {
   "title": "Calendar",
   "new_event": "New event",
+  "sync": "Sync",
   "loading": "Loading…",
   "error": "Could not load the calendar.",
   "today": "Today",
@@ -30,13 +31,16 @@
     "TASK": "Tasks",
     "FINANCE": "Finance",
     "MEAL": "Meals",
-    "SAVINGS": "Savings"
+    "SAVINGS": "Savings",
+    "EXTERNAL": "Followed calendars"
   },
   "filters": {
     "label": "Filter by source"
   },
   "recurring_series": {
-    "manage": "Manage recurring events"
+    "manage": "Manage recurring events",
+    "open": "Recurring events",
+    "open_short": "Recurring"
   },
   "palette": {
     "today": "Calendar — today"
@@ -57,6 +61,8 @@
     "leave": "Leave",
     "missing": "This item no longer exists.",
     "projected_hint": "Upcoming occurrence: it does not exist yet, only its series can be changed.",
+    "followed_calendar": "Followed calendar: {{name}} — it is changed at its source.",
+    "followed_calendar_unknown": "Followed calendar — it is changed at its source.",
     "open_in": {
       "EVENT": "Open",
       "TASK": "Open in Tasks",
@@ -86,15 +92,7 @@
     "times_required": "An event that is not all day has a start and an end time.",
     "end_before_start": "The end cannot precede the start.",
     "too_long": "An event lasts at most {{days}} days.",
-    "save_failed": "Saving failed.",
-    "color_name": {
-      "event-violet": "Violet",
-      "event-magenta": "Magenta",
-      "event-cyan": "Cyan",
-      "event-graphite": "Graphite",
-      "event-indigo": "Indigo",
-      "event-brique": "Brick"
-    }
+    "save_failed": "Saving failed."
   },
   "delete": {
     "failed": "Deleting failed.",
@@ -108,7 +106,39 @@
     "this_occurrence": "This occurrence",
     "whole_series": "The whole series"
   },
+  "rule": {
+    "every": {
+      "DAILY_one": "Every day",
+      "DAILY_other": "Every {{count}} days",
+      "WEEKLY_one": "Every week",
+      "WEEKLY_other": "Every {{count}} weeks",
+      "MONTHLY_one": "Every month",
+      "MONTHLY_other": "Every {{count}} months",
+      "YEARLY_one": "Every year",
+      "YEARLY_other": "Every {{count}} years"
+    },
+    "weekday_item": "{{weekday}}",
+    "on_days": "on {{days}}",
+    "day": "on day {{day}}",
+    "day_first": "on day {{day}}",
+    "day_of_month": "on {{month}} {{day}}",
+    "day_of_month_first": "on {{month}} {{day}}",
+    "rank": { "1": "first", "2": "second", "3": "third", "4": "fourth" },
+    "weekday_of_month": "on the {{rank}} {{weekday}}",
+    "weekday_of_month_in": "on the {{rank}} {{weekday}} {{ofMonth}}",
+    "last_weekday": "on the last {{weekday}}",
+    "last_weekday_in": "on the last {{weekday}} {{ofMonth}}",
+    "last_day": "on the last day of the month",
+    "last_day_in": "on the last day {{ofMonth}}",
+    "of_month": "of {{month}}",
+    "of_month_elided": "of {{month}}"
+  },
   "series": {
+    "weekdays": "Days",
+    "day_rule": "Day",
+    "day_rule_needs_start": "Enter the start date first",
+    "day_rule_fell_back": "Day set back to “{{rule}}”: the new start date does not allow the one chosen.",
+    "day_rule_restored": "Day back to “{{rule}}”: the new start date allows it again.",
     "edit_title": "Edit series",
     "empty": "No recurring events.",
     "edit": "Edit {{name}}",
@@ -128,6 +158,8 @@
     "from": "from {{date}}",
     "until_date": "until {{date}}",
     "interval_invalid": "The frequency must be at least 1.",
+    "interval_not_whole": "The frequency must be a whole number.",
+    "interval_too_large": "The frequency must be at most {{maximum}}.",
     "occurrence_too_long": "An occurrence cannot last longer than the time between two occurrences.",
     "until_before_start": "The repetition cannot stop before the start date."
   },

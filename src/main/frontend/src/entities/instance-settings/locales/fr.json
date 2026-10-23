@@ -33,7 +33,8 @@
     "public-url": "Adresse publique",
     "sessions.access-token-minutes": "Durée du jeton d'accès (minutes)",
     "sessions.refresh-token-days": "Durée de la session (jours)",
-    "api.swagger": "Documentation Swagger"
+    "api.swagger": "Documentation Swagger",
+    "calendar.allow-private-network": "Autoriser les calendriers du réseau local"
   },
   "option": {
     "starttls": "STARTTLS (port 587)",

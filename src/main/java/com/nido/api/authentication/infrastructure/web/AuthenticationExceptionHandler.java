@@ -1,6 +1,7 @@
 package com.nido.api.authentication.infrastructure.web;
 
 import com.nido.api.authentication.domain.model.AuthenticationException;
+import com.nido.api.infrastructure.web.LoggedPath;
 import com.nido.api.shared.infrastructure.web.ProblemDetailFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -86,7 +87,7 @@ public class AuthenticationExceptionHandler {
                     response(409, "This account already chose its password.", "account_already_joined");
 
             case AuthenticationException.DataIntegrityError ex -> {
-                log.error("Data integrity violation on {}", request.getRequestURI(), ex);
+                log.error("Data integrity violation on {}", LoggedPath.of(request), ex);
                 yield response(500, "An unexpected error occurred. Please try again later.");
             }
         };

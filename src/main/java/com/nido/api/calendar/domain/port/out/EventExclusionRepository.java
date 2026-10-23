@@ -12,6 +12,9 @@ public interface EventExclusionRepository {
     /** The cancelled slots inside {@code [from, to]} of each series, in one read: a series with none is absent. */
     Map<UUID, Set<LocalDate>> findSlotsOfEach(Collection<UUID> seriesIds, LocalDate from, LocalDate to);
 
+    /** Every slot each series has cancelled, in one read: a series with none is absent. */
+    Map<UUID, Set<LocalDate>> findAllSlotsOfEach(Collection<UUID> seriesIds);
+
     /** Idempotent: excluding an already-excluded slot is not an error. */
     void exclude(UUID seriesId, LocalDate originalDate);
 

@@ -20,7 +20,7 @@ function occurrence(overrides: Partial<CalendarOccurrence> & { title: string }):
   return {
     source: 'EVENT', sourceId: overrides.title, seriesId: null, originalDate: null,
     materialized: true, description: null, location: null, allDay: true, startDate: '2026-01-14', startTime: null,
-    endDate: '2026-01-14', endTime: null, color: null, participantIds: [], ...overrides,
+    endDate: '2026-01-14', endTime: null, color: null, participantIds: [], externalFeedId: null, ...overrides,
   }
 }
 
@@ -137,6 +137,22 @@ describe('MonthGrid', () => {
       onDay('T1', 'TASK'), onDay('T2', 'TASK'), onDay('T3', 'TASK'), onDay('Gratin', 'MEAL'),
     ])
     expect(container.querySelectorAll('[data-testid="day-dot"]')).toHaveLength(2)
+  })
+
+  it('gives each colour of the followed calendars of a day its own dot, as their filters show them', () => {
+    const { container } = renderGrid([
+      occurrence({ title: 'Vacances', source: 'EXTERNAL', color: 'event-cyan', externalFeedId: 'f1' }),
+      occurrence({ title: 'Match', source: 'EXTERNAL', color: 'event-indigo', externalFeedId: 'f2' }),
+      occurrence({ title: 'Match retour', source: 'EXTERNAL', color: 'event-indigo', externalFeedId: 'f2' }),
+    ])
+    const dots = [...container.querySelectorAll('[data-testid="day-dot"]')]
+    expect(dots.map((dot) => dot.className)).toEqual([expect.stringContaining('bg-event-cyan'),
+      expect.stringContaining('bg-event-indigo')])
+  })
+
+  it('never lets an entry of a followed calendar be dragged', () => {
+    renderGrid([occurrence({ title: 'Vacances', source: 'EXTERNAL', color: 'event-cyan', externalFeedId: 'f1' })])
+    expect(screen.getByText('Vacances').closest('button')?.getAttribute('data-draggable')).toBeNull()
   })
 
   it('orders the dots the same way on every day', () => {

@@ -17,14 +17,14 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class ListCalendarEventsHandlerTest {
+class ListAgendaEntriesHandlerTest {
 
     private final SpaceMembership caller = new SpaceMembership(
         UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), SpaceRole.VIEWER, Instant.now());
 
     @Test
     void returns_only_the_events_ordered_all_day_first_then_by_time() {
-        var handler = new ListCalendarEventsHandler(List.of(
+        var handler = new ListAgendaEntriesHandler(List.of(
             source(CalendarSourceType.EVENT,
                 timed("Dîner chez Paul", LocalDate.of(2026, 9, 26), LocalTime.of(19, 30)),
                 timed("Marché", LocalDate.of(2026, 9, 26), LocalTime.of(10, 30)),
@@ -45,15 +45,44 @@ class ListCalendarEventsHandlerTest {
                 throw new IllegalStateException("the tasks source must not run");
             }
         };
-        var handler = new ListCalendarEventsHandler(List.of(failingTasks,
+        var handler = new ListAgendaEntriesHandler(List.of(failingTasks,
             source(CalendarSourceType.EVENT, allDay("Anniversaire de Léa", LocalDate.of(2026, 9, 26)))));
 
         assertThat(handler.list(caller, LocalDate.of(2026, 9, 26), LocalDate.of(2026, 9, 26))).hasSize(1);
     }
 
     @Test
+    void reads_the_calendars_a_space_follows_besides_its_events() {
+        var handler = new ListAgendaEntriesHandler(List.of(
+            source(CalendarSourceType.EVENT, allDay("Anniversaire de Léa", LocalDate.of(2026, 9, 26))),
+            source(CalendarSourceType.EXTERNAL, allDay("Vacances", LocalDate.of(2026, 9, 26))),
+            source(CalendarSourceType.TASK, allDay("Linge", LocalDate.of(2026, 9, 26)))));
+
+        assertThat(handler.list(caller, LocalDate.of(2026, 9, 26), LocalDate.of(2026, 9, 26)))
+            .extracting(CalendarOccurrence::title).containsExactlyInAnyOrder("Anniversaire de Léa", "Vacances");
+    }
+
+    @Test
+    void the_followed_calendars_give_the_agenda_at_most_two_hundred_entries() {
+        CalendarOccurrence[] many = new CalendarOccurrence[500];
+        for (int i = 0; i < many.length; i++) {
+            LocalDate day = LocalDate.of(2026, 9, 26);
+            many[i] = new CalendarOccurrence(CalendarSourceType.EXTERNAL, "e" + i, null, null, true, "Externe " + i, null,
+                null, true, day, null, day, null, null, List.of());
+        }
+        var handler = new ListAgendaEntriesHandler(List.of(
+            source(CalendarSourceType.EXTERNAL, many),
+            source(CalendarSourceType.EVENT, allDay("Anniversaire de Léa", LocalDate.of(2026, 9, 26)))));
+
+        List<CalendarOccurrence> listed = handler.list(caller, LocalDate.of(2026, 9, 26), LocalDate.of(2026, 9, 26));
+
+        assertThat(listed).filteredOn(o -> o.source() == CalendarSourceType.EXTERNAL).hasSize(200);
+        assertThat(listed).extracting(CalendarOccurrence::title).contains("Anniversaire de Léa");
+    }
+
+    @Test
     void refuses_a_window_whose_start_is_after_its_end() {
-        var handler = new ListCalendarEventsHandler(List.of());
+        var handler = new ListAgendaEntriesHandler(List.of());
 
         assertThatThrownBy(() -> handler.list(caller, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 1, 1)))
             .isInstanceOf(CalendarException.ReversedWindow.class);
@@ -61,7 +90,7 @@ class ListCalendarEventsHandlerTest {
 
     @Test
     void refuses_a_window_wider_than_the_maximum() {
-        var handler = new ListCalendarEventsHandler(List.of());
+        var handler = new ListAgendaEntriesHandler(List.of());
 
         assertThatThrownBy(() -> handler.list(caller, LocalDate.of(2026, 1, 1), LocalDate.of(2027, 6, 1)))
             .isInstanceOf(CalendarException.WindowTooLarge.class);

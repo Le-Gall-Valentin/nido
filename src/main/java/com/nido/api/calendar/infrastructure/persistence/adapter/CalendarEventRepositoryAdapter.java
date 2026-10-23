@@ -46,19 +46,14 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
 
     @Override
     public List<CalendarEvent> findBySpaceIdOverlapping(UUID spaceId, LocalDate from, LocalDate to) {
-        List<CalendarEventEntity> found = events.findOverlapping(spaceId, from, to);
-        if (found.isEmpty()) {
-            return List.of();
-        }
         // One query for every event's participants rather than one per event: a month window can
         // return hundreds of rows, and the per-row version is the N+1 this method exists to avoid.
-        Map<UUID, List<UUID>> byEvent = participants
-            .findByEventIdIn(found.stream().map(CalendarEventEntity::getId).toList()).stream()
-            .collect(Collectors.groupingBy(CalendarEventParticipantEntity::getEventId,
-                Collectors.mapping(CalendarEventParticipantEntity::getUserId, Collectors.toList())));
-        return found.stream()
-            .map(e -> toDomain(e, byEvent.getOrDefault(e.getId(), List.of())))
-            .toList();
+        return withParticipants(events.findOverlapping(spaceId, from, to));
+    }
+
+    @Override
+    public List<CalendarEvent> findBySpaceId(UUID spaceId) {
+        return withParticipants(events.findBySpaceIdOrderByStartDateAscStartTimeAsc(spaceId));
     }
 
     @Override
@@ -76,15 +71,7 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
 
     @Override
     public List<CalendarEvent> findDetachedOf(UUID seriesId) {
-        List<CalendarEventEntity> found = events.findByRecurringSeriesId(seriesId);
-        if (found.isEmpty()) {
-            return List.of();
-        }
-        Map<UUID, List<UUID>> byEvent = participants
-            .findByEventIdIn(found.stream().map(CalendarEventEntity::getId).toList()).stream()
-            .collect(Collectors.groupingBy(CalendarEventParticipantEntity::getEventId,
-                Collectors.mapping(CalendarEventParticipantEntity::getUserId, Collectors.toList())));
-        return found.stream().map(e -> toDomain(e, byEvent.getOrDefault(e.getId(), List.of()))).toList();
+        return withParticipants(events.findByRecurringSeriesId(seriesId));
     }
 
     @Override
@@ -96,6 +83,16 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
     @Override
     @Transactional
     public CalendarEvent create(CreateEventCommand command) {
+        return insert(command, null);
+    }
+
+    @Override
+    @Transactional
+    public CalendarEvent createImported(CreateEventCommand command, String importUidHash) {
+        return insert(command, importUidHash);
+    }
+
+    private CalendarEvent insert(CreateEventCommand command, String importUidHash) {
         SpaceSealer sealer = sealers.forSpace(command.spaceId());
         CalendarEventEntity entity = new CalendarEventEntity();
         entity.setSpaceId(command.spaceId());
@@ -111,6 +108,7 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
         entity.setRecurringSeriesId(command.recurringSeriesId());
         entity.setRecurringOriginalDate(command.recurringOriginalDate());
         entity.setCreatedBy(command.createdBy());
+        entity.setImportUidHash(importUidHash);
         CalendarEventEntity saved = events.saveAndFlush(entity);
         replaceParticipants(saved.getId(), command.participantIds());
         return toDomain(saved, List.copyOf(command.participantIds()));
@@ -163,6 +161,18 @@ public class CalendarEventRepositoryAdapter implements CalendarEventRepository {
             row.setUserId(userId);
             participants.save(row);
         }
+    }
+
+    /** One query for every event's participants rather than one per event. */
+    private List<CalendarEvent> withParticipants(List<CalendarEventEntity> found) {
+        if (found.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, List<UUID>> byEvent = participants
+            .findByEventIdIn(found.stream().map(CalendarEventEntity::getId).toList()).stream()
+            .collect(Collectors.groupingBy(CalendarEventParticipantEntity::getEventId,
+                Collectors.mapping(CalendarEventParticipantEntity::getUserId, Collectors.toList())));
+        return found.stream().map(e -> toDomain(e, byEvent.getOrDefault(e.getId(), List.of()))).toList();
     }
 
     private List<UUID> participantIdsOf(UUID eventId) {

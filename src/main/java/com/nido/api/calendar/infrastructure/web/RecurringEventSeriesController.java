@@ -94,8 +94,8 @@ public class RecurringEventSeriesController {
             createUseCase.create(new CreateRecurringEventSeriesCommand(
                 spaceId, request.title(), request.description(), request.location(), request.allDayOrDefault(),
                 request.startTime(), request.endTime(), request.durationDaysOrDefault(), request.color(),
-                request.intervalType(), request.intervalCount(), request.anchorDate(), request.endDate(),
-                request.participantIds(), membership.userId()), membership)));
+                request.intervalType(), request.intervalCount(), request.weekdaysOrNull(), request.dayRule(),
+                request.anchorDate(), request.endDate(), request.participantIds(), membership.userId(), null), membership)));
     }
 
     @PatchMapping("/{seriesId}")
@@ -109,8 +109,8 @@ public class RecurringEventSeriesController {
             updateUseCase.update(new UpdateRecurringEventSeriesCommand(
                 seriesId, request.title(), request.description(), request.location(), request.allDayOrDefault(),
                 request.startTime(), request.endTime(), request.durationDaysOrDefault(), request.color(),
-                request.intervalType(), request.intervalCount(), request.anchorDate(), request.endDate(),
-                request.participantIds()), membership)));
+                request.intervalType(), request.intervalCount(), request.weekdaysOrNull(), request.dayRule(),
+                request.anchorDate(), request.endDate(), request.participantIds()), membership)));
     }
 
     @DeleteMapping("/{seriesId}")

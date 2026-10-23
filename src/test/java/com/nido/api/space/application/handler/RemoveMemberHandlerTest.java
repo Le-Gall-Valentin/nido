@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.SpaceDepartures;
 import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.RemoveMemberCommand;
 import com.nido.api.space.domain.model.SpaceException;
@@ -28,6 +29,7 @@ class RemoveMemberHandlerTest {
 
     @Mock SpaceMembershipPort spaceMembershipPort;
     @Mock SpaceNotifier spaceNotifier;
+    @Mock SpaceDepartures departures;
 
     private RemoveMemberHandler handler;
 
@@ -37,7 +39,7 @@ class RemoveMemberHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new RemoveMemberHandler(spaceMembershipPort, spaceNotifier);
+        handler = new RemoveMemberHandler(spaceMembershipPort, spaceNotifier, departures);
     }
 
     @Test
@@ -49,6 +51,7 @@ class RemoveMemberHandlerTest {
 
         verify(spaceMembershipPort).remove(target.id());
         verify(spaceNotifier).memberRemoved(spaceId, callerId, targetId);
+        verify(departures).departed(spaceId, targetId);
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.SpaceDepartures;
 import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceAppearance;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -36,6 +38,7 @@ class HandleUserDeletionHandlerTest {
     @Mock SpaceMembershipPort spaceMembershipPort;
     @Mock SpaceInvitationPort spaceInvitationPort;
     @Mock SpaceNotifier spaceNotifier;
+    @Mock SpaceDepartures departures;
 
     private HandleUserDeletionHandler handler;
 
@@ -45,7 +48,7 @@ class HandleUserDeletionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new HandleUserDeletionHandler(spaceRepository, spaceCommandPort, spaceMembershipPort, spaceInvitationPort, spaceNotifier);
+        handler = new HandleUserDeletionHandler(spaceRepository, spaceCommandPort, spaceMembershipPort, spaceInvitationPort, spaceNotifier, departures);
     }
 
     @Test
@@ -57,6 +60,8 @@ class HandleUserDeletionHandlerTest {
         handler.handleUserDeletion(userId, "alice");
 
         verify(spaceCommandPort).delete(personalSpaceId);
+        // the cascade takes the addresses with the space
+        verify(departures, never()).departed(any(), any());
     }
 
     @Test
@@ -70,6 +75,7 @@ class HandleUserDeletionHandlerTest {
         verify(spaceMembershipPort).remove(membership.id());
         verify(spaceCommandPort, never()).delete(sharedSpaceId);
         verify(spaceNotifier).memberLeftNido(sharedSpaceId, userId, "alice");
+        verify(departures).departed(sharedSpaceId, userId);
     }
 
     @Test
@@ -87,6 +93,7 @@ class HandleUserDeletionHandlerTest {
         verify(spaceMembershipPort).changeRole(successor.id(), SpaceRole.OWNER);
         verify(spaceCommandPort, never()).delete(sharedSpaceId);
         verify(spaceNotifier).ownershipInherited(sharedSpaceId, userId, "alice", successor.userId());
+        verify(departures).departed(sharedSpaceId, userId);
     }
 
     @Test
@@ -101,6 +108,8 @@ class HandleUserDeletionHandlerTest {
         InOrder order = inOrder(spaceNotifier, spaceCommandPort);
         order.verify(spaceNotifier).spaceDeletedWithoutHeir(sharedSpaceId, userId, "alice");
         order.verify(spaceCommandPort).delete(sharedSpaceId);
+        // the cascade takes the addresses with the space
+        verify(departures, never()).departed(any(), any());
     }
 
     @Test

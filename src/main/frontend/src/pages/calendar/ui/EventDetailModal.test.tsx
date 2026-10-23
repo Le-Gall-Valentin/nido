@@ -12,7 +12,7 @@ const concert: CalendarOccurrence = {
   source: 'EVENT', sourceId: 'e1', seriesId: null, originalDate: null, materialized: true,
   title: 'Concert', description: 'Apporter les billets.\nRendez-vous à l\'entrée nord.',
   location: 'Salle Pleyel', allDay: false, startDate: '2026-09-23', startTime: '20:00:00',
-  endDate: '2026-09-23', endTime: '22:30:00', color: null, participantIds: [],
+  endDate: '2026-09-23', endTime: '22:30:00', color: null, participantIds: [], externalFeedId: null,
 }
 
 function renderDetail(occurrence: CalendarOccurrence, isPersonal = false) {
@@ -86,5 +86,14 @@ describe('EventDetailModal', () => {
         onJoin={vi.fn()} onLeave={vi.fn()} onClose={vi.fn()} />)
     expect(screen.getByText('member.generic')).toBeTruthy()
     expect(screen.queryByText('member.former')).toBeNull()
+  })
+
+  it('says how a recurring event repeats', () => {
+    render(
+      <EventDetailModal occurrence={{ ...concert, seriesId: 's1' }} members={[]} currentUserId="u1" canWrite
+        recurrence="Toutes les semaines le lundi et le jeudi"
+        onEdit={vi.fn()} onDelete={vi.fn()} onCopy={vi.fn()} onMove={vi.fn()}
+        onJoin={vi.fn()} onLeave={vi.fn()} onClose={vi.fn()} />)
+    expect(screen.getByText('Toutes les semaines le lundi et le jeudi')).toBeTruthy()
   })
 })

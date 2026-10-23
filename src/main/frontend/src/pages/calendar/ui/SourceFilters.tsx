@@ -1,36 +1,30 @@
 import { useTranslation } from 'react-i18next'
-import type { CalendarSourceType } from '@/entities/calendar'
+import { EVENT_DOT_CLASS, feedColor, type CalendarSourceType, type ExternalFeed } from '@/entities/calendar'
 import { SOURCE_ORDER, dotClassForSource } from '../lib/sourceAppearance'
+import { FilterChip } from './FilterChip'
 
 interface SourceFiltersProps {
   isEnabled: (source: CalendarSourceType) => boolean
   onToggle: (source: CalendarSourceType) => void
+  /** The calendars the space follows, each filtered on its own. */
+  feeds: ExternalFeed[]
+  isFeedEnabled: (feedId: string) => boolean
+  onToggleFeed: (feedId: string) => void
 }
 
-/**
- * Five toggles, one per source. Real buttons with aria-pressed rather than styled divs, so the
- * on/off state is announced rather than only coloured — the colour is the whole affordance here.
- */
-export function SourceFilters({ isEnabled, onToggle }: SourceFiltersProps) {
+/** One toggle per source, then one per followed calendar, in its own colour. */
+export function SourceFilters({ isEnabled, onToggle, feeds, isFeedEnabled, onToggleFeed }: SourceFiltersProps) {
   const { t } = useTranslation('calendar')
   return (
     <div role="group" aria-label={t('filters.label')} className="flex flex-wrap gap-1.5">
-      {SOURCE_ORDER.map((source) => {
-        const on = isEnabled(source)
-        return (
-          <button
-            key={source}
-            type="button"
-            aria-pressed={on}
-            onClick={() => onToggle(source)}
-            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold
-              ${on ? 'border-border-2 bg-bg-1 text-fg-1' : 'border-border bg-transparent text-fg-4'}`}
-          >
-            <span className={`size-1.5 rounded-full ${on ? dotClassForSource(source) : 'bg-fg-4'}`} />
-            {t(`source.${source}`)}
-          </button>
-        )
-      })}
+      {SOURCE_ORDER.map((source) => (
+        <FilterChip key={source} on={isEnabled(source)} dotClass={dotClassForSource(source)} label={t(`source.${source}`)}
+          onToggle={() => onToggle(source)} />
+      ))}
+      {feeds.map((feed) => (
+        <FilterChip key={feed.id} on={isFeedEnabled(feed.id)} dotClass={EVENT_DOT_CLASS[feedColor(feed.color)]} label={feed.name}
+          onToggle={() => onToggleFeed(feed.id)} />
+      ))}
     </div>
   )
 }

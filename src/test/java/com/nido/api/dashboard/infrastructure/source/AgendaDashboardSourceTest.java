@@ -1,6 +1,6 @@
 package com.nido.api.dashboard.infrastructure.source;
 
-import com.nido.api.calendar.application.port.in.ListCalendarEventsUseCase;
+import com.nido.api.calendar.application.port.in.ListAgendaEntriesUseCase;
 import com.nido.api.calendar.domain.model.CalendarOccurrence;
 import com.nido.api.calendar.domain.model.CalendarSourceType;
 import com.nido.api.dashboard.domain.model.AgendaCard;
@@ -35,7 +35,7 @@ class AgendaDashboardSourceTest {
     private final UUID spaceId = UUID.randomUUID();
     private final UUID me = UUID.randomUUID();
     private final SpaceMembership caller = new SpaceMembership(UUID.randomUUID(), spaceId, me, SpaceRole.MEMBER, Instant.now());
-    private final ListCalendarEventsUseCase listEvents = mock(ListCalendarEventsUseCase.class);
+    private final ListAgendaEntriesUseCase listEvents = mock(ListAgendaEntriesUseCase.class);
     private final ListTasksDueBetweenUseCase listTasksDue = mock(ListTasksDueBetweenUseCase.class);
     private int created;
 

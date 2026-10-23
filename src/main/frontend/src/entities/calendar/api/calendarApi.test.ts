@@ -3,6 +3,7 @@ import { client } from '@/shared/api'
 import { calendarApi } from './calendarApi'
 import { NotFoundError, ForbiddenError, RateLimitError, ServerError, NetworkError } from '@/shared/lib'
 import type { EventInput, RecurringEventSeriesInput } from '../model/types'
+import { IntervalTooLargeError } from './seriesErrors'
 
 vi.mock('@/shared/api', () => ({
   client: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn(), delete: vi.fn() },
@@ -16,7 +17,7 @@ const input: EventInput = {
 
 const seriesInput: RecurringEventSeriesInput = {
   title: 'Piano', description: null, location: null, allDay: false, startTime: '18:00', endTime: '19:00',
-  durationDays: 0, color: null, intervalType: 'WEEKLY', intervalCount: 1, anchorDate: '2026-01-06',
+  durationDays: 0, color: null, intervalType: 'WEEKLY', intervalCount: 1, weekdays: ['TUESDAY'], dayRule: 'SAME_DAY', anchorDate: '2026-01-06',
   endDate: null, participantIds: [],
 }
 
@@ -123,6 +124,21 @@ describe('calendarApi', () => {
   it('reports a request that never got an answer as the network failing', async () => {
     vi.mocked(client.get).mockRejectedValue({ isAxiosError: true })
     await expect(calendarApi.listOccurrences('s1', '2026-01-01', '2026-01-31')).rejects.toBeInstanceOf(NetworkError)
+  })
+
+  const seriesWrites: [string, () => Promise<unknown>, 'post' | 'patch'][] = [
+    ['createRecurringEventSeries', () => calendarApi.createRecurringEventSeries('s1', seriesInput), 'post'],
+    ['updateRecurringEventSeries', () => calendarApi.updateRecurringEventSeries('s1', 'r1', seriesInput), 'patch'],
+  ]
+
+  it.each(seriesWrites)('names the refusal of an interval over the server\'s limit by %s', async (_name, call, verb) => {
+    vi.mocked(client[verb]).mockRejectedValue({ isAxiosError: true, response: { status: 400, data: { error_code: 'interval_too_large' } } })
+    await expect(call()).rejects.toBeInstanceOf(IntervalTooLargeError)
+  })
+
+  it.each(seriesWrites)('reports any other refusal by %s as the server\'s', async (_name, call, verb) => {
+    vi.mocked(client[verb]).mockRejectedValue({ isAxiosError: true, response: { status: 400, data: { error_code: 'invalid_recurrence_rule' } } })
+    await expect(call()).rejects.toBeInstanceOf(ServerError)
   })
 
   it.each(everyCall)('translates a failure of %s', async (_name, call) => {

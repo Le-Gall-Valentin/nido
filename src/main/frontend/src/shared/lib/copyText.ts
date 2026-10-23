@@ -12,6 +12,8 @@ export async function copyText(text: string): Promise<boolean> {
       // Refused (permissions): try the copy command below.
     }
   }
+  // The field takes the focus to be selected: it is given back, or it would fall to <body> once the field goes.
+  const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null
   const field = document.createElement('textarea')
   field.value = text
   field.setAttribute('readonly', '')
@@ -27,5 +29,6 @@ export async function copyText(text: string): Promise<boolean> {
     return false
   } finally {
     field.remove()
+    focused?.focus()
   }
 }

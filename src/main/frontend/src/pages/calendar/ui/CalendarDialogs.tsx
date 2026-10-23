@@ -1,11 +1,16 @@
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import i18next from 'i18next'
 import { ROUTES } from '@/shared/config'
+import { resolveLocale } from '@/shared/lib'
 import { useSpaceMembers } from '@/entities/space'
 import { useAuth } from '@/features/auth'
+import { CalendarSyncDialog } from '@/features/calendar-sync'
 import {
   useJoinEvent, useLeaveEvent, useRecurringEventSeries, type CalendarOccurrence,
 } from '@/entities/calendar'
 import type { CalendarDialogState } from '../model/useCalendarDialog'
+import { describeSeries } from '../lib/recurrenceRule'
 import { DayDetailModal } from './DayDetailModal'
 import { OccurrenceRouter } from './OccurrenceRouter'
 import { EventDetailModal } from './EventDetailModal'
@@ -33,6 +38,7 @@ interface CalendarDialogsProps {
 export function CalendarDialogs({
   spaceId, dialog, occurrences, date, today, canWrite, isPersonal,
 }: CalendarDialogsProps) {
+  const { t } = useTranslation('calendar')
   const navigate = useNavigate()
   const { open, show, close, act, answerScope, closeForm } = dialog
   const { data: knownMembers } = useSpaceMembers(spaceId)
@@ -42,8 +48,10 @@ export function CalendarDialogs({
   const currentUserId = useAuth((state) => state.user?.id) ?? ''
   const joinEvent = useJoinEvent(spaceId)
   const leaveEvent = useLeaveEvent(spaceId)
-  // Loaded only once a series is acted on: the feed carries its id, the form needs all of it.
-  const { data: seriesList } = useRecurringEventSeries(open?.kind === 'series' ? spaceId : undefined)
+  // Loaded once a series is acted on, or an occurrence of one is opened: the feed carries the series' id, not its rule.
+  const opened = open?.kind === 'occurrence' ? occurrences.find((candidate) => candidate.sourceId === open.sourceId) : undefined
+  const openedSeries = opened?.source === 'EVENT' && opened.seriesId != null
+  const { data: seriesList } = useRecurringEventSeries(open?.kind === 'series' || openedSeries ? spaceId : undefined)
 
   const showOccurrence = (occurrence: CalendarOccurrence) => show({ kind: 'occurrence', sourceId: occurrence.sourceId })
 
@@ -59,7 +67,7 @@ export function CalendarDialogs({
       )
 
     case 'occurrence': {
-      const occurrence = occurrences.find((candidate) => candidate.sourceId === open.sourceId)
+      const occurrence = opened
       if (!occurrence) return null
       if (occurrence.source !== 'EVENT') {
         return (
@@ -73,9 +81,11 @@ export function CalendarDialogs({
             onClose={close} />
         )
       }
+      const series = occurrence.seriesId ? seriesList?.find((candidate) => candidate.id === occurrence.seriesId) : undefined
+      const recurrence = series ? describeSeries(t, series, resolveLocale(i18next.language)) : null
       return (
         <EventDetailModal occurrence={occurrence} members={knownMembers} currentUserId={currentUserId}
-          canWrite={canWrite} isPersonal={isPersonal}
+          canWrite={canWrite} isPersonal={isPersonal} recurrence={recurrence}
           onEdit={() => act(occurrence, 'edit')} onDelete={() => act(occurrence, 'delete')}
           onCopy={() => show({ kind: 'transfer', occurrence, operation: 'copy' })}
           onMove={() => show({ kind: 'transfer', occurrence, operation: 'move' })}
@@ -118,6 +128,9 @@ export function CalendarDialogs({
 
     case 'meal':
       return <MealEntryModal spaceId={spaceId} date={open.date} onClose={close} />
+
+    case 'sync':
+      return <CalendarSyncDialog spaceId={spaceId} canWrite={canWrite} isPersonal={isPersonal} onClose={close} />
 
     case 'manage-series':
       return (

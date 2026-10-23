@@ -2,6 +2,7 @@ package com.nido.api.calendar.infrastructure.persistence.adapter;
 
 import com.nido.api.IntegrationTestConfig;
 import com.nido.api.TestSpaces;
+import com.nido.api.calendar.domain.model.CalendarDigests;
 import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CreateEventCommand;
 import com.nido.api.calendar.domain.model.CreateRecurringEventSeriesCommand;
@@ -11,6 +12,7 @@ import com.nido.api.calendar.domain.model.UpdateEventCommand;
 import com.nido.api.calendar.domain.model.UpdateRecurringEventSeriesCommand;
 import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
 import com.nido.api.calendar.domain.port.out.EventExclusionRepository;
+import com.nido.api.calendar.domain.port.out.ImportedUidRepository;
 import com.nido.api.calendar.domain.port.out.RecurringEventSeriesRepository;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarEventEntity;
 import com.nido.api.calendar.infrastructure.persistence.entity.CalendarRecurringEventSeriesEntity;
@@ -23,6 +25,7 @@ import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +35,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 @IntegrationTestConfig
 class CalendarEventRepositoryAdapterIT {
@@ -53,6 +58,7 @@ class CalendarEventRepositoryAdapterIT {
     @Autowired CalendarEventRepository events;
     @Autowired RecurringEventSeriesRepository series;
     @Autowired EventExclusionRepository exclusions;
+    @Autowired ImportedUidRepository importedUids;
     @Autowired SpaceJpaRepository spaces;
     @Autowired UserIdentityJpaRepository users;
     @Autowired SpaceSealers sealers;
@@ -61,6 +67,7 @@ class CalendarEventRepositoryAdapterIT {
 
     private UUID spaceId;
     private UUID aliceId;
+    private final List<UUID> madeSpaces = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -70,12 +77,20 @@ class CalendarEventRepositoryAdapterIT {
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         spaceId = spaces.saveAndFlush(space).getId();
+        madeSpaces.add(spaceId);
 
         UserIdentityEntity user = new UserIdentityEntity();
         user.setUsername("alice-" + UUID.randomUUID());
         user.setEmail(UUID.randomUUID() + "@test.com");
         user.setRole(Role.USER);
         aliceId = users.saveAndFlush(user).getId();
+    }
+
+    @AfterEach
+    void cleanUp() {
+        // The database is shared with every other test: only what this one made goes, its calendar with its spaces.
+        madeSpaces.forEach(spaces::deleteById);
+        users.deleteById(aliceId);
     }
 
     @Test
@@ -318,6 +333,87 @@ class CalendarEventRepositoryAdapterIT {
             dentist.id(), piano.id());
 
         assertThatThrownBy(() -> events.findById(piano.id())).isInstanceOf(SealedValueRejected.class);
+    }
+
+    @Test
+    void an_imported_uid_is_known_in_its_space_until_its_rows_are_deleted() {
+        String hash = CalendarDigests.sha256Hex("abc@google.com");
+        CalendarEvent event = events.createImported(new CreateEventCommand(spaceId, "Match", null, null, true,
+            LocalDate.of(2026, 10, 14), null, LocalDate.of(2026, 10, 14), null, null, List.of(), null, null, aliceId), hash);
+        RecurringEventSeries weekly = series.createImported(new CreateRecurringEventSeriesCommand(spaceId, "Entraînement",
+            null, null, true, null, null, 0, null, RecurrenceInterval.WEEKLY, 1, LocalDate.of(2026, 10, 12), null,
+            List.of(), aliceId), CalendarDigests.sha256Hex("def@google.com"));
+
+        assertThat(importedUids.knownHashes(spaceId, List.of(hash, CalendarDigests.sha256Hex("def@google.com"), "other")))
+            .containsExactlyInAnyOrder(hash, CalendarDigests.sha256Hex("def@google.com"));
+        assertThat(importedUids.knownHashes(UUID.randomUUID(), List.of(hash))).as("another space").isEmpty();
+
+        events.delete(event.id());
+        series.delete(weekly.id());
+        assertThat(importedUids.knownHashes(spaceId, List.of(hash))).isEmpty();
+    }
+
+    @Test
+    void the_ids_of_a_nido_export_are_recognised_in_their_space_only() {
+        CalendarEvent event = events.create(new CreateEventCommand(spaceId, "Concert", null, null, true,
+            LocalDate.of(2026, 9, 23), null, LocalDate.of(2026, 9, 23), null, null, List.of(), null, null, aliceId));
+        UUID unknown = UUID.randomUUID();
+
+        assertThat(importedUids.existingIds(spaceId, List.of(event.id(), unknown))).containsExactly(event.id());
+        assertThat(importedUids.existingIds(UUID.randomUUID(), List.of(event.id()))).isEmpty();
+    }
+
+    @Test
+    void a_copy_of_an_imported_event_is_not_imported_itself() {
+        String hash = CalendarDigests.sha256Hex("abc@google.com");
+        CalendarEvent event = events.createImported(new CreateEventCommand(spaceId, "Match", null, null, true,
+            LocalDate.of(2026, 10, 14), null, LocalDate.of(2026, 10, 14), null, null, List.of(), null, null, aliceId), hash);
+        events.create(new CreateEventCommand(spaceId, event.title(), null, null, true, event.startDate(), null,
+            event.endDate(), null, null, List.of(), null, null, aliceId));
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_events WHERE space_id = ? AND import_uid_hash = ?",
+            Long.class, spaceId, hash)).isOne();
+    }
+
+    @Test
+    void every_event_of_a_space_is_found_with_its_edited_occurrences_and_nothing_of_another_space() {
+        UUID weekly = weeklySeries();
+        CalendarEvent concert = events.create(plainEvent("Concert", LocalDate.of(2026, 9, 23)));
+        CalendarEvent edited = events.create(new CreateEventCommand(spaceId, "Piano (décalé)", null, null, false,
+            LocalDate.of(2026, 2, 11), LocalTime.of(19, 0), LocalDate.of(2026, 2, 11), LocalTime.of(20, 0), null, List.of(),
+            weekly, LocalDate.of(2026, 2, 10), aliceId));
+        UUID elsewhere = newSpace();
+        events.create(new CreateEventCommand(elsewhere, "Ailleurs", null, null, true, LocalDate.of(2026, 9, 23), null,
+            LocalDate.of(2026, 9, 23), null, null, List.of(), null, null, aliceId));
+
+        assertThat(events.findBySpaceId(spaceId)).extracting(CalendarEvent::id, CalendarEvent::title)
+            .containsExactlyInAnyOrder(tuple(concert.id(), "Concert"), tuple(edited.id(), "Piano (décalé)"));
+    }
+
+    @Test
+    void the_cancelled_slots_of_several_series_are_read_at_once_and_a_series_without_any_is_absent() {
+        UUID first = weeklySeries();
+        UUID second = weeklySeries();
+        UUID untouched = weeklySeries();
+        exclusions.exclude(first, LocalDate.of(2026, 2, 10));
+        exclusions.exclude(first, LocalDate.of(2026, 2, 17));
+        exclusions.exclude(second, LocalDate.of(2026, 2, 24));
+
+        assertThat(exclusions.findAllSlotsOfEach(List.of(first, second, untouched))).isEqualTo(Map.of(
+            first, Set.of(LocalDate.of(2026, 2, 10), LocalDate.of(2026, 2, 17)),
+            second, Set.of(LocalDate.of(2026, 2, 24))));
+        assertThat(exclusions.findAllSlotsOfEach(List.of())).isEmpty();
+    }
+
+    private UUID newSpace() {
+        SpaceEntity space = new SpaceEntity();
+        space.setType(SpaceType.SHARED);
+        TestSpaces.name(space, "Ailleurs");
+        space.setAccent("#c17a5c");
+        space.setGlyph("🏡");
+        UUID id = spaces.saveAndFlush(space).getId();
+        madeSpaces.add(id);
+        return id;
     }
 
     private CreateEventCommand plainEvent(String title, LocalDate date) {

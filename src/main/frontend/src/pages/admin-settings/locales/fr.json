@@ -19,6 +19,10 @@
     "api": {
       "title": "API",
       "description": "La documentation de l'API, pour les développeurs. Elle exige d'être connecté."
+    },
+    "calendar": {
+      "title": "Calendrier",
+      "description": "Les calendriers suivis sont téléchargés par le serveur, qui refuse par défaut les adresses du réseau local. Les ouvrir (pour un Nextcloud chez vous, par exemple) laisse chaque membre de chaque espace faire télécharger par Nido les adresses de ce réseau. Même alors, cette machine, la base de données de Nido et Redis restent fermés : un Nextcloud installé sur la même machine se donne par son adresse sur le réseau."
     }
   },
   "source": {

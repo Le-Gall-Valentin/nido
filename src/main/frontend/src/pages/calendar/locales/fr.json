@@ -1,6 +1,7 @@
 {
   "title": "Calendrier",
   "new_event": "Nouvel événement",
+  "sync": "Synchroniser",
   "loading": "Chargement…",
   "error": "Impossible de charger le calendrier.",
   "today": "Aujourd'hui",
@@ -30,13 +31,16 @@
     "TASK": "Tâches",
     "FINANCE": "Finances",
     "MEAL": "Repas",
-    "SAVINGS": "Épargne"
+    "SAVINGS": "Épargne",
+    "EXTERNAL": "Calendriers suivis"
   },
   "filters": {
     "label": "Filtrer par source"
   },
   "recurring_series": {
-    "manage": "Gérer les événements récurrents"
+    "manage": "Gérer les événements récurrents",
+    "open": "Événements récurrents",
+    "open_short": "Récurrents"
   },
   "palette": {
     "today": "Calendrier — aujourd'hui"
@@ -57,6 +61,8 @@
     "leave": "Me retirer",
     "missing": "Cet élément n'existe plus.",
     "projected_hint": "Occurrence à venir : elle n'existe pas encore, seule sa série peut être modifiée.",
+    "followed_calendar": "Calendrier suivi : {{name}} — il se modifie à sa source.",
+    "followed_calendar_unknown": "Calendrier suivi — il se modifie à sa source.",
     "open_in": {
       "EVENT": "Ouvrir",
       "TASK": "Ouvrir dans Tâches",
@@ -86,15 +92,7 @@
     "times_required": "Un événement qui n'est pas sur la journée entière a une heure de début et de fin.",
     "end_before_start": "La fin ne peut pas précéder le début.",
     "too_long": "Un événement dure au plus {{days}} jours.",
-    "save_failed": "L'enregistrement a échoué.",
-    "color_name": {
-      "event-violet": "Violet",
-      "event-magenta": "Magenta",
-      "event-cyan": "Cyan",
-      "event-graphite": "Graphite",
-      "event-indigo": "Indigo",
-      "event-brique": "Brique"
-    }
+    "save_failed": "L'enregistrement a échoué."
   },
   "delete": {
     "failed": "La suppression a échoué.",
@@ -108,7 +106,39 @@
     "this_occurrence": "Cette occurrence",
     "whole_series": "Toute la série"
   },
+  "rule": {
+    "every": {
+      "DAILY_one": "Tous les jours",
+      "DAILY_other": "Tous les {{count}} jours",
+      "WEEKLY_one": "Toutes les semaines",
+      "WEEKLY_other": "Toutes les {{count}} semaines",
+      "MONTHLY_one": "Tous les mois",
+      "MONTHLY_other": "Tous les {{count}} mois",
+      "YEARLY_one": "Tous les ans",
+      "YEARLY_other": "Tous les {{count}} ans"
+    },
+    "weekday_item": "le {{weekday}}",
+    "on_days": "{{days}}",
+    "day": "le {{day}}",
+    "day_first": "le 1ᵉʳ",
+    "day_of_month": "le {{day}} {{month}}",
+    "day_of_month_first": "le 1ᵉʳ {{month}}",
+    "rank": { "1": "1ᵉʳ", "2": "2ᵉ", "3": "3ᵉ", "4": "4ᵉ" },
+    "weekday_of_month": "le {{rank}} {{weekday}}",
+    "weekday_of_month_in": "le {{rank}} {{weekday}} {{ofMonth}}",
+    "last_weekday": "le dernier {{weekday}}",
+    "last_weekday_in": "le dernier {{weekday}} {{ofMonth}}",
+    "last_day": "le dernier jour du mois",
+    "last_day_in": "le dernier jour {{ofMonth}}",
+    "of_month": "de {{month}}",
+    "of_month_elided": "d'{{month}}"
+  },
   "series": {
+    "weekdays": "Jours",
+    "day_rule": "Jour",
+    "day_rule_needs_start": "Indiquez d'abord la date de début",
+    "day_rule_fell_back": "Jour remis sur « {{rule}} » : la nouvelle date de début ne permet pas celui choisi.",
+    "day_rule_restored": "Jour revenu à « {{rule}} » : la nouvelle date de début le permet de nouveau.",
     "edit_title": "Modifier la série",
     "empty": "Aucun événement récurrent.",
     "edit": "Modifier {{name}}",
@@ -128,6 +158,8 @@
     "from": "à partir du {{date}}",
     "until_date": "jusqu'au {{date}}",
     "interval_invalid": "La fréquence doit être d'au moins 1.",
+    "interval_not_whole": "La fréquence doit être un nombre entier.",
+    "interval_too_large": "La fréquence doit être d'au plus {{maximum}}.",
     "occurrence_too_long": "Une occurrence ne peut pas durer plus longtemps que l'écart entre deux occurrences.",
     "until_before_start": "La répétition ne peut pas s'arrêter avant la date de début."
   },

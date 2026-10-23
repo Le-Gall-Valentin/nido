@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import type { CalendarOccurrence } from '@/entities/calendar'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { CalendarApiProvider, type CalendarApi, type CalendarOccurrence } from '@/entities/calendar'
 import { OccurrenceRouter } from './OccurrenceRouter'
 
 vi.mock('react-i18next', () => ({
@@ -49,14 +50,24 @@ vi.mock('@/widgets/savings-goal', () => ({
 const base: CalendarOccurrence = {
   source: 'TASK', sourceId: 't1', seriesId: null, originalDate: null, materialized: true,
   title: 'Poubelles', description: null, location: null, allDay: true,
-  startDate: '2026-10-05', startTime: null, endDate: '2026-10-05', endTime: null, color: null, participantIds: [],
+  startDate: '2026-10-05', startTime: null, endDate: '2026-10-05', endTime: null, color: null, participantIds: [], externalFeedId: null,
 }
 
-function route(occurrence: CalendarOccurrence) {
+const FEED = {
+  id: 'f1', name: 'Vacances scolaires', host: 'ecole.example', color: 'event-cyan',
+  contentFetchedAt: '2026-10-13T00:00:00Z', lastAttemptAt: '2026-10-13T00:00:00Z', lastError: null,
+}
+
+function route(occurrence: CalendarOccurrence, feeds: unknown[] = [FEED]) {
   const onOpenInModule = vi.fn()
   const onClose = vi.fn()
+  const api = { listExternalFeeds: vi.fn().mockResolvedValue(feeds) } as unknown as CalendarApi
   const { container } = render(
-    <OccurrenceRouter spaceId="space-1" occurrence={occurrence} members={[]} onOpenInModule={onOpenInModule} onClose={onClose} />)
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <CalendarApiProvider api={api}>
+        <OccurrenceRouter spaceId="space-1" occurrence={occurrence} members={[]} onOpenInModule={onOpenInModule} onClose={onClose} />
+      </CalendarApiProvider>
+    </QueryClientProvider>)
   return { onOpenInModule, onClose, container }
 }
 
@@ -166,6 +177,40 @@ describe('OccurrenceRouter', () => {
     it('says when it is still to come', () => {
       route({ ...dinner, materialized: false })
       expect(screen.getByText('detail.projected_hint')).toBeTruthy()
+    })
+  })
+
+  describe('an entry of a followed calendar', () => {
+    const toussaint: CalendarOccurrence = {
+      ...base, source: 'EXTERNAL', sourceId: 'f1:toussaint:2026-10-17T00:00', externalFeedId: 'f1',
+      title: 'Vacances de la Toussaint', description: 'Zone C', location: 'Partout',
+    }
+
+    it('opens it read-only, naming its calendar', async () => {
+      route(toussaint)
+      expect(await screen.findByRole('heading', { level: 3, name: 'Vacances de la Toussaint' })).toBeTruthy()
+      expect(screen.getByText('Zone C')).toBeTruthy()
+      expect(screen.getByText('Partout')).toBeTruthy()
+      expect(await screen.findByText('detail.followed_calendar')).toBeTruthy()
+      for (const action of ['detail.edit', 'detail.delete', 'detail.move', 'detail.copy', 'detail.join', 'detail.leave']) {
+        expect(screen.queryByRole('button', { name: action })).toBeNull()
+      }
+      expect(screen.getByText(/all_day_short/)).toBeTruthy()
+    })
+
+    it('is a labelled dialog that closes', async () => {
+      const { onClose } = route(toussaint)
+      const dialog = await screen.findByRole('dialog')
+      expect(dialog.getAttribute('aria-labelledby')).toBeTruthy()
+      expect(dialog.contains(document.activeElement)).toBe(true)
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+      expect(onClose).toHaveBeenCalled()
+    })
+
+    it('still opens when its calendar is no longer followed', async () => {
+      route(toussaint, [])
+      expect(await screen.findByText('Vacances de la Toussaint')).toBeTruthy()
+      expect(await screen.findByText('detail.followed_calendar_unknown')).toBeTruthy()
     })
   })
 

@@ -7,7 +7,7 @@ function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence 
   return {
     source: 'EVENT', sourceId: 'x', seriesId: null, originalDate: null, materialized: true,
     title: 'x', description: null, location: null, allDay: true, startDate: '2026-01-01', startTime: null, endDate: '2026-01-01',
-    endTime: null, color: null, participantIds: [], ...overrides,
+    endTime: null, color: null, participantIds: [], externalFeedId: null, ...overrides,
   }
 }
 
@@ -30,6 +30,42 @@ describe('useCalendarFilters', () => {
       occurrence({ source: 'EVENT', title: 'Piano' }),
     ])
     expect(kept.map((o) => o.title)).toEqual(['Piano'])
+  })
+
+  it('shows the entries of a followed calendar, whichever sources are hidden', () => {
+    const { result } = renderHook(() => useCalendarFilters('s1'))
+    act(() => { result.current.toggle('EVENT') })
+    const kept = result.current.filter([
+      occurrence({ source: 'EXTERNAL', title: 'Ecole', externalFeedId: 'f1' }),
+      occurrence({ source: 'EVENT', title: 'Piano' }),
+    ])
+    expect(kept.map((o) => o.title)).toEqual(['Ecole'])
+  })
+
+  it('hides one followed calendar without hiding the others, and remembers it', () => {
+    const { result } = renderHook(() => useCalendarFilters('s1'))
+    act(() => result.current.toggleFeed('f1'))
+
+    expect(result.current.isFeedEnabled('f1')).toBe(false)
+    expect(result.current.isFeedEnabled('f2')).toBe(true)
+    expect(result.current.filter([
+      occurrence({ source: 'EXTERNAL', externalFeedId: 'f1' }),
+      occurrence({ source: 'EXTERNAL', externalFeedId: 'f2' }),
+      occurrence({ source: 'EVENT' }),
+    ]).map((o) => o.externalFeedId)).toEqual(['f2', null])
+    expect(renderHook(() => useCalendarFilters('s1')).result.current.isFeedEnabled('f1')).toBe(false)
+    expect(renderHook(() => useCalendarFilters('s2')).result.current.isFeedEnabled('f1')).toBe(true)
+  })
+
+  it('shows a followed calendar again once toggled back, and ignores a stored value that is no list of ids', () => {
+    localStorage.setItem('nido.calendar.feeds.s1', JSON.stringify(['f1', 7, null]))
+    const { result } = renderHook(() => useCalendarFilters('s1'))
+    expect(result.current.isFeedEnabled('f1')).toBe(false)
+    act(() => result.current.toggleFeed('f1'))
+    expect(result.current.isFeedEnabled('f1')).toBe(true)
+
+    localStorage.setItem('nido.calendar.feeds.s3', '"broken"')
+    expect(renderHook(() => useCalendarFilters('s3')).result.current.isFeedEnabled('f1')).toBe(true)
   })
 
   it('remembers a disabled source across remounts, per space', () => {
@@ -66,5 +102,32 @@ describe('useCalendarFilters', () => {
     localStorage.setItem('nido.calendar.filters.s1', '"broken"')
     const { result } = renderHook(() => useCalendarFilters('s1'))
     expect(result.current.enabled.size).toBe(5)
+  })
+
+  it('reads the other space\'s filters when the page turns to it, and never writes one space\'s under the other', () => {
+    localStorage.setItem('nido.calendar.feeds.B', JSON.stringify(['gB']))
+    const { result, rerender } = renderHook(({ spaceId }) => useCalendarFilters(spaceId), { initialProps: { spaceId: 'A' } })
+    act(() => {
+      result.current.toggleFeed('fA')
+      result.current.toggle('TASK')
+    })
+
+    rerender({ spaceId: 'B' })
+
+    expect(result.current.isFeedEnabled('gB')).toBe(false)
+    expect(result.current.isFeedEnabled('fA')).toBe(true)
+    expect(result.current.isEnabled('TASK')).toBe(true)
+    act(() => { result.current.toggleFeed('gB2') })
+    expect(JSON.parse(localStorage.getItem('nido.calendar.feeds.B') ?? '[]')).toEqual(['gB', 'gB2'])
+    expect(JSON.parse(localStorage.getItem('nido.calendar.feeds.A') ?? '[]')).toEqual(['fA'])
+  })
+
+  it('forgets a calendar no longer followed the next time the space\'s calendars are written', () => {
+    localStorage.setItem('nido.calendar.feeds.s1', JSON.stringify(['gone', 'kept']))
+    const { result } = renderHook(() => useCalendarFilters('s1', ['kept', 'other']))
+
+    act(() => { result.current.toggleFeed('other') })
+
+    expect(JSON.parse(localStorage.getItem('nido.calendar.feeds.s1') ?? '[]')).toEqual(['kept', 'other'])
   })
 })

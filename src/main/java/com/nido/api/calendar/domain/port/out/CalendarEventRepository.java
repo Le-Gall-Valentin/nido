@@ -30,6 +30,9 @@ public interface CalendarEventRepository {
      */
     Map<UUID, Set<LocalDate>> findDetachedSlotsOfEach(Collection<UUID> seriesIds, LocalDate from, LocalDate to);
 
+    /** Every event of the space, the occurrences edited on their own among them: what an export writes. */
+    List<CalendarEvent> findBySpaceId(UUID spaceId);
+
     Optional<CalendarEvent> findBySeriesAndOriginalDate(UUID seriesId, LocalDate originalDate);
 
     /** Every occurrence of the series edited on its own, wherever each now sits. */
@@ -42,6 +45,9 @@ public interface CalendarEventRepository {
     void relink(UUID eventId, UUID seriesId, LocalDate originalDate);
 
     CalendarEvent create(CreateEventCommand command);
+
+    /** As {@link #create}, remembering the UID of the file it comes from. */
+    CalendarEvent createImported(CreateEventCommand command, String importUidHash);
 
     CalendarEvent update(UpdateEventCommand command);
 

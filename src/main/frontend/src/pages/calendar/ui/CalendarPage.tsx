@@ -9,7 +9,7 @@ import { canWrite, isPersonal } from '@/entities/space'
 import { useMySpaces, useSpaceTimezone } from '@/features/space-switcher'
 import { useRescheduleOccurrence } from '@/features/reschedule-occurrence'
 import {
-  calendarApi, calendarKey, CalendarApiProvider, useOccurrences, type CalendarApi, type ScheduleChange,
+  calendarApi, calendarKey, CalendarApiProvider, useExternalFeeds, useOccurrences, type CalendarApi, type ScheduleChange,
 } from '@/entities/calendar'
 import { FinanceApiProvider, financeApi as defaultFinanceApi, type IFinanceApi } from '@/entities/finance'
 import { KitchenApiProvider, kitchenApi as defaultKitchenApi, type IKitchenApi } from '@/entities/kitchen'
@@ -62,7 +62,9 @@ function CalendarPageContent() {
   const today = now.date
 
   const { view, date, setView, setDate, goToToday, shiftPeriod } = useCalendarUrlState(today)
-  const { isEnabled, toggle, filter } = useCalendarFilters(spaceId)
+  const { data: feeds } = useExternalFeeds(spaceId)
+  const feedIds = useMemo(() => feeds?.map((feed) => feed.id), [feeds])
+  const { isEnabled, toggle, filter, isFeedEnabled, toggleFeed } = useCalendarFilters(spaceId, feedIds)
 
   const { data: mySpaces } = useMySpaces()
   const currentSpace = mySpaces?.find((space) => space.id === spaceId)
@@ -105,6 +107,8 @@ function CalendarPageContent() {
     <div className="mx-auto max-w-[1100px] px-5 py-6 md:px-10 md:py-[34px]">
       <CalendarToolbar canWrite={canWriteHere} view={view} periodLabel={periodLabel}
         onShift={shiftPeriod} onToday={goToToday} onView={setView} isEnabled={isEnabled} onToggle={toggle}
+        feeds={feeds ?? []} isFeedEnabled={isFeedEnabled} onToggleFeed={toggleFeed}
+        onSync={() => show({ kind: 'sync' })}
         onManageSeries={() => show({ kind: 'manage-series' })}
         onNewEvent={() => show({ kind: 'create', date, returnToDay: false })} />
 

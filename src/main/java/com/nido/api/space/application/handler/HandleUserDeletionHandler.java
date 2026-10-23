@@ -1,6 +1,7 @@
 package com.nido.api.space.application.handler;
 
 import com.nido.api.shared.annotation.ApplicationService;
+import com.nido.api.space.application.service.SpaceDepartures;
 import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.application.port.in.HandleUserDeletionUseCase;
 import com.nido.api.space.domain.model.Space;
@@ -30,17 +31,20 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
     private final SpaceMembershipPort spaceMembershipPort;
     private final SpaceInvitationPort spaceInvitationPort;
     private final SpaceNotifier spaceNotifier;
+    private final SpaceDepartures departures;
 
     public HandleUserDeletionHandler(SpaceRepository spaceRepository,
                                      SpaceCommandPort spaceCommandPort,
                                      SpaceMembershipPort spaceMembershipPort,
                                      SpaceInvitationPort spaceInvitationPort,
-                                     SpaceNotifier spaceNotifier) {
+                                     SpaceNotifier spaceNotifier,
+                                     SpaceDepartures departures) {
         this.spaceRepository = spaceRepository;
         this.spaceCommandPort = spaceCommandPort;
         this.spaceMembershipPort = spaceMembershipPort;
         this.spaceInvitationPort = spaceInvitationPort;
         this.spaceNotifier = spaceNotifier;
+        this.departures = departures;
     }
 
     @Override
@@ -67,6 +71,7 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
             }
             if (!membership.isOwner()) {
                 spaceMembershipPort.remove(membership.id());
+                departures.departed(space.id(), userId);
                 spaceNotifier.memberLeftNido(space.id(), userId, username);
                 continue;
             }
@@ -81,6 +86,7 @@ public class HandleUserDeletionHandler implements HandleUserDeletionUseCase {
             }
             // Retirer l'ancien propriétaire d'abord : un seul OWNER à la fois.
             spaceMembershipPort.remove(membership.id());
+            departures.departed(space.id(), userId);
             spaceMembershipPort.changeRole(successor.get().id(), SpaceRole.OWNER);
             log.info("Ownership of space {} passed to {} after the deletion of {}",
                 space.id(), successor.get().userId(), userId);

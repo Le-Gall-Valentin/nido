@@ -21,7 +21,9 @@ public enum SettingKey {
     PUBLIC_URL("public-url", SettingGroup.PUBLIC_URL, "NIDO_APP_URL", null, Trait.REQUIRED),
     ACCESS_TOKEN_MINUTES("sessions.access-token-minutes", SettingGroup.SESSIONS, "NIDO_JWT_EXPIRY_MINUTES", "15"),
     REFRESH_TOKEN_DAYS("sessions.refresh-token-days", SettingGroup.SESSIONS, "NIDO_REFRESH_TOKEN_EXPIRY_DAYS", "30"),
-    SWAGGER("api.swagger", SettingGroup.API, "SWAGGER_ENABLED", "false");
+    SWAGGER("api.swagger", SettingGroup.API, "SWAGGER_ENABLED", "false"),
+    CALENDAR_ALLOW_PRIVATE_NETWORK("calendar.allow-private-network", SettingGroup.CALENDAR,
+        "NIDO_CALENDAR_ALLOW_PRIVATE_NETWORK", "false");
 
     /** What sets a setting apart from the others. */
     public enum Trait {

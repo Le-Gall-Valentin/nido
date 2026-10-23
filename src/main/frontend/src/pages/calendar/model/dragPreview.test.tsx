@@ -10,7 +10,7 @@ const meeting: CalendarOccurrence = {
   source: 'EVENT', sourceId: 'e1', seriesId: null, originalDate: null, materialized: true,
   title: 'Piano', description: null, location: null, allDay: false,
   startDate: '2026-09-23', startTime: '14:00:00', endDate: '2026-09-23', endTime: '15:30:00',
-  color: null, participantIds: [],
+  color: null, participantIds: [], externalFeedId: null,
 }
 const move: DragIntent = { kind: 'move', occurrence: meeting, from: 'grid', day: '2026-09-23' }
 const stretch: DragIntent = { kind: 'resize-end', occurrence: meeting }

@@ -20,13 +20,13 @@ public record CalendarOccurrenceResponse(
     CalendarSourceType source, String sourceId, UUID seriesId, LocalDate originalDate,
     boolean materialized, String title, String description, String location, boolean allDay,
     LocalDate startDate, LocalTime startTime, LocalDate endDate, LocalTime endTime,
-    String color, List<UUID> participantIds
+    String color, List<UUID> participantIds, UUID externalFeedId
 ) {
     public static CalendarOccurrenceResponse from(CalendarOccurrence o) {
         return new CalendarOccurrenceResponse(
             o.source(), o.sourceId(), o.seriesId(), o.originalDate(), o.materialized(),
             o.title(), o.description(), o.location(), o.allDay(),
             o.startDate(), o.startTime(), o.endDate(), o.endTime(),
-            o.color(), o.participantIds());
+            o.color(), o.participantIds(), o.externalFeedId());
     }
 }

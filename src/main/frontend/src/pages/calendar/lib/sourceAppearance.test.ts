@@ -1,20 +1,24 @@
 import { describe, it, expect } from 'vitest'
 import { EVENT_COLORS, type CalendarOccurrence } from '@/entities/calendar'
-import { DOT_CLASS, SOURCE_TOKEN, TINT_CLASS, tokenFor } from './sourceAppearance'
+import { DISPLAY_ORDER, DOT_CLASS, SOURCE_ORDER, SOURCE_TOKEN, TINT_CLASS, dayDots, tokenFor } from './sourceAppearance'
 
 function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence {
   return {
     source: 'EVENT', sourceId: 'x', seriesId: null, originalDate: null, materialized: true,
     title: 'x', description: null, location: null, allDay: true, startDate: '2026-01-01', startTime: null,
-    endDate: '2026-01-01', endTime: null, color: null, participantIds: [], ...overrides,
+    endDate: '2026-01-01', endTime: null, color: null, participantIds: [], externalFeedId: null, ...overrides,
   }
 }
 
+/**
+ * The sources of the space itself: no event may wear one of their colours. A followed calendar is no such source —
+ * it wears an event colour of its own choosing (spec §8), graphite by default.
+ */
 const OTHER_SOURCES = [SOURCE_TOKEN.TASK, SOURCE_TOKEN.FINANCE, SOURCE_TOKEN.MEAL, SOURCE_TOKEN.SAVINGS] as string[]
 
 describe('source colours', () => {
   it('gives every source a colour of its own', () => {
-    expect(new Set(Object.values(SOURCE_TOKEN)).size).toBe(5)
+    expect(new Set(Object.values(SOURCE_TOKEN)).size).toBe(6)
   })
 
   it('paints an event with no colour of its own in violet, apart from the green of meals', () => {
@@ -25,10 +29,27 @@ describe('source colours', () => {
   })
 })
 
+describe('display order', () => {
+  it('shows the followed calendars after every source of the space, without a filter of their own kind', () => {
+    expect(DISPLAY_ORDER).toEqual(['EVENT', 'TASK', 'FINANCE', 'MEAL', 'SAVINGS', 'EXTERNAL'])
+    expect(SOURCE_ORDER).not.toContain('EXTERNAL')
+  })
+
+  it('paints a followed calendar in its own colour, or in graphite when that is no event colour', () => {
+    expect(tokenFor(occurrence({ source: 'EXTERNAL', color: 'event-cyan' }))).toBe('event-cyan')
+    expect(tokenFor(occurrence({ source: 'EXTERNAL', color: '#ff0000' }))).toBe('event-graphite')
+    expect(tokenFor(occurrence({ source: 'EXTERNAL', color: null }))).toBe('event-graphite')
+  })
+})
+
 describe('event colours', () => {
   it('offers no colour another source wears', () => {
     // The palette itself lives in entities/calendar (eventPalette.test.ts).
     for (const color of EVENT_COLORS) expect(OTHER_SOURCES).not.toContain(color)
+  })
+
+  it('dresses a followed calendar in an event colour, by design: one of the palette it is offered', () => {
+    expect(EVENT_COLORS as readonly string[]).toContain(SOURCE_TOKEN.EXTERNAL)
   })
 
   it('honours an event colour an event was given', () => {
@@ -51,5 +72,20 @@ describe('event colours', () => {
       expect(DOT_CLASS[token]).toBe(`bg-${token}`)
       expect(TINT_CLASS[token]).toBe(`bg-${token}-dim text-${token}`)
     }
+  })
+})
+
+describe('a day\'s dots on a phone', () => {
+  it('gives one dot per source present, and one per colour of the followed calendars present', () => {
+    const dots = dayDots([
+      occurrence({ source: 'TASK' }), occurrence({ source: 'TASK' }),
+      occurrence({ source: 'EXTERNAL', color: 'event-cyan' }), occurrence({ source: 'EXTERNAL', color: 'event-cyan' }),
+      occurrence({ source: 'EXTERNAL', color: 'event-indigo' }), occurrence({ source: 'EVENT' }),
+    ])
+
+    expect(dots.map((dot) => [dot.source, dot.className])).toEqual([
+      ['EVENT', 'bg-event-violet'], ['TASK', 'bg-status-blue'],
+      ['EXTERNAL', 'bg-event-cyan'], ['EXTERNAL', 'bg-event-indigo'],
+    ])
   })
 })

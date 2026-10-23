@@ -1,0 +1,49 @@
+databaseChangeLog:
+  - changeSet:
+      id: 079-create-calendar-external-feeds
+      author: nido
+      comment: >
+        The calendars a space follows at an address of their own. Name and address are sealed — an address often holds
+        a secret token —, and so is the last calendar downloaded, kept apart so that listing a space's calendars never
+        loads them. A failure keeps the last calendar: last_error says why, last_attempt_at when.
+      changes:
+        - sql:
+            sql: >
+              CREATE TABLE calendar_external_feeds (
+                id UUID NOT NULL,
+                space_id UUID NOT NULL,
+                name_encrypted TEXT NOT NULL,
+                url_encrypted TEXT NOT NULL,
+                color VARCHAR(30),
+                created_by UUID NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                content_fetched_at TIMESTAMPTZ NOT NULL,
+                last_attempt_at TIMESTAMPTZ NOT NULL,
+                last_error VARCHAR(30),
+                etag VARCHAR(200),
+                last_modified VARCHAR(100),
+                CONSTRAINT pk_calendar_external_feeds PRIMARY KEY (id),
+                CONSTRAINT fk_calendar_external_feeds_space FOREIGN KEY (space_id) REFERENCES spaces (id) ON DELETE CASCADE
+              )
+            splitStatements: false
+        - sql:
+            sql: CREATE INDEX idx_calendar_external_feeds_space_id ON calendar_external_feeds (space_id)
+        - sql:
+            sql: CREATE INDEX idx_calendar_external_feeds_last_attempt_at ON calendar_external_feeds (last_attempt_at)
+        - sql:
+            sql: >
+              CREATE TABLE calendar_external_feed_contents (
+                id UUID NOT NULL,
+                feed_id UUID NOT NULL,
+                content_encrypted TEXT NOT NULL,
+                CONSTRAINT pk_calendar_external_feed_contents PRIMARY KEY (id),
+                CONSTRAINT uq_calendar_external_feed_contents_feed UNIQUE (feed_id),
+                CONSTRAINT fk_calendar_external_feed_contents_feed FOREIGN KEY (feed_id)
+                  REFERENCES calendar_external_feeds (id) ON DELETE CASCADE
+              )
+            splitStatements: false
+      rollback:
+        - dropTable:
+            tableName: calendar_external_feed_contents
+        - dropTable:
+            tableName: calendar_external_feeds

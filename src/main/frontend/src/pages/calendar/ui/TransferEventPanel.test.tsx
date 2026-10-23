@@ -17,7 +17,7 @@ const piano: CalendarOccurrence = {
   source: 'EVENT', sourceId: 'series-1:2026-01-13', seriesId: 'series-1', originalDate: '2026-01-13',
   materialized: false, title: 'Piano', description: null, location: null, allDay: false,
   startDate: '2026-01-13', startTime: '18:00:00', endDate: '2026-01-13', endTime: '19:00:00',
-  color: null, participantIds: [],
+  color: null, participantIds: [], externalFeedId: null,
 }
 
 function fakeApi() {

@@ -3,6 +3,7 @@ export { usePaletteItems, usePaletteResults } from './paletteRegistry'
 export { registerLocales } from './registerLocales'
 export { resolveLocale, toLanguage } from './resolveLocale'
 export { useFocusTrap } from './useFocusTrap'
+export { usePendingFocus } from './usePendingFocus'
 export {
   setSessionExpiredCallback, triggerSessionExpired,
   setLoginSuccessCallback, notifyLoginSuccess,
@@ -37,4 +38,5 @@ export { formatAmount, formatSignedAmount } from './formatAmount'
 export { formatIsoDate } from './formatIsoDate'
 export { parseAmount, type AmountProblem } from './parseAmount'
 export { useCreateIntent, withCreateIntent, CREATE_INTENT_PARAM, type CreateIntent } from './useCreateIntent'
-export { useInvalidateOnAnyWrite } from './useInvalidateOnAnyWrite'
+export { useInvalidateOnAnyWrite, NOTHING_ELSE_TO_REFRESH } from './useInvalidateOnAnyWrite'
+export { saveBlob } from './saveBlob'

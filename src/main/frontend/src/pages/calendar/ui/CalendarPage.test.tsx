@@ -6,7 +6,7 @@ import { createTestQueryClient } from '@/shared/test'
 import { todayIso } from '@/shared/lib'
 import { SpacesApiProvider, type ISpacesApi } from '@/features/space-switcher'
 import { SpaceMembersApiProvider, type ISpaceMembersApi, type SpaceMember, type SpaceSummary } from '@/entities/space'
-import type { CalendarApi, CalendarOccurrence, RecurringEventSeries } from '@/entities/calendar'
+import { IntervalTooLargeError, type CalendarApi, type CalendarOccurrence, type RecurringEventSeries } from '@/entities/calendar'
 import type { IFinanceApi } from '@/entities/finance'
 import type { IKitchenApi } from '@/entities/kitchen'
 import { TasksApiProvider, type TasksApi } from '@/entities/tasks'
@@ -31,7 +31,7 @@ function occurrence(overrides: Partial<CalendarOccurrence> & { title: string }):
   return {
     source: 'EVENT', sourceId: overrides.title, seriesId: null, originalDate: null, materialized: true,
     description: null, location: null, allDay: true, startDate: '2026-09-23', startTime: null,
-    endDate: '2026-09-23', endTime: null, color: null, participantIds: [], ...overrides,
+    endDate: '2026-09-23', endTime: null, color: null, participantIds: [], externalFeedId: null, ...overrides,
   }
 }
 
@@ -45,7 +45,7 @@ function renderPage(feed: CalendarOccurrence[], apis: {
   members?: SpaceMember[]
   search?: string
 } = {}) {
-  const calendar = { listOccurrences: vi.fn().mockResolvedValue(feed), listRecurringEventSeries: vi.fn().mockResolvedValue([]), ...apis.calendar } as unknown as CalendarApi
+  const calendar = { listOccurrences: vi.fn().mockResolvedValue(feed), listRecurringEventSeries: vi.fn().mockResolvedValue([]), listExternalFeeds: vi.fn().mockResolvedValue([]), ...apis.calendar } as unknown as CalendarApi
   const finance = { listSavingsGoals: vi.fn().mockResolvedValue([]), listRecurringSeries: vi.fn().mockResolvedValue([]), listCategories: vi.fn().mockResolvedValue([]), ...apis.finance } as unknown as IFinanceApi
   const kitchen = { listRecipes: vi.fn().mockResolvedValue([]), listMenuEntries: vi.fn().mockResolvedValue([]), ...apis.kitchen } as unknown as IKitchenApi
   const spaces: ISpacesApi = { listMySpaces: vi.fn().mockResolvedValue([{ ...SPACE, myRole: apis.role ?? 'MEMBER' }]), getSpace: vi.fn() }
@@ -72,6 +72,45 @@ function renderPage(feed: CalendarOccurrence[], apis: {
 }
 
 describe('CalendarPage', () => {
+  it('lets a viewer open the sync dialog, though not create an event', async () => {
+    renderPage([], { role: 'VIEWER' })
+    fireEvent.click(await screen.findByRole('button', { name: 'sync' }))
+    expect(await screen.findByRole('tablist')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /new_event/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'recurring_series.open' })).toBeNull()
+  })
+
+  it('names the recurring events button in full, though a phone shows its short name', async () => {
+    renderPage([])
+    const manage = await screen.findByRole('button', { name: 'recurring_series.open' })
+    expect(manage.textContent).toContain('recurring_series.open_short')
+  })
+
+  it.each(['day', 'week', 'month'] as const)('shows the entries of a followed calendar and filters each calendar on its own, in the %s view', async (view) => {
+    // The filters are remembered per space in this browser: each view starts from all shown.
+    localStorage.clear()
+    const feeds = [
+      { id: 'f1', name: 'Vacances scolaires', host: 'a.example', color: 'event-cyan', contentFetchedAt: '2026-10-13T00:00:00Z', lastAttemptAt: '2026-10-13T00:00:00Z', lastError: null },
+      { id: 'f2', name: 'Matchs du club', host: 'b.example', color: null, contentFetchedAt: '2026-10-13T00:00:00Z', lastAttemptAt: '2026-10-13T00:00:00Z', lastError: null },
+    ]
+    renderPage([
+      occurrence({ title: 'Toussaint', source: 'EXTERNAL', sourceId: 'ext-a', externalFeedId: 'f1' }),
+      occurrence({ title: 'Finale', source: 'EXTERNAL', sourceId: 'ext-b', externalFeedId: 'f2' }),
+    ], { view, calendar: { listExternalFeeds: vi.fn().mockResolvedValue(feeds) } })
+
+    // The week view lists a day's entries twice: in its phone list and in its desktop band.
+    expect((await screen.findAllByText('Toussaint')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Finale').length).toBeGreaterThan(0)
+
+    const filter = await screen.findByRole('button', { name: 'Vacances scolaires' })
+    expect(filter.getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(filter)
+
+    expect(screen.queryAllByText('Toussaint')).toHaveLength(0)
+    expect(screen.getAllByText('Finale').length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: 'Vacances scolaires' }).getAttribute('aria-pressed')).toBe('false')
+  })
+
   it('opens a savings deadline instead of crashing', async () => {
     const { finance } = renderPage([occurrence({ title: 'Vacances', source: 'SAVINGS', sourceId: 'goal-1' })], {
       finance: { listSavingsGoals: vi.fn().mockResolvedValue([
@@ -288,7 +327,7 @@ describe('CalendarPage — one dialog leading to the next', () => {
 const PIANO_SERIES: RecurringEventSeries = {
   id: 's-1', title: 'Piano', description: 'Salle 3', location: 'Conservatoire', allDay: false,
   startTime: '18:00', endTime: '19:00', durationDays: 0, color: null,
-  intervalType: 'MONTHLY', intervalCount: 1, anchorDate: '2026-09-02', endDate: null,
+  intervalType: 'MONTHLY', intervalCount: 1, weekdays: null, dayRule: 'SAME_DAY', anchorDate: '2026-09-02', endDate: null,
   startsOn: null, firstDate: '2026-09-02',
   participantIds: [], createdBy: 'u-1', createdAt: '2026-01-01T00:00:00Z',
 }
@@ -315,6 +354,17 @@ describe('CalendarPage — recurring events in the event form', () => {
       intervalType: 'WEEKLY', intervalCount: 1, endDate: null,
     })))
     expect(createEvent).not.toHaveBeenCalled()
+  })
+
+  it('says the server\'s refusal of an interval over its limit as the form says it', async () => {
+    const createRecurringEventSeries = vi.fn().mockRejectedValue(new IntervalTooLargeError())
+    renderPage([], { calendar: { createRecurringEventSeries } })
+    fireEvent.click(await screen.findByRole('button', { name: 'new_event' }))
+    fireEvent.change(screen.getByLabelText('form.title'), { target: { value: 'Piano' } })
+    fireEvent.click(screen.getByLabelText('form.recurring'))
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }))
+
+    expect((await screen.findByRole('alert')).textContent).toBe('series.interval_too_large:{"maximum":1000}')
   })
 
   it('turns a time picked out in the week grid into a series at that time', async () => {
@@ -363,6 +413,22 @@ describe('CalendarPage — recurring events in the event form', () => {
     })))
   })
 
+  it('says how the series of an opened occurrence repeats', async () => {
+    renderPage([PIANO_OCCURRENCE], { calendar: { listRecurringEventSeries: vi.fn().mockResolvedValue([PIANO_SERIES]) } })
+    fireEvent.click(await screen.findByText('Piano'))
+
+    expect(await screen.findByText('rule.every.MONTHLY:{"count":1} rule.day:{"day":2}')).toBeTruthy()
+  })
+
+  it('loads no series to open an event that belongs to none', async () => {
+    const listRecurringEventSeries = vi.fn().mockResolvedValue([PIANO_SERIES])
+    renderPage([occurrence({ title: 'Concert' })], { calendar: { listRecurringEventSeries } })
+    fireEvent.click(await screen.findByText('Concert'))
+
+    expect(await screen.findByRole('button', { name: 'detail.edit' })).toBeTruthy()
+    expect(listRecurringEventSeries).not.toHaveBeenCalled()
+  })
+
   it('deletes the whole series from one of its occurrences without a detour through the list', async () => {
     const deleteRecurringEventSeries = vi.fn().mockResolvedValue(undefined)
     renderPage([PIANO_OCCURRENCE], { calendar: {
@@ -381,12 +447,15 @@ describe('CalendarPage — recurring events in the event form', () => {
   it('lists the series to manage them, and edits one in the same form', async () => {
     const ended = { ...PIANO_SERIES, id: 's-0', title: 'Solfège', endDate: '2026-09-01', firstDate: '2026-01-07' }
     renderPage([], { calendar: { listRecurringEventSeries: vi.fn().mockResolvedValue([ended, PIANO_SERIES]) } })
-    fireEvent.click(await screen.findByRole('button', { name: 'recurring_series.manage' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'recurring_series.open' }))
+    expect(await screen.findByRole('dialog', { name: 'recurring_series.manage' })).toBeTruthy()
     const edit = await screen.findByRole('button', { name: 'series.edit:{"name":"Piano"}' })
     // Series are created from the new-event button now, never from here.
     expect(screen.queryByRole('button', { name: /series\.new/ })).toBeNull()
-    // Each says from when it shows, and until when for one that ends.
+    // Each says how it repeats, from when it shows, and until when for one that ends.
     expect(screen.getByText(/series\.from:\{"date":"2026-01-07"\}/).textContent).toContain('series.until_date:{"date":"2026-09-01"}')
+    expect(screen.getByText(/series\.from:\{"date":"2026-09-02"\}/).textContent)
+      .toContain('rule.every.MONTHLY:{"count":1} rule.day:{"day":2} · series.from')
     fireEvent.click(edit)
 
     expect(await screen.findByText('series.edit_title')).toBeTruthy()

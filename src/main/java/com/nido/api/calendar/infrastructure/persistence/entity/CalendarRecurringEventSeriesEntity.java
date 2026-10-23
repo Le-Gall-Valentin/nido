@@ -1,5 +1,6 @@
 package com.nido.api.calendar.infrastructure.persistence.entity;
 
+import com.nido.api.calendar.domain.model.DayRule;
 import com.nido.api.calendar.domain.model.RecurrenceInterval;
 import com.nido.api.infrastructure.persistence.entity.AssignedUuidEntity;
 import com.nido.api.infrastructure.sealing.SealedColumn;
@@ -69,6 +70,14 @@ public class CalendarRecurringEventSeriesEntity extends AssignedUuidEntity {
     @Column(name = "interval_count", nullable = false)
     private int intervalCount;
 
+    /** The days a weekly series repeats on, as iCalendar codes ("MO,TH"); null for any other frequency. */
+    @Column(length = 27)
+    private String weekdays;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "day_rule", nullable = false, length = 25)
+    private DayRule dayRule = DayRule.SAME_DAY;
+
     @Column(name = "anchor_date", nullable = false)
     private LocalDate anchorDate;
 
@@ -80,6 +89,10 @@ public class CalendarRecurringEventSeriesEntity extends AssignedUuidEntity {
 
     @Column(name = "created_by", nullable = false)
     private UUID createdBy;
+
+    /** The SHA-256 of the UID the row had in the iCalendar file it was imported from; null for anything made here. */
+    @Column(name = "import_uid_hash", length = 64)
+    private String importUidHash;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

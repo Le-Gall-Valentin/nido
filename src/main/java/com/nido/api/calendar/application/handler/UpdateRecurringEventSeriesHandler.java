@@ -54,7 +54,8 @@ public class UpdateRecurringEventSeriesHandler implements UpdateRecurringEventSe
             throw new CalendarException.RecurringEventSeriesNotFound();
         }
         EventScheduleValidator.validateSeries(command.allDay(), command.startTime(), command.endTime(),
-            command.durationDays(), command.intervalType(), command.intervalCount(), command.anchorDate(), command.endDate());
+            command.durationDays(), command.intervalType(), command.intervalCount(), command.weekdays(), command.dayRule(),
+            command.anchorDate(), command.endDate());
         UpdateRecurringEventSeriesCommand stored =
             command.withParticipants(memberValidator.participantsFor(caller, command.participantIds(), existing.participantIds()));
 
@@ -73,8 +74,9 @@ public class UpdateRecurringEventSeriesHandler implements UpdateRecurringEventSe
         }
         RecurringEventSeries carriedOn = series.create(new CreateRecurringEventSeriesCommand(existing.spaceId(),
             stored.title(), stored.description(), stored.location(), stored.allDay(), stored.startTime(), stored.endTime(),
-            stored.durationDays(), stored.color(), stored.intervalType(), stored.intervalCount(), stored.anchorDate(),
-            stored.endDate(), stored.participantIds(), existing.createdBy(),
+            stored.durationDays(), stored.color(), stored.intervalType(), stored.intervalCount(),
+            stored.weekdays(), stored.dayRule(), stored.anchorDate(), stored.endDate(), stored.participantIds(),
+            existing.createdBy(),
             // Shown from today on, whatever the anchor: the days before it belong to the series as it was.
             stored.anchorDate().isBefore(today) ? today : null));
         exceptions.carryOver(existing.id(), today, carriedOn);

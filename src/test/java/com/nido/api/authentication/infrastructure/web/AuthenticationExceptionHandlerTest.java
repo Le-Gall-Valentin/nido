@@ -1,5 +1,7 @@
 package com.nido.api.authentication.infrastructure.web;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import com.nido.api.LogCapture;
 import com.nido.api.authentication.domain.model.AuthenticationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -177,5 +179,16 @@ class AuthenticationExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
         assertThat(response.getHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isEqualTo("600");
         assertThat(response.getBody().getProperties()).containsEntry("error_code", "two_factor_locked");
+    }
+
+    @Test
+    void a_data_integrity_error_is_logged_without_the_token_of_a_subscription_address() {
+        try (LogCapture logged = LogCapture.of(AuthenticationExceptionHandler.class)) {
+            var answer = handler.handle(new AuthenticationException.DataIntegrityError(),
+                new MockHttpServletRequest("GET", "/ical/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde.ics"));
+            assertThat(answer.getStatusCode().value()).isEqualTo(500);
+            assertThat(logged.events()).extracting(ILoggingEvent::getFormattedMessage)
+                .singleElement().asString().contains("/ical/***.ics").doesNotContain("AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde");
+        }
     }
 }

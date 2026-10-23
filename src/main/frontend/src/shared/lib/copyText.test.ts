@@ -46,6 +46,19 @@ describe('copyText', () => {
     expect(document.querySelector('textarea')).toBeNull()
   })
 
+  it('gives the focus back to what held it before the copy', async () => {
+    clipboard(undefined)
+    execCommand(true)
+    const button = document.createElement('button')
+    document.body.appendChild(button)
+    button.focus()
+
+    await copyText('the key')
+
+    expect(document.activeElement).toBe(button)
+    button.remove()
+  })
+
   it('says so when nothing could copy', async () => {
     clipboard(vi.fn().mockRejectedValue(new Error('denied')))
     execCommand('throws')

@@ -31,6 +31,8 @@ public interface CalendarEventJpaRepository extends JpaRepository<CalendarEventE
 
     List<CalendarEventEntity> findByRecurringSeriesId(UUID seriesId);
 
+    List<CalendarEventEntity> findBySpaceIdOrderByStartDateAscStartTimeAsc(UUID spaceId);
+
     /**
      * The slot each detached instance takes over, series by series. Queried on the ORIGINAL date, so a
      * slot stays freed even when its instance moved away; and on the two columns, not the whole rows.
@@ -56,4 +58,10 @@ public interface CalendarEventJpaRepository extends JpaRepository<CalendarEventE
         """)
     void relink(@Param("eventId") UUID eventId, @Param("seriesId") UUID seriesId,
                 @Param("originalDate") LocalDate originalDate);
+
+    @Query("SELECT DISTINCT e.importUidHash FROM CalendarEventEntity e WHERE e.spaceId = :spaceId AND e.importUidHash IN :hashes")
+    List<String> findImportHashes(@Param("spaceId") UUID spaceId, @Param("hashes") Collection<String> hashes);
+
+    @Query("SELECT e.id FROM CalendarEventEntity e WHERE e.spaceId = :spaceId AND e.id IN :ids")
+    List<UUID> findIdsIn(@Param("spaceId") UUID spaceId, @Param("ids") Collection<UUID> ids);
 }

@@ -1,6 +1,6 @@
 package com.nido.api.dashboard.infrastructure.source;
 
-import com.nido.api.calendar.application.port.in.ListCalendarEventsUseCase;
+import com.nido.api.calendar.application.port.in.ListAgendaEntriesUseCase;
 import com.nido.api.calendar.domain.model.CalendarOccurrence;
 import com.nido.api.dashboard.domain.model.AgendaDay;
 import com.nido.api.dashboard.domain.model.AgendaEvent;
@@ -23,10 +23,10 @@ import java.util.List;
 @Component
 public class AgendaDashboardSource implements DashboardSource {
 
-    private final ListCalendarEventsUseCase listEvents;
+    private final ListAgendaEntriesUseCase listEvents;
     private final ListTasksDueBetweenUseCase listTasksDue;
 
-    public AgendaDashboardSource(ListCalendarEventsUseCase listEvents, ListTasksDueBetweenUseCase listTasksDue) {
+    public AgendaDashboardSource(ListAgendaEntriesUseCase listEvents, ListTasksDueBetweenUseCase listTasksDue) {
         this.listEvents = listEvents;
         this.listTasksDue = listTasksDue;
     }

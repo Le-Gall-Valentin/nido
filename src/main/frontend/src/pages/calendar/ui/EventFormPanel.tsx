@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next'
 import type { SpaceMember } from '@/entities/space'
 import {
   toEventInput, useCreateEvent, useUpdateEvent, useDetachOccurrence, useCreateRecurringEventSeries,
-  useUpdateRecurringEventSeries, type CalendarOccurrence, type EventInput, type RecurringEventSeries, type ScheduleChange,
+  useUpdateRecurringEventSeries, IntervalTooLargeError, type CalendarOccurrence, type EventInput, type RecurringEventSeries,
+  type ScheduleChange,
 } from '@/entities/calendar'
 import { fromSeries, runsAcross, toSeriesInput, type Recurrence } from '../lib/seriesInput'
+import { intervalTooLarge } from '../lib/eventFormProblem'
 import { EventFormModal } from './EventFormModal'
 
 interface EventFormPanelProps {
@@ -60,11 +62,13 @@ export function EventFormPanel({
   // Editing one occurrence of a series starts from what that occurrence looks like today, but is
   // written through the slot's endpoint — so the form is pre-filled even though no event row exists.
   const initial = occurrence ? toEventInput(occurrence) : null
-  const editedSeries = series ? fromSeries(series) : null
+  const seriesForm = series ? fromSeries(series) : null
 
   const handleSubmit = (input: EventInput, recurrence: Recurrence | null) => {
     setError(null)
-    const onError = () => setError(t('form.save_failed'))
+    // An interval over the server's limit is said as the form says it; any other failure, as a failed save.
+    const onError = (failure: Error) => setError(failure instanceof IntervalTooLargeError
+      ? t(intervalTooLarge.key, intervalTooLarge.values) : t('form.save_failed'))
     const onSuccess = () => onClose()
 
     if (series && recurrence) {
@@ -90,9 +94,10 @@ export function EventFormPanel({
 
   return (
     <EventFormModal
-      initial={editedSeries?.event ?? initial ?? blank}
+      initial={seriesForm?.event ?? initial ?? blank}
       mode={series ? 'edit-series' : occurrence ? 'edit' : 'create'}
-      initialRecurrence={editedSeries?.recurrence ?? null}
+      initialRecurrence={seriesForm?.recurrence ?? null}
+      editedSeries={series}
       notice={series && runsAcross(series, today) ? t('series.split_notice') : null}
       members={members}
       isPersonal={isPersonal}

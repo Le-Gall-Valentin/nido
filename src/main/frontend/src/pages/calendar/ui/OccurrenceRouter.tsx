@@ -1,12 +1,15 @@
 import { useTranslation } from 'react-i18next'
+import i18next from 'i18next'
 import { Dialog, Button, Spinner } from '@/shared/ui'
+import { resolveLocale } from '@/shared/lib'
 import type { SpaceMember } from '@/entities/space'
 import { useTasks, useRecurringTaskSeries } from '@/entities/tasks'
 import { useRecurringSeries, useCategories, useSavingsGoals, useUpdateSavingsGoal } from '@/entities/finance'
 import { TaskDetailModal } from '@/widgets/task-management'
 import { FinanceRecurringSeriesPanel } from '@/widgets/finance-recurring-series'
 import { SavingsGoalFormModal } from '@/widgets/savings-goal'
-import type { CalendarOccurrence } from '@/entities/calendar'
+import { formatWhen } from '../lib/occurrenceWhen'
+import { useExternalFeeds, type CalendarOccurrence } from '@/entities/calendar'
 
 interface OccurrenceRouterProps {
   spaceId: string
@@ -40,10 +43,38 @@ export function OccurrenceRouter({
       return <SavingsOccurrence spaceId={spaceId} occurrence={occurrence} onClose={onClose} />
     case 'MEAL':
       return <ExternalOccurrence occurrence={occurrence} onOpenInModule={onOpenInModule} onClose={onClose} />
+    case 'EXTERNAL':
+      return <FollowedOccurrence spaceId={spaceId} occurrence={occurrence} onClose={onClose} />
     case 'EVENT':
       // Events are handled by the page itself, which owns the form and delete state.
       return null
   }
+}
+
+/** An entry of a calendar the space follows: changed at its source only, so read here and nothing more. */
+function FollowedOccurrence({ spaceId, occurrence, onClose }: {
+  spaceId: string; occurrence: CalendarOccurrence; onClose: () => void
+}) {
+  const { t } = useTranslation('calendar')
+  const { data: feeds } = useExternalFeeds(spaceId)
+  const feed = feeds?.find((candidate) => candidate.id === occurrence.externalFeedId)
+  return (
+    <Dialog open onClose={onClose} title={t('detail.title')} showCloseButton maxWidth="max-w-lg">
+      <div className="flex flex-col gap-3">
+        <div>
+          {/* Under the dialog's own heading (h2): the entry's title is what a screen reader jumps to, in every detail. */}
+          <h3 className="pr-8 text-base font-semibold text-fg-0 break-words">{occurrence.title}</h3>
+          <p className="text-sm text-fg-2">{formatWhen(occurrence, t('all_day_short'), resolveLocale(i18next.language))}</p>
+        </div>
+        {/* A followed calendar's text often holds a long meeting address: it wraps rather than widen the dialog. */}
+        {occurrence.location && <p className="break-words text-sm text-fg-1">{occurrence.location}</p>}
+        {occurrence.description && <p className="whitespace-pre-line break-words text-sm text-fg-1">{occurrence.description}</p>}
+        <p className="text-xs text-fg-3">
+          {feed ? t('detail.followed_calendar', { name: feed.name }) : t('detail.followed_calendar_unknown')}
+        </p>
+      </div>
+    </Dialog>
+  )
 }
 
 /**
@@ -92,7 +123,7 @@ function ExternalOccurrence({
     <Dialog open onClose={onClose} title={t('detail.title')} showCloseButton>
       <div className="flex flex-col gap-3">
         <div>
-          <p className="pr-8 text-base font-semibold text-fg-0">{occurrence.title}</p>
+          <h3 className="pr-8 text-base font-semibold text-fg-0 break-words">{occurrence.title}</h3>
           <p className="text-sm text-fg-2">
             {occurrence.startDate} · {t(`source.${occurrence.source}`)}
           </p>
@@ -117,7 +148,7 @@ function ProjectedNotice({
   return (
     <Dialog open onClose={onClose} title={t('detail.title')} showCloseButton>
       <div className="flex flex-col gap-3">
-        <p className="pr-8 text-base font-semibold text-fg-0">{occurrence.title}</p>
+        <h3 className="pr-8 text-base font-semibold text-fg-0 break-words">{occurrence.title}</h3>
         <p className="text-sm text-fg-2">{occurrence.startDate}</p>
         <p className="text-sm text-fg-3">{t('detail.projected_hint')}</p>
         <div className="flex justify-end">

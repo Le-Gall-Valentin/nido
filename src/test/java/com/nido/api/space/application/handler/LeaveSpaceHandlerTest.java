@@ -1,5 +1,6 @@
 package com.nido.api.space.application.handler;
 
+import com.nido.api.space.application.service.SpaceDepartures;
 import com.nido.api.space.application.service.SpaceNotifier;
 import com.nido.api.space.domain.model.Space;
 import com.nido.api.space.domain.model.SpaceAppearance;
@@ -31,6 +32,7 @@ class LeaveSpaceHandlerTest {
     @Mock SpaceRepository spaceRepository;
     @Mock SpaceMembershipPort spaceMembershipPort;
     @Mock SpaceNotifier spaceNotifier;
+    @Mock SpaceDepartures departures;
 
     private LeaveSpaceHandler handler;
 
@@ -39,7 +41,7 @@ class LeaveSpaceHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new LeaveSpaceHandler(spaceRepository, spaceMembershipPort, spaceNotifier);
+        handler = new LeaveSpaceHandler(spaceRepository, spaceMembershipPort, spaceNotifier, departures);
     }
 
     @Test
@@ -51,6 +53,7 @@ class LeaveSpaceHandlerTest {
 
         verify(spaceMembershipPort).remove(membership.id());
         verify(spaceNotifier).memberLeft(spaceId, userId);
+        verify(departures).departed(spaceId, userId);
     }
 
     @Test

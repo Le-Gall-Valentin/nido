@@ -2,7 +2,14 @@ import { useEffect } from 'react'
 import { useQueryClient, type QueryKey } from '@tanstack/react-query'
 
 /**
- * Invalidates `queryKey` after every write that succeeds while the caller is mounted, whoever made it.
+ * The `meta` of a mutation after which a page has nothing to read again: it changes nothing — an export, a dry run —
+ * or only what it reads again itself, which no other page shows. useInvalidateOnAnyWrite lets it pass.
+ */
+export const NOTHING_ELSE_TO_REFRESH = { nothingElseToRefresh: true } as const
+
+/**
+ * Invalidates `queryKey` after every write that succeeds while the caller is mounted, whoever made it, unless it says
+ * there is nothing else to refresh (NOTHING_ELSE_TO_REFRESH).
  *
  * For a page that shows what other modules own — the calendar, the dashboard — and opens their
  * editors: those writes refresh their own module and know nothing of the page (moving a savings
@@ -16,7 +23,7 @@ export function useInvalidateOnAnyWrite(queryKey: QueryKey): void {
   useEffect(() => {
     const key = JSON.parse(serialized) as QueryKey
     return queryClient.getMutationCache().subscribe((event) => {
-      if (event.type === 'updated' && event.action.type === 'success') {
+      if (event.type === 'updated' && event.action.type === 'success' && event.mutation.meta?.nothingElseToRefresh !== true) {
         void queryClient.invalidateQueries({ queryKey: key })
       }
     })

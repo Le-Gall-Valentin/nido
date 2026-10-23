@@ -1,5 +1,6 @@
 package com.nido.api.infrastructure.ratelimit;
 
+import com.nido.api.infrastructure.web.LoggedPath;
 import com.nido.api.shared.infrastructure.web.ProblemDetailFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
@@ -24,7 +25,7 @@ public class RateLimitExceptionHandler {
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.TOO_MANY_REQUESTS, "RateLimitExceeded",
             "Too many requests. Please try again later.",
-            URI.create(request.getRequestURI()));
+            URI.create(LoggedPath.of(request)));
         return ResponseEntity.status(429)
             .header("X-RateLimit-Limit",     String.valueOf(e.getLimit()))
             .header("X-RateLimit-Remaining", "0")

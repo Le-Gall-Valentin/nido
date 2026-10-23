@@ -44,6 +44,10 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/ical': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
 })

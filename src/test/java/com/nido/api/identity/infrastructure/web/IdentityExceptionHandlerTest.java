@@ -1,5 +1,7 @@
 package com.nido.api.identity.infrastructure.web;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import com.nido.api.LogCapture;
 import com.nido.api.identity.domain.model.IdentityException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -140,5 +142,16 @@ class IdentityExceptionHandlerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().getProperties()).containsEntry("error_code", "email_code_expired");
+    }
+
+    @Test
+    void a_data_integrity_error_is_logged_without_the_token_of_a_subscription_address() {
+        try (LogCapture logged = LogCapture.of(IdentityExceptionHandler.class)) {
+            var answer = handler.handle(new IdentityException.DataIntegrityError(),
+                new MockHttpServletRequest("GET", "/ical/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde.ics"));
+            assertThat(answer.getStatusCode().value()).isEqualTo(500);
+            assertThat(logged.events()).extracting(ILoggingEvent::getFormattedMessage)
+                .singleElement().asString().contains("/ical/***.ics").doesNotContain("AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde");
+        }
     }
 }

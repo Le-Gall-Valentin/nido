@@ -28,6 +28,8 @@ export type CalendarDialog =
   | { kind: 'transfer'; occurrence: CalendarOccurrence; operation: 'copy' | 'move' }
   | { kind: 'meal'; date: string }
   | { kind: 'manage-series' }
+  // Export, subscribe, import and the calendars the space follows.
+  | { kind: 'sync' }
 
 /** Which dialog the calendar shows, and the steps that lead from one to the next. */
 export function useCalendarDialog() {

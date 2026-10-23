@@ -1,6 +1,7 @@
 package com.nido.api.calendar.infrastructure.web;
 
 import com.nido.api.calendar.domain.model.CalendarException;
+import com.nido.api.infrastructure.web.LoggedPath;
 import com.nido.api.shared.infrastructure.web.ProblemDetailFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
@@ -40,8 +41,40 @@ public class CalendarExceptionHandler {
                 new CalendarErrorResponse(400, "An event lasts at most " + ex.maximumDays() + " days.");
             case CalendarException.OccurrenceLongerThanInterval ignored ->
                 new CalendarErrorResponse(400, "An occurrence cannot last longer than the time between two occurrences.");
+            case CalendarException.IntervalTooLarge ex -> new CalendarErrorResponse(400,
+                "A series repeats at an interval of at most " + ex.maximum() + ".", "interval_too_large");
             case CalendarException.InvalidEndDate ignored ->
                 new CalendarErrorResponse(400, "The end date must be on or after the anchor date.");
+            case CalendarException.InvalidRecurrenceRule ex ->
+                new CalendarErrorResponse(400, detailOf(ex.reason()), "invalid_recurrence_rule");
+            case CalendarException.NotAnIcalFile ignored ->
+                new CalendarErrorResponse(400, "This is not an iCalendar (.ics) document.", "not_ics");
+            case CalendarException.InvalidSources ignored -> new CalendarErrorResponse(400,
+                "Choose at least one source among events, tasks, meals, money and savings.", "invalid_sources");
+            case CalendarException.TooManySubscriptionLinks ex -> new CalendarErrorResponse(409,
+                "You already have " + ex.maximum() + " addresses for this space. Revoke one first.", "too_many_links");
+            case CalendarException.SubscriptionLinkNotFound ignored ->
+                new CalendarErrorResponse(404, "Subscription address not found.", "subscription_link_not_found");
+            case CalendarException.PublicUrlMissing ignored -> new CalendarErrorResponse(409,
+                "The public address of this installation is not set: an administrator sets it in the settings.",
+                "public_url_missing");
+            case CalendarException.ImportTooLarge ex -> new CalendarErrorResponse(400, switch (ex.limit()) {
+                case EVENTS -> "A file imported holds at most " + ex.maximum() + " events.";
+                case ROWS -> "An import writes at most " + ex.maximum()
+                    + " rows: its events and series, their occurrences edited or cancelled, and who takes part.";
+            }, "import_too_large");
+            case CalendarException.ImportFileTooLarge ex -> new CalendarErrorResponse(413,
+                "Files up to " + ex.maximumMegabytes() + " MB can be imported.", "file_too_large");
+            case CalendarException.InvalidFeedAddress ignored ->
+                new CalendarErrorResponse(400, "Give an http, https or webcal address.", "invalid_feed_address");
+            case CalendarException.ExternalFeedNotFound ignored ->
+                new CalendarErrorResponse(404, "Followed calendar not found.", "external_feed_not_found");
+            case CalendarException.FeedUnavailable ex -> new CalendarErrorResponse(400,
+                "The calendar could not be read at this address (" + ex.error().code() + ").", "feed_unavailable");
+            case CalendarException.TooManyExternalFeeds ex -> new CalendarErrorResponse(409,
+                "This space already follows " + ex.maximum() + " calendars.", "too_many_feeds");
+            case CalendarException.RefreshTooSoon ignored ->
+                new CalendarErrorResponse(429, "This calendar was read less than a minute ago.", "refresh_too_soon");
             case CalendarException.ReversedWindow ignored ->
                 new CalendarErrorResponse(400, "The window starts after it ends: 'from' must be on or before 'to'.");
             case CalendarException.WindowTooLarge ex -> new CalendarErrorResponse(400,
@@ -50,9 +83,30 @@ public class CalendarExceptionHandler {
         };
         ProblemDetail problem = ProblemDetailFactory.of(
             HttpStatus.valueOf(response.status()), e.getClass().getSimpleName(), response.detail(),
-            URI.create(request.getRequestURI()));
+            URI.create(LoggedPath.of(request)));
+        if (response.errorCode() != null) {
+            problem.setProperty("error_code", response.errorCode());
+        }
+        if (e instanceof CalendarException.FeedUnavailable unavailable) {
+            problem.setProperty("feed_error", unavailable.error().code());
+        }
         return ResponseEntity.status(response.status()).body(problem);
     }
 
-    private record CalendarErrorResponse(int status, String detail) {}
+    private static String detailOf(CalendarException.InvalidRecurrenceRule.Reason reason) {
+        return switch (reason) {
+            case WEEKDAYS_NOT_WEEKLY -> "Only a weekly series repeats on days of the week.";
+            case ANCHOR_NOT_AMONG_WEEKDAYS -> "The days of a series are read off its first day: it must be one of them.";
+            case DAY_RULE_NOT_MONTHLY_OR_YEARLY ->
+                "Only a monthly or yearly series falls on a day of the month such as the last one or the second Tuesday.";
+            case DAY_RULE_NOT_FROM_ANCHOR ->
+                "The day of the month a series falls on is read off its first day, which must be such a day.";
+        };
+    }
+
+    private record CalendarErrorResponse(int status, String detail, String errorCode) {
+        CalendarErrorResponse(int status, String detail) {
+            this(status, detail, null);
+        }
+    }
 }

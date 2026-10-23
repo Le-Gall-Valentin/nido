@@ -1,9 +1,12 @@
 import { isAxiosError } from 'axios'
 import { client } from '@/shared/api'
 import { NetworkError, RateLimitError, ServerError, ForbiddenError, NotFoundError } from '@/shared/lib'
+import type { CalendarApi } from '../model/calendarApiContext'
 import type { ICalendarApi } from '../model/ICalendarApi'
 import type { IRecurringEventSeriesApi } from '../model/IRecurringEventSeriesApi'
 import type { CalendarEvent, CalendarOccurrence, RecurringEventSeries } from '../model/types'
+import { calendarSyncApi } from './calendarSyncApi'
+import { IntervalTooLargeError } from './seriesErrors'
 
 function handleError(error: unknown): never {
   if (isAxiosError(error)) {
@@ -16,9 +19,19 @@ function handleError(error: unknown): never {
   throw new NetworkError()
 }
 
+/** A series' own refusal, which the event form words, before what any other call fails with. */
+function handleSeriesError(error: unknown): never {
+  if (isAxiosError(error) && error.response?.status === 400
+      && (error.response.data as { error_code?: string } | undefined)?.error_code === 'interval_too_large') {
+    throw new IntervalTooLargeError()
+  }
+  handleError(error)
+}
+
 const base = (spaceId: string) => `/spaces/${spaceId}/calendar`
 
-export const calendarApi: ICalendarApi & IRecurringEventSeriesApi = {
+/** The feed, the events and the series: failures are the shared errors every entity adapter throws. */
+const eventApi: ICalendarApi & IRecurringEventSeriesApi = {
   async listOccurrences(spaceId, from, to) {
     try {
       const res = await client.get<CalendarOccurrence[]>(`${base(spaceId)}/occurrences`, { params: { from, to } })
@@ -83,14 +96,14 @@ export const calendarApi: ICalendarApi & IRecurringEventSeriesApi = {
     try {
       const res = await client.post<RecurringEventSeries>(`${base(spaceId)}/recurring-event-series`, input)
       return res.data
-    } catch (error) { handleError(error) }
+    } catch (error) { handleSeriesError(error) }
   },
 
   async updateRecurringEventSeries(spaceId, seriesId, input) {
     try {
       const res = await client.patch<RecurringEventSeries>(`${base(spaceId)}/recurring-event-series/${seriesId}`, input)
       return res.data
-    } catch (error) { handleError(error) }
+    } catch (error) { handleSeriesError(error) }
   },
 
   async deleteRecurringEventSeries(spaceId, seriesId) {
@@ -130,3 +143,6 @@ export const calendarApi: ICalendarApi & IRecurringEventSeriesApi = {
     } catch (error) { handleError(error) }
   },
 }
+
+/** The whole calendar: its events and series, and what goes in and out of it (calendarSyncApi). */
+export const calendarApi: CalendarApi = { ...eventApi, ...calendarSyncApi }

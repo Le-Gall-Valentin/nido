@@ -19,6 +19,10 @@
     "api": {
       "title": "API",
       "description": "The API documentation, for developers. It requires being signed in."
+    },
+    "calendar": {
+      "title": "Calendar",
+      "description": "Followed calendars are downloaded by the server, which refuses addresses on the local network by default. Opening them (for a Nextcloud at home, for instance) lets every member of every space make Nido fetch addresses on that network. Even then, this machine, Nido's database and Redis stay closed: a Nextcloud on the same machine is given by its network address."
     }
   },
   "source": {

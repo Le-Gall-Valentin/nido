@@ -1,5 +1,7 @@
 package com.nido.api.space.infrastructure.web;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import com.nido.api.LogCapture;
 import com.nido.api.space.domain.model.SpaceException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
@@ -53,5 +55,16 @@ class SpaceExceptionHandlerTest {
     void data_integrity_error_is_a_500() {
         assertThat(handler.handle(new SpaceException.DataIntegrityError(), request)
             .getStatusCode().value()).isEqualTo(500);
+    }
+
+    @Test
+    void a_data_integrity_error_is_logged_without_the_token_of_a_subscription_address() {
+        try (LogCapture logged = LogCapture.of(SpaceExceptionHandler.class)) {
+            var answer = handler.handle(new SpaceException.DataIntegrityError(),
+                new MockHttpServletRequest("GET", "/ical/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde.ics"));
+            assertThat(answer.getStatusCode().value()).isEqualTo(500);
+            assertThat(logged.events()).extracting(ILoggingEvent::getFormattedMessage)
+                .singleElement().asString().contains("/ical/***.ics").doesNotContain("AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde");
+        }
     }
 }

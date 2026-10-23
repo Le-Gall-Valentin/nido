@@ -1,5 +1,7 @@
 package com.nido.api.calendar.domain.model;
 
+import java.time.DateTimeException;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
@@ -13,10 +15,11 @@ import java.util.Set;
  * Expands a recurring event series over a window, in memory, never persisting anything.
  *
  * <p>The date arithmetic is the same anchored sequence as Tasks' {@code RecurrenceScheduler} and
- * Finance's {@code RecurrenceProjector}: occurrence N is N intervals after the anchor, re-derived
- * from the anchor every time, so a monthly series anchored on the 31st lands on Feb 28 and then
- * back on Mar 31 rather than drifting to Mar 28. This is the third copy of that arithmetic in the
- * codebase, kept deliberately — each bounded context owns its domain.
+ * Finance's {@code RecurrenceProjector}: period N — the week, month or year N intervals after the
+ * anchor's — is re-derived from the anchor every time, and gives its dates by the series' rule, so a
+ * monthly series anchored on the 31st lands on Feb 28 and then back on Mar 31 rather than drifting to
+ * Mar 28. This is the third copy of that arithmetic in the codebase, kept deliberately — each bounded
+ * context owns its domain.
  *
  * <p>What is new here is that a window is not simply a filter on the slot dates. Two things
  * remove a slot, and one thing extends the search backwards:
@@ -41,41 +44,19 @@ public final class EventRecurrenceProjector {
 
     private EventRecurrenceProjector() {}
 
-    public static LocalDate occurrenceDate(LocalDate anchorDate, RecurrenceInterval intervalType,
-                                           int intervalCount, int occurrenceNumber) {
-        // Not reachable through the API (the record and the CHECK constraint both refuse it), but
-        // the scan below never advances and loops forever if it ever were — fail fast instead.
-        if (intervalCount < 1) {
-            throw new IllegalArgumentException("intervalCount must be at least 1, got " + intervalCount);
-        }
-        long steps = (long) intervalCount * occurrenceNumber;
-        return switch (intervalType) {
-            case DAILY -> anchorDate.plusDays(steps);
-            case WEEKLY -> anchorDate.plusWeeks(steps);
-            case MONTHLY -> {
-                YearMonth targetMonth = YearMonth.from(anchorDate).plusMonths(steps);
-                int day = Math.min(anchorDate.getDayOfMonth(), targetMonth.lengthOfMonth());
-                yield targetMonth.atDay(day);
-            }
-            case YEARLY -> anchorDate.plusYears(steps);
-        };
-    }
-
     /**
      * The earliest slot that can still be running inside a window starting at {@code from}: an
      * occurrence lasting several days may have begun before it. Whoever looks up the slots a series
      * has cancelled or detached must look this far back too — or an occurrence that began before
      * the window comes back from the dead, or shows twice.
+     *
+     * <p>Never before the day the series is shown from: those occurrences belong to the series it carried
+     * on from, which shows them itself. That also keeps a duration stored before occurrences were bounded
+     * from reaching back past the first date the database holds.
      */
     public static LocalDate scanFrom(RecurringEventSeries series, LocalDate from) {
-        return from.minusDays(series.durationDays());
-    }
-
-    /** The series' first occurrence, if it has any: on or after the day it is shown from. */
-    public static Optional<LocalDate> firstOccurrence(RecurringEventSeries series) {
-        LocalDate first = occurrenceDate(series.anchorDate(), series.intervalType(), series.intervalCount(),
-            firstIndexOnOrAfter(series, series.shownFrom()));
-        return series.endDate() != null && first.isAfter(series.endDate()) ? Optional.empty() : Optional.of(first);
+        LocalDate earliest = from.minusDays(series.durationDays());
+        return earliest.isBefore(series.shownFrom()) ? series.shownFrom() : earliest;
     }
 
     /**
@@ -90,37 +71,16 @@ public final class EventRecurrenceProjector {
 
     /**
      * The occurrence of {@code series} nearest to {@code date} — the later of two at the same distance —
-     * among those less than one interval away; none if the series has no occurrence that close.
+     * among those less than one interval away; none if the series has no occurrence that close. On several
+     * weekdays, one interval is the widest gap between two of them: a day between two occurrences always has one.
      */
     public static Optional<LocalDate> nearestSlot(RecurringEventSeries series, LocalDate date) {
-        long within = EventScheduleValidator.shortestIntervalDays(series.intervalType(), series.intervalCount()) - 1;
+        long within = EventScheduleValidator.longestIntervalDays(series) - 1;
         LocalDate from = date.minusDays(within);
         return slotsBetween(series, from, date.plusDays(within)).stream()
             .filter(slot -> !slot.isBefore(from))
             .min(Comparator.comparingLong((LocalDate slot) -> Math.abs(ChronoUnit.DAYS.between(date, slot)))
                 .thenComparing(Comparator.reverseOrder()));
-    }
-
-    /** Every slot of {@code series} overlapping {@code [from, to]}, in ascending order. */
-    public static List<LocalDate> slotsBetween(RecurringEventSeries series, LocalDate from, LocalDate to) {
-        // Nothing before the day the series is shown from: those occurrences belong to the series it
-        // carried on from, which shows them itself.
-        LocalDate scanFrom = scanFrom(series, from);
-        if (scanFrom.isBefore(series.shownFrom())) {
-            scanFrom = series.shownFrom();
-        }
-        LocalDate lastAllowed = series.endDate() == null || series.endDate().isAfter(to) ? to : series.endDate();
-
-        List<LocalDate> slots = new ArrayList<>();
-        int n = firstIndexOnOrAfter(series, scanFrom);
-        while (true) {
-            LocalDate slot = occurrenceDate(series.anchorDate(), series.intervalType(), series.intervalCount(), n);
-            if (slot.isAfter(lastAllowed)) {
-                return slots;
-            }
-            slots.add(slot);
-            n++;
-        }
     }
 
     /**
@@ -144,30 +104,95 @@ public final class EventRecurrenceProjector {
     }
 
     /**
-     * Index of the first occurrence falling on or after {@code target}, found arithmetically
-     * rather than by stepping from occurrence 0 — so the cost depends on how many dates come back,
-     * never on how old the anchor is. The division can be off by one, because month-end clamping
-     * means the estimate captures the calendar month rather than the exact day, so two bounded
-     * corrections settle it.
+     * The dates of the series' period {@code period} — the week, month or year that many intervals after the
+     * anchor's —, in order, before any bound is applied: a week may hold several, a month or a year holds one.
+     *
+     * <p>None past the last date a calendar holds, the year 999,999,999: a series stored before its interval was
+     * bounded, every billion years, has no occurrence there — rather than failing every read of its space.
      */
-    private static int firstIndexOnOrAfter(RecurringEventSeries series, LocalDate target) {
+    static List<LocalDate> datesOfPeriod(RecurringEventSeries series, long period) {
+        // Not reachable through the API (the record and the CHECK constraint both refuse it), but the scans below
+        // never advance and loop forever if it ever were — fail fast instead.
+        if (series.intervalCount() < 1) {
+            throw new IllegalArgumentException("intervalCount must be at least 1, got " + series.intervalCount());
+        }
+        LocalDate anchor = series.anchorDate();
+        try {
+            long steps = Math.multiplyExact(series.intervalCount(), period);
+            return switch (series.intervalType()) {
+                case DAILY -> List.of(anchor.plusDays(steps));
+                case WEEKLY -> {
+                    LocalDate monday = anchor.with(DayOfWeek.MONDAY).plusWeeks(steps);
+                    yield series.weekdays().stream().map(day -> monday.plusDays(day.getValue() - 1L)).toList();
+                }
+                case MONTHLY -> List.of(series.dayRule().in(YearMonth.from(anchor).plusMonths(steps), anchor));
+                case YEARLY -> List.of(series.dayRule().in(YearMonth.from(anchor).plusYears(steps), anchor));
+            };
+        } catch (DateTimeException | ArithmeticException pastTheLastDate) {
+            return List.of();
+        }
+    }
+
+    /** The series' first occurrence, if it has any: on or after the day it is shown from. */
+    public static Optional<LocalDate> firstOccurrence(RecurringEventSeries series) {
+        LocalDate from = series.shownFrom();
+        // The period reaching `from` holds a date on or after it, by definition — unless it lies past the last date.
+        return datesOfPeriod(series, firstPeriodReaching(series, from)).stream()
+            .filter(date -> !date.isBefore(from))
+            .findFirst()
+            .filter(date -> series.endDate() == null || !date.isAfter(series.endDate()));
+    }
+
+    /** Every slot of {@code series} overlapping {@code [from, to]}, in ascending order. */
+    public static List<LocalDate> slotsBetween(RecurringEventSeries series, LocalDate from, LocalDate to) {
+        // The anchor's week may hold days before the anchor, which are not occurrences: none is before scanFrom.
+        LocalDate scanFrom = scanFrom(series, from);
+        LocalDate lastAllowed = series.endDate() == null || series.endDate().isAfter(to) ? to : series.endDate();
+
+        List<LocalDate> slots = new ArrayList<>();
+        for (long period = firstPeriodReaching(series, scanFrom); ; period++) {
+            List<LocalDate> dates = datesOfPeriod(series, period);
+            if (dates.isEmpty() || dates.getFirst().isAfter(lastAllowed)) {
+                return slots;
+            }
+            for (LocalDate date : dates) {
+                if (!date.isBefore(scanFrom) && !date.isAfter(lastAllowed)) {
+                    slots.add(date);
+                }
+            }
+        }
+    }
+
+    /**
+     * The first period whose last date falls on or after {@code target}, found arithmetically rather than by stepping
+     * from period 0 — so the cost depends on how many dates come back, never on how old the anchor is. The estimate can
+     * be off by one (a month's day may fall either side of the target's), so two bounded corrections settle it.
+     */
+    private static long firstPeriodReaching(RecurringEventSeries series, LocalDate target) {
         LocalDate anchor = series.anchorDate();
         if (!target.isAfter(anchor)) {
             return 0;
         }
+        long count = series.intervalCount();
         long estimate = switch (series.intervalType()) {
-            case DAILY -> ChronoUnit.DAYS.between(anchor, target) / series.intervalCount();
-            case WEEKLY -> ChronoUnit.WEEKS.between(anchor, target) / series.intervalCount();
-            case MONTHLY -> ChronoUnit.MONTHS.between(YearMonth.from(anchor), YearMonth.from(target)) / series.intervalCount();
-            case YEARLY -> ChronoUnit.YEARS.between(anchor, target) / series.intervalCount();
+            case DAILY -> ChronoUnit.DAYS.between(anchor, target) / count;
+            case WEEKLY -> ChronoUnit.WEEKS.between(anchor.with(DayOfWeek.MONDAY), target.with(DayOfWeek.MONDAY)) / count;
+            case MONTHLY -> ChronoUnit.MONTHS.between(YearMonth.from(anchor), YearMonth.from(target)) / count;
+            case YEARLY -> ((long) target.getYear() - anchor.getYear()) / count;
         };
-        int n = (int) Math.max(0L, Math.min(estimate, Integer.MAX_VALUE - 2L));
-        while (n > 0 && !occurrenceDate(anchor, series.intervalType(), series.intervalCount(), n - 1).isBefore(target)) {
-            n--;
+        long period = Math.max(0L, estimate);
+        while (period > 0 && !lastDateOf(series, period - 1).isBefore(target)) {
+            period--;
         }
-        while (occurrenceDate(anchor, series.intervalType(), series.intervalCount(), n).isBefore(target)) {
-            n++;
+        while (lastDateOf(series, period).isBefore(target)) {
+            period++;
         }
-        return n;
+        return period;
+    }
+
+    /** The last date of a period; one past the last date a calendar holds comes after every date. */
+    private static LocalDate lastDateOf(RecurringEventSeries series, long period) {
+        List<LocalDate> dates = datesOfPeriod(series, period);
+        return dates.isEmpty() ? LocalDate.MAX : dates.getLast();
     }
 }

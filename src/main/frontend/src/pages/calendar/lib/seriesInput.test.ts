@@ -7,14 +7,14 @@ const event: EventInput = {
   startDate: '2026-10-02', startTime: '18:00', endDate: '2026-10-02', endTime: '19:00',
   color: 'status-blue', participantIds: ['u-1', 'u-2'],
 }
-const weekly: Recurrence = { intervalType: 'WEEKLY', intervalCount: 1, until: null }
+const weekly: Recurrence = { intervalType: 'WEEKLY', intervalCount: 1, until: null, weekdays: ['FRIDAY'], dayRule: 'SAME_DAY' }
 
 describe('toSeriesInput', () => {
   it('keeps everything an event says, and starts the series on its first day', () => {
-    expect(toSeriesInput(event, { intervalType: 'MONTHLY', intervalCount: 2, until: '2027-06-30' })).toEqual({
+    expect(toSeriesInput(event, { intervalType: 'MONTHLY', intervalCount: 2, until: '2027-06-30', weekdays: [], dayRule: 'SAME_DAY' })).toEqual({
       title: 'Piano', description: 'Salle 3', location: 'Conservatoire', allDay: false,
       startTime: '18:00', endTime: '19:00', durationDays: 0, color: 'status-blue',
-      intervalType: 'MONTHLY', intervalCount: 2, anchorDate: '2026-10-02', endDate: '2027-06-30',
+      intervalType: 'MONTHLY', intervalCount: 2, weekdays: null, dayRule: 'SAME_DAY', anchorDate: '2026-10-02', endDate: '2027-06-30',
       participantIds: ['u-1', 'u-2'],
     })
   })
@@ -30,11 +30,18 @@ describe('toSeriesInput', () => {
   })
 })
 
+describe('toSeriesInput days', () => {
+  it('sends no days but for a weekly series, and the same day but for a monthly or yearly one', () => {
+    expect(toSeriesInput(event, { intervalType: 'DAILY', intervalCount: 1, until: null, weekdays: ['FRIDAY'], dayRule: 'LAST_DAY_OF_MONTH' }))
+      .toMatchObject({ weekdays: null, dayRule: 'SAME_DAY' })
+  })
+})
+
 describe('fromSeries', () => {
   const series: RecurringEventSeries = {
     id: 's-1', title: 'Piano', description: 'Salle 3', location: 'Conservatoire', allDay: false,
     startTime: '22:00:00', endTime: '02:00:00', durationDays: 1, color: 'status-blue',
-    intervalType: 'WEEKLY', intervalCount: 2, anchorDate: '2026-10-02', endDate: '2027-06-30',
+    intervalType: 'WEEKLY', intervalCount: 2, weekdays: ['FRIDAY'], dayRule: 'SAME_DAY', anchorDate: '2026-10-02', endDate: '2027-06-30',
     startsOn: null, firstDate: '2026-10-02',
     participantIds: ['u-2'], createdBy: 'u-2', createdAt: '2026-01-01T00:00:00Z',
   }
@@ -46,8 +53,12 @@ describe('fromSeries', () => {
         startDate: '2026-10-02', startTime: '22:00:00', endDate: '2026-10-03', endTime: '02:00:00',
         color: 'status-blue', participantIds: ['u-2'],
       },
-      recurrence: { intervalType: 'WEEKLY', intervalCount: 2, until: '2027-06-30' },
+      recurrence: { intervalType: 'WEEKLY', intervalCount: 2, until: '2027-06-30', weekdays: ['FRIDAY'], dayRule: 'SAME_DAY' },
     })
+  })
+
+  it('names no days for a series that names none, the form adding its start\'s', () => {
+    expect(fromSeries({ ...series, intervalType: 'MONTHLY', weekdays: null }).recurrence.weekdays).toEqual([])
   })
 
   it('gives back the same series once written again', () => {
@@ -60,7 +71,7 @@ describe('fromSeries', () => {
 /** Weekly from Monday Sept 7, carrying on an edit from Thursday Sept 24: first shown on Monday Sept 28. */
 const carriedOn: RecurringEventSeries = {
   id: 's-2', title: 'Piano', description: null, location: null, allDay: true, startTime: null, endTime: null,
-  durationDays: 0, color: null, intervalType: 'WEEKLY', intervalCount: 1, anchorDate: '2026-09-07', endDate: null,
+  durationDays: 0, color: null, intervalType: 'WEEKLY', intervalCount: 1, weekdays: ['MONDAY'], dayRule: 'SAME_DAY', anchorDate: '2026-09-07', endDate: null,
   startsOn: '2026-09-24', firstDate: '2026-09-28', participantIds: [], createdBy: 'u-1', createdAt: '2026-01-01T00:00:00Z',
 }
 
@@ -78,6 +89,31 @@ describe('a series carrying on an edit', () => {
     const { event, recurrence } = fromSeries(carriedOn)
     expect(toSeriesInput({ ...event, startDate: '2026-09-29', endDate: '2026-09-29' }, recurrence, carriedOn).anchorDate)
       .toBe('2026-09-29')
+  })
+
+  it('anchors on the start shown once the interval changes, so the occurrence shown is still one of them', () => {
+    // From Monday Sept 7 every 2 weeks, Monday Sept 28 would be skipped.
+    const { event, recurrence } = fromSeries(carriedOn)
+    expect(toSeriesInput(event, { ...recurrence, intervalCount: 2 }, carriedOn).anchorDate).toBe('2026-09-28')
+  })
+
+  it('anchors on the start shown once the frequency changes, so the occurrence shown is still one of them', () => {
+    // Monthly on the 31st, shown from 30 April: made yearly from 31 January, it would never fall on 30 April.
+    const monthly: RecurringEventSeries = {
+      ...carriedOn, intervalType: 'MONTHLY', weekdays: null, anchorDate: '2026-01-31', startsOn: '2026-04-20', firstDate: '2026-04-30',
+    }
+    const { event, recurrence } = fromSeries(monthly)
+    expect(toSeriesInput(event, recurrence, monthly).anchorDate).toBe('2026-01-31')
+    expect(toSeriesInput(event, { ...recurrence, intervalType: 'YEARLY' }, monthly).anchorDate).toBe('2026-04-30')
+  })
+
+  it('anchors on the start shown once the days change, so the new days hold the anchor\'s', () => {
+    const { event, recurrence } = fromSeries(carriedOn)
+    // Shown from Monday Sept 28; now on Tuesdays and Thursdays: Monday Sept 7 is no longer one of them.
+    expect(toSeriesInput({ ...event, startDate: '2026-09-29', endDate: '2026-09-29' },
+      { ...recurrence, weekdays: ['TUESDAY', 'THURSDAY'] }, carriedOn).anchorDate).toBe('2026-09-29')
+    expect(toSeriesInput(event, { ...recurrence, weekdays: ['MONDAY', 'THURSDAY'] }, carriedOn).anchorDate)
+      .toBe('2026-09-28')
   })
 })
 

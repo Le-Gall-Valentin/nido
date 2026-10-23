@@ -6,7 +6,7 @@ import { resolveLocale } from '@/shared/lib'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay } from '../lib/calendarWindow'
 import { formatPeriodLabel, formatSpan } from '../lib/periodLabel'
-import { SOURCE_ORDER, dotClassFor } from '../lib/sourceAppearance'
+import { DISPLAY_ORDER, dotClassFor } from '../lib/sourceAppearance'
 
 interface DayDetailModalProps {
   date: string
@@ -46,7 +46,7 @@ export function DayDetailModal({
       <div className="flex flex-col gap-4">
         {dayOccurrences.length === 0 && <p className="text-sm text-fg-3">{t('empty_day')}</p>}
 
-        {SOURCE_ORDER.map((source) => {
+        {DISPLAY_ORDER.map((source) => {
           const ofSource = dayOccurrences.filter((o) => o.source === source)
           if (ofSource.length === 0) return null
           return (
@@ -78,7 +78,7 @@ export function DayDetailModal({
                           {occurrence.description && (
                             // Clamped: this is an overview of the day. The full text is one tap away.
                             <span data-testid="occurrence-description"
-                              className="line-clamp-3 whitespace-pre-line text-xs text-fg-3">
+                              className="line-clamp-3 whitespace-pre-line break-words text-xs text-fg-3">
                               {occurrence.description}
                             </span>
                           )}

@@ -72,6 +72,10 @@ public class CalendarEventEntity extends AssignedUuidEntity {
     @Column(name = "created_by", nullable = false)
     private UUID createdBy;
 
+    /** The SHA-256 of the UID the row had in the iCalendar file it was imported from; null for anything made here. */
+    @Column(name = "import_uid_hash", length = 64)
+    private String importUidHash;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

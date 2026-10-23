@@ -6,7 +6,7 @@ import { useCalendarDialog } from './useCalendarDialog'
 const dentist: CalendarOccurrence = {
   source: 'EVENT', sourceId: 'e1', seriesId: null, originalDate: null, materialized: true,
   title: 'Dentiste', description: null, location: null, allDay: true, startDate: '2026-10-06', startTime: null,
-  endDate: '2026-10-06', endTime: null, color: null, participantIds: [],
+  endDate: '2026-10-06', endTime: null, color: null, participantIds: [], externalFeedId: null,
 }
 const piano: CalendarOccurrence = {
   ...dentist, sourceId: 's1:2026-10-13', seriesId: 's1', originalDate: '2026-10-13', materialized: false, title: 'Piano',

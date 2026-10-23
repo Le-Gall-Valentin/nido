@@ -1,0 +1,278 @@
+package com.nido.api.calendar.infrastructure.ical;
+
+import com.nido.api.calendar.domain.model.CalendarException;
+import com.nido.api.calendar.domain.model.EventRecurrenceProjector;
+import com.nido.api.calendar.domain.model.EventScheduleValidator;
+import com.nido.api.calendar.domain.model.IcalRecurrence;
+import com.nido.api.calendar.domain.model.ImportedEvent;
+import com.nido.api.calendar.domain.model.ImportedOccurrence;
+import com.nido.api.calendar.domain.model.ImportedSeries;
+import com.nido.api.calendar.domain.model.RecurrenceRules;
+import com.nido.api.calendar.domain.model.RecurringEventSeries;
+import com.nido.api.calendar.domain.model.Weekdays;
+import net.fortuna.ical4j.model.Property;
+import net.fortuna.ical4j.model.Recur;
+import net.fortuna.ical4j.model.component.VEvent;
+import net.fortuna.ical4j.model.property.RRule;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.Temporal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+
+/**
+ * What a recurring event of a file becomes. nido suggests a series for its rule (RecurrenceRules) and keeps it only if
+ * its projector gives exactly the starts ical4j expands, in the space's zone, over two years from the first: one test
+ * for a rule nido cannot say, for a zone whose summer time does not move with the space's, and for a mistake of the
+ * translation itself. Anything else is unfolded: its occurrences from a year ago to two years ahead, 500 at most.
+ * Every expansion goes through the reading's {@link BoundedExpansion}, which refuses what it cannot afford.
+ */
+final class RecurringImport {
+
+    record Result(ImportedSeries series, List<ImportedEvent> events, boolean unfolded, int unfoldedOccurrences, boolean partial) {}
+
+    static final int VERIFIED_YEARS = 2;
+    static final int MAX_UNFOLDED = 500;
+    /** How far a COUNT is followed to find its last day. */
+    private static final int COUNT_HORIZON_YEARS = 100;
+    /** Every kind of year — the weekday of its first day, leap or not — comes round within 28 years (within a century). */
+    static final int RULE_CYCLE_YEARS = 28;
+    /** How many occurrences are asked of ical4j to check a series: far more than any rule nido can say gives in two years. */
+    private static final int VERIFIED_CAP = 1_000;
+
+    private final ZoneId zone;
+    private final LocalDate today;
+    private final Locale locale;
+    private final BoundedExpansion expansion;
+
+    RecurringImport(ZoneId zone, LocalDate today, Locale locale, BoundedExpansion expansion) {
+        this.zone = zone;
+        this.today = today;
+        this.locale = locale;
+        this.expansion = expansion;
+    }
+
+    /** May throw {@link BoundedExpansion.Refused}, or whatever ical4j throws on a rule it cannot expand: the caller isolates the group. */
+    Result translate(VEvent master, List<VEvent> overrides, IcalTexts texts, IcalTimes times, ReadingReport report) {
+        List<RRule<Temporal>> rules = master.getProperties(Property.RRULE);
+        boolean oneRule = rules.size() == 1 && master.getProperties(Property.EXRULE).isEmpty();
+        if (oneRule && BoundedExpansion.mayBeSeries(rules.getFirst().getRecur())) {
+            ZonedDateTime from = times.start().atZone(zone);
+            ZonedDateTime to = from.plusYears(VERIFIED_YEARS);
+            Set<LocalDateTime> excluded = expansion.excluded(master);
+            List<LocalDateTime> expanded = expansion.ofRules(master, times, from, to, VERIFIED_CAP);
+            if (expanded.isEmpty() && expansion.rdates(master).isEmpty()) {
+                // A rule giving nothing at all: what is left is its first day (RFC 5545 counts it), unless it is excluded
+                // or edited on its own, and the edited occurrences, each an event of its own.
+                List<ImportedEvent> events = new ArrayList<>();
+                ownStart(texts, times, excluded, overrides).ifPresent(events::add);
+                for (VEvent override : overrides) {
+                    if (!IcalGroups.cancelled(override)) {
+                        eventOf(override, report, true).ifPresent(events::add);
+                    }
+                }
+                return new Result(null, events, false, 0, false);
+            }
+            if (!expanded.isEmpty()) {
+                // Where the rule itself begins: RFC 5545 counts an excluded occurrence, and so does a COUNT.
+                LocalDateTime first = excluded.isEmpty() ? expanded.getFirst()
+                    : expansion.ofRulesWithoutExdates(master, times, from, to, 1).getFirst();
+                Optional<RecurringEventSeries> series = asSeries(master, texts, times, first)
+                    .filter(candidate -> expanded.size() < VERIFIED_CAP
+                        && projected(candidate, from, to, excluded).equals(expanded)
+                        && expansion.rdates(master).stream().allMatch(at -> excluded.contains(at) || isSlotStart(candidate, at))
+                        && new ZoneShifts(zone, expansion).keepTheHoursOf(master, candidate));
+                if (series.isPresent()) {
+                    return asResult(series.get(), overrides, texts, times, first, excluded, report);
+                }
+            }
+        }
+        return unfold(master, overrides, texts, times, report);
+    }
+
+    private Optional<RecurringEventSeries> asSeries(VEvent master, IcalTexts texts, IcalTimes times, LocalDateTime first) {
+        Recur<Temporal> recur = master.<RRule<Temporal>>getProperty(Property.RRULE).orElseThrow().getRecur();
+        IcalTimes occurrence = times.at(first);
+        return RecurrenceRules.candidateFor(recurrence(recur), first.toLocalDate()).flatMap(candidate -> {
+            try {
+                int durationDays = (int) ChronoUnit.DAYS.between(occurrence.startDate(), occurrence.endDate());
+                RecurringEventSeries open = series(texts, occurrence, candidate, durationDays, null);
+                LocalDate endDate = endDate(open, recur, occurrence, first.toLocalDate());
+                EventScheduleValidator.validateSeries(occurrence.allDay(), occurrence.startTime(), occurrence.endTime(),
+                    durationDays, candidate.intervalType(), candidate.intervalCount(), candidate.weekdays(),
+                    candidate.dayRule(), candidate.anchorDate(), endDate);
+                return Optional.of(series(texts, occurrence, candidate, durationDays, endDate));
+            } catch (CalendarException | IllegalArgumentException refused) {
+                return Optional.empty();
+            }
+        });
+    }
+
+    private static RecurringEventSeries series(IcalTexts texts, IcalTimes occurrence, RecurrenceRules.Candidate candidate,
+                                               int durationDays, LocalDate endDate) {
+        return new RecurringEventSeries(UUID.randomUUID(), UUID.randomUUID(), texts.title(),
+            texts.description(), texts.location(), occurrence.allDay(), occurrence.startTime(), occurrence.endTime(),
+            durationDays, null, candidate.intervalType(), candidate.intervalCount(), candidate.weekdays(),
+            candidate.dayRule(), candidate.anchorDate(), endDate, candidate.startsOn(), List.of(),
+            UUID.randomUUID(), Instant.EPOCH);
+    }
+
+    /** The rule's parts nido may say, out of ical4j's own reading of it. */
+    private static IcalRecurrence recurrence(Recur<Temporal> recur) {
+        boolean otherParts = !recur.getHourList().isEmpty() || !recur.getMinuteList().isEmpty()
+            || !recur.getSecondList().isEmpty() || !recur.getYearDayList().isEmpty() || !recur.getWeekNoList().isEmpty();
+        return new IcalRecurrence(recur.getFrequency().name(), Math.max(1, recur.getInterval()),
+            recur.getDayList().stream()
+                .map(day -> new IcalRecurrence.ByDay(day.getOffset(), Weekdays.fromCode(day.getDay().name()))).toList(),
+            recur.getMonthDayList(), recur.getMonthList().stream().map(month -> month.getMonthOfYear()).toList(),
+            recur.getSetPosList(), otherParts);
+    }
+
+    /**
+     * The last day an occurrence may start on: the day of the COUNT-th occurrence — read off nido's own projector, which
+     * the series has been checked to agree with, rather than by walking ical4j to a far horizon — or UNTIL's day, the day
+     * before when its time falls before the occurrence's.
+     */
+    private LocalDate endDate(RecurringEventSeries open, Recur<Temporal> recur, IcalTimes occurrence, LocalDate first) {
+        if (recur.getCount() > 0) {
+            List<LocalDate> slots = List.of();
+            for (int years = 1; ; years = Math.min(COUNT_HORIZON_YEARS, years * 2)) {
+                slots = EventRecurrenceProjector.slotsBetween(open, first, first.plusYears(years));
+                expansion.bill(slots.size());
+                if (slots.size() >= recur.getCount() || years == COUNT_HORIZON_YEARS) {
+                    break;
+                }
+            }
+            return slots.isEmpty() ? null : slots.get(Math.min(slots.size(), recur.getCount()) - 1);
+        }
+        if (recur.getUntil() != null) {
+            LocalDateTime until = IcalSupport.toLocal(recur.getUntil(), zone);
+            boolean beforeTheOccurrence = !occurrence.allDay() && until.toLocalTime().isBefore(occurrence.startTime());
+            return beforeTheOccurrence ? until.toLocalDate().minusDays(1) : until.toLocalDate();
+        }
+        return null;
+    }
+
+    private List<LocalDateTime> projected(RecurringEventSeries series, ZonedDateTime from, ZonedDateTime to,
+                                          Set<LocalDateTime> excluded) {
+        LocalDateTime start = from.toLocalDateTime();
+        LocalDateTime end = to.toLocalDateTime();
+        return EventRecurrenceProjector.slotsBetween(series, from.toLocalDate(), to.toLocalDate()).stream()
+            .map(day -> startOf(series, day))
+            .filter(at -> !at.isBefore(start) && at.isBefore(end))
+            .filter(at -> !excluded.contains(at))
+            .toList();
+    }
+
+    /**
+     * When an occurrence starts, as ical4j places it: a time the spring change skips (02:30 on its day in Paris) is the
+     * same time after the change, 03:30, where nido's series keeps 02:30.
+     */
+    private LocalDateTime startOf(RecurringEventSeries series, LocalDate day) {
+        return series.allDay() ? day.atStartOfDay() : day.atTime(series.startTime()).atZone(zone).toLocalDateTime();
+    }
+
+    /** Whether a series has an occurrence starting exactly then: a slot of its days, at its time. */
+    private boolean isSlotStart(RecurringEventSeries series, LocalDateTime at) {
+        return isSlot(series, at.toLocalDate()) && startOf(series, at.toLocalDate()).equals(at);
+    }
+
+    private static boolean isSlot(RecurringEventSeries series, LocalDate day) {
+        return EventRecurrenceProjector.slotsBetween(series, day, day).contains(day);
+    }
+
+    private Result asResult(RecurringEventSeries series, List<VEvent> overrides, IcalTexts texts, IcalTimes times,
+                            LocalDateTime first, Set<LocalDateTime> excluded, ReadingReport report) {
+        List<ImportedEvent> ownEvents = new ArrayList<>();
+        if (!first.equals(times.start())) {
+            ownStart(texts, times, excluded, overrides).ifPresent(ownEvents::add);
+        }
+        Set<LocalDate> cancelled = new TreeSet<>();
+        // An EXDATE frees a slot only when it names the slot's own start.
+        excluded.stream().filter(at -> isSlotStart(series, at)).map(LocalDateTime::toLocalDate).forEach(cancelled::add);
+        List<ImportedOccurrence> edited = new ArrayList<>();
+        for (VEvent override : overrides) {
+            Optional<LocalDateTime> replaced = IcalGroups.slotOf(override, zone);
+            if (replaced.isEmpty()) {
+                continue;
+            }
+            LocalDate slot = replaced.get().toLocalDate();
+            boolean isCancelled = IcalGroups.cancelled(override);
+            Optional<ImportedEvent> event = eventOf(override, report, !isCancelled);
+            if (isSlotStart(series, replaced.get())) {
+                if (isCancelled) {
+                    cancelled.add(slot);
+                } else {
+                    event.ifPresent(e -> edited.add(new ImportedOccurrence(slot, e)));
+                }
+            } else if (!isCancelled) {
+                event.ifPresent(ownEvents::add);
+            }
+        }
+        return new Result(new ImportedSeries(series.title(), series.description(), series.location(), series.allDay(),
+            series.startTime(), series.endTime(), series.durationDays(), series.intervalType(), series.intervalCount(),
+            series.weekdays(), series.dayRule(), series.anchorDate(), series.startsOn(), series.endDate(), cancelled, edited),
+            ownEvents, false, 0, false);
+    }
+
+    /**
+     * DTSTART as an event of its own, when the rule does not give it (RFC 5545 counts it all the same): unless an EXDATE
+     * takes it out, or an edited occurrence of that very start replaces it — which then stands in its place, or, cancelled,
+     * leaves nothing.
+     */
+    private Optional<ImportedEvent> ownStart(IcalTexts texts, IcalTimes times, Set<LocalDateTime> excluded, List<VEvent> overrides) {
+        boolean edited = overrides.stream().anyMatch(override -> IcalGroups.slotOf(override, zone).filter(times.start()::equals).isPresent());
+        return excluded.contains(times.start()) || edited ? Optional.empty()
+            : Optional.of(Ical4jImportReaderAdapter.event(texts, times));
+    }
+
+    /** The event an override says, with the usual notes of its texts and times when {@code noted}. */
+    private Optional<ImportedEvent> eventOf(VEvent override, ReadingReport report, boolean noted) {
+        return IcalTimes.of(override, zone).map(t -> {
+            IcalTexts texts = IcalTexts.of(override, locale);
+            if (noted) {
+                Ical4jImportReaderAdapter.notesOf(texts, t, report);
+            }
+            return Ical4jImportReaderAdapter.event(texts, t);
+        });
+    }
+
+    private Result unfold(VEvent master, List<VEvent> overrides, IcalTexts texts, IcalTimes times, ReadingReport report) {
+        ZonedDateTime from = today.minusYears(1).atStartOfDay(zone);
+        ZonedDateTime to = today.plusYears(VERIFIED_YEARS).plusDays(1).atStartOfDay(zone);
+        Set<LocalDateTime> replaced = IcalGroups.slotsTaken(overrides, zone);
+        // Asked for one more than is kept, to know whether some were left out, and for as many as the overrides may take out.
+        List<LocalDateTime> all = expansion.occurrences(master, times, from, to, MAX_UNFOLDED + 1 + replaced.size()).stream()
+            .filter(start -> !replaced.contains(start))
+            .toList();
+        List<LocalDateTime> starts = all.stream().limit(MAX_UNFOLDED).toList();
+        List<ImportedEvent> events = new ArrayList<>();
+        starts.forEach(start -> events.add(Ical4jImportReaderAdapter.event(texts, times.at(start))));
+        for (VEvent override : overrides) {
+            if (!IcalGroups.cancelled(override)) {
+                IcalTimes.of(override, zone)
+                    .filter(t -> !t.start().isBefore(from.toLocalDateTime()) && t.start().isBefore(to.toLocalDateTime()))
+                    .flatMap(t -> eventOf(override, report, true))
+                    .ifPresent(events::add);
+            }
+        }
+        boolean partial = all.size() > MAX_UNFOLDED || times.start().isBefore(from.toLocalDateTime())
+            || endless(master) || !expansion.occurrences(master, times, to, to.plusYears(50), 1).isEmpty();
+        return new Result(null, events, true, starts.size(), partial);
+    }
+
+    private static boolean endless(VEvent master) {
+        return master.<RRule<Temporal>>getProperties(Property.RRULE).stream()
+            .anyMatch(rule -> rule.getRecur().getCount() < 1 && rule.getRecur().getUntil() == null);
+    }
+}

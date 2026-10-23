@@ -1,0 +1,51 @@
+databaseChangeLog:
+  - changeSet:
+      id: 076-add-calendar-series-day-rules
+      author: nido
+      comment: >
+        A weekly series may repeat on several weekdays, and a monthly or yearly one on a day read off its anchor (the
+        second Tuesday, the last Friday, the last day). Every weekly series written before gets its anchor's day, so the
+        weekdays of a weekly series are never missing; every other series keeps the same day of the month.
+      changes:
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series ADD COLUMN weekdays VARCHAR(27)
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series ADD COLUMN day_rule VARCHAR(25) NOT NULL DEFAULT 'SAME_DAY'
+        - sql:
+            sql: >-
+              UPDATE calendar_recurring_event_series
+              SET weekdays = (ARRAY['MO','TU','WE','TH','FR','SA','SU'])[EXTRACT(ISODOW FROM anchor_date)::int]
+              WHERE interval_type = 'WEEKLY'
+        - sql:
+            sql: >-
+              ALTER TABLE calendar_recurring_event_series ADD CONSTRAINT chk_cres_weekdays
+              CHECK ((interval_type = 'WEEKLY') = (weekdays IS NOT NULL))
+            splitStatements: false
+        - sql:
+            sql: >-
+              ALTER TABLE calendar_recurring_event_series ADD CONSTRAINT chk_cres_weekdays_format
+              CHECK (weekdays IS NULL OR weekdays ~ '^(MO|TU|WE|TH|FR|SA|SU)(,(MO|TU|WE|TH|FR|SA|SU)){0,6}$')
+            splitStatements: false
+        - sql:
+            sql: >-
+              ALTER TABLE calendar_recurring_event_series ADD CONSTRAINT chk_cres_day_rule
+              CHECK (day_rule IN ('SAME_DAY', 'WEEKDAY_OF_MONTH', 'LAST_WEEKDAY_OF_MONTH', 'LAST_DAY_OF_MONTH'))
+            splitStatements: false
+        - sql:
+            sql: >-
+              ALTER TABLE calendar_recurring_event_series ADD CONSTRAINT chk_cres_day_rule_frequency
+              CHECK (day_rule = 'SAME_DAY' OR interval_type IN ('MONTHLY', 'YEARLY'))
+            splitStatements: false
+      rollback:
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series DROP CONSTRAINT chk_cres_day_rule_frequency
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series DROP CONSTRAINT chk_cres_day_rule
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series DROP CONSTRAINT chk_cres_weekdays_format
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series DROP CONSTRAINT chk_cres_weekdays
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series DROP COLUMN day_rule
+        - sql:
+            sql: ALTER TABLE calendar_recurring_event_series DROP COLUMN weekdays

@@ -25,7 +25,7 @@ public final class SettingRules {
     public static String normalize(SettingKey key, String value) {
         String stripped = value.strip();
         return switch (key) {
-            case MAIL_SECURITY, SWAGGER -> stripped.toLowerCase(Locale.ROOT);
+            case MAIL_SECURITY, SWAGGER, CALENDAR_ALLOW_PRIVATE_NETWORK -> stripped.toLowerCase(Locale.ROOT);
             case PUBLIC_URL -> PublicUrl.parse(stripped).map(PublicUrl::value).orElse(stripped);
             case MAIL_PASSWORD -> value;
             default -> stripped;
@@ -42,7 +42,7 @@ public final class SettingRules {
             case PUBLIC_URL -> PublicUrl.parse(v).isPresent() ? Optional.empty() : Optional.of(SettingProblem.INVALID_URL);
             case ACCESS_TOKEN_MINUTES -> integerProblem(v, 1, MAX_ACCESS_TOKEN_MINUTES);
             case REFRESH_TOKEN_DAYS -> integerProblem(v, 1, MAX_REFRESH_TOKEN_DAYS);
-            case SWAGGER -> "true".equalsIgnoreCase(v) || "false".equalsIgnoreCase(v)
+            case SWAGGER, CALENDAR_ALLOW_PRIVATE_NETWORK -> "true".equalsIgnoreCase(v) || "false".equalsIgnoreCase(v)
                 ? Optional.empty() : Optional.of(SettingProblem.NOT_A_BOOLEAN);
             case MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM -> Optional.empty();
         };

@@ -1,6 +1,13 @@
-export type CalendarSourceType = 'EVENT' | 'TASK' | 'FINANCE' | 'MEAL' | 'SAVINGS'
+import type { EventColor } from '../lib/eventPalette'
+
+export type CalendarSourceType = 'EVENT' | 'TASK' | 'FINANCE' | 'MEAL' | 'SAVINGS' | 'EXTERNAL'
 
 export type RecurrenceInterval = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
+
+export type Weekday = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'
+
+/** Which day of a month a monthly or yearly series falls on, read off its anchor — the server's DayRule. */
+export type DayRule = 'SAME_DAY' | 'WEEKDAY_OF_MONTH' | 'LAST_WEEKDAY_OF_MONTH' | 'LAST_DAY_OF_MONTH'
 
 /**
  * One entry of the unified feed, whatever produced it.
@@ -30,6 +37,8 @@ export interface CalendarOccurrence {
   endTime: string | null
   color: string | null
   participantIds: string[]
+  /** The followed calendar an EXTERNAL entry comes from; null for every other source. */
+  externalFeedId: string | null
 }
 
 export interface CalendarEvent {
@@ -64,6 +73,9 @@ export interface RecurringEventSeries {
   color: string | null
   intervalType: RecurrenceInterval
   intervalCount: number
+  /** The days a weekly series repeats on, its anchor's among them; null for any other frequency. */
+  weekdays: Weekday[] | null
+  dayRule: DayRule
   /** Sets the rhythm. The first occurrence shown is `firstDate`, later once the series carries on an edit. */
   anchorDate: string
   endDate: string | null
@@ -101,6 +113,9 @@ export interface RecurringEventSeriesInput {
   color: string | null
   intervalType: RecurrenceInterval
   intervalCount: number
+  /** The days a weekly series repeats on, its anchor's among them; null for any other frequency. */
+  weekdays: Weekday[] | null
+  dayRule: DayRule
   anchorDate: string
   endDate: string | null
   participantIds: string[]
@@ -109,4 +124,84 @@ export interface RecurringEventSeriesInput {
 /** When something runs: what a drag, a resize or a selection in the grid decides, before it is written. */
 export interface ScheduleChange {
   allDay: boolean; startDate: string; startTime: string | null; endDate: string; endTime: string | null
+}
+
+/** What an export or a subscription may write: every source nido owns, a followed calendar never. */
+export type ExportableSource = Exclude<CalendarSourceType, 'EXTERNAL'>
+
+export interface SubscriptionLink {
+  id: string
+  label: string
+  sources: ExportableSource[]
+  onlyMine: boolean
+  createdAt: string
+  /** When a calendar application last read it; absent until it has. */
+  lastReadAt?: string | null
+}
+
+export interface SubscriptionLinkInput {
+  label: string
+  sources: ExportableSource[]
+  onlyMine: boolean
+}
+
+/** The one answer holding the address: it is shown once and kept nowhere. */
+export interface CreatedSubscriptionLink {
+  link: SubscriptionLink
+  url: string
+  webcalUrl: string
+}
+
+export type ImportNoteKind = 'UNFOLDED' | 'UNFOLDED_PARTIAL' | 'TRUNCATED_TEXT' | 'CONVERTED_ZONE' | 'UNKNOWN_ZONE' | 'IGNORED'
+
+export interface ImportNote {
+  kind: ImportNoteKind
+  title: string | null
+  detail: string | null
+}
+
+/** The most notes the server puts in one report: past it, the others are left out. */
+export const MAX_IMPORT_NOTES = 200
+
+/** The largest file the server imports (IcalUpload): 5 MB of 1024 × 1024 bytes. */
+export const MAX_IMPORT_BYTES = 5 * 1024 * 1024
+
+/** What an import did — or, `written` false, what it would do. */
+export interface ImportReport {
+  eventsCreated: number
+  seriesCreated: number
+  seriesUnfolded: number
+  occurrencesUnfolded: number
+  duplicates: number
+  ignored: number
+  notes: ImportNote[]
+  written: boolean
+}
+
+/** A calendar the space follows: its host, never its address. */
+export interface ExternalFeed {
+  id: string
+  name: string
+  host: string
+  color: string | null
+  contentFetchedAt: string
+  lastAttemptAt: string
+  /** "TIMEOUT", "HTTP_404"… — why the last attempt failed; null when it did not. */
+  lastError: string | null
+}
+
+/** The longest address of a calendar to follow the server takes (ExternalFeedRequest). */
+export const MAX_FEED_ADDRESS_LENGTH = 2000
+
+/** A calendar to follow. A colour is one of the palette, or none for the graphite of external sources. */
+export interface ExternalFeedInput {
+  url: string
+  name: string | null
+  color: EventColor | null
+}
+
+/** What changes of a followed calendar: its name and its colour, never its address. */
+export interface ExternalFeedUpdate {
+  name: string
+  color: EventColor | null
 }

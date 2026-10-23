@@ -1,14 +1,18 @@
 package com.nido.api.calendar.infrastructure.web.dto;
 
+import com.nido.api.calendar.domain.model.DayRule;
 import com.nido.api.calendar.domain.model.RecurrenceInterval;
+import com.nido.api.calendar.domain.model.Weekdays;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -29,6 +33,9 @@ public record RecurringEventSeriesRequest(
     @NotNull @Min(1) Integer intervalCount,
     @NotNull LocalDate anchorDate,
     LocalDate endDate,
+    // At most the seven days of a week, none missing; the series' own day is one of them (checked by the domain).
+    @Size(max = 7) List<@NotNull DayOfWeek> weekdays,
+    DayRule dayRule,
     // No household holds a hundred members; each id is looked up, so the list is bounded before that.
     @Size(max = 100) List<UUID> participantIds
 ) {
@@ -39,6 +46,11 @@ public record RecurringEventSeriesRequest(
     /** Absent means a same-day occurrence, which is the common case and must not need spelling out. */
     public int durationDaysOrDefault() {
         return durationDays == null ? 0 : durationDays;
+    }
+
+    /** Absent or empty means the anchor's own day, for a weekly series. */
+    public Set<DayOfWeek> weekdaysOrNull() {
+        return weekdays == null || weekdays.isEmpty() ? null : Weekdays.copyOf(weekdays);
     }
 
     public List<UUID> participantIds() {

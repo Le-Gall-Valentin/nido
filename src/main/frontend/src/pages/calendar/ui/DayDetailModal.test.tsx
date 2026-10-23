@@ -14,7 +14,7 @@ function occurrence(overrides: Partial<CalendarOccurrence> & { title: string }):
   return {
     source: 'EVENT', sourceId: overrides.title, seriesId: null, originalDate: null, materialized: true,
     description: null, location: null, allDay: true, startDate: '2026-09-23', startTime: null,
-    endDate: '2026-09-23', endTime: null, color: null, participantIds: [], ...overrides,
+    endDate: '2026-09-23', endTime: null, color: null, participantIds: [], externalFeedId: null, ...overrides,
   }
 }
 
@@ -39,6 +39,15 @@ describe('DayDetailModal', () => {
     renderDay([occurrence({ title: 'Concert', location: 'Salle Pleyel', description: 'Apporter les billets' })])
     expect(screen.getByText('Salle Pleyel')).toBeTruthy()
     expect(screen.getByText('Apporter les billets')).toBeTruthy()
+  })
+
+  it('lists the entries of followed calendars after every other source, under their own heading', () => {
+    renderDay([
+      occurrence({ title: 'Toussaint', source: 'EXTERNAL', externalFeedId: 'f1' }),
+      occurrence({ title: 'Piano' }),
+    ])
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['source.EVENT', 'source.EXTERNAL'])
+    expect(screen.getByText('Toussaint')).toBeTruthy()
   })
 
   it('shows the time span of a timed event', () => {

@@ -6,7 +6,7 @@ function timed(startDate: string, startTime: string, endDate: string, endTime: s
   return {
     source: 'EVENT', sourceId: 'x', seriesId: null, originalDate: null, materialized: true,
     title: 'x', description: null, location: null, allDay: false,
-    startDate, startTime, endDate, endTime, color: null, participantIds: [],
+    startDate, startTime, endDate, endTime, color: null, participantIds: [], externalFeedId: null,
   }
 }
 

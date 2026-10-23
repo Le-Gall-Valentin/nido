@@ -6,12 +6,14 @@ import { resolveLocale } from '@/shared/lib'
 import { useMemberName, type SpaceMember } from '@/entities/space'
 import { UserAvatar } from '@/entities/user'
 import type { CalendarOccurrence } from '@/entities/calendar'
-import { formatPeriodLabel, formatSpan } from '../lib/periodLabel'
+import { formatWhen } from '../lib/occurrenceWhen'
 
 interface EventDetailModalProps {
   occurrence: CalendarOccurrence
   /** Undefined while not known: nobody is then called a former member. */
   members: SpaceMember[] | undefined
+  /** How a recurring event repeats, in one sentence — null while the series is not known. */
+  recurrence?: string | null
   /** The signed-in user, so "join" and "leave" can be offered as the right one of the two. */
   currentUserId: string
   canWrite: boolean
@@ -27,15 +29,6 @@ interface EventDetailModalProps {
   onClose: () => void
 }
 
-/** The same wording as the calendar's own headings: a day in full, a span shortened only as it can be. */
-function formatWhen(occurrence: CalendarOccurrence, allDayLabel: string, locale: string): string {
-  const days = occurrence.startDate === occurrence.endDate
-    ? formatPeriodLabel('day', occurrence.startDate, locale)
-    : formatSpan(occurrence.startDate, occurrence.endDate, locale)
-  if (occurrence.allDay) return `${days} · ${allDayLabel}`
-  return `${days} · ${occurrence.startTime?.slice(0, 5)} – ${occurrence.endTime?.slice(0, 5)}`
-}
-
 /**
  * A button of the actions row: an equal share of it. The 9rem start is wider than the longest label,
  * so no label ever makes its button wider than the others; the modal is as wide as the event form,
@@ -44,7 +37,7 @@ function formatWhen(occurrence: CalendarOccurrence, allDayLabel: string, locale:
 const SHARED_ROW = 'flex-[1_1_9rem] whitespace-nowrap'
 
 export function EventDetailModal({
-  occurrence, members, currentUserId, canWrite, isPersonal = false,
+  occurrence, members, currentUserId, canWrite, isPersonal = false, recurrence = null,
   onEdit, onDelete, onCopy, onMove, onJoin, onLeave, onClose,
 }: EventDetailModalProps) {
   const { t } = useTranslation('calendar')
@@ -56,13 +49,20 @@ export function EventDetailModal({
     <Dialog open onClose={onClose} title={t('detail.title')} showCloseButton maxWidth="max-w-lg">
       <div className="flex flex-col gap-3">
         <div>
-          <p className="flex items-center gap-1.5 pr-8 text-base font-semibold text-fg-0">
+          {/* Under the dialog's own heading (h2): the entry's title is what a screen reader jumps to, in every detail. */}
+          <h3 className="flex items-center gap-1.5 pr-8 text-base font-semibold text-fg-0 break-words">
             {occurrence.title}
             {belongsToSeries && <Repeat aria-label={t('detail.recurring')} className="size-3.5 shrink-0 text-fg-3" />}
-          </p>
+          </h3>
           <p className="text-sm text-fg-2">
             {formatWhen(occurrence, t('all_day_short'), resolveLocale(i18next.language))}
           </p>
+          {recurrence && (
+            <p className="flex items-center gap-1.5 text-sm text-fg-2">
+              <Repeat aria-hidden className="size-3.5 shrink-0 text-fg-3" />
+              {recurrence}
+            </p>
+          )}
         </div>
 
         {occurrence.location && (
@@ -74,7 +74,7 @@ export function EventDetailModal({
 
         {occurrence.description && (
           // In full here, unlike the day overview: this is where the reader came to read it.
-          <p data-testid="event-description" className="whitespace-pre-line text-sm text-fg-1">
+          <p data-testid="event-description" className="whitespace-pre-line break-words text-sm text-fg-1">
             {occurrence.description}
           </p>
         )}

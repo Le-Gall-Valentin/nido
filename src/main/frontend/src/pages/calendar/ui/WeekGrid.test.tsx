@@ -27,7 +27,7 @@ function occurrence(overrides: Partial<CalendarOccurrence> & { title: string }):
   return {
     source: 'EVENT', sourceId: overrides.title, seriesId: null, originalDate: null,
     materialized: true, description: null, location: null, allDay: true, startDate: '2026-01-06', startTime: null,
-    endDate: '2026-01-06', endTime: null, color: null, participantIds: [], ...overrides,
+    endDate: '2026-01-06', endTime: null, color: null, participantIds: [], externalFeedId: null, ...overrides,
   }
 }
 
@@ -297,6 +297,13 @@ describe('WeekGrid', () => {
       expect(row.className).toContain('[scrollbar-gutter:stable]')
       expect(row.className).toContain('overflow-hidden')
     }
+  })
+
+  it('neither drags nor resizes an entry of a followed calendar: nido does not write to it', () => {
+    renderWeek([{ ...timed('Réunion', '09:00', '10:00'), source: 'EXTERNAL', color: 'event-cyan', externalFeedId: 'f1' }])
+    expect(document.querySelectorAll('[data-draggable]')).toHaveLength(0)
+    expect(screen.queryByTestId('resize-start')).toBeNull()
+    expect(screen.queryByTestId('resize-end')).toBeNull()
   })
 
   it('never makes finance or savings draggable', () => {

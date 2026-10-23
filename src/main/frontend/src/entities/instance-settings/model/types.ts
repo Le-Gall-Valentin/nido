@@ -12,7 +12,7 @@ export interface SettingField {
   set: boolean
 }
 
-export type SettingsGroupCode = 'mail' | 'public-url' | 'sessions' | 'api'
+export type SettingsGroupCode = 'mail' | 'public-url' | 'sessions' | 'api' | 'calendar'
 
 export interface SettingsGroup {
   group: SettingsGroupCode

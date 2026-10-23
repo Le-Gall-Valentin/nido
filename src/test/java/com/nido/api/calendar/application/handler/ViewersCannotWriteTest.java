@@ -3,16 +3,23 @@ package com.nido.api.calendar.application.handler;
 import com.nido.api.calendar.application.port.in.CopyOccurrenceUseCase;
 import com.nido.api.calendar.application.port.in.ExcludeOccurrenceUseCase;
 import com.nido.api.calendar.application.service.CalendarSpaceMemberValidator;
+import com.nido.api.calendar.application.service.ExternalFeedLookup;
+import com.nido.api.calendar.application.service.ExternalFeedRefresher;
 import com.nido.api.calendar.application.service.SeriesExceptionsMover;
 import com.nido.api.calendar.domain.model.CalendarEvent;
 import com.nido.api.calendar.domain.model.CreateEventCommand;
 import com.nido.api.calendar.domain.model.CreateRecurringEventSeriesCommand;
+import com.nido.api.calendar.domain.model.FollowExternalFeedCommand;
 import com.nido.api.calendar.domain.model.RecurrenceInterval;
 import com.nido.api.calendar.domain.model.RecurringEventSeries;
 import com.nido.api.calendar.domain.model.UpdateEventCommand;
+import com.nido.api.calendar.domain.model.UpdateExternalFeedCommand;
 import com.nido.api.calendar.domain.model.UpdateRecurringEventSeriesCommand;
 import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
 import com.nido.api.calendar.domain.port.out.EventExclusionRepository;
+import com.nido.api.calendar.domain.port.out.ExternalFeedDownloader;
+import com.nido.api.calendar.domain.port.out.ExternalFeedRepository;
+import com.nido.api.calendar.domain.port.out.IcalFeedChecker;
 import com.nido.api.calendar.domain.port.out.RecurringEventSeriesRepository;
 import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.space.domain.model.SpaceException;
@@ -22,6 +29,7 @@ import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -126,6 +134,38 @@ class ViewersCannotWriteTest {
         ExcludeOccurrenceUseCase exclude = mock(ExcludeOccurrenceUseCase.class);
         refused(() -> new MoveOccurrenceHandler(copy, exclude).move(weekly.id(), day, UUID.randomUUID(), viewer));
         verifyNoInteractions(copy, exclude);
+    }
+
+    @Test
+    void followingACalendar() {
+        ExternalFeedRepository feeds = mock(ExternalFeedRepository.class);
+        ExternalFeedDownloader downloader = mock(ExternalFeedDownloader.class);
+        refused(() -> new FollowExternalFeedHandler(feeds, downloader, mock(IcalFeedChecker.class), Clock.systemUTC())
+            .follow(new FollowExternalFeedCommand("https://ecole.example/v.ics", null, null), viewer));
+        verifyNoInteractions(feeds, downloader);
+    }
+
+    @Test
+    void renamingAFollowedCalendar() {
+        ExternalFeedRepository feeds = mock(ExternalFeedRepository.class);
+        refused(() -> new UpdateExternalFeedHandler(feeds, new ExternalFeedLookup(feeds))
+            .update(UUID.randomUUID(), new UpdateExternalFeedCommand("Club", null), viewer));
+        verifyNoInteractions(feeds);
+    }
+
+    @Test
+    void removingAFollowedCalendar() {
+        ExternalFeedRepository feeds = mock(ExternalFeedRepository.class);
+        refused(() -> new RemoveExternalFeedHandler(feeds, new ExternalFeedLookup(feeds)).remove(UUID.randomUUID(), viewer));
+        verifyNoInteractions(feeds);
+    }
+
+    @Test
+    void refreshingAFollowedCalendar() {
+        ExternalFeedRepository feeds = mock(ExternalFeedRepository.class);
+        ExternalFeedRefresher refresher = mock(ExternalFeedRefresher.class);
+        refused(() -> new RefreshExternalFeedHandler(new ExternalFeedLookup(feeds), refresher).refresh(UUID.randomUUID(), viewer));
+        verifyNoInteractions(feeds, refresher);
     }
 
     /** Refused for its role — and refused before anything was read, checked or written. */
