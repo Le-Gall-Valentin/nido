@@ -11,14 +11,16 @@ import java.util.UUID;
 
 public interface SubscriptionLinkRepository {
 
-    SubscriptionLink create(UUID spaceId, UUID userId, String label, Set<CalendarSourceType> sources, boolean onlyMine,
-                            String tokenHash);
+    /**
+     * Gives the address, unless the member has {@code most} for the space already: counted and written in one go, so
+     * that two requests at once never pass the limit together. Empty when they have that many.
+     */
+    Optional<SubscriptionLink> createUnlessHolding(int most, UUID spaceId, UUID userId, String label,
+                                                   Set<CalendarSourceType> sources, boolean onlyMine, String tokenHash);
 
     List<SubscriptionLink> findBySpaceAndUser(UUID spaceId, UUID userId);
 
     Optional<SubscriptionLink> findByTokenHash(String tokenHash);
-
-    long countBySpaceAndUser(UUID spaceId, UUID userId);
 
     /** Deletes the address if {@code userId} gave it for {@code spaceId}, and says whether it did; its label is never opened. */
     boolean deleteOwned(UUID linkId, UUID spaceId, UUID userId);

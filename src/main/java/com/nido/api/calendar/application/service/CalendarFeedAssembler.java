@@ -16,6 +16,7 @@ import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.space.application.port.in.GetSpaceUseCase;
 import com.nido.api.space.domain.model.SpaceDetailView;
 import com.nido.api.space.domain.model.SpaceMembership;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -62,6 +63,8 @@ public class CalendarFeedAssembler {
         this.spaceToday = spaceToday;
     }
 
+    /** Read in one transaction: the file is then written outside it, without holding a connection. */
+    @Transactional(readOnly = true)
     public CalendarFeed assemble(SpaceMembership reader, Set<CalendarSourceType> wanted, boolean onlyMine) {
         SpaceDetailView space = spaces.get(reader.spaceId(), reader);
         Predicate<List<UUID>> concerns = people -> !onlyMine || people.isEmpty() || people.contains(reader.userId());

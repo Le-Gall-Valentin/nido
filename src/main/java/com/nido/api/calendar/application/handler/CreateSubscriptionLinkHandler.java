@@ -28,11 +28,9 @@ public class CreateSubscriptionLinkHandler implements CreateSubscriptionLinkUseC
     @Transactional
     public CreatedSubscriptionLink create(CreateSubscriptionLinkCommand command, SpaceMembership caller) {
         var sources = CalendarSourceType.checkExportable(command.sources());
-        if (links.countBySpaceAndUser(caller.spaceId(), caller.userId()) >= MAX_PER_PERSON_AND_SPACE) {
-            throw new CalendarException.TooManySubscriptionLinks(MAX_PER_PERSON_AND_SPACE);
-        }
         String token = SubscriptionTokens.newToken();
-        return new CreatedSubscriptionLink(links.create(caller.spaceId(), caller.userId(), command.label().strip(), sources,
-            command.onlyMine(), CalendarDigests.sha256Hex(token)), token);
+        return new CreatedSubscriptionLink(links.createUnlessHolding(MAX_PER_PERSON_AND_SPACE, caller.spaceId(),
+                caller.userId(), command.label().strip(), sources, command.onlyMine(), CalendarDigests.sha256Hex(token))
+            .orElseThrow(() -> new CalendarException.TooManySubscriptionLinks(MAX_PER_PERSON_AND_SPACE)), token);
     }
 }

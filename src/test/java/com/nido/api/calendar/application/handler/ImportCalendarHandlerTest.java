@@ -1,6 +1,8 @@
 package com.nido.api.calendar.application.handler;
 
 import com.nido.api.calendar.application.service.CalendarSpaceMemberValidator;
+import com.nido.api.calendar.application.service.ImportWriter;
+import com.nido.api.calendar.application.service.KnownImportUids;
 import com.nido.api.calendar.domain.model.CalendarDigests;
 import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.CreateEventCommand;
@@ -73,8 +75,9 @@ class ImportCalendarHandlerTest {
     private final GetSpaceUseCase spaces = mock(GetSpaceUseCase.class);
     private final GetSpaceTodayUseCase today = mock(GetSpaceTodayUseCase.class);
     private final AccountLanguage language = mock(AccountLanguage.class);
-    private final ImportCalendarHandler handler = new ImportCalendarHandler(reader, importedUids, events, series,
-        exclusions, members, spaces, today, language);
+    private final KnownImportUids known = new KnownImportUids(importedUids);
+    private final ImportCalendarHandler handler = new ImportCalendarHandler(reader, known,
+        new ImportWriter(importedUids, known, events, series, exclusions), members, spaces, today, language);
 
     private final UUID spaceId = UUID.randomUUID();
     private final SpaceMembership member = new SpaceMembership(UUID.randomUUID(), spaceId, UUID.randomUUID(), SpaceRole.MEMBER, Instant.now());
@@ -167,6 +170,44 @@ class ImportCalendarHandlerTest {
         assertThatThrownBy(() -> handler.importFile("ics", member)).isInstanceOf(CalendarException.ImportTooLarge.class);
         verify(events, never()).createImported(any(), any());
         verify(series, never()).createImported(any(), any());
+    }
+
+    @Test
+    void anImportOfTheSpaceWritingMeanwhileIsWaitedForAndWhatItWroteIsPassed() {
+        when(reader.read(eq("ics"), eq(PARIS), eq(TODAY), eq(Locale.FRENCH), any()))
+            .thenReturn(reading(event("a@test"), event("c@test")));
+        // Read before the other import wrote a@test; found once the imports of the space take turns.
+        when(importedUids.knownHashes(eq(spaceId), anyCollection())).thenReturn(Set.of(CalendarDigests.sha256Hex("a@test")));
+
+        ImportReport report = handler.importFile("ics", member);
+
+        InOrder order = inOrder(importedUids, events);
+        order.verify(importedUids).lockImports(spaceId);
+        order.verify(importedUids).knownHashes(eq(spaceId), anyCollection());
+        order.verify(events).createImported(any(), eq(CalendarDigests.sha256Hex("c@test")));
+        verify(events, never()).createImported(any(), eq(CalendarDigests.sha256Hex("a@test")));
+        assertThat(report.duplicates()).isEqualTo(1);
+        assertThat(report.eventsCreated()).isEqualTo(1);
+    }
+
+    @Test
+    void anAnalysisTakesNoLockAndWritesNothing() {
+        when(reader.read(eq("ics"), eq(PARIS), eq(TODAY), eq(Locale.FRENCH), any())).thenReturn(reading(event("a@test")));
+
+        handler.analyse("ics", member);
+
+        verify(importedUids, never()).lockImports(any());
+    }
+
+    @Test
+    void anEventTheReaderShouldNeverHaveKeptIsRefusedAndNothingIsWritten() {
+        ImportedEvent backwards = new ImportedEvent("À l'envers", null, null, false, LocalDate.of(2026, 10, 14),
+            java.time.LocalTime.of(10, 0), LocalDate.of(2026, 10, 14), java.time.LocalTime.of(9, 0));
+        when(reader.read(eq("ics"), eq(PARIS), eq(TODAY), eq(Locale.FRENCH), any())).thenReturn(reading(event("a@test"),
+            new ImportGroup("b@test", List.of(backwards), null, false, 0)));
+
+        assertThatThrownBy(() -> handler.importFile("ics", member)).isInstanceOf(CalendarException.InvalidTimeRange.class);
+        verify(events, never()).createImported(any(), any());
     }
 
     @Test

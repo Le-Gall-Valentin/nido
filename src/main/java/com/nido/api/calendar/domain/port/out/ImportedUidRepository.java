@@ -15,4 +15,10 @@ public interface ImportedUidRepository {
 
     /** Among {@code ids}, those of an event or a series of the space. */
     Set<UUID> existingIds(UUID spaceId, Collection<UUID> ids);
+
+    /**
+     * Puts the imports of a space in line until the transaction ends: of two imports of one file at once, the second
+     * finds what the first wrote, and passes it. Taken inside a transaction, before reading what the space holds.
+     */
+    void lockImports(UUID spaceId);
 }

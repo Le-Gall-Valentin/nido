@@ -12,7 +12,6 @@ import com.nido.api.calendar.domain.port.out.SubscriptionLinkRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.port.out.SpaceMembershipPort;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -50,7 +49,6 @@ public class ReadSubscriptionFeedHandler implements ReadSubscriptionFeedUseCase 
     }
 
     @Override
-    @Transactional
     public Optional<String> read(String token) {
         if (!SubscriptionTokens.wellFormed(token)) {
             return Optional.empty();

@@ -24,16 +24,23 @@ public class SubscriptionLinkRepositoryAdapter implements SubscriptionLinkReposi
 
     private final CalendarSubscriptionLinkJpaRepository links;
     private final SpaceSealers sealers;
+    private final CalendarAdvisoryLocks locks;
 
-    public SubscriptionLinkRepositoryAdapter(CalendarSubscriptionLinkJpaRepository links, SpaceSealers sealers) {
+    public SubscriptionLinkRepositoryAdapter(CalendarSubscriptionLinkJpaRepository links, SpaceSealers sealers,
+                                             CalendarAdvisoryLocks locks) {
         this.links = links;
         this.sealers = sealers;
+        this.locks = locks;
     }
 
     @Override
     @Transactional
-    public SubscriptionLink create(UUID spaceId, UUID userId, String label, Set<CalendarSourceType> sources,
-                                   boolean onlyMine, String tokenHash) {
+    public Optional<SubscriptionLink> createUnlessHolding(int most, UUID spaceId, UUID userId, String label,
+                                                          Set<CalendarSourceType> sources, boolean onlyMine, String tokenHash) {
+        locks.lock("subscription-links:" + spaceId + ":" + userId);
+        if (links.countBySpaceIdAndUserId(spaceId, userId) >= most) {
+            return Optional.empty();
+        }
         CalendarSubscriptionLinkEntity entity = new CalendarSubscriptionLinkEntity();
         entity.setSpaceId(spaceId);
         entity.setUserId(userId);
@@ -41,7 +48,7 @@ public class SubscriptionLinkRepositoryAdapter implements SubscriptionLinkReposi
         entity.setTokenHash(tokenHash);
         entity.setSources(sources.stream().sorted().map(Enum::name).collect(Collectors.joining(",")));
         entity.setOnlyMine(onlyMine);
-        return toDomain(links.saveAndFlush(entity));
+        return Optional.of(toDomain(links.saveAndFlush(entity)));
     }
 
     @Override
@@ -52,11 +59,6 @@ public class SubscriptionLinkRepositoryAdapter implements SubscriptionLinkReposi
     @Override
     public Optional<SubscriptionLink> findByTokenHash(String tokenHash) {
         return links.findByTokenHash(tokenHash).map(this::toDomain);
-    }
-
-    @Override
-    public long countBySpaceAndUser(UUID spaceId, UUID userId) {
-        return links.countBySpaceIdAndUserId(spaceId, userId);
     }
 
     @Override

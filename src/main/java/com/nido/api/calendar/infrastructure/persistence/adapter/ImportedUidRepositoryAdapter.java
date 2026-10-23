@@ -15,10 +15,18 @@ public class ImportedUidRepositoryAdapter implements ImportedUidRepository {
 
     private final CalendarEventJpaRepository events;
     private final CalendarRecurringEventSeriesJpaRepository series;
+    private final CalendarAdvisoryLocks locks;
 
-    public ImportedUidRepositoryAdapter(CalendarEventJpaRepository events, CalendarRecurringEventSeriesJpaRepository series) {
+    public ImportedUidRepositoryAdapter(CalendarEventJpaRepository events, CalendarRecurringEventSeriesJpaRepository series,
+                                        CalendarAdvisoryLocks locks) {
         this.events = events;
         this.series = series;
+        this.locks = locks;
+    }
+
+    @Override
+    public void lockImports(UUID spaceId) {
+        locks.lock("imports:" + spaceId);
     }
 
     @Override
