@@ -1,5 +1,7 @@
 package com.nido.api.calendar.domain.model;
 
+import com.nido.api.calendar.domain.model.CalendarException.InvalidRecurrenceRule.Reason;
+import org.assertj.core.api.ThrowingConsumer;
 import org.junit.jupiter.api.Test;
 
 import java.time.DayOfWeek;
@@ -126,23 +128,28 @@ class EventScheduleValidatorTest {
     @Test
     void aRuleTheAnchorCannotGiveIsRefused() {
         assertThatThrownBy(() -> ruledAllDay(0, RecurrenceInterval.MONTHLY, null, DayRule.LAST_DAY_OF_MONTH,
-            LocalDate.of(2026, 1, 30))).isInstanceOf(CalendarException.InvalidRecurrenceRule.class);
+            LocalDate.of(2026, 1, 30))).satisfies(refusedFor(Reason.DAY_RULE_NOT_FROM_ANCHOR));
         assertThatThrownBy(() -> ruledAllDay(0, RecurrenceInterval.MONTHLY, null, DayRule.WEEKDAY_OF_MONTH,
-            LocalDate.of(2026, 1, 29))).isInstanceOf(CalendarException.InvalidRecurrenceRule.class);
+            LocalDate.of(2026, 1, 29))).satisfies(refusedFor(Reason.DAY_RULE_NOT_FROM_ANCHOR));
     }
 
     @Test
     void weekdaysWithoutTheAnchorsOrOutsideAWeeklySeriesAreRefused() {
         assertThatThrownBy(() -> ruledAllDay(0, RecurrenceInterval.WEEKLY, Set.of(DayOfWeek.TUESDAY), null,
-            LocalDate.of(2026, 1, 5))).isInstanceOf(CalendarException.InvalidRecurrenceRule.class);
+            LocalDate.of(2026, 1, 5))).satisfies(refusedFor(Reason.ANCHOR_NOT_AMONG_WEEKDAYS));
         assertThatThrownBy(() -> ruledAllDay(0, RecurrenceInterval.DAILY, Set.of(DayOfWeek.MONDAY), null,
-            LocalDate.of(2026, 1, 5))).isInstanceOf(CalendarException.InvalidRecurrenceRule.class);
+            LocalDate.of(2026, 1, 5))).satisfies(refusedFor(Reason.WEEKDAYS_NOT_WEEKLY));
     }
 
     @Test
     void aDayRuleOutsideMonthsAndYearsIsRefused() {
         assertThatThrownBy(() -> ruledAllDay(0, RecurrenceInterval.WEEKLY, null, DayRule.LAST_DAY_OF_MONTH,
-            LocalDate.of(2026, 1, 31))).isInstanceOf(CalendarException.InvalidRecurrenceRule.class);
+            LocalDate.of(2026, 1, 31))).satisfies(refusedFor(Reason.DAY_RULE_NOT_MONTHLY_OR_YEARLY));
+    }
+
+    private static ThrowingConsumer<Throwable> refusedFor(Reason reason) {
+        return refused -> assertThat(refused).isInstanceOfSatisfying(CalendarException.InvalidRecurrenceRule.class,
+            invalid -> assertThat(invalid.reason()).isEqualTo(reason));
     }
 
     private static void ruledAllDay(int durationDays, RecurrenceInterval interval, Set<DayOfWeek> weekdays,

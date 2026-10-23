@@ -127,9 +127,28 @@ public abstract sealed class CalendarException extends RuntimeException
     /**
      * Thrown when a series' days cannot be read off its anchor — a last day that is not one, a fifth weekday, weekdays
      * without the anchor's — or belong to another frequency: the series would not start on its own first occurrence.
+     * {@link #reason()} says which.
      */
     public static final class InvalidRecurrenceRule extends CalendarException {
-        public InvalidRecurrenceRule() { super("The recurrence rule does not fit the series' first day"); }
+        public enum Reason {
+            /** Weekdays given to a series that does not repeat weekly. */
+            WEEKDAYS_NOT_WEEKLY,
+            /** Weekdays that leave out the anchor's own. */
+            ANCHOR_NOT_AMONG_WEEKDAYS,
+            /** A day rule given to a series that repeats daily or weekly. */
+            DAY_RULE_NOT_MONTHLY_OR_YEARLY,
+            /** A day rule the anchor does not fall on: a last day that is not one, a fifth weekday. */
+            DAY_RULE_NOT_FROM_ANCHOR
+        }
+
+        private final Reason reason;
+
+        public InvalidRecurrenceRule(Reason reason) {
+            super("The recurrence rule does not fit the series' first day: " + reason);
+            this.reason = reason;
+        }
+
+        public Reason reason() { return reason; }
     }
 
     /** Thrown when a file or a followed address does not hold an iCalendar document nido can read. */

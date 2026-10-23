@@ -1,5 +1,7 @@
 package com.nido.api.calendar.domain.model;
 
+import com.nido.api.calendar.domain.model.CalendarException.InvalidRecurrenceRule.Reason;
+
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -95,13 +97,20 @@ public final class EventScheduleValidator {
     private static void validateRule(RecurrenceInterval intervalType, Set<DayOfWeek> weekdays, DayRule dayRule,
                                      LocalDate anchorDate) {
         boolean someDays = weekdays != null && !weekdays.isEmpty();
-        if (someDays && (intervalType != RecurrenceInterval.WEEKLY || !weekdays.contains(anchorDate.getDayOfWeek()))) {
-            throw new CalendarException.InvalidRecurrenceRule();
+        if (someDays && intervalType != RecurrenceInterval.WEEKLY) {
+            throw new CalendarException.InvalidRecurrenceRule(Reason.WEEKDAYS_NOT_WEEKLY);
         }
-        if (dayRule != null && dayRule != DayRule.SAME_DAY
-            && (intervalType != RecurrenceInterval.MONTHLY && intervalType != RecurrenceInterval.YEARLY
-                || !dayRule.fits(anchorDate))) {
-            throw new CalendarException.InvalidRecurrenceRule();
+        if (someDays && !weekdays.contains(anchorDate.getDayOfWeek())) {
+            throw new CalendarException.InvalidRecurrenceRule(Reason.ANCHOR_NOT_AMONG_WEEKDAYS);
+        }
+        if (dayRule == null || dayRule == DayRule.SAME_DAY) {
+            return;
+        }
+        if (intervalType != RecurrenceInterval.MONTHLY && intervalType != RecurrenceInterval.YEARLY) {
+            throw new CalendarException.InvalidRecurrenceRule(Reason.DAY_RULE_NOT_MONTHLY_OR_YEARLY);
+        }
+        if (!dayRule.fits(anchorDate)) {
+            throw new CalendarException.InvalidRecurrenceRule(Reason.DAY_RULE_NOT_FROM_ANCHOR);
         }
     }
 

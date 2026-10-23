@@ -45,8 +45,8 @@ public class CalendarExceptionHandler {
                 "A series repeats at an interval of at most " + ex.maximum() + ".", "interval_too_large");
             case CalendarException.InvalidEndDate ignored ->
                 new CalendarErrorResponse(400, "The end date must be on or after the anchor date.");
-            case CalendarException.InvalidRecurrenceRule ignored -> new CalendarErrorResponse(400,
-                "The days of a series are read off its first day: it must be one of them.", "invalid_recurrence_rule");
+            case CalendarException.InvalidRecurrenceRule ex ->
+                new CalendarErrorResponse(400, detailOf(ex.reason()), "invalid_recurrence_rule");
             case CalendarException.NotAnIcalFile ignored ->
                 new CalendarErrorResponse(400, "This is not an iCalendar (.ics) document.", "not_ics");
             case CalendarException.InvalidSources ignored -> new CalendarErrorResponse(400,
@@ -88,6 +88,17 @@ public class CalendarExceptionHandler {
             problem.setProperty("feed_error", unavailable.error().code());
         }
         return ResponseEntity.status(response.status()).body(problem);
+    }
+
+    private static String detailOf(CalendarException.InvalidRecurrenceRule.Reason reason) {
+        return switch (reason) {
+            case WEEKDAYS_NOT_WEEKLY -> "Only a weekly series repeats on days of the week.";
+            case ANCHOR_NOT_AMONG_WEEKDAYS -> "The days of a series are read off its first day: it must be one of them.";
+            case DAY_RULE_NOT_MONTHLY_OR_YEARLY ->
+                "Only a monthly or yearly series falls on a day of the month such as the last one or the second Tuesday.";
+            case DAY_RULE_NOT_FROM_ANCHOR ->
+                "The day of the month a series falls on is read off its first day, which must be such a day.";
+        };
     }
 
     private record CalendarErrorResponse(int status, String detail, String errorCode) {

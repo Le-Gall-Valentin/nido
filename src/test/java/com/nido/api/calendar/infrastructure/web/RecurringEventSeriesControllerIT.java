@@ -127,7 +127,9 @@ class RecurringEventSeriesControllerIT {
                      "dayRule": "LAST_DAY_OF_MONTH", "anchorDate": "2026-10-30"}
                     """))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.error_code").value("invalid_recurrence_rule"));
+            .andExpect(jsonPath("$.error_code").value("invalid_recurrence_rule"))
+            .andExpect(jsonPath("$.detail").value(
+                "The day of the month a series falls on is read off its first day, which must be such a day."));
     }
 
     @Test
