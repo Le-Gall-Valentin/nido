@@ -54,7 +54,7 @@ public class CalendarExceptionHandler {
             case CalendarException.TooManySubscriptionLinks ex -> new CalendarErrorResponse(409,
                 "You already have " + ex.maximum() + " addresses for this space. Revoke one first.", "too_many_links");
             case CalendarException.SubscriptionLinkNotFound ignored ->
-                new CalendarErrorResponse(404, "Subscription address not found.");
+                new CalendarErrorResponse(404, "Subscription address not found.", "subscription_link_not_found");
             case CalendarException.PublicUrlMissing ignored -> new CalendarErrorResponse(409,
                 "The public address of this installation is not set: an administrator sets it in the settings.",
                 "public_url_missing");
@@ -68,7 +68,7 @@ public class CalendarExceptionHandler {
             case CalendarException.InvalidFeedAddress ignored ->
                 new CalendarErrorResponse(400, "Give an http, https or webcal address.", "invalid_feed_address");
             case CalendarException.ExternalFeedNotFound ignored ->
-                new CalendarErrorResponse(404, "Followed calendar not found.");
+                new CalendarErrorResponse(404, "Followed calendar not found.", "external_feed_not_found");
             case CalendarException.FeedUnavailable ex -> new CalendarErrorResponse(400,
                 "The calendar could not be read at this address (" + ex.error().code() + ").", "feed_unavailable");
             case CalendarException.TooManyExternalFeeds ex -> new CalendarErrorResponse(409,

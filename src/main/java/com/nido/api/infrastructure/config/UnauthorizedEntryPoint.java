@@ -1,5 +1,6 @@
 package com.nido.api.infrastructure.config;
 
+import com.nido.api.infrastructure.web.LoggedPath;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -27,7 +28,7 @@ public class UnauthorizedEntryPoint implements AuthenticationEntryPoint {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Authentication required");
         problem.setType(URI.create("about:blank"));
         problem.setTitle("Unauthorized");
-        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setInstance(URI.create(LoggedPath.of(request)));
 
         response.setContentType("application/problem+json");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

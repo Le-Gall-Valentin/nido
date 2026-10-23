@@ -14,12 +14,16 @@ class CalendarExceptionHandlerTest {
     private final CalendarExceptionHandler handler = new CalendarExceptionHandler();
 
     @Test
-    void the_answer_never_names_the_token_of_a_subscription_address() {
-        var answer = handler.handle(new CalendarException.SubscriptionLinkNotFound(),
-            new MockHttpServletRequest("GET", "/ical/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcde.ics"));
+    void what_was_removed_meanwhile_is_said_under_a_code_of_its_own() {
+        var link = handler.handle(new CalendarException.SubscriptionLinkNotFound(),
+            new MockHttpServletRequest("DELETE", "/api/spaces/1/calendar/subscription-links/2"));
+        var feed = handler.handle(new CalendarException.ExternalFeedNotFound(),
+            new MockHttpServletRequest("POST", "/api/spaces/1/calendar/external-feeds/2/refresh"));
 
-        assertThat(answer.getStatusCode().value()).isEqualTo(404);
-        assertThat(answer.getBody().getInstance()).hasToString("/ical/***.ics");
+        assertThat(link.getStatusCode().value()).isEqualTo(404);
+        assertThat(link.getBody().getProperties()).containsEntry("error_code", "subscription_link_not_found");
+        assertThat(feed.getStatusCode().value()).isEqualTo(404);
+        assertThat(feed.getBody().getProperties()).containsEntry("error_code", "external_feed_not_found");
     }
 
     @Test

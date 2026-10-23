@@ -2,24 +2,18 @@ package com.nido.api.calendar.infrastructure.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
-import com.nido.api.TestSpaces;
+import com.nido.api.TestAccessTokens;
+import com.nido.api.TestPeople;
 import com.nido.api.calendar.infrastructure.security.NidoSubscriptionTokenGenerator;
+import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.instance.InstanceSettingsTestSupport;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.instance.domain.port.out.SettingsStorePort;
-import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
-import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
-import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
-import com.nido.api.shared.model.Role;
 import com.nido.api.space.application.port.in.HandleUserDeletionUseCase;
 import com.nido.api.space.domain.model.SpaceRole;
-import com.nido.api.space.domain.model.SpaceType;
-import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
-import com.nido.api.space.infrastructure.persistence.entity.SpaceMemberEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceMemberJpaRepository;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +24,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -37,7 +32,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,8 +48,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @IntegrationTestConfig
 class IcalFeedControllerIT {
-
-    private static final String JWT_SECRET = "integration-test-secret-at-least-32-chars!";
 
     @Autowired WebApplicationContext webApplicationContext;
     @Autowired UserIdentityJpaRepository users;
@@ -83,19 +75,20 @@ class IcalFeedControllerIT {
         spaces.deleteAll();
         users.deleteAll();
 
-        aliceId = saveUser("alice");
-        bobId = saveUser("bob");
-        spaceId = saveSharedSpace("Chez Valentin");
-        saveMembership(spaceId, aliceId, SpaceRole.OWNER);
-        saveMembership(spaceId, bobId, SpaceRole.VIEWER);
+        aliceId = TestPeople.user(users, "alice");
+        bobId = TestPeople.user(users, "bob");
+        spaceId = TestPeople.sharedSpace(spaces, "Chez Valentin");
+        TestPeople.member(members, spaceId, aliceId, SpaceRole.OWNER);
+        TestPeople.member(members, spaceId, bobId, SpaceRole.VIEWER);
         settingsStore.save(Map.of(SettingKey.PUBLIC_URL, Optional.of("https://nido.test")), null, Instant.now());
     }
 
     @AfterEach
     void noPublicAddress() {
         InstanceSettingsTestSupport.clear(settingsStore);
-        jdbc.update("DELETE FROM calendar_subscription_links");
-        jdbc.update("UPDATE users SET is_active = true");
+        // The database is shared with every other test: only this one's rows are touched.
+        jdbc.update("DELETE FROM calendar_subscription_links WHERE user_id IN (?, ?)", aliceId, bobId);
+        jdbc.update("UPDATE users SET is_active = true WHERE id IN (?, ?)", aliceId, bobId);
     }
 
     @Test
@@ -110,7 +103,8 @@ class IcalFeedControllerIT {
             .andExpect(header().string("X-Robots-Tag", "noindex"))
             .andExpect(header().string("Referrer-Policy", "no-referrer"))
             .andExpect(content().string(org.hamcrest.Matchers.containsString("SUMMARY:Concert")));
-        assertThat(jdbc.queryForObject("SELECT last_read_at IS NOT NULL FROM calendar_subscription_links", Boolean.class)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT last_read_at IS NOT NULL FROM calendar_subscription_links WHERE user_id = ?",
+            Boolean.class, bobId)).isTrue();
     }
 
     @Test
@@ -167,8 +161,8 @@ class IcalFeedControllerIT {
     @Test
     void a_revoked_address_reads_nothing() throws Exception {
         String path = createLink(bobId, "{\"label\":\"iPhone\",\"sources\":[\"EVENT\"]}");
-        String id = jdbc.queryForObject("SELECT id::text FROM calendar_subscription_links", String.class);
-        mockMvc.perform(delete(links() + "/" + id).cookie(tokenFor(bobId))).andExpect(status().isNoContent());
+        String id = jdbc.queryForObject("SELECT id::text FROM calendar_subscription_links WHERE user_id = ?", String.class, bobId);
+        mockMvc.perform(delete(links() + "/" + id).cookie(TestAccessTokens.cookieFor(bobId))).andExpect(status().isNoContent());
 
         mockMvc.perform(get(path)).andExpect(status().isNotFound());
     }
@@ -177,7 +171,7 @@ class IcalFeedControllerIT {
     void a_member_removed_from_the_space_loses_their_addresses() throws Exception {
         String path = createLink(bobId, "{\"label\":\"iPhone\",\"sources\":[\"EVENT\"]}");
 
-        mockMvc.perform(delete("/api/spaces/" + spaceId + "/members/" + bobId).cookie(tokenFor(aliceId)))
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/members/" + bobId).cookie(TestAccessTokens.cookieFor(aliceId)))
             .andExpect(status().isNoContent());
 
         mockMvc.perform(get(path)).andExpect(status().isNotFound());
@@ -189,7 +183,7 @@ class IcalFeedControllerIT {
     void a_member_who_leaves_the_space_loses_their_addresses() throws Exception {
         String path = createLink(bobId, "{\"label\":\"iPhone\",\"sources\":[\"EVENT\"]}");
 
-        mockMvc.perform(delete("/api/spaces/" + spaceId + "/membership").cookie(tokenFor(bobId)))
+        mockMvc.perform(delete("/api/spaces/" + spaceId + "/membership").cookie(TestAccessTokens.cookieFor(bobId)))
             .andExpect(status().isNoContent());
 
         mockMvc.perform(get(path)).andExpect(status().isNotFound());
@@ -208,14 +202,51 @@ class IcalFeedControllerIT {
     }
 
     /** The path of the address made, as a calendar application would request it. */
+    @Test
+    void no_answer_to_a_subscription_address_names_its_token() throws Exception {
+        String path = createLink(bobId, "{\"label\":\"iPhone\",\"sources\":[\"EVENT\"]}");
+        String token = path.substring("/ical/".length(), path.length() - ".ics".length());
+
+        // Another method falls to the security chain; another case of the suffix, to Spring's own static resources.
+        MockHttpServletResponse posted = mockMvc.perform(post(path)).andReturn().getResponse();
+        MockHttpServletResponse shouted = mockMvc.perform(get(path.replace(".ics", ".ICS"))).andReturn().getResponse();
+
+        assertThat(posted.getStatus()).isEqualTo(401);
+        assertThat(posted.getContentAsString()).doesNotContain(token).contains("/ical/***.ics");
+        assertThat(shouted.getStatus()).isEqualTo(404);
+        assertThat(shouted.getContentAsString()).doesNotContain(token);
+    }
+
+    @Test
+    void sixty_reads_a_minute_from_one_address_then_a_refusal_that_names_no_token() throws Exception {
+        String path = createLink(bobId, "{\"label\":\"iPhone\",\"sources\":[\"EVENT\"]}");
+        String token = path.substring("/ical/".length(), path.length() - ".ics".length());
+        for (int i = 0; i < 60; i++) {
+            mockMvc.perform(get(path).with(from("203.0.113.5"))).andExpect(status().isOk());
+        }
+
+        MockHttpServletResponse limited = mockMvc.perform(get(path).with(from("203.0.113.5"))).andReturn().getResponse();
+
+        assertThat(limited.getStatus()).isEqualTo(429);
+        assertThat(limited.getContentAsString()).doesNotContain(token);
+        mockMvc.perform(get(path).with(from("203.0.113.6"))).andExpect(status().isOk());
+    }
+
+    private static RequestPostProcessor from(String address) {
+        return request -> {
+            request.setRemoteAddr(address);
+            return request;
+        };
+    }
+
     private String createLink(UUID userId, String body) throws Exception {
-        String response = mockMvc.perform(post(links()).cookie(tokenFor(userId)).contentType(MediaType.APPLICATION_JSON).content(body))
+        String response = mockMvc.perform(post(links()).cookie(TestAccessTokens.cookieFor(userId)).contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         return URI.create(objectMapper.readTree(response).get("url").asText()).getPath();
     }
 
     private void createEvent(String title, String day) throws Exception {
-        mockMvc.perform(post("/api/spaces/" + spaceId + "/calendar/events").cookie(tokenFor(aliceId))
+        mockMvc.perform(post("/api/spaces/" + spaceId + "/calendar/events").cookie(TestAccessTokens.cookieFor(aliceId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"title\":\"" + title + "\",\"allDay\":true,\"startDate\":\"" + day + "\",\"endDate\":\"" + day
                     + "\",\"participantIds\":[]}"))
@@ -226,42 +257,4 @@ class IcalFeedControllerIT {
         return "/api/spaces/" + spaceId + "/calendar/subscription-links";
     }
 
-    private UUID saveUser(String username) {
-        UserIdentityEntity user = new UserIdentityEntity();
-        user.setUsername(username);
-        user.setEmail(username + "@test.com");
-        user.setRole(Role.USER);
-        return users.saveAndFlush(user).getId();
-    }
-
-    private UUID saveSharedSpace(String name) {
-        SpaceEntity space = new SpaceEntity();
-        space.setType(SpaceType.SHARED);
-        TestSpaces.name(space, name);
-        space.setAccent("#c17a5c");
-        space.setGlyph("🏡");
-        return spaces.saveAndFlush(space).getId();
-    }
-
-    private void saveMembership(UUID space, UUID userId, SpaceRole role) {
-        SpaceMemberEntity member = new SpaceMemberEntity();
-        member.setSpaceId(space);
-        member.setUserId(userId);
-        member.setRole(role);
-        members.saveAndFlush(member);
-    }
-
-    private Cookie tokenFor(UUID userId) {
-        String token = Jwts.builder()
-            .issuer("nido")
-            .audience().add("nido").and()
-            .subject(userId.toString())
-            .claim("role", Role.USER.name())
-            .claim("email", userId + "@test.com")
-            .issuedAt(Date.from(Instant.now()))
-            .expiration(Date.from(Instant.now().plusSeconds(900)))
-            .signWith(Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
-            .compact();
-        return new Cookie("access_token", token);
-    }
 }

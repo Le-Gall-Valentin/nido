@@ -2,24 +2,17 @@ package com.nido.api.calendar.infrastructure.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nido.api.IntegrationTestConfig;
-import com.nido.api.TestSpaces;
+import com.nido.api.TestAccessTokens;
+import com.nido.api.TestPeople;
 import com.nido.api.calendar.domain.model.CalendarDigests;
+import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
+import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
 import com.nido.api.instance.InstanceSettingsTestSupport;
 import com.nido.api.instance.domain.model.SettingKey;
 import com.nido.api.instance.domain.port.out.SettingsStorePort;
-import com.nido.api.identity.infrastructure.persistence.entity.UserIdentityEntity;
-import com.nido.api.identity.infrastructure.persistence.repository.UserIdentityJpaRepository;
-import com.nido.api.infrastructure.ratelimit.RedisRateLimitBucketStore;
-import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceRole;
-import com.nido.api.space.domain.model.SpaceType;
-import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
-import com.nido.api.space.infrastructure.persistence.entity.SpaceMemberEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceMemberJpaRepository;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +26,6 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -48,8 +40,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @IntegrationTestConfig
 class CalendarSubscriptionLinkControllerIT {
-
-    private static final String JWT_SECRET = "integration-test-secret-at-least-32-chars!";
 
     @Autowired WebApplicationContext webApplicationContext;
     @Autowired UserIdentityJpaRepository users;
@@ -77,25 +67,26 @@ class CalendarSubscriptionLinkControllerIT {
         spaces.deleteAll();
         users.deleteAll();
 
-        aliceId = saveUser("alice");
-        bobId = saveUser("bob");
-        spaceId = saveSharedSpace("Chez Valentin");
-        saveMembership(spaceId, aliceId, SpaceRole.OWNER);
-        saveMembership(spaceId, bobId, SpaceRole.VIEWER);
-        bobsSpaceId = saveSharedSpace("Chez Bob");
-        saveMembership(bobsSpaceId, bobId, SpaceRole.OWNER);
+        aliceId = TestPeople.user(users, "alice");
+        bobId = TestPeople.user(users, "bob");
+        spaceId = TestPeople.sharedSpace(spaces, "Chez Valentin");
+        TestPeople.member(members, spaceId, aliceId, SpaceRole.OWNER);
+        TestPeople.member(members, spaceId, bobId, SpaceRole.VIEWER);
+        bobsSpaceId = TestPeople.sharedSpace(spaces, "Chez Bob");
+        TestPeople.member(members, bobsSpaceId, bobId, SpaceRole.OWNER);
         settingsStore.save(Map.of(SettingKey.PUBLIC_URL, Optional.of("https://nido.test")), null, Instant.now());
     }
 
     @AfterEach
     void noPublicAddress() {
         InstanceSettingsTestSupport.clear(settingsStore);
-        jdbc.update("DELETE FROM calendar_subscription_links");
+        // The database is shared with every other test: only this one's rows are touched.
+        jdbc.update("DELETE FROM calendar_subscription_links WHERE user_id IN (?, ?)", aliceId, bobId);
     }
 
     @Test
     void a_viewer_creates_an_address_shown_once_with_its_webcal_twin() throws Exception {
-        mockMvc.perform(post(links()).cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(links()).cookie(TestAccessTokens.cookieFor(bobId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"label\":\"iPhone\",\"sources\":[\"EVENT\",\"TASK\"],\"onlyMine\":true}"))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.url").value(org.hamcrest.Matchers.matchesPattern("https://nido\\.test/ical/[A-Za-z0-9_-]{43}\\.ics")))
@@ -104,7 +95,7 @@ class CalendarSubscriptionLinkControllerIT {
             .andExpect(jsonPath("$.link.sources[0]").value("EVENT"))
             .andExpect(jsonPath("$.link.onlyMine").value(true));
 
-        mockMvc.perform(get(links()).cookie(tokenFor(bobId)))
+        mockMvc.perform(get(links()).cookie(TestAccessTokens.cookieFor(bobId)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].label").value("iPhone"))
@@ -113,7 +104,7 @@ class CalendarSubscriptionLinkControllerIT {
             .andExpect(jsonPath("$[0].tokenHash").doesNotExist())
             .andExpect(jsonPath("$[0].lastReadAt").doesNotExist());
 
-        mockMvc.perform(get(links()).cookie(tokenFor(aliceId)))
+        mockMvc.perform(get(links()).cookie(TestAccessTokens.cookieFor(aliceId)))
             .andExpect(jsonPath("$.length()").value(0));
     }
 
@@ -122,7 +113,8 @@ class CalendarSubscriptionLinkControllerIT {
         String url = create(bobId, "T\u00e9l\u00e9phone de Bob");
         String token = url.substring(url.lastIndexOf('/') + 1, url.length() - ".ics".length());
 
-        Map<String, Object> row = jdbc.queryForMap("SELECT label_encrypted, token_hash FROM calendar_subscription_links");
+        Map<String, Object> row = jdbc.queryForMap("SELECT label_encrypted, token_hash FROM calendar_subscription_links WHERE user_id = ?",
+            bobId);
         assertThat((String) row.get("label_encrypted")).startsWith("v3:").doesNotContain("Bob");
         assertThat(row.get("token_hash")).isEqualTo(CalendarDigests.sha256Hex(token));
     }
@@ -130,11 +122,11 @@ class CalendarSubscriptionLinkControllerIT {
     @Test
     void an_address_is_revoked_by_its_owner_only() throws Exception {
         create(bobId, "iPhone");
-        String id = jdbc.queryForObject("SELECT id::text FROM calendar_subscription_links", String.class);
+        String id = jdbc.queryForObject("SELECT id::text FROM calendar_subscription_links WHERE user_id = ?", String.class, bobId);
 
-        mockMvc.perform(delete(links() + "/" + id).cookie(tokenFor(aliceId))).andExpect(status().isNotFound());
-        mockMvc.perform(delete(links() + "/" + id).cookie(tokenFor(bobId))).andExpect(status().isNoContent());
-        mockMvc.perform(get(links()).cookie(tokenFor(bobId))).andExpect(jsonPath("$.length()").value(0));
+        mockMvc.perform(delete(links() + "/" + id).cookie(TestAccessTokens.cookieFor(aliceId))).andExpect(status().isNotFound());
+        mockMvc.perform(delete(links() + "/" + id).cookie(TestAccessTokens.cookieFor(bobId))).andExpect(status().isNoContent());
+        mockMvc.perform(get(links()).cookie(TestAccessTokens.cookieFor(bobId))).andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
@@ -147,7 +139,7 @@ class CalendarSubscriptionLinkControllerIT {
         jdbc.update("UPDATE calendar_subscription_links SET label_encrypted = (SELECT label_encrypted FROM calendar_subscription_links "
             + "WHERE id = ?::uuid) WHERE id = ?::uuid", ids.get(1), ids.get(0));
 
-        mockMvc.perform(delete(links() + "/" + ids.get(0)).cookie(tokenFor(bobId))).andExpect(status().isNoContent());
+        mockMvc.perform(delete(links() + "/" + ids.get(0)).cookie(TestAccessTokens.cookieFor(bobId))).andExpect(status().isNoContent());
         assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_subscription_links WHERE id = ?::uuid", Long.class, ids.get(0)))
             .isZero();
     }
@@ -157,39 +149,48 @@ class CalendarSubscriptionLinkControllerIT {
         for (int i = 0; i < 10; i++) {
             create(bobId, "Appareil " + i);
         }
-        mockMvc.perform(post(links()).cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(links()).cookie(TestAccessTokens.cookieFor(bobId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"label\":\"Un de trop\",\"sources\":[\"EVENT\"]}"))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.error_code").value("too_many_links"));
 
         // The cap counts per person and per space: neither Alice here nor Bob elsewhere is held back.
         create(aliceId, "Premier");
-        mockMvc.perform(post("/api/spaces/" + bobsSpaceId + "/calendar/subscription-links").cookie(tokenFor(bobId))
+        mockMvc.perform(post("/api/spaces/" + bobsSpaceId + "/calendar/subscription-links").cookie(TestAccessTokens.cookieFor(bobId))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"label\":\"Ailleurs\",\"sources\":[\"EVENT\"]}"))
             .andExpect(status().isCreated());
     }
 
     @Test
     void an_address_of_another_space_is_not_revoked_through_this_one() throws Exception {
-        mockMvc.perform(post("/api/spaces/" + bobsSpaceId + "/calendar/subscription-links").cookie(tokenFor(bobId))
+        mockMvc.perform(post("/api/spaces/" + bobsSpaceId + "/calendar/subscription-links").cookie(TestAccessTokens.cookieFor(bobId))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"label\":\"Chez Bob\",\"sources\":[\"EVENT\"]}"))
             .andExpect(status().isCreated());
-        String id = jdbc.queryForObject("SELECT id::text FROM calendar_subscription_links", String.class);
+        String id = jdbc.queryForObject("SELECT id::text FROM calendar_subscription_links WHERE user_id = ?", String.class, bobId);
 
-        mockMvc.perform(delete(links() + "/" + id).cookie(tokenFor(bobId))).andExpect(status().isNotFound());
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_subscription_links", Long.class)).isEqualTo(1L);
+        mockMvc.perform(delete(links() + "/" + id).cookie(TestAccessTokens.cookieFor(bobId))).andExpect(status().isNotFound());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM calendar_subscription_links WHERE user_id = ?", Long.class, bobId))
+            .isEqualTo(1L);
     }
 
     @Test
     void a_null_source_is_refused() throws Exception {
-        mockMvc.perform(post(links()).cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(links()).cookie(TestAccessTokens.cookieFor(bobId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"label\":\"x\",\"sources\":[null]}"))
             .andExpect(status().isBadRequest());
     }
 
     @Test
+    void a_source_nido_does_not_know_is_an_invalid_source_as_on_export() throws Exception {
+        mockMvc.perform(post(links()).cookie(TestAccessTokens.cookieFor(bobId)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"label\":\"x\",\"sources\":[\"BOGUS\"]}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("invalid_sources"));
+    }
+
+    @Test
     void a_followed_calendar_cannot_be_subscribed_to_again() throws Exception {
-        mockMvc.perform(post(links()).cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(links()).cookie(TestAccessTokens.cookieFor(bobId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"label\":\"x\",\"sources\":[\"EXTERNAL\"]}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error_code").value("invalid_sources"));
@@ -198,14 +199,14 @@ class CalendarSubscriptionLinkControllerIT {
     @Test
     void without_a_public_address_no_address_can_be_given() throws Exception {
         InstanceSettingsTestSupport.clear(settingsStore);
-        mockMvc.perform(post(links()).cookie(tokenFor(bobId)).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(links()).cookie(TestAccessTokens.cookieFor(bobId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"label\":\"x\",\"sources\":[\"EVENT\"]}"))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.error_code").value("public_url_missing"));
     }
 
     private String create(UUID userId, String label) throws Exception {
-        String body = mockMvc.perform(post(links()).cookie(tokenFor(userId)).contentType(MediaType.APPLICATION_JSON)
+        String body = mockMvc.perform(post(links()).cookie(TestAccessTokens.cookieFor(userId)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"label\":\"" + label + "\",\"sources\":[\"EVENT\"]}"))
             .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         return objectMapper.readTree(body).get("url").asText();
@@ -215,42 +216,4 @@ class CalendarSubscriptionLinkControllerIT {
         return "/api/spaces/" + spaceId + "/calendar/subscription-links";
     }
 
-    private UUID saveUser(String username) {
-        UserIdentityEntity user = new UserIdentityEntity();
-        user.setUsername(username);
-        user.setEmail(username + "@test.com");
-        user.setRole(Role.USER);
-        return users.saveAndFlush(user).getId();
-    }
-
-    private UUID saveSharedSpace(String name) {
-        SpaceEntity space = new SpaceEntity();
-        space.setType(SpaceType.SHARED);
-        TestSpaces.name(space, name);
-        space.setAccent("#c17a5c");
-        space.setGlyph("🏡");
-        return spaces.saveAndFlush(space).getId();
-    }
-
-    private void saveMembership(UUID space, UUID userId, SpaceRole role) {
-        SpaceMemberEntity member = new SpaceMemberEntity();
-        member.setSpaceId(space);
-        member.setUserId(userId);
-        member.setRole(role);
-        members.saveAndFlush(member);
-    }
-
-    private Cookie tokenFor(UUID userId) {
-        String token = Jwts.builder()
-            .issuer("nido")
-            .audience().add("nido").and()
-            .subject(userId.toString())
-            .claim("role", Role.USER.name())
-            .claim("email", userId + "@test.com")
-            .issuedAt(Date.from(Instant.now()))
-            .expiration(Date.from(Instant.now().plusSeconds(900)))
-            .signWith(Keys.hmacShaKeyFor(JWT_SECRET.getBytes(StandardCharsets.UTF_8)))
-            .compact();
-        return new Cookie("access_token", token);
-    }
 }

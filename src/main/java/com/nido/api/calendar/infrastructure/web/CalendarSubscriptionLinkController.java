@@ -63,9 +63,9 @@ public class CalendarSubscriptionLinkController {
     public ResponseEntity<CreatedSubscriptionLinkResponse> create(
             @PathVariable UUID spaceId, @Valid @RequestBody SubscriptionLinkRequest request,
             @Parameter(hidden = true) @CurrentMembership SpaceMembership membership) {
+        List<CalendarSourceType> sources = CalendarSourceType.named(request.sources());
         CreatedSubscriptionLink created = createUseCase.create(new CreateSubscriptionLinkCommand(request.label(),
-            request.sources() == null || request.sources().isEmpty()
-                ? EnumSet.noneOf(CalendarSourceType.class) : EnumSet.copyOf(request.sources()),
+            sources.isEmpty() ? EnumSet.noneOf(CalendarSourceType.class) : EnumSet.copyOf(sources),
             request.onlyMineOrDefault()), membership);
         return ResponseEntity.status(HttpStatus.CREATED).body(new CreatedSubscriptionLinkResponse(
             SubscriptionLinkResponse.from(created.link()), created.url(), created.webcalUrl()));
