@@ -137,6 +137,43 @@ class CalendarSchemaIT {
     }
 
     @Test
+    void rejectsAWeeklySeriesWithoutItsDaysAndAnotherWithDays() {
+        assertThatThrownBy(() -> series("'WEEKLY'", "NULL", "'SAME_DAY'")).hasMessageContaining("chk_cres_weekdays");
+        assertThatThrownBy(() -> series("'DAILY'", "'MO'", "'SAME_DAY'")).hasMessageContaining("chk_cres_weekdays");
+    }
+
+    @Test
+    void rejectsWeekdaysNidoCannotRead() {
+        assertThatThrownBy(() -> series("'WEEKLY'", "'MO,XX'", "'SAME_DAY'")).hasMessageContaining("chk_cres_weekdays_format");
+        assertThatThrownBy(() -> series("'WEEKLY'", "'mo'", "'SAME_DAY'")).hasMessageContaining("chk_cres_weekdays_format");
+    }
+
+    @Test
+    void rejectsADayRuleNidoDoesNotKnowOrOneOfAnotherFrequency() {
+        assertThatThrownBy(() -> series("'MONTHLY'", "NULL", "'FIFTH_FRIDAY'")).hasMessageContaining("chk_cres_day_rule");
+        assertThatThrownBy(() -> series("'DAILY'", "NULL", "'LAST_DAY_OF_MONTH'"))
+            .hasMessageContaining("chk_cres_day_rule_frequency");
+    }
+
+    @Test
+    void acceptsTheDaysAndTheDayRulesOfEachFrequency() {
+        assertThatCode(() -> {
+            series("'WEEKLY'", "'MO,TH'", "'SAME_DAY'");
+            series("'MONTHLY'", "NULL", "'LAST_WEEKDAY_OF_MONTH'");
+            series("'YEARLY'", "NULL", "'WEEKDAY_OF_MONTH'");
+        }).doesNotThrowAnyException();
+    }
+
+    private void series(String intervalType, String weekdays, String dayRule) {
+        jdbc.update(("""
+            INSERT INTO calendar_recurring_event_series
+              (space_id, title_encrypted, all_day, duration_days, interval_type, interval_count, weekdays, day_rule,
+               anchor_date, created_by)
+            VALUES (?, 'x', true, 0, %s, 1, %s, %s, '2026-10-29', ?)
+            """).formatted(intervalType, weekdays, dayRule), spaceId, aliceId);
+    }
+
+    @Test
     void cascadesExclusionsAndDetachedInstancesWhenASeriesIsDeleted() {
         UUID seriesId = insertSeries();
         insertEvent("true", "'2026-01-05'", "NULL", "'2026-01-05'", "NULL", "'" + seriesId + "'", "'2026-01-03'");
