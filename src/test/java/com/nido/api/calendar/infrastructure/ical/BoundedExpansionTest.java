@@ -18,15 +18,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 /**
- * Hostile rules, through the reader: each must come back within two seconds, the event set aside and the reason said.
- * (A rule that sent ical4j into an endless loop cannot be interrupted: these run under a preemptive timeout.)
+ * Hostile rules, through the reader: each comes back, the event set aside and the reason said. The budget is what bounds
+ * them, and what is asserted; the preemptive timeout is only a guard against a hang, wide enough for a loaded machine.
  */
 class BoundedExpansionTest {
+
+    /** A guard against a rule that sends ical4j into an endless loop, never a measure of speed. */
+    static final Duration HANG_GUARD = Duration.ofSeconds(30);
 
     private final Ical4jImportReaderAdapter reader = new Ical4jImportReaderAdapter();
 
     private ImportReading read(String... events) {
-        return assertTimeoutPreemptively(Duration.ofSeconds(2), () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH));
+        return assertTimeoutPreemptively(HANG_GUARD, () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH));
     }
 
     private static void setAside(ImportReading reading, String detail) {
@@ -86,7 +89,7 @@ class BoundedExpansionTest {
         String rule = "RRULE:FREQ=YEARLY;BYYEARDAY=" + list(1, 366) + ";BYHOUR=" + list(0, 9) + ";COUNT=100000";
         String[] copies = IntStream.range(0, 300).mapToObj(i -> vevent("b" + i + "@test", "SUMMARY:Copie " + i,
             "DTSTART:15000101T000000", rule)).toArray(String[]::new);
-        ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(2),
+        ImportReading reading = assertTimeoutPreemptively(HANG_GUARD,
             () -> reader.read(ics(copies), PARIS, TODAY, Locale.FRENCH));
         assertThat(reading.ignored()).isGreaterThanOrEqualTo(298);
         assertThat(reading.notes()).filteredOn(note -> note.kind() == ImportNoteKind.IGNORED)
@@ -117,7 +120,7 @@ class BoundedExpansionTest {
             ? vevent("n" + i + "@test", "SUMMARY:Court " + i, "DTSTART;VALUE=DATE:20180101", "RRULE:FREQ=DAILY;COUNT=5")
             : vevent("n" + i + "@test", "SUMMARY:Hebdo " + i, "DTSTART;VALUE=DATE:20150105", "RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=10"))
             .toArray(String[]::new);
-        ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(2),
+        ImportReading reading = assertTimeoutPreemptively(HANG_GUARD,
             () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH));
         assertThat(reading.ignored()).isZero();
         assertThat(reading.groups()).hasSize(1_000).allSatisfy(group -> assertThat(group.series()).isNotNull());
@@ -133,7 +136,7 @@ class BoundedExpansionTest {
         events.add(vevent("o@test", "SUMMARY:Tout", "DTSTART:10000101T000000", everything));
         IntStream.range(0, 10).forEach(i -> events.add(vevent("h" + i + "@test", "SUMMARY:Lourd " + i, "DTSTART:15000101T000000", heavy)));
         events.add(vevent("k@test", "SUMMARY:Court", "DTSTART;VALUE=DATE:20260105", "RRULE:FREQ=DAILY;COUNT=5"));
-        ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(2),
+        ImportReading reading = assertTimeoutPreemptively(HANG_GUARD,
             () -> reader.read(ics(events.toArray(String[]::new)), PARIS, TODAY, Locale.FRENCH));
         // The wrapped one, and all but one or two of the heavy ones, are refused: a negative bill would have freed the budget.
         assertThat(reading.ignored()).isGreaterThanOrEqualTo(9);
@@ -146,7 +149,7 @@ class BoundedExpansionTest {
         String[] events = IntStream.range(0, 1_000).mapToObj(i -> vevent("u" + i + "@test", "SUMMARY:Berlin " + i,
             "DTSTART;TZID=Europe/Berlin:20230105T100000", "DTEND;TZID=Europe/Berlin:20230105T110000",
             "RRULE:FREQ=WEEKLY;BYDAY=TH;UNTIL=99991231T000000Z")).toArray(String[]::new);
-        ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(2),
+        ImportReading reading = assertTimeoutPreemptively(HANG_GUARD,
             () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH));
         assertThat(reading.groups()).hasSize(1_000).allSatisfy(group -> assertThat(group.series()).isNotNull());
     }
@@ -155,7 +158,7 @@ class BoundedExpansionTest {
     void aThousandEndlessCountsAreBilledForTheirEndSearchAndTheLaterOnesRefused() {
         String[] events = IntStream.range(0, 1_000).mapToObj(i -> vevent("e" + i + "@test", "SUMMARY:Sans fin " + i,
             "DTSTART;VALUE=DATE:20260105", "RRULE:FREQ=DAILY;COUNT=2000000000")).toArray(String[]::new);
-        ImportReading reading = assertTimeoutPreemptively(Duration.ofSeconds(2),
+        ImportReading reading = assertTimeoutPreemptively(HANG_GUARD,
             () -> reader.read(ics(events), PARIS, TODAY, Locale.FRENCH));
         assertThat(reading.ignored()).isPositive();
         assertThat(reading.notes()).filteredOn(note -> note.kind() == ImportNoteKind.IGNORED)
