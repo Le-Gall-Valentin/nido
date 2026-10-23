@@ -316,7 +316,7 @@ class Ical4jFeedReaderAdapterTest {
         LocalDate from = LocalDate.of(2026, 10, 1);
         LocalDate to = LocalDate.of(2026, 10, 31);
 
-        try (LogCapture logs = LogCapture.of(Ical4jFeedReaderAdapter.class)) {
+        try (LogCapture logs = LogCapture.atEveryLevel(Ical4jFeedReaderAdapter.class)) {
             occurrencesOf(one, () -> file, PARIS, Locale.FRENCH, from, to);
             assertThat(logs.messages()).as("the rule is tried, and refused").filteredOn(m -> m.contains("left out (TOO_HEAVY)")).hasSize(1);
             List<CalendarOccurrence> again = occurrencesOf(one, () -> file, PARIS, Locale.FRENCH, from, to);

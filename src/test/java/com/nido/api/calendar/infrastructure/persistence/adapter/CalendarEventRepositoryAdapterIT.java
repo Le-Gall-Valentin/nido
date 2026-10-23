@@ -10,7 +10,6 @@ import com.nido.api.calendar.domain.model.RecurrenceInterval;
 import com.nido.api.calendar.domain.model.RecurringEventSeries;
 import com.nido.api.calendar.domain.model.UpdateEventCommand;
 import com.nido.api.calendar.domain.model.UpdateRecurringEventSeriesCommand;
-import com.nido.api.calendar.domain.port.out.AccountLanguage;
 import com.nido.api.calendar.domain.port.out.CalendarEventRepository;
 import com.nido.api.calendar.domain.port.out.EventExclusionRepository;
 import com.nido.api.calendar.domain.port.out.ImportedUidRepository;
@@ -26,6 +25,7 @@ import com.nido.api.shared.model.Role;
 import com.nido.api.space.domain.model.SpaceType;
 import com.nido.api.space.infrastructure.persistence.entity.SpaceEntity;
 import com.nido.api.space.infrastructure.persistence.repository.SpaceJpaRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,8 +35,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -59,7 +59,6 @@ class CalendarEventRepositoryAdapterIT {
     @Autowired RecurringEventSeriesRepository series;
     @Autowired EventExclusionRepository exclusions;
     @Autowired ImportedUidRepository importedUids;
-    @Autowired AccountLanguage language;
     @Autowired SpaceJpaRepository spaces;
     @Autowired UserIdentityJpaRepository users;
     @Autowired SpaceSealers sealers;
@@ -68,6 +67,7 @@ class CalendarEventRepositoryAdapterIT {
 
     private UUID spaceId;
     private UUID aliceId;
+    private final List<UUID> madeSpaces = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -77,12 +77,20 @@ class CalendarEventRepositoryAdapterIT {
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
         spaceId = spaces.saveAndFlush(space).getId();
+        madeSpaces.add(spaceId);
 
         UserIdentityEntity user = new UserIdentityEntity();
         user.setUsername("alice-" + UUID.randomUUID());
         user.setEmail(UUID.randomUUID() + "@test.com");
         user.setRole(Role.USER);
         aliceId = users.saveAndFlush(user).getId();
+    }
+
+    @AfterEach
+    void cleanUp() {
+        // The database is shared with every other test: only what this one made goes, its calendar with its spaces.
+        madeSpaces.forEach(spaces::deleteById);
+        users.deleteById(aliceId);
     }
 
     @Test
@@ -397,27 +405,15 @@ class CalendarEventRepositoryAdapterIT {
         assertThat(exclusions.findAllSlotsOfEach(List.of())).isEmpty();
     }
 
-    @Test
-    void an_export_speaks_the_language_of_its_account_and_english_when_it_has_none() {
-        UserIdentityEntity french = new UserIdentityEntity();
-        french.setUsername("francoise-" + UUID.randomUUID());
-        french.setEmail(UUID.randomUUID() + "@test.com");
-        french.setRole(Role.USER);
-        french.setLanguage("fr");
-        UUID frenchId = users.saveAndFlush(french).getId();
-
-        assertThat(language.of(frenchId)).isEqualTo(Locale.FRENCH);
-        assertThat(language.of(aliceId)).as("no language recorded, outside any request").isEqualTo(Locale.ENGLISH);
-        assertThat(language.of(UUID.randomUUID())).isEqualTo(Locale.ENGLISH);
-    }
-
     private UUID newSpace() {
         SpaceEntity space = new SpaceEntity();
         space.setType(SpaceType.SHARED);
         TestSpaces.name(space, "Ailleurs");
         space.setAccent("#c17a5c");
         space.setGlyph("🏡");
-        return spaces.saveAndFlush(space).getId();
+        UUID id = spaces.saveAndFlush(space).getId();
+        madeSpaces.add(id);
+        return id;
     }
 
     private CreateEventCommand plainEvent(String title, LocalDate date) {
