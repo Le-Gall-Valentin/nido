@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { EVENT_COLORS, type CalendarOccurrence } from '@/entities/calendar'
-import { DISPLAY_ORDER, DOT_CLASS, SOURCE_ORDER, SOURCE_TOKEN, TINT_CLASS, tokenFor } from './sourceAppearance'
+import { DISPLAY_ORDER, DOT_CLASS, SOURCE_ORDER, SOURCE_TOKEN, TINT_CLASS, dayDots, tokenFor } from './sourceAppearance'
 
 function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence {
   return {
@@ -10,6 +10,10 @@ function occurrence(overrides: Partial<CalendarOccurrence>): CalendarOccurrence 
   }
 }
 
+/**
+ * The sources of the space itself: no event may wear one of their colours. A followed calendar is no such source —
+ * it wears an event colour of its own choosing (spec §8), graphite by default.
+ */
 const OTHER_SOURCES = [SOURCE_TOKEN.TASK, SOURCE_TOKEN.FINANCE, SOURCE_TOKEN.MEAL, SOURCE_TOKEN.SAVINGS] as string[]
 
 describe('source colours', () => {
@@ -44,6 +48,10 @@ describe('event colours', () => {
     for (const color of EVENT_COLORS) expect(OTHER_SOURCES).not.toContain(color)
   })
 
+  it('dresses a followed calendar in an event colour, by design: one of the palette it is offered', () => {
+    expect(EVENT_COLORS as readonly string[]).toContain(SOURCE_TOKEN.EXTERNAL)
+  })
+
   it('honours an event colour an event was given', () => {
     expect(tokenFor(occurrence({ color: 'event-cyan' }))).toBe('event-cyan')
   })
@@ -64,5 +72,20 @@ describe('event colours', () => {
       expect(DOT_CLASS[token]).toBe(`bg-${token}`)
       expect(TINT_CLASS[token]).toBe(`bg-${token}-dim text-${token}`)
     }
+  })
+})
+
+describe('a day\'s dots on a phone', () => {
+  it('gives one dot per source present, and one per colour of the followed calendars present', () => {
+    const dots = dayDots([
+      occurrence({ source: 'TASK' }), occurrence({ source: 'TASK' }),
+      occurrence({ source: 'EXTERNAL', color: 'event-cyan' }), occurrence({ source: 'EXTERNAL', color: 'event-cyan' }),
+      occurrence({ source: 'EXTERNAL', color: 'event-indigo' }), occurrence({ source: 'EVENT' }),
+    ])
+
+    expect(dots.map((dot) => [dot.source, dot.className])).toEqual([
+      ['EVENT', 'bg-event-violet'], ['TASK', 'bg-status-blue'],
+      ['EXTERNAL', 'bg-event-cyan'], ['EXTERNAL', 'bg-event-indigo'],
+    ])
   })
 })

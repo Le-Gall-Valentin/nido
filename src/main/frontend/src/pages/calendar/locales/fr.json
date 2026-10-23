@@ -66,8 +66,7 @@
       "TASK": "Ouvrir dans Tâches",
       "FINANCE": "Ouvrir dans Finances",
       "MEAL": "Planifier ce repas",
-      "SAVINGS": "Ouvrir dans Épargne",
-      "EXTERNAL": "Ouvrir"
+      "SAVINGS": "Ouvrir dans Épargne"
     }
   },
   "form": {
@@ -137,6 +136,7 @@
     "day_rule": "Jour",
     "day_rule_needs_start": "Indiquez d'abord la date de début",
     "day_rule_fell_back": "Jour remis sur « {{rule}} » : la nouvelle date de début ne permet pas celui choisi.",
+    "day_rule_restored": "Jour revenu à « {{rule}} » : la nouvelle date de début le permet de nouveau.",
     "edit_title": "Modifier la série",
     "empty": "Aucun événement récurrent.",
     "edit": "Modifier {{name}}",

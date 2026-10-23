@@ -8,7 +8,7 @@ import { canReschedule } from '@/features/reschedule-occurrence'
 import type { DragData, DropData } from '../lib/dragTypes'
 import { covers } from '../lib/segments'
 import { fadeClassFor, useDragPreview } from '../model/dragPreview'
-import { DISPLAY_ORDER, dotClassFor, dotClassForSource } from '../lib/sourceAppearance'
+import { dayDots, dotClassFor } from '../lib/sourceAppearance'
 import { formatDay, formatDayAndMonth } from '../lib/periodLabel'
 
 interface MonthGridProps {
@@ -75,8 +75,7 @@ export function MonthGrid({
           const dayOccurrences = byDay.get(day) ?? []
           const isToday = day === today
           const isOutside = day.slice(0, 7) !== shownMonth
-          const sourcesPresent = DISPLAY_ORDER.filter(
-            (source) => dayOccurrences.some((o) => o.source === source))
+          const dots = dayDots(dayOccurrences)
           const open = () => (isOutside ? onSelectMonth(day) : onSelectDay(day))
           const faded = isOutside ? 'opacity-50' : ''
 
@@ -100,15 +99,15 @@ export function MonthGrid({
                 ) : Number(day.slice(8, 10))}
               </button>
 
-              {/* Phone: one dot per source present — never one per occurrence. Faded, the row
-                  would be drawn over the stretched day button and swallow the taps meant for it. */}
+              {/* Phone: one dot per source present, per followed calendar's colour — never one per occurrence. Faded,
+                  the row would be drawn over the stretched day button and swallow the taps meant for it. */}
               <div className={`pointer-events-none flex flex-wrap gap-1 px-0.5 md:hidden ${faded}`}>
-                {sourcesPresent.map((source) => (
+                {dots.map((dot) => (
                   <span
-                    key={source}
+                    key={dot.key}
                     data-testid="day-dot"
-                    data-source={source}
-                    className={`size-1.5 rounded-full ${dotClassForSource(source)}`}
+                    data-source={dot.source}
+                    className={`size-1.5 rounded-full ${dot.className}`}
                   />
                 ))}
               </div>

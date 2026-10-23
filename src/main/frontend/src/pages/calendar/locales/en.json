@@ -66,8 +66,7 @@
       "TASK": "Open in Tasks",
       "FINANCE": "Open in Finance",
       "MEAL": "Plan this meal",
-      "SAVINGS": "Open in Savings",
-      "EXTERNAL": "Open"
+      "SAVINGS": "Open in Savings"
     }
   },
   "form": {
@@ -137,6 +136,7 @@
     "day_rule": "Day",
     "day_rule_needs_start": "Enter the start date first",
     "day_rule_fell_back": "Day set back to “{{rule}}”: the new start date does not allow the one chosen.",
+    "day_rule_restored": "Day back to “{{rule}}”: the new start date allows it again.",
     "edit_title": "Edit series",
     "empty": "No recurring events.",
     "edit": "Edit {{name}}",
