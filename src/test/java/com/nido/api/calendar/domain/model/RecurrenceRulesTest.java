@@ -125,9 +125,12 @@ class RecurrenceRulesTest {
             LocalDate.of(2027, 2, 28)))
             .contains(new RecurrenceRules.Candidate(RecurrenceInterval.MONTHLY, 2, null, DayRule.SAME_DAY,
                 LocalDate.of(2026, 12, 30), LocalDate.of(2027, 2, 28)));
-        // Every other year from 28 February 2027: 2025 and 2023 have no leap day, 2021 neither, 2019... none in that rhythm.
+        // Every other year from 28 February 2027: 2025 and 2023 have no leap day, 2021 neither, 2019... none in that rhythm,
+        // and none ever will: the rule says the last day of February, every other year.
         assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", 2, List.of(), List.of(28, 29), List.of(2), List.of(-1)),
-            LocalDate.of(2027, 2, 28))).isEmpty();
+            LocalDate.of(2027, 2, 28)))
+            .contains(new RecurrenceRules.Candidate(RecurrenceInterval.YEARLY, 2, null, DayRule.LAST_DAY_OF_MONTH,
+                LocalDate.of(2027, 2, 28), null));
         assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", 3, List.of(), List.of(28, 29), List.of(2), List.of(-1)),
             LocalDate.of(2027, 2, 28)))
             .contains(new RecurrenceRules.Candidate(RecurrenceInterval.YEARLY, 3, null, DayRule.SAME_DAY,
@@ -178,6 +181,29 @@ class RecurrenceRulesTest {
             LocalDate.of(2027, 4, 30)).map(RecurrenceRules.Candidate::dayRule)).contains(DayRule.SAME_DAY);
         assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 1, List.of(), List.of(28), List.of(), List.of()),
             LocalDate.of(2027, 1, 28)).map(RecurrenceRules.Candidate::dayRule)).contains(DayRule.SAME_DAY);
+    }
+
+    @Test
+    void aWeekdayRankedByItsPositionInTheMonthIsARankedWeekday() {
+        assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 1, List.of(day(0, DayOfWeek.TUESDAY)), List.of(), List.of(), List.of(2)),
+            LocalDate.of(2026, 10, 13)).map(RecurrenceRules.Candidate::dayRule)).contains(DayRule.WEEKDAY_OF_MONTH);
+        assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 1, List.of(day(0, DayOfWeek.FRIDAY)), List.of(), List.of(), List.of(-1)),
+            LocalDate.of(2026, 10, 30)).map(RecurrenceRules.Candidate::dayRule)).contains(DayRule.LAST_WEEKDAY_OF_MONTH);
+        assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", 1, List.of(day(0, DayOfWeek.THURSDAY)), List.of(), List.of(11), List.of(4)),
+            LocalDate.of(2026, 11, 26)).map(RecurrenceRules.Candidate::dayRule)).contains(DayRule.WEEKDAY_OF_MONTH);
+        // Over a whole year, the second Tuesday is January's: no month of nido's.
+        assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", 1, List.of(day(0, DayOfWeek.TUESDAY)), List.of(), List.of(), List.of(2)),
+            LocalDate.of(2026, 1, 13))).isEmpty();
+        assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 1, List.of(day(0, DayOfWeek.TUESDAY)), List.of(), List.of(), List.of(5)),
+            LocalDate.of(2026, 3, 31))).isEmpty();
+    }
+
+    @Test
+    void theLastOfDaysNoMonthOfTheRuleOutlastsIsTheLastDayOfTheMonth() {
+        assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", 1, List.of(), List.of(28, 29, 30, 31), List.of(4), List.of(-1)),
+            LocalDate.of(2027, 4, 30)))
+            .contains(new RecurrenceRules.Candidate(RecurrenceInterval.YEARLY, 1, null, DayRule.LAST_DAY_OF_MONTH,
+                LocalDate.of(2027, 4, 30), null));
     }
 
     @Test

@@ -146,8 +146,9 @@ public final class RecurrenceRules {
         if (r.byDay().isEmpty() && monthDays.isEmpty() && r.bySetPos().isEmpty()) {
             return plainDay(type, count, first);
         }
-        if (r.byDay().size() == 1 && monthDays.isEmpty() && r.bySetPos().isEmpty()) {
-            IcalRecurrence.ByDay byDay = r.byDay().getFirst();
+        Optional<IcalRecurrence.ByDay> ranked = rankedWeekday(r, type);
+        if (ranked.isPresent()) {
+            IcalRecurrence.ByDay byDay = ranked.get();
             if (byDay.day() != first.getDayOfWeek()) {
                 return Optional.empty();
             }
@@ -198,6 +199,26 @@ public final class RecurrenceRules {
     }
 
     /**
+     * One weekday of a month, ranked: {@code BYDAY=2TU}, or the same said as Outlook may, {@code BYDAY=TU;BYSETPOS=2} —
+     * within a month only, which a yearly rule says by naming its month.
+     */
+    private static Optional<IcalRecurrence.ByDay> rankedWeekday(IcalRecurrence r, RecurrenceInterval type) {
+        if (r.byDay().size() != 1 || !r.byMonthDay().isEmpty()) {
+            return Optional.empty();
+        }
+        IcalRecurrence.ByDay byDay = r.byDay().getFirst();
+        if (r.bySetPos().isEmpty()) {
+            return Optional.of(byDay);
+        }
+        int position = r.bySetPos().getFirst();
+        boolean withinAMonth = type == RecurrenceInterval.MONTHLY || r.byMonth().size() == 1;
+        boolean aRank = position == -1 || position >= 1 && position <= 4;
+        return r.bySetPos().size() == 1 && byDay.offset() == 0 && withinAMonth && aRank
+            ? Optional.of(new IcalRecurrence.ByDay(position, byDay.day()))
+            : Optional.empty();
+    }
+
+    /**
      * The {@code day}th of the month, or its last day when shorter. Its first occurrence may be capped — 28 February for
      * "the 30th" —, and nido reads the day off the anchor: the anchor is then the last month before it that has that
      * day, in the series' rhythm, and the series is shown from its first occurrence.
@@ -217,6 +238,14 @@ public final class RecurrenceRules {
                 return Optional.of(new Candidate(type, count, null, DayRule.SAME_DAY, month.atDay(day), first));
             }
         }
-        return Optional.empty();
+        // No month of its rhythm has that day: when none ever has more days, the rule says the last day of the month —
+        // 28 or 29 February every other year from an ordinary one, the 28th to 31st of April.
+        int months = type == RecurrenceInterval.MONTHLY ? count % 12 : 0;
+        boolean alwaysTheLast = IntStream.range(0, 12)
+            .mapToObj(k -> first.getMonth().plus((long) k * months))
+            .allMatch(month -> month.maxLength() <= day);
+        return alwaysTheLast && DayRule.LAST_DAY_OF_MONTH.fits(first)
+            ? Optional.of(new Candidate(type, count, null, DayRule.LAST_DAY_OF_MONTH, first, null))
+            : Optional.empty();
     }
 }
