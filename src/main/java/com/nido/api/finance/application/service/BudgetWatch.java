@@ -31,7 +31,10 @@ import java.util.UUID;
  *
  * <p>The same figures as the finance page: what {@link BudgetLine} makes of the month's expenses in the category. A
  * past month is not watched — its budget is over and done with — and neither are the occurrences a recurring
- * transaction records by itself, which nobody's gesture writes.
+ * transaction records by itself, which nobody's gesture writes. Unlike the page, nothing is materialized here: an
+ * occurrence already due but not yet recorded counts once a read of the finances records it. The page reads them
+ * before its form opens, so a gesture made from it sees them; one made long after anybody last opened the finances
+ * may miss a crossing they would have caused.
  */
 @ApplicationService
 public class BudgetWatch {
@@ -81,15 +84,18 @@ public class BudgetWatch {
         watched.ifPresent(before -> {
             BigDecimal spent = spent(actor.spaceId(), before.categoryId(), before.month());
             BudgetStatus status = new BudgetLine(before.categoryId(), before.limit(), spent).status();
-            if (status.isWorseThan(before.status())) {
+            if (!status.isWorseThan(before.status())) {
+                return;
+            }
+            // An alert that cannot name its category says nothing worth a mail.
+            categories.findById(before.categoryId()).map(Category::label).ifPresent(label ->
                 audience.of(actor).ifPresent(heard -> {
                     List<Addressee> readers = heard.everyoneButTheActor();
                     if (!readers.isEmpty()) {
-                        notifications.budgetCrossed(heard.gesture(), status, new BudgetAlert(categoryLabel(before.categoryId()),
-                            before.month(), spent, before.limit(), cause.label(), cause.amount()), readers);
+                        notifications.budgetCrossed(heard.gesture(), status, new BudgetAlert(label, before.month(), spent,
+                            before.limit(), cause.label(), cause.amount()), readers);
                     }
-                });
-            }
+                }));
         });
     }
 
@@ -99,9 +105,5 @@ public class BudgetWatch {
             .filter(t -> t.type() == TransactionType.EXPENSE && t.categoryId().equals(categoryId))
             .map(Transaction::amount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private String categoryLabel(UUID categoryId) {
-        return categories.findById(categoryId).map(Category::label).orElse(null);
     }
 }

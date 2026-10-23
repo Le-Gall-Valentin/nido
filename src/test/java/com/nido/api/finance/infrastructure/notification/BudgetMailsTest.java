@@ -45,11 +45,11 @@ class BudgetMailsTest {
 
         assertThat(fr.subject()).isEqualTo("Budget Alimentation : 83 % atteints");
         assertThat(fr.text()).contains("Bonjour bob,",
-            "Dans l’espace « Chez nous », avec l’opération « Courses » (35,00 €) saisie par alice, les dépenses « Alimentation » "
+            "Dans l’espace « Chez nous », alice a enregistré l’opération « Courses » (35,00 €) : les dépenses « Alimentation » "
                 + "en octobre 2026 atteignent 415,00 € sur un budget de 500,00 €.",
             "Voir les finances\nhttps://nido.example/s/42/finance");
         assertThat(en.subject()).isEqualTo("Alimentation budget: 83% used");
-        assertThat(en.text()).contains("In the space “Our place”, with alice’s transaction “Courses” (€35.00), the “Alimentation” "
+        assertThat(en.text()).contains("In the space “Our place”, alice saved the transaction “Courses” (€35.00): the “Alimentation” "
             + "spending for October 2026 reaches €415.00 of a €500.00 budget.");
     }
 
@@ -61,10 +61,10 @@ class BudgetMailsTest {
             Locale.ENGLISH);
 
         assertThat(fr.subject()).isEqualTo("Budget Alimentation dépassé");
-        assertThat(fr.text()).contains("Dans l’espace « Chez nous », avec l’opération « Courses » (35,00 €) saisie par alice, les dépenses "
-            + "« Alimentation » en octobre 2026 atteignent 520,00 € : le budget de 500,00 € est dépassé.");
+        assertThat(fr.text()).contains("Dans l’espace « Chez nous », alice a enregistré l’opération « Courses » (35,00 €) : les dépenses "
+            + "« Alimentation » en octobre 2026 atteignent 520,00 € : le budget de 500,00 € est dépassé de 20,00 €.");
         assertThat(en.subject()).isEqualTo("Alimentation budget exceeded");
-        assertThat(en.text()).contains("In the space “Our place”, with alice’s transaction “Courses” (€35.00), the “Alimentation” "
-            + "spending for October 2026 reaches €520.00: the €500.00 budget is exceeded.");
+        assertThat(en.text()).contains("In the space “Our place”, alice saved the transaction “Courses” (€35.00): the “Alimentation” "
+            + "spending for October 2026 reaches €520.00: the €500.00 budget is exceeded by €20.00.");
     }
 }

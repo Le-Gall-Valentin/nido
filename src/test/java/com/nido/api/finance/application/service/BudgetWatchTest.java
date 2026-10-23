@@ -223,4 +223,15 @@ class BudgetWatchTest {
             new BudgetAlert("Alimentation", OCTOBER, new BigDecimal("0.01"), new BigDecimal("0.00"), "Courses", new BigDecimal("0.01")),
             theOthers);
     }
+
+    @Test
+    void a_category_that_can_no_longer_be_read_tells_nobody() {
+        budgetOf("500.00");
+        octoberHolds(spending("380.00"), spending("520.00"));
+        when(categories.findById(groceries)).thenReturn(Optional.empty());
+
+        watch.after(aliceActs, watchedGroceries(), expense("35.00", groceries));
+
+        verifyNoInteractions(port);
+    }
 }

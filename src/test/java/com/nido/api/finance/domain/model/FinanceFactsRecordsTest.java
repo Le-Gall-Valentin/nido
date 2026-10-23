@@ -62,6 +62,12 @@ class FinanceFactsRecordsTest {
     }
 
     @Test
+    void a_budget_alert_says_how_far_past_the_budget_the_spending_went() {
+        assertThat(alert("520.00", "500.00").overrun()).isEqualByComparingTo("20.00");
+        assertThat(alert("415.00", "500.00").overrun()).isEqualByComparingTo("0");
+    }
+
+    @Test
     void involvement_follows_where_the_reader_stands_before_and_after() {
         assertThat(Involvement.of(true, true)).isEqualTo(Involvement.CHANGED);
         assertThat(Involvement.of(false, true)).isEqualTo(Involvement.ADDED);
