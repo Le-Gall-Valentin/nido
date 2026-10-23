@@ -6,6 +6,7 @@ import com.nido.api.calendar.application.port.in.RefreshExternalFeedUseCase;
 import com.nido.api.calendar.application.port.in.RemoveExternalFeedUseCase;
 import com.nido.api.calendar.application.port.in.UpdateExternalFeedUseCase;
 import com.nido.api.calendar.domain.model.FollowExternalFeedCommand;
+import com.nido.api.calendar.domain.model.UpdateExternalFeedCommand;
 import com.nido.api.calendar.infrastructure.web.dto.ExternalFeedRequest;
 import com.nido.api.calendar.infrastructure.web.dto.ExternalFeedResponse;
 import com.nido.api.calendar.infrastructure.web.dto.ExternalFeedUpdateRequest;
@@ -78,7 +79,7 @@ public class CalendarExternalFeedController {
     public ResponseEntity<ExternalFeedResponse> update(
             @PathVariable UUID spaceId, @PathVariable UUID feedId, @Valid @RequestBody ExternalFeedUpdateRequest request,
             @Parameter(hidden = true) @CurrentMembership(min = SpaceRole.MEMBER) SpaceMembership membership) {
-        return ResponseEntity.ok(ExternalFeedResponse.from(updateUseCase.update(feedId, request.name(), request.color(), membership)));
+        return ResponseEntity.ok(ExternalFeedResponse.from(updateUseCase.update(feedId, new UpdateExternalFeedCommand(request.name(), request.color()), membership)));
     }
 
     @DeleteMapping("/{feedId}")

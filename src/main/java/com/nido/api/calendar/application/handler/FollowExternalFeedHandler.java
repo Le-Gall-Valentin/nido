@@ -26,7 +26,6 @@ import java.time.Clock;
 public class FollowExternalFeedHandler implements FollowExternalFeedUseCase {
 
     static final int MAX_PER_SPACE = 10;
-    static final int MAX_NAME = 100;
 
     private final ExternalFeedRepository feeds;
     private final ExternalFeedDownloader downloader;
@@ -64,18 +63,12 @@ public class FollowExternalFeedHandler implements FollowExternalFeedUseCase {
         } catch (CalendarException.NotAnIcalFile notACalendar) {
             throw new CalendarException.FeedUnavailable(FeedError.of(FeedErrorKind.NOT_ICS));
         }
-        String name = command.name() != null && !command.name().isBlank() ? command.name().strip()
+        String name = command.name() != null && !command.name().isBlank() ? command.name()
             : ownName != null ? ownName : url.getHost();
         // Counted again as it is written: another follow may have passed the limit during the download.
-        return feeds.createUnlessFollowing(MAX_PER_SPACE, caller.spaceId(), truncated(name), url,
+        return feeds.createUnlessFollowing(MAX_PER_SPACE, caller.spaceId(), ExternalFeed.fittedName(name), url,
                 ExternalFeed.colorOrDefault(command.color()), caller.userId(), downloaded.content(), downloaded.etag(),
                 downloaded.lastModified(), clock.instant())
             .orElseThrow(() -> new CalendarException.TooManyExternalFeeds(MAX_PER_SPACE));
-    }
-
-    /** At most {@link #MAX_NAME} characters, never cutting a character in two. */
-    private static String truncated(String name) {
-        return name.codePointCount(0, name.length()) <= MAX_NAME ? name
-            : name.substring(0, name.offsetByCodePoints(0, MAX_NAME));
     }
 }

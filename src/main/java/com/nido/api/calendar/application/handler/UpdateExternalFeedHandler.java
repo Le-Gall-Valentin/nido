@@ -3,6 +3,7 @@ package com.nido.api.calendar.application.handler;
 import com.nido.api.calendar.application.port.in.UpdateExternalFeedUseCase;
 import com.nido.api.calendar.application.service.ExternalFeedLookup;
 import com.nido.api.calendar.domain.model.ExternalFeed;
+import com.nido.api.calendar.domain.model.UpdateExternalFeedCommand;
 import com.nido.api.calendar.domain.port.out.ExternalFeedRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -23,10 +24,11 @@ public class UpdateExternalFeedHandler implements UpdateExternalFeedUseCase {
 
     @Override
     @Transactional
-    public ExternalFeed update(UUID feedId, String name, String color, SpaceMembership caller) {
+    public ExternalFeed update(UUID feedId, UpdateExternalFeedCommand command, SpaceMembership caller) {
         caller.ensureCanWrite();
         ExternalFeed feed = lookup.ofSpace(feedId, caller);
-        feeds.update(feed.id(), name.strip(), ExternalFeed.colorOrDefault(color));
+        String name = command.name() == null || command.name().isBlank() ? feed.name() : ExternalFeed.fittedName(command.name());
+        feeds.update(feed.id(), name, ExternalFeed.colorOrDefault(command.color()));
         return lookup.ofSpace(feedId, caller);
     }
 }
