@@ -7,10 +7,10 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * The household's own events between two dates — one-off, detached and projected recurring ones —
- * without the tasks, meals and finance entries {@link ListCalendarOccurrencesUseCase} merges in.
- * Same window rules, same order.
+ * What an agenda shows between two dates: the household's own events — one-off, detached and projected recurring ones —
+ * and the calendars the space follows, at most 200 entries of those; without the tasks, meals and finance entries
+ * {@link ListCalendarOccurrencesUseCase} merges in. Same window rules, same order.
  */
-public interface ListCalendarEventsUseCase {
+public interface ListAgendaEntriesUseCase {
     List<CalendarOccurrence> list(SpaceMembership caller, LocalDate from, LocalDate to);
 }

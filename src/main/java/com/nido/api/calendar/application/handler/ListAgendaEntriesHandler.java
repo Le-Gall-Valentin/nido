@@ -1,6 +1,6 @@
 package com.nido.api.calendar.application.handler;
 
-import com.nido.api.calendar.application.port.in.ListCalendarEventsUseCase;
+import com.nido.api.calendar.application.port.in.ListAgendaEntriesUseCase;
 import com.nido.api.calendar.domain.model.CalendarOccurrence;
 import com.nido.api.calendar.domain.model.CalendarSourceType;
 import com.nido.api.calendar.domain.port.out.CalendarSource;
@@ -18,7 +18,7 @@ import java.util.List;
  * their queries never run for this read.
  */
 @ApplicationService
-public class ListCalendarEventsHandler implements ListCalendarEventsUseCase {
+public class ListAgendaEntriesHandler implements ListAgendaEntriesUseCase {
 
     /**
      * What the followed calendars may put in one agenda: ten of them could give twenty thousand entries, and the agenda
@@ -28,7 +28,7 @@ public class ListCalendarEventsHandler implements ListCalendarEventsUseCase {
 
     private final List<CalendarSource> eventSources;
 
-    public ListCalendarEventsHandler(List<CalendarSource> sources) {
+    public ListAgendaEntriesHandler(List<CalendarSource> sources) {
         this.eventSources = sources.stream()
             .filter(source -> source.type() == CalendarSourceType.EVENT || source.type() == CalendarSourceType.EXTERNAL)
             .toList();
