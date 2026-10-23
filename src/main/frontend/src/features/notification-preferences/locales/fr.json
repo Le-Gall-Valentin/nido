@@ -12,7 +12,8 @@
   },
   "group": {
     "space": "Espaces",
-    "identity": "Administration"
+    "identity": "Administration",
+    "finance": "Finances"
   },
   "type": {
     "space": {
@@ -77,6 +78,68 @@
       "account-2fa-reset": {
         "label": "2FA réinitialisée",
         "description": "Quand un administrateur réinitialise la double authentification d'un compte"
+      }
+    },
+    "finance": {
+      "transaction-added": {
+        "label": "Opération ajoutée",
+        "description": "Quand quelqu'un ajoute une opération qui vous concerne"
+      },
+      "transaction-updated": {
+        "label": "Opération modifiée",
+        "description": "Quand une opération qui vous concerne change, ou qu'on vous y ajoute ou retire"
+      },
+      "transaction-deleted": {
+        "label": "Opération supprimée",
+        "description": "Quand une opération qui vous concernait est supprimée"
+      },
+      "recurring-created": {
+        "label": "Opération récurrente créée",
+        "description": "Quand une opération récurrente qui vous concerne est créée"
+      },
+      "recurring-updated": {
+        "label": "Opération récurrente modifiée",
+        "description": "Quand une opération récurrente qui vous concerne change"
+      },
+      "recurring-stopped": {
+        "label": "Opération récurrente arrêtée",
+        "description": "Quand une opération récurrente qui vous concerne s'arrête"
+      },
+      "settlement-recorded": {
+        "label": "Remboursement",
+        "description": "Quand quelqu'un vous rembourse ou enregistre votre remboursement"
+      },
+      "savings-contribution": {
+        "label": "Versement d'épargne",
+        "description": "Quand quelqu'un épargne sur un objectif de vos espaces"
+      },
+      "savings-goal-reached": {
+        "label": "Objectif atteint",
+        "description": "Quand un objectif d'épargne est atteint"
+      },
+      "savings-goal-created": {
+        "label": "Objectif créé",
+        "description": "Quand un objectif d'épargne est créé"
+      },
+      "savings-goal-updated": {
+        "label": "Objectif modifié",
+        "description": "Quand le nom, le montant ou la date d'un objectif change"
+      },
+      "savings-goal-deleted": {
+        "label": "Objectif supprimé",
+        "description": "Quand un objectif d'épargne est supprimé"
+      },
+      "budget-warning": {
+        "label": "Budget presque atteint",
+        "description": "Quand les dépenses d'une catégorie passent 80 % de son budget du mois"
+      },
+      "budget-exceeded": {
+        "label": "Budget dépassé",
+        "description": "Quand les dépenses d'une catégorie dépassent son budget du mois"
+      },
+      "opening-balance-changed": {
+        "label": "Solde de départ",
+        "description": "Quand le solde de départ d'un espace est fixé ou retiré"
       }
     }
   },
