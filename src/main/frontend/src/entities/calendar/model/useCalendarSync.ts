@@ -69,7 +69,10 @@ export function useExternalFeeds(spaceId: string | undefined) {
 export function useFollowExternalFeed(spaceId: string) {
   const api = useCalendarSyncApi()
   const invalidate = useCalendarInvalidation(spaceId)
-  return useMutation({ mutationFn: (input: ExternalFeedInput) => api.followExternalFeed(spaceId, input), onSuccess: invalidate })
+  return useMutation({ mutationFn: (input: ExternalFeedInput) => api.followExternalFeed(spaceId, input), onSuccess: invalidate,
+    // The address sent often holds a secret token, which the server never sends back: drop it with the last observer.
+    gcTime: 0,
+  })
 }
 
 export function useUpdateExternalFeed(spaceId: string) {

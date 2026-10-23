@@ -75,6 +75,8 @@ export function ExternalFeedsTab({ spaceId, canWrite }: { spaceId: string; canWr
       onSuccess: (followed) => {
         setUrl('')
         setName('')
+        // The address typed is the mutation's too: reset, it leaves the cache with this tab still open.
+        follow.reset()
         pendingFocus.current = 'new'
         setAdding(false)
         setMessage(t('feeds.followed', { name: followed.name }))

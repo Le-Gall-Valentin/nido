@@ -15,16 +15,19 @@ const SCHOOL: ExternalFeed = {
 const CLUB: ExternalFeed = { ...SCHOOL, id: 'f2', name: 'Club', host: 'club.example', lastError: null }
 
 function renderTab(api: Partial<CalendarApi>, canWrite = true) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider client={client}>
       <CalendarApiProvider api={api as CalendarApi}><ExternalFeedsTab spaceId="s1" canWrite={canWrite} /></CalendarApiProvider>
     </QueryClientProvider>)
+  return client
 }
 
 async function openForm(api: Partial<CalendarApi>) {
-  renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([]), ...api })
+  const client = renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([]), ...api })
   fireEvent.click(await screen.findByRole('button', { name: 'feeds.follow' }))
   fireEvent.change(screen.getByLabelText('feeds.url'), { target: { value: 'https://x/a.ics' } })
+  return client
 }
 
 describe('ExternalFeedsTab', () => {
@@ -48,6 +51,15 @@ describe('ExternalFeedsTab', () => {
       { url: 'webcal://ecole.example/v.ics', name: null, color: 'event-indigo' }))
     await waitFor(() => expect(screen.getByRole('status').textContent).toContain('feeds.followed'))
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'feeds.follow' }))
+  })
+
+  it('keeps the address followed, which may hold a secret, out of the mutation cache once it is followed', async () => {
+    const client = await openForm({ followExternalFeed: vi.fn().mockResolvedValue(SCHOOL) })
+    fireEvent.change(screen.getByLabelText('feeds.url'), { target: { value: 'https://calendar.example/private-abc123/basic.ics' } })
+    fireEvent.click(screen.getByRole('button', { name: 'feeds.save' }))
+
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('feeds.followed'))
+    await waitFor(() => expect(JSON.stringify(client.getMutationCache().getAll().map((m) => m.state.variables))).not.toContain('private-abc123'))
   })
 
   it('says why an address could not be followed, and forgets it on cancel', async () => {
