@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowRightLeft } from 'lucide-react'
-import { Alert, Dialog, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Dialog, Button } from '@/shared/ui'
 import { SpaceAvatar, type SpaceSummary } from '@/entities/space'
 
 export type TransferOperation = 'copy' | 'move'
@@ -92,7 +92,7 @@ export function TransferDialog({ itemName, operation, destinations, onClose, onC
           onClick={() => { void handleSubmit() }}
           isLoading={isLoading}
           disabled={!selectedId}
-          style={CTA_BUTTON_STYLE}
+          variant="primary"
         >
           <ArrowRightLeft className="size-4" />
           {t(submitKey)}

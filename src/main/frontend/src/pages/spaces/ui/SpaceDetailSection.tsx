@@ -4,7 +4,7 @@ import { formatTimezone } from '@/shared/lib'
 import { useQueryClient } from '@tanstack/react-query'
 import { Clock, LogOut, Pencil, Trash2, UserPlus } from 'lucide-react'
 import { useAuth } from '@/features/auth'
-import { Alert, Button, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Button, Spinner } from '@/shared/ui'
 import { SpaceAvatar, SpaceRolePill, canManageSpace, isOwner, isPersonal, useSpaceMembers, type SpaceMember, SpaceNotAccessibleError, SPACES_QUERY_KEY , AssignableSpaceRole } from '@/entities/space'
 import { useSpaceDetail , useSpaceInvitations ,
   useChangeMemberRole,
@@ -132,8 +132,7 @@ export function SpaceDetailSection({ spaceId, onLeft, onDeleted }: SpaceDetailSe
           {manager && (
             <Button
               onClick={() => setInviteOpen(true)}
-              className="border-transparent font-semibold"
-              style={CTA_BUTTON_STYLE}
+              variant="primary"
             >
               <UserPlus className="size-4" />
               {t('actions.invite')}

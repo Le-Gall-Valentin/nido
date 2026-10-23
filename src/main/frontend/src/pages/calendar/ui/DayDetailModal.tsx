@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import i18next from 'i18next'
 import { MapPin, Plus } from 'lucide-react'
-import { Dialog, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Dialog, Button } from '@/shared/ui'
 import { resolveLocale } from '@/shared/lib'
 import type { CalendarOccurrence } from '@/entities/calendar'
 import { groupByDay } from '../lib/calendarWindow'
@@ -94,7 +94,7 @@ export function DayDetailModal({
 
         {canWrite && (
           <div className="flex justify-end border-t border-border pt-3">
-            <Button type="button" style={CTA_BUTTON_STYLE} onClick={() => onCreateEvent(date)}>
+            <Button type="button" variant="primary" onClick={() => onCreateEvent(date)}>
               <Plus className="size-4" /> {t('day_detail.add_event')}
             </Button>
           </div>

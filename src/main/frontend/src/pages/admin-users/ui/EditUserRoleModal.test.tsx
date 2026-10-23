@@ -13,7 +13,6 @@ vi.mock('react-i18next', () => ({
 }))
 
 vi.mock('@/shared/ui', () => ({
-  CTA_BUTTON_STYLE: {},
   Alert: ({ children, variant }: { children: React.ReactNode; variant: string }) => (
     <div role={variant === 'error' ? 'alert' : 'status'}>{children}</div>
   ),

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, CTA_BUTTON_STYLE, Spinner } from '@/shared/ui'
+import { Button, Spinner } from '@/shared/ui'
 import { usePendingFocus } from '@/shared/lib'
 import {
   FEED_FALLBACK_COLOR, useExternalFeeds, useFollowExternalFeed, useRefreshExternalFeed, useRemoveExternalFeed,
@@ -147,13 +147,13 @@ export function ExternalFeedsTab({ spaceId, canWrite }: { spaceId: string; canWr
       {adding ? (
         <div className="flex justify-end gap-2">
           <Button type="button" disabled={follow.isPending} onClick={leaveForm}>{t('feeds.cancel')}</Button>
-          <BusyButton type="button" style={CTA_BUTTON_STYLE} disabled={!draft.url} busy={follow.isPending} onClick={submit}>
+          <BusyButton type="button" variant="primary" disabled={!draft.url} busy={follow.isPending} onClick={submit}>
             {t('feeds.save')}
           </BusyButton>
         </div>
       ) : canWrite && (
         <div className="flex justify-end">
-          <Button type="button" style={CTA_BUTTON_STYLE} data-new-feed onClick={() => {
+          <Button type="button" variant="primary" data-new-feed onClick={() => {
             resetIdle()
             setDraft(NO_FEED)
             focusNext('[data-feed-url]')

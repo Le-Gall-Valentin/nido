@@ -15,7 +15,6 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/shared/ui', async (importOriginal) => ({
   // The real field attributes: the tests read them off the rendered input.
   VERBATIM_INPUT_PROPS: (await importOriginal<typeof import('@/shared/ui')>()).VERBATIM_INPUT_PROPS,
-  CTA_BUTTON_STYLE: {},
   Alert: ({ children, variant }: { children: React.ReactNode; variant: string }) => (
     <div role={variant === 'error' ? 'alert' : 'status'}>{children}</div>
   ),

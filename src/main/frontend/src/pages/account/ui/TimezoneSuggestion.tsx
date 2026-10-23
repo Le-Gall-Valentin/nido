@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Globe } from 'lucide-react'
-import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Button } from '@/shared/ui'
 import { formatTimezone, shouldSuggestTimezoneChange } from '@/shared/lib'
 import type { SpaceSummary } from '@/entities/space'
 
@@ -75,7 +75,7 @@ export function TimezoneSuggestion({ space, browserTimezone, onAccept }: Timezon
             })}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="button" style={CTA_BUTTON_STYLE} onClick={() => void accept()} disabled={isSaving}>
+            <Button type="button" variant="primary" onClick={() => void accept()} disabled={isSaving}>
               {t('timezone_suggestion.accept', { detected })}
             </Button>
             <Button type="button" onClick={dismiss} disabled={isSaving}>

@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, SlidersHorizontal } from 'lucide-react'
 import type { BudgetLine, Category } from '@/entities/finance'
 import { formatAmount } from '@/shared/lib'
+import { Button } from '@/shared/ui'
 
 interface BudgetSectionProps {
   budgetVsActual: BudgetLine[]
@@ -19,9 +20,7 @@ export function BudgetSection({ budgetVsActual, categoryById, canWrite, onManage
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-[15px] font-semibold text-fg-0">{t('budget.title')}</h2>
         {canWrite && (
-          <button type="button" onClick={onManageBudget} className="shrink-0 text-sm font-semibold text-accent">
-            {t('budget.manage')}
-          </button>
+          <Button type="button" size="sm" icon={SlidersHorizontal} onClick={onManageBudget}>{t('budget.manage')}</Button>
         )}
       </div>
       <ul className="space-y-4">

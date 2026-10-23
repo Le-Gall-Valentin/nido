@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Alert, Dialog, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Dialog, Button } from '@/shared/ui'
 import type { User, AdminUser } from '@/entities/user'
 import type { MailAvailability } from '@/entities/capabilities'
 import { assignableRoles } from '../lib/permissions'
@@ -88,8 +88,7 @@ export function EditUserRoleModal({ target, caller, mail, onClose, onUpdate, onS
             type="submit"
             disabled={submitDisabled}
             isLoading={isLoading}
-            className="border-transparent font-semibold"
-            style={CTA_BUTTON_STYLE}
+            variant="primary"
           >
             {t('edit_role.submit')}
           </Button>

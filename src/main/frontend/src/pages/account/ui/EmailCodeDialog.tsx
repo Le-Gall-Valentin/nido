@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle } from 'lucide-react'
-import { Button, CTA_BUTTON_STYLE, Dialog } from '@/shared/ui'
+import { Button, Dialog } from '@/shared/ui'
 import {
   CodeInput, ResendCode, commonErrorMessage, useResend, type CodeInputHandle, type Message,
 } from '@/features/two-factor'
@@ -71,7 +71,7 @@ export function EmailCodeDialog({ sentTo, previousAddress, resendAfterSeconds, o
             {t(error.key, error.values)}
           </div>
         )}
-        <Button type="submit" isLoading={isLoading} className="mt-2 w-full border-transparent py-3 font-semibold" style={CTA_BUTTON_STYLE}>
+        <Button type="submit" isLoading={isLoading} className="mt-2 w-full py-3" variant="primary">
           {t('profile.email_code.submit')}
         </Button>
       </form>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, CTA_BUTTON_STYLE, Spinner } from '@/shared/ui'
+import { Button, Spinner } from '@/shared/ui'
 import { usePendingFocus } from '@/shared/lib'
 import {
   useCreateSubscriptionLink, useRevokeSubscriptionLink, useSubscriptionLinks, type CreatedSubscriptionLink,
@@ -85,7 +85,7 @@ export function SubscriptionsTab({ spaceId, isPersonal }: { spaceId: string; isP
         </ul>
       )}
       <div className="flex justify-end">
-        <Button type="button" style={CTA_BUTTON_STYLE} data-new-link onClick={() => {
+        <Button type="button" variant="primary" data-new-link onClick={() => {
           focusNext('[data-link-label]')
           setCreating(true)
         }}>{t('subscribe.new')}</Button>

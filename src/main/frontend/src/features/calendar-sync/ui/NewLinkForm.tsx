@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, CTA_BUTTON_STYLE, Input } from '@/shared/ui'
+import { Button, Input } from '@/shared/ui'
 import type { ExportableSource, SubscriptionLinkInput } from '@/entities/calendar'
 import { BusyButton } from './BusyButton'
 import { OnlyMineToggle, SourceChecklist } from './SourceChecklist'
@@ -27,7 +27,7 @@ export function NewLinkForm({ isPersonal, pending, error, onCreate, onCancel }: 
       <div className="flex justify-end gap-2">
         {/* Not while the address is being made: it would be made all the same, never shown, and count toward ten. */}
         <Button type="button" disabled={pending} onClick={onCancel}>{t('subscribe.cancel')}</Button>
-        <BusyButton type="button" style={CTA_BUTTON_STYLE} disabled={!label.trim() || sources.length === 0} busy={pending}
+        <BusyButton type="button" variant="primary" disabled={!label.trim() || sources.length === 0} busy={pending}
           onClick={() => onCreate({ label: label.trim(), sources, onlyMine })}>
           {t('subscribe.create')}
         </BusyButton>

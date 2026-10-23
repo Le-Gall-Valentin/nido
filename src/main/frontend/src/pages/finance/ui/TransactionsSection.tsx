@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Pencil, Repeat, Trash2 } from 'lucide-react'
-import { Tooltip } from '@/shared/ui'
+import { Button, Tooltip } from '@/shared/ui'
 import { UserAvatar } from '@/entities/user'
 import { useMemberName, type SpaceMember } from '@/entities/space'
 import type { Category, Transaction } from '@/entities/finance'
@@ -29,9 +29,7 @@ export function TransactionsSection({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <h2 className="text-[15px] font-semibold text-fg-0">{t('transactions.title')}</h2>
         {canWrite && (
-          <button type="button" onClick={onManageRecurring} className="shrink-0 text-sm font-semibold text-accent">
-            {t('recurring_series.manage')}
-          </button>
+          <Button type="button" size="sm" icon={Repeat} onClick={onManageRecurring}>{t('recurring_series.manage')}</Button>
         )}
       </div>
       <ul className="divide-y divide-border">

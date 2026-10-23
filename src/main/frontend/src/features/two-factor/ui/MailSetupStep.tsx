@@ -1,7 +1,7 @@
 import React, { useId, useRef, useState } from 'react'
 import { AlertTriangle, ChevronLeft, Mail } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Button } from '@/shared/ui'
 import { CodeInput, type CodeInputHandle } from './CodeInput'
 import { ResendCode } from './ResendCode'
 import { useResend } from '../model/useResend'
@@ -109,8 +109,8 @@ export function MailSetupStep({ sentTo, resendAfterSeconds, api, onSuccess, onBa
         <Button
           type="submit"
           isLoading={isLoading}
-          className="mt-2 w-full rounded-[11px] border-transparent py-3.5 text-[15px] font-semibold active:translate-y-px disabled:cursor-wait"
-          style={CTA_BUTTON_STYLE}
+          className="mt-2 w-full rounded-[11px] py-3.5 text-[15px] active:translate-y-px disabled:cursor-wait"
+          variant="primary"
         >
           {t('mailSetup.submit')}
         </Button>

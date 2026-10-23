@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SettingsGroup } from '@/entities/instance-settings'
-import { Alert, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Button } from '@/shared/ui'
 import type { ISettingsApi } from '../model/ISettingsApi'
 import { useSettingsGroup } from '../model/useSettingsGroup'
 import { GROUP_EXTRAS } from './extras'
@@ -43,7 +43,7 @@ export function SettingsGroupCard({ group, api }: { group: SettingsGroup; api: I
           <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
             {Actions && <Actions group={group} state={state} />}
             {state.editable && (
-              <Button type="submit" className="border-transparent" style={CTA_BUTTON_STYLE} isLoading={state.busy}>
+              <Button type="submit" variant="primary" isLoading={state.busy}>
                 {t('action.save')}
               </Button>
             )}

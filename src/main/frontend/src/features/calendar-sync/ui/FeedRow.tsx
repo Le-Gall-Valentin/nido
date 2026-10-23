@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Button } from '@/shared/ui'
 import { formatRelativeTime } from '@/shared/lib'
 import { EVENT_DOT_CLASS, feedColor, type ExternalFeed } from '@/entities/calendar'
 import { BusyButton } from './BusyButton'
@@ -57,7 +57,7 @@ export function FeedRow({ feed, canWrite, busy, confirming, removing, error, onR
           <p className="flex-1 text-xs text-fg-2">{t('feeds.remove_confirm', { name: feed.name })}</p>
           {/* Not while the removal runs: the calendar would go all the same, thought kept. */}
           <Button type="button" disabled={removing} onClick={onCancel}>{t('feeds.cancel')}</Button>
-          <BusyButton type="button" style={CTA_BUTTON_STYLE} busy={removing} onClick={onConfirm}>
+          <BusyButton type="button" variant="primary" busy={removing} onClick={onConfirm}>
             {t('feeds.remove_yes')}
           </BusyButton>
         </div>

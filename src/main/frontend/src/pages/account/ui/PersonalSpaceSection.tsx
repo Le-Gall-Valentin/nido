@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { timezoneChoices } from '@/shared/lib'
-import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Button } from '@/shared/ui'
 import type { SpaceSummary } from '@/entities/space'
 
 interface PersonalSpaceSectionProps {
@@ -93,7 +93,7 @@ export function PersonalSpaceSection({ space, onSave }: PersonalSpaceSectionProp
       {failed && <p className="mt-3 text-[13px] text-status-red">{t('personal_space.error')}</p>}
 
       <div className="mt-4 flex justify-end">
-        <Button type="button" style={CTA_BUTTON_STYLE} onClick={() => void handleSave()} disabled={!isDirty || isSaving}>
+        <Button type="button" variant="primary" onClick={() => void handleSave()} disabled={!isDirty || isSaving}>
           {t('personal_space.submit')}
         </Button>
       </div>

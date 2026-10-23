@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Dialog, Button, Input } from '@/shared/ui'
 import { formatAmount, formatIsoDate, parseAmount, todayIso } from '@/shared/lib'
 import type { OpeningBalance } from '@/entities/finance'
 
@@ -80,7 +80,7 @@ export function OpeningBalanceModal({
           ) : <span />}
           <div className="flex gap-2">
             <Button type="button" onClick={onClose}>{t('form.cancel')}</Button>
-            <Button type="submit" isLoading={isSaving} style={CTA_BUTTON_STYLE}>{t('form.save')}</Button>
+            <Button type="submit" isLoading={isSaving} variant="primary">{t('form.save')}</Button>
           </div>
         </div>
       </form>

@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { copyText } from '@/shared/lib'
-import { Alert, Button, CTA_BUTTON_STYLE, Spinner } from '@/shared/ui'
+import { Alert, Button, Spinner } from '@/shared/ui'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SetupKey } from '../model/types'
 import { SetupCodeInvalidError } from '../model/errors'
@@ -74,8 +74,7 @@ export function KeyStep({ api, code, publicUrl, finishing, finishError, onFinish
         <Button type="button" onClick={onBack}>{t('action.back')}</Button>
         <Button
           type="button"
-          className="border-transparent"
-          style={CTA_BUTTON_STYLE}
+          variant="primary"
           isLoading={finishing}
           disabled={generated && !saved}
           onClick={() => onFinish(generated && saved)}

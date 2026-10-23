@@ -96,8 +96,7 @@ export function DisableMethodDialog({ method, paused, address, resendAfterSecond
             type="submit"
             disabled={needsCode && code.length < 6}
             isLoading={isLoading}
-            className="border-transparent font-semibold !text-bg-0 transition hover:brightness-90"
-            style={{ background: 'var(--color-status-red)' }}
+            variant="danger"
           >
             {t('disable.submit')}
           </Button>

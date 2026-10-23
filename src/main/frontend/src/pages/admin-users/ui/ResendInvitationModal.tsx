@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Send } from 'lucide-react'
-import { Alert, Button, Dialog, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Button, Dialog } from '@/shared/ui'
 import type { AdminUser, InvitationDelivery } from '@/entities/user'
 import type { MailAvailability } from '@/entities/capabilities'
 import { useDialogSubmit } from '../lib/useDialogSubmit'
@@ -33,7 +33,7 @@ export function ResendInvitationModal({ user, mail, onClose, onResend }: ResendI
         <h3 className="mb-4 text-xl font-semibold text-fg-0">{t('resend.done_title')}</h3>
         <InvitationResult username={user.username} email={user.email} delivery={delivery} />
         <div className="mt-5 flex justify-end">
-          <Button type="button" onClick={onClose} className="border-transparent font-semibold" style={CTA_BUTTON_STYLE}>
+          <Button type="button" onClick={onClose} variant="primary">
             {t('invitation.done')}
           </Button>
         </div>
@@ -54,8 +54,7 @@ export function ResendInvitationModal({ user, mail, onClose, onResend }: ResendI
         <Button
           onClick={() => { void handleSubmit() }}
           isLoading={isLoading}
-          className="border-transparent font-semibold"
-          style={CTA_BUTTON_STYLE}
+          variant="primary"
         >
           <Send className="size-4" />
           {t(byMail ? 'resend.submit_mail' : 'resend.submit_link')}

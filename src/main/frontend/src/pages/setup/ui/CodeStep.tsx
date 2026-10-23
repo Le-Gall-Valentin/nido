@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Alert, Button, CTA_BUTTON_STYLE, Input } from '@/shared/ui'
+import { Alert, Button, Input } from '@/shared/ui'
 import type { ISetupApi } from '../model/ISetupApi'
 import { describeSetupError } from '../lib/describeSetupError'
 import { LEAD_CLASS, PRIMARY_CLASS, TITLE_CLASS } from './styles'
@@ -51,7 +51,7 @@ export function CodeStep({ api, notice = null, onVerified }: Props) {
         autoFocus
       />
       {error && <Alert variant="error" className="mt-4">{t(error)}</Alert>}
-      <Button type="submit" isLoading={busy} className={`mt-6 ${PRIMARY_CLASS}`} style={CTA_BUTTON_STYLE}>
+      <Button type="submit" isLoading={busy} className={`mt-6 ${PRIMARY_CLASS}`} variant="primary">
         {t('action.next')}
       </Button>
     </form>

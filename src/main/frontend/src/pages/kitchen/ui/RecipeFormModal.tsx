@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
-import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Dialog, Button, Input, Textarea } from '@/shared/ui'
 import { RECIPE_CATEGORY_META, RECIPE_CATEGORY_ORDER } from '../lib/recipeCategoryMeta'
 import { RECIPE_UNITS, RECIPE_UNIT_LABEL_KEY } from '../lib/recipeUnitMeta'
 import type { MeasurementUnit, Recipe, RecipeInput, RecipeCategory } from '@/entities/kitchen'
@@ -179,7 +179,7 @@ export function RecipeFormModal({ open, onClose, onSubmit, initialRecipe }: Reci
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" onClick={onClose}>{t('form.cancel')}</Button>
-          <Button type="button" onClick={handleSave} style={CTA_BUTTON_STYLE}>{t('form.save')}</Button>
+          <Button type="button" onClick={handleSave} variant="primary">{t('form.save')}</Button>
         </div>
       </div>
     </Dialog>

@@ -4,6 +4,7 @@ import { UserAvatarStack } from '@/entities/user'
 import type { SavingsGoal } from '@/entities/finance'
 import { safeSavingsGoalColor, safeSavingsGoalGlyph } from '@/widgets/savings-goal'
 import { formatAmount } from '@/shared/lib'
+import { Button } from '@/shared/ui'
 
 interface SavingsGoalsSectionProps {
   savingsGoals: SavingsGoal[]
@@ -29,14 +30,7 @@ export function SavingsGoalsSection({
           <p className="mt-0.5 text-xs text-fg-3">{t('savings.subtitle')}</p>
         </div>
         {canWrite && (
-          <button
-            type="button"
-            onClick={onCreate}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent-dim px-3 py-1.5 text-sm font-semibold text-accent"
-          >
-            <Plus size={16} />
-            {t('savings.new_goal')}
-          </button>
+          <Button type="button" size="sm" icon={Plus} onClick={onCreate}>{t('savings.new_goal')}</Button>
         )}
       </div>
 
@@ -118,13 +112,10 @@ export function SavingsGoalsSection({
                       )}
                     </div>
                     {canWrite && !done && (
-                      <button
-                        type="button"
-                        onClick={() => onContribute(goal)}
-                        className="pointer-events-auto shrink-0 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white"
-                      >
+                      <Button type="button" size="sm" variant="primary" onClick={() => onContribute(goal)}
+                        className="pointer-events-auto shrink-0">
                         {t('savings.contribute')}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>

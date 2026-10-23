@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettingWording } from '@/entities/instance-settings'
-import { Alert, Button, CTA_BUTTON_STYLE, Input } from '@/shared/ui'
+import { Alert, Button, Input } from '@/shared/ui'
 import { isHttpAddress } from '../lib/isHttpAddress'
 import { ACTIONS_CLASS, FIELD_ERROR_CLASS, LEAD_CLASS, TITLE_CLASS } from './styles'
 
@@ -50,7 +50,7 @@ export function AddressStep({ initial, locked, serverProblem, onNext, onBack }: 
       )}
       <div className={ACTIONS_CLASS}>
         <Button type="button" onClick={onBack}>{t('action.back')}</Button>
-        <Button type="submit" className="border-transparent" style={CTA_BUTTON_STYLE}>{t('action.next')}</Button>
+        <Button type="submit" variant="primary">{t('action.next')}</Button>
       </div>
     </form>
   )

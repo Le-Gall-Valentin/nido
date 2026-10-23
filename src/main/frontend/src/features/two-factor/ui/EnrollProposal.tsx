@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { AlertTriangle, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Button } from '@/shared/ui'
 import { MethodCard } from './MethodCard'
 import type { ITwoFactorMethodsApi } from '../model/ITwoFactorMethodsApi'
 import type { MailSetupData } from '../model/types'
@@ -71,8 +71,8 @@ export function EnrollProposal({ username, email, mailAvailable, api, onAppChose
         <Button
           type="button"
           onClick={onAppChosen}
-          className="mt-2 w-full border-transparent py-3 font-semibold active:translate-y-px"
-          style={CTA_BUTTON_STYLE}
+          className="mt-2 w-full py-3 active:translate-y-px"
+          variant="primary"
         >
           <ShieldCheck className="size-4" />
           {t('enroll.activate')}

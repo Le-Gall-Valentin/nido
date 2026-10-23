@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Plus, SlidersHorizontal } from 'lucide-react'
 import { DndContext, DragOverlay, useDroppable, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
-import { Alert, Spinner, Dialog } from '@/shared/ui'
+import { Alert, Button, Spinner, Dialog } from '@/shared/ui'
 import { MEASUREMENT_UNIT_LABEL_KEY, underThePointerFirst, useCreateIntent, useDragSensors } from '@/shared/lib'
 import { useMySpaces } from '@/features/space-switcher'
 import { canWrite } from '@/entities/space'
@@ -140,18 +140,18 @@ function ShoppingListPageContent() {
 
   return (
     <div className="mx-auto max-w-[720px] px-5 py-6 md:px-10 md:py-[34px]">
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-fg-0">{t('title')}</h1>
         {(items ?? []).length > 0 && canWriteHere && (
           <div className="flex gap-2">
-            <button type="button" onClick={() => { runMutation(clearDoneItems.mutateAsync()).catch(() => {}) }}
-              className="rounded-[9px] border border-border px-3 py-1.5 text-xs font-semibold text-fg-2">
+            <Button type="button" size="sm" onClick={() => { runMutation(clearDoneItems.mutateAsync()).catch(() => {}) }}>
               {t('clear_done')}
-            </button>
-            <button type="button" onClick={() => { runMutation(clearAllItems.mutateAsync()).catch(() => {}) }}
-              className="rounded-[9px] border border-status-red px-3 py-1.5 text-xs font-semibold text-status-red">
+            </Button>
+            {/* Emptying the whole list is the one that cannot be undone: outlined in red, short of the full danger button. */}
+            <Button type="button" size="sm" className="border-status-red/30 text-status-red hover:bg-status-red-dim hover:text-status-red"
+              onClick={() => { runMutation(clearAllItems.mutateAsync()).catch(() => {}) }}>
               {t('clear_all')}
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -164,15 +164,10 @@ function ShoppingListPageContent() {
           the pair keeps a single width whatever the two labels translate to. */}
       {canWriteHere && (
         <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <button type="button" onClick={() => setAddingItem(true)}
-            className="flex items-center justify-center gap-1.5 rounded-[10px] px-4 py-2.5 text-sm font-semibold text-bg-0"
-            style={{ background: 'var(--color-accent)' }}>
-            <Plus className="size-4" /> {t('add_item')}
-          </button>
-          <button type="button" onClick={() => setManagingCategories(true)}
-            className="flex items-center justify-center gap-1.5 rounded-[10px] border-[1.5px] border-border px-4 py-2.5 text-sm font-semibold text-fg-2 transition-colors hover:bg-bg-2 hover:text-fg-0">
-            <SlidersHorizontal className="size-4" /> {t('manage_categories')}
-          </button>
+          <Button type="button" variant="primary" icon={Plus} onClick={() => setAddingItem(true)}>{t('add_item')}</Button>
+          <Button type="button" icon={SlidersHorizontal} onClick={() => setManagingCategories(true)}>
+            {t('manage_categories')}
+          </Button>
         </div>
       )}
 

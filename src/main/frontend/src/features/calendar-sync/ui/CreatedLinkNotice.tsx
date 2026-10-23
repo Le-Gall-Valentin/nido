@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Button } from '@/shared/ui'
 import { useCopy } from '@/shared/lib'
 import type { CreatedSubscriptionLink } from '@/entities/calendar'
 
@@ -47,7 +47,7 @@ export function CreatedLinkNotice({ created, onDone }: { created: CreatedSubscri
         <li>{t('subscribe.help_outlook')}</li>
       </ul>
       <div className="flex justify-end">
-        <Button type="button" style={CTA_BUTTON_STYLE} onClick={onDone}>{t('subscribe.done')}</Button>
+        <Button type="button" variant="primary" onClick={onDone}>{t('subscribe.done')}</Button>
       </div>
     </div>
   )

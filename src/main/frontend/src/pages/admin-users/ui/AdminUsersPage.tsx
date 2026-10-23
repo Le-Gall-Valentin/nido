@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
-import { Alert, Button, DebouncedSearchInput, Pagination, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Button, DebouncedSearchInput, PageActions, Pagination } from '@/shared/ui'
 import { pageAfterRemoval } from '@/shared/lib'
 import { useAuth } from '@/features/auth'
 import type { AdminUser, IAdminUsersApi } from '@/entities/user'
@@ -95,14 +95,11 @@ function AdminUsersPageContent() {
             {t(currentUser.role === 'SUPER_ADMIN' ? 'subtitle_super' : 'subtitle_admin')}
           </p>
         </div>
-        <Button
-          onClick={() => setDialog({ kind: 'create' })}
-          className="self-start shrink-0 border-transparent font-semibold"
-          style={{ ...CTA_BUTTON_STYLE, boxShadow: 'var(--btn-primary-shadow)' }}
-        >
-          <Plus className="size-4" />
-          {t('action.create')}
-        </Button>
+        <PageActions>
+          <Button variant="primary" icon={Plus} onClick={() => setDialog({ kind: 'create' })}>
+            {t('action.create')}
+          </Button>
+        </PageActions>
       </div>
 
       <ProtectionRulesPanel />

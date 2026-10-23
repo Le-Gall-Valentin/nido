@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Copy, Send } from 'lucide-react'
-import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
+import { Alert, Dialog, Button, Input, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import { useCopy } from '@/shared/lib'
 import type { SpaceInvitation , AssignableSpaceRole } from '@/entities/space'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
@@ -75,8 +75,7 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
           <Button
             type="button"
             onClick={handleClose}
-            className="border-transparent font-semibold"
-            style={CTA_BUTTON_STYLE}
+            variant="primary"
           >
             {t('invite.done')}
           </Button>
@@ -136,8 +135,7 @@ export function InviteMemberModal({ onClose, onInvite, onSuccess }: InviteMember
             type="submit"
             disabled={!canSubmit}
             isLoading={isLoading}
-            className="border-transparent font-semibold"
-            style={CTA_BUTTON_STYLE}
+            variant="primary"
           >
             <Send className="size-4" />
             {t('invite.submit')}

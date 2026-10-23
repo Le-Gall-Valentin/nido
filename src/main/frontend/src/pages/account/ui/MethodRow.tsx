@@ -1,6 +1,6 @@
 import { Mail, Pause, Smartphone } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Button } from '@/shared/ui'
 import type { MethodState } from '@/features/two-factor'
 
 type Status = 'enabled' | 'disabled' | 'paused' | 'unavailable'
@@ -67,8 +67,8 @@ export function MethodRow({ state, email, appOn, busy, onEnable, onDisable }: Me
         <Button
           onClick={onEnable}
           disabled={busy}
-          className="col-start-2 justify-self-start sm:col-start-auto border-transparent font-semibold"
-          style={CTA_BUTTON_STYLE}
+          className="col-start-2 justify-self-start sm:col-start-auto"
+          variant="primary"
         >
           {t('twofa.btn_enable')}
         </Button>

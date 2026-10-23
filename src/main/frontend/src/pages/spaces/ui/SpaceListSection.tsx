@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { formatTimezone } from '@/shared/lib'
 import { ChevronRight, Plus } from 'lucide-react'
 import { SpaceAvatar, isPersonal, type SpaceSummary } from '@/entities/space'
-import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Button } from '@/shared/ui'
 
 interface SpaceListSectionProps {
   spaces: SpaceSummary[]
@@ -22,8 +22,7 @@ export function SpaceListSection({ spaces, onSelect, onCreateClick }: SpaceListS
         <h2 className="text-[13px] font-semibold uppercase tracking-[0.05em] text-fg-3">{t('list.title')}</h2>
         <Button
           onClick={onCreateClick}
-          className="border-transparent font-semibold"
-          style={CTA_BUTTON_STYLE}
+          variant="primary"
         >
           <Plus className="size-4" />
           {t('list.action_create')}
