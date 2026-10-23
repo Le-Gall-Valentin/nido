@@ -32,6 +32,38 @@ class HtmlTextTest {
         assertThat(HtmlText.looksLikeHtml("Ligne<br>suivante")).isTrue();
     }
 
+    @Test
+    void anAddressBetweenAngleBracketsIsPlainTextAndKept() {
+        // How Outlook writes a Teams meeting and an organiser in plain text; and a comparison.
+        String teams = "Click here to join the meeting<https://teams.microsoft.com/l/meetup-join/19%3ameeting>";
+        for (String plain : new String[] {teams, "Jeanne Martin <jeanne.martin@example.com>", "x<y et y>z",
+            "<mailto:jeanne@example.com>"}) {
+            assertThat(HtmlText.looksLikeHtml(plain)).as(plain).isFalse();
+        }
+        // In HTML too: what is no tag stays.
+        assertThat(HtmlText.toPlain("<p>Rejoindre<https://teams.microsoft.com/l/x></p>"))
+            .isEqualTo("Rejoindre<https://teams.microsoft.com/l/x>");
+    }
+
+    @Test
+    void outlooksOwnTagsAndDeclarationsAreTags() {
+        assertThat(HtmlText.looksLikeHtml("<o:p></o:p>")).isTrue();
+        assertThat(HtmlText.toPlain("<!DOCTYPE html><p class=MsoNormal>Bonjour<o:p></o:p></p>")).isEqualTo("Bonjour");
+    }
+
+    @Test
+    void namedEntitiesOfFrenchAndTypographyAreDecoded() {
+        assertThat(HtmlText.toPlain("<p>R&eacute;union &agrave; l&rsquo;&eacute;cole&hellip; 5&nbsp;&euro; &laquo;&nbsp;&OElig;uvre&nbsp;&raquo;</p>"))
+            .isEqualTo("Réunion à l’école… 5 € « Œuvre »");
+        assertThat(HtmlText.toPlain("<p>&Eacute;t&eacute; &AMP; hiver</p>")).isEqualTo("Été & hiver");
+        assertThat(HtmlText.toPlain("<p>&unknown; reste</p>")).isEqualTo("&unknown; reste");
+    }
+
+    @Test
+    void aCarriageReturnWrittenAsAnEntityIsDropped() {
+        assertThat(HtmlText.toPlain("<p>Ligne&#13;\nsuivante</p>")).isEqualTo("Ligne\nsuivante");
+    }
+
     private static void linear(String input) {
         assertTimeoutPreemptively(Duration.ofSeconds(2), () -> {
             HtmlText.looksLikeHtml(input);
@@ -58,6 +90,13 @@ class HtmlTextTest {
     void anOpeningTagWithManyHrefsAndNoEndIsReadInLinearTime() {
         linear("<a " + "href=\"x\" ".repeat(20_000));
         linear("<a " + "href='x ".repeat(25_000));
+    }
+
+    @Test
+    void longNamesAndAddressesBetweenAngleBracketsAreReadInLinearTime() {
+        linear("<" + "a".repeat(200_000));
+        linear("<o:" + "p".repeat(200_000));
+        linear("<https://x".repeat(20_000));
     }
 
     @Test

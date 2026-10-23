@@ -1,5 +1,6 @@
 package com.nido.api.calendar.domain.model;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -15,7 +16,19 @@ import java.util.regex.Pattern;
  */
 public final class HtmlText {
 
-    private static final Pattern TAG = Pattern.compile("<[a-zA-Z/!][^<>]*>");
+    /**
+     * A tag: a real element name (Outlook's {@code o:p} included), then a blank, a slash or its end — so neither an
+     * address written between angle brackets ({@code <https://…>}, {@code <jeanne@example.com>}) nor a comparison is
+     * one —, or a declaration ({@code <!DOCTYPE …>}).
+     */
+    private static final Pattern TAG = Pattern.compile("</?[a-zA-Z][a-zA-Z0-9]*+(?::[a-zA-Z][a-zA-Z0-9]*+)?(?:[\\s/][^<>]*+)?>|<![^<>]*+>");
+    /**
+     * What makes a text HTML: a tag of an element descriptions are written with. A plain text may hold anything between
+     * angle brackets — "x<y et y>z" —, never one of these.
+     */
+    private static final Pattern HTML_TAG = Pattern.compile("(?i)</?(?:a|abbr|b|big|blockquote|body|br|center|code|dd|div|dl|dt|em|"
+        + "font|h[1-6]|head|hr|html|i|img|li|meta|o:p|ol|p|pre|s|small|span|strike|strong|style|sub|sup|table|tbody|td|th|"
+        + "thead|title|tr|u|ul)(?=[\\s/>])[^<>]*+>");
     /** The whole opening tag, possessive: it ends at the next {@code <} or {@code >}, and never backtracks. */
     private static final Pattern LINK_OPEN = Pattern.compile("(?i)<a(?=\\s)[^<>]*+>");
     /**
@@ -30,14 +43,34 @@ public final class HtmlText {
     private static final Pattern STYLE_CLOSE = Pattern.compile("(?i)</style\\s*>");
     private static final Pattern BREAK =
         Pattern.compile("(?i)<br\\s*/?>|<p(\\s[^<>]*)?>|</p\\s*>|</div\\s*>|</li\\s*>|</h[1-6]\\s*>");
-    private static final Pattern ENTITY = Pattern.compile("&(#[xX][0-9a-fA-F]{1,6}|#[0-9]{1,7}|[a-zA-Z]{1,10});");
-    private static final Map<String, String> NAMED = Map.of(
-        "amp", "&", "lt", "<", "gt", ">", "quot", "\"", "apos", "'", "nbsp", " ");
+    private static final Pattern ENTITY = Pattern.compile("&(#[xX][0-9a-fA-F]{1,6}|#[0-9]{1,7}|[a-zA-Z][a-zA-Z0-9]{0,9});");
+    /** HTML's names of the Latin-1 characters, from U+00A0 on, in order. */
+    private static final String LATIN_1 = "nbsp iexcl cent pound curren yen brvbar sect uml copy ordf laquo not shy reg macr "
+        + "deg plusmn sup2 sup3 acute micro para middot cedil sup1 ordm raquo frac14 frac12 frac34 iquest Agrave Aacute Acirc "
+        + "Atilde Auml Aring AElig Ccedil Egrave Eacute Ecirc Euml Igrave Iacute Icirc Iuml ETH Ntilde Ograve Oacute Ocirc "
+        + "Otilde Ouml times Oslash Ugrave Uacute Ucirc Uuml Yacute THORN szlig agrave aacute acirc atilde auml aring aelig "
+        + "ccedil egrave eacute ecirc euml igrave iacute icirc iuml eth ntilde ograve oacute ocirc otilde ouml divide oslash "
+        + "ugrave uacute ucirc uuml yacute thorn yuml";
+    /** The others a description is written with: markup, typography, French ligatures, the euro. */
+    private static final Map<String, Integer> OTHERS = Map.ofEntries(
+        Map.entry("amp", (int) '&'), Map.entry("lt", (int) '<'), Map.entry("gt", (int) '>'), Map.entry("quot", (int) '"'),
+        Map.entry("apos", (int) '\''), Map.entry("OElig", 0x152), Map.entry("oelig", 0x153), Map.entry("Scaron", 0x160),
+        Map.entry("scaron", 0x161), Map.entry("Yuml", 0x178), Map.entry("fnof", 0x192), Map.entry("circ", 0x2C6),
+        Map.entry("tilde", 0x2DC), Map.entry("ensp", 0x2002), Map.entry("emsp", 0x2003), Map.entry("thinsp", 0x2009),
+        Map.entry("ndash", 0x2013), Map.entry("mdash", 0x2014), Map.entry("lsquo", 0x2018), Map.entry("rsquo", 0x2019),
+        Map.entry("sbquo", 0x201A), Map.entry("ldquo", 0x201C), Map.entry("rdquo", 0x201D), Map.entry("bdquo", 0x201E),
+        Map.entry("dagger", 0x2020), Map.entry("Dagger", 0x2021), Map.entry("bull", 0x2022), Map.entry("hellip", 0x2026),
+        Map.entry("permil", 0x2030), Map.entry("prime", 0x2032), Map.entry("Prime", 0x2033), Map.entry("lsaquo", 0x2039),
+        Map.entry("rsaquo", 0x203A), Map.entry("euro", 0x20AC), Map.entry("trade", 0x2122), Map.entry("larr", 0x2190),
+        Map.entry("rarr", 0x2192));
+    private static final Map<String, String> NAMED = named();
+    /** A carriage return written as an entity: Outlook ends its lines with {@code &#13;} before their line feed. */
+    private static final int CARRIAGE_RETURN = 13;
 
     private HtmlText() {}
 
     public static boolean looksLikeHtml(String text) {
-        return text != null && TAG.matcher(text).find();
+        return text != null && HTML_TAG.matcher(text).find();
     }
 
     public static String toPlain(String html) {
@@ -129,11 +162,26 @@ public final class HtmlText {
         if (entity.startsWith("#")) {
             boolean hex = entity.startsWith("#x") || entity.startsWith("#X");
             int codePoint = Integer.parseInt(entity.substring(hex ? 2 : 1), hex ? 16 : 10);
+            if (codePoint == CARRIAGE_RETURN) {
+                return "";
+            }
             boolean keepable = Character.isValidCodePoint(codePoint)
                 && !(codePoint >= Character.MIN_SURROGATE && codePoint <= Character.MAX_SURROGATE)
                 && (!Character.isISOControl(codePoint) || codePoint == '\t' || codePoint == '\n');
             return keepable ? Character.toString(codePoint) : written;
         }
-        return NAMED.getOrDefault(entity.toLowerCase(), written);
+        // Exact first: &Eacute; is not &eacute;. Browsers also read &AMP; and the like, written in capitals.
+        return NAMED.getOrDefault(entity, NAMED.getOrDefault(entity.toLowerCase(), written));
+    }
+
+    private static Map<String, String> named() {
+        Map<String, String> named = new HashMap<>();
+        String[] latin1 = LATIN_1.split(" ");
+        for (int i = 0; i < latin1.length; i++) {
+            named.put(latin1[i], Character.toString(0xA0 + i));
+        }
+        OTHERS.forEach((name, codePoint) -> named.put(name, Character.toString(codePoint)));
+        named.put("nbsp", " "); // a space as any other: a description is no layout
+        return Map.copyOf(named);
     }
 }
