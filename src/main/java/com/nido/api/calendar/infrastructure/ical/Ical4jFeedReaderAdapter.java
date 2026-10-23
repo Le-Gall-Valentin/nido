@@ -12,7 +12,6 @@ import net.fortuna.ical4j.model.Component;
 import net.fortuna.ical4j.model.ComponentContainer;
 import net.fortuna.ical4j.model.Property;
 import net.fortuna.ical4j.model.component.VEvent;
-import net.fortuna.ical4j.model.property.RecurrenceId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,12 +22,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.temporal.Temporal;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -214,8 +211,12 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
     private static List<Group> groupsOf(Calendar calendar) {
         List<Group> groups = new ArrayList<>();
         // A short stable digest, never the UID: it is untrusted, as long as the file, and would be repeated in every id.
-        IcalGroups.byUid(calendar.<VEvent>getComponents(Component.VEVENT)).forEach((uid, events) ->
-            groups.add(new Group(UUID.nameUUIDFromBytes(uid.getBytes(StandardCharsets.UTF_8)).toString(), events)));
+        IcalGroups.byUid(calendar.<VEvent>getComponents(Component.VEVENT)).forEach((uid, events) -> {
+            // A property nido reads did not parse: the event is left out, as the import sets it aside.
+            if (!IcalGroups.unreadable(events)) {
+                groups.add(new Group(UUID.nameUUIDFromBytes(uid.getBytes(StandardCharsets.UTF_8)).toString(), events));
+            }
+        });
         return groups;
     }
 
@@ -245,11 +246,7 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
         // One version of a slot edited twice, as the import keeps: an occurrence is never shown twice.
         List<VEvent> overrides = IcalGroups.onePerSlot(IcalGroups.overrides(group.events()), zone, dropped -> { });
         String digest = group.digest();
-        Set<LocalDateTime> replaced = new HashSet<>();
-        for (VEvent override : overrides) {
-            override.<RecurrenceId<Temporal>>getProperty(Property.RECURRENCE_ID)
-                .map(id -> IcalSupport.toLocal(id.getDate(), zone)).ifPresent(replaced::add);
-        }
+        Set<LocalDateTime> replaced = IcalGroups.slotsTaken(overrides, zone);
         // Only the first master of a UID stands: a followed calendar has no report to say the others were set aside.
         if (!masters.isEmpty()) {
             VEvent master = masters.getFirst();
@@ -268,12 +265,14 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
             }
         }
         for (VEvent override : overrides) {
-            // An edited occurrence stands alone, with its own times.
-            if (found.size() < MAX_OCCURRENCES && !Ical4jImportReaderAdapter.cancelled(override)) {
+            // An edited occurrence stands alone, with its own times, and is named by the slot it took over: that slot is
+            // shown by nothing else, where its own new start may be another occurrence's.
+            if (found.size() < MAX_OCCURRENCES && !IcalGroups.cancelled(override)) {
                 try {
-                    Optional<IcalTimes> times = IcalTimes.of(override, zone);
+                    Optional<IcalTimes> times = IcalTimes.of(override, zone).filter(IcalTimes::fits);
                     if (times.isPresent() && overlaps(times.get(), from, to)) {
-                        add(found, feed, digest, IcalTexts.of(override, locale), times.get());
+                        LocalDateTime slot = IcalGroups.slotOf(override, zone).orElse(times.get().start());
+                        add(found, feed, digest, slot, IcalTexts.of(override, locale), times.get());
                     }
                 } catch (RuntimeException unreadable) {
                     log.debug("Followed calendar {}: an edited occurrence left out ({})", feed.id(), unreadable.getClass().getSimpleName());
@@ -285,10 +284,11 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
     private void readMaster(ExternalFeed feed, String digest, VEvent master, Set<LocalDateTime> replaced, BoundedExpansion expansion,
                             ZoneId zone, Locale locale, ZonedDateTime windowStart, ZonedDateTime windowEnd, LocalDate from,
                             LocalDate to, List<CalendarOccurrence> found) {
-        if (Ical4jImportReaderAdapter.cancelled(master)) {
+        if (IcalGroups.cancelled(master)) {
             return;
         }
-        Optional<IcalTimes> read = IcalTimes.of(master, zone);
+        // An event longer than a calendar read shows is one nido does not hold: the import sets it aside too.
+        Optional<IcalTimes> read = IcalTimes.of(master, zone).filter(IcalTimes::fits);
         if (read.isEmpty()) {
             return;
         }
@@ -306,15 +306,16 @@ public class Ical4jFeedReaderAdapter implements IcalFeedChecker {
         }
         // The texts (and the markup stripped from them) only for an event that shows in the window.
         IcalTexts texts = IcalTexts.of(master, locale);
-        shown.forEach(occurrence -> add(found, feed, digest, texts, occurrence));
+        shown.forEach(occurrence -> add(found, feed, digest, occurrence.start(), texts, occurrence));
     }
 
     private static boolean overlaps(IcalTimes times, LocalDate from, LocalDate to) {
         return !times.endDate().isBefore(from) && !times.startDate().isAfter(to);
     }
 
-    private static void add(List<CalendarOccurrence> found, ExternalFeed feed, String digest, IcalTexts texts, IcalTimes times) {
-        found.add(new CalendarOccurrence(CalendarSourceType.EXTERNAL, feed.id() + ":" + digest + ":" + times.start(),
+    private static void add(List<CalendarOccurrence> found, ExternalFeed feed, String digest, LocalDateTime slot, IcalTexts texts,
+                            IcalTimes times) {
+        found.add(new CalendarOccurrence(CalendarSourceType.EXTERNAL, feed.id() + ":" + digest + ":" + slot,
             null, null, true, texts.title(), texts.description(), texts.location(), times.allDay(),
             times.startDate(), times.startTime(), times.endDate(), times.endTime(), feed.color(), List.of(), feed.id()));
     }

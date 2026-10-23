@@ -1,5 +1,6 @@
 package com.nido.api.calendar.infrastructure.ical;
 
+import com.nido.api.calendar.domain.model.CalendarException;
 import com.nido.api.calendar.domain.model.EventScheduleValidator;
 import net.fortuna.ical4j.model.Parameter;
 import net.fortuna.ical4j.model.Property;
@@ -69,6 +70,16 @@ record IcalTimes(boolean allDay, LocalDateTime start, LocalDateTime end, String 
 
     private static LocalDateTime tooLate(LocalDateTime startLocal) {
         return startLocal.plusDays(EventScheduleValidator.MAX_EVENT_DAYS + 1L);
+    }
+
+    /** Whether nido can hold it as it is: no event covers more than a calendar read shows. */
+    boolean fits() {
+        try {
+            EventScheduleValidator.validateEvent(allDay, startDate(), startTime(), endDate(), endTime());
+            return true;
+        } catch (CalendarException refused) {
+            return false;
+        }
     }
 
     LocalDate startDate() {

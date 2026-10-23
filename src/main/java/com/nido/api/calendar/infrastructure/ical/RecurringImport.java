@@ -16,7 +16,6 @@ import net.fortuna.ical4j.model.Recur;
 import net.fortuna.ical4j.model.component.VEvent;
 import net.fortuna.ical4j.model.property.DtStart;
 import net.fortuna.ical4j.model.property.RRule;
-import net.fortuna.ical4j.model.property.RecurrenceId;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -35,7 +34,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 /**
  * What a recurring event of a file becomes. nido suggests a series for its rule (RecurrenceRules) and keeps it only if
@@ -81,10 +79,16 @@ final class RecurringImport {
             Set<LocalDateTime> excluded = expansion.excluded(master);
             List<LocalDateTime> expanded = expansion.ofRules(master, times, from, to, VERIFIED_CAP);
             if (expanded.isEmpty() && expansion.rdates(master).isEmpty()) {
-                // A rule giving nothing at all: what is left is its first day (RFC 5545 counts it), unless it is excluded.
-                List<ImportedEvent> first = excluded.contains(times.start()) ? List.of()
-                    : List.of(Ical4jImportReaderAdapter.event(texts, times));
-                return new Result(null, first, false, 0, false);
+                // A rule giving nothing at all: what is left is its first day (RFC 5545 counts it), unless it is excluded
+                // or edited on its own, and the edited occurrences, each an event of its own.
+                List<ImportedEvent> events = new ArrayList<>();
+                ownStart(texts, times, excluded, overrides).ifPresent(events::add);
+                for (VEvent override : overrides) {
+                    if (!IcalGroups.cancelled(override)) {
+                        eventOf(override, notes, true).ifPresent(events::add);
+                    }
+                }
+                return new Result(null, events, false, 0, false);
             }
             if (!expanded.isEmpty()) {
                 // Where the rule itself begins: RFC 5545 counts an excluded occurrence, and so does a COUNT.
@@ -221,8 +225,8 @@ final class RecurringImport {
         return source.getRules().getOffset(at).getTotalSeconds() - zone.getRules().getOffset(at).getTotalSeconds();
     }
 
-    private static List<LocalDateTime> projected(RecurringEventSeries series, ZonedDateTime from, ZonedDateTime to,
-                                                 Set<LocalDateTime> excluded) {
+    private List<LocalDateTime> projected(RecurringEventSeries series, ZonedDateTime from, ZonedDateTime to,
+                                          Set<LocalDateTime> excluded) {
         LocalDateTime start = from.toLocalDateTime();
         LocalDateTime end = to.toLocalDateTime();
         return EventRecurrenceProjector.slotsBetween(series, from.toLocalDate(), to.toLocalDate()).stream()
@@ -232,12 +236,16 @@ final class RecurringImport {
             .toList();
     }
 
-    private static LocalDateTime startOf(RecurringEventSeries series, LocalDate day) {
-        return series.allDay() ? day.atStartOfDay() : day.atTime(series.startTime());
+    /**
+     * When an occurrence starts, as ical4j places it: a time the spring change skips (02:30 on its day in Paris) is the
+     * same time after the change, 03:30, where nido's series keeps 02:30.
+     */
+    private LocalDateTime startOf(RecurringEventSeries series, LocalDate day) {
+        return series.allDay() ? day.atStartOfDay() : day.atTime(series.startTime()).atZone(zone).toLocalDateTime();
     }
 
     /** Whether a series has an occurrence starting exactly then: a slot of its days, at its time. */
-    private static boolean isSlotStart(RecurringEventSeries series, LocalDateTime at) {
+    private boolean isSlotStart(RecurringEventSeries series, LocalDateTime at) {
         return isSlot(series, at.toLocalDate()) && startOf(series, at.toLocalDate()).equals(at);
     }
 
@@ -248,20 +256,20 @@ final class RecurringImport {
     private Result asResult(RecurringEventSeries series, List<VEvent> overrides, IcalTexts texts, IcalTimes times,
                             LocalDateTime first, Set<LocalDateTime> excluded, List<ImportNote> notes) {
         List<ImportedEvent> ownEvents = new ArrayList<>();
-        if (!first.equals(times.start()) && !excluded.contains(times.start())) {
-            ownEvents.add(Ical4jImportReaderAdapter.event(texts, times));
+        if (!first.equals(times.start())) {
+            ownStart(texts, times, excluded, overrides).ifPresent(ownEvents::add);
         }
         Set<LocalDate> cancelled = new TreeSet<>();
         // An EXDATE frees a slot only when it names the slot's own start.
         excluded.stream().filter(at -> isSlotStart(series, at)).map(LocalDateTime::toLocalDate).forEach(cancelled::add);
         List<ImportedOccurrence> edited = new ArrayList<>();
         for (VEvent override : overrides) {
-            Optional<LocalDateTime> replaced = replaced(override, zone);
+            Optional<LocalDateTime> replaced = IcalGroups.slotOf(override, zone);
             if (replaced.isEmpty()) {
                 continue;
             }
             LocalDate slot = replaced.get().toLocalDate();
-            boolean isCancelled = Ical4jImportReaderAdapter.cancelled(override);
+            boolean isCancelled = IcalGroups.cancelled(override);
             Optional<ImportedEvent> event = eventOf(override, notes, !isCancelled);
             if (isSlotStart(series, replaced.get())) {
                 if (isCancelled) {
@@ -279,6 +287,17 @@ final class RecurringImport {
             ownEvents, false, 0, false);
     }
 
+    /**
+     * DTSTART as an event of its own, when the rule does not give it (RFC 5545 counts it all the same): unless an EXDATE
+     * takes it out, or an edited occurrence of that very start replaces it — which then stands in its place, or, cancelled,
+     * leaves nothing.
+     */
+    private Optional<ImportedEvent> ownStart(IcalTexts texts, IcalTimes times, Set<LocalDateTime> excluded, List<VEvent> overrides) {
+        boolean edited = overrides.stream().anyMatch(override -> IcalGroups.slotOf(override, zone).filter(times.start()::equals).isPresent());
+        return excluded.contains(times.start()) || edited ? Optional.empty()
+            : Optional.of(Ical4jImportReaderAdapter.event(texts, times));
+    }
+
     /** The event an override says, with the usual notes of its texts and times when {@code noted}. */
     private Optional<ImportedEvent> eventOf(VEvent override, List<ImportNote> notes, boolean noted) {
         return IcalTimes.of(override, zone).map(t -> {
@@ -293,7 +312,7 @@ final class RecurringImport {
     private Result unfold(VEvent master, List<VEvent> overrides, IcalTexts texts, IcalTimes times, List<ImportNote> notes) {
         ZonedDateTime from = today.minusYears(1).atStartOfDay(zone);
         ZonedDateTime to = today.plusYears(VERIFIED_YEARS).plusDays(1).atStartOfDay(zone);
-        Set<LocalDateTime> replaced = overrides.stream().map(o -> replaced(o, zone)).flatMap(Optional::stream).collect(Collectors.toSet());
+        Set<LocalDateTime> replaced = IcalGroups.slotsTaken(overrides, zone);
         // Asked for one more than is kept, to know whether some were left out, and for as many as the overrides may take out.
         List<LocalDateTime> all = expansion.occurrences(master, times, from, to, MAX_UNFOLDED + 1 + replaced.size()).stream()
             .filter(start -> !replaced.contains(start))
@@ -302,7 +321,7 @@ final class RecurringImport {
         List<ImportedEvent> events = new ArrayList<>();
         starts.forEach(start -> events.add(Ical4jImportReaderAdapter.event(texts, times.at(start))));
         for (VEvent override : overrides) {
-            if (!Ical4jImportReaderAdapter.cancelled(override)) {
+            if (!IcalGroups.cancelled(override)) {
                 IcalTimes.of(override, zone)
                     .filter(t -> !t.start().isBefore(from.toLocalDateTime()) && t.start().isBefore(to.toLocalDateTime()))
                     .flatMap(t -> eventOf(override, notes, true))
@@ -317,11 +336,5 @@ final class RecurringImport {
     private static boolean endless(VEvent master) {
         return master.<RRule<Temporal>>getProperties(Property.RRULE).stream()
             .anyMatch(rule -> rule.getRecur().getCount() < 1 && rule.getRecur().getUntil() == null);
-    }
-
-    /** The slot an edited occurrence of the file takes over, in {@code zone}. */
-    static Optional<LocalDateTime> replaced(VEvent override, ZoneId zone) {
-        Optional<RecurrenceId<Temporal>> id = override.getProperty(Property.RECURRENCE_ID);
-        return id.map(RecurrenceId::getDate).map(date -> IcalSupport.toLocal(date, zone));
     }
 }

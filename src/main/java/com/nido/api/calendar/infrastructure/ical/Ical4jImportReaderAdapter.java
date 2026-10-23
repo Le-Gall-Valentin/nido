@@ -1,7 +1,6 @@
 package com.nido.api.calendar.infrastructure.ical;
 
 import com.nido.api.calendar.domain.model.CalendarException;
-import com.nido.api.calendar.domain.model.EventScheduleValidator;
 import com.nido.api.calendar.domain.model.ImportGroup;
 import com.nido.api.calendar.domain.model.ImportNote;
 import com.nido.api.calendar.domain.model.ImportNoteKind;
@@ -62,6 +61,13 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
                     "NIDO_SOURCE"));
                 continue;
             }
+            if (IcalGroups.unreadable(entry.getValue())) {
+                // A property nido reads did not parse: nothing of that event is guessed, the rest of the file is read.
+                ignored[0]++;
+                notes.add(new ImportNote(ImportNoteKind.IGNORED, IcalTexts.titleOrUntitled(entry.getValue().getFirst(), locale),
+                    "MALFORMED"));
+                continue;
+            }
             group(uid, entry.getValue(), zone, locale, recurring, notes, ignored).ifPresent(groups::add);
         }
         return new ImportReading(groups, ignored[0], notes);
@@ -105,7 +111,7 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
             notesOf(texts, times, notes);
             // An edited occurrence nido cannot hold is set aside and said so; a cancelled one is no event, only a slot to free.
             List<VEvent> held = overrides.stream()
-                .filter(override -> cancelled(override) || usable(override, zone, locale, notes, ignored)).toList();
+                .filter(override -> IcalGroups.cancelled(override) || usable(override, zone, locale, notes, ignored)).toList();
             RecurringImport.Result result = recurring.translate(master, held, texts, times, notes);
             if (result.unfolded()) {
                 // Said even when nothing is kept: every occurrence lay outside the window.
@@ -143,12 +149,12 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
         List<ImportedEvent> events = new ArrayList<>();
         Optional<IcalTimes> own = IcalTimes.of(master, zone);
         Optional<VEvent> newer = own.isEmpty() ? Optional.empty() : overrides.stream()
-            .filter(override -> RecurringImport.replaced(override, zone).filter(own.get().start()::equals).isPresent())
+            .filter(override -> IcalGroups.slotOf(override, zone).filter(own.get().start()::equals).isPresent())
             .findFirst();
         boolean replaced = false;
         if (newer.isPresent()) {
             // Its newer version says what the event is now; if nido cannot hold that, the event stays as the master said.
-            boolean cancelledNewer = cancelled(newer.get());
+            boolean cancelledNewer = IcalGroups.cancelled(newer.get());
             boolean usableNewer = usable(newer.get(), zone, locale, notes, ignored);
             replaced = cancelledNewer || usableNewer;
             if (usableNewer) {
@@ -189,11 +195,11 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
      */
     private static boolean usable(VEvent vevent, ZoneId zone, Locale locale, List<ImportNote> notes, int[] ignored) {
         String reason;
-        if (cancelled(vevent)) {
+        if (IcalGroups.cancelled(vevent)) {
             reason = "CANCELLED";
         } else {
             Optional<IcalTimes> times = IcalTimes.of(vevent, zone);
-            reason = times.isEmpty() ? "NO_START" : fits(times.get()) ? null : "TOO_LONG";
+            reason = times.isEmpty() ? "NO_START" : times.get().fits() ? null : "TOO_LONG";
         }
         if (reason == null) {
             return true;
@@ -216,19 +222,5 @@ public class Ical4jImportReaderAdapter implements IcalImportReader {
     static ImportedEvent event(IcalTexts texts, IcalTimes times) {
         return new ImportedEvent(texts.title(), texts.description(), texts.location(), times.allDay(),
             times.startDate(), times.startTime(), times.endDate(), times.endTime());
-    }
-
-    static boolean cancelled(VEvent event) {
-        return event.getProperty(Property.STATUS).map(Property::getValue).filter("CANCELLED"::equalsIgnoreCase).isPresent();
-    }
-
-    /** Whether nido can hold it as it is: no event covers more than a calendar read shows. */
-    private static boolean fits(IcalTimes times) {
-        try {
-            EventScheduleValidator.validateEvent(times.allDay(), times.startDate(), times.startTime(), times.endDate(), times.endTime());
-            return true;
-        } catch (CalendarException refused) {
-            return false;
-        }
     }
 }

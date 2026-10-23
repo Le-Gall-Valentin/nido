@@ -95,6 +95,10 @@ final class BoundedZones implements ComponentFactory<VTimeZone> {
         if (first != null) {
             return first;
         }
+        if (zone.getObservances().stream().anyMatch(IcalSupport::unreadable)) {
+            // A change whose day or rule did not parse: no time written in that zone could be placed.
+            throw new IllegalStateException("A zone with an unreadable change");
+        }
         zone.getObservances().forEach(this::charge);
         given.put(id.get(), zone);
         return zone;

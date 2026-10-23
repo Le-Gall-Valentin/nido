@@ -211,10 +211,22 @@ final class BoundedExpansion {
         boolean longDate = dateSeed && overlapping && lasting.compareTo(Duration.ofDays(1)) > 0;
         TemporalAmount lead = dateSeed && !longDate ? java.time.Period.ofDays(1) : lasting;
         long leadSeconds = dateSeed && !longDate ? 86_400 : Math.max(0, lasting.toSeconds());
-        Temporal asked = from.minus(lead);
+        ZonedDateTime asked = from.minus(lead);
+        // Bounds of the seed's own kind: ical4j compares a floating time or a date with zoned bounds in the JVM's zone
+        // (TemporalComparator), not the space's, and loses what lies at either edge of the window.
+        Temporal low = switch (seed) {
+            case LocalDateTime floating -> asked.toLocalDateTime();
+            case LocalDate date -> asked.toLocalDate();
+            default -> asked;
+        };
+        Temporal high = switch (seed) {
+            case LocalDateTime floating -> to.toLocalDateTime();
+            case LocalDate date -> to.toLocalDate();
+            default -> to;
+        };
         for (Recur<Temporal> recur : rules) {
             charge(recur, dateSeed, times.start(), from.toLocalDateTime(), to.toLocalDateTime(), leadSeconds);
-            recur.getDatesAsStream(seed, asked, to, wanted).forEach(date -> found.add(IcalSupport.toLocal(date, zone)));
+            recur.getDatesAsStream(seed, low, high, wanted).forEach(date -> found.add(IcalSupport.toLocal(date, zone)));
         }
         return found;
     }

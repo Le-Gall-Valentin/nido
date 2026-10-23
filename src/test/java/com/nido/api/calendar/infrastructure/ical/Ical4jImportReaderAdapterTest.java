@@ -290,13 +290,9 @@ class Ical4jImportReaderAdapterTest {
     @Test
     void startsInYear0AndYear9999AreReadWithoutThrowing() {
         for (String start : new String[] {"00000101T100000", "99991231T100000", "99991231T235959Z"}) {
-            // ical4j refuses year 0 outright: the file is then not an iCalendar one, which is an answer, not a crash.
-            try {
-                ImportReading reading = read(ics(vevent("w" + start, "SUMMARY:Limite", "DTSTART:" + start)), PARIS);
-                assertThat(reading.groups().size() + reading.ignored()).isEqualTo(1);
-            } catch (CalendarException.NotAnIcalFile refused) {
-                assertThat(start).startsWith("0000");
-            }
+            // ical4j refuses year 0 outright: that event is then set aside as unreadable, which is an answer, not a crash.
+            ImportReading reading = read(ics(vevent("w" + start, "SUMMARY:Limite", "DTSTART:" + start)), PARIS);
+            assertThat(reading.groups().size() + reading.ignored()).isEqualTo(1);
         }
     }
 
@@ -402,12 +398,58 @@ class Ical4jImportReaderAdapterTest {
     }
 
     @Test
-    void aPropertyNidoReadsThatDoesNotParseStillRefusesTheFile() {
-        // What an event is, when and how it repeats, is never guessed.
-        assertThatThrownBy(() -> read(ics(vevent("d@test", "SUMMARY:x", "DTSTART:notadate")), PARIS))
-            .isInstanceOf(CalendarException.NotAnIcalFile.class);
-        assertThatThrownBy(() -> read(ics(vevent("r@test", "SUMMARY:x", "DTSTART;VALUE=DATE:20261017", "RRULE:FREQ=WEEKLY;COUNT=x")), PARIS))
-            .isInstanceOf(CalendarException.NotAnIcalFile.class);
+    void anEventWithAPropertyNidoReadsThatDoesNotParseIsSetAsideAndTheRestOfTheFileIsRead() {
+        // What an event is, when and how it repeats, is never guessed: that event goes, with its edited occurrences.
+        ImportReading reading = read(ics(
+            vevent("ok@test", "SUMMARY:Lu", "DTSTART:20261017T090000"),
+            vevent("d@test", "SUMMARY:Sans début lisible", "DTSTART:notadate"),
+            vevent("r@test", "SUMMARY:Règle illisible", "DTSTART;VALUE=DATE:20261017", "RRULE:FREQ=WEEKLY;COUNT=x"),
+            vevent("o@test", "SUMMARY:Série", "DTSTART:20261019T090000", "RRULE:FREQ=WEEKLY;COUNT=3"),
+            vevent("o@test", "SUMMARY:Déplacée", "RECURRENCE-ID:pas-une-date", "DTSTART:20261027T100000")), PARIS);
+
+        assertThat(onlyEvent(reading).title()).isEqualTo("Lu");
+        assertThat(reading.ignored()).isEqualTo(3);
+        assertThat(reading.notes()).extracting(ImportNote::kind, ImportNote::title, ImportNote::detail).containsExactly(
+            tuple(ImportNoteKind.IGNORED, "Sans début lisible", "MALFORMED"),
+            tuple(ImportNoteKind.IGNORED, "Règle illisible", "MALFORMED"),
+            tuple(ImportNoteKind.IGNORED, "Série", "MALFORMED"));
+    }
+
+    @Test
+    void aMalformedDueOfATaskNidoSetsAsideRefusesNothing() {
+        ImportReading reading = read(ics(vevent("ok@test", "SUMMARY:Lu", "DTSTART:20261017T090000"),
+            "BEGIN:VTODO\r\nUID:t@test\r\nDTSTAMP:20261001T000000Z\r\nSUMMARY:Tâche\r\nDUE:00001231T000000Z-x\r\nEND:VTODO\r\n"), PARIS);
+
+        assertThat(onlyEvent(reading).title()).isEqualTo("Lu");
+        assertThat(reading.notes()).extracting(ImportNote::detail).containsExactly("VTODO");
+    }
+
+    @Test
+    void anEditedFirstDayOffItsRuleTakesItsPlaceOrCancelsIt() {
+        // Mondays from Wednesday 7 January: the Wednesday is an event of its own, which its edited version replaces.
+        String rule = "RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20260131T000000Z";
+        ImportReading moved = read(ics(
+            vevent("a@test", "SUMMARY:Atelier", "DTSTART:20260107T090000", rule),
+            vevent("a@test", "SUMMARY:Atelier (déplacé)", "RECURRENCE-ID:20260107T090000", "DTSTART:20260108T090000")), PARIS);
+        ImportReading cancelled = read(ics(
+            vevent("c@test", "SUMMARY:Atelier", "DTSTART:20260107T090000", rule),
+            vevent("c@test", "SUMMARY:Atelier", "RECURRENCE-ID:20260107T090000", "DTSTART:20260107T090000", "STATUS:CANCELLED")), PARIS);
+
+        assertThat(moved.groups().getFirst().series()).isNotNull();
+        assertThat(moved.groups().getFirst().events()).extracting(ImportedEvent::title, ImportedEvent::startDate)
+            .containsExactly(tuple("Atelier (déplacé)", LocalDate.of(2026, 1, 8)));
+        assertThat(cancelled.groups().getFirst().series()).isNotNull();
+        assertThat(cancelled.groups().getFirst().events()).isEmpty();
+    }
+
+    @Test
+    void anEditedFirstDayOfARuleGivingNothingElseTakesItsPlace() {
+        // A rule whose UNTIL comes before its first Monday gives nothing: only the first day is left, edited on its own.
+        ImportReading reading = read(ics(
+            vevent("n@test", "SUMMARY:Atelier", "DTSTART:20260107T090000", "RRULE:FREQ=WEEKLY;BYDAY=MO;UNTIL=20260110T000000Z"),
+            vevent("n@test", "SUMMARY:Atelier (déplacé)", "RECURRENCE-ID:20260107T090000", "DTSTART:20260108T090000")), PARIS);
+
+        assertThat(onlyEvent(reading).title()).isEqualTo("Atelier (déplacé)");
     }
 
     @Test

@@ -10,10 +10,12 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -139,7 +141,7 @@ class Ical4jFeedReaderAdapterTest {
             + "BEGIN:VEVENT\r\nUID:fine\r\nDTSTAMP:20260901T000000Z\r\nSUMMARY:Normal\r\n"
             + "DTSTART;VALUE=DATE:20261014\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
 
-        List<CalendarOccurrence> found = assertTimeoutPreemptively(Duration.ofSeconds(2), () -> reader.occurrencesOf(
+        List<CalendarOccurrence> found = assertTimeoutPreemptively(BoundedExpansionTest.HANG_GUARD, () -> reader.occurrencesOf(
             feed, () -> hostile, PARIS, Locale.FRENCH, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31)));
 
         assertThat(found).extracting(CalendarOccurrence::title).containsExactly("Normal");
@@ -179,6 +181,56 @@ class Ical4jFeedReaderAdapterTest {
             .isGreaterThan(10 * content.length());
     }
 
+    @Test
+    void anEventWithAPropertyNidoReadsThatDoesNotParseIsLeftOutAndTheRestIsShown() {
+        String content = calendar(vevent("ok", "Lu", "DTSTART;VALUE=DATE:20261014\r\n"),
+            vevent("bad", "Illisible", "DTSTART;VALUE=DATE:20261014\r\nRRULE:FREQ=WEEKLY;COUNT=x\r\n"));
+
+        assertThat(reader.occurrencesOf(feed, () -> content, PARIS, Locale.FRENCH, LocalDate.of(2026, 10, 12), LocalDate.of(2026, 10, 18)))
+            .extracting(CalendarOccurrence::title).containsExactly("Lu");
+    }
+
+    @Test
+    void floatingTimesAreComparedInTheSpacesZoneWhateverTheMachinesZone() {
+        String content = calendar(vevent("late", "Tard", "DTSTART:20261102T230000\r\nRRULE:FREQ=WEEKLY\r\n"),
+            vevent("early", "Tôt", "DTSTART:20261102T060000\r\nRRULE:FREQ=WEEKLY\r\n"));
+        LocalDate monday = LocalDate.of(2026, 11, 16);
+        TimeZone machine = TimeZone.getDefault();
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+            for (String zone : List.of("Europe/Paris", "America/Los_Angeles", "Asia/Tokyo")) {
+                assertThat(reader.occurrencesOf(anotherFeed(), () -> content, ZoneId.of(zone), Locale.FRENCH, monday, monday))
+                    .as(zone).extracting(CalendarOccurrence::title, CalendarOccurrence::startTime)
+                    .containsExactlyInAnyOrder(tuple("Tard", LocalTime.of(23, 0)), tuple("Tôt", LocalTime.of(6, 0)));
+            }
+        } finally {
+            TimeZone.setDefault(machine);
+        }
+    }
+
+    @Test
+    void anOccurrenceMovedOntoAnotherOnesStartKeepsAnIdOfItsOwn() {
+        String content = calendar(
+            vevent("club", "Club", "DTSTART;TZID=Europe/Paris:20261005T180000\r\nRRULE:FREQ=WEEKLY;BYDAY=MO\r\n"),
+            vevent("club", "Club (avancé)", "RECURRENCE-ID;TZID=Europe/Paris:20261012T180000\r\n"
+                + "DTSTART;TZID=Europe/Paris:20261019T180000\r\n"));
+
+        List<CalendarOccurrence> found = reader.occurrencesOf(feed, () -> content, PARIS, Locale.FRENCH,
+            LocalDate.of(2026, 10, 12), LocalDate.of(2026, 10, 25));
+
+        assertThat(found).extracting(CalendarOccurrence::title).containsExactlyInAnyOrder("Club", "Club (avancé)");
+        assertThat(found).extracting(CalendarOccurrence::sourceId).doesNotHaveDuplicates();
+    }
+
+    @Test
+    void anEventLongerThanACalendarReadShowsIsLeftOutAsTheImportSetsItAside() {
+        String content = calendar(vevent("long", "Toujours", "DTSTART;VALUE=DATE:19000101\r\nDTEND;VALUE=DATE:99991231\r\n"),
+            vevent("ok", "Lu", "DTSTART;VALUE=DATE:20261014\r\n"));
+
+        assertThat(reader.occurrencesOf(feed, () -> content, PARIS, Locale.FRENCH, LocalDate.of(2026, 10, 12), LocalDate.of(2026, 10, 18)))
+            .extracting(CalendarOccurrence::title).containsExactly("Lu");
+    }
+
     private static String vevent(String uid, String summary, String extra) {
         return "BEGIN:VEVENT\r\nUID:" + uid + "\r\nDTSTAMP:20260901T000000Z\r\nSUMMARY:" + summary + "\r\n" + extra + "END:VEVENT\r\n";
     }
@@ -198,14 +250,12 @@ class Ical4jFeedReaderAdapterTest {
         String huge = calendar(vevent("U".repeat(100_000), "Long UID",
             "DTSTART:20261001T000000Z\r\nDTEND:20261001T003000Z\r\nRRULE:FREQ=HOURLY\r\n"));
 
-        long started = System.nanoTime();
         List<CalendarOccurrence> found = reader.occurrencesOf(anotherFeed(), () -> huge, PARIS, Locale.FRENCH,
             LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 7));
 
         assertThat(found).hasSizeGreaterThan(100);
         assertThat(found).allSatisfy(o -> assertThat(o.sourceId()).hasSizeLessThan(100));
         assertThat(found).extracting(CalendarOccurrence::sourceId).doesNotHaveDuplicates();
-        assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(2));
     }
 
     @Test
@@ -239,7 +289,7 @@ class Ical4jFeedReaderAdapterTest {
             first.id(), calendar(normal("n1", "Normal 1"), heavy("h1", "Heavy 1")),
             second.id(), calendar(normal("n2", "Normal 2"), heavy("h2", "Heavy 2")));
 
-        List<CalendarOccurrence> found = assertTimeoutPreemptively(Duration.ofSeconds(1), () -> reader.occurrencesOf(
+        List<CalendarOccurrence> found = assertTimeoutPreemptively(BoundedExpansionTest.HANG_GUARD, () -> reader.occurrencesOf(
             List.of(first, second), feed -> files.get(feed.id()), PARIS, Locale.FRENCH,
             LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 31)));
 

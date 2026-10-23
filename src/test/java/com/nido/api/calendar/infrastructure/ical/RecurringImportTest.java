@@ -112,6 +112,27 @@ class RecurringImportTest {
         assertThat(group.events()).extracting(ImportedEvent::startDate).containsExactly(LocalDate.of(2026, 1, 7));
     }
 
+    @ParameterizedTest(name = "at {0}")
+    @MethodSource("aroundTheSpringChange")
+    void aDailySeriesAtAnHourTheSpringChangeSkipsComesBackAsASeries(LocalTime at) {
+        // 29 March 2026 has no 02:30 in Paris: ical4j places that occurrence at 03:30, where nido's series keeps 02:30.
+        RecurringEventSeries daily = new RecurringEventSeries(UUID.randomUUID(), UUID.randomUUID(), "Traite", null, null,
+            false, at, at.plusMinutes(30), 0, null, RecurrenceInterval.DAILY, 1, LocalDate.of(2026, 3, 20), null,
+            List.of(), UUID.randomUUID(), Instant.now());
+        String ics = new Ical4jCalendarWriterAdapter().write(new CalendarFeed("x", PARIS, List.of(),
+            List.of(new FeedSeries(daily, Set.of(), List.of())), List.of()), Locale.FRENCH);
+
+        ImportGroup group = only(ics, PARIS);
+
+        assertThat(group.unfolded()).isFalse();
+        assertThat(group.series().startTime()).isEqualTo(at);
+        assertThat(group.series().endDate()).isNull();
+    }
+
+    static Stream<LocalTime> aroundTheSpringChange() {
+        return Stream.of(LocalTime.of(2, 30), LocalTime.of(3, 30));
+    }
+
     @Test
     void aFifthTuesdayIsUnfolded() {
         ImportGroup group = only(ics(vevent("f@test", "SUMMARY:Réunion", "DTSTART;VALUE=DATE:20260331",
