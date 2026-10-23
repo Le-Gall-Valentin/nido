@@ -11,7 +11,8 @@ import com.nido.api.calendar.domain.port.out.IcalWriter;
 import com.nido.api.calendar.domain.port.out.SubscriptionLinkRepository;
 import com.nido.api.shared.annotation.ApplicationService;
 import com.nido.api.space.domain.model.SpaceMembership;
-import com.nido.api.space.domain.port.out.SpaceMembershipPort;
+import com.nido.api.space.application.port.in.ResolveMembershipUseCase;
+import com.nido.api.space.domain.model.SpaceException;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -29,14 +30,14 @@ public class ReadSubscriptionFeedHandler implements ReadSubscriptionFeedUseCase 
     private static final Duration READ_MARK_EVERY = Duration.ofHours(1);
 
     private final SubscriptionLinkRepository links;
-    private final SpaceMembershipPort memberships;
+    private final ResolveMembershipUseCase memberships;
     private final CalendarFeedAssembler assembler;
     private final IcalWriter writer;
     private final AccountLanguage language;
     private final ActiveAccounts accounts;
     private final Clock clock;
 
-    public ReadSubscriptionFeedHandler(SubscriptionLinkRepository links, SpaceMembershipPort memberships,
+    public ReadSubscriptionFeedHandler(SubscriptionLinkRepository links, ResolveMembershipUseCase memberships,
                                        CalendarFeedAssembler assembler, IcalWriter writer, AccountLanguage language,
                                        ActiveAccounts accounts, Clock clock) {
         this.links = links;
@@ -61,11 +62,14 @@ public class ReadSubscriptionFeedHandler implements ReadSubscriptionFeedUseCase 
         if (!accounts.isActive(link.userId())) {
             return Optional.empty();
         }
-        Optional<SpaceMembership> reader = memberships.find(link.spaceId(), link.userId());
-        if (reader.isEmpty()) {
+        SpaceMembership reader;
+        try {
+            reader = memberships.resolve(link.spaceId(), link.userId());
+        } catch (SpaceException.NotAMember left) {
+            // Its owner left the space: the address reads nothing, and is said not to exist.
             return Optional.empty();
         }
-        String content = writer.write(assembler.assemble(reader.get(), link.sources(), link.onlyMine()),
+        String content = writer.write(assembler.assemble(reader, link.sources(), link.onlyMine()),
             language.of(link.userId()));
         Instant now = clock.instant();
         if (link.lastReadAt() == null || link.lastReadAt().isBefore(now.minus(READ_MARK_EVERY))) {
