@@ -1,6 +1,6 @@
 import React, { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Alert, Button, Input, PasswordInput, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, CTA_ELEVATED_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
+import { Alert, Button, Input, PasswordInput, AUTH_FIELD_CLASS, AUTH_SUBMIT_CLASS, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import { InvalidLinkError, isValidPassword, passwordProblem } from '@/shared/lib'
 import { describeError, type FormError } from '../model/describeError'
 
@@ -101,7 +101,7 @@ export function NewPasswordForm({ onSave, username, labelId, onDone, onInvalid }
         disabled={!canSave}
         isLoading={isLoading}
         className={`${AUTH_SUBMIT_CLASS} disabled:cursor-not-allowed`}
-        style={CTA_ELEVATED_STYLE}
+        variant="primary"
       >
         {t('action.save')}
       </Button>

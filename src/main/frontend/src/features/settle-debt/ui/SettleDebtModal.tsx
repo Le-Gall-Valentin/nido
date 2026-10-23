@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatAmount, todayIso } from '@/shared/lib'
-import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Dialog, Button, Input } from '@/shared/ui'
 import { HandCoins } from 'lucide-react'
 
 interface SettleDebtModalProps {
@@ -55,7 +55,7 @@ export function SettleDebtModal({ spaceTimezone, fromLabel, toLabel, amount, onC
 
       <div className="mt-5 flex justify-end gap-2">
         <Button type="button" onClick={onCancel} disabled={isPending}>{t('cancel')}</Button>
-        <Button type="button" onClick={handleConfirm} isLoading={isPending} style={CTA_BUTTON_STYLE}>
+        <Button type="button" onClick={handleConfirm} isLoading={isPending} variant="primary">
           {t('confirm')}
         </Button>
       </div>

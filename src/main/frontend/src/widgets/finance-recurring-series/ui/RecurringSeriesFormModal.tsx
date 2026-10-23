@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Dialog, Button, Input } from '@/shared/ui'
 import type { SpaceMember } from '@/entities/space'
 import type { Category, ContributionInput, RecurrenceInput, RecurrenceInterval, RecurringSeries, TransactionType } from '@/entities/finance'
 import { resolveContributorsOrError } from '../lib/resolveContributorsOrError'
@@ -153,7 +153,7 @@ export function RecurringSeriesFormModal({ series, categories, members, canPickC
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" onClick={onCancel}>{t('form.cancel')}</Button>
-          <Button type="submit" style={CTA_BUTTON_STYLE}>{t('form.save')}</Button>
+          <Button type="submit" variant="primary">{t('form.save')}</Button>
         </div>
       </form>
     </Dialog>

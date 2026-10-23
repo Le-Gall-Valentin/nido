@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Dialog, Button, Input, Textarea, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Dialog, Button, Input, Textarea } from '@/shared/ui'
 import type { SpaceMember } from '@/entities/space'
 import { ColorSwatches, isEventColor, type EventInput, type RecurringEventSeries } from '@/entities/calendar'
 import type { Recurrence } from '../lib/seriesInput'
@@ -124,7 +124,7 @@ export function EventFormModal({
 
         <div className="mt-1 flex justify-end gap-2">
           <Button type="button" onClick={onCancel}>{t('form.cancel')}</Button>
-          <Button type="button" style={CTA_BUTTON_STYLE} disabled={isPending} onClick={submit}>
+          <Button type="button" variant="primary" disabled={isPending} onClick={submit}>
             {t('form.save')}
           </Button>
         </div>

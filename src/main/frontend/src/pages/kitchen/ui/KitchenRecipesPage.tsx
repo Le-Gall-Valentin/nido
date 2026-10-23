@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Star, Clock, Users, Plus, Pencil, Copy, ArrowRightLeft } from 'lucide-react'
-import { Alert, Button, SearchInput, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Button, PageActions, SearchInput, Spinner } from '@/shared/ui'
 import { ROUTES } from '@/shared/config'
 import { useMySpaces, useWritableSpaces } from '@/features/space-switcher'
 import { canWrite } from '@/entities/space'
@@ -77,12 +77,14 @@ function KitchenRecipesPageContent() {
 
   return (
     <div className="mx-auto max-w-[900px] px-5 py-6 md:px-10 md:py-[34px]">
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-fg-0">{t('recipes.title')}</h1>
         {canWriteHere && (
-          <Button type="button" onClick={() => setCreateOpen(true)} style={CTA_BUTTON_STYLE}>
-            <Plus className="size-4" /> {t('recipes.new_recipe')}
-          </Button>
+          <PageActions>
+            <Button type="button" variant="primary" icon={Plus} onClick={() => setCreateOpen(true)}>
+              {t('recipes.new_recipe')}
+            </Button>
+          </PageActions>
         )}
       </div>
 

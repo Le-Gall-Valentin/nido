@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isValidEmail, passwordProblem, useLanguage, usernameProblem } from '@/shared/lib'
-import { Alert, Button, CTA_BUTTON_STYLE, Input, PasswordInput } from '@/shared/ui'
+import { Alert, Button, Input, PasswordInput } from '@/shared/ui'
 import type { SetupAdmin } from '../model/types'
 import { ACTIONS_CLASS, FIELD_ERROR_CLASS, LEAD_CLASS, TITLE_CLASS } from './styles'
 
@@ -64,7 +64,7 @@ export function AdminStep({ initial, serverError = null, onNext }: Props) {
       </div>
       <div className={ACTIONS_CLASS}>
         <span />
-        <Button type="submit" className="border-transparent" style={CTA_BUTTON_STYLE}>{t('action.next')}</Button>
+        <Button type="submit" variant="primary">{t('action.next')}</Button>
       </div>
     </form>
   )

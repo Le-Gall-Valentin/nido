@@ -1,32 +1,45 @@
-import { Loader2 } from 'lucide-react'
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { Loader2, type LucideIcon } from 'lucide-react'
+import type { ComponentPropsWithRef, ReactNode } from 'react'
+import { buttonClassName, type ButtonLook, type ButtonSize } from './buttonLook'
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+const ICON_SIZE: Record<ButtonSize, string> = { md: 'size-4', sm: 'size-3.5' }
+
+interface ButtonProps extends ComponentPropsWithRef<'button'>, ButtonLook {
   isLoading?: boolean
+  /** Drawn before the label, green on a secondary button so that it reads at a glance. */
+  icon?: LucideIcon
   children: ReactNode
 }
 
 export function Button({
+  variant = 'secondary',
+  size = 'md',
+  icon: Icon,
   isLoading = false,
   disabled,
   children,
   className = '',
   ...props
 }: ButtonProps) {
+  const iconClass = `${ICON_SIZE[size]} shrink-0`
   return (
     <button
       disabled={disabled || isLoading}
       aria-busy={isLoading}
-      className={`flex items-center justify-center gap-[7px] rounded-[10px] border-[1.5px] border-border bg-bg-1 px-[18px] py-[11px] text-sm font-semibold text-fg-2 transition-colors hover:bg-bg-2 hover:text-fg-0 disabled:opacity-50 ${className}`}
+      data-variant={variant}
+      className={buttonClassName({ variant, size, className })}
       {...props}
     >
       {isLoading ? (
         <>
-          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          <Loader2 className={`${iconClass} animate-spin`} aria-hidden="true" />
           <span className="sr-only">{children}</span>
         </>
       ) : (
-        children
+        <>
+          {Icon && <Icon className={`${iconClass} ${variant === 'secondary' ? 'text-accent' : ''}`} aria-hidden="true" />}
+          {children}
+        </>
       )}
     </button>
   )

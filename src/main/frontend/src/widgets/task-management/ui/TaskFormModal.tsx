@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Dialog, Button, Input } from '@/shared/ui'
 import { UserAvatar } from '@/entities/user'
 import { useMemberName, type SpaceMember } from '@/entities/space'
 import type { RecurrenceInterval, Task, TaskPriority } from '@/entities/tasks'
@@ -218,7 +218,7 @@ export function TaskFormModal({ open, onClose, onSubmit, initialTask, members, i
 
         <div className="flex gap-2 pt-2">
           <Button type="button" onClick={onClose} className="flex-1">{t('form.cancel')}</Button>
-          <Button type="button" onClick={handleSave} style={CTA_BUTTON_STYLE} className="flex-1">{t('form.save')}</Button>
+          <Button type="button" onClick={handleSave} variant="primary" className="flex-1">{t('form.save')}</Button>
         </div>
       </div>
     </Dialog>

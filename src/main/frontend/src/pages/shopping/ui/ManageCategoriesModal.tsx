@@ -147,10 +147,9 @@ export function ManageCategoriesModal({
                     className="rounded-md px-2.5 py-1.5 text-xs font-semibold text-fg-2 hover:bg-bg-2 disabled:opacity-50">
                     {t('form_cancel')}
                   </button>
-                  <button type="button" onClick={() => confirmDelete(category.id)} disabled={pending}
-                    className="rounded-md bg-status-red px-2.5 py-1.5 text-xs font-semibold text-bg-0 disabled:opacity-50">
+                  <Button type="button" size="sm" variant="danger" onClick={() => confirmDelete(category.id)} disabled={pending}>
                     {t('category_delete_confirm_action')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

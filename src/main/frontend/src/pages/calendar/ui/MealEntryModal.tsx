@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Trash2 } from 'lucide-react'
-import { Alert, Dialog, Button, Input, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Dialog, Button, Input, Spinner } from '@/shared/ui'
 import { useRecipes, useMenuEntries, useAddMenuEntry, useRemoveMenuEntry } from '@/entities/kitchen'
 
 interface MealEntryModalProps {
@@ -84,7 +84,7 @@ export function MealEntryModal({ spaceId, date, onClose }: MealEntryModalProps) 
 
           <div className="flex justify-end gap-2">
             <Button type="button" onClick={onClose}>{t('form.cancel')}</Button>
-            <Button type="button" style={CTA_BUTTON_STYLE} disabled={addEntry.isPending} onClick={submit}>
+            <Button type="button" variant="primary" disabled={addEntry.isPending} onClick={submit}>
               {t('meal.add')}
             </Button>
           </div>

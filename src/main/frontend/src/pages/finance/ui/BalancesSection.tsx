@@ -3,6 +3,7 @@ import { ArrowRight, CheckCircle2, HandCoins } from 'lucide-react'
 import { UserAvatar } from '@/entities/user'
 import type { Balances, SuggestedTransfer } from '@/entities/finance'
 import { formatAmount, formatSignedAmount } from '@/shared/lib'
+import { Button } from '@/shared/ui'
 
 interface BalancesSectionProps {
   balances?: Balances
@@ -72,8 +73,9 @@ export function BalancesSection({
                 <div className="flex items-center justify-between gap-2 sm:contents">
                   <span className="shrink-0 text-sm font-semibold text-fg-0">{formatAmount(transfer.amount)}</span>
                   {(transfer.fromMemberId === currentUserId || transfer.toMemberId === currentUserId) && (
-                    <button type="button" onClick={() => onSettle(transfer)}
-                      className="shrink-0 rounded-[8px] bg-accent px-2.5 py-1 text-xs font-semibold text-white">{t('balances.settle')}</button>
+                    <Button type="button" size="sm" variant="primary" onClick={() => onSettle(transfer)} className="shrink-0">
+                      {t('balances.settle')}
+                    </Button>
                   )}
                 </div>
               </div>

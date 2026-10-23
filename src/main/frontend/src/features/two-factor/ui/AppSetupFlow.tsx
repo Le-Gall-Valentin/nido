@@ -2,7 +2,7 @@ import React, { useEffect, useId, useRef, useState } from 'react'
 import { AlertTriangle, Eye, EyeOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { QRCodeSVG } from 'qrcode.react'
-import { Button, Spinner, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Button, Spinner } from '@/shared/ui'
 import { CodeInput } from './CodeInput'
 import type { CodeInputHandle } from './CodeInput'
 import { CodeError, ConfirmMaxAttemptsError } from '../model/errors'
@@ -172,8 +172,8 @@ export function AppSetupFlow({ api, onSuccess, onDismiss, dismissLabel }: AppSet
         <Button
           type="submit"
           isLoading={isLoading}
-          className="mt-2 w-full rounded-[11px] border-transparent py-3.5 text-[15px] font-semibold active:translate-y-px disabled:cursor-wait"
-          style={CTA_BUTTON_STYLE}
+          className="mt-2 w-full rounded-[11px] py-3.5 text-[15px] active:translate-y-px disabled:cursor-wait"
+          variant="primary"
         >
           {t('setup.submit')}
         </Button>

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MailTestFailedError, SettingInput, SettingsInvalidError, useSettingWording } from '@/entities/instance-settings'
 import { useLanguage } from '@/shared/lib'
-import { Alert, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Button } from '@/shared/ui'
 import type { ISetupApi } from '../model/ISetupApi'
 import type { SettingValues } from '../model/types'
 import { SetupCodeInvalidError } from '../model/errors'
@@ -75,7 +75,7 @@ export function MailStep({ api, code, publicUrl, recipient, locked, initial, ser
         <p className={LEAD_CLASS}>{t('mail.locked')}</p>
         <div className={ACTIONS_CLASS}>
           <Button type="button" onClick={onBack}>{t('action.back')}</Button>
-          <Button type="button" className="border-transparent" style={CTA_BUTTON_STYLE} onClick={() => onNext(null)}>{t('action.next')}</Button>
+          <Button type="button" variant="primary" onClick={() => onNext(null)}>{t('action.next')}</Button>
         </div>
       </div>
     )
@@ -118,7 +118,7 @@ export function MailStep({ api, code, publicUrl, recipient, locked, initial, ser
         <Button type="button" onClick={onBack}>{t('action.back')}</Button>
         <div className="flex flex-col-reverse gap-2 sm:flex-row">
           <Button type="button" onClick={() => onNext(null)}>{t('action.later')}</Button>
-          <Button type="submit" className="border-transparent" style={CTA_BUTTON_STYLE}>{t('action.next')}</Button>
+          <Button type="submit" variant="primary">{t('action.next')}</Button>
         </div>
       </div>
     </form>

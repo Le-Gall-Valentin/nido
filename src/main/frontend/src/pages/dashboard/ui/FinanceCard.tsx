@@ -3,6 +3,7 @@ import i18next from 'i18next'
 import { Wallet } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 import { formatAmount, formatSignedAmount, resolveLocale } from '@/shared/lib'
+import { Button } from '@/shared/ui'
 import type { BudgetWatch, FinanceCard as FinanceCardData, MemberBalance, UpcomingOperation } from '@/entities/dashboard'
 import { UserAvatar } from '@/entities/user'
 import { useDashboardActions } from '../model/dashboardActions'
@@ -10,7 +11,6 @@ import { formatMonthName, formatShortDay } from '../lib/dates'
 import { DashboardCard } from './DashboardCard'
 import { CardRow, RowLead } from './CardRow'
 import { CardGroup } from './CardGroup'
-import { SmallButton } from './cardParts'
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -60,7 +60,7 @@ function BalanceRow({ balance }: { balance: MemberBalance }) {
     <CardRow lead={<UserAvatar userId={balance.memberId} username={name} className="size-6 rounded-full text-[10px]" />}
       title={iOwe ? t('finance.i_owe', { amount, name }) : t('finance.owes_me', { name, amount })}
       trail={iOwe && canWrite
-        ? <SmallButton onClick={() => settle({ toMemberId: balance.memberId, amount: balance.amount })}>{t('finance.settle')}</SmallButton>
+        ? <Button type="button" size="sm" onClick={() => settle({ toMemberId: balance.memberId, amount: balance.amount })}>{t('finance.settle')}</Button>
         : undefined} />
   )
 }

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { browserTimezone , timezoneChoices} from '@/shared/lib'
 import { useTranslation } from 'react-i18next'
-import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Dialog, Button, Input } from '@/shared/ui'
 import { SPACE_ACCENTS, SPACE_GLYPHS, type SpaceDetail , CreateSpaceInput } from '@/entities/space'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 import { AppearancePicker, NAME_MAX, DESCRIPTION_MAX } from './AppearancePicker'
@@ -127,8 +127,7 @@ export function CreateSpaceModal({ onClose, onCreate, onSuccess }: CreateSpaceMo
             type="submit"
             disabled={!canSubmit}
             isLoading={isLoading}
-            className="border-transparent font-semibold"
-            style={CTA_BUTTON_STYLE}
+            variant="primary"
           >
             {t('create.submit')}
           </Button>

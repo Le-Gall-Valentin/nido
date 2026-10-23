@@ -3,12 +3,13 @@ import i18next from 'i18next'
 import { BellRing, CalendarX2, HandCoins, Mail, TriangleAlert } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
 import { formatAmount, formatRelativeTime } from '@/shared/lib'
+import { Button } from '@/shared/ui'
 import { useAcceptInvitation } from '@/entities/space'
 import type { AttentionItem } from '@/entities/dashboard'
 import { useDashboardActions } from '../model/dashboardActions'
 import { DashboardCard } from './DashboardCard'
 import { CardRow } from './CardRow'
-import { Counter, SmallButton, SmallLink, Tint } from './cardParts'
+import { Counter, SmallLink, Tint } from './cardParts'
 
 function itemKey(item: AttentionItem): string {
   switch (item.kind) {
@@ -45,7 +46,7 @@ function AttentionRow({ item }: { item: AttentionItem }) {
           title={t('attention.debt', { amount: formatAmount(item.amount), name: memberName(item.toMemberId) })}
           meta={<span>{t('attention.debt_detail')}</span>}
           trail={canWrite
-            ? <SmallButton onClick={() => settle({ toMemberId: item.toMemberId, amount: item.amount })}>{t('attention.settle')}</SmallButton>
+            ? <Button type="button" size="sm" onClick={() => settle({ toMemberId: item.toMemberId, amount: item.amount })}>{t('attention.settle')}</Button>
             : undefined} />
       )
     case 'INVITATION': {
@@ -58,8 +59,8 @@ function AttentionRow({ item }: { item: AttentionItem }) {
             ? t('attention.invitation_from', { name: item.invitedByUsername, role, expires })
             : t('attention.invitation_detail', { role, expires })}</span>}
           // Accepting is the caller's own business, not a write in this space: a viewer here may accept too.
-          trail={<SmallButton primary disabled={accept.isPending}
-            onClick={() => accept.mutate(item.invitationId, { onError: reportError })}>{t('attention.accept')}</SmallButton>} />
+          trail={<Button type="button" size="sm" variant="primary" disabled={accept.isPending}
+            onClick={() => accept.mutate(item.invitationId, { onError: reportError })}>{t('attention.accept')}</Button>} />
       )
     }
   }

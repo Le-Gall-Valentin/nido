@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CTA_BUTTON_STYLE } from '@/shared/ui'
 import { saveBlob } from '@/shared/lib'
 import { useExportCalendar, type ExportableSource } from '@/entities/calendar'
 import { BusyButton } from './BusyButton'
@@ -33,7 +32,7 @@ export function ExportTab({ spaceId, isPersonal }: { spaceId: string; isPersonal
       {exportCalendar.isError && <p role="alert" className="text-sm text-status-red">{syncErrorMessage(t, exportCalendar.error)}</p>}
       <p role="status" className="min-h-5 text-sm text-fg-2">{exportCalendar.isPending ? t('export.preparing') : ''}</p>
       <div className="flex justify-end">
-        <BusyButton type="button" style={CTA_BUTTON_STYLE} disabled={sources.length === 0} busy={exportCalendar.isPending}
+        <BusyButton type="button" variant="primary" disabled={sources.length === 0} busy={exportCalendar.isPending}
           onClick={download}>
           {t('export.download')}
         </BusyButton>

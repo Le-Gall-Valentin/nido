@@ -74,7 +74,7 @@ export function RecurrenceFields({ recurrence, startDate, editedSeries, notice }
               <button key={day} type="button" aria-pressed={on} disabled={isStart}
                 aria-label={weekdayName(day, locale)} onClick={() => recurrence.toggleDay(day)}
                 className={`grid size-8 place-items-center rounded-full border text-xs font-semibold
-                  ${on ? 'border-accent bg-accent text-white' : 'border-border text-fg-2 hover:bg-bg-1'}
+                  ${on ? 'border-accent bg-accent text-on-accent' : 'border-border text-fg-2 hover:bg-bg-1'}
                   disabled:opacity-100`}>
                 {weekdayName(day, locale, 'narrow')}
               </button>

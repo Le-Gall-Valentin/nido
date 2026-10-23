@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Dialog, Button, Input } from '@/shared/ui'
 import { resolveCategoryIcon } from '../lib/resolveCategoryIcon'
 import { ALL_ICON_NAMES } from '../lib/lucideIconNames'
 
@@ -48,7 +48,7 @@ export function IconPickerModal({ initialIcon, initialColor, onConfirm, onCancel
           const isSelected = name === selectedIcon
           return (
             <button key={name} type="button" aria-label={name} aria-pressed={isSelected} onClick={() => setSelectedIcon(name)}
-              className={`grid aspect-square place-items-center rounded-[8px] ${isSelected ? 'bg-accent text-white' : 'text-fg-2 hover:bg-bg-1'}`}>
+              className={`grid aspect-square place-items-center rounded-[8px] ${isSelected ? 'bg-accent text-on-accent' : 'text-fg-2 hover:bg-bg-1'}`}>
               <Icon size={18} />
             </button>
           )
@@ -60,7 +60,7 @@ export function IconPickerModal({ initialIcon, initialColor, onConfirm, onCancel
 
       <div className="mt-4 flex justify-end gap-2">
         <Button type="button" onClick={onCancel}>{t('form.cancel')}</Button>
-        <Button type="button" onClick={() => onConfirm(selectedIcon, color)} style={CTA_BUTTON_STYLE}>{t('categories.icon_confirm')}</Button>
+        <Button type="button" onClick={() => onConfirm(selectedIcon, color)} variant="primary">{t('categories.icon_confirm')}</Button>
       </div>
     </Dialog>
   )

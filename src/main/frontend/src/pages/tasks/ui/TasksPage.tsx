@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Plus, Pencil, ArrowRightLeft, Repeat } from 'lucide-react'
 import { DndContext, DragOverlay, useDraggable, useDroppable, type DragEndEvent } from '@dnd-kit/core'
-import { Alert, Dialog, Spinner } from '@/shared/ui'
+import { Alert, Button, Dialog, PageActions, Spinner } from '@/shared/ui'
 import { todayIso, underThePointerFirst, useDragSensors } from '@/shared/lib'
 import { useMemberName, useSpaceMembers } from '@/entities/space'
 import { useSpaceTimezone } from '@/features/space-switcher'
@@ -201,16 +201,14 @@ function TasksPageContent() {
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-fg-0">{t('title')}</h1>
         {canWriteHere && (
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-            <button type="button" onClick={() => setManagingRecurringSeries(true)}
-              className="text-center text-sm font-semibold text-accent sm:text-left">
+          <PageActions>
+            <Button type="button" icon={Repeat} onClick={() => setManagingRecurringSeries(true)}>
               {t('recurring_series.manage')}
-            </button>
-            <button type="button" onClick={() => setFormState({ mode: 'create' })}
-              className="flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-accent px-4 py-2.5 text-sm font-semibold text-white sm:w-auto">
-              <Plus className="size-4" /> {t('new_task')}
-            </button>
-          </div>
+            </Button>
+            <Button type="button" variant="primary" icon={Plus} onClick={() => setFormState({ mode: 'create' })}>
+              {t('new_task')}
+            </Button>
+          </PageActions>
         )}
       </div>
 

@@ -77,7 +77,7 @@ export function WeekGrid({
                 className="mb-2 flex items-center gap-2 text-sm font-semibold text-fg-0"
               >
                 <span className={`grid size-6 place-items-center rounded-full text-xs
-                  ${day === today ? 'bg-accent text-white' : 'bg-bg-3 text-fg-1'}`}>
+                  ${day === today ? 'bg-accent text-on-accent' : 'bg-bg-3 text-fg-1'}`}>
                   {dayLabel(day)}
                 </span>
                 {t(`weekday_short.${['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'][days.indexOf(day)]}`)}
@@ -120,7 +120,7 @@ export function WeekGrid({
                 {t(`weekday_short.${['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'][days.indexOf(day)]}`)}
               </span>
               <span className={`grid size-6 place-items-center rounded-full text-xs font-semibold
-                ${day === today ? 'bg-accent text-white' : 'text-fg-1'}`}>
+                ${day === today ? 'bg-accent text-on-accent' : 'text-fg-1'}`}>
                 {dayLabel(day)}
               </span>
             </button>

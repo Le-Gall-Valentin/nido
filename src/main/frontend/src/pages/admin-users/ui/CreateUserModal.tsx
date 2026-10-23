@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
+import { Alert, Dialog, Button, Input, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import { isValidEmail, isValidUsername, usernameProblem } from '@/shared/lib'
 import type { InvitationDelivery, User } from '@/entities/user'
 import { assignableRoles } from '../lib/permissions'
@@ -57,7 +57,7 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
         <h3 className="mb-4 text-xl font-semibold text-fg-0">{t('invitation.created_title')}</h3>
         <InvitationResult username={created.username} email={created.email} delivery={created.delivery} />
         <div className="mt-5 flex justify-end">
-          <Button type="button" onClick={handleClose} className="border-transparent font-semibold" style={CTA_BUTTON_STYLE}>
+          <Button type="button" onClick={handleClose} variant="primary">
             {t('invitation.done')}
           </Button>
         </div>
@@ -134,8 +134,7 @@ export function CreateUserModal({ caller, onClose, onCreate, onSuccess }: Create
             type="submit"
             disabled={!canSubmit}
             isLoading={isLoading}
-            className="border-transparent font-semibold"
-            style={CTA_BUTTON_STYLE}
+            variant="primary"
           >
             {t('create.submit')}
           </Button>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Button } from '@/shared/ui'
 import { MAX_IMPORT_BYTES, useAnalyseImport, useImportFile } from '@/entities/calendar'
 import { ImportNotes, ImportTotals } from './ImportReport'
 import { syncErrorMessage } from '../lib/syncWording'
@@ -89,7 +89,7 @@ export function ImportTab({ spaceId }: { spaceId: string }) {
       <div className="flex justify-end gap-2">
         {(report || error) && !importFile.isPending && <Button type="button" onClick={startOver}>{t('import.again')}</Button>}
         {report && !report.written && toImport > 0 && analyse.variables && (
-          <Button type="button" style={CTA_BUTTON_STYLE} disabled={importFile.isPending}
+          <Button type="button" variant="primary" disabled={importFile.isPending}
             onClick={() => importFile.mutate(analyse.variables)}>
             {t('import.confirm', { count: toImport })}
           </Button>

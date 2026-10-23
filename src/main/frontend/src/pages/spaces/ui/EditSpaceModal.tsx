@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { timezoneChoices } from '@/shared/lib'
-import { Alert, Dialog, Button, Input, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Dialog, Button, Input } from '@/shared/ui'
 import { safeAccent, safeGlyph, type SpaceDetail , UpdateSpaceInput } from '@/entities/space'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 import { AppearancePicker, NAME_MAX, DESCRIPTION_MAX } from './AppearancePicker'
@@ -139,8 +139,7 @@ export function EditSpaceModal({ space, onClose, onUpdate, onSuccess }: EditSpac
             type="submit"
             disabled={!canSubmit}
             isLoading={isLoading}
-            className="border-transparent font-semibold"
-            style={CTA_BUTTON_STYLE}
+            variant="primary"
           >
             {t('edit.submit')}
           </Button>

@@ -111,8 +111,8 @@ export function AddItemModal({ categories, onAdd, onClose }: AddItemModalProps) 
 
       <div className="flex justify-end gap-2">
         <Button type="button" onClick={onClose} disabled={pending}>{t('form_cancel')}</Button>
-        <Button type="button" onClick={submit} isLoading={pending} className="border-transparent !text-bg-0" style={{ background: 'var(--color-accent)' }}>
-          <Plus className="size-4" /> {t('add_item_confirm')}
+        <Button type="button" variant="primary" icon={Plus} onClick={submit} isLoading={pending}>
+          {t('add_item_confirm')}
         </Button>
       </div>
     </Dialog>

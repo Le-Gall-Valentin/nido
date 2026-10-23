@@ -53,13 +53,7 @@ export function LeaveSpaceModal({ spaceName, onClose, onLeave, onSuccess }: Leav
         <Button type="button" onClick={handleClose} disabled={isLoading}>
           {t('leave.cancel')}
         </Button>
-        <Button
-          onClick={() => { void handleSubmit() }}
-          isLoading={isLoading}
-          className="border-transparent font-semibold !text-bg-0 transition hover:brightness-90"
-          style={{ background: 'var(--color-status-red)' }}
-        >
-          <LogOut className="size-4" />
+        <Button variant="danger" icon={LogOut} onClick={() => { void handleSubmit() }} isLoading={isLoading}>
           {t('leave.submit')}
         </Button>
       </div>

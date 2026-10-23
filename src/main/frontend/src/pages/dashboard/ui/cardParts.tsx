@@ -1,7 +1,7 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { CTA_BUTTON_STYLE } from '@/shared/ui'
+import { buttonClassName } from '@/shared/ui'
 
 const TINT_TONE = {
   neutral: 'bg-bg-3 text-fg-2',
@@ -28,18 +28,7 @@ export function Counter({ children, tone = 'neutral' }: { children: ReactNode; t
   )
 }
 
-const SMALL_BASE = 'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border-[1.5px] px-2.5 py-1 text-[12.5px] font-semibold disabled:opacity-50'
-const SMALL_PLAIN = 'border-border bg-bg-1 text-fg-2 hover:bg-bg-2'
-
-/** The small in-row action. `primary` wears the app's CTA colours, which stay deep green in dark mode. */
-export function SmallButton({ primary = false, className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { primary?: boolean }) {
-  return (
-    <button type="button" {...props}
-      className={`${SMALL_BASE} ${primary ? 'border-transparent' : SMALL_PLAIN} ${className}`}
-      style={primary ? CTA_BUTTON_STYLE : undefined} />
-  )
-}
-
+/** The small in-row way to another page, dressed as the small secondary button beside it. */
 export function SmallLink({ to, children }: { to: string; children: ReactNode }) {
-  return <Link to={to} className={`${SMALL_BASE} ${SMALL_PLAIN}`}>{children}</Link>
+  return <Link to={to} className={buttonClassName({ size: 'sm' })}>{children}</Link>
 }

@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Alert, Button, Input, CTA_BUTTON_STYLE, VERBATIM_INPUT_PROPS } from '@/shared/ui'
+import { Alert, Button, Input, VERBATIM_INPUT_PROPS } from '@/shared/ui'
 import type { User } from '@/entities/user'
 import { ResendTooSoonError, SendLimitError, commonErrorMessage } from '@/features/two-factor'
 import { ConflictError, InvalidCurrentPasswordError } from '../api/accountApi'
@@ -186,7 +186,7 @@ export function ProfileEditSection({ user, onPatch, onUpdateProfile }: ProfileEd
             <Button type="button" onClick={handleCancel} disabled={!isDirty || isSubmitting} className="border-transparent bg-transparent hover:bg-bg-2 hover:border-transparent">
               {t('profile.cancel')}
             </Button>
-            <Button type="submit" disabled={!canSave} isLoading={isSubmitting} className="border-transparent font-semibold" style={CTA_BUTTON_STYLE}>
+            <Button type="submit" disabled={!canSave} isLoading={isSubmitting} variant="primary">
               {t('profile.save')}
             </Button>
           </div>

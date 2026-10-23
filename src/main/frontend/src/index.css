@@ -15,6 +15,8 @@
   --color-fg-3: #9a948a;
   --color-accent: #5c7a58;
   --color-accent-dim: #eef2ec;
+  /* Text on a solid accent: white on the deep green, dark ink on the dark theme's light one (4.5:1 or more in both) */
+  --color-on-accent: #ffffff;
   --color-status-green: #3f5b3b;
   --color-status-green-dim: #eef2ec;
   --color-status-red: #a3463a;
@@ -94,6 +96,7 @@
     --color-fg-3: #7c766a;
     --color-accent: #82c28d;
     --color-accent-dim: #24352a;
+    --color-on-accent: #1c1b18;
     --color-status-green: #82c28d;
     --color-status-green-dim: #24352a;
     --color-status-red: #e59684;
@@ -135,6 +138,7 @@
   --color-fg-3: #7c766a;
   --color-accent: #82c28d;
   --color-accent-dim: #24352a;
+  --color-on-accent: #1c1b18;
   --color-status-green: #82c28d;
   --color-status-green-dim: #24352a;
   --color-status-red: #e59684;

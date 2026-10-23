@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check } from 'lucide-react'
 import { SpaceAvatar, SpaceRolePill , useReceivedInvitations , useAcceptInvitation } from '@/entities/space'
-import { Alert, Button, CTA_BUTTON_STYLE } from '@/shared/ui'
+import { Alert, Button } from '@/shared/ui'
 import { formatRelativeTime } from '@/shared/lib'
 import { mapSpaceErrorToKey } from '../lib/mapSpaceErrorToKey'
 
@@ -60,8 +60,7 @@ export function ReceivedInvitationsSection({ onAccepted }: ReceivedInvitationsSe
               <Button
                 onClick={() => void handleAccept(invitation.invitationId)}
                 isLoading={accepting}
-                className="border-transparent font-semibold"
-                style={CTA_BUTTON_STYLE}
+                variant="primary"
               >
                 <Check className="size-4" />
                 {t('received.action_accept')}

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, Clock } from 'lucide-react'
 import { ROUTES } from '@/shared/config'
-import { Alert, Button, CTA_ELEVATED_STYLE } from '@/shared/ui'
+import { Alert, Button, buttonClassName } from '@/shared/ui'
 
 /**
  * A one-time link that no longer works. An alert: it can stop working while the password is being typed, and
@@ -32,7 +32,7 @@ export function LinkInvalid({ title, body, children }: { title: string; body: st
 /** The way out of an invalid link: a primary action, styled as the page's main button. */
 export function LinkInvalidAction({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <Link to={to} className="block w-full rounded-[11px] py-3.5 text-center text-[15px] font-semibold" style={CTA_ELEVATED_STYLE}>
+    <Link to={to} className={buttonClassName({ variant: 'primary', className: 'w-full rounded-[11px] py-3.5 text-[15px]' })}>
       {children}
     </Link>
   )

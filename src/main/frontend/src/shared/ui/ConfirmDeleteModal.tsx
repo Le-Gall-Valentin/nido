@@ -54,13 +54,7 @@ export function ConfirmDeleteModal({
         <Button type="button" onClick={onCancel} disabled={isPending}>
           {cancelLabel ?? t('delete_confirm.cancel')}
         </Button>
-        <Button
-          onClick={onConfirm}
-          isLoading={isPending}
-          className="border-transparent font-semibold !text-bg-0 transition hover:brightness-90"
-          style={{ background: 'var(--color-status-red)' }}
-        >
-          <Trash2 className="size-4" />
+        <Button variant="danger" icon={Trash2} onClick={onConfirm} isLoading={isPending}>
           {confirmLabel ?? t('delete_confirm.confirm')}
         </Button>
       </div>
