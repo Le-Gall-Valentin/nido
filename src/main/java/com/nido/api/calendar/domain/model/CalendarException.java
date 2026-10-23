@@ -6,7 +6,8 @@ public abstract sealed class CalendarException extends RuntimeException
             CalendarException.InvalidTimeRange, CalendarException.InvalidEndDate,
             CalendarException.MemberNotInSpace, CalendarException.WindowTooLarge,
             CalendarException.ParticipantsFixedInPersonalSpace, CalendarException.EventTooLong,
-            CalendarException.OccurrenceLongerThanInterval, CalendarException.ReversedWindow,
+            CalendarException.OccurrenceLongerThanInterval, CalendarException.IntervalTooLarge,
+            CalendarException.ReversedWindow,
             CalendarException.InvalidRecurrenceRule, CalendarException.NotAnIcalFile,
             CalendarException.InvalidSources, CalendarException.TooManySubscriptionLinks,
             CalendarException.SubscriptionLinkNotFound, CalendarException.PublicUrlMissing,
@@ -66,6 +67,21 @@ public abstract sealed class CalendarException extends RuntimeException
      */
     public static final class OccurrenceLongerThanInterval extends CalendarException {
         public OccurrenceLongerThanInterval() { super("An occurrence cannot last longer than the time between two occurrences"); }
+    }
+
+    /**
+     * Thrown when a series repeats more rarely than nido can say. Every billion years, a series reached past the last
+     * date a calendar holds, and every read of its space failed.
+     */
+    public static final class IntervalTooLarge extends CalendarException {
+        private final int maximum;
+
+        public IntervalTooLarge(int maximum) {
+            super("A series repeats at an interval of at most " + maximum);
+            this.maximum = maximum;
+        }
+
+        public int maximum() { return maximum; }
     }
 
     public static final class InvalidEndDate extends CalendarException {

@@ -1,6 +1,6 @@
 package com.nido.api.calendar.infrastructure.ical;
 
-import com.nido.api.calendar.domain.model.RecurrenceRules;
+import com.nido.api.calendar.domain.model.EventScheduleValidator;
 import net.fortuna.ical4j.model.Parameter;
 import net.fortuna.ical4j.model.Property;
 import net.fortuna.ical4j.model.Recur;
@@ -223,7 +223,7 @@ final class BoundedExpansion {
     private void charge(Recur<Temporal> recur, boolean dateStart, LocalDateTime seed, LocalDateTime from, LocalDateTime to,
                         long leadSeconds) {
         Frequency frequency = recur.getFrequency();
-        if (frequency == null || recur.getInterval() > RecurrenceRules.MAX_INTERVAL || !distinctAndShort(recur)
+        if (frequency == null || recur.getInterval() > EventScheduleValidator.MAX_INTERVAL || !distinctAndShort(recur)
             || dateStart && (frequency == Frequency.HOURLY || !recur.getHourList().isEmpty()
                 || !recur.getMinuteList().isEmpty() || !recur.getSecondList().isEmpty())) {
             throw Refused.always("BAD_RULE");

@@ -329,6 +329,35 @@ class RecurringEventSeriesControllerIT {
     }
 
     @Test
+    void a_series_repeating_more_rarely_than_every_thousand_periods_is_refused_with_its_code() throws Exception {
+        String body = """
+            {"title":"Comète","allDay":true,"intervalType":"YEARLY","intervalCount":%d,"anchorDate":"2026-01-06"}""";
+        mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content(body.formatted(1_000_000_000)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("interval_too_large"));
+        String created = mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content(body.formatted(1000)))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+
+        mockMvc.perform(patch(series() + "/" + objectMapper.readTree(created).get("id").asText()).cookie(tokenFor(aliceId))
+                .contentType(MediaType.APPLICATION_JSON).content(body.formatted(1001)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error_code").value("interval_too_large"));
+    }
+
+    @Test
+    void an_occurrence_lasting_longer_than_an_event_is_refused() throws Exception {
+        // Every two years, each occurrence lasting a year and a day: it never runs into the next one, but no read shows it whole.
+        mockMvc.perform(post(series()).cookie(tokenFor(aliceId)).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"title":"Longue","allDay":true,"durationDays":366,"intervalType":"YEARLY","intervalCount":2,
+                     "anchorDate":"2026-01-06"}"""))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.title").value("EventTooLong"));
+    }
+
+    @Test
     void a_participant_who_left_the_space_does_not_block_editing_the_series() throws Exception {
         UUID carolId = saveUser("carol");
         saveMembership(spaceId, carolId, SpaceRole.MEMBER);

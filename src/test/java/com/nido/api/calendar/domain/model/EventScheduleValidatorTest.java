@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -68,8 +69,25 @@ class EventScheduleValidatorTest {
     }
 
     @Test
-    void aVeryLongIntervalDoesNotOverflowWhileMeasuringIt() {
-        assertThatCode(() -> allDaySeries(1_000_000, RecurrenceInterval.YEARLY, 10_000_000)).doesNotThrowAnyException();
+    void aSeriesMayRepeatEveryThousandYearsButNoMoreRarely() {
+        // Every billion years, a series reached past the last date a calendar can hold, and every read of its space failed.
+        assertThatCode(() -> allDaySeries(0, RecurrenceInterval.YEARLY, 1000)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> allDaySeries(0, RecurrenceInterval.YEARLY, 1001))
+            .isInstanceOfSatisfying(CalendarException.IntervalTooLarge.class,
+                refused -> assertThat(refused.maximum()).isEqualTo(1000));
+        assertThatThrownBy(() -> allDaySeries(0, RecurrenceInterval.DAILY, 1_000_000_000))
+            .isInstanceOf(CalendarException.IntervalTooLarge.class);
+    }
+
+    @Test
+    void anOccurrenceLastsNoLongerThanAnEvent() {
+        // Every two years, an occurrence of two years would not run into the next one: it is still more than a read shows.
+        assertThatCode(() -> allDaySeries(365, RecurrenceInterval.YEARLY, 2)).doesNotThrowAnyException();
+        assertThatThrownBy(() -> allDaySeries(366, RecurrenceInterval.YEARLY, 2))
+            .isInstanceOfSatisfying(CalendarException.EventTooLong.class,
+                refused -> assertThat(refused.maximumDays()).isEqualTo(366));
+        assertThatThrownBy(() -> EventScheduleValidator.validateSeries(false, LocalTime.of(9, 0), LocalTime.of(10, 0),
+            366, RecurrenceInterval.YEARLY, 1000, DAY, null)).isInstanceOf(CalendarException.EventTooLong.class);
     }
 
     private static void allDaySeries(int durationDays, RecurrenceInterval intervalType, int intervalCount) {

@@ -41,6 +41,8 @@ public class CalendarExceptionHandler {
                 new CalendarErrorResponse(400, "An event lasts at most " + ex.maximumDays() + " days.");
             case CalendarException.OccurrenceLongerThanInterval ignored ->
                 new CalendarErrorResponse(400, "An occurrence cannot last longer than the time between two occurrences.");
+            case CalendarException.IntervalTooLarge ex -> new CalendarErrorResponse(400,
+                "A series repeats at an interval of at most " + ex.maximum() + ".", "interval_too_large");
             case CalendarException.InvalidEndDate ignored ->
                 new CalendarErrorResponse(400, "The end date must be on or after the anchor date.");
             case CalendarException.InvalidRecurrenceRule ignored -> new CalendarErrorResponse(400,

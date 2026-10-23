@@ -34,9 +34,6 @@ public final class RecurrenceRules {
      */
     private static final int BACK_ANCHOR_TRIES = 48;
 
-    /** nido cannot sensibly say a rule repeating this rarely, and date arithmetic on it would overflow. */
-    public static final int MAX_INTERVAL = 1000;
-
     /** A nido rule that may give an RRULE's occurrences, anchored as nido needs it. */
     public record Candidate(RecurrenceInterval intervalType, int intervalCount, Set<DayOfWeek> weekdays, DayRule dayRule,
                             LocalDate anchorDate, LocalDate startsOn) {}
@@ -90,7 +87,7 @@ public final class RecurrenceRules {
 
     /** A nido rule that may give the occurrences of {@code r} from {@code first}, its first occurrence; none if it cannot. */
     public static Optional<Candidate> candidateFor(IcalRecurrence r, LocalDate first) {
-        if (r.hasOtherParts() || r.frequency() == null || r.interval() > MAX_INTERVAL
+        if (r.hasOtherParts() || r.frequency() == null || r.interval() > EventScheduleValidator.MAX_INTERVAL
             || r.byMonthDay().stream().anyMatch(d -> d == 0 || d < -31 || d > 31)
             || r.byMonth().stream().anyMatch(m -> m < 1 || m > 12)) {
             return Optional.empty();

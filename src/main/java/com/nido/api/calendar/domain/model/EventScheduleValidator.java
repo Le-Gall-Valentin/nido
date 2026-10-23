@@ -17,8 +17,11 @@ import java.util.Set;
  */
 public final class EventScheduleValidator {
 
-    /** The most days an event may cover: no more than a single calendar read can show. */
+    /** The most days an event may cover, or an occurrence of a series: no more than a single calendar read can show. */
     public static final int MAX_EVENT_DAYS = EventRecurrenceProjector.MAX_WINDOW_DAYS;
+
+    /** nido cannot sensibly say a series repeating more rarely than this, and date arithmetic on it would overflow. */
+    public static final int MAX_INTERVAL = 1000;
 
     private static final long MINUTES_PER_DAY = 1440;
 
@@ -67,6 +70,9 @@ public final class EventScheduleValidator {
         if (endDate != null && endDate.isBefore(anchorDate)) {
             throw new CalendarException.InvalidEndDate();
         }
+        if (intervalCount > MAX_INTERVAL) {
+            throw new CalendarException.IntervalTooLarge(MAX_INTERVAL);
+        }
         validateRule(intervalType, weekdays, dayRule, anchorDate);
         // An occurrence never runs into the next one, as in any diary. It is also what bounds a read:
         // every occurrence overlapping a window then starts at most one interval before it.
@@ -77,6 +83,10 @@ public final class EventScheduleValidator {
             ? durationDays + 1L > shortest
             : durationDays * MINUTES_PER_DAY + minutesOf(endTime) - minutesOf(startTime) > shortest * MINUTES_PER_DAY) {
             throw new CalendarException.OccurrenceLongerThanInterval();
+        }
+        // Rare enough, an occurrence may last years without running into the next: a read could no longer show it whole.
+        if (durationDays + 1L > MAX_EVENT_DAYS) {
+            throw new CalendarException.EventTooLong(MAX_EVENT_DAYS);
         }
     }
 
