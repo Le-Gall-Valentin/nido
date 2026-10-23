@@ -144,7 +144,7 @@ public final class RecurrenceRules {
         List<Integer> monthDays = r.byMonthDay();
         boolean lastOfSet = r.bySetPos().equals(List.of(-1));
         if (r.byDay().isEmpty() && monthDays.isEmpty() && r.bySetPos().isEmpty()) {
-            return sameDay(type, count, first);
+            return plainDay(type, count, first);
         }
         if (r.byDay().size() == 1 && monthDays.isEmpty() && r.bySetPos().isEmpty()) {
             IcalRecurrence.ByDay byDay = r.byDay().getFirst();
@@ -168,7 +168,7 @@ public final class RecurrenceRules {
                 : Optional.empty();
         }
         if (monthDays.size() == 1 && monthDays.getFirst() == first.getDayOfMonth() && r.byDay().isEmpty() && r.bySetPos().isEmpty()) {
-            return sameDay(type, count, first);
+            return plainDay(type, count, first);
         }
         // "The 30th, or the last day of a shorter month": 28,29,30 with the last of them.
         if (lastOfSet && r.byDay().isEmpty() && monthDays.size() >= 2 && monthDays.getFirst() == 28
@@ -176,6 +176,21 @@ public final class RecurrenceRules {
             return cappedDay(type, count, monthDays.getLast(), first);
         }
         return Optional.empty();
+    }
+
+    /**
+     * A plain day of the month, which RFC 5545 skips in a month without it where nido's "same day" caps it: the two agree
+     * only when no period of the rule ever lands in a month shorter than that day. A check over two years cannot say it
+     * for a rule every 24 months, nor for the 29th of February every four years, which parts ways in 2100.
+     */
+    private static Optional<Candidate> plainDay(RecurrenceInterval type, int count, LocalDate first) {
+        int day = first.getDayOfMonth();
+        int months = type == RecurrenceInterval.MONTHLY ? count % 12 : 0;
+        // The months its periods land in: each kind comes round within twelve periods.
+        boolean everyMonthHasIt = IntStream.range(0, 12)
+            .mapToObj(k -> first.getMonth().plus((long) k * months))
+            .allMatch(month -> month.minLength() >= day);
+        return everyMonthHasIt ? sameDay(type, count, first) : Optional.empty();
     }
 
     private static Optional<Candidate> sameDay(RecurrenceInterval type, int count, LocalDate first) {

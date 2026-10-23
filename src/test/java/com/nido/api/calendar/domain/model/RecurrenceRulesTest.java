@@ -151,6 +151,36 @@ class RecurrenceRulesTest {
     }
 
     @Test
+    void aPlainDayAShorterMonthWouldSkipHasNoCandidate() {
+        // RFC 5545 skips a month without the day, where nido caps it: 29 February every other year is not nido's
+        // "same day", which would show 28 February 2026 — nor every fourth year, which parts ways in 2100.
+        for (int interval : List.of(1, 2, 4)) {
+            assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", interval, List.of(), List.of(), List.of(), List.of()),
+                LocalDate.of(2024, 2, 29))).as("every %d years", interval).isEmpty();
+            assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", interval, List.of(), List.of(29), List.of(2), List.of()),
+                LocalDate.of(2024, 2, 29))).as("every %d years, its day named", interval).isEmpty();
+        }
+        // Every 24 months from 29 February: always February. Every second month from 31 January: September has no 31st.
+        assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 24, List.of(), List.of(), List.of(), List.of()),
+            LocalDate.of(2024, 2, 29))).isEmpty();
+        assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 2, List.of(), List.of(31), List.of(), List.of()),
+            LocalDate.of(2027, 1, 31))).isEmpty();
+    }
+
+    @Test
+    void aPlainDayEveryMonthOfTheRuleHasIsACandidate() {
+        // Every twelve or twenty-four months from 31 January is always January; every year on 30 April, always April.
+        for (int interval : List.of(12, 24)) {
+            assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", interval, List.of(), List.of(31), List.of(), List.of()),
+                LocalDate.of(2027, 1, 31)).map(RecurrenceRules.Candidate::dayRule)).contains(DayRule.SAME_DAY);
+        }
+        assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", 1, List.of(), List.of(), List.of(), List.of()),
+            LocalDate.of(2027, 4, 30)).map(RecurrenceRules.Candidate::dayRule)).contains(DayRule.SAME_DAY);
+        assertThat(RecurrenceRules.candidateFor(recurrence("MONTHLY", 1, List.of(), List.of(28), List.of(), List.of()),
+            LocalDate.of(2027, 1, 28)).map(RecurrenceRules.Candidate::dayRule)).contains(DayRule.SAME_DAY);
+    }
+
+    @Test
     void aYearlyRankedWeekday() {
         assertThat(RecurrenceRules.candidateFor(recurrence("YEARLY", 1, List.of(day(4, DayOfWeek.THURSDAY)), List.of(), List.of(11), List.of()),
             LocalDate.of(2026, 11, 26)).map(RecurrenceRules.Candidate::dayRule)).contains(DayRule.WEEKDAY_OF_MONTH);
