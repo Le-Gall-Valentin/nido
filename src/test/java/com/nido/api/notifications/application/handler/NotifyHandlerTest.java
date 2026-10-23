@@ -64,4 +64,30 @@ class NotifyHandlerTest {
             .hasMessageContaining(ReminderNotification.class.getName());
         verifyNoInteractions(delivery);
     }
+
+    @Test
+    void an_uncatalogued_fallback_fails_where_it_is_sent() {
+        NotificationRequest withFallback = new NotificationRequest(UUID.randomUUID(), new GreetingNotification("jane"), null,
+            new ReminderNotification("x"));
+
+        assertThatThrownBy(() -> handler().notify(withFallback))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining(ReminderNotification.class.getName());
+        verifyNoInteractions(delivery);
+    }
+
+    @Test
+    void a_fallback_a_channel_can_write_waits_for_the_commit_even_when_the_main_one_cannot_go() {
+        NotificationType reminderType = new NotificationType("agenda.reminder");
+        NotificationCatalog both = new NotificationCatalog(
+            Map.of(GreetingNotification.class, GREETING, ReminderNotification.class, reminderType));
+        NotificationRequest withFallback = new NotificationRequest(UUID.randomUUID(), new GreetingNotification("jane"), null,
+            new ReminderNotification("x"));
+        when(mail.canDeliver(GreetingNotification.class)).thenReturn(false);
+        when(mail.canDeliver(ReminderNotification.class)).thenReturn(true);
+
+        new NotifyHandler(() -> both, List.of(mail), delivery).notify(withFallback);
+
+        verify(delivery).deliverAfterCommit(GREETING, withFallback);
+    }
 }

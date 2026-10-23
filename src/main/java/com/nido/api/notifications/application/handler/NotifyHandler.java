@@ -34,8 +34,15 @@ public class NotifyHandler implements NotifyUseCase {
     public void notify(NotificationRequest request) {
         Class<? extends Notification> notificationClass = request.notification().getClass();
         NotificationType type = catalog.catalog().typeOf(notificationClass);
-        // No channel for it on this installation (mail off): nothing to wait for, no transaction to open.
-        if (channels.stream().anyMatch(channel -> channel.canDeliver(notificationClass))) {
+        List<Class<? extends Notification>> classes = request.fallback() == null
+            ? List.of(notificationClass)
+            : List.of(notificationClass, request.fallback().getClass());
+        if (request.fallback() != null) {
+            // A fallback is checked as strictly as the notification it stands in for.
+            catalog.catalog().typeOf(request.fallback().getClass());
+        }
+        // No channel for either on this installation (mail off): nothing to wait for, no transaction to open.
+        if (channels.stream().anyMatch(channel -> classes.stream().anyMatch(channel::canDeliver))) {
             delivery.deliverAfterCommit(type, request);
         }
     }
