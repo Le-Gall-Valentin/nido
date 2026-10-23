@@ -1,5 +1,7 @@
 package com.nido.api.finance.infrastructure.notification;
 
+import com.nido.api.finance.domain.model.BudgetAlert;
+import com.nido.api.finance.domain.model.BudgetStatus;
 import com.nido.api.finance.domain.model.ContributorSide;
 import com.nido.api.finance.domain.model.Gesture;
 import com.nido.api.finance.domain.model.GoalFacts;
@@ -126,6 +128,15 @@ public class FinanceNotificationAdapter implements FinanceNotificationPort {
     public void openingBalanceCleared(Gesture gesture, List<Addressee> readers) {
         readers.forEach(reader -> tell(reader, new OpeningBalanceChangedNotification(reader.username(), gesture.actorName(),
             gesture.spaceName(), true, null, null, finance(gesture.spaceId()))));
+    }
+
+    @Override
+    public void budgetCrossed(Gesture gesture, BudgetStatus reached, BudgetAlert alert, List<Addressee> readers) {
+        readers.forEach(reader -> tell(reader, reached == BudgetStatus.OVER
+            ? new BudgetExceededNotification(reader.username(), gesture.actorName(), gesture.spaceName(), alert,
+                finance(gesture.spaceId()))
+            : new BudgetWarningNotification(reader.username(), gesture.actorName(), gesture.spaceName(), alert,
+                finance(gesture.spaceId()))));
     }
 
     /** Whose deposit it is to this reader: the author's own, the reader's, or another member's. */

@@ -1,5 +1,7 @@
 package com.nido.api.finance.infrastructure.notification;
 
+import com.nido.api.finance.domain.model.BudgetAlert;
+import com.nido.api.finance.domain.model.BudgetStatus;
 import com.nido.api.finance.domain.model.ContributorSide;
 import com.nido.api.finance.domain.model.Gesture;
 import com.nido.api.finance.domain.model.GoalFacts;
@@ -25,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
@@ -183,5 +186,18 @@ class FinanceNotificationAdapterTest {
             new OpeningBalanceChangedNotification("bob", "alice", "Chez nous", false, new BigDecimal("1520.30"),
                 LocalDate.of(2026, 10, 1), finance),
             new OpeningBalanceChangedNotification("carol", "alice", "Chez nous", true, null, null, finance));
+    }
+
+    @Test
+    void a_budget_crossing_says_which_threshold_it_reached() {
+        BudgetAlert alert = new BudgetAlert("Alimentation", YearMonth.of(2026, 10), new BigDecimal("415.00"),
+            new BigDecimal("500.00"), "Courses", new BigDecimal("35.00"));
+
+        adapter().budgetCrossed(gesture, BudgetStatus.WARNING, alert, List.of(bob));
+        adapter().budgetCrossed(gesture, BudgetStatus.OVER, alert, List.of(carol));
+
+        assertThat(sent(2)).extracting(NotificationRequest::notification).containsExactly(
+            new BudgetWarningNotification("bob", "alice", "Chez nous", alert, finance),
+            new BudgetExceededNotification("carol", "alice", "Chez nous", alert, finance));
     }
 }

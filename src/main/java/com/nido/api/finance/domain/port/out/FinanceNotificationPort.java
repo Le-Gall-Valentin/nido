@@ -1,5 +1,7 @@
 package com.nido.api.finance.domain.port.out;
 
+import com.nido.api.finance.domain.model.BudgetAlert;
+import com.nido.api.finance.domain.model.BudgetStatus;
 import com.nido.api.finance.domain.model.Gesture;
 import com.nido.api.finance.domain.model.GoalFacts;
 import com.nido.api.finance.domain.model.Involved;
@@ -55,4 +57,7 @@ public interface FinanceNotificationPort {
     void openingBalanceSet(Gesture gesture, BigDecimal amount, LocalDate asOf, List<Addressee> readers);
 
     void openingBalanceCleared(Gesture gesture, List<Addressee> readers);
+
+    /** @param reached the threshold crossed: {@code WARNING} past 80 % of the budget, {@code OVER} past the budget itself */
+    void budgetCrossed(Gesture gesture, BudgetStatus reached, BudgetAlert alert, List<Addressee> readers);
 }
