@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { formatRelativeTime } from '@/shared/lib'
 import { EVENT_DOT_CLASS, feedColor, type ExternalFeed } from '@/entities/calendar'
+import { BusyButton } from './BusyButton'
 import { feedErrorText } from '../lib/syncWording'
 
 /**
@@ -26,10 +27,6 @@ export function FeedRow({ feed, canWrite, busy, confirming, removing, error, onR
   const status = feed.lastError
     ? t('feeds.failed_since', { when: formatRelativeTime(feed.contentFetchedAt, i18n.language), reason: feedErrorText(t, feed.lastError) })
     : t('feeds.updated', { when: formatRelativeTime(feed.lastAttemptAt, i18n.language) })
-  // Inert while another action runs, but focusable still: a disabled button would drop the focus it holds.
-  const action = (run: () => void) => () => {
-    if (!busy) run()
-  }
   return (
     <li className="flex flex-col gap-1 rounded-lg bg-bg-2 px-3 py-2">
       <div className="flex items-start gap-2">
@@ -41,18 +38,18 @@ export function FeedRow({ feed, canWrite, busy, confirming, removing, error, onR
       </div>
       {canWrite && !confirming && (
         <div className="flex flex-wrap justify-end gap-2">
-          <Button type="button" aria-label={t('feeds.refresh_for', { name: feed.name })} aria-disabled={busy}
-            onClick={action(onRefresh)}>
+          <BusyButton type="button" aria-label={t('feeds.refresh_for', { name: feed.name })} busy={busy}
+            onClick={onRefresh}>
             {t('feeds.refresh')}
-          </Button>
-          <Button type="button" data-edit-feed={feed.id} aria-label={t('feeds.edit_for', { name: feed.name })}
-            aria-disabled={busy} onClick={action(onEdit)}>
+          </BusyButton>
+          <BusyButton type="button" data-edit-feed={feed.id} aria-label={t('feeds.edit_for', { name: feed.name })}
+            busy={busy} onClick={onEdit}>
             {t('feeds.edit')}
-          </Button>
-          <Button type="button" data-remove-feed={feed.id} aria-label={t('feeds.remove_for', { name: feed.name })}
-            aria-disabled={busy} onClick={action(onRemove)}>
+          </BusyButton>
+          <BusyButton type="button" data-remove-feed={feed.id} aria-label={t('feeds.remove_for', { name: feed.name })}
+            busy={busy} onClick={onRemove}>
             {t('feeds.remove')}
-          </Button>
+          </BusyButton>
         </div>
       )}
       {confirming && (
@@ -60,9 +57,9 @@ export function FeedRow({ feed, canWrite, busy, confirming, removing, error, onR
           <p className="flex-1 text-xs text-fg-2">{t('feeds.remove_confirm', { name: feed.name })}</p>
           {/* Not while the removal runs: the calendar would go all the same, thought kept. */}
           <Button type="button" disabled={removing} onClick={onCancel}>{t('feeds.cancel')}</Button>
-          <Button type="button" style={CTA_BUTTON_STYLE} disabled={removing} onClick={onConfirm}>
+          <BusyButton type="button" style={CTA_BUTTON_STYLE} busy={removing} onClick={onConfirm}>
             {t('feeds.remove_yes')}
-          </Button>
+          </BusyButton>
         </div>
       )}
       {error && <p role="alert" className="text-sm text-status-red">{error}</p>}

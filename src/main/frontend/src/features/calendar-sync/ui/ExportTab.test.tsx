@@ -29,6 +29,19 @@ describe('ExportTab', () => {
     expect(exportCalendar).toHaveBeenCalledWith('s1', ['EVENT', 'TASK'], true)
   })
 
+  it('holds the button while the file is made, focus kept on it, and makes it once', async () => {
+    const exportCalendar = vi.fn().mockReturnValue(new Promise(() => {}))
+    renderTab({ exportCalendar })
+    const download = screen.getByRole('button', { name: 'export.download' }) as HTMLButtonElement
+    download.focus()
+    fireEvent.click(download)
+    await waitFor(() => expect(download.getAttribute('aria-disabled')).toBe('true'))
+    expect(download.disabled).toBe(false)
+    expect(document.activeElement).toBe(download)
+    fireEvent.click(download)
+    expect(exportCalendar).toHaveBeenCalledTimes(1)
+  })
+
   it('cannot download nothing', () => {
     renderTab({ exportCalendar: vi.fn() })
     fireEvent.click(screen.getByLabelText('sources.EVENT'))

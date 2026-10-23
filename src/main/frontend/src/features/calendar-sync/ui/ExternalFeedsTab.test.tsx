@@ -77,12 +77,19 @@ describe('ExternalFeedsTab', () => {
     expect(screen.getByLabelText('feeds.url').getAttribute('maxlength')).toBe('2000')
   })
 
-  it('shows a busy state and disables the button while the calendar downloads', async () => {
+  it('shows a busy state and holds the button, focus kept on it, while the calendar downloads', async () => {
     let finish: (feed: ExternalFeed) => void = () => {}
-    await openForm({ followExternalFeed: vi.fn().mockReturnValue(new Promise<ExternalFeed>((resolve) => { finish = resolve })) })
-    fireEvent.click(screen.getByRole('button', { name: 'feeds.save' }))
+    const followExternalFeed = vi.fn().mockReturnValue(new Promise<ExternalFeed>((resolve) => { finish = resolve }))
+    await openForm({ followExternalFeed })
+    const save = screen.getByRole('button', { name: 'feeds.save' }) as HTMLButtonElement
+    save.focus()
+    fireEvent.click(save)
     expect((await screen.findByText('feeds.saving')).closest('[role="status"]')).toBeTruthy()
-    expect((screen.getByRole('button', { name: 'feeds.save' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(save.getAttribute('aria-disabled')).toBe('true')
+    expect(save.disabled).toBe(false)
+    expect(document.activeElement).toBe(save)
+    fireEvent.click(save)
+    expect(followExternalFeed).toHaveBeenCalledTimes(1)
     finish(SCHOOL)
     await waitFor(() => expect(screen.queryByText('feeds.saving')).toBeNull())
   })
@@ -189,6 +196,16 @@ describe('ExternalFeedsTab', () => {
     expect((await screen.findByRole('alert')).textContent).toBe(`errors.${reason}`)
   })
 
+  it('gives the button back, focus still on it, when the follow is refused', async () => {
+    await openForm({ followExternalFeed: vi.fn().mockRejectedValue(new CalendarSyncError('invalid_feed_address')) })
+    const save = screen.getByRole('button', { name: 'feeds.save' })
+    save.focus()
+    fireEvent.click(save)
+    await screen.findByRole('alert')
+    expect(save.getAttribute('aria-disabled')).toBeNull()
+    expect(document.activeElement).toBe(save)
+  })
+
   it('shows a calendar of an unknown colour in graphite, in the list and in its editor', async () => {
     renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([{ ...SCHOOL, color: 'mauve' }]) })
     const dot = (await screen.findByText('Vacances scolaires')).closest('li')?.querySelector('span[aria-hidden]')
@@ -250,6 +267,23 @@ describe('ExternalFeedsTab', () => {
 
     expect((await screen.findByRole('alert')).textContent).toBe('errors.rate_limited')
     expect((screen.getByLabelText('feeds.rename') as HTMLInputElement).value).toBe('Club de foot')
+  })
+
+  it.each([
+    ['the change is saved', 'updateExternalFeed', /feeds\.edit_for.*Club/, 'feeds.update'],
+    ['the calendar is removed', 'removeExternalFeed', /feeds\.remove_for.*Club/, 'feeds.remove_yes'],
+  ] as const)('holds the button, focus kept on it, while %s, and does it once', async (_, call, opener, label) => {
+    const run = vi.fn().mockReturnValue(new Promise(() => {}))
+    renderTab({ listExternalFeeds: vi.fn().mockResolvedValue([CLUB]), [call]: run })
+    fireEvent.click(await screen.findByRole('button', { name: opener }))
+    const button = screen.getByRole('button', { name: label }) as HTMLButtonElement
+    button.focus()
+    fireEvent.click(button)
+    await waitFor(() => expect(button.getAttribute('aria-disabled')).toBe('true'))
+    expect(button.disabled).toBe(false)
+    expect(document.activeElement).toBe(button)
+    fireEvent.click(button)
+    expect(run).toHaveBeenCalledTimes(1)
   })
 
   it('opens the next follow in the colour of external sources, whatever the last one was in', async () => {

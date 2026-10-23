@@ -210,7 +210,7 @@ describe('SubscriptionsTab', () => {
     expect(await screen.findByText('iPhone')).toBeTruthy()
   })
 
-  it('cannot be cancelled while the address is being made, nor while it is being revoked', async () => {
+  it('cannot be cancelled while the address is being made', async () => {
     let made: (value: CreatedSubscriptionLink) => void = () => {}
     await openForm({ createSubscriptionLink: vi.fn(() => new Promise<CreatedSubscriptionLink>((resolve) => { made = resolve })) })
     fireEvent.change(screen.getByLabelText('subscribe.label'), { target: { value: 'iPad' } })
@@ -218,5 +218,40 @@ describe('SubscriptionsTab', () => {
 
     await waitFor(() => expect((screen.getByRole('button', { name: 'subscribe.cancel' }) as HTMLButtonElement).disabled).toBe(true))
     made(CREATED)
+  })
+
+  it('cannot be cancelled while the address is being revoked', async () => {
+    renderTab({ listSubscriptionLinks: vi.fn().mockResolvedValue([IPHONE]), revokeSubscriptionLink: vi.fn(() => new Promise<void>(() => {})) })
+    fireEvent.click(await screen.findByRole('button', { name: /subscribe\.revoke_for/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'subscribe.revoke_yes' }))
+    await waitFor(() => expect((screen.getByRole('button', { name: 'subscribe.cancel' }) as HTMLButtonElement).disabled).toBe(true))
+  })
+
+  it('holds the button that makes an address, focus kept on it, and makes it once', async () => {
+    const createSubscriptionLink = vi.fn(() => new Promise<CreatedSubscriptionLink>(() => {}))
+    await openForm({ createSubscriptionLink })
+    fireEvent.change(screen.getByLabelText('subscribe.label'), { target: { value: 'iPad' } })
+    const create = screen.getByRole('button', { name: 'subscribe.create' }) as HTMLButtonElement
+    create.focus()
+    fireEvent.click(create)
+    await waitFor(() => expect(create.getAttribute('aria-disabled')).toBe('true'))
+    expect(create.disabled).toBe(false)
+    expect(document.activeElement).toBe(create)
+    fireEvent.click(create)
+    expect(createSubscriptionLink).toHaveBeenCalledTimes(1)
+  })
+
+  it('holds the confirmation while the address is revoked, and revokes it once', async () => {
+    const revokeSubscriptionLink = vi.fn(() => new Promise<void>(() => {}))
+    renderTab({ listSubscriptionLinks: vi.fn().mockResolvedValue([IPHONE]), revokeSubscriptionLink })
+    fireEvent.click(await screen.findByRole('button', { name: /subscribe\.revoke_for/ }))
+    const confirm = screen.getByRole('button', { name: 'subscribe.revoke_yes' }) as HTMLButtonElement
+    confirm.focus()
+    fireEvent.click(confirm)
+    await waitFor(() => expect(confirm.getAttribute('aria-disabled')).toBe('true'))
+    expect(confirm.disabled).toBe(false)
+    expect(document.activeElement).toBe(confirm)
+    fireEvent.click(confirm)
+    expect(revokeSubscriptionLink).toHaveBeenCalledTimes(1)
   })
 })

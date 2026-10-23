@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Button, CTA_BUTTON_STYLE } from '@/shared/ui'
 import { formatRelativeTime } from '@/shared/lib'
 import type { SubscriptionLink } from '@/entities/calendar'
+import { BusyButton } from './BusyButton'
 
 /** One subscription address: what it reads, when it was last read, and its revocation, confirmed in place. */
 export function LinkRow({ link, confirming, pending, error, onRevoke, onCancel, onConfirm }: {
@@ -41,9 +42,9 @@ export function LinkRow({ link, confirming, pending, error, onRevoke, onCancel, 
           <p className="flex-1 text-xs text-fg-2">{t('subscribe.revoke_confirm', { label: link.label })}</p>
           {/* Not while the revocation runs: the address would go all the same, thought kept. */}
           <Button type="button" disabled={pending} onClick={onCancel}>{t('subscribe.cancel')}</Button>
-          <Button type="button" style={CTA_BUTTON_STYLE} disabled={pending} onClick={onConfirm}>
+          <BusyButton type="button" style={CTA_BUTTON_STYLE} busy={pending} onClick={onConfirm}>
             {t('subscribe.revoke_yes')}
-          </Button>
+          </BusyButton>
         </div>
       )}
       {confirming && error && <p role="alert" className="text-sm text-status-red">{error}</p>}

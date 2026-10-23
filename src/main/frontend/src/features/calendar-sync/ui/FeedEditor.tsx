@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, CTA_BUTTON_STYLE, Input } from '@/shared/ui'
 import { feedColor, type EventColor, type ExternalFeed } from '@/entities/calendar'
+import { BusyButton } from './BusyButton'
 import { FeedColorPicker } from './FeedColorPicker'
 
 /** Renames a followed calendar and changes its colour, in place of its row. */
@@ -23,9 +24,10 @@ export function FeedEditor({ feed, pending, error, onSave, onCancel }: {
       <div className="flex justify-end gap-2">
         {/* Not while the change is saved: it would be saved all the same, thought dropped. */}
         <Button type="button" disabled={pending} onClick={onCancel}>{t('feeds.cancel')}</Button>
-        <Button type="button" style={CTA_BUTTON_STYLE} disabled={!name.trim() || pending} onClick={() => onSave(name.trim(), color)}>
+        <BusyButton type="button" style={CTA_BUTTON_STYLE} disabled={!name.trim()} busy={pending}
+          onClick={() => onSave(name.trim(), color)}>
           {t('feeds.update')}
-        </Button>
+        </BusyButton>
       </div>
     </li>
   )

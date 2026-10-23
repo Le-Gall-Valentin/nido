@@ -6,6 +6,7 @@ import {
   FEED_FALLBACK_COLOR, useExternalFeeds, useFollowExternalFeed, useRefreshExternalFeed, useRemoveExternalFeed,
   useUpdateExternalFeed, type ExternalFeedInput,
 } from '@/entities/calendar'
+import { BusyButton } from './BusyButton'
 import { FeedEditor } from './FeedEditor'
 import { FeedRow } from './FeedRow'
 import { FollowFeedForm } from './FollowFeedForm'
@@ -146,9 +147,9 @@ export function ExternalFeedsTab({ spaceId, canWrite }: { spaceId: string; canWr
       {adding ? (
         <div className="flex justify-end gap-2">
           <Button type="button" disabled={follow.isPending} onClick={leaveForm}>{t('feeds.cancel')}</Button>
-          <Button type="button" style={CTA_BUTTON_STYLE} disabled={!draft.url || follow.isPending} onClick={submit}>
+          <BusyButton type="button" style={CTA_BUTTON_STYLE} disabled={!draft.url} busy={follow.isPending} onClick={submit}>
             {t('feeds.save')}
-          </Button>
+          </BusyButton>
         </div>
       ) : canWrite && (
         <div className="flex justify-end">
