@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: mail(#{${mail.cleared ? 'subject.cleared' : 'subject.set'}(${mail.actorName}, ${mail.spaceName})}, #{preheader(${mail.spaceName})}, ~{::content})}">
+<body>
+<th:block th:fragment="content">
+  <h1 th:replace="~{components :: heading(#{heading})}"></h1>
+  <p th:replace="~{components :: paragraph(#{greeting(${mail.username})})}"></p>
+  <th:block th:if="${mail.cleared}">
+    <p th:replace="~{components :: paragraph(#{body.cleared(${mail.actorName}, ${mail.spaceName})})}"></p>
+  </th:block>
+  <th:block th:unless="${mail.cleared}">
+    <p th:replace="~{components :: paragraph(#{body.set(${mail.actorName}, ${mail.spaceName}, ${format.amount(mail.amount)}, ${format.date(mail.asOf)})})}"></p>
+  </th:block>
+  <table th:replace="~{components :: button(${appUrl + mail.financePath.value}, #{action})}"></table>
+  <p th:replace="~{components :: fallbackLink(${appUrl + mail.financePath.value})}"></p>
+  <p th:replace="~{notifications/manage :: manage}"></p>
+</th:block>
+</body>
+</html>

@@ -1,6 +1,8 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.UpdateTransactionUseCase;
+import com.nido.api.finance.application.service.BudgetWatch;
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
@@ -15,6 +17,7 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @ApplicationService
 public class UpdateTransactionHandler implements UpdateTransactionUseCase {
@@ -22,12 +25,17 @@ public class UpdateTransactionHandler implements UpdateTransactionUseCase {
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
     private final SpaceMemberValidator spaceMemberValidator;
+    private final OperationNotifier notifier;
+    private final BudgetWatch budgetWatch;
 
     public UpdateTransactionHandler(
-            TransactionRepository transactionRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator) {
+            TransactionRepository transactionRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator,
+            OperationNotifier notifier, BudgetWatch budgetWatch) {
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
         this.spaceMemberValidator = spaceMemberValidator;
+        this.notifier = notifier;
+        this.budgetWatch = budgetWatch;
     }
 
     @Override
@@ -53,6 +61,12 @@ public class UpdateTransactionHandler implements UpdateTransactionUseCase {
         if (!existing.spaceId().equals(command.spaceId())) {
             throw new FinanceException.TransactionNotFound();
         }
-        return transactionRepository.update(command, resolved);
+        // Watched as the operation will be: moved to another category, only the new one can go up.
+        Optional<BudgetWatch.Watched> watched =
+            budgetWatch.before(command.spaceId(), command.type(), command.categoryId(), command.date());
+        Transaction updated = transactionRepository.update(command, resolved);
+        notifier.transactionUpdated(caller, existing, updated);
+        budgetWatch.after(caller, watched, updated);
+        return updated;
     }
 }

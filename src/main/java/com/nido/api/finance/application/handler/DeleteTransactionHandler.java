@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.DeleteTransactionUseCase;
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.Transaction;
 import com.nido.api.finance.domain.port.out.TransactionRepository;
@@ -14,9 +15,11 @@ import java.util.UUID;
 public class DeleteTransactionHandler implements DeleteTransactionUseCase {
 
     private final TransactionRepository transactionRepository;
+    private final OperationNotifier notifier;
 
-    public DeleteTransactionHandler(TransactionRepository transactionRepository) {
+    public DeleteTransactionHandler(TransactionRepository transactionRepository, OperationNotifier notifier) {
         this.transactionRepository = transactionRepository;
+        this.notifier = notifier;
     }
 
     @Override
@@ -29,5 +32,6 @@ public class DeleteTransactionHandler implements DeleteTransactionUseCase {
             throw new FinanceException.TransactionNotFound();
         }
         transactionRepository.delete(transactionId);
+        notifier.transactionDeleted(caller, existing);
     }
 }

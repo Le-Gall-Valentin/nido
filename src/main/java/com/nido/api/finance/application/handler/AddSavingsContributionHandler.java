@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.AddSavingsContributionUseCase;
+import com.nido.api.finance.application.service.SavingsNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.AddSavingsContributionCommand;
 import com.nido.api.finance.domain.model.FinanceException;
@@ -12,16 +13,21 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.Stream;
 
 @ApplicationService
 public class AddSavingsContributionHandler implements AddSavingsContributionUseCase {
 
     private final SavingsGoalRepository savingsGoalRepository;
     private final SpaceMemberValidator spaceMemberValidator;
+    private final SavingsNotifier notifier;
 
-    public AddSavingsContributionHandler(SavingsGoalRepository savingsGoalRepository, SpaceMemberValidator spaceMemberValidator) {
+    public AddSavingsContributionHandler(SavingsGoalRepository savingsGoalRepository, SpaceMemberValidator spaceMemberValidator,
+                                         SavingsNotifier notifier) {
         this.savingsGoalRepository = savingsGoalRepository;
         this.spaceMemberValidator = spaceMemberValidator;
+        this.notifier = notifier;
     }
 
     @Override
@@ -39,12 +45,15 @@ public class AddSavingsContributionHandler implements AddSavingsContributionUseC
         if (!goal.spaceId().equals(command.spaceId())) {
             throw new FinanceException.SavingsGoalNotFound();
         }
-        BigDecimal alreadyContributed = savingsGoalRepository.findContributionsByGoalId(goal.id()).stream()
+        List<SavingsContribution> earlier = savingsGoalRepository.findContributionsByGoalId(goal.id());
+        BigDecimal alreadyContributed = earlier.stream()
             .map(SavingsContribution::amount)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         if (alreadyContributed.add(command.amount()).compareTo(goal.targetAmount()) > 0) {
             throw new FinanceException.ContributionExceedsGoalTarget();
         }
-        return savingsGoalRepository.addContribution(command);
+        SavingsContribution created = savingsGoalRepository.addContribution(command);
+        notifier.deposited(caller, goal, created, Stream.concat(earlier.stream(), Stream.of(created)).toList());
+        return created;
     }
 }

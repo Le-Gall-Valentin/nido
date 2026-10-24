@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: mail(#{${'subject.' + mail.author}(${mail.actorName}, ${format.amount(mail.amount)})}, #{preheader(${mail.spaceName})}, ~{::content})}">
+<body>
+<th:block th:fragment="content">
+  <h1 th:replace="~{components :: heading(#{heading})}"></h1>
+  <p th:replace="~{components :: paragraph(#{greeting(${mail.username})})}"></p>
+  <p th:replace="~{components :: paragraph(#{${'body.' + mail.author}(${mail.actorName}, ${format.amount(mail.amount)}, ${format.date(mail.date)}, ${mail.spaceName})})}"></p>
+  <p th:replace="~{components :: paragraph(#{${'standing.' + mail.standing}(${mail.actorName}, ${format.amount(mail.remaining)})})}"></p>
+  <table th:replace="~{components :: button(${appUrl + mail.financePath.value}, #{action})}"></table>
+  <p th:replace="~{components :: fallbackLink(${appUrl + mail.financePath.value})}"></p>
+  <p th:replace="~{notifications/manage :: manage}"></p>
+</th:block>
+</body>
+</html>

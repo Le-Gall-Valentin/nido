@@ -1,7 +1,7 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
-import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
@@ -12,12 +12,14 @@ import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.model.UpdateRecurringSeriesCommand;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -33,9 +35,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +50,7 @@ class UpdateRecurringSeriesHandlerTest {
     @Mock GetSpaceTodayUseCase spaceToday;
     @Mock CategoryRepository categoryRepository;
     @Mock SpaceMemberValidator spaceMemberValidator;
+    @Mock OperationNotifier notifier;
     private UpdateRecurringSeriesHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
@@ -57,7 +62,7 @@ class UpdateRecurringSeriesHandlerTest {
         // The space's date, not the server's: these handlers validate a backlog against
         // "today" and the space is what decides which day that is.
         lenient().when(spaceToday.today(any())).thenReturn(LocalDate.of(2026, 9, 12));
-        handler = new UpdateRecurringSeriesHandler(seriesRepository, categoryRepository, spaceMemberValidator, spaceToday);
+        handler = new UpdateRecurringSeriesHandler(seriesRepository, categoryRepository, spaceMemberValidator, spaceToday, notifier);
         lenient().when(categoryRepository.findById(any())).thenReturn(Optional.of(category));
     }
 
@@ -241,5 +246,35 @@ class UpdateRecurringSeriesHandlerTest {
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);
+    }
+
+    @Test
+    void an_updated_series_tells_the_notifier_what_it_was_and_what_it_is_after_writing() {
+        UpdateRecurringSeriesCommand command = new UpdateRecurringSeriesCommand(UUID.randomUUID(), spaceId, "Loyer modifié",
+            new BigDecimal("850.00"), TransactionType.EXPENSE, UUID.randomUUID(), null, List.of(),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null);
+        RecurringTransactionSeries existing = existingInSameSpace(command.seriesId());
+        when(seriesRepository.findById(command.seriesId())).thenReturn(Optional.of(existing));
+        RecurringTransactionSeries updated = new RecurringTransactionSeries(command.seriesId(), spaceId, "Loyer modifié",
+            new BigDecimal("850.00"), TransactionType.EXPENSE, command.categoryId(), null, List.of(),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null, null);
+        when(seriesRepository.update(command, List.of())).thenReturn(updated);
+        SpaceMembership caller = membership(SpaceRole.MEMBER);
+
+        handler.update(command, caller);
+
+        InOrder order = inOrder(seriesRepository, notifier);
+        order.verify(seriesRepository).update(command, List.of());
+        order.verify(notifier).recurringUpdated(caller, existing, updated);
+    }
+
+    @Test
+    void a_refused_gesture_tells_nobody() {
+        UpdateRecurringSeriesCommand command = new UpdateRecurringSeriesCommand(UUID.randomUUID(), spaceId, "Loyer modifié",
+            new BigDecimal("850.00"), TransactionType.EXPENSE, UUID.randomUUID(), null, List.of(),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null);
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.VIEWER)));
+        verifyNoInteractions(notifier);
     }
 }

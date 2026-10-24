@@ -1,9 +1,11 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.BalanceNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.CreateSettlementCommand;
 import com.nido.api.finance.domain.model.FinanceException;
 import com.nido.api.finance.domain.model.SettlementRecord;
+import com.nido.api.finance.domain.model.SuggestedTransfer;
 import com.nido.api.finance.domain.port.out.RunningTotalsRepository;
 import com.nido.api.finance.domain.port.out.SettlementRecordRepository;
 import com.nido.api.space.domain.model.SpaceMembership;
@@ -11,6 +13,7 @@ import com.nido.api.space.domain.model.SpaceRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -19,13 +22,16 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +40,7 @@ class SettleDebtHandlerTest {
     @Mock SettlementRecordRepository settlementRecordRepository;
     @Mock RunningTotalsRepository runningTotals;
     @Mock SpaceMemberValidator spaceMemberValidator;
+    @Mock BalanceNotifier notifier;
     private SettleDebtHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID debtorId = UUID.randomUUID();
@@ -41,7 +48,7 @@ class SettleDebtHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new SettleDebtHandler(settlementRecordRepository, runningTotals, spaceMemberValidator);
+        handler = new SettleDebtHandler(settlementRecordRepository, runningTotals, spaceMemberValidator, notifier);
         // A debt of 1000.00 from debtorId to creditorId — large enough that tests not
         // concerned with the debt cap itself (amount 20.00) never trip over it.
         lenient().when(runningTotals.findNetByMember(spaceId)).thenReturn(debt("1000.00"));
@@ -159,5 +166,40 @@ class SettleDebtHandlerTest {
         handler.settle(command, membership(debtorId, SpaceRole.VIEWER));
 
         verify(settlementRecordRepository).lockForSettlement(spaceId, debtorId, creditorId);
+    }
+
+    @Test
+    void the_remaining_debt_is_read_after_the_repayment_and_told_to_the_notifier() {
+        CreateSettlementCommand command = command();
+        SettlementRecord created = new SettlementRecord(UUID.randomUUID(), spaceId, command.fromMemberId(), command.toMemberId(), command.amount(), command.date());
+        when(settlementRecordRepository.create(command)).thenReturn(created);
+        SpaceMembership caller = membership(debtorId, SpaceRole.MEMBER);
+
+        handler.settle(command, caller);
+
+        InOrder order = inOrder(settlementRecordRepository, runningTotals, notifier);
+        order.verify(settlementRecordRepository).create(command);
+        order.verify(runningTotals).findNetByMember(spaceId);
+        order.verify(notifier).settlementRecorded(caller, created,
+            Optional.of(new SuggestedTransfer(debtorId, creditorId, new BigDecimal("1000.00"))));
+    }
+
+    @Test
+    void a_repayment_that_leaves_nothing_between_the_two_tells_them_they_are_even() {
+        CreateSettlementCommand command = command();
+        SettlementRecord created = new SettlementRecord(UUID.randomUUID(), spaceId, command.fromMemberId(), command.toMemberId(), command.amount(), command.date());
+        when(settlementRecordRepository.create(command)).thenReturn(created);
+        when(runningTotals.findNetByMember(spaceId)).thenReturn(debt("20.00"), Map.of());
+        SpaceMembership caller = membership(creditorId, SpaceRole.MEMBER);
+
+        handler.settle(command, caller);
+
+        verify(notifier).settlementRecorded(caller, created, Optional.empty());
+    }
+
+    @Test
+    void a_refused_gesture_tells_nobody() {
+        assertThatThrownBy(() -> handler.settle(command(), membership(UUID.randomUUID(), SpaceRole.MEMBER)));
+        verifyNoInteractions(notifier);
     }
 }

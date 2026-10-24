@@ -1,6 +1,9 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.BudgetWatch;
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
+import com.nido.api.finance.domain.model.BudgetStatus;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
@@ -16,12 +19,14 @@ import com.nido.api.space.domain.model.SpaceRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,9 +36,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +49,8 @@ class CreateTransactionHandlerTest {
     @Mock TransactionRepository transactionRepository;
     @Mock CategoryRepository categoryRepository;
     @Mock SpaceMemberValidator spaceMemberValidator;
+    @Mock OperationNotifier notifier;
+    @Mock BudgetWatch budgetWatch;
     private CreateTransactionHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
@@ -50,7 +59,7 @@ class CreateTransactionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new CreateTransactionHandler(transactionRepository, categoryRepository, spaceMemberValidator);
+        handler = new CreateTransactionHandler(transactionRepository, categoryRepository, spaceMemberValidator, notifier, budgetWatch);
         lenient().when(categoryRepository.findById(any())).thenReturn(Optional.of(category));
     }
 
@@ -186,5 +195,50 @@ class CreateTransactionHandlerTest {
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.MEMBER)))
             .isInstanceOf(SpaceException.NotAMember.class);
+    }
+
+    @Test
+    void a_created_transaction_tells_the_notifier_after_writing() {
+        CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("45.30"),
+            TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), null, List.of(), null);
+        Transaction created = new Transaction(UUID.randomUUID(), spaceId, "Courses", new BigDecimal("45.30"),
+            TransactionType.EXPENSE, command.categoryId(), command.date(), null, List.of(), null, Instant.now());
+        when(transactionRepository.create(command, List.of())).thenReturn(created);
+        SpaceMembership caller = membership(SpaceRole.MEMBER);
+
+        handler.create(command, caller);
+
+        InOrder order = inOrder(transactionRepository, notifier);
+        order.verify(transactionRepository).create(command, List.of());
+        order.verify(notifier).transactionAdded(caller, created);
+    }
+
+    @Test
+    void a_refused_gesture_tells_nobody() {
+        CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("45.30"),
+            TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), null, List.of(), null);
+
+        assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.VIEWER)));
+        verifyNoInteractions(notifier, budgetWatch);
+    }
+
+    @Test
+    void the_budget_is_read_before_writing_and_again_after() {
+        CreateTransactionCommand command = new CreateTransactionCommand(spaceId, "Courses", new BigDecimal("45.30"),
+            TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 15), null, List.of(), null);
+        Transaction created = new Transaction(UUID.randomUUID(), spaceId, "Courses", new BigDecimal("45.30"),
+            TransactionType.EXPENSE, command.categoryId(), command.date(), null, List.of(), null, Instant.now());
+        Optional<BudgetWatch.Watched> watched = Optional.of(new BudgetWatch.Watched(command.categoryId(), YearMonth.of(2026, 1),
+            new BigDecimal("500.00"), BudgetStatus.OK));
+        when(budgetWatch.before(spaceId, TransactionType.EXPENSE, command.categoryId(), command.date())).thenReturn(watched);
+        when(transactionRepository.create(command, List.of())).thenReturn(created);
+        SpaceMembership caller = membership(SpaceRole.MEMBER);
+
+        handler.create(command, caller);
+
+        InOrder order = inOrder(budgetWatch, transactionRepository);
+        order.verify(budgetWatch).before(spaceId, TransactionType.EXPENSE, command.categoryId(), command.date());
+        order.verify(transactionRepository).create(command, List.of());
+        order.verify(budgetWatch).after(caller, watched, created);
     }
 }

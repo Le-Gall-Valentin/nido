@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.UpdateRecurringSeriesUseCase;
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
@@ -26,14 +27,16 @@ public class UpdateRecurringSeriesHandler implements UpdateRecurringSeriesUseCas
     private final RecurringTransactionSeriesRepository seriesRepository;
     private final CategoryRepository categoryRepository;
     private final SpaceMemberValidator spaceMemberValidator;
+    private final OperationNotifier notifier;
 
     public UpdateRecurringSeriesHandler(
             RecurringTransactionSeriesRepository seriesRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator,
-                            GetSpaceTodayUseCase spaceToday) {
+                            GetSpaceTodayUseCase spaceToday, OperationNotifier notifier) {
         this.seriesRepository = seriesRepository;
         this.categoryRepository = categoryRepository;
         this.spaceMemberValidator = spaceMemberValidator;
         this.spaceToday = spaceToday;
+        this.notifier = notifier;
     }
 
     @Override
@@ -77,6 +80,8 @@ public class UpdateRecurringSeriesHandler implements UpdateRecurringSeriesUseCas
         // Moving its anchor into the distant past, on the other hand, is exactly what this refuses.
         RecurrenceProjector.validateBacklog(command.anchorDate(), command.intervalType(),
             command.intervalCount(), command.endDate(), today, existing.lastMaterializedDate());
-        return seriesRepository.update(command, resolved);
+        RecurringTransactionSeries updated = seriesRepository.update(command, resolved);
+        notifier.recurringUpdated(caller, existing, updated);
+        return updated;
     }
 }

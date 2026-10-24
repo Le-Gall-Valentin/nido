@@ -1,7 +1,7 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
-import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
@@ -12,12 +12,14 @@ import com.nido.api.finance.domain.model.RecurringTransactionSeries;
 import com.nido.api.finance.domain.model.TransactionType;
 import com.nido.api.finance.domain.port.out.CategoryRepository;
 import com.nido.api.finance.domain.port.out.RecurringTransactionSeriesRepository;
+import com.nido.api.space.application.port.in.GetSpaceTodayUseCase;
 import com.nido.api.space.domain.model.SpaceException;
 import com.nido.api.space.domain.model.SpaceMembership;
 import com.nido.api.space.domain.model.SpaceRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -33,9 +35,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +50,7 @@ class CreateRecurringSeriesHandlerTest {
     @Mock GetSpaceTodayUseCase spaceToday;
     @Mock CategoryRepository categoryRepository;
     @Mock SpaceMemberValidator spaceMemberValidator;
+    @Mock OperationNotifier notifier;
     private CreateRecurringSeriesHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
@@ -57,7 +62,7 @@ class CreateRecurringSeriesHandlerTest {
         // The space's date, not the server's: these handlers validate a backlog against
         // "today" and the space is what decides which day that is.
         lenient().when(spaceToday.today(any())).thenReturn(LocalDate.of(2026, 9, 12));
-        handler = new CreateRecurringSeriesHandler(seriesRepository, categoryRepository, spaceMemberValidator, spaceToday);
+        handler = new CreateRecurringSeriesHandler(seriesRepository, categoryRepository, spaceMemberValidator, spaceToday, notifier);
         lenient().when(categoryRepository.findById(any())).thenReturn(Optional.of(category));
     }
 
@@ -201,5 +206,31 @@ class CreateRecurringSeriesHandlerTest {
 
         assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);
+    }
+
+    @Test
+    void a_created_series_tells_the_notifier_after_writing() {
+        CreateRecurringSeriesCommand command = new CreateRecurringSeriesCommand(spaceId, "Loyer", new BigDecimal("800.00"),
+            TransactionType.EXPENSE, UUID.randomUUID(), null, List.of(), RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null);
+        RecurringTransactionSeries created = new RecurringTransactionSeries(UUID.randomUUID(), spaceId, "Loyer",
+            new BigDecimal("800.00"), TransactionType.EXPENSE, command.categoryId(), null, List.of(),
+            RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null, null);
+        when(seriesRepository.create(command, List.of())).thenReturn(created);
+        SpaceMembership caller = membership(SpaceRole.MEMBER);
+
+        handler.create(command, caller);
+
+        InOrder order = inOrder(seriesRepository, notifier);
+        order.verify(seriesRepository).create(command, List.of());
+        order.verify(notifier).recurringCreated(caller, created);
+    }
+
+    @Test
+    void a_refused_gesture_tells_nobody() {
+        CreateRecurringSeriesCommand command = new CreateRecurringSeriesCommand(spaceId, "Loyer", new BigDecimal("800.00"),
+            TransactionType.EXPENSE, UUID.randomUUID(), null, List.of(), RecurrenceInterval.MONTHLY, 1, LocalDate.of(2026, 1, 1), null);
+
+        assertThatThrownBy(() -> handler.create(command, membership(SpaceRole.VIEWER)));
+        verifyNoInteractions(notifier);
     }
 }

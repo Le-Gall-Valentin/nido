@@ -1,6 +1,9 @@
 package com.nido.api.finance.application.handler;
 
+import com.nido.api.finance.application.service.BudgetWatch;
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
+import com.nido.api.finance.domain.model.BudgetStatus;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
 import com.nido.api.finance.domain.model.ContributionInput;
@@ -16,12 +19,14 @@ import com.nido.api.space.domain.model.SpaceRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,9 +36,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +49,8 @@ class UpdateTransactionHandlerTest {
     @Mock TransactionRepository transactionRepository;
     @Mock CategoryRepository categoryRepository;
     @Mock SpaceMemberValidator spaceMemberValidator;
+    @Mock OperationNotifier notifier;
+    @Mock BudgetWatch budgetWatch;
     private UpdateTransactionHandler handler;
     private final UUID spaceId = UUID.randomUUID();
     private final UUID aliceId = UUID.randomUUID();
@@ -50,7 +59,7 @@ class UpdateTransactionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new UpdateTransactionHandler(transactionRepository, categoryRepository, spaceMemberValidator);
+        handler = new UpdateTransactionHandler(transactionRepository, categoryRepository, spaceMemberValidator, notifier, budgetWatch);
         lenient().when(categoryRepository.findById(any())).thenReturn(Optional.of(category));
     }
 
@@ -209,5 +218,53 @@ class UpdateTransactionHandlerTest {
 
         assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.VIEWER)))
             .isInstanceOf(SpaceException.InsufficientRole.class);
+    }
+
+    @Test
+    void an_updated_transaction_tells_the_notifier_what_it_was_and_what_it_is_after_writing() {
+        UpdateTransactionCommand command = new UpdateTransactionCommand(UUID.randomUUID(), spaceId, "T modifié",
+            new BigDecimal("20.00"), TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 2), null, List.of());
+        Transaction existing = existingInSameSpace(command.transactionId());
+        when(transactionRepository.findById(command.transactionId())).thenReturn(Optional.of(existing));
+        Transaction updated = new Transaction(command.transactionId(), spaceId, "T modifié", new BigDecimal("20.00"),
+            TransactionType.EXPENSE, command.categoryId(), command.date(), null, List.of(), null, Instant.now());
+        when(transactionRepository.update(command, List.of())).thenReturn(updated);
+        SpaceMembership caller = membership(SpaceRole.MEMBER);
+
+        handler.update(command, caller);
+
+        InOrder order = inOrder(transactionRepository, notifier);
+        order.verify(transactionRepository).update(command, List.of());
+        order.verify(notifier).transactionUpdated(caller, existing, updated);
+    }
+
+    @Test
+    void a_refused_gesture_tells_nobody() {
+        UpdateTransactionCommand command = new UpdateTransactionCommand(UUID.randomUUID(), spaceId, "T modifié",
+            new BigDecimal("20.00"), TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 2), null, List.of());
+
+        assertThatThrownBy(() -> handler.update(command, membership(SpaceRole.VIEWER)));
+        verifyNoInteractions(notifier, budgetWatch);
+    }
+
+    @Test
+    void the_budget_of_the_operation_as_it_will_be_is_read_before_writing_and_again_after() {
+        UpdateTransactionCommand command = new UpdateTransactionCommand(UUID.randomUUID(), spaceId, "T modifié",
+            new BigDecimal("80.00"), TransactionType.EXPENSE, UUID.randomUUID(), LocalDate.of(2026, 1, 20), null, List.of());
+        when(transactionRepository.findById(command.transactionId())).thenReturn(Optional.of(existingInSameSpace(command.transactionId())));
+        Transaction updated = new Transaction(command.transactionId(), spaceId, "T modifié", new BigDecimal("80.00"),
+            TransactionType.EXPENSE, command.categoryId(), command.date(), null, List.of(), null, Instant.now());
+        Optional<BudgetWatch.Watched> watched = Optional.of(new BudgetWatch.Watched(command.categoryId(), YearMonth.of(2026, 1),
+            new BigDecimal("500.00"), BudgetStatus.WARNING));
+        when(budgetWatch.before(spaceId, TransactionType.EXPENSE, command.categoryId(), command.date())).thenReturn(watched);
+        when(transactionRepository.update(command, List.of())).thenReturn(updated);
+        SpaceMembership caller = membership(SpaceRole.MEMBER);
+
+        handler.update(command, caller);
+
+        InOrder order = inOrder(budgetWatch, transactionRepository);
+        order.verify(budgetWatch).before(spaceId, TransactionType.EXPENSE, command.categoryId(), command.date());
+        order.verify(transactionRepository).update(command, List.of());
+        order.verify(budgetWatch).after(caller, watched, updated);
     }
 }

@@ -38,6 +38,10 @@
   <a data-text-line th:href="${href}" th:text="${href}" href="#" style="color:#5c7a58;word-break:break-all;">https://</a>
 </p>
 
+<!-- One fact of a mail, as label and value: "Montant : 86,40 €". One per line, so each is shown or left out on its own. -->
+<p th:fragment="fact(label, value)" data-text-line
+   style="margin:0 0 6px;font-family:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14.5px;line-height:1.5;color:#4a463f;"><span th:text="|${label}#{fact.separator}|">Label :</span> <strong th:text="${value}" style="font-weight:600;color:#2c2a26;">Value</strong></p>
+
 <p th:fragment="small(text)" data-text-line th:text="${text}"
    style="margin:0 0 14px;font-family:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.55;color:#6f6a61;">Small</p>
 

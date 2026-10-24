@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: mail(#{subject}, #{preheader}, ~{::content})}">
+<body>
+<th:block th:fragment="content">
+  <h1 th:replace="~{components :: heading(#{heading})}"></h1>
+  <p th:replace="~{components :: fact(#{amount}, ${format.amount(mail.amount)})}"></p>
+  <p th:replace="~{components :: fact(#{date}, ${format.date(mail.date)})}"></p>
+</th:block>
+</body>
+</html>

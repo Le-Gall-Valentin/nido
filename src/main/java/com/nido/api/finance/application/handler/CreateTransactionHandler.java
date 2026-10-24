@@ -1,6 +1,8 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.CreateTransactionUseCase;
+import com.nido.api.finance.application.service.BudgetWatch;
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
@@ -15,6 +17,7 @@ import com.nido.api.space.domain.model.SpaceMembership;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @ApplicationService
 public class CreateTransactionHandler implements CreateTransactionUseCase {
@@ -22,12 +25,17 @@ public class CreateTransactionHandler implements CreateTransactionUseCase {
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
     private final SpaceMemberValidator spaceMemberValidator;
+    private final OperationNotifier notifier;
+    private final BudgetWatch budgetWatch;
 
     public CreateTransactionHandler(
-            TransactionRepository transactionRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator) {
+            TransactionRepository transactionRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator,
+            OperationNotifier notifier, BudgetWatch budgetWatch) {
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
         this.spaceMemberValidator = spaceMemberValidator;
+        this.notifier = notifier;
+        this.budgetWatch = budgetWatch;
     }
 
     @Override
@@ -49,6 +57,11 @@ public class CreateTransactionHandler implements CreateTransactionUseCase {
             spaceMemberValidator.ensureMember(command.spaceId(), command.payerId());
         }
         resolved.forEach(c -> spaceMemberValidator.ensureMember(command.spaceId(), c.memberId()));
-        return transactionRepository.create(command, resolved);
+        Optional<BudgetWatch.Watched> watched =
+            budgetWatch.before(command.spaceId(), command.type(), command.categoryId(), command.date());
+        Transaction created = transactionRepository.create(command, resolved);
+        notifier.transactionAdded(caller, created);
+        budgetWatch.after(caller, watched, created);
+        return created;
     }
 }

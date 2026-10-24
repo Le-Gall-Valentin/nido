@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: mail(#{subject(${mail.deposit.goal.name})}, #{preheader(${mail.spaceName})}, ~{::content})}">
+<body>
+<th:block th:fragment="content">
+  <h1 th:replace="~{components :: heading(#{heading})}"></h1>
+  <p th:replace="~{components :: paragraph(#{greeting(${mail.username})})}"></p>
+  <th:block th:if="${mail.side.name() == 'READER'}">
+    <p th:replace="~{components :: paragraph(#{body.yours(${format.amount(mail.deposit.amount)}, ${mail.deposit.goal.name}, ${mail.spaceName}, ${format.amount(mail.deposit.goal.target)})})}"></p>
+  </th:block>
+  <th:block th:unless="${mail.side.name() == 'READER'}">
+    <p th:replace="~{components :: paragraph(#{${mail.deposit.contributorName == null ? 'body.former' : 'body'}(${mail.deposit.contributorName}, ${format.amount(mail.deposit.amount)}, ${mail.deposit.goal.name}, ${mail.spaceName}, ${format.amount(mail.deposit.goal.target)})})}"></p>
+  </th:block>
+  <th:block th:replace="~{finance/parts :: savedByMember(${mail.deposit.saved}, ${mail.deposit.savedByMember})}"></th:block>
+  <table th:replace="~{components :: button(${appUrl + mail.financePath.value}, #{action})}"></table>
+  <p th:replace="~{components :: fallbackLink(${appUrl + mail.financePath.value})}"></p>
+  <p th:replace="~{notifications/manage :: manage}"></p>
+</th:block>
+</body>
+</html>

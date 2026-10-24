@@ -12,6 +12,7 @@ import com.nido.api.notifications.domain.port.out.NotificationRecipientPort;
 import com.nido.api.shared.model.Language;
 import com.nido.api.shared.model.Role;
 import fixtures.notifications.valid.GreetingNotification;
+import fixtures.notifications.valid.ReminderNotification;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -190,5 +191,74 @@ class DeliverNotificationHandlerTest {
         handler(mail).deliver(GREETING, new NotificationRequest(janeId, greeting, EXPIRES_AT), Language.EN);
 
         verify(mail).deliver(jane, GREETING, greeting, EXPIRES_AT);
+    }
+
+    // --- A fallback: sent instead, where the account switched the main kind off but keeps the fallback's
+
+    private static final NotificationType REMINDER = new NotificationType("agenda.reminder");
+    private final ReminderNotification reminder = new ReminderNotification("jane");
+
+    private DeliverNotificationHandler handlerWithFallback(NotificationCatalog catalog, NotificationChannelPort channel) {
+        return new DeliverNotificationHandler(() -> catalog, recipients, preferences, List.of(channel));
+    }
+
+    private static NotificationCatalog bothKinds() {
+        return new NotificationCatalog(Map.of(GreetingNotification.class, GREETING, ReminderNotification.class, REMINDER));
+    }
+
+    /** A mail channel that can write both the greeting and the reminder. */
+    private static NotificationChannelPort channelForBoth() {
+        NotificationChannelPort channel = channel(true);
+        when(channel.canDeliver(ReminderNotification.class)).thenReturn(true);
+        return channel;
+    }
+
+    private void deliverWithFallback(DeliverNotificationHandler handler) {
+        handler.deliver(GREETING, new NotificationRequest(janeId, greeting, EXPIRES_AT, reminder), null);
+    }
+
+    @Test
+    void the_main_notification_wins_when_the_account_keeps_its_kind_on() {
+        NotificationChannelPort mail = channelForBoth();
+        janeChose(NotificationPreferences.DEFAULTS);
+
+        deliverWithFallback(handlerWithFallback(bothKinds(), mail));
+
+        verify(mail).deliver(jane, GREETING, greeting, EXPIRES_AT);
+        verify(mail, never()).deliver(jane, REMINDER, reminder, EXPIRES_AT);
+    }
+
+    @Test
+    void the_fallback_goes_out_when_the_account_switched_the_main_kind_off() {
+        NotificationChannelPort mail = channelForBoth();
+        janeChose(new NotificationPreferences(Map.of(), Map.of(GREETING, false)));
+
+        deliverWithFallback(handlerWithFallback(bothKinds(), mail));
+
+        verify(mail).deliver(jane, REMINDER, reminder, EXPIRES_AT);
+        verify(mail, never()).deliver(jane, GREETING, greeting, EXPIRES_AT);
+    }
+
+    @Test
+    void nothing_goes_out_when_both_kinds_are_switched_off() {
+        NotificationChannelPort mail = channelForBoth();
+        janeChose(new NotificationPreferences(Map.of(), Map.of(GREETING, false, REMINDER, false)));
+
+        deliverWithFallback(handlerWithFallback(bothKinds(), mail));
+
+        verify(mail, never()).deliver(any(), any(), any(), any());
+    }
+
+    @Test
+    void a_fallback_reserved_to_another_role_is_not_delivered() {
+        NotificationChannelPort mail = channelForBoth();
+        janeChose(new NotificationPreferences(Map.of(), Map.of(GREETING, false)));
+        NotificationCatalog reserved = new NotificationCatalog(
+            Map.of(GreetingNotification.class, GREETING, ReminderNotification.class, REMINDER),
+            Map.of(REMINDER, Set.of(Role.SUPER_ADMIN)));
+
+        deliverWithFallback(handlerWithFallback(reserved, mail));
+
+        verify(mail, never()).deliver(any(), any(), any(), any());
     }
 }

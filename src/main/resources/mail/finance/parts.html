@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- What the finance mails tell about an operation, a recurring transaction or a goal, as facts: one line each, said
+     to one reader (readerId), who reads "you" for themself and "a former member" for someone who can no longer be
+     named. The *Change fragments show "before → after" where a value changed, the value alone where it did not. -->
+
+<th:block th:fragment="operation(op, readerId)">
+  <p th:replace="~{components :: fact(#{fact.amount}, ${format.amount(op.amount)})}"></p>
+  <p th:replace="~{components :: fact(#{fact.date}, ${format.date(op.date)})}"></p>
+  <th:block th:if="${op.categoryLabel != null}">
+    <p th:replace="~{components :: fact(#{fact.category}, ${op.categoryLabel})}"></p>
+  </th:block>
+  <th:block th:if="${op.payerId != null}">
+    <p th:replace="~{components :: fact(#{${'fact.payer.' + op.type}}, ${op.paidBy(readerId)} ? #{you} : (${op.payerName} ?: #{former-member}))}"></p>
+  </th:block>
+  <th:block th:unless="${op.shares.isEmpty()}"
+            th:with="shared=${#strings.listJoin(op.shares.![(memberName ?: #messages.msg('former-member')) + ' (' + #root.format.amount(amount) + ')'], ', ')}">
+    <p th:replace="~{components :: fact(#{fact.shared-with}, ${shared})}"></p>
+  </th:block>
+  <th:block th:if="${op.shareOf(readerId) != null}">
+    <p th:replace="~{components :: fact(#{fact.your-share}, ${format.amount(op.shareOf(readerId))})}"></p>
+  </th:block>
+</th:block>
+
+
+<th:block th:fragment="operationChange(before, after, readerId)"
+          th:with="typeBefore=#{${'type.' + before.type}}, typeAfter=#{${'type.' + after.type}},
+                   payerBefore=${before.payerId == null} ? #{nobody} : (${before.paidBy(readerId)} ? #{you} : (${before.payerName} ?: #{former-member})), payerAfter=${after.payerId == null} ? #{nobody} : (${after.paidBy(readerId)} ? #{you} : (${after.payerName} ?: #{former-member})),
+                   sharedBefore=${before.shares.isEmpty()} ? #{nobody} : ${#strings.listJoin(before.shares.![(memberName ?: #messages.msg('former-member')) + ' (' + #root.format.amount(amount) + ')'], ', ')}, sharedAfter=${after.shares.isEmpty()} ? #{nobody} : ${#strings.listJoin(after.shares.![(memberName ?: #messages.msg('former-member')) + ' (' + #root.format.amount(amount) + ')'], ', ')},
+                   shareBefore=${before.shareOf(readerId) == null} ? #{no-share} : ${format.amount(before.shareOf(readerId))}, shareAfter=${after.shareOf(readerId) == null} ? #{no-share} : ${format.amount(after.shareOf(readerId))}">
+  <th:block th:if="${before.label != after.label}">
+    <p th:replace="~{components :: fact(#{fact.label}, ${format.change(before.label, after.label)})}"></p>
+  </th:block>
+  <th:block th:if="${before.type != after.type}">
+    <p th:replace="~{components :: fact(#{fact.type}, ${format.change(typeBefore, typeAfter)})}"></p>
+  </th:block>
+  <p th:replace="~{components :: fact(#{fact.amount}, ${format.change(format.amount(before.amount), format.amount(after.amount))})}"></p>
+  <p th:replace="~{components :: fact(#{fact.date}, ${format.change(format.date(before.date), format.date(after.date))})}"></p>
+  <th:block th:if="${after.categoryLabel != null}">
+    <p th:replace="~{components :: fact(#{fact.category}, ${format.change(before.categoryLabel ?: after.categoryLabel, after.categoryLabel)})}"></p>
+  </th:block>
+  <th:block th:if="${before.payerId != null or after.payerId != null}">
+    <p th:replace="~{components :: fact(#{${'fact.payer.' + after.type}}, ${format.change(payerBefore, payerAfter)})}"></p>
+  </th:block>
+  <th:block th:unless="${before.shares.isEmpty() and after.shares.isEmpty()}">
+    <p th:replace="~{components :: fact(#{fact.shared-with}, ${format.change(sharedBefore, sharedAfter)})}"></p>
+  </th:block>
+  <th:block th:if="${before.shareOf(readerId) != null or after.shareOf(readerId) != null}">
+    <p th:replace="~{components :: fact(#{fact.your-share}, ${format.change(shareBefore, shareAfter)})}"></p>
+  </th:block>
+</th:block>
+
+<th:block th:fragment="series(s, readerId)"
+          th:with="frequency=${s.intervalCount == 1} ? #{${'frequency.' + s.interval + '.one'}} : #{${'frequency.' + s.interval + '.many'}(${s.intervalCount})}">
+  <p th:replace="~{components :: fact(#{fact.amount}, ${format.amount(s.amount)})}"></p>
+  <p th:replace="~{components :: fact(#{fact.frequency}, ${frequency})}"></p>
+  <p th:replace="~{components :: fact(#{fact.from}, ${format.date(s.from)})}"></p>
+  <th:block th:if="${s.until != null}">
+    <p th:replace="~{components :: fact(#{fact.until}, ${format.date(s.until)})}"></p>
+  </th:block>
+  <th:block th:if="${s.categoryLabel != null}">
+    <p th:replace="~{components :: fact(#{fact.category}, ${s.categoryLabel})}"></p>
+  </th:block>
+  <th:block th:if="${s.payerId != null}">
+    <p th:replace="~{components :: fact(#{${'fact.payer.' + s.type}}, ${s.paidBy(readerId)} ? #{you} : (${s.payerName} ?: #{former-member}))}"></p>
+  </th:block>
+  <th:block th:unless="${s.shares.isEmpty()}" th:with="shared=${#strings.listJoin(s.shares.![(memberName ?: #messages.msg('former-member')) + ' (' + #root.format.amount(amount) + ')'], ', ')}">
+    <p th:replace="~{components :: fact(#{fact.shared-with}, ${shared})}"></p>
+  </th:block>
+  <th:block th:if="${s.shareOf(readerId) != null}">
+    <p th:replace="~{components :: fact(#{fact.your-share-each}, ${format.amount(s.shareOf(readerId))})}"></p>
+  </th:block>
+</th:block>
+
+<th:block th:fragment="seriesChange(before, after, readerId)"
+          th:with="typeBefore=#{${'type.' + before.type}}, typeAfter=#{${'type.' + after.type}},
+                   frequencyBefore=${before.intervalCount == 1} ? #{${'frequency.' + before.interval + '.one'}} : #{${'frequency.' + before.interval + '.many'}(${before.intervalCount})}, frequencyAfter=${after.intervalCount == 1} ? #{${'frequency.' + after.interval + '.one'}} : #{${'frequency.' + after.interval + '.many'}(${after.intervalCount})},
+                   untilBefore=${before.until == null} ? #{never} : ${format.date(before.until)}, untilAfter=${after.until == null} ? #{never} : ${format.date(after.until)},
+                   payerBefore=${before.payerId == null} ? #{nobody} : (${before.paidBy(readerId)} ? #{you} : (${before.payerName} ?: #{former-member})), payerAfter=${after.payerId == null} ? #{nobody} : (${after.paidBy(readerId)} ? #{you} : (${after.payerName} ?: #{former-member})),
+                   sharedBefore=${before.shares.isEmpty()} ? #{nobody} : ${#strings.listJoin(before.shares.![(memberName ?: #messages.msg('former-member')) + ' (' + #root.format.amount(amount) + ')'], ', ')}, sharedAfter=${after.shares.isEmpty()} ? #{nobody} : ${#strings.listJoin(after.shares.![(memberName ?: #messages.msg('former-member')) + ' (' + #root.format.amount(amount) + ')'], ', ')},
+                   shareBefore=${before.shareOf(readerId) == null} ? #{no-share} : ${format.amount(before.shareOf(readerId))}, shareAfter=${after.shareOf(readerId) == null} ? #{no-share} : ${format.amount(after.shareOf(readerId))}">
+  <th:block th:if="${before.label != after.label}">
+    <p th:replace="~{components :: fact(#{fact.label}, ${format.change(before.label, after.label)})}"></p>
+  </th:block>
+  <th:block th:if="${before.type != after.type}">
+    <p th:replace="~{components :: fact(#{fact.type}, ${format.change(typeBefore, typeAfter)})}"></p>
+  </th:block>
+  <p th:replace="~{components :: fact(#{fact.amount}, ${format.change(format.amount(before.amount), format.amount(after.amount))})}"></p>
+  <p th:replace="~{components :: fact(#{fact.frequency}, ${format.change(frequencyBefore, frequencyAfter)})}"></p>
+  <p th:replace="~{components :: fact(#{fact.from}, ${format.change(format.date(before.from), format.date(after.from))})}"></p>
+  <th:block th:if="${before.until != null or after.until != null}">
+    <p th:replace="~{components :: fact(#{fact.until}, ${format.change(untilBefore, untilAfter)})}"></p>
+  </th:block>
+  <th:block th:if="${after.categoryLabel != null}">
+    <p th:replace="~{components :: fact(#{fact.category}, ${format.change(before.categoryLabel ?: after.categoryLabel, after.categoryLabel)})}"></p>
+  </th:block>
+  <th:block th:if="${before.payerId != null or after.payerId != null}">
+    <p th:replace="~{components :: fact(#{${'fact.payer.' + after.type}}, ${format.change(payerBefore, payerAfter)})}"></p>
+  </th:block>
+  <th:block th:unless="${before.shares.isEmpty() and after.shares.isEmpty()}">
+    <p th:replace="~{components :: fact(#{fact.shared-with}, ${format.change(sharedBefore, sharedAfter)})}"></p>
+  </th:block>
+  <th:block th:if="${before.shareOf(readerId) != null or after.shareOf(readerId) != null}">
+    <p th:replace="~{components :: fact(#{fact.your-share-each}, ${format.change(shareBefore, shareAfter)})}"></p>
+  </th:block>
+</th:block>
+
+<th:block th:fragment="goal(g)">
+  <p th:replace="~{components :: fact(#{fact.target}, ${format.amount(g.target)})}"></p>
+  <th:block th:if="${g.targetDate != null}">
+    <p th:replace="~{components :: fact(#{fact.target-date}, ${format.date(g.targetDate)})}"></p>
+  </th:block>
+</th:block>
+
+<th:block th:fragment="goalChange(before, after)"
+          th:with="dateBefore=${before.targetDate == null} ? #{no-date} : ${format.date(before.targetDate)},
+                   dateAfter=${after.targetDate == null} ? #{no-date} : ${format.date(after.targetDate)}">
+  <th:block th:if="${before.name != after.name}">
+    <p th:replace="~{components :: fact(#{fact.name}, ${format.change(before.name, after.name)})}"></p>
+  </th:block>
+  <p th:replace="~{components :: fact(#{fact.target}, ${format.change(format.amount(before.target), format.amount(after.target))})}"></p>
+  <th:block th:if="${before.targetDate != null or after.targetDate != null}">
+    <p th:replace="~{components :: fact(#{fact.target-date}, ${format.change(dateBefore, dateAfter)})}"></p>
+  </th:block>
+</th:block>
+
+<th:block th:fragment="deposit(d)"
+          th:with="progress=#{progress(${format.amount(d.saved)}, ${format.amount(d.goal.target)}, ${d.percent()})}">
+  <p th:replace="~{components :: fact(#{fact.deposit}, ${format.amount(d.amount)})}"></p>
+  <p th:replace="~{components :: fact(#{fact.date}, ${format.date(d.date)})}"></p>
+  <p th:replace="~{components :: fact(#{fact.progress}, ${progress})}"></p>
+  <th:block th:if="${d.goal.targetDate != null}">
+    <p th:replace="~{components :: fact(#{fact.target-date}, ${format.date(d.goal.targetDate)})}"></p>
+  </th:block>
+</th:block>
+
+<!-- What a goal held, then one line per member: "alice : 600,00 €". -->
+<th:block th:fragment="savedByMember(saved, shares)">
+  <p th:replace="~{components :: fact(#{fact.saved}, ${format.amount(saved)})}"></p>
+  <th:block th:each="share : ${shares}">
+    <p th:replace="~{components :: fact(${share.memberName} ?: #{former-member}, ${format.amount(share.amount)})}"></p>
+  </th:block>
+</th:block>
+
+</body>
+</html>

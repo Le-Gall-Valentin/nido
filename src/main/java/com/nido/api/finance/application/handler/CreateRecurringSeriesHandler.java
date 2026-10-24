@@ -1,6 +1,7 @@
 package com.nido.api.finance.application.handler;
 
 import com.nido.api.finance.application.port.in.CreateRecurringSeriesUseCase;
+import com.nido.api.finance.application.service.OperationNotifier;
 import com.nido.api.finance.application.service.SpaceMemberValidator;
 import com.nido.api.finance.domain.model.Category;
 import com.nido.api.finance.domain.model.Contribution;
@@ -26,14 +27,16 @@ public class CreateRecurringSeriesHandler implements CreateRecurringSeriesUseCas
     private final RecurringTransactionSeriesRepository seriesRepository;
     private final CategoryRepository categoryRepository;
     private final SpaceMemberValidator spaceMemberValidator;
+    private final OperationNotifier notifier;
 
     public CreateRecurringSeriesHandler(
             RecurringTransactionSeriesRepository seriesRepository, CategoryRepository categoryRepository, SpaceMemberValidator spaceMemberValidator,
-                            GetSpaceTodayUseCase spaceToday) {
+                            GetSpaceTodayUseCase spaceToday, OperationNotifier notifier) {
         this.seriesRepository = seriesRepository;
         this.categoryRepository = categoryRepository;
         this.spaceMemberValidator = spaceMemberValidator;
         this.spaceToday = spaceToday;
+        this.notifier = notifier;
     }
 
     @Override
@@ -70,6 +73,8 @@ public class CreateRecurringSeriesHandler implements CreateRecurringSeriesUseCas
             spaceMemberValidator.ensureMember(command.spaceId(), command.payerId());
         }
         resolved.forEach(c -> spaceMemberValidator.ensureMember(command.spaceId(), c.memberId()));
-        return seriesRepository.create(command, resolved);
+        RecurringTransactionSeries created = seriesRepository.create(command, resolved);
+        notifier.recurringCreated(caller, created);
+        return created;
     }
 }

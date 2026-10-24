@@ -24,7 +24,9 @@ import java.util.Optional;
  * Delivers a notification on every channel that can: the installation has it, it can write this
  * notification, and the account — existing, active, and of a role the kind is open to — keeps both the channel and the kind on.
  *
- * An account without a language of its own is written to in the language of whoever acted.
+ * An account without a language of its own is written to in the language of whoever acted. A request may name
+ * a fallback: on a channel where the account switched the main kind off, the fallback goes instead, if the
+ * account keeps its kind on.
  *
  * <p>Alone in its transaction: it runs once the change it reports is committed (see NotifyHandler), so
  * nothing here can undo that change, and a failure here rolls back only what this delivery wrote.
@@ -50,9 +52,9 @@ public class DeliverNotificationHandler implements DeliverNotificationUseCase {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void deliver(NotificationType type, NotificationRequest request, Language actorLanguage) {
-        Notification notification = request.notification();
+        List<Candidate> candidates = candidates(type, request);
         List<NotificationChannelPort> able = channels.stream()
-            .filter(channel -> channel.canDeliver(notification.getClass()))
+            .filter(channel -> candidates.stream().anyMatch(candidate -> candidate.travelsOn(channel)))
             .toList();
         if (able.isEmpty()) {
             return;
@@ -64,16 +66,37 @@ public class DeliverNotificationHandler implements DeliverNotificationUseCase {
                 request.recipientId(), type.code());
             return;
         }
-        if (!catalog.catalog().isOpenTo(type, recipient.get().role())) {
+        List<Candidate> open = candidates.stream()
+            .filter(candidate -> catalog.catalog().isOpenTo(candidate.type(), recipient.get().role()))
+            .toList();
+        if (open.isEmpty()) {
             log.debug("Account {} no longer has a role {} is reserved to: not sent", request.recipientId(), type.code());
             return;
         }
         NotificationPreferences chosen = preferences.find(request.recipientId());
         NotificationRecipient addressed = recipient.get().withLanguageOr(actorLanguage);
         for (NotificationChannelPort channel : able) {
-            if (chosen.allows(type, channel.channel())) {
-                channel.deliver(addressed, type, notification, request.expiresAt());
-            }
+            // The main notification when the account keeps its kind on this channel, else the fallback when it keeps that one's.
+            open.stream()
+                .filter(candidate -> candidate.travelsOn(channel) && chosen.allows(candidate.type(), channel.channel()))
+                .findFirst()
+                .ifPresent(candidate -> channel.deliver(addressed, candidate.type(), candidate.notification(), request.expiresAt()));
+        }
+    }
+
+    /** The main notification, then its fallback when the request names one. */
+    private List<Candidate> candidates(NotificationType type, NotificationRequest request) {
+        Notification fallback = request.fallback();
+        return fallback == null
+            ? List.of(new Candidate(type, request.notification()))
+            : List.of(new Candidate(type, request.notification()),
+                      new Candidate(catalog.catalog().typeOf(fallback.getClass()), fallback));
+    }
+
+    private record Candidate(NotificationType type, Notification notification) {
+
+        boolean travelsOn(NotificationChannelPort channel) {
+            return channel.canDeliver(notification.getClass());
         }
     }
 }

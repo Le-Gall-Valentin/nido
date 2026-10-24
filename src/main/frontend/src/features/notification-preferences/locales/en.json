@@ -12,7 +12,8 @@
   },
   "group": {
     "space": "Spaces",
-    "identity": "Administration"
+    "identity": "Administration",
+    "finance": "Finances"
   },
   "type": {
     "space": {
@@ -77,6 +78,68 @@
       "account-2fa-reset": {
         "label": "2FA reset",
         "description": "When an administrator resets the two-factor authentication of an account"
+      }
+    },
+    "finance": {
+      "transaction-added": {
+        "label": "Transaction added",
+        "description": "When someone adds a transaction that involves you"
+      },
+      "transaction-updated": {
+        "label": "Transaction changed",
+        "description": "When a transaction that involves you changes, or you are added to or removed from it"
+      },
+      "transaction-deleted": {
+        "label": "Transaction deleted",
+        "description": "When a transaction that involved you is deleted"
+      },
+      "recurring-created": {
+        "label": "Recurring transaction created",
+        "description": "When a recurring transaction that involves you is created"
+      },
+      "recurring-updated": {
+        "label": "Recurring transaction changed",
+        "description": "When a recurring transaction that involves you changes"
+      },
+      "recurring-stopped": {
+        "label": "Recurring transaction stopped",
+        "description": "When a recurring transaction that involves you stops"
+      },
+      "settlement-recorded": {
+        "label": "Repayment",
+        "description": "When someone pays you back or records your repayment"
+      },
+      "savings-contribution": {
+        "label": "Savings deposit",
+        "description": "When someone saves towards a goal in your spaces"
+      },
+      "savings-goal-reached": {
+        "label": "Goal reached",
+        "description": "When a savings goal is reached"
+      },
+      "savings-goal-created": {
+        "label": "Goal created",
+        "description": "When a savings goal is created"
+      },
+      "savings-goal-updated": {
+        "label": "Goal changed",
+        "description": "When the name, amount or date of a goal changes"
+      },
+      "savings-goal-deleted": {
+        "label": "Goal deleted",
+        "description": "When a savings goal is deleted"
+      },
+      "budget-warning": {
+        "label": "Budget nearly used",
+        "description": "When a category's spending passes 80% of its monthly budget"
+      },
+      "budget-exceeded": {
+        "label": "Budget exceeded",
+        "description": "When a category's spending goes over its monthly budget"
+      },
+      "opening-balance-changed": {
+        "label": "Opening balance",
+        "description": "When the opening balance of a space is set or removed"
       }
     }
   },
